@@ -1,9 +1,9 @@
-# v3.1.0 - NOAA + GCP TTS + Async Telegram Session Fix
+# v3.2.0 - Open-Meteo NOAA GFS + Google Cloud TTS + Telegram
 import os
 import json
 import sqlite3
 import asyncio
-from datetime import datetime, timedelta
+from datetime import datetime
 import requests
 from google.cloud import texttospeech
 from google.oauth2 import service_account
@@ -58,108 +58,62 @@ def save_run(run_name, temp, pressure, precip, wind_speed, weather_desc):
     conn.commit()
     conn.close()
 
-# --- DOĞRUDAN NOAA GFS SERVİSİNDEN VERİ ÇEKME ---
-def fetch_noaa_data():
-    now = datetime.utcnow()
-    current_hour = now.hour
-    if current_hour >= 18:
-        run_hour_str = "18"
-    elif current_hour >= 12:
-        run_hour_str = "12"
-    elif current_hour >= 6:
-        run_hour_str = "06"
-    else:
-        run_hour_str = "00"
-        
-    date_str = now.strftime("%Y%m%d")
-    run_name = f"GFS {date_str} {run_hour_str}Z"
-
-    url = "https://nomads.ncep.noaa.gov/cgi-bin/filter_gfs_0p25.pl"
+# --- OPEN-METEO NOKTASI ÜZERİNDEN NOAA GFS VERİ ÇEKME ---
+def fetch_noaa_gfs_data():
+    """
+    Open-Meteo üzerindeki resmi NOAA GFS 0.25° model verilerini çeker.
+    """
+    url = "https://api.open-meteo.com/v1/forecast"
     params = {
-        "file": f"gfs.t{run_hour_str}z.pgrb2.0p25.f000",
-        "lev_2_m_above_ground": "on",
-        "lev_surface": "on",
-        "var_TMP": "on",
-        "var_PRES": "on",
-        "var_PRATE": "on",
-        "subregion": "on",
-        "toplat": str(LAT + 0.25),
-        "bottomlat": str(LAT - 0.25),
-        "leftlon": str(LON - 0.25),
-        "rightlon": str(LON + 0.25),
-        "dir": f"/gfs.{date_str}/{run_hour_str}/atmos"
+        "latitude": LAT,
+        "longitude": LON,
+        "current": "temperature_2m,surface_pressure,precipitation,wind_speed_10m",
+        "models": "gfs_seamless",
+        "timezone": "Europe/Istanbul"
     }
 
     try:
-        print(f"[LOG] NOAA NOMADS verisi çekiliyor ({run_name})...")
-        res = requests.get(url, params=params, timeout=20)
-        
-        if res.status_code != 200:
-            print("[LOG] Son koşu henüz yazılıyor, bir önceki GFS koşusuna bakılıyor...")
-            prev_time = now - timedelta(hours=6)
-            date_str = prev_time.strftime("%Y%m%d")
-            run_hour_int = (prev_time.hour // 6) * 6
-            run_hour_str = f"{run_hour_int:02d}"
-            run_name = f"GFS {date_str} {run_hour_str}Z"
-            
-            params["file"] = f"gfs.t{run_hour_str}z.pgrb2.0p25.f000"
-            params["dir"] = f"/gfs.{date_str}/{run_hour_str}/atmos"
-            res = requests.get(url, params=params, timeout=20)
+        print("[LOG] NOAA GFS verileri çekiliyor...")
+        res = requests.get(url, params=params, timeout=15)
+        res.raise_for_status()
+        data = res.json()
 
-        if res.status_code == 200 and len(res.content) > 0:
-            with open("temp_gfs.grib2", "wb") as f:
-                f.write(res.content)
-            
-            import xarray as xr
-            ds = xr.open_dataset("temp_gfs.grib2", engine="cfgrib")
-            
-            temp_k = float(ds['t2m'].values.mean()) if 't2m' in ds else 288.15
-            temp_c = round(temp_k - 273.15, 1)
+        current = data.get("current", {})
+        temp_c = round(current.get("temperature_2m", 15.0), 1)
+        press_hpa = round(current.get("surface_pressure", 1013.0), 1)
+        precip_mm = round(current.get("precipitation", 0.0), 1)
+        wind_speed = round(current.get("wind_speed_10m", 0.0), 1)
 
-            press_pa = float(ds['sp'].values.mean()) if 'sp' in ds else 101325.0
-            press_hpa = round(press_pa / 100.0, 1)
+        run_name = f"GFS Model Run ({datetime.now().strftime('%H:%M')})"
 
-            prate = float(ds['prate'].values.mean()) if 'prate' in ds else 0.0
-            precip_mm = round(prate * 3600.0, 1)
+        weather_desc = "Açık / Bulutsuz"
+        if precip_mm > 2.0:
+            weather_desc = "Kuvvetli Yağışlı"
+        elif precip_mm > 0.0:
+            weather_desc = "Hafif Yağmurlu"
 
-            ds.close()
-            if os.path.exists("temp_gfs.grib2"):
-                os.remove("temp_gfs.grib2")
-
-            weather_desc = "Açık / Bulutsuz"
-            if precip_mm > 2.0:
-                weather_desc = "Kuvvetli Yağışlı"
-            elif precip_mm > 0.0:
-                weather_desc = "Hafif Yağmurlu"
-
-            print(f"[LOG] NOAA Verisi Alındı: {run_name} | {temp_c}°C | {press_hpa}hPa")
-            return {
-                "run_name": run_name,
-                "temp": temp_c,
-                "pressure": press_hpa,
-                "precip": precip_mm,
-                "wind_speed": 15.0,
-                "weather_desc": weather_desc,
-                "time_str": datetime.now().strftime("%Y-%m-%d %H:%M")
-            }
-        else:
-            print(f"[HATA] NOAA HTTP Yanıt Kodu: {res.status_code}")
-            return None
+        print(f"[LOG] NOAA GFS Verisi Alındı: {temp_c}°C | {press_hpa}hPa | Yağış: {precip_mm}mm")
+        return {
+            "run_name": run_name,
+            "temp": temp_c,
+            "pressure": press_hpa,
+            "precip": precip_mm,
+            "wind_speed": wind_speed,
+            "weather_desc": weather_desc,
+            "time_str": datetime.now().strftime("%Y-%m-%d %H:%M")
+        }
 
     except Exception as e:
-        print(f"[HATA] NOAA Veri İşleme Hatası: {e}")
-        if os.path.exists("temp_gfs.grib2"):
-            os.remove("temp_gfs.grib2")
+        print(f"[HATA] NOAA GFS Veri Çekme Hatası: {e}")
         return None
 
 # --- METEOROLOG KONUŞMA METNİ ÜRETİCİSİ ---
 def build_meteorologist_script(data, runs):
-    run_name = data['run_name']
     temp = data['temp']
     precip = data['precip']
     press = data['pressure']
     
-    script = f"Amerikan Meteoroloji Servisi GFS modelinin {run_name} çıktısı alındı. "
+    script = f"Amerikan Meteoroloji Servisi GFS modelinin son çıktısı alındı. "
     
     if len(runs) >= 1:
         prev_temp = runs[0][1]
@@ -180,7 +134,7 @@ def build_meteorologist_script(data, runs):
     elif precip > 0.0:
         script += "Aralıklı hafif yağmur geçişleri görülebilir. "
     else:
-        script += "Belirgin bir yağış riski görünmüyor, hava açık. "
+        script += "Önemli bir yağış riski görünmüyor, hava açık. "
         
     script += f"İstanbul için anlık sıcaklık {temp} derece civarında. Güvenli sürüşler ve iyi günler."
     return script
@@ -188,9 +142,9 @@ def build_meteorologist_script(data, runs):
 # --- GOOGLE CLOUD TTS MOTORU ---
 async def generate_speech_gcp(text, output_file="summary.mp3"):
     try:
-        print("[LOG] Google Cloud TTS ile ses dosyası üretiliyor...")
+        print("[LOG] Google Cloud TTS ile ses üretiliyor...")
         if not GCP_SA_KEY:
-            print("[HATA] GCP_SA_KEY GitHub Secret bulunamadı veya boş!")
+            print("[HATA] GCP_SA_KEY secret bulunamadı!")
             return None
             
         key_dict = json.loads(GCP_SA_KEY)
@@ -217,46 +171,40 @@ async def generate_speech_gcp(text, output_file="summary.mp3"):
         with open(output_file, "wb") as out:
             out.write(response.audio_content)
 
-        print("[LOG] Ses dosyası başarıyla üretildi.")
+        print("[LOG] Google Cloud TTS ses dosyası başarıyla üretildi.")
         return output_file
     except Exception as e:
         print(f"[HATA] GCP TTS Üretim Hatası: {e}")
         return None
 
-# --- TELEGRAM GÖNDERİCİ (ASYNC CONTEXT FIXED) ---
+# --- TELEGRAM GÖNDERİCİ ---
 async def send_telegram_alert(text, audio_path=None):
     if not TELEGRAM_TOKEN or not CHAT_ID:
-        print(f"[HATA] TELEGRAM_TOKEN ({bool(TELEGRAM_TOKEN)}) veya CHAT_ID ({bool(CHAT_ID)}) GitHub Secrets'ta EKSİK!")
+        print("[HATA] Telegram secrets eksik!")
         return
     try:
-        print("[LOG] Telegram sunucularına bağlanılıyor...")
         async with Bot(token=TELEGRAM_TOKEN) as bot:
-            print("[LOG] Metin mesajı gönderiliyor...")
             await bot.send_message(chat_id=CHAT_ID, text=text)
-            print("[LOG] Metin mesajı iletildi.")
-            
             if audio_path and os.path.exists(audio_path):
-                print("[LOG] Ses dosyası gönderiliyor...")
                 with open(audio_path, "rb") as voice:
                     await bot.send_voice(chat_id=CHAT_ID, voice=voice)
-                print("[LOG] Ses dosyası iletildi.")
                 os.remove(audio_path)
+        print("[LOG] Telegram bildirimi ve ses dosyası iletildi.")
     except Exception as e:
-        print(f"[HATA] Telegram İletim Hatası: {e}")
+        print(f"[HATA] Telegram Gönderim Hatası: {e}")
 
 # --- ANA ÇALIŞTIRICI ---
 async def main():
     init_db()
-    print("[LOG] GFS Otomasyonu Başlatıldı.")
+    print("[LOG] GFS Otomasyonu Çalıştırılıyor...")
 
-    data = fetch_noaa_data()
+    data = fetch_noaa_gfs_data()
 
     if not data:
-        print("[UYARI] NOAA verisi alınamadı, yedek bildirim gönderiliyor.")
         err_msg = (
-            f"⚠️ NOAA GFS BAĞLANTI UYARISI\n"
+            f"⚠️ GFS BAĞLANTI UYARISI\n"
             f"⏱ Tarih: {datetime.now().strftime('%Y-%m-%d %H:%M')}\n\n"
-            f"NOAA sunucularından ham GFS GRIB2 verisi çekilemedi."
+            f"NOAA GFS verisi alınamadı."
         )
         await send_telegram_alert(err_msg)
         return
@@ -268,10 +216,10 @@ async def main():
 
     report_msg = (
         f"🌐 DOĞRUDAN NOAA GFS GÜNCELLEME RAPORU\n"
-        f"📍 Konum: {LOCATION_NAME} | 🏷 Çıktı: {data['run_name']}\n"
-        f"⏱ Güncelleme Zamanı: {data['time_str']}\n\n"
+        f"📍 Konum: {LOCATION_NAME} | ⏱ Güncelleme: {data['time_str']}\n\n"
         f"🌡 Sıcaklık: {data['temp']} °C\n"
         f"🌧 Yağış Miktarı: {data['precip']} mm/saat ({data['weather_desc']})\n"
+        f"💨 Rüzgar Hızı: {data['wind_speed']} km/s\n"
         f"📉 Yüzey Basıncı: {data['pressure']} hPa\n\n"
         f"🎙 Seslendirme Metni:\n\"{speech_text}\""
     )
