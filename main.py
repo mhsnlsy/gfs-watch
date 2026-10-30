@@ -1,4 +1,4 @@
-# v4.0.0 - Advanced GFS Synoptic Tracker & Dynamic Alert Engine
+# v5.0.0 - GFS +180h 6-Hour Interval Shift Engine & GCP TTS Integration
 import os
 import json
 import sqlite3
@@ -14,45 +14,20 @@ TELEGRAM_TOKEN = os.getenv("TELEGRAM_TOKEN")
 CHAT_ID = os.getenv("CHAT_ID")
 GCP_SA_KEY = os.getenv("GCP_SA_KEY")
 
-# Hedef Konum: İstanbul
 LAT = 41.014
 LON = 28.950
 LOCATION_NAME = "İstanbul"
-
-# 2000 km Çapındaki Sinoptik Kontrol Noktaları (Enlem, Boylam, Bölge Adı)
-SYNOPTIC_POINTS = {
-    "Balkanlar/Orta Avrupa": (45.0, 18.0),
-    "Karadeniz/Rusya": (46.0, 35.0),
-    "Orta Akdeniz/İtalya": (38.0, 15.0),
-    "Doğu Akdeniz": (34.0, 30.0)
-}
-
-# --- RÜZGAR YÖNÜ ÇEVİRİCİ ---
-def get_wind_direction_name(deg):
-    dirs = [
-        "Yıldız (Kuzey)", "Poyraz (Kuzeydoğu)", "Gündoğusu (Doğu)", 
-        "Keşişleme (Güneydoğu)", "Kıble (Güney)", "Lodos (Güneybatı)", 
-        "Günbatısı (Batı)", "Karayel (Kuzeybatı)"
-    ]
-    idx = int((deg + 22.5) // 45) % 8
-    return dirs[idx]
 
 # --- VERİTABANI TAKİBİ ---
 def init_db():
     conn = sqlite3.connect("gfs_watch.db")
     cursor = conn.cursor()
     cursor.execute("""
-        CREATE TABLE IF NOT EXISTS gfs_runs_v2 (
+        CREATE TABLE IF NOT EXISTS gfs_runs_v3 (
             id INTEGER PRIMARY KEY AUTOINCREMENT,
             timestamp DATETIME DEFAULT CURRENT_TIMESTAMP,
             run_name TEXT,
-            temp REAL,
-            pressure REAL,
-            precip REAL,
-            snowfall REAL,
-            wind_speed REAL,
-            wind_dir TEXT,
-            weather_desc TEXT
+            forecast_json TEXT
         )
     """)
     conn.commit()
@@ -62,162 +37,135 @@ def get_previous_runs():
     conn = sqlite3.connect("gfs_watch.db")
     cursor = conn.cursor()
     cursor.execute("""
-        SELECT run_name, temp, pressure, precip, snowfall, wind_speed, wind_dir, weather_desc 
-        FROM gfs_runs_v2 ORDER BY id DESC LIMIT 2
+        SELECT run_name, forecast_json 
+        FROM gfs_runs_v3 ORDER BY id DESC LIMIT 2
     """)
     rows = cursor.fetchall()
     conn.close()
     return rows
 
-def save_run(run_name, temp, pressure, precip, snowfall, wind_speed, wind_dir, weather_desc):
+def save_run(run_name, forecast_dict):
     conn = sqlite3.connect("gfs_watch.db")
     cursor = conn.cursor()
     cursor.execute("""
-        INSERT INTO gfs_runs_v2 (run_name, temp, pressure, precip, snowfall, wind_speed, wind_dir, weather_desc)
-        VALUES (?, ?, ?, ?, ?, ?, ?, ?)
-    """, (run_name, temp, pressure, precip, snowfall, wind_speed, wind_dir, weather_desc))
+        INSERT INTO gfs_runs_v3 (run_name, forecast_json)
+        VALUES (?, ?)
+    """, (run_name, json.dumps(forecast_dict)))
     conn.commit()
     conn.close()
 
-# --- VERİ ÇEKME & BÖLGESEL SİNOPTİK ANALİZ ---
-def fetch_gfs_full_data():
-    # 1. Yerel Veri (İstanbul)
-    local_url = "https://api.open-meteo.com/v1/forecast"
-    local_params = {
+# --- OPEN-METEO GFS 180 SAATLİK (6 SAAT DİLİMLİ) VERİ ÇEKME ---
+def fetch_gfs_180h_data():
+    url = "https://api.open-meteo.com/v1/forecast"
+    params = {
         "latitude": LAT,
         "longitude": LON,
-        "current": "temperature_2m,surface_pressure,pressure_msl,precipitation,rain,snowfall,wind_speed_10m,wind_direction_10m",
+        "hourly": "temperature_2m,precipitation,snowfall,surface_pressure,wind_speed_10m",
+        "forecast_hours": 180,
         "models": "gfs_seamless",
         "timezone": "Europe/Istanbul"
     }
 
     try:
-        res = requests.get(local_url, params=local_params, timeout=15)
+        res = requests.get(url, params=params, timeout=20)
         res.raise_for_status()
-        local_data = res.json().get("current", {})
+        hourly = res.json().get("hourly", {})
 
-        temp = round(local_data.get("temperature_2m", 15.0), 1)
-        press = round(local_data.get("surface_pressure", 1013.0), 1)
-        press_msl = round(local_data.get("pressure_msl", 1013.0), 1)
-        precip = round(local_data.get("precipitation", 0.0), 1)
-        rain = round(local_data.get("rain", 0.0), 1)
-        snowfall = round(local_data.get("snowfall", 0.0), 1)
-        wind_speed = round(local_data.get("wind_speed_10m", 0.0), 1)
-        wind_dir_deg = local_data.get("wind_direction_10m", 0)
-        wind_dir = get_wind_direction_name(wind_dir_deg)
+        times = hourly.get("time", [])
+        temps = hourly.get("temperature_2m", [])
+        precips = hourly.get("precipitation", [])
+        snows = hourly.get("snowfall", [])
+        pressures = hourly.get("surface_pressure", [])
+        winds = hourly.get("wind_speed_10m", [])
 
-        # Yağış Tipi Belirleme
-        precip_type = "Yağış Yok"
-        if snowfall > 0:
-            precip_type = "Kar Yağışlı" if temp <= 1.0 else "Karla Karışık Yağmur"
-        elif rain > 0:
-            precip_type = "Sağanak Yağmurlu" if precip > 4.0 else "Hafif Yağmurlu"
+        forecast_timeline = {}
 
-        # 2. Bölgesel Sinoptik Basınç Taraması (2000 km Yarıçap)
-        synoptic_alerts = []
-        for region, (r_lat, r_lon) in SYNOPTIC_POINTS.items():
-            r_params = {
-                "latitude": r_lat,
-                "longitude": r_lon,
-                "current": "pressure_msl",
-                "models": "gfs_seamless"
+        # 0'dan 180'e kadar 6 saatlik adımlarla tara
+        for i in range(0, min(181, len(times)), 6):
+            t_str = times[i]
+            forecast_timeline[t_str] = {
+                "step_hour": i,
+                "temp": round(temps[i], 1) if i < len(temps) else 0.0,
+                "precip": round(precips[i], 1) if i < len(precips) else 0.0,
+                "snow": round(snows[i], 1) if i < len(snows) else 0.0,
+                "press": round(pressures[i], 1) if i < len(pressures) else 0.0,
+                "wind": round(winds[i], 1) if i < len(winds) else 0.0
             }
-            try:
-                r_res = requests.get(local_url, params=r_params, timeout=10).json()
-                r_press = r_res.get("current", {}).get("pressure_msl", 1013.0)
-                
-                if r_press <= 1002.0:
-                    synoptic_alerts.append(f"{region} üzerinde derin alçak basınç ({r_press} hPa) oluşumu var.")
-                elif r_press >= 1030.0:
-                    synoptic_alerts.append(f"{region} üzerinde güçlü yüksek basınç ({r_press} hPa) merkezlendi.")
-            except Exception:
-                continue
 
         run_name = f"GFS ({datetime.now().strftime('%H:%M')})"
-        return {
-            "run_name": run_name,
-            "temp": temp,
-            "pressure": press,
-            "pressure_msl": press_msl,
-            "precip": precip,
-            "snowfall": snowfall,
-            "precip_type": precip_type,
-            "wind_speed": wind_speed,
-            "wind_dir": wind_dir,
-            "synoptic_alerts": synoptic_alerts,
-            "time_str": datetime.now().strftime("%Y-%m-%d %H:%M")
-        }
+        return run_name, forecast_timeline
     except Exception as e:
-        print(f"[HATA] Veri alma hatası: {e}")
-        return None
+        print(f"[HATA] Open-Meteo verisi çekilemedi: {e}")
+        return None, None
 
-# --- METEOROLOG METİN MOTORU VE ÖNEM KONTROLÜ ---
-def analyze_and_build_script(data, runs):
-    temp = data["temp"]
-    press = data["pressure"]
-    precip_type = data["precip_type"]
-    wind_dir = data["wind_dir"]
-    wind_speed = data["wind_speed"]
-    synoptic = data["synoptic_alerts"]
-
+# --- N-1 VE N-2 İLE 6 SAATLİK DİLİMLERDE KIYASLAMA VE SES METNİ ÜRETME ---
+def analyze_and_build_script(current_run_name, current_forecast, previous_runs):
+    script_parts = [f"GFS modelinin {current_run_name} güncellemesi alındı."]
+    significant_changes = []
     is_important = False
-    reasons = []
 
-    script = f"Meteoroloji GFS modeli {data['run_name']} güncellemesi incelendi. "
+    if previous_runs and len(previous_runs) > 0:
+        prev_run_name, prev_json_str = previous_runs[0]
+        prev_forecast = json.loads(prev_json_str)
 
-    # N-1 & N-2 Kıyaslamaları
-    if len(runs) >= 1:
-        prev_temp = runs[0][1]
-        prev_press = runs[0][2]
-        t_diff = round(temp - prev_temp, 1)
-        p_diff = round(press - prev_press, 1)
+        temp_shifts = []
+        precip_shifts = []
 
-        if abs(t_diff) >= 2.0:
+        # Ortak zaman noktalarını kıyasla (+180 saate kadar)
+        for time_key, curr_data in current_forecast.items():
+            if time_key in prev_forecast:
+                p_data = prev_forecast[time_key]
+                step = curr_data["step_hour"]
+
+                # 1. Sıcaklık Kıyaslaması (3 derece ve üzeri değişim)
+                t_diff = round(curr_data["temp"] - p_data["temp"], 1)
+                if abs(t_diff) >= 3.0:
+                    direction = "artış" if t_diff > 0 else "düşüş"
+                    temp_shifts.append(f"+{step}. saatte {abs(t_diff)} derece {direction}")
+
+                # 2. Yağış Kıyaslaması (6 saatlik dilimde 7.0 mm ve üzeri değişim)
+                p_diff = round(curr_data["precip"] - p_data["precip"], 1)
+                if abs(p_diff) >= 7.0:
+                    p_dir = "artış" if p_diff > 0 else "azalma"
+                    precip_shifts.append(f"+{step}. saatte {abs(p_diff)} milimetre {p_dir}")
+
+        if temp_shifts or precip_shifts:
             is_important = True
-            direction = "düşüş" if t_diff < 0 else "yükseliş"
-            reasons.append(f"Sıcaklıkta {abs(t_diff)}°C {direction}")
-            script += f"Model çıktısında önemli bir değişim var; sıcaklıkta {abs(t_diff)} derecelik {direction} kaydedildi. "
+            script_parts.append(f"Önceki {prev_run_name} çıktısına göre 180 saatlik projeksiyonda önemli değişiklikler tespit edildi.")
 
-        if p_diff <= -3.0:
-            is_important = True
-            reasons.append(f"Basınçta {abs(p_diff)} hPa sert düşüş")
-            script += f"Basınçtaki {abs(p_diff)} hektopaskallık sert düşüş yaklaşan dinamik sistemin habercisi. "
+            if temp_shifts:
+                # İlk 3 belirgin değişimi seslendirmeye dahil et
+                t_msg = "Sıcaklıkta: " + ", ".join(temp_shifts[:3]) + "."
+                script_parts.append(t_msg)
+                significant_changes.extend(temp_shifts)
 
-    # Yağış ve Kar Kontrolü
-    if data["snowfall"] > 0:
-        is_important = True
-        reasons.append("Kar yağışı beklentisi")
-        script += f"Dikkat, model haritalarında {precip_type} öngörülüyor. "
-    elif data["precip"] > 5.0:
-        is_important = True
-        reasons.append("Kuvvetli yağış")
-        script += f"Bölgede {precip_type} geçişleri bekleniyor. "
+            if precip_shifts:
+                p_msg = "Yağışta: " + ", ".join(precip_shifts[:3]) + "."
+                script_parts.append(p_msg)
+                significant_changes.extend(precip_shifts)
+        else:
+            script_parts.append("Önceki çıktıya kıyasla 180 saatlik periyotta sıcaklıkta 3 derece veya yağışta 7 milimetre üzeri belirgin bir değişim saptanmadı.")
     else:
-        script += f"Mevcut durumda yağış yapısı {precip_type} olarak şekilleniyor. "
-
-    # Rüzgar Yorumu
-    script += f"Rüzgar {wind_dir} yönünden saatte {wind_speed} kilometre hızla esiyor. "
-    if wind_speed >= 40:
+        script_parts.append("Veritabanında kıyaslanacak önceki koşu kaydı bulunmadığı için ilk referans veri kaydedildi.")
         is_important = True
-        reasons.append("Fırtına riski")
-        script += "Rüzgar hamleleri sert, açık alanda dikkatli olunmalı. "
 
-    # Sinoptik Bölgesel Etki
-    if synoptic:
-        is_important = True
-        reasons.append("Bölgesel sinoptik basınç anomalisi")
-        synoptic_text = " ".join(synoptic)
-        script += f"Geniş ölçekli hava haritasına baktığımızda: {synoptic_text} Bu durum önümüzdeki saatlerde İstanbul hava akışını doğrudan etkileyecektir. "
+    # Anlık İstanbul Durumu Bilgisi
+    first_step = current_forecast.get(list(current_forecast.keys())[0], {})
+    curr_t = first_step.get("temp", 0.0)
+    curr_p = first_step.get("precip", 0.0)
+    
+    script_parts.append(f"İstanbul için anlık sıcaklık {curr_t} derece, yağış miktarı {curr_p} milimetre. Güvenli sürüşler.")
 
-    script += f"İstanbul için anlık sıcaklık {temp} derece. Güvenli sürüşler."
-
-    return script, is_important, reasons
+    speech_text = " ".join(script_parts)
+    return speech_text, is_important, significant_changes
 
 # --- GOOGLE CLOUD TTS MOTORU ---
 async def generate_speech_gcp(text, output_file="summary.mp3"):
     try:
         if not GCP_SA_KEY:
+            print("[HATA] GCP_SA_KEY secret tanımlı değil!")
             return None
+            
         key_dict = json.loads(GCP_SA_KEY)
         credentials = service_account.Credentials.from_service_account_info(key_dict)
         client = texttospeech.TextToSpeechClient(credentials=credentials)
@@ -244,6 +192,7 @@ async def generate_speech_gcp(text, output_file="summary.mp3"):
 # --- TELEGRAM GÖNDERİCİ ---
 async def send_telegram_alert(text, audio_path=None):
     if not TELEGRAM_TOKEN or not CHAT_ID:
+        print("[HATA] Telegram parametreleri eksik!")
         return
     try:
         async with Bot(token=TELEGRAM_TOKEN) as bot:
@@ -253,42 +202,36 @@ async def send_telegram_alert(text, audio_path=None):
                     await bot.send_voice(chat_id=CHAT_ID, voice=voice)
                 os.remove(audio_path)
     except Exception as e:
-        print(f"[HATA] Telegram Hatası: {e}")
+        print(f"[HATA] Telegram Gönderim Hatası: {e}")
 
 # --- ANA ÇALIŞTIRICI ---
 async def main():
     init_db()
-    data = fetch_gfs_full_data()
-    if not data:
+    print("[LOG] GFS 180 Saatlik Kıyaslama Otomasyonu Çalıştırılıyor...")
+
+    run_name, current_forecast = fetch_gfs_180h_data()
+    if not current_forecast:
         return
 
-    runs = get_previous_runs()
-    speech_text, is_important, reasons = analyze_and_build_script(data, runs)
+    previous_runs = get_previous_runs()
+    speech_text, is_important, changes = analyze_and_build_script(run_name, current_forecast, previous_runs)
 
-    # Veritabanına her koşuyu kaydet
-    save_run(
-        data["run_name"], data["temp"], data["pressure"], 
-        data["precip"], data["snowfall"], data["wind_speed"], 
-        data["wind_dir"], data["precip_type"]
-    )
+    # Veritabanına kaydet
+    save_run(run_name, current_forecast)
 
-    # SADECE ÖNEMLİ GÜNCELLEMEDE BİLDİRİM GÖNDER
-    if is_important or len(runs) == 0:
-        print(f"[LOG] Önemli Değişim Yakalandı! Nedenler: {reasons}")
+    # Değişim varsa veya ilk çalıştırmaysa Telegram bildirimi at
+    if is_important or len(previous_runs) == 0:
+        changes_summary = ", ".join(changes) if changes else "İlk Referans Çalıştırması"
         report_msg = (
-            f"⚠️ KRİTİK GFS MODEL GÜNCELLEMESİ\n"
-            f"📍 Konum: {LOCATION_NAME} | ⏱ Zaman: {data['time_str']}\n"
-            f"🎯 Tetiklenme Nedenleri: {', '.join(reasons)}\n\n"
-            f"🌡 Sıcaklık: {data['temp']} °C\n"
-            f"🌧 Yağış Durumu: {data['precip_type']} ({data['precip']} mm)\n"
-            f"💨 Rüzgar: {data['wind_dir']} ({data['wind_speed']} km/s)\n"
-            f"📉 Basınç: {data['pressure']} hPa\n\n"
+            f"🌐 GFS 180 SAATLİK KIYASLAMA RAPORU\n"
+            f"📍 Konum: {LOCATION_NAME} | 🏷 Çıktı: {run_name}\n"
+            f"⚡ Değişim Tespiti: {changes_summary}\n\n"
             f"🎙 Seslendirme Metni:\n\"{speech_text}\""
         )
         audio_file = await generate_speech_gcp(speech_text)
         await send_telegram_alert(report_msg, audio_path=audio_file)
     else:
-        print("[LOG] Model çıktısında belirgin bir anomali/değişim yok. Bildirim atlanıyor.")
+        print("[LOG] +180 saatlik periyotta 3°C sıcaklık veya 7mm yağış üzerinde belirgin değişim saptanmadı. Bildirim gönderilmedi.")
 
 if __name__ == "__main__":
     asyncio.run(main())
