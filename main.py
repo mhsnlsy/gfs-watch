@@ -12,7 +12,7 @@ from telegram import Bot
 # --- KONFİGÜRASYON ---
 TELEGRAM_TOKEN = os.getenv("TELEGRAM_TOKEN")
 CHAT_ID = os.getenv("CHAT_ID")
-METEOPT_URL = "https://www.meteopt.com/modelos/gfs"
+METEOPT_URL = "https://dawn-hill-a95d.muhsin-ulusoy.workers.dev/"
 
 HEADERS = {
     "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/124.0.0.0 Safari/537.36",
