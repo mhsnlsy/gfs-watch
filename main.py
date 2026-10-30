@@ -1,4 +1,4 @@
-# v8.1.0 - Updated Pressure Thresholds (1015 hPa / 1023 hPa) & Full Tracking Engine
+# v9.0.0 - Fast-Fetch Engine (+180h Early Release Optimized)
 import os
 import json
 import sqlite3
@@ -18,7 +18,7 @@ LAT = 41.014
 LON = 28.950
 LOCATION_NAME = "İstanbul"
 
-# 2000 km Çapındaki Sinoptik Kontrol Noktaları (Enlem, Boylam, Bölge Adı)
+# 2000 km Çapındaki Sinoptik Kontrol Noktaları
 SYNOPTIC_POINTS = {
     "Balkanlar": (45.0, 18.0),
     "Karadeniz / Kırım çevresi": (46.0, 35.0),
@@ -62,10 +62,12 @@ def save_run(run_name, forecast_dict):
     conn.commit()
     conn.close()
 
-# --- ANLIK, 3 GÜNLÜK, 180 SAATLİK VE SİNOPTİK VERİ ÇEKME ---
+# --- ERKEN YAKALAMA (+180 SAAT / 8 GÜN SINIRLI) VERİ ÇEKME ---
 def fetch_full_weather_data():
-    print("[STEP 1] Yerel ve sinoptik veriler çekiliyor...")
+    print("[STEP 1] Erken paket (+180 saat sınırlı) çekiliyor...")
     local_url = "https://api.open-meteo.com/v1/forecast"
+    
+    # forecast_days=8 parametresi ile sadece ilk 180-192 saatlik erken paket çekilir, uzun vadeli bekletme yapılmaz.
     local_params = {
         "latitude": LAT,
         "longitude": LON,
@@ -78,7 +80,7 @@ def fetch_full_weather_data():
     }
 
     try:
-        res = requests.get(local_url, params=local_params, timeout=20)
+        res = requests.get(local_url, params=local_params, timeout=12)
         res.raise_for_status()
         data = res.json()
 
@@ -90,6 +92,7 @@ def fetch_full_weather_data():
         temps = hourly.get("temperature_2m", [])
         precips = hourly.get("precipitation", [])
 
+        # Sadece 0'dan +180. saate kadar 6 saatlik adımları kaydet
         forecast_timeline = {}
         for i in range(0, min(181, len(times)), 6):
             t_str = times[i]
@@ -99,7 +102,7 @@ def fetch_full_weather_data():
                 "precip": round(precips[i], 2) if i < len(precips) else 0.0
             }
 
-        # 2000 km Çapında Bölgesel Basınç Taraması (Eşikler: <=1015 hPa & >=1023 hPa)
+        # 2000 km Çaplı Basınç Taraması (Eşikler: <=1015 hPa & >=1023 hPa)
         synoptic_alerts = []
         for region, (r_lat, r_lon) in SYNOPTIC_POINTS.items():
             r_params = {
@@ -109,7 +112,7 @@ def fetch_full_weather_data():
                 "models": "gfs_seamless"
             }
             try:
-                r_res = requests.get(local_url, params=r_params, timeout=10).json()
+                r_res = requests.get(local_url, params=r_params, timeout=6).json()
                 r_press = round(r_res.get("current", {}).get("pressure_msl", 1013.0), 1)
                 
                 if r_press <= 1015.0:
@@ -138,7 +141,7 @@ def fetch_full_weather_data():
         }
 
         run_name = f"Güncelleme ({datetime.now().strftime('%H:%M')})"
-        print("[STEP 1 BAŞARILI] Yerel ve sinoptik veriler alındı.")
+        print("[STEP 1 BAŞARILI] +180h Erken paket ve sinoptik veriler alındı.")
         return run_name, payload
     except Exception as e:
         print(f"[STEP 1 ERROR] Veri Alma Hatası: {e}")
@@ -189,7 +192,7 @@ def analyze_and_build_output(current_run_name, payload, previous_runs):
 
         speech_parts.append(day_text)
 
-    # 3. 180 SAATLİK KIYASLAMA (2°C Sıcaklık / 1.00mm Yağış Eşiği)
+    # 3. +180 SAATLİK KIYASLAMA (2°C Sıcaklık / 1.00mm Yağış Eşiği)
     temp_shifts = []
     precip_shifts = []
 
@@ -224,7 +227,7 @@ def analyze_and_build_output(current_run_name, payload, previous_runs):
         if precip_shifts:
             speech_parts.append("Yağışta: " + ", ".join(precip_shifts[:2]) + ".")
 
-    # 4. SİNOPTİK BASINÇ BİLDİRİMİ (SESE VE METNE EKLEME)
+    # 4. SİNOPTİK BASINÇ BİLDİRİMİ
     if synoptic:
         syn_text = "Bölgesel basınç haritasında: " + ", ".join(synoptic) + " tespit edildi."
         speech_parts.append(syn_text)
@@ -252,7 +255,7 @@ def analyze_and_build_output(current_run_name, payload, previous_runs):
         text_report_lines.append(f"• {label}: {t_min}°C / {t_max}°C | Yağış: {p_sum} mm{wind_tag}")
 
     if temp_shifts or precip_shifts:
-        text_report_lines.append("\n⚡ 180 Saate Kadar 6 Saatlik Dilim Değişiklikleri:")
+        text_report_lines.append("\n⚡ +180 Saate Kadar 6 Saatlik Dilim Değişiklikleri:")
         if temp_shifts:
             text_report_lines.append("• Sıcaklık: " + ", ".join(temp_shifts))
         if precip_shifts:
@@ -336,3 +339,8 @@ async def main():
     save_run(run_name, payload)
 
     audio_file = await generate_speech_gcp(speech_text)
+    await send_telegram_alert(full_text_report, audio_path=audio_file)
+    print("[LOG COMPLETE] İşlem tamamlandı.")
+
+if __name__ == "__main__":
+    asyncio.run(main())
