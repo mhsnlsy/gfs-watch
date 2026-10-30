@@ -1,6 +1,4 @@
 requests
-edge-tts
 python-telegram-bot
-eccodes
-cfgrib
-xarray
+google-cloud-texttospeech
+google-auth
