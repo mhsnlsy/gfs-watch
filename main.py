@@ -1,4 +1,4 @@
-# v5.0.0 - GFS +180h 6-Hour Interval Shift Engine & GCP TTS Integration
+# v7.0.0 - Always Voice Output + 3-Day Forecast & >20km/h Wind Alert Engine
 import os
 import json
 import sqlite3
@@ -54,14 +54,17 @@ def save_run(run_name, forecast_dict):
     conn.commit()
     conn.close()
 
-# --- OPEN-METEO GFS 180 SAATLİK (6 SAAT DİLİMLİ) VERİ ÇEKME ---
-def fetch_gfs_180h_data():
+# --- ANLIK, 3 GÜNLÜK VE 180 SAATLİK VERİ ÇEKME ---
+def fetch_full_weather_data():
     url = "https://api.open-meteo.com/v1/forecast"
     params = {
         "latitude": LAT,
         "longitude": LON,
+        "current": "temperature_2m,precipitation,rain,snowfall,wind_speed_10m",
+        "daily": "temperature_2m_max,temperature_2m_min,precipitation_sum,wind_speed_10m_max",
         "hourly": "temperature_2m,precipitation,snowfall,surface_pressure,wind_speed_10m",
         "forecast_hours": 180,
+        "forecast_days": 3,
         "models": "gfs_seamless",
         "timezone": "Europe/Istanbul"
     }
@@ -69,95 +72,159 @@ def fetch_gfs_180h_data():
     try:
         res = requests.get(url, params=params, timeout=20)
         res.raise_for_status()
-        hourly = res.json().get("hourly", {})
+        data = res.json()
 
+        current = data.get("current", {})
+        daily = data.get("daily", {})
+        hourly = data.get("hourly", {})
+
+        # 180 saatlik dilimler
         times = hourly.get("time", [])
         temps = hourly.get("temperature_2m", [])
         precips = hourly.get("precipitation", [])
-        snows = hourly.get("snowfall", [])
-        pressures = hourly.get("surface_pressure", [])
-        winds = hourly.get("wind_speed_10m", [])
 
         forecast_timeline = {}
-
-        # 0'dan 180'e kadar 6 saatlik adımlarla tara
         for i in range(0, min(181, len(times)), 6):
             t_str = times[i]
             forecast_timeline[t_str] = {
                 "step_hour": i,
                 "temp": round(temps[i], 1) if i < len(temps) else 0.0,
-                "precip": round(precips[i], 1) if i < len(precips) else 0.0,
-                "snow": round(snows[i], 1) if i < len(snows) else 0.0,
-                "press": round(pressures[i], 1) if i < len(pressures) else 0.0,
-                "wind": round(winds[i], 1) if i < len(winds) else 0.0
+                "precip": round(precips[i], 2) if i < len(precips) else 0.0
             }
 
-        run_name = f"GFS ({datetime.now().strftime('%H:%M')})"
-        return run_name, forecast_timeline
+        payload = {
+            "current": {
+                "temp": round(current.get("temperature_2m", 0.0), 1),
+                "precip": round(current.get("precipitation", 0.0), 2),
+                "wind": round(current.get("wind_speed_10m", 0.0), 1)
+            },
+            "daily": {
+                "time": daily.get("time", []),
+                "temp_max": daily.get("temperature_2m_max", []),
+                "temp_min": daily.get("temperature_2m_min", []),
+                "precip_sum": daily.get("precipitation_sum", []),
+                "wind_max": daily.get("wind_speed_10m_max", [])
+            },
+            "timeline_180h": forecast_timeline
+        }
+
+        run_name = f"Güncelleme ({datetime.now().strftime('%H:%M')})"
+        return run_name, payload
     except Exception as e:
-        print(f"[HATA] Open-Meteo verisi çekilemedi: {e}")
+        print(f"[HATA] Veri çekilemedi: {e}")
         return None, None
 
-# --- N-1 VE N-2 İLE 6 SAATLİK DİLİMLERDE KIYASLAMA VE SES METNİ ÜRETME ---
-def analyze_and_build_script(current_run_name, current_forecast, previous_runs):
-    script_parts = [f"GFS modelinin {current_run_name} güncellemesi alındı."]
-    significant_changes = []
-    is_important = False
+# --- METİN VE SES İÇERİĞİ OLUŞTURUCU ---
+def analyze_and_build_output(current_run_name, payload, previous_runs):
+    curr = payload["current"]
+    daily = payload["daily"]
+    timeline = payload["timeline_180h"]
+
+    curr_t = curr["temp"]
+    curr_p = curr["precip"]
+    curr_w = curr["wind"]
+
+    # 1. ANLIK HAVA DURUMU SES METNİ
+    speech_parts = [f"İstanbul'da anlık sıcaklık {curr_t} derece."]
+    
+    if curr_p > 0:
+        speech_parts.append(f"Yağış {curr_p} milimetre.")
+    else:
+        speech_parts.append("Yağış beklenmiyor.")
+
+    if curr_w > 20.0:
+        speech_parts.append("Hava rüzgarlı.")
+
+    # 2. 3 GÜNLÜK ÖZET SES METNİ
+    speech_parts.append("Önümüzdeki 3 günlük özete baktığımızda:")
+    day_labels = ["Bugün", "Yarın", "Sonraki gün"]
+    
+    for i in range(min(3, len(daily.get("time", [])))):
+        label = day_labels[i] if i < len(day_labels) else f"{i+1}. gün"
+        t_max = round(daily["temp_max"][i], 1) if i < len(daily["temp_max"]) else 0.0
+        t_min = round(daily["temp_min"][i], 1) if i < len(daily["temp_min"]) else 0.0
+        p_sum = round(daily["precip_sum"][i], 1) if i < len(daily["precip_sum"]) else 0.0
+        w_max = round(daily["wind_max"][i], 1) if i < len(daily["wind_max"]) else 0.0
+
+        day_text = f"{label}: En düşük {t_min}, en yüksek {t_max} derece."
+        if p_sum > 0:
+            day_text += f" Toplam yağış {p_sum} milimetre."
+        else:
+            day_text += " Yağışsız."
+
+        if w_max > 20.0:
+            day_text += " Hava rüzgarlı."
+
+        speech_parts.append(day_text)
+
+    # 3. 180 SAATLİK 6 SAATLİK DİLİM DEĞİŞİKLİK KIYASLAMASI (N-1)
+    temp_shifts = []
+    precip_shifts = []
 
     if previous_runs and len(previous_runs) > 0:
-        prev_run_name, prev_json_str = previous_runs[0]
-        prev_forecast = json.loads(prev_json_str)
+        try:
+            prev_json = json.loads(previous_runs[0][1])
+            prev_timeline = prev_json.get("timeline_180h", {})
 
-        temp_shifts = []
-        precip_shifts = []
+            for time_key, curr_data in timeline.items():
+                if time_key in prev_timeline:
+                    p_data = prev_timeline[time_key]
+                    step = curr_data["step_hour"]
 
-        # Ortak zaman noktalarını kıyasla (+180 saate kadar)
-        for time_key, curr_data in current_forecast.items():
-            if time_key in prev_forecast:
-                p_data = prev_forecast[time_key]
-                step = curr_data["step_hour"]
+                    # 2°C ve üzeri sıcaklık farkı
+                    t_diff = round(curr_data["temp"] - p_data["temp"], 1)
+                    if abs(t_diff) >= 2.0:
+                        direction = "artış" if t_diff > 0 else "düşüş"
+                        temp_shifts.append(f"+{step}. saatte {abs(t_diff)}°C {direction}")
 
-                # 1. Sıcaklık Kıyaslaması (3 derece ve üzeri değişim)
-                t_diff = round(curr_data["temp"] - p_data["temp"], 1)
-                if abs(t_diff) >= 3.0:
-                    direction = "artış" if t_diff > 0 else "düşüş"
-                    temp_shifts.append(f"+{step}. saatte {abs(t_diff)} derece {direction}")
+                    # 2.00 mm ve üzeri yağış farkı
+                    p_diff = round(curr_data["precip"] - p_data["precip"], 2)
+                    if abs(p_diff) >= 2.00:
+                        p_dir = "artış" if p_diff > 0 else "azalma"
+                        precip_shifts.append(f"+{step}. saatte {abs(p_diff)} mm {p_dir}")
+        except Exception as e:
+            print(f"[UYARI] Kıyaslama hatası: {e}")
 
-                # 2. Yağış Kıyaslaması (6 saatlik dilimde 7.0 mm ve üzeri değişim)
-                p_diff = round(curr_data["precip"] - p_data["precip"], 1)
-                if abs(p_diff) >= 7.0:
-                    p_dir = "artış" if p_diff > 0 else "azalma"
-                    precip_shifts.append(f"+{step}. saatte {abs(p_diff)} milimetre {p_dir}")
+    if temp_shifts or precip_shifts:
+        speech_parts.append("Önceki çıktıya kıyasla ilerleyen saatlerde değişimler var.")
+        if temp_shifts:
+            speech_parts.append("Sıcaklıkta: " + ", ".join(temp_shifts[:2]) + ".")
+        if precip_shifts:
+            speech_parts.append("Yağışta: " + ", ".join(precip_shifts[:2]) + ".")
 
-        if temp_shifts or precip_shifts:
-            is_important = True
-            script_parts.append(f"Önceki {prev_run_name} çıktısına göre 180 saatlik projeksiyonda önemli değişiklikler tespit edildi.")
+    speech_text = " ".join(speech_parts)
 
-            if temp_shifts:
-                # İlk 3 belirgin değişimi seslendirmeye dahil et
-                t_msg = "Sıcaklıkta: " + ", ".join(temp_shifts[:3]) + "."
-                script_parts.append(t_msg)
-                significant_changes.extend(temp_shifts)
+    # TELEGRAM METİN RAPORU
+    text_report_lines = [
+        f"🌐 MODEL GÜNCELLEME RAPORU",
+        f"📍 Konum: {LOCATION_NAME} | ⏱ Zaman: {datetime.now().strftime('%Y-%m-%d %H:%M')}\n",
+        f"🌡 Anlık Sıcaklık: {curr_t} °C",
+        f"🌧 Anlık Yağış: {curr_p} mm",
+        f"💨 Anlık Rüzgar: {curr_w} km/s {'(Rüzgarlı 🌬️)' if curr_w > 20.0 else ''}\n",
+        f"📅 ÖNÜMÜZDEKİ 3 GÜNLÜK ÖZET:"
+    ]
 
-            if precip_shifts:
-                p_msg = "Yağışta: " + ", ".join(precip_shifts[:3]) + "."
-                script_parts.append(p_msg)
-                significant_changes.extend(precip_shifts)
-        else:
-            script_parts.append("Önceki çıktıya kıyasla 180 saatlik periyotta sıcaklıkta 3 derece veya yağışta 7 milimetre üzeri belirgin bir değişim saptanmadı.")
-    else:
-        script_parts.append("Veritabanında kıyaslanacak önceki koşu kaydı bulunmadığı için ilk referans veri kaydedildi.")
-        is_important = True
+    for i in range(min(3, len(daily.get("time", [])))):
+        label = day_labels[i] if i < len(day_labels) else f"{i+1}. gün"
+        t_max = round(daily["temp_max"][i], 1) if i < len(daily["temp_max"]) else 0.0
+        t_min = round(daily["temp_min"][i], 1) if i < len(daily["temp_min"]) else 0.0
+        p_sum = round(daily["precip_sum"][i], 1) if i < len(daily["precip_sum"]) else 0.0
+        w_max = round(daily["wind_max"][i], 1) if i < len(daily["wind_max"]) else 0.0
 
-    # Anlık İstanbul Durumu Bilgisi
-    first_step = current_forecast.get(list(current_forecast.keys())[0], {})
-    curr_t = first_step.get("temp", 0.0)
-    curr_p = first_step.get("precip", 0.0)
-    
-    script_parts.append(f"İstanbul için anlık sıcaklık {curr_t} derece, yağış miktarı {curr_p} milimetre. Güvenli sürüşler.")
+        wind_tag = " | 🌬️ Rüzgarlı" if w_max > 20.0 else ""
+        text_report_lines.append(f"• {label}: {t_min}°C / {t_max}°C | Yağış: {p_sum} mm{wind_tag}")
 
-    speech_text = " ".join(script_parts)
-    return speech_text, is_important, significant_changes
+    if temp_shifts or precip_shifts:
+        text_report_lines.append("\n⚡ 180 Saate Kadar 6 Saatlik Dilim Değişiklikleri:")
+        if temp_shifts:
+            text_report_lines.append("• Sıcaklık: " + ", ".join(temp_shifts))
+        if precip_shifts:
+            text_report_lines.append("• Yağış: " + ", ".join(precip_shifts))
+
+    text_report_lines.append(f"\n🎙 Seslendirme Metni:\n\"{speech_text}\"")
+    full_text_report = "\n".join(text_report_lines)
+
+    return full_text_report, speech_text
 
 # --- GOOGLE CLOUD TTS MOTORU ---
 async def generate_speech_gcp(text, output_file="summary.mp3"):
@@ -165,7 +232,7 @@ async def generate_speech_gcp(text, output_file="summary.mp3"):
         if not GCP_SA_KEY:
             print("[HATA] GCP_SA_KEY secret tanımlı değil!")
             return None
-            
+
         key_dict = json.loads(GCP_SA_KEY)
         credentials = service_account.Credentials.from_service_account_info(key_dict)
         client = texttospeech.TextToSpeechClient(credentials=credentials)
@@ -196,7 +263,10 @@ async def send_telegram_alert(text, audio_path=None):
         return
     try:
         async with Bot(token=TELEGRAM_TOKEN) as bot:
+            # 1. Önce metin mesajını gönder
             await bot.send_message(chat_id=CHAT_ID, text=text)
+            
+            # 2. Ses dosyasını gönder (Her daim mevcuttur)
             if audio_path and os.path.exists(audio_path):
                 with open(audio_path, "rb") as voice:
                     await bot.send_voice(chat_id=CHAT_ID, voice=voice)
@@ -207,31 +277,6 @@ async def send_telegram_alert(text, audio_path=None):
 # --- ANA ÇALIŞTIRICI ---
 async def main():
     init_db()
-    print("[LOG] GFS 180 Saatlik Kıyaslama Otomasyonu Çalıştırılıyor...")
+    print("[LOG] Hava Durumu Otomasyonu Çalıştırılıyor...")
 
-    run_name, current_forecast = fetch_gfs_180h_data()
-    if not current_forecast:
-        return
-
-    previous_runs = get_previous_runs()
-    speech_text, is_important, changes = analyze_and_build_script(run_name, current_forecast, previous_runs)
-
-    # Veritabanına kaydet
-    save_run(run_name, current_forecast)
-
-    # Değişim varsa veya ilk çalıştırmaysa Telegram bildirimi at
-    if is_important or len(previous_runs) == 0:
-        changes_summary = ", ".join(changes) if changes else "İlk Referans Çalıştırması"
-        report_msg = (
-            f"🌐 GFS 180 SAATLİK KIYASLAMA RAPORU\n"
-            f"📍 Konum: {LOCATION_NAME} | 🏷 Çıktı: {run_name}\n"
-            f"⚡ Değişim Tespiti: {changes_summary}\n\n"
-            f"🎙 Seslendirme Metni:\n\"{speech_text}\""
-        )
-        audio_file = await generate_speech_gcp(speech_text)
-        await send_telegram_alert(report_msg, audio_path=audio_file)
-    else:
-        print("[LOG] +180 saatlik periyotta 3°C sıcaklık veya 7mm yağış üzerinde belirgin değişim saptanmadı. Bildirim gönderilmedi.")
-
-if __name__ == "__main__":
-    asyncio.run(main())
+    run_name, payload = fetch_full_weather_
