@@ -1,4 +1,4 @@
-# v7.1.0 - Hyper-Verbose Diagnostic & Open-Meteo Parameter Fix
+# v8.1.0 - Updated Pressure Thresholds (1015 hPa / 1023 hPa) & Full Tracking Engine
 import os
 import json
 import sqlite3
@@ -17,6 +17,14 @@ GCP_SA_KEY = os.getenv("GCP_SA_KEY")
 LAT = 41.014
 LON = 28.950
 LOCATION_NAME = "İstanbul"
+
+# 2000 km Çapındaki Sinoptik Kontrol Noktaları (Enlem, Boylam, Bölge Adı)
+SYNOPTIC_POINTS = {
+    "Balkanlar": (45.0, 18.0),
+    "Karadeniz / Kırım çevresi": (46.0, 35.0),
+    "Orta Akdeniz": (38.0, 15.0),
+    "Doğu Akdeniz": (34.0, 30.0)
+}
 
 # --- VERİTABANI TAKİBİ ---
 def init_db():
@@ -54,14 +62,14 @@ def save_run(run_name, forecast_dict):
     conn.commit()
     conn.close()
 
-# --- ANLIK, 3 GÜNLÜK VE 180 SAATLİK VERİ ÇEKME ---
+# --- ANLIK, 3 GÜNLÜK, 180 SAATLİK VE SİNOPTİK VERİ ÇEKME ---
 def fetch_full_weather_data():
-    print("[STEP 1] Open-Meteo verileri çekiliyor...")
-    url = "https://api.open-meteo.com/v1/forecast"
-    params = {
+    print("[STEP 1] Yerel ve sinoptik veriler çekiliyor...")
+    local_url = "https://api.open-meteo.com/v1/forecast"
+    local_params = {
         "latitude": LAT,
         "longitude": LON,
-        "current": "temperature_2m,precipitation,rain,snowfall,wind_speed_10m",
+        "current": "temperature_2m,precipitation,rain,snowfall,wind_speed_10m,surface_pressure",
         "daily": "temperature_2m_max,temperature_2m_min,precipitation_sum,wind_speed_10m_max",
         "hourly": "temperature_2m,precipitation,snowfall,surface_pressure,wind_speed_10m",
         "forecast_days": 8,
@@ -70,7 +78,7 @@ def fetch_full_weather_data():
     }
 
     try:
-        res = requests.get(url, params=params, timeout=20)
+        res = requests.get(local_url, params=local_params, timeout=20)
         res.raise_for_status()
         data = res.json()
 
@@ -91,11 +99,32 @@ def fetch_full_weather_data():
                 "precip": round(precips[i], 2) if i < len(precips) else 0.0
             }
 
+        # 2000 km Çapında Bölgesel Basınç Taraması (Eşikler: <=1015 hPa & >=1023 hPa)
+        synoptic_alerts = []
+        for region, (r_lat, r_lon) in SYNOPTIC_POINTS.items():
+            r_params = {
+                "latitude": r_lat,
+                "longitude": r_lon,
+                "current": "pressure_msl",
+                "models": "gfs_seamless"
+            }
+            try:
+                r_res = requests.get(local_url, params=r_params, timeout=10).json()
+                r_press = round(r_res.get("current", {}).get("pressure_msl", 1013.0), 1)
+                
+                if r_press <= 1015.0:
+                    synoptic_alerts.append(f"{region} üzerinde alçak basınç ({r_press} hPa)")
+                elif r_press >= 1023.0:
+                    synoptic_alerts.append(f"{region} üzerinde yüksek basınç ({r_press} hPa)")
+            except Exception:
+                continue
+
         payload = {
             "current": {
                 "temp": round(current.get("temperature_2m", 0.0), 1),
                 "precip": round(current.get("precipitation", 0.0), 2),
-                "wind": round(current.get("wind_speed_10m", 0.0), 1)
+                "wind": round(current.get("wind_speed_10m", 0.0), 1),
+                "pressure": round(current.get("surface_pressure", 1013.0), 1)
             },
             "daily": {
                 "time": daily.get("time", []),
@@ -104,22 +133,24 @@ def fetch_full_weather_data():
                 "precip_sum": daily.get("precipitation_sum", []),
                 "wind_max": daily.get("wind_speed_10m_max", [])
             },
-            "timeline_180h": forecast_timeline
+            "timeline_180h": forecast_timeline,
+            "synoptic_alerts": synoptic_alerts
         }
 
         run_name = f"Güncelleme ({datetime.now().strftime('%H:%M')})"
-        print("[STEP 1 BAŞARILI] Hava durumu verileri tam olarak çekildi.")
+        print("[STEP 1 BAŞARILI] Yerel ve sinoptik veriler alındı.")
         return run_name, payload
     except Exception as e:
-        print(f"[STEP 1 CRITICAL ERROR] Open-Meteo Veri Alma Hatası: {e}")
+        print(f"[STEP 1 ERROR] Veri Alma Hatası: {e}")
         return None, None
 
 # --- METİN VE SES İÇERİĞİ OLUŞTURUCU ---
 def analyze_and_build_output(current_run_name, payload, previous_runs):
-    print("[STEP 2] Metin ve analiz içeriği oluşturuluyor...")
+    print("[STEP 2] Raporlar ve ses metni üretiliyor...")
     curr = payload["current"]
     daily = payload["daily"]
     timeline = payload["timeline_180h"]
+    synoptic = payload["synoptic_alerts"]
 
     curr_t = curr["temp"]
     curr_p = curr["precip"]
@@ -158,7 +189,7 @@ def analyze_and_build_output(current_run_name, payload, previous_runs):
 
         speech_parts.append(day_text)
 
-    # 3. 180 SAATLİK 6 SAATLİK DİLİM DEĞİŞİKLİK KIYASLAMASI (N-1)
+    # 3. 180 SAATLİK KIYASLAMA (2°C Sıcaklık / 1.00mm Yağış Eşiği)
     temp_shifts = []
     precip_shifts = []
 
@@ -172,15 +203,17 @@ def analyze_and_build_output(current_run_name, payload, previous_runs):
                     p_data = prev_timeline[time_key]
                     step = curr_data["step_hour"]
 
+                    # Sıcaklık Değişimi (>= 2.0°C)
                     t_diff = round(curr_data["temp"] - p_data["temp"], 1)
                     if abs(t_diff) >= 2.0:
                         direction = "artış" if t_diff > 0 else "düşüş"
-                        temp_shifts.append(f"+{step}. saatte {abs(t_diff)}°C {direction}")
+                        temp_shifts.append(f"+{step}. saatte {abs(t_diff)} derece {direction}")
 
+                    # Yağış Değişimi (>= 1.00mm)
                     p_diff = round(curr_data["precip"] - p_data["precip"], 2)
-                    if abs(p_diff) >= 2.00:
+                    if abs(p_diff) >= 1.00:
                         p_dir = "artış" if p_diff > 0 else "azalma"
-                        precip_shifts.append(f"+{step}. saatte {abs(p_diff)} mm {p_dir}")
+                        precip_shifts.append(f"+{step}. saatte {abs(p_diff)} milimetre {p_dir}")
         except Exception as e:
             print(f"[UYARI] Kıyaslama hatası: {e}")
 
@@ -190,6 +223,11 @@ def analyze_and_build_output(current_run_name, payload, previous_runs):
             speech_parts.append("Sıcaklıkta: " + ", ".join(temp_shifts[:2]) + ".")
         if precip_shifts:
             speech_parts.append("Yağışta: " + ", ".join(precip_shifts[:2]) + ".")
+
+    # 4. SİNOPTİK BASINÇ BİLDİRİMİ (SESE VE METNE EKLEME)
+    if synoptic:
+        syn_text = "Bölgesel basınç haritasında: " + ", ".join(synoptic) + " tespit edildi."
+        speech_parts.append(syn_text)
 
     speech_text = " ".join(speech_parts)
 
@@ -220,6 +258,11 @@ def analyze_and_build_output(current_run_name, payload, previous_runs):
         if precip_shifts:
             text_report_lines.append("• Yağış: " + ", ".join(precip_shifts))
 
+    if synoptic:
+        text_report_lines.append("\n🌀 2000 km Çaplı Bölgesel Basınç Durumu:")
+        for syn_item in synoptic:
+            text_report_lines.append(f"• {syn_item}")
+
     text_report_lines.append(f"\n🎙 Seslendirme Metni:\n\"{speech_text}\"")
     full_text_report = "\n".join(text_report_lines)
 
@@ -228,10 +271,10 @@ def analyze_and_build_output(current_run_name, payload, previous_runs):
 
 # --- GOOGLE CLOUD TTS MOTORU ---
 async def generate_speech_gcp(text, output_file="summary.mp3"):
-    print("[STEP 3] Google Cloud TTS ile ses dosyası üretiliyor...")
+    print("[STEP 3] Google Cloud TTS ile ses üretiliyor...")
     try:
         if not GCP_SA_KEY:
-            print("[STEP 3 ERROR] GCP_SA_KEY secret tanımlı değil veya boş!")
+            print("[STEP 3 ERROR] GCP_SA_KEY secret tanımlı değil!")
             return None
 
         key_dict = json.loads(GCP_SA_KEY)
@@ -262,33 +305,29 @@ async def generate_speech_gcp(text, output_file="summary.mp3"):
 async def send_telegram_alert(text, audio_path=None):
     print("[STEP 4] Telegram mesajı gönderiliyor...")
     if not TELEGRAM_TOKEN or not CHAT_ID:
-        print(f"[STEP 4 ERROR] TELEGRAM_TOKEN var mı: {bool(TELEGRAM_TOKEN)}, CHAT_ID var mı: {bool(CHAT_ID)}")
+        print("[STEP 4 ERROR] Telegram parametreleri eksik!")
         return
     try:
         async with Bot(token=TELEGRAM_TOKEN) as bot:
-            print(f"[STEP 4.1] Metin mesajı iletiliyor...")
             await bot.send_message(chat_id=CHAT_ID, text=text)
             print("[STEP 4.1 BAŞARILI] Metin mesajı iletildi.")
             
             if audio_path and os.path.exists(audio_path):
-                print("[STEP 4.2] Ses dosyası iletiliyor...")
                 with open(audio_path, "rb") as voice:
                     await bot.send_voice(chat_id=CHAT_ID, voice=voice)
                 print("[STEP 4.2 BAŞARILI] Ses dosyası iletildi.")
                 os.remove(audio_path)
-            else:
-                print("[STEP 4.2 SKIPPED] Ses dosyası bulunamadı.")
     except Exception as e:
-        print(f"[STEP 4 CRITICAL ERROR] Telegram İletim Hatası: {e}")
+        print(f"[STEP 4 ERROR] Telegram Gönderim Hatası: {e}")
 
 # --- ANA ÇALIŞTIRICI ---
 async def main():
     init_db()
-    print("[LOG START] Hava Durumu Otomasyonu Başlatıldı.")
+    print("[LOG START] Otomasyon Başlatıldı.")
 
     run_name, payload = fetch_full_weather_data()
     if not payload:
-        print("[LOG ABORT] Veri çekilemediği için süreç sonlandırıldı.")
+        print("[LOG ABORT] Veri çekilemedi.")
         return
 
     previous_runs = get_previous_runs()
@@ -297,8 +336,3 @@ async def main():
     save_run(run_name, payload)
 
     audio_file = await generate_speech_gcp(speech_text)
-    await send_telegram_alert(full_text_report, audio_path=audio_file)
-    print("[LOG COMPLETE] Süreç tamamlandı.")
-
-if __name__ == "__main__":
-    asyncio.run(main())
