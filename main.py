@@ -1,9 +1,10 @@
-# v9.4.0 - Clean & Robust GFS Watcher Engine (Istanbul 180h / 1.2x Voice / Group Alert)
+# v9.5.0 - Istanbul Timezone Fix (UTC+3), 180h Forecast & 1.2x Speech
 import os
 import json
 import sqlite3
 import asyncio
 from datetime import datetime
+from zoneinfo import ZoneInfo  # Türkiye saati için yerleşik kütüphane
 import requests
 from google.cloud import texttospeech
 from google.oauth2 import service_account
@@ -17,6 +18,7 @@ GCP_SA_KEY = os.getenv("GCP_SA_KEY")
 LAT = 41.014
 LON = 28.950
 LOCATION_NAME = "İstanbul"
+TR_TZ = ZoneInfo("Europe/Istanbul")  # İstanbul saat dilimi
 
 SYNOPTIC_POINTS = {
     "Balkanlar": (45.0, 18.0),
@@ -136,7 +138,9 @@ def fetch_full_weather_data():
             "synoptic_alerts": synoptic_alerts
         }
 
-        run_name = f"Güncelleme ({datetime.now().strftime('%H:%M')})"
+        # Türkiye saatiyle güncelleme adı
+        now_tr = datetime.now(TR_TZ)
+        run_name = f"Güncelleme ({now_tr.strftime('%H:%M')})"
         print("[STEP 1 BAŞARILI] Hava durumu verisi alındı.")
         return run_name, payload
     except Exception as e:
@@ -214,9 +218,11 @@ def analyze_and_build_output(current_run_name, payload, previous_runs):
 
     speech_text = " ".join(speech_parts)
 
+    now_tr_str = datetime.now(TR_TZ).strftime('%Y-%m-%d %H:%M')
+
     text_report_lines = [
         f"🌐 MODEL GÜNCELLEME RAPORU",
-        f"📍 Konum: {LOCATION_NAME} | ⏱ Zaman: {datetime.now().strftime('%Y-%m-%d %H:%M')}\n",
+        f"📍 Konum: {LOCATION_NAME} | ⏱ Zaman: {now_tr_str}\n",
         f"🌡 Anlık Sıcaklık: {curr_t} °C",
         f"🌧 Anlık Yağış: {curr_p} mm",
         f"💨 Anlık Rüzgar: {curr_w} km/s {'(Rüzgarlı 🌬️)' if curr_w > 20.0 else ''}\n",
