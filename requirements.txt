@@ -1,4 +1,6 @@
-cloudscraper
-beautifulsoup4
+requests
 edge-tts
 python-telegram-bot
+eccodes
+cfgrib
+xarray
