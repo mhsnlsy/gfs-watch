@@ -1,4 +1,4 @@
-# v9.2.0 - 1.2x Speech Speed & +180h Fast-Fetch Engine
+# v9.3.0 - Strict Telegram Error-Raising & 1.2x Speech Speed Engine
 import os
 import json
 import sqlite3
@@ -150,3 +150,195 @@ def fetch_full_weather_data():
 def analyze_and_build_output(current_run_name, payload, previous_runs):
     print("[STEP 2] Raporlar ve ses metni üretiliyor...")
     curr = payload["current"]
+    daily = payload["daily"]
+    timeline = payload["timeline_180h"]
+    synoptic = payload["synoptic_alerts"]
+
+    curr_t = curr["temp"]
+    curr_p = curr["precip"]
+    curr_w = curr["wind"]
+
+    # 1. ANLIK HAVA DURUMU SES METNİ
+    speech_parts = [f"İstanbul'da anlık sıcaklık {curr_t} derece."]
+    
+    if curr_p > 0:
+        speech_parts.append(f"Yağış {curr_p} milimetre.")
+    else:
+        speech_parts.append("Yağış beklenmiyor.")
+
+    if curr_w > 20.0:
+        speech_parts.append("Hava rüzgarlı.")
+
+    # 2. ÖNÜMÜZDEKİ 3 GÜNLÜK ÖZET (Yarın, Sonraki gün, 3. gün)
+    speech_parts.append("Önümüzdeki 3 günlük özete baktığımızda:")
+    day_labels = ["Yarın", "Sonraki gün", "3. gün"]
+    
+    for idx, i in enumerate(range(1, min(4, len(daily.get("time", []))))):
+        label = day_labels[idx] if idx < len(day_labels) else f"{idx+1}. gün"
+        t_max = round(daily["temp_max"][i], 1) if i < len(daily["temp_max"]) else 0.0
+        t_min = round(daily["temp_min"][i], 1) if i < len(daily["temp_min"]) else 0.0
+        p_sum = round(daily["precip_sum"][i], 1) if i < len(daily["precip_sum"]) else 0.0
+        w_max = round(daily["wind_max"][i], 1) if i < len(daily["wind_max"]) else 0.0
+
+        day_text = f"{label}: En düşük {t_min}, en yüksek {t_max} derece."
+        if p_sum > 0:
+            day_text += f" Toplam yağış {p_sum} milimetre."
+        else:
+            day_text += " Yağışsız."
+
+        if w_max > 20.0:
+            day_text += " Hava rüzgarlı."
+
+        speech_parts.append(day_text)
+
+    # 3. +180 SAATLİK KIYASLAMA (2°C Sıcaklık / 1.00mm Yağış Eşiği)
+    temp_shifts = []
+    precip_shifts = []
+
+    if previous_runs and len(previous_runs) > 0:
+        try:
+            prev_json = json.loads(previous_runs[0][1])
+            prev_timeline = prev_json.get("timeline_180h", {})
+
+            for time_key, curr_data in timeline.items():
+                if time_key in prev_timeline:
+                    p_data = prev_timeline[time_key]
+                    step = curr_data["step_hour"]
+
+                    # Sıcaklık Değişimi (>= 2.0°C)
+                    t_diff = round(curr_data["temp"] - p_data["temp"], 1)
+                    if abs(t_diff) >= 2.0:
+                        direction = "artış" if t_diff > 0 else "düşüş"
+                        temp_shifts.append(f"+{step}. saatte {abs(t_diff)} derece {direction}")
+
+                    # Yağış Değişimi (>= 1.00mm)
+                    p_diff = round(curr_data["precip"] - p_data["precip"], 2)
+                    if abs(p_diff) >= 1.00:
+                        p_dir = "artış" if p_diff > 0 else "azalma"
+                        precip_shifts.append(f"+{step}. saatte {abs(p_diff)} milimetre {p_dir}")
+        except Exception as e:
+            print(f"[UYARI] Kıyaslama hatası: {e}")
+
+    if temp_shifts or precip_shifts:
+        speech_parts.append("Önceki çıktıya kıyasla ilerleyen saatlerde değişimler var.")
+        if temp_shifts:
+            speech_parts.append("Sıcaklıkta: " + ", ".join(temp_shifts[:2]) + ".")
+        if precip_shifts:
+            speech_parts.append("Yağışta: " + ", ".join(precip_shifts[:2]) + ".")
+
+    # 4. SİNOPTİK BASINÇ BİLDİRİMİ
+    if synoptic:
+        syn_text = "Bölgesel basınç haritasında: " + ", ".join(synoptic) + " tespit edildi."
+        speech_parts.append(syn_text)
+
+    speech_text = " ".join(speech_parts)
+
+    # TELEGRAM METİN RAPORU
+    text_report_lines = [
+        f"🌐 MODEL GÜNCELLEME RAPORU",
+        f"📍 Konum: {LOCATION_NAME} | ⏱ Zaman: {datetime.now().strftime('%Y-%m-%d %H:%M')}\n",
+        f"🌡 Anlık Sıcaklık: {curr_t} °C",
+        f"🌧 Anlık Yağış: {curr_p} mm",
+        f"💨 Anlık Rüzgar: {curr_w} km/s {'(Rüzgarlı 🌬️)' if curr_w > 20.0 else ''}\n",
+        f"📅 ÖNÜMÜZDEKİ 3 GÜNLÜK ÖZET:"
+    ]
+
+    for idx, i in enumerate(range(1, min(4, len(daily.get("time", []))))):
+        label = day_labels[idx] if idx < len(day_labels) else f"{idx+1}. gün"
+        t_max = round(daily["temp_max"][i], 1) if i < len(daily["temp_max"]) else 0.0
+        t_min = round(daily["temp_min"][i], 1) if i < len(daily["temp_min"]) else 0.0
+        p_sum = round(daily["precip_sum"][i], 1) if i < len(daily["precip_sum"]) else 0.0
+        w_max = round(daily["wind_max"][i], 1) if i < len(daily["wind_max"]) else 0.0
+
+        wind_tag = " | 🌬️ Rüzgarlı" if w_max > 20.0 else ""
+        text_report_lines.append(f"• {label}: {t_min}°C / {t_max}°C | Yağış: {p_sum} mm{wind_tag}")
+
+    if temp_shifts or precip_shifts:
+        text_report_lines.append("\n⚡ +180 Saate Kadar 6 Saatlik Dilim Değişiklikleri:")
+        if temp_shifts:
+            text_report_lines.append("• Sıcaklık: " + ", ".join(temp_shifts))
+        if precip_shifts:
+            text_report_lines.append("• Yağış: " + ", ".join(precip_shifts))
+
+    if synoptic:
+        text_report_lines.append("\n🌀 2000 km Çaplı Bölgesel Basınç Durumu:")
+        for syn_item in synoptic:
+            text_report_lines.append(f"• {syn_item}")
+
+    text_report_lines.append(f"\n🎙 Seslendirme Metni:\n\"{speech_text}\"")
+    full_text_report = "\n".join(text_report_lines)
+
+    print("[STEP 2 BAŞARILI] Rapor ve ses metni hazırlandı.")
+    return full_text_report, speech_text
+
+# --- GOOGLE CLOUD TTS MOTORU (1.2X HIZLI) ---
+async def generate_speech_gcp(text, output_file="summary.mp3"):
+    print("[STEP 3] Google Cloud TTS ile ses üretiliyor (Hız: 1.2x)...")
+    try:
+        if not GCP_SA_KEY:
+            raise ValueError("[STEP 3 HATA] GCP_SA_KEY secret tanımlı değil veya boş!")
+
+        key_dict = json.loads(GCP_SA_KEY)
+        credentials = service_account.Credentials.from_service_account_info(key_dict)
+        client = texttospeech.TextToSpeechClient(credentials=credentials)
+
+        synthesis_input = texttospeech.SynthesisInput(text=text)
+        voice = texttospeech.VoiceSelectionParams(
+            language_code="tr-TR",
+            name="tr-TR-Wavenet-C",
+            ssml_gender=texttospeech.SsmlVoiceGender.MALE
+        )
+        audio_config = texttospeech.AudioConfig(
+            audio_encoding=texttospeech.AudioEncoding.MP3,
+            speaking_rate=1.2
+        )
+        response = client.synthesize_speech(input=synthesis_input, voice=voice, audio_config=audio_config)
+
+        with open(output_file, "wb") as out:
+            out.write(response.audio_content)
+        print("[STEP 3 BAŞARILI] 1.2x hızında ses dosyası üretildi.")
+        return output_file
+    except Exception as e:
+        print(f"[STEP 3 ERROR] GCP TTS Hatası: {e}")
+        raise e
+
+# --- TELEGRAM GÖNDERİCİ (HATA FIRLATAN MOD) ---
+async def send_telegram_alert(text, audio_path=None):
+    print("[STEP 4] Telegram mesajı gönderiliyor...")
+    
+    if not TELEGRAM_TOKEN or not CHAT_ID:
+        raise ValueError("[STEP 4 HATA] TELEGRAM_TOKEN veya CHAT_ID GitHub Secrets alanında eksik veya tanımlanmamış!")
+    
+    async with Bot(token=TELEGRAM_TOKEN) as bot:
+        print(f"[STEP 4.1] Chat ID ({CHAT_ID}) adresine metin gönderiliyor...")
+        await bot.send_message(chat_id=CHAT_ID, text=text)
+        print("[STEP 4.1 BAŞARILI] Metin mesajı iletildi.")
+        
+        if audio_path and os.path.exists(audio_path):
+            print("[STEP 4.2] Ses dosyası gönderiliyor...")
+            with open(audio_path, "rb") as voice:
+                await bot.send_voice(chat_id=CHAT_ID, voice=voice)
+            print("[STEP 4.2 BAŞARILI] Ses dosyası iletildi.")
+            os.remove(audio_path)
+
+# --- ANA ÇALIŞTIRICI ---
+async def main():
+    init_db()
+    print("[LOG START] Otomasyon Başlatıldı.")
+
+    run_name, payload = fetch_full_weather_data()
+    if not payload:
+        print("[LOG ABORT] Veri çekilemedi.")
+        return
+
+    previous_runs = get_previous_runs()
+    full_text_report, speech_text = analyze_and_build_output(run_name, payload, previous_runs)
+
+    save_run(run_name, payload)
+
+    audio_file = await generate_speech_gcp(speech_text)
+    await send_telegram_alert(full_text_report, audio_path=audio_file)
+    print("[LOG COMPLETE] İşlem başarıyla tamamlandı.")
+
+if __name__ == "__main__":
+    asyncio.run(main())
