@@ -1,3 +1,4 @@
+# v1.0.2 - Fixed Syntax and Error Catching
 import os
 import re
 import sqlite3
