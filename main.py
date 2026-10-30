@@ -1,9 +1,10 @@
 import os
+import re
 import sqlite3
 import requests
 import asyncio
 from bs4 import BeautifulSoup
-from datetime import datetime, time as dtime
+from datetime import datetime
 import edge_tts
 from telegram import Bot
 
@@ -56,31 +57,41 @@ def save_record(run_hour, temp, pressure, precip):
         print(f"Veritabanı yazma hatası: {e}")
 
 def fetch_meteopt_data():
-    """Meteopt ana sayfasından ve aktif run linkinden verileri çeker."""
-    headers = {"User-Agent": "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7)"}
+    """Meteopt sayfasını regex ve BeautifulSoup ile güvenli şekilde tarar."""
+    headers = {
+        "User-Agent": "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36"
+    }
     try:
         response = requests.get(METEOPT_URL, headers=headers, timeout=15)
         response.raise_for_status()
-        soup = BeautifulSoup(response.text, "html.parser")
-        
-        # Meteopt üzerindeki aktif run bilgisini ve tablo verilerini yakalama
-        run_tag = soup.find(string=lambda t: t and "Run" in t) or "GFS Güncellemesi"
-        run_info = str(run_tag).strip() if run_tag else "GFS Model"
+        html = response.text
 
-        # Tablodan değerleri okuma
-        temp_elem = soup.select_one(".temp") or soup.select_one("td:contains('°C')")
-        press_elem = soup.select_one(".press") or soup.select_one("td:contains('hPa')")
-        precip_elem = soup.select_one(".precip") or soup.select_one("td:contains('mm')")
+        temp = None
+        pressure = None
+        precip = None
 
-        # Eğer spesifik etiketler henüz oluşmadıysa genel veri parse etme
-        temp = float(temp_elem.text.replace("°C", "").strip()) if temp_elem else 15.0
-        pressure = float(press_elem.text.replace("hPa", "").strip()) if press_elem else 1013.2
-        precip = float(precip_elem.text.replace("mm", "").strip()) if precip_elem else 0.0
+        # Sayfadaki °C, hPa ve mm değerlerini regex ile bulma
+        temp_match = re.search(r'(-?\d+(?:\.\d+)?)\s*°C', html)
+        if temp_match:
+            temp = float(temp_match.group(1))
+
+        press_match = re.search(r'(\d{3,4}(?:\.\d+)?)\s*hPa', html)
+        if press_match:
+            pressure = float(press_match.group(1))
+
+        precip_match = re.search(r'(\d+(?:\.\d+)?)\s*mm', html)
+        if precip_match:
+            precip = float(precip_match.group(1))
+
+        # Bulunamayan değerler için varsayılanlar
+        temp = temp if temp is not None else 15.0
+        pressure = pressure if pressure is not None else 1013.2
+        precip = precip if precip is not None else 0.0
 
         run_hour = datetime.now().strftime("%Y-%m-%d %H:%M")
 
         return {
-            "run_info": run_info,
+            "run_info": "GFS Güncellemesi",
             "run_hour": run_hour,
             "temp": temp,
             "pressure": pressure,
@@ -88,10 +99,17 @@ def fetch_meteopt_data():
         }
     except Exception as e:
         print(f"[{datetime.now()}] Meteopt veri çekme hatası: {e}")
-        return None
+        return {
+            "run_info": "GFS Güncellemesi (Bağlantı Hatası)",
+            "run_hour": datetime.now().strftime("%Y-%m-%d %H:%M"),
+            "temp": 0.0,
+            "pressure": 1013.0,
+            "precip": 0.0,
+            "error": str(e)
+        }
 
 async def generate_speech(text, output_file="summary.mp3"):
-    """Edge-TTS ile Türkçe sesli yanıt dosyası oluşturur."""
+    """Edge-TTS ile Türkçe ses dosyası oluşturur."""
     try:
         communicate = edge_tts.Communicate(text, "tr-TR-AhmetNeural")
         await communicate.save(output_file)
@@ -102,6 +120,7 @@ async def generate_speech(text, output_file="summary.mp3"):
 
 async def send_telegram_alert(bot, text, audio_path=None):
     if not bot or not CHAT_ID:
+        print("HATA: Telegram Token veya CHAT_ID eksik!")
         return
     try:
         await bot.send_message(chat_id=CHAT_ID, text=text, parse_mode="Markdown")
@@ -109,14 +128,14 @@ async def send_telegram_alert(bot, text, audio_path=None):
             with open(audio_path, "rb") as voice:
                 await bot.send_voice(chat_id=CHAT_ID, voice=voice)
             os.remove(audio_path)
-        print("Bildirim başarıyla gönderildi.")
+        print("Telegram bildirimi başarıyla gönderildi.")
     except Exception as e:
-        print(f"Telegram mesaj hatası: {e}")
+        print(f"Telegram gönderme hatası: {e}")
 
 async def run_once():
     init_db()
     if not TELEGRAM_TOKEN or not CHAT_ID:
-        print("HATA: Secrets tanımlı değil.")
+        print("HATA: TELEGRAM_TOKEN veya CHAT_ID tanımlı değil!")
         return
 
     bot = Bot(token=TELEGRAM_TOKEN)
@@ -125,8 +144,8 @@ async def run_once():
     if data:
         last_data = get_last_record()
         
-        # 1. Ani Değişim Var Mı Kontrol Et
-        if last_data:
+        # Ani Değişim Kontrolü
+        if last_data and "error" not in data:
             old_temp, old_press, old_precip = last_data
             press_diff = old_press - data["pressure"]
             precip_diff = data["precip"] - old_precip
@@ -141,21 +160,20 @@ async def run_once():
                 )
                 await send_telegram_alert(bot, alert_msg)
 
-        # Veriyi kaydet
         save_record(data["run_hour"], data["temp"], data["pressure"], data["precip"])
 
-        # 2. Güncelleme Özeti ve Sesli Mesaj Gönderimi
+        # Raporlama ve Sesli Mesaj
         summary_text = (
-            f"GFS Modeli Son Güncelleme Tamamlandı. "
+            f"GFS Modeli Son Güncelleme Raporu. "
             f"Sıcaklık {data['temp']} derece, "
             f"Basınç {data['pressure']} hektopaskal, "
-            f"Hesaplanan Yağış Miktarı {data['precip']} milimetre."
+            f"Yağış {data['precip']} milimetre."
         )
         audio_file = await generate_speech(summary_text)
 
         report_msg = (
             f"📊 *GFS MODEL GÜNCELLEME RAPORU*\n\n"
-            f"• **Çıktı Bilgisi:** `{data['run_info']}`\n"
+            f"• **Durum:** `{data['run_info']}`\n"
             f"• **Sıcaklık:** `{data['temp']} °C`\n"
             f"• **Basınç:** `{data['pressure']} hPa`\n"
             f"• **Yağış:** `{data['precip']} mm`\n"
