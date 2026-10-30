@@ -1,8 +1,7 @@
 import os
-import time
-import asyncio
 import sqlite3
 import requests
+import asyncio
 from bs4 import BeautifulSoup
 from datetime import datetime, time as dtime
 import edge_tts
@@ -63,13 +62,12 @@ def fetch_meteopt_data():
         response.raise_for_status()
         soup = BeautifulSoup(response.text, "html.parser")
         
-        # Sayfadaki verileri güvenli şekilde arama
         temp_elem = soup.select_one(".temp-val") or soup.find(id="temp")
         press_elem = soup.select_one(".press-val") or soup.find(id="pressure")
         precip_elem = soup.select_one(".precip-val") or soup.find(id="precip")
 
         if not temp_elem or not press_elem or not precip_elem:
-            print(f"[{datetime.now()}] Meteopt sayfa yapısı okunamadı (Varsayılan test değerleri kullanılıyor).")
+            print(f"[{datetime.now()}] Meteopt sayfa yapısı okunamadı.")
             return None
 
         temp = float(temp_elem.text.replace("°C", "").strip())
@@ -84,7 +82,7 @@ def fetch_meteopt_data():
 
 async def send_telegram_alert(bot, text, audio_path=None):
     if not bot or not CHAT_ID:
-        print("Telegram botu veya Chat ID tanımlı olmadığı için mesaj gönderilemedi.")
+        print("Telegram bot veya CHAT_ID eksik!")
         return
     try:
         await bot.send_message(chat_id=CHAT_ID, text=text, parse_mode="Markdown")
@@ -92,6 +90,7 @@ async def send_telegram_alert(bot, text, audio_path=None):
             with open(audio_path, "rb") as voice:
                 await bot.send_voice(chat_id=CHAT_ID, voice=voice)
             os.remove(audio_path)
+        print("Telegram bildirimi başarıyla gönderildi.")
     except Exception as e:
         print(f"Telegram mesaj gönderme hatası: {e}")
 
@@ -104,73 +103,59 @@ async def generate_speech(text, output_file="summary.mp3"):
         print(f"Ses oluşturma hatası: {e}")
         return None
 
-def is_in_target_window():
-    now = datetime.now().time()
-    w1_start, w1_end = dtime(6, 30), dtime(8, 16)
-    w2_start, w2_end = dtime(12, 30), dtime(14, 16)
-    w3_start, w3_end = dtime(0, 30), dtime(2, 16)
-    return (w1_start <= now <= w1_end) or (w2_start <= now <= w2_end) or (w3_start <= now <= w3_end)
-
 def is_window_closing_exact():
     now = datetime.now().time()
     closing_times = [dtime(8, 16), dtime(14, 16), dtime(2, 16)]
-    return any(now.hour == t.hour and now.minute == t.minute for t in closing_times)
+    return any(now.hour == t.hour and abs(now.minute - t.minute) <= 5 for t in closing_times)
 
-async def main_loop():
+async def run_once():
     init_db()
-    print("GFS-Watch Takip Motoru Başlatıldı...")
+    print("GFS Tek Seferlik Tarama Başlatıldı...")
 
     if not TELEGRAM_TOKEN:
-        print("UYARI: TELEGRAM_TOKEN bulunamadı! Lütfen Fly.io Secrets kısmından TELEGRAM_TOKEN ekleyin.")
-        bot = None
+        print("HATA: TELEGRAM_TOKEN bulunamadı!")
+        return
+
+    bot = Bot(token=TELEGRAM_TOKEN)
+    data = fetch_meteopt_data()
+
+    if data:
+        last_data = get_last_record()
+        
+        if last_data:
+            old_temp, old_press, old_precip = last_data
+            press_diff = old_press - data["pressure"]
+            precip_diff = data["precip"] - old_precip
+
+            if press_diff >= PRESSURE_DROP_THRESHOLD or precip_diff >= PRECIP_SPIKE_THRESHOLD:
+                alert_msg = (
+                    f"🚨 *ANİ METEOROLOJİK DEĞİŞİM UYARISI*\n\n"
+                    f"📉 **Basınç Düşüşü:** {press_diff:.1f} hPa\n"
+                    f"🌧 **Yağış Artışı:** {precip_diff:.1f} mm\n"
+                    f"🌡 **Anlık Sıcaklık:** {data['temp']}°C"
+                )
+                await send_telegram_alert(bot, alert_msg)
+
+        save_record(data["run_hour"], data["temp"], data["pressure"], data["precip"])
+
+        # Pencere kapanış zamanına denk geliniyorsa sesli ana bildirim atar
+        if is_window_closing_exact():
+            summary_text = (
+                f"GFS Model Güncellemesi Tamamlandı. "
+                f"Sıcaklık {data['temp']} derece, "
+                f"Basınç {data['pressure']} hectopascal, "
+                f"Hesaplanan Yağış {data['precip']} milimetre."
+            )
+            audio_file = await generate_speech(summary_text)
+            formatted_msg = (
+                f"📋 *GFS MODEL ANA GÜNCELLEME ÖZETİ*\n\n"
+                f"• **Sıcaklık:** {data['temp']} °C\n"
+                f"• **Basınç:** {data['pressure']} hPa\n"
+                f"• **Yağış:** {data['precip']} mm"
+            )
+            await send_telegram_alert(bot, formatted_msg, audio_path=audio_file)
     else:
-        bot = Bot(token=TELEGRAM_TOKEN)
-
-    while True:
-        try:
-            if is_in_target_window():
-                data = fetch_meteopt_data()
-                if data:
-                    last_data = get_last_record()
-                    
-                    if last_data:
-                        old_temp, old_press, old_precip = last_data
-                        press_diff = old_press - data["pressure"]
-                        precip_diff = data["precip"] - old_precip
-
-                        if press_diff >= PRESSURE_DROP_THRESHOLD or precip_diff >= PRECIP_SPIKE_THRESHOLD:
-                            alert_msg = (
-                                f"🚨 *ANİ METEOROLOJİK DEĞİŞİM UYARISI*\n\n"
-                                f"📉 **Basınç Düşüşü:** {press_diff:.1f} hPa\n"
-                                f"🌧 **Yağış Artışı:** {precip_diff:.1f} mm\n"
-                                f"🌡 **Anlık Sıcaklık:** {data['temp']}°C"
-                            )
-                            await send_telegram_alert(bot, alert_msg)
-
-                    save_record(data["run_hour"], data["temp"], data["pressure"], data["precip"])
-
-                    if is_window_closing_exact():
-                        summary_text = (
-                            f"GFS Model Güncellemesi Tamamlandı. "
-                            f"Sıcaklık {data['temp']} derece, "
-                            f"Basınç {data['pressure']} hectopascal, "
-                            f"Hesaplanan Yağış {data['precip']} milimetre."
-                        )
-                        audio_file = await generate_speech(summary_text)
-                        formatted_msg = (
-                            f"📋 *GFS MODEL ANA GÜNCELLEME ÖZETİ*\n\n"
-                            f"• **Sıcaklık:** {data['temp']} °C\n"
-                            f"• **Basınç:** {data['pressure']} hPa\n"
-                            f"• **Yağış:** {data['precip']} mm"
-                        )
-                        await send_telegram_alert(bot, formatted_msg, audio_path=audio_file)
-
-                await asyncio.sleep(600)
-            else:
-                await asyncio.sleep(60)
-        except Exception as e:
-            print(f"Döngü içi beklenmeyen hata: {e}")
-            await asyncio.sleep(60)
+        print("Meteopt sitesinden veri alınamadı.")
 
 if __name__ == "__main__":
-    asyncio.run(main_loop())
+    asyncio.run(run_once())
