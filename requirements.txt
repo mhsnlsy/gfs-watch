@@ -1,4 +1,4 @@
-requests
+cloudscraper
 beautifulsoup4
 edge-tts
 python-telegram-bot
