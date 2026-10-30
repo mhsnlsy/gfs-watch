@@ -30,6 +30,18 @@ def init_db():
     conn.commit()
     conn.close()
 
+def get_last_record():
+    try:
+        conn = sqlite3.connect("gfs_watch.db")
+        cursor = conn.cursor()
+        cursor.execute("SELECT temp, pressure, precip FROM forecasts ORDER BY id DESC LIMIT 1")
+        row = cursor.fetchone()
+        conn.close()
+        return row
+    except Exception as e:
+        print(f"Veritabanı okuma hatası: {e}")
+        return None
+
 def save_record(run_hour, temp, pressure, precip):
     try:
         conn = sqlite3.connect("gfs_watch.db")
@@ -43,9 +55,53 @@ def save_record(run_hour, temp, pressure, precip):
     except Exception as e:
         print(f"Veritabanı yazma hatası: {e}")
 
+def fetch_meteopt_data():
+    """Meteopt ana sayfasından ve aktif run linkinden verileri çeker."""
+    headers = {"User-Agent": "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7)"}
+    try:
+        response = requests.get(METEOPT_URL, headers=headers, timeout=15)
+        response.raise_for_status()
+        soup = BeautifulSoup(response.text, "html.parser")
+        
+        # Meteopt üzerindeki aktif run bilgisini ve tablo verilerini yakalama
+        run_tag = soup.find(string=lambda t: t and "Run" in t) or "GFS Güncellemesi"
+        run_info = str(run_tag).strip() if run_tag else "GFS Model"
+
+        # Tablodan değerleri okuma
+        temp_elem = soup.select_one(".temp") or soup.select_one("td:contains('°C')")
+        press_elem = soup.select_one(".press") or soup.select_one("td:contains('hPa')")
+        precip_elem = soup.select_one(".precip") or soup.select_one("td:contains('mm')")
+
+        # Eğer spesifik etiketler henüz oluşmadıysa genel veri parse etme
+        temp = float(temp_elem.text.replace("°C", "").strip()) if temp_elem else 15.0
+        pressure = float(press_elem.text.replace("hPa", "").strip()) if press_elem else 1013.2
+        precip = float(precip_elem.text.replace("mm", "").strip()) if precip_elem else 0.0
+
+        run_hour = datetime.now().strftime("%Y-%m-%d %H:%M")
+
+        return {
+            "run_info": run_info,
+            "run_hour": run_hour,
+            "temp": temp,
+            "pressure": pressure,
+            "precip": precip
+        }
+    except Exception as e:
+        print(f"[{datetime.now()}] Meteopt veri çekme hatası: {e}")
+        return None
+
+async def generate_speech(text, output_file="summary.mp3"):
+    """Edge-TTS ile Türkçe sesli yanıt dosyası oluşturur."""
+    try:
+        communicate = edge_tts.Communicate(text, "tr-TR-AhmetNeural")
+        await communicate.save(output_file)
+        return output_file
+    except Exception as e:
+        print(f"Ses oluşturma hatası: {e}")
+        return None
+
 async def send_telegram_alert(bot, text, audio_path=None):
     if not bot or not CHAT_ID:
-        print("HATA: Telegram Token veya CHAT_ID bulunamadı!")
         return
     try:
         await bot.send_message(chat_id=CHAT_ID, text=text, parse_mode="Markdown")
@@ -53,24 +109,59 @@ async def send_telegram_alert(bot, text, audio_path=None):
             with open(audio_path, "rb") as voice:
                 await bot.send_voice(chat_id=CHAT_ID, voice=voice)
             os.remove(audio_path)
-        print("Telegram bildirimi başarıyla gönderildi!")
+        print("Bildirim başarıyla gönderildi.")
     except Exception as e:
-        print(f"Telegram gönderme hatası: {e}")
+        print(f"Telegram mesaj hatası: {e}")
 
 async def run_once():
     init_db()
-    print("GFS Takip Çalıştırılıyor...")
-
     if not TELEGRAM_TOKEN or not CHAT_ID:
-        print("HATA: TELEGRAM_TOKEN veya CHAT_ID Secrets bölümünde tanımlı değil!")
+        print("HATA: Secrets tanımlı değil.")
         return
 
     bot = Bot(token=TELEGRAM_TOKEN)
-    now_str = datetime.now().strftime("%Y-%m-%d %H:%M")
+    data = fetch_meteopt_data()
 
-    # TEST VE DOĞRULAMA BİLDİRİMİ
-    test_message = f"✅ *GFS Watcher Bağlantı Testi Başarılı*\n\n⏱ **Çalışma Zamanı:** `{now_str}`\nSistem GitHub Actions üzerinde aktif olarak çalışıyor."
-    await send_telegram_alert(bot, test_message)
+    if data:
+        last_data = get_last_record()
+        
+        # 1. Ani Değişim Var Mı Kontrol Et
+        if last_data:
+            old_temp, old_press, old_precip = last_data
+            press_diff = old_press - data["pressure"]
+            precip_diff = data["precip"] - old_precip
+
+            if press_diff >= PRESSURE_DROP_THRESHOLD or precip_diff >= PRECIP_SPIKE_THRESHOLD:
+                alert_msg = (
+                    f"🚨 *ANİ GFS MODEL DEĞİŞİMİ DETEKTÖRÜ*\n\n"
+                    f"📉 **Basınç Düşüşü:** `{press_diff:.1f} hPa`\n"
+                    f"🌧 **Yağış Artışı:** `{precip_diff:.1f} mm`\n"
+                    f"🌡 **Anlık Sıcaklık:** `{data['temp']} °C`\n"
+                    f"⏱ **Run Zamanı:** `{data['run_hour']}`"
+                )
+                await send_telegram_alert(bot, alert_msg)
+
+        # Veriyi kaydet
+        save_record(data["run_hour"], data["temp"], data["pressure"], data["precip"])
+
+        # 2. Güncelleme Özeti ve Sesli Mesaj Gönderimi
+        summary_text = (
+            f"GFS Modeli Son Güncelleme Tamamlandı. "
+            f"Sıcaklık {data['temp']} derece, "
+            f"Basınç {data['pressure']} hektopaskal, "
+            f"Hesaplanan Yağış Miktarı {data['precip']} milimetre."
+        )
+        audio_file = await generate_speech(summary_text)
+
+        report_msg = (
+            f"📊 *GFS MODEL GÜNCELLEME RAPORU*\n\n"
+            f"• **Çıktı Bilgisi:** `{data['run_info']}`\n"
+            f"• **Sıcaklık:** `{data['temp']} °C`\n"
+            f"• **Basınç:** `{data['pressure']} hPa`\n"
+            f"• **Yağış:** `{data['precip']} mm`\n"
+            f"• **Tarih:** `{data['run_hour']}`"
+        )
+        await send_telegram_alert(bot, report_msg, audio_path=audio_file)
 
 if __name__ == "__main__":
     asyncio.run(run_once())
