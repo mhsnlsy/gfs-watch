@@ -20,6 +20,8 @@ concurrency:
 
 permissions:
   contents: write
+  pages: write
+  id-token: write
 
 jobs:
   check-gfs:
@@ -105,3 +107,22 @@ jobs:
           git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
           git commit -m "Update GFS run history"
           git push origin gfs-watch-state
+
+  deploy-pages:
+    name: Publish latest report to GitHub Pages
+    needs: check-gfs
+    if: needs.check-gfs.result == 'success'
+    permissions:
+      contents: read
+      pages: write
+      id-token: write
+    uses: ./.github/workflows/pages.yml
+
+  send-web-push:
+    name: Send device notification after Pages deployment
+    needs: deploy-pages
+    if: needs.deploy-pages.result == 'success'
+    permissions:
+      contents: read
+    uses: ./.github/workflows/web-push-notify.yml
+    secrets: inherit
