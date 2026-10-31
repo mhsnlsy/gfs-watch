@@ -73,52 +73,26 @@ def fetch_observation():
         all_stations = stations_response.json()
         station_matches = [
             item for item in all_stations
-            if any(
-                str(item.get(key, "")).strip() == str(STATION_NUMBER)
-                for key in (
-                    "sondurumIstNo", "istNo", "istasyonNo",
-                    "sonDurumIstNo", "sondurumIstasyonNo",
-                    "merkezId", "id", "istasyonId",
-                )
-            )
+            if str(item.get("istNo", "")).strip() == str(STATION_NUMBER)
         ] if isinstance(all_stations, list) else []
-        print(
-            "[MGM DIAGNOSTIC] merkezler keys="
-            + (",".join(sorted(centres[0].keys())) if centres else "empty")
-            + "; /web/istasyonlar matches="
-            + json.dumps(station_matches[:5], ensure_ascii=False)
-        )
-        district_matches = [
-            item for item in centres
-            if "eyüp" in json.dumps(item, ensure_ascii=False).lower()
-            or "eyup" in json.dumps(item, ensure_ascii=False).lower()
-        ]
-        print(
-            "[MGM DIAGNOSTIC] Eyüp centre candidates="
-            + json.dumps(district_matches[:10], ensure_ascii=False)
-        )
-        page_response = session.get(STATION_PAGE, timeout=20)
-        print(
-            "[WSTATMAP DIAGNOSTIC] status="
-            + str(page_response.status_code)
-            + "; scripts="
-            + json.dumps(
-                __import__("re").findall(
-                    r'<script[^>]+src=["\']([^"\']+)',
-                    page_response.text,
-                )[:12],
-                ensure_ascii=False,
+        if station_matches:
+            centre = station_matches[0]
+            print(
+                f"[MGM STATION MATCH] {station_matches[0].get('istAd')} "
+                f"istNo={station_matches[0].get('istNo')} "
+                f"ilce={station_matches[0].get('ilce')}"
             )
-            + "; page_excerpt="
-            + page_response.text[:1200].replace("\n", " ")
-        )
-        raise LookupError(
-            f"Station {STATION_NUMBER} was not found in MGM centre or station inventories."
-        )
+        else:
+            raise LookupError(
+                f"Station {STATION_NUMBER} was not found in MGM centre or station inventories."
+            )
 
-    centre_id = centre.get("merkezId")
-    if centre_id in (None, ""):
-        raise ValueError("MGM station record does not contain merkezId.")
+    centre_id = (
+        centre.get("merkezId")
+        or centre.get("merkezid")
+        or centre.get("istNo")
+        or STATION_NUMBER
+    )
 
     response = session.get(
         f"{BASE_URL}/web/sondurumlar",
