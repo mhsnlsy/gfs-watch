@@ -1550,6 +1550,80 @@ async def process_gfs_update(strict=False):
     print(f"[COMPLETE] GFS run işlendi ve +180 saat bildirimi gönderildi: {run_id}")
 
 
+async def run_manual_multi_comparison(run_ids):
+    """Send one temporary multi-run chart without writing DB, JSON, or run state."""
+    normalized = [
+        _parse_utc_datetime(run_id).isoformat(timespec="seconds")
+        for run_id in run_ids
+    ]
+    if len(normalized) != 4:
+        raise ValueError("Dört döngülü geçici kıyas için tam dört run ID gerekli.")
+    run_datetimes = [_parse_utc_datetime(run_id) for run_id in normalized]
+    if run_datetimes != sorted(run_datetimes) or len(set(normalized)) != 4:
+        raise ValueError("GFS döngüleri benzersiz ve eskiden yeniye sıralı olmalı.")
+    if any(
+        (run_datetimes[index + 1] - run_datetimes[index]) != timedelta(hours=6)
+        for index in range(3)
+    ):
+        raise ValueError("Dört karşılaştırma döngüsü arasında tam 6 saat olmalı.")
+
+    print(
+        "[MANUAL FOUR-CYCLE] " + " -> ".join(normalized)
+        + "; SQLite ve NOAA erişimi salt okunur."
+    )
+
+    loaded = []
+    for run_id in normalized:
+        stored_record = await asyncio.to_thread(get_run_payload, run_id)
+        if stored_record:
+            stored_run_id, forecast_payload = stored_record
+            print(f"[MANUAL FOUR-CYCLE] {stored_run_id} SQLite geçmişinden alındı.")
+        else:
+            print(
+                f"[MANUAL FOUR-CYCLE] {run_id} SQLite'da yok; "
+                "NOAA/NCEP'den salt okunur alınıyor."
+            )
+            forecast_payload = await asyncio.to_thread(fetch_full_weather_data, run_id)
+            if not forecast_payload or "_pending_noaa_gfs" in forecast_payload:
+                reason = (forecast_payload or {}).get(
+                    "_reason", "NOAA forecast data unavailable"
+                )
+                raise RuntimeError(f"{run_id} tahmini alınamadı: {reason}")
+            stored_run_id = run_id
+        loaded.append((stored_run_id, forecast_payload))
+
+    previous_runs = [
+        (run_id, json.dumps(forecast_payload, ensure_ascii=False))
+        for run_id, forecast_payload in loaded[:-1]
+    ]
+    current_run_id, current_payload = loaded[-1]
+    chart = create_comparison_chart(
+        current_run_id, current_payload, previous_runs
+    )
+    if not chart:
+        raise RuntimeError("Dört döngülü karşılaştırma görseli üretilemedi.")
+
+    try:
+        labels = []
+        for run_id, _ in loaded:
+            run_utc = _parse_utc_datetime(run_id)
+            run_local = run_utc.astimezone(TR_TZ)
+            labels.append(f"{run_utc:%H}Z ({run_local:%d.%m} TSİ)")
+        caption = (
+            "📊 İstanbul GFS | Tek seferlik dört döngü karşılaştırması\n"
+            "Eski → yeni: " + " → ".join(labels) + "\n"
+            "Sıcaklık, günlük toplam yağış ve günlük maksimum rüzgâr."
+        )
+        await send_telegram_photo(chart, caption)
+    finally:
+        chart.close()
+
+    print(
+        "[MANUAL FOUR-CYCLE COMPLETE] Görsel Telegram'a gönderildi; "
+        "SQLite, JSON ve bildirim geçmişinde değişiklik yapılmadı."
+    )
+
+
 async def run_manual_comparison(previous_run_id, current_run_id):
     """Send a one-off comparison image; never writes DB, JSON, or run state."""
     previous_dt = _parse_utc_datetime(previous_run_id)
@@ -1704,9 +1778,13 @@ async def run_once():
 
 if __name__ == "__main__":
     try:
+        compare_run_ids = os.getenv("GFS_WATCH_COMPARE_RUN_IDS", "").strip()
         compare_previous = os.getenv("GFS_WATCH_COMPARE_PREVIOUS_RUN_ID", "").strip()
         compare_current = os.getenv("GFS_WATCH_COMPARE_CURRENT_RUN_ID", "").strip()
-        if compare_previous and compare_current:
+        if compare_run_ids:
+            run_ids = [item.strip() for item in compare_run_ids.split(",") if item.strip()]
+            asyncio.run(run_manual_multi_comparison(run_ids))
+        elif compare_previous and compare_current:
             asyncio.run(run_manual_comparison(compare_previous, compare_current))
         else:
             manual_run_id = os.getenv("GFS_WATCH_MANUAL_RUN_ID", "").strip()
