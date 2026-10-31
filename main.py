@@ -28,8 +28,8 @@ from telegram import Bot
 TELEGRAM_TOKEN = os.getenv("TELEGRAM_TOKEN")
 CHAT_ID = os.getenv("CHAT_ID")
 GCP_SA_KEY = os.getenv("GCP_SA_KEY")
-APP_NAME = "Boğaziçi Hava"
-APP_VERSION = "2.0.0"
+APP_NAME = "İstanbul'un Havası"
+APP_VERSION = "2.0.1"
 
 LAT = 41.014
 LON = 28.950
