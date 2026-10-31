@@ -7,6 +7,7 @@ import io
 import math
 import tempfile
 import time
+import shutil
 from datetime import datetime, timedelta, timezone
 from zoneinfo import ZoneInfo  # Türkiye saati için yerleşik kütüphane
 import requests
@@ -40,10 +41,24 @@ MODEL_NAME = "ncep_gfs_global"
 # A successful HEAD confirms the exact global GRIB2 f180 object is published,
 # without downloading the hundreds-of-megabytes global file.
 NOAA_GFS_S3_BASE = "https://noaa-gfs-bdp-pds.s3.amazonaws.com"
+NOAA_NOMADS_FILTER_URL = "https://nomads.ncep.noaa.gov/cgi-bin/filter_gfs_0p25.pl"
 NOAA_CYCLE_LOOKBACK = 6
 MIN_FORECAST_HOURS = 180
 RETENTION_DAYS = 10
 PUBLIC_DATA_DIR = os.getenv("PUBLIC_DATA_DIR", "public")
+NOAA_CACHE_DIR = os.getenv("NOAA_CACHE_DIR", "noaa_cache")
+NOAA_REQUEST_INTERVAL_SECONDS = max(
+    1.0, float(os.getenv("NOAA_REQUEST_INTERVAL_SECONDS", "10"))
+)
+NOAA_PREFETCH_FILES_PER_CHECK = max(
+    1, int(os.getenv("NOAA_PREFETCH_FILES_PER_CHECK", "4"))
+)
+NOAA_PREFETCH_MIN_AGE_HOURS = max(
+    0.0, float(os.getenv("NOAA_PREFETCH_MIN_AGE_HOURS", "2"))
+)
+NOAA_CACHE_RETENTION_HOURS = max(
+    12.0, float(os.getenv("NOAA_CACHE_RETENTION_HOURS", "48"))
+)
 REGIONAL_PRESSURE_DIAMETER_KM = 2500.0
 REGIONAL_PRESSURE_RADIUS_KM = REGIONAL_PRESSURE_DIAMETER_KM / 2.0
 HIGH_PRESSURE_THRESHOLD_HPA = 1023.0
@@ -536,6 +551,215 @@ def _parse_forecast_local_time(value):
     return parsed.astimezone(timezone.utc)
 
 
+def _noaa_run_cache_dir(run_id):
+    run_dt = _parse_utc_datetime(run_id)
+    return os.path.join(
+        NOAA_CACHE_DIR, run_dt.strftime("%Y%m%dT%HZ")
+    )
+
+
+def _noaa_cache_file(run_id, lead):
+    return os.path.join(
+        _noaa_run_cache_dir(run_id), f"f{int(lead):03d}.grib2"
+    )
+
+
+def _read_noaa_cache_file(run_id, lead):
+    cache_path = _noaa_cache_file(run_id, lead)
+    try:
+        with open(cache_path, "rb") as cache_file:
+            grib_bytes = cache_file.read()
+    except FileNotFoundError:
+        return None
+    except OSError as exc:
+        print(f"[NOAA CACHE UYARI] {cache_path} okunamadı: {exc}")
+        return None
+
+    if not grib_bytes.startswith(b"GRIB"):
+        print(f"[NOAA CACHE INVALID] {cache_path} geçerli GRIB2 değil; siliniyor.")
+        try:
+            os.remove(cache_path)
+        except OSError:
+            pass
+        return None
+    return grib_bytes
+
+
+def _write_noaa_cache_file(run_id, lead, grib_bytes):
+    cache_path = _noaa_cache_file(run_id, lead)
+    os.makedirs(os.path.dirname(cache_path), exist_ok=True)
+    temporary_path = cache_path + f".{os.getpid()}.tmp"
+    with open(temporary_path, "wb") as cache_file:
+        cache_file.write(grib_bytes)
+        cache_file.flush()
+        os.fsync(cache_file.fileno())
+    os.replace(temporary_path, cache_path)
+
+
+def _noaa_filter_request(run_dt, lead):
+    date_token = run_dt.strftime("%Y%m%d")
+    cycle = run_dt.strftime("%H")
+    filename = f"gfs.t{cycle}z.pgrb2.0p25.f{int(lead):03d}"
+    params = {
+        "file": filename,
+        "var_TMP": "on",
+        "lev_2_m_above_ground": "on",
+        "var_APCP": "on",
+        "lev_surface": "on",
+        "var_UGRD": "on",
+        "var_VGRD": "on",
+        "lev_10_m_above_ground": "on",
+        "subregion": "",
+        "leftlon": f"{GRID_LON - 0.1:.2f}",
+        "rightlon": f"{GRID_LON + 0.1:.2f}",
+        "toplat": f"{GRID_LAT + 0.1:.2f}",
+        "bottomlat": f"{GRID_LAT - 0.1:.2f}",
+        "dir": f"/gfs.{date_token}/{cycle}/atmos",
+    }
+    return filename, params
+
+
+def _download_noaa_grib_file(session, run_dt, lead, headers):
+    filename, params = _noaa_filter_request(run_dt, lead)
+    try:
+        response = session.get(
+            NOAA_NOMADS_FILTER_URL,
+            params=params,
+            headers=headers,
+            timeout=75,
+        )
+    except requests.RequestException as exc:
+        return None, f"{type(exc).__name__}: {exc}", filename
+
+    if response.status_code in (404, 408, 425, 429, 500, 502, 503, 504):
+        return None, f"HTTP {response.status_code}", filename
+    try:
+        response.raise_for_status()
+    except requests.RequestException as exc:
+        return None, f"{type(exc).__name__}: {exc}", filename
+
+    grib_bytes = response.content
+    if not grib_bytes.startswith(b"GRIB"):
+        preview = grib_bytes[:250].decode("utf-8", errors="replace")
+        return None, f"GRIB2 yerine başka yanıt: {preview}", filename
+    return grib_bytes, None, filename
+
+
+def prune_noaa_cache():
+    """Remove abandoned cycle caches; active cycles are kept until processed."""
+    if not os.path.isdir(NOAA_CACHE_DIR):
+        return 0
+
+    now = datetime.now(timezone.utc)
+    cutoff = timedelta(hours=NOAA_CACHE_RETENTION_HOURS)
+    removed = 0
+    for entry in os.scandir(NOAA_CACHE_DIR):
+        if not entry.is_dir():
+            continue
+        try:
+            run_dt = datetime.strptime(
+                entry.name, "%Y%m%dT%HZ"
+            ).replace(tzinfo=timezone.utc)
+        except ValueError:
+            continue
+        if now - run_dt > cutoff:
+            try:
+                shutil.rmtree(entry.path)
+                removed += 1
+                print(f"[NOAA CACHE PRUNE] Eski önbellek silindi: {entry.name}")
+            except OSError as exc:
+                print(f"[NOAA CACHE UYARI] {entry.name} silinemedi: {exc}")
+    return removed
+
+
+def clear_noaa_run_cache(run_id):
+    cache_dir = _noaa_run_cache_dir(run_id)
+    if os.path.isdir(cache_dir):
+        try:
+            shutil.rmtree(cache_dir)
+            print(f"[NOAA CACHE CLEAR] İşlenen döngünün geçici önbelleği temizlendi: {run_id}")
+        except OSError as exc:
+            print(f"[NOAA CACHE UYARI] İşlenen önbellek temizlenemedi: {exc}")
+
+
+def prefetch_latest_noaa_cycle(skip_run_ids=None):
+    """Fetch a small batch of early forecast files before the cycle reaches +180h."""
+    skip_run_ids = set(skip_run_ids or ())
+    now = datetime.now(timezone.utc)
+    cycle_hour = (now.hour // 6) * 6
+    run_dt = now.replace(
+        hour=cycle_hour, minute=0, second=0, microsecond=0
+    )
+    run_id = run_dt.isoformat(timespec="seconds")
+    age_hours = (now - run_dt).total_seconds() / 3600.0
+
+    if run_id in skip_run_ids:
+        print(f"[NOAA PREFETCH SKIP] {run_id} zaten NOAA +180 envanterinde.")
+        return 0
+    if age_hours < NOAA_PREFETCH_MIN_AGE_HOURS:
+        print(
+            f"[NOAA PREFETCH SKIP] {run_id} döngüsü henüz {age_hours:.1f} saatlik; "
+            f"ön indirme eşiği {NOAA_PREFETCH_MIN_AGE_HOURS:.1f} saat."
+        )
+        return 0
+
+    os.makedirs(NOAA_CACHE_DIR, exist_ok=True)
+    leads = list(range(0, MIN_FORECAST_HOURS, 6))
+    missing = [
+        lead for lead in leads
+        if _read_noaa_cache_file(run_id, lead) is None
+    ]
+    cached_count = len(leads) - len(missing)
+    if not missing:
+        print(f"[NOAA PREFETCH READY] {run_id}: 30/30 tahmin dosyası önbellekte.")
+        return 0
+
+    batch = missing[:NOAA_PREFETCH_FILES_PER_CHECK]
+    session = requests.Session()
+    headers = {"User-Agent": "GFS-Watch/1.0"}
+    last_request_at = 0.0
+    downloaded = 0
+
+    print(
+        f"[NOAA PREFETCH] {run_id}: {cached_count}/30 hazır; "
+        f"bu kontrolde en fazla {len(batch)} dosya indirilecek."
+    )
+    try:
+        for lead in batch:
+            if last_request_at:
+                elapsed = time.monotonic() - last_request_at
+                if elapsed < NOAA_REQUEST_INTERVAL_SECONDS:
+                    time.sleep(NOAA_REQUEST_INTERVAL_SECONDS - elapsed)
+
+            filename, _ = _noaa_filter_request(run_dt, lead)
+            print(f"[NOAA PREFETCH] {filename} indiriliyor...")
+            grib_bytes, error, _ = _download_noaa_grib_file(
+                session, run_dt, lead, headers
+            )
+            last_request_at = time.monotonic()
+            if error:
+                print(
+                    f"[NOAA PREFETCH PENDING] {filename} henüz alınamadı: {error}; "
+                    "sonraki kontrolde tekrar denenecek."
+                )
+                break
+
+            _write_noaa_cache_file(run_id, lead, grib_bytes)
+            downloaded += 1
+            print(
+                f"[NOAA PREFETCH OK] {filename}: "
+                f"{len(grib_bytes)} byte önbelleğe alındı."
+            )
+    finally:
+        session.close()
+
+    print(
+        f"[NOAA PREFETCH BATCH] {run_id}: bu kontrolde {downloaded} yeni dosya; "
+        f"önbellekte toplam {cached_count + downloaded}/30."
+    )
+    return downloaded
+
+
 def fetch_full_weather_data(run_id, min_request_interval=10.0):
     """Fetch an exact GFS cycle; keep polite NOAA pacing configurable for one-off tools."""
     print(f"[STEP 1] NOAA/NCEP GRIB2 verisi çekiliyor: {run_id}")
@@ -565,62 +789,41 @@ def fetch_full_weather_data(run_id, min_request_interval=10.0):
                 if elapsed < min_request_interval:
                     time.sleep(min_request_interval - elapsed)
 
-            filename = f"gfs.t{cycle}z.pgrb2.0p25.f{lead:03d}"
-            params = {
-                "file": filename,
-                "var_TMP": "on",
-                "lev_2_m_above_ground": "on",
-                "var_APCP": "on",
-                "lev_surface": "on",
-                "var_UGRD": "on",
-                "var_VGRD": "on",
-                "lev_10_m_above_ground": "on",
-                "subregion": "",
-                "leftlon": f"{GRID_LON - 0.1:.2f}",
-                "rightlon": f"{GRID_LON + 0.1:.2f}",
-                "toplat": f"{GRID_LAT + 0.1:.2f}",
-                "bottomlat": f"{GRID_LAT - 0.1:.2f}",
-                "dir": f"/gfs.{date_token}/{cycle}/atmos",
-            }
+            grib_bytes = _read_noaa_cache_file(run_id, lead)
+            if grib_bytes is not None:
+                print(
+                    f"[NOAA CACHE HIT] f{lead:03d}: "
+                    f"{len(grib_bytes)} byte önbellekten alındı."
+                )
+            else:
+                if last_request_at:
+                    elapsed = time.monotonic() - last_request_at
+                    if elapsed < min_request_interval:
+                        time.sleep(min_request_interval - elapsed)
 
-            print(f"[NOAA] {filename} indiriliyor ({position + 1}/{len(download_order)})...")
-            try:
-                response = session.get(
-                    filter_url, params=params, headers=headers, timeout=75
+                filename, _ = _noaa_filter_request(run_dt, lead)
+                print(
+                    f"[NOAA] {filename} indiriliyor "
+                    f"({position + 1}/{len(download_order)})..."
+                )
+                grib_bytes, error, _ = _download_noaa_grib_file(
+                    session, run_dt, lead, headers
                 )
                 last_request_at = time.monotonic()
-            except requests.RequestException as exc:
-                print(f"[PENDING] NOAA NOMADS bağlantı hatası f{lead:03d}: {exc}")
-                return {
-                    "_pending_noaa_gfs": True,
-                    "_run_id": run_id,
-                    "_forecast_hour": lead,
-                    "_reason": str(exc),
-                }
+                if error:
+                    print(
+                        f"[PENDING] NOAA GRIB dosyası f{lead:03d} alınamadı: "
+                        f"{error}; sonraki kontrolde tekrar denenecek."
+                    )
+                    return {
+                        "_pending_noaa_gfs": True,
+                        "_run_id": run_id,
+                        "_forecast_hour": lead,
+                        "_reason": error,
+                    }
+                _write_noaa_cache_file(run_id, lead, grib_bytes)
 
-            if response.status_code in (404, 408, 425, 429, 500, 502, 503, 504):
-                print(
-                    f"[PENDING] NOAA GRIB dosyası f{lead:03d} henüz hazır değil "
-                    f"(HTTP {response.status_code}); sonraki kontrolde tekrar denenecek."
-                )
-                return {
-                    "_pending_noaa_gfs": True,
-                    "_run_id": run_id,
-                    "_forecast_hour": lead,
-                    "_http_status": response.status_code,
-                }
-            response.raise_for_status()
-            grib_bytes = response.content
-            if not grib_bytes.startswith(b"GRIB"):
-                preview = grib_bytes[:250].decode("utf-8", errors="replace")
-                print(f"[NOAA HATA] f{lead:03d} GRIB2 yerine yanıt döndü: {preview}")
-                return {
-                    "_pending_noaa_gfs": True,
-                    "_run_id": run_id,
-                    "_forecast_hour": lead,
-                    "_reason": "NOAA filter response is not GRIB2",
-                }
-
+            filename = f"gfs.t{cycle}z.pgrb2.0p25.f{lead:03d}"
             step_data = {
                 "temperature": None,
                 "wind_u": None,
@@ -1306,8 +1509,10 @@ async def send_telegram_voice(audio_path, max_attempts=3):
 # --- ANA ÇALIŞTIRICI ---
 async def process_gfs_update(strict=False):
     await asyncio.to_thread(prune_old_runs)
+    await asyncio.to_thread(prune_noaa_cache)
     candidates = await asyncio.to_thread(fetch_noaa_available_runs)
     if not candidates:
+        await asyncio.to_thread(prefetch_latest_noaa_cycle)
         message = "NOAA S3 üzerinde henüz +180 GFS GRIB2 dosyası yayımlanmadı."
         print(f"[SKIP] {message}")
         if strict:
@@ -1364,6 +1569,10 @@ async def process_gfs_update(strict=False):
 
         latest_run = candidates[-1]["run_id"]
         print(f"[UNCHANGED] Son GFS çalışmaları zaten işlendi; en güncel run: {latest_run}")
+        await asyncio.to_thread(
+            prefetch_latest_noaa_cycle,
+            {item["run_id"] for item in candidates},
+        )
         return
 
     eligible_runs = [
@@ -1377,6 +1586,10 @@ async def process_gfs_update(strict=False):
             f"[PENDING] GFS run {newest_pending['run_id']} şu an +{available_hours} saat; "
             f"bildirim için +{MIN_FORECAST_HOURS} saat gerekiyor. "
             "Tamamlanmış ve daha eski başka bir bekleyen run da bulunamadı."
+        )
+        await asyncio.to_thread(
+            prefetch_latest_noaa_cycle,
+            {item["run_id"] for item in candidates},
         )
         return
 
@@ -1472,6 +1685,7 @@ async def process_gfs_update(strict=False):
     else:
         print("[VOICE] Ses üretilemedi; metin bildirimi gönderilmiş durumda.")
     print(f"[COMPLETE] GFS run işlendi ve +180 saat bildirimi gönderildi: {run_id}")
+    await asyncio.to_thread(clear_noaa_run_cache, run_id)
 
 
 async def run_manual_multi_comparison(run_ids):
