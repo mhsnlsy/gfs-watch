@@ -1,5 +1,18 @@
 {
   "schema": "gfs-watch.notifications.v1",
-  "updated_at_utc": "2026-10-31T17:33:00+00:00",
-  "items": []
+  "updated_at_utc": "2026-10-31T17:45:51+00:00",
+  "items": [
+    {
+      "id": "20261031T12Z",
+      "title": "İstanbul GFS tahmin raporu",
+      "run_id_utc": "2026-10-31T12:00:00+00:00",
+      "published_at_utc": "2026-10-31T17:45:51+00:00",
+      "published_at_istanbul": "Cumartesi 31 Ekim 2026 20:45",
+      "cycle_label": "12Z · 31.10.2026 15:00 TSİ",
+      "summary": "GFS başlangıç analizine göre İstanbul'da sıcaklık 16.2 derece. Önümüzdeki üç günün özeti: Pazar 1 Kasım: En düşük 14.2, en yüksek 17.6 derece. Toplam yağış 0.5 milimetre. Rüzgâr hızı yüksek. Pazartesi 2 Kasım: En düşük 15.1, en yüksek 18.8 derece. Toplam yağış 5.5 milimetre. Salı 3 Kasım: En düşük 16.4, en yüksek 19.6 derece. Toplam yağış 2.5 milimetre.",
+      "report_text": "🌦 İSTANBUL'UN HAVASI | v2.1.0\nİSTANBUL GFS TAHMİN RAPORU\n📄 Çıktı: Yazılı tahmin raporu\n🛰 Model döngüsü: Cumartesi 31 Ekim 2026 15:00 TSİ (12Z UTC)\n🗓 Tahmin aralığı: Cumartesi 31 Ekim 2026 15:00 – Pazar 8 Kasım 2026 03:00 TSİ (+180 saat)\n🕒 Rapor zamanı: Cumartesi 31 Ekim 2026 20:45 TSİ\n📍 Koordinat: 41.014°N, 28.950°E\n\n🌡 GFS başlangıç sıcaklığı: 16.2°C\n💨 GFS başlangıç rüzgârı: 14.9 km/sa\n\n📅 ÖNÜMÜZDEKİ 3 GÜN\n• Pazar 1 Kasım: 14.2–17.6°C | Yağış: 0.5 mm | Maks. rüzgâr: 23.5 km/sa | Rüzgârlı\n• Pazartesi 2 Kasım: 15.1–18.8°C | Yağış: 5.5 mm | Maks. rüzgâr: 12.6 km/sa\n• Salı 3 Kasım: 16.4–19.6°C | Yağış: 2.5 mm | Maks. rüzgâr: 15.6 km/sa\n\n🌀 BASINÇ DURUMU | İstanbul merkezli 2.500 km çaplı alan\nGeçerlilik zamanı: Cumartesi 31 Ekim 2026 15:00 TSİ (model başlangıç saati)\n• Yüksek basınç merkezi: 1026.2 hPa (47.8°N, 16.5°E)\n• Alçak basınç merkezi: 1013.2 hPa (47.2°N, 35.5°E)\n\n🎙 Seslendirme metni:\n“GFS başlangıç analizine göre İstanbul'da sıcaklık 16.2 derece. Önümüzdeki üç günün özeti: Pazar 1 Kasım: En düşük 14.2, en yüksek 17.6 derece. Toplam yağış 0.5 milimetre. Rüzgâr hızı yüksek. Pazartesi 2 Kasım: En düşük 15.1, en yüksek 18.8 derece. Toplam yağış 5.5 milimetre. Salı 3 Kasım: En düşük 16.4, en yüksek 19.6 derece. Toplam yağış 2.5 milimetre.”",
+      "image_path": "media/gfs-20261031T12Z-comparison.png",
+      "audio_path": "media/gfs-20261031T12Z-voice.mp3"
+    }
+  ]
 }
