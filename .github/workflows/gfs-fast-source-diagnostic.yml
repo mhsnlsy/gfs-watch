@@ -1,0 +1,92 @@
+name: GFS Fast Source Diagnostic
+
+on:
+  push:
+    branches:
+      - main
+    paths:
+      - ".github/workflows/gfs-fast-source-diagnostic.yml"
+
+jobs:
+  probe:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - name: Probe point forecast sources for Istanbul coordinates
+        run: |
+          python - <<'PY'
+          import requests
+          from urllib.parse import urlparse
+
+          session = requests.Session()
+          session.headers.update({"User-Agent": "Mozilla/5.0 GFS-Watch/1.0"})
+
+          def probe(name, url, params=None, stream=False):
+              print(f"\n=== {name} ===")
+              try:
+                  response = session.get(url, params=params, timeout=35, stream=stream)
+                  print("URL:", response.url)
+                  print("HTTP:", response.status_code)
+                  print("Content-Type:", response.headers.get("Content-Type"))
+                  print("Content-Length:", response.headers.get("Content-Length"))
+                  if stream:
+                      chunk = next(response.iter_content(256), b"")
+                      print("First bytes:", repr(chunk[:120]))
+                  else:
+                      body = response.text
+                      print("Body length:", len(body))
+                      print("Body preview:", body[:1800].replace("\n", "\\n"))
+                  response.close()
+              except Exception as exc:
+                  print("ERROR:", type(exc).__name__, str(exc))
+
+          probe(
+              "METEOPT RAW GFS TEXT (41.014, 28.950)",
+              "https://www.meteopt.com/modelos/meteogramas/gfstxt.php",
+              {"lat":"41.014", "lon":"28.950", "units":"m"},
+          )
+
+          probe(
+              "WXCHARTS GFS POINT PAGE (41.014, 28.950)",
+              "https://wxcharts.com/",
+              {"panel":"default", "model":"gfs,gfs,gfs,gfs", "region":"turkey",
+               "chart":"overview,850temp,wind10mkph,snowdepth", "run":"06",
+               "step":"180", "lat":"41.014", "lon":"28.950", "plottype":"gfs_profile"},
+          )
+
+          probe(
+              "NOAA AWS GFS F180 OBJECT",
+              "https://noaa-gfs-bdp-pds.s3.amazonaws.com/gfs.20261031/06/atmos/gfs.t06z.pgrb2.0p25.f180",
+              stream=True,
+          )
+
+          probe(
+              "NOAA NOMADS GFS F180 POINT-AREA SUBSET",
+              "https://nomads.ncep.noaa.gov/cgi-bin/filter_gfs_0p25.pl",
+              {
+                  "dir":"/gfs.20261031/06/atmos",
+                  "file":"gfs.t06z.pgrb2.0p25.f180",
+                  "var_TMP":"on",
+                  "lev_2_m_above_ground":"on",
+                  "var_UGRD":"on",
+                  "var_VGRD":"on",
+                  "lev_10_m_above_ground":"on",
+                  "var_APCP":"on",
+                  "lev_surface":"on",
+                  "var_PRMSL":"on",
+                  "lev_mean_sea_level":"on",
+                  "subregion":"",
+                  "toplat":"41.5",
+                  "leftlon":"28.5",
+                  "rightlon":"29.5",
+                  "bottomlat":"40.5",
+              },
+              stream=True,
+          )
+
+          probe(
+              "NOAA AWS GFS F000 OBJECT",
+              "https://noaa-gfs-bdp-pds.s3.amazonaws.com/gfs.20261031/06/atmos/gfs.t06z.pgrb2.0p25.f000",
+              stream=True,
+          )
+          PY
