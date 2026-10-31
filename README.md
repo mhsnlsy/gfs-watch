@@ -55,3 +55,7 @@ Başarıyla işlenen tahminler `gfs-watch-state` dalında tutulur:
 ## Veri notları
 
 f000 alanı canlı gözlem değildir; GFS modelinin başlangıç analizidir. Basınç analizi f000 deniz seviyesi basınç alanını kullanır ve İstanbul merkezli 2.500 km çaplı bölgeyi değerlendirir. Değerler °C, km/sa ve mm cinsine çevrilir.
+
+## Web sitesi
+
+İstanbul'un Havası, GitHub Pages üzerinde ücretsiz statik site olarak yayınlanır: https://mhsnlsy.github.io/gfs-watch/ . Site, GFS Watch'ın `gfs-watch-state` dalındaki `public/latest.json` tahmin çıktısını kullanır; başarılı GFS çalışmaları tamamlandığında web yayını otomatik yenilenir. İlk kurulumda **Settings → Pages → Build and deployment → Source** alanı **GitHub Actions** olarak seçilmeli ve `Deploy İstanbul'un Havası` workflow'u bir kez elle çalıştırılmalıdır.
