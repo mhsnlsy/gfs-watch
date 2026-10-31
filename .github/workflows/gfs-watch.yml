@@ -1,16 +1,6 @@
 name: GFS Watch
 
 on:
-  push:
-    branches:
-      - main
-    paths:
-      - "main.py"
-      - "requirements.txt"
-      - ".github/workflows/gfs-watch.yml"
-  schedule:
-    # Run every 10 minutes, offset from the start of the hour to reduce queue delays.
-    - cron: "7,17,27,37,47,57 * * * *"
   workflow_dispatch:
 
 concurrency:
@@ -24,30 +14,29 @@ jobs:
   check-gfs:
     runs-on: ubuntu-latest
     timeout-minutes: 30
-
     steps:
       - name: Check out application
         uses: actions/checkout@v7
         with:
           fetch-depth: 0
-
       - name: Set up Python
         uses: actions/setup-python@v7
         with:
           python-version: "3.12"
           cache: "pip"
           cache-dependency-path: requirements.txt
-
+      - name: Install system dependencies
+        run: |
+          sudo apt-get update -qq
+          sudo apt-get install -y -qq libeccodes-dev
       - name: Install dependencies
         run: python -m pip install -r requirements.txt
-
       - name: Restore GFS run history
         run: |
           git fetch origin gfs-watch-state
           if git cat-file -e origin/gfs-watch-state:gfs_watch.db 2>/dev/null; then
             git show origin/gfs-watch-state:gfs_watch.db > gfs_watch.db
           fi
-
       - name: Check GFS once
         env:
           GFS_WATCH_ONCE: "1"
@@ -56,7 +45,6 @@ jobs:
           CHAT_ID: ${{ secrets.CHAT_ID }}
           GCP_SA_KEY: ${{ secrets.GCP_SA_KEY }}
         run: python -u main.py
-
       - name: Save GFS run history
         run: |
           cp gfs_watch.db "$RUNNER_TEMP/gfs_watch.db"
