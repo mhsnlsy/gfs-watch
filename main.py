@@ -1180,8 +1180,8 @@ def create_comparison_chart(current_run_id, payload, previous_runs):
 
         previous_dt = _parse_utc_datetime(previous_run_id).astimezone(TR_TZ)
         current_dt = _parse_utc_datetime(current_run_id).astimezone(TR_TZ)
-        previous_label = f"Önceki: {previous_dt:%d.%m %H}Z"
-        current_label = f"Yeni: {current_dt:%d.%m %H}Z"
+        previous_label = f"Önceki: {previous_dt:%d.%m %H:%M} TSİ"
+        current_label = f"Yeni: {current_dt:%d.%m %H:%M} TSİ"
 
         fig, axes = plt.subplots(
             3, 1, figsize=(15, 11), sharex=True,
@@ -1267,15 +1267,27 @@ def create_comparison_chart(current_run_id, payload, previous_runs):
             plt.close(fig)
 
 
-async def send_telegram_photo(photo, caption):
+async def send_telegram_photo(photo, caption, max_attempts=3):
     if not TELEGRAM_TOKEN or not CHAT_ID:
         raise RuntimeError("TELEGRAM_TOKEN veya CHAT_ID eksik.")
     if not photo:
         return
-    photo.seek(0)
-    async with Bot(token=TELEGRAM_TOKEN) as bot:
-        await bot.send_photo(chat_id=CHAT_ID, photo=photo, caption=caption)
-    print("[TELEGRAM] GFS karşılaştırma görseli gönderildi.")
+    for attempt in range(1, max_attempts + 1):
+        try:
+            photo.seek(0)
+            async with Bot(token=TELEGRAM_TOKEN) as bot:
+                await bot.send_photo(chat_id=CHAT_ID, photo=photo, caption=caption)
+            print("[TELEGRAM] GFS karşılaştırma görseli gönderildi.")
+            return
+        except Exception as exc:
+            if attempt >= max_attempts:
+                raise
+            delay = 5 * attempt
+            print(
+                f"[KIYAS GÖRSELİ RETRY] {attempt}/{max_attempts} başarısız: "
+                f"{exc}. {delay} saniye sonra tekrar."
+            )
+            await asyncio.sleep(delay)
 
 
 async def send_telegram_voice(audio_path, max_attempts=3):
