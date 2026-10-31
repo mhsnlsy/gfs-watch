@@ -1,0 +1,12 @@
+{
+  "name": "gfs-watch-push",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "generate-vapid": "web-push generate-vapid-keys --json",
+    "send": "node send-notification.mjs"
+  },
+  "dependencies": {
+    "web-push": "3.6.7"
+  }
+}
