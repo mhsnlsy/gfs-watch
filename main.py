@@ -980,25 +980,8 @@ def analyze_and_build_output(current_run_name, payload, previous_runs):
         except Exception as exc:
             print(f"[UYARI] Kıyaslama yapılırken hata oluştu: {exc}")
 
-    # Keep the existing comparison narration structure for now. The requested
-    # detailed day/time voice redesign can be handled separately later.
-    if temp_shifts or precip_shifts:
-        speech_parts.append(
-            "Önceki GFS çalışmasıyla kıyaslandığında ilerleyen saatlerde değişimler var."
-        )
-        if temp_shifts:
-            speech_parts.append("Sıcaklıkta: " + ", ".join(temp_shifts[:2]) + ".")
-        if precip_shifts:
-            speech_parts.append("Yağışta: " + ", ".join(precip_shifts[:2]) + ".")
-    elif previous_runs and comparison_points:
-        speech_parts.append(
-            "Önceki GFS çalışmasıyla kıyaslama yapıldı; belirlenen eşiklerin üzerinde "
-            "sıcaklık veya yağış değişikliği yok."
-        )
-    elif previous_runs:
-        speech_parts.append(
-            "Önceki GFS çalışmasıyla ortak zaman dilimi bulunamadı; kıyaslama yapılamadı."
-        )
+    # Run-to-run changes are intentionally omitted from speech.
+    # They remain available in the written report and Telegram comparison chart.
 
     # Pressure findings are written to the text report only, never to speech.
     speech_text = " ".join(speech_parts)
