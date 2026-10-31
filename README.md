@@ -8,7 +8,7 @@
 - Gerekli meteorolojik alanlar, GRIB2 dosyalarının `.idx` envanterinden seçilir ve yalnızca ilgili byte aralıkları indirilir. Böylece yaklaşık 500 MB'lık küresel dosyanın tamamı indirilmez.
 - Her yeni tahmin dosyası indirildiğinde ecCodes ile çözülür; İstanbul için sıcaklık, 10 m rüzgârı ve yağış değerleri önceden hazırlanıp önbelleğe yazılır.
 - Ön veriler f000–f120 arasında saatlik, f123–f177 arasında üç saatlik adımlardan oluşur: toplam 140 lead. f180 son dosyadır. f180 yayımlandığında sistem önce 140 ön verinin hazır olduğunu doğrular, ardından f180'i alıp 141 zaman noktalı tahmini birleştirir.
-- Ön indirme taraması 5 dakikada bir, NOAA f180 yayın kontrolü 15 saniyede bir yapılır. Her otomatik çalışma en fazla 90 dakika izleme yapar.
+- Her GFS döngüsü için GitHub Actions tek bir 90 dakikalık izleme başlatır. Bu süre boyunca NOAA S3'teki f180 dosyası 15 saniyede bir kontrol edilir; ön GRIB2 dosyaları eksikse 60 saniyede bir yeniden taranıp indirilir. Geçici 404, yayın gecikmesi veya ağ hatasında aynı izleme oturumu içinde tekrar denenir. İşlenmemiş döngü, izleme penceresi içinde tamamlandığında otomatik raporlanır.
 - GRIB2 alanları yerel olarak ecCodes ile çözülür. Günlük sıcaklık, yağış ve rüzgâr özetleri modelin mevcut zaman adımlarından hesaplanır.
 - Koordinat: **41.014°N, 28.950°E**. En yakın 0.25° GFS grid noktası **41.000°N, 29.000°E**; değerler tüm İstanbul için enterpolasyon değil, bu grid hücresi içindir.
 
@@ -16,14 +16,14 @@
 
 GitHub Actions zamanlaması İstanbul saatine (TSİ, UTC+3) göredir:
 
-| Başlangıç | GFS döngüsü |
+| Başlangıç (TSİ) | GFS döngüsü |
 |---|---|
 | 06:50 | 00Z |
 | 12:50 | 06Z |
 | 18:50 | 12Z |
 | 00:50 | 18Z |
 
-GitHub zamanlanmış işleri birkaç dakika geciktirebilir. Her çalışma 90 dakikaya kadar NOAA'yı izler; kod değişiklikleri üretim tahminini otomatik başlatmaz. **Actions → GFS Watch → Run workflow** ile tek seferlik kontrol elle başlatılabilir.
+Her zamanlanmış çalışma ilgili döngüyü 90 dakika boyunca izler ve NOAA'yı 15 saniyede bir yeniden kontrol eder. GitHub zamanlanmış işleri birkaç dakika geciktirebilir. **Actions → GFS Watch → Run workflow** ile izleme elle de başlatılabilir.
 
 ## Kurulum
 
