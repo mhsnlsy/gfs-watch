@@ -1508,7 +1508,6 @@ def analyze_and_build_output(current_run_name, payload, previous_runs):
             "",
         ])
     text_report_lines.append("📅 ÖNÜMÜZDEKİ 3 GÜN")
-    ]
 
     for i in daily_indices:
         day_label = _format_tr_date(daily["time"][i])
