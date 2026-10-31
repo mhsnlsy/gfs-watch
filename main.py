@@ -22,8 +22,13 @@ TR_TZ = ZoneInfo("Europe/Istanbul")  # İstanbul saat dilimi
 POLL_INTERVAL_SECONDS = max(60, int(os.getenv("POLL_INTERVAL_SECONDS", "600")))
 DATA_DIR = "/data" if os.path.isdir("/data") else "."
 DB_PATH = os.getenv("DB_PATH", os.path.join(DATA_DIR, "gfs_watch.db"))
-MODEL_UPDATES_URL = "https://api.open-meteo.com/v1/model-updates"
 MODEL_NAME = "gfs_seamless"
+# Open-Meteo exposes model run metadata as per-model JSON files, not
+# through the retired /v1/model-updates endpoint.
+MODEL_METADATA_URLS = (
+    "https://api.open-meteo.com/data/ncep_gfs013/static/meta.json",
+    "https://api.open-meteo.com/data/ncep_gfs025/static/meta.json",
+)
 RETENTION_DAYS = 10
 
 SYNOPTIC_POINTS = {
@@ -117,49 +122,36 @@ def _normalise_model_timestamp(value):
 
 
 def fetch_model_update_metadata():
-    try:
-        response = requests.get(
-            MODEL_UPDATES_URL,
-            params={"models": MODEL_NAME},
-            timeout=15,
-        )
-        response.raise_for_status()
-        data = response.json()
-        records = data
-        if isinstance(data, dict):
-            for key in ("model_updates", "models", "data"):
-                if key in data:
-                    records = data[key]
-                    break
-        record = None
-        if isinstance(records, list):
-            matches = [
-                item for item in records
-                if isinstance(item, dict)
-                and (item.get("model") == MODEL_NAME or item.get("model_name") == MODEL_NAME)
-            ]
-            record = matches[0] if matches else (records[0] if len(records) == 1 else None)
-        elif isinstance(records, dict):
-            record = records.get(MODEL_NAME, records)
-        if not isinstance(record, dict):
-            raise ValueError(f"{MODEL_NAME} metadata kaydı bulunamadı: {data}")
-        initialisation = _normalise_model_timestamp(
-            record.get("last_run_initialisation_time")
-        )
-        if not initialisation:
-            raise ValueError(f"GFS model başlangıç zamanı bulunamadı: {record}")
-        return {
-            "model": MODEL_NAME,
-            "run_id": initialisation,
-            "last_run_initialisation_time": initialisation,
-            "last_run_availability_time": _normalise_model_timestamp(
-                record.get("last_run_availability_time")
-            ),
-            "update_interval_seconds": record.get("update_interval_seconds"),
-        }
-    except Exception as e:
-        print(f"[METADATA HATA] GFS model sürümü alınamadı: {e}")
-        return None
+    errors = []
+    for metadata_url in MODEL_METADATA_URLS:
+        try:
+            response = requests.get(metadata_url, timeout=15)
+            response.raise_for_status()
+            record = response.json()
+            if not isinstance(record, dict):
+                raise ValueError(f"Beklenmeyen metadata yanıtı: {record}")
+
+            initialisation = _normalise_model_timestamp(
+                record.get("last_run_initialisation_time")
+            )
+            if not initialisation:
+                raise ValueError(f"GFS model başlangıç zamanı bulunamadı: {record}")
+
+            return {
+                "model": MODEL_NAME,
+                "metadata_source": metadata_url,
+                "run_id": initialisation,
+                "last_run_initialisation_time": initialisation,
+                "last_run_availability_time": _normalise_model_timestamp(
+                    record.get("last_run_availability_time")
+                ),
+                "update_interval_seconds": record.get("update_interval_seconds"),
+            }
+        except Exception as e:
+            errors.append(f"{metadata_url}: {type(e).__name__}: {e}")
+
+    print("[METADATA HATA] GFS model sürümü alınamadı. " + " | ".join(errors))
+    return None
 
 
 # --- VERİ ÇEKME (+180 SAAT / FAST-FETCH) ---
@@ -441,11 +433,14 @@ async def send_telegram_voice(audio_path, max_attempts=3):
             os.remove(audio_path)
 
 # --- ANA ÇALIŞTIRICI ---
-async def process_gfs_update():
+async def process_gfs_update(strict=False):
     await asyncio.to_thread(prune_old_runs)
     metadata = await asyncio.to_thread(fetch_model_update_metadata)
     if not metadata:
-        print("[SKIP] Model metadata alınamadı; sonraki kontrolde tekrar denenecek.")
+        message = "GFS model metadata alınamadı; doğru Open-Meteo model adresleri kontrol edilmeli."
+        print(f"[SKIP] {message}")
+        if strict:
+            raise RuntimeError(message)
         return
     run_id = metadata["run_id"]
 
@@ -478,7 +473,10 @@ async def process_gfs_update():
     print(f"[UPDATE] Yeni GFS run tespit edildi: {run_id}")
     payload = await asyncio.to_thread(fetch_full_weather_data)
     if not payload:
-        print("[RETRY] Forecast verisi alınamadı; run işlenmiş olarak kaydedilmedi.")
+        message = "Forecast verisi alınamadı; GFS run işlenmiş olarak kaydedilmedi."
+        print(f"[RETRY] {message}")
+        if strict:
+            raise RuntimeError(message)
         return
     payload["model_metadata"] = metadata
     full_text_report, speech_text = analyze_and_build_output(
@@ -527,7 +525,7 @@ async def run_once():
     """Run one GFS check and exit; used by scheduled GitHub Actions."""
     init_db()
     print(f"[START] GFS Watch tek kontrol modunda çalışıyor; model: {MODEL_NAME}.")
-    await process_gfs_update()
+    await process_gfs_update(strict=True)
 
 
 if __name__ == "__main__":
