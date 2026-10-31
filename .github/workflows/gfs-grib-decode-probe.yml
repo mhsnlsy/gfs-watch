@@ -38,10 +38,10 @@ jobs:
               "var_PRMSL": "on",
               "lev_mean_sea_level": "on",
               "subregion": "",
-              "leftlon": "27",
-              "rightlon": "39",
-              "toplat": "47",
-              "bottomlat": "33",
+              "leftlon": "10",
+              "rightlon": "42",
+              "toplat": "50",
+              "bottomlat": "30",
               "dir": "/gfs.20261031/06/atmos",
           }
           response = requests.get(url, params=params, timeout=90)
