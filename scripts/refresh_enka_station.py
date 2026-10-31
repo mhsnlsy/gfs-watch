@@ -15,14 +15,14 @@ OUT = Path("public/station-observation.json")
 
 
 def clean(value):
-    value = re.sub(r"<script\\b[^>]*>.*?</script>", " ", value, flags=re.I | re.S)
-    value = re.sub(r"<style\\b[^>]*>.*?</style>", " ", value, flags=re.I | re.S)
+    value = re.sub(r"<script\b[^>]*>.*?</script>", " ", value, flags=re.I | re.S)
+    value = re.sub(r"<style\b[^>]*>.*?</style>", " ", value, flags=re.I | re.S)
     value = re.sub(r"<[^>]+>", " ", value)
-    return re.sub(r"\\s+", " ", unescape(value)).strip()
+    return re.sub(r"\s+", " ", unescape(value)).strip()
 
 
 def number(value):
-    match = re.search(r"[-+]?\\d+(?:[.,]\\d+)?", value or "")
+    match = re.search(r"[-+]?\d+(?:[.,]\d+)?", value or "")
     return float(match.group(0).replace(",", ".")) if match else None
 
 
@@ -41,7 +41,7 @@ def fetch():
     page = response.text
     page_text = clean(page)
     stamp = re.search(
-        r"As\\s+of\\s*:?[ ]*(\\d{1,2}/\\d{1,2}/\\d{2,4})\\s+(\\d{1,2}:\\d{2})",
+        r"As\s+of\s*:?[ ]*(\d{1,2}/\d{1,2}/\d{2,4})\s+(\d{1,2}:\d{2})",
         page_text,
         flags=re.I,
     )
@@ -59,8 +59,8 @@ def fetch():
         raise ValueError(f"Unrecognized ENKA timestamp: {stamp_text}")
 
     values = {}
-    for row in re.findall(r"<tr\\b[^>]*>(.*?)</tr>", page, flags=re.I | re.S):
-        cells = [clean(x) for x in re.findall(r"<t[dh]\\b[^>]*>(.*?)</t[dh]>", row, flags=re.I | re.S)]
+    for row in re.findall(r"<tr\b[^>]*>(.*?)</tr>", page, flags=re.I | re.S):
+        cells = [clean(x) for x in re.findall(r"<t[dh]\b[^>]*>(.*?)</t[dh]>", row, flags=re.I | re.S)]
         if len(cells) < 2:
             continue
         label, value = cells[0].strip().lower(), cells[1]
@@ -71,7 +71,7 @@ def fetch():
         elif "wind - 10 min avg" in label or "wind – 10 min avg" in label:
             values["wind_knots"] = number(value)
         elif label == "wind":
-            direction = re.match(r"\\s*(NNE|ENE|ESE|SSE|SSW|WSW|WNW|NNW|N|NE|E|SE|S|SW|W|NW)\\b", value, flags=re.I)
+            direction = re.match(r"\s*(NNE|ENE|ESE|SSE|SSW|WSW|WNW|NNW|N|NE|E|SE|S|SW|W|NW)\b", value, flags=re.I)
             values["direction"] = direction.group(1).upper() if direction else None
             values.setdefault("wind_knots", number(value))
         elif label == "daily rain":
@@ -122,7 +122,7 @@ def main():
         "station_observation": observation,
         "updated_at_utc": datetime.now(timezone.utc).isoformat(timespec="seconds"),
     }
-    OUT.write_text(json.dumps(document, ensure_ascii=False, indent=2) + "\\n", encoding="utf-8")
+    OUT.write_text(json.dumps(document, ensure_ascii=False, indent=2) + "\n", encoding="utf-8")
     print(f"New ENKA observation published: {observation['observed_at_utc']}")
 
 
