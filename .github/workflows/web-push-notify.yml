@@ -24,10 +24,17 @@ jobs:
     if: ${{ vars.PUSH_API_URL != '' }}
     runs-on: ubuntu-latest
     steps:
+      - name: Check out application code
+        uses: actions/checkout@v7
+        with:
+          ref: main
+          path: app-source
+
       - name: Check out published notification feed
         uses: actions/checkout@v7
         with:
           ref: gfs-watch-state
+          path: forecast-data
 
       - name: Set up Node.js
         uses: actions/setup-node@v5
@@ -35,7 +42,7 @@ jobs:
           node-version: "22"
 
       - name: Install Web Push sender
-        working-directory: push-worker
+        working-directory: app-source/push-worker
         run: npm install --no-package-lock --ignore-scripts
 
       - name: Send Web Push notification
@@ -46,5 +53,6 @@ jobs:
           VAPID_PUBLIC_KEY: ${{ secrets.VAPID_PUBLIC_KEY }}
           VAPID_PRIVATE_KEY: ${{ secrets.VAPID_PRIVATE_KEY }}
           NOTIFICATION_ID: ${{ inputs.notification_id }}
+          NOTIFICATION_FEED_PATH: ../../forecast-data/public/notifications/latest.json
           VAPID_SUBJECT: "https://mhsnlsy.github.io/gfs-watch/"
         run: node send-notification.mjs
