@@ -564,6 +564,17 @@ def _noaa_cache_file(run_id, lead):
     )
 
 
+def _mark_noaa_cache_updated():
+    """Expose cache changes to the GitHub Actions cache-save step."""
+    output_path = os.getenv("GITHUB_OUTPUT")
+    if output_path:
+        try:
+            with open(output_path, "a", encoding="utf-8") as output_file:
+                output_file.write("noaa_cache_updated=true\\n")
+        except OSError as exc:
+            print(f"[NOAA CACHE UYARI] GitHub output yazılamadı: {exc}")
+
+
 def _read_noaa_cache_file(run_id, lead):
     cache_path = _noaa_cache_file(run_id, lead)
     try:
@@ -579,6 +590,7 @@ def _read_noaa_cache_file(run_id, lead):
         print(f"[NOAA CACHE INVALID] {cache_path} geçerli GRIB2 değil; siliniyor.")
         try:
             os.remove(cache_path)
+            _mark_noaa_cache_updated()
         except OSError:
             pass
         return None
@@ -594,6 +606,7 @@ def _write_noaa_cache_file(run_id, lead, grib_bytes):
         cache_file.flush()
         os.fsync(cache_file.fileno())
     os.replace(temporary_path, cache_path)
+    _mark_noaa_cache_updated()
 
 
 def _noaa_filter_request(run_dt, lead):
@@ -666,6 +679,7 @@ def prune_noaa_cache():
             try:
                 shutil.rmtree(entry.path)
                 removed += 1
+                _mark_noaa_cache_updated()
                 print(f"[NOAA CACHE PRUNE] Eski önbellek silindi: {entry.name}")
             except OSError as exc:
                 print(f"[NOAA CACHE UYARI] {entry.name} silinemedi: {exc}")
@@ -677,6 +691,7 @@ def clear_noaa_run_cache(run_id):
     if os.path.isdir(cache_dir):
         try:
             shutil.rmtree(cache_dir)
+            _mark_noaa_cache_updated()
             print(f"[NOAA CACHE CLEAR] İşlenen döngünün geçici önbelleği temizlendi: {run_id}")
         except OSError as exc:
             print(f"[NOAA CACHE UYARI] İşlenen önbellek temizlenemedi: {exc}")
