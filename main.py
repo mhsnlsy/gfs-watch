@@ -2194,28 +2194,6 @@ async def run_scheduled_watch():
 
 async def run_once():
     """Run a one-off check, GRIB2 smoke test, or continuous scheduled watch."""
-    smoke_test_run_id = os.getenv("NOAA_GRIB2_SMOKE_TEST_RUN_ID", "").strip()
-    if smoke_test_run_id:
-        init_db()
-        expected_steps = len(gfs_forecast_hours(MIN_FORECAST_HOURS))
-        print(
-            f"[GRIB2 SMOKE TEST] {smoke_test_run_id} için "
-            f"{expected_steps} adım doğrudan S3'ten indiriliyor."
-        )
-        payload = await asyncio.to_thread(fetch_full_weather_data, smoke_test_run_id)
-        if not payload or "_pending_noaa_gfs" in payload:
-            raise RuntimeError(f"NOAA direct GRIB2 smoke test failed: {payload}")
-        point_count = len(payload.get("timeline_180h", {}))
-        if point_count != expected_steps:
-            raise RuntimeError(
-                f"GRIB2 smoke test expected {expected_steps} forecast points, got {point_count}"
-            )
-        print(
-            f"[GRIB2 SMOKE TEST OK] {smoke_test_run_id}: "
-            f"{point_count} forecast steps; no Telegram message sent."
-        )
-        return
-
     if os.getenv("GFS_WATCH_CONTINUOUS", "").strip().lower() in {"1", "true", "yes"}:
         await run_scheduled_watch()
         return
