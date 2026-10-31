@@ -1,6 +1,12 @@
 name: Send GFS Web Push
 
 on:
+  workflow_call:
+    inputs:
+      notification_id:
+        description: "Optional notification ID; blank sends the latest feed item"
+        required: false
+        type: string
   push:
     branches: [gfs-watch-state]
     paths:
