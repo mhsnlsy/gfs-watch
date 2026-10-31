@@ -63,8 +63,9 @@ This is a downloadable public data file, not a live feed automatically consumed 
 ## Notification behaviour
 
 - One text notification is sent per eligible GFS run; there are no separate notifications for forecast changes.
-- When a previous processed run exists, every automatic GFS cycle notification (00Z, 06Z, 12Z and 18Z) also sends a PNG comparison chart to Telegram. It contains paired daily temperature candlesticks (first/last six-hour sample as open/close; daily low/high as wick), daily precipitation totals and daily maximum wind speed for dates shared by both runs.
-- The first processed run has no previous run to compare and therefore sends no comparison image. Manual report resends do not generate or send comparison images.
+- Every automatic GFS cycle notification (00Z, 06Z, 12Z and 18Z) also sends a four-cycle PNG comparison chart to Telegram: the current run plus the three immediately preceding six-hour cycles. For example, a 12Z notification compares 18Z (previous day), 00Z, 06Z and the new 12Z run.
+- The chart contains grouped daily temperature candlesticks (first/last six-hour sample as open/close; daily low/high as wick), grouped daily precipitation totals and grouped daily maximum wind speed. All four runs use the same set of overlapping Istanbul calendar dates and consistent colours across panels.
+- The three exact preceding runs are loaded from SQLite in read-only mode. If a run is missing from retained history, its NOAA/NCEP forecast is fetched read-only for chart generation; this fallback does not save a DB row, alter notification state or update public JSON. Manual report resends do not generate or send comparison images.
 - Telegram text delivery does not wait for TTS. Audio generation starts concurrently in a background thread.
 - TTS generation and Telegram voice delivery each retry up to three times after failures. If audio cannot be produced or sent, the text report remains delivered.
 - GitHub Actions prevents overlapping GFS Watch jobs.
