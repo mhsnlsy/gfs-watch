@@ -93,12 +93,18 @@ def fetch_model_update_metadata():
         )
         response.raise_for_status()
         data = response.json()
-        records = data.get("model_updates", data) if isinstance(data, dict) else data
+        records = data
+        if isinstance(data, dict):
+            for key in ("model_updates", "models", "data"):
+                if key in data:
+                    records = data[key]
+                    break
         record = None
         if isinstance(records, list):
             matches = [
                 item for item in records
-                if item.get("model") == MODEL_NAME or item.get("model_name") == MODEL_NAME
+                if isinstance(item, dict)
+                and (item.get("model") == MODEL_NAME or item.get("model_name") == MODEL_NAME)
             ]
             record = matches[0] if matches else (records[0] if len(records) == 1 else None)
         elif isinstance(records, dict):
@@ -377,6 +383,23 @@ async def process_gfs_update():
         print("[SKIP] Model metadata alınamadı; sonraki kontrolde tekrar denenecek.")
         return
     run_id = metadata["run_id"]
+
+    # Open-Meteo recommends allowing 10 minutes after availability so all
+    # geographically distributed API servers have received the new run.
+    available_at = metadata.get("last_run_availability_time")
+    if available_at:
+        try:
+            available_dt = datetime.fromisoformat(available_at.replace("Z", "+00:00"))
+            if available_dt.tzinfo is None:
+                available_dt = available_dt.replace(tzinfo=timezone.utc)
+            ready_at = available_dt.timestamp() + 600
+            if datetime.now(timezone.utc).timestamp() < ready_at:
+                remaining = int(ready_at - datetime.now(timezone.utc).timestamp())
+                print(f"[WAIT] GFS verisi sunuculara yayılıyor; yaklaşık {remaining} saniye sonra tekrar kontrol.")
+                return
+        except (TypeError, ValueError):
+            print("[METADATA UYARI] Availability zamanı çözümlenemedi; normal kontrole devam ediliyor.")
+
     previous_runs = get_previous_runs()
     if previous_runs and previous_runs[0][0] == run_id:
         print(f"[UNCHANGED] GFS run zaten işlendi: {run_id}")
