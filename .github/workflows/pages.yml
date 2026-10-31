@@ -49,7 +49,7 @@ jobs:
           python -m json.tool forecast-data/public/latest.json > /dev/null
           mkdir -p _site/data
           cp -a source/site/. _site/
-          printf '{"apiBaseUrl":"%s"}\\n' "$PUSH_API_URL" > _site/push-config.json
+          printf '{"apiBaseUrl":"%s"}\n' "$PUSH_API_URL" > _site/push-config.json
           cp forecast-data/public/latest.json _site/data/latest.json
           if [ -s forecast-data/public/station-observation.json ]; then
             python -m json.tool forecast-data/public/station-observation.json > /dev/null
