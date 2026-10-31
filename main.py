@@ -3,7 +3,7 @@ import os
 import json
 import sqlite3
 import asyncio
-from datetime import datetime
+from datetime import datetime, timezone
 from zoneinfo import ZoneInfo  # Türkiye saati için yerleşik kütüphane
 import requests
 from google.cloud import texttospeech
@@ -19,6 +19,11 @@ LAT = 41.014
 LON = 28.950
 LOCATION_NAME = "İstanbul"
 TR_TZ = ZoneInfo("Europe/Istanbul")  # İstanbul saat dilimi
+POLL_INTERVAL_SECONDS = max(60, int(os.getenv("POLL_INTERVAL_SECONDS", "600")))
+DATA_DIR = "/data" if os.path.isdir("/data") else "."
+DB_PATH = os.getenv("DB_PATH", os.path.join(DATA_DIR, "gfs_watch.db"))
+MODEL_UPDATES_URL = "https://api.open-meteo.com/v1/model-updates"
+MODEL_NAME = "gfs_seamless"
 
 SYNOPTIC_POINTS = {
     "Balkanlar": (45.0, 18.0),
@@ -29,7 +34,7 @@ SYNOPTIC_POINTS = {
 
 # --- VERİTABANI İŞLEMLERİ ---
 def init_db():
-    conn = sqlite3.connect("gfs_watch.db")
+    conn = sqlite3.connect(DB_PATH)
     cursor = conn.cursor()
     cursor.execute("""
         CREATE TABLE IF NOT EXISTS gfs_runs_v3 (
@@ -43,7 +48,7 @@ def init_db():
     conn.close()
 
 def get_previous_runs():
-    conn = sqlite3.connect("gfs_watch.db")
+    conn = sqlite3.connect(DB_PATH)
     cursor = conn.cursor()
     cursor.execute("""
         SELECT run_name, forecast_json 
@@ -54,7 +59,7 @@ def get_previous_runs():
     return rows
 
 def save_run(run_name, forecast_dict):
-    conn = sqlite3.connect("gfs_watch.db")
+    conn = sqlite3.connect(DB_PATH)
     cursor = conn.cursor()
     cursor.execute("""
         INSERT INTO gfs_runs_v3 (run_name, forecast_json)
@@ -62,6 +67,68 @@ def save_run(run_name, forecast_dict):
     """, (run_name, json.dumps(forecast_dict)))
     conn.commit()
     conn.close()
+
+# --- GFS MODEL SÜRÜMÜ METADATA ---
+def _normalise_model_timestamp(value):
+    if value is None:
+        return None
+    try:
+        if isinstance(value, (int, float)) or str(value).isdigit():
+            parsed = datetime.fromtimestamp(float(value), tz=timezone.utc)
+        else:
+            parsed = datetime.fromisoformat(str(value).replace("Z", "+00:00"))
+            if parsed.tzinfo is None:
+                parsed = parsed.replace(tzinfo=timezone.utc)
+        return parsed.astimezone(timezone.utc).isoformat(timespec="seconds")
+    except (TypeError, ValueError, OverflowError):
+        return str(value)
+
+
+def fetch_model_update_metadata():
+    try:
+        response = requests.get(
+            MODEL_UPDATES_URL,
+            params={"models": MODEL_NAME},
+            timeout=15,
+        )
+        response.raise_for_status()
+        data = response.json()
+        records = data
+        if isinstance(data, dict):
+            for key in ("model_updates", "models", "data"):
+                if key in data:
+                    records = data[key]
+                    break
+        record = None
+        if isinstance(records, list):
+            matches = [
+                item for item in records
+                if isinstance(item, dict)
+                and (item.get("model") == MODEL_NAME or item.get("model_name") == MODEL_NAME)
+            ]
+            record = matches[0] if matches else (records[0] if len(records) == 1 else None)
+        elif isinstance(records, dict):
+            record = records.get(MODEL_NAME, records)
+        if not isinstance(record, dict):
+            raise ValueError(f"{MODEL_NAME} metadata kaydı bulunamadı: {data}")
+        initialisation = _normalise_model_timestamp(
+            record.get("last_run_initialisation_time")
+        )
+        if not initialisation:
+            raise ValueError(f"GFS model başlangıç zamanı bulunamadı: {record}")
+        return {
+            "model": MODEL_NAME,
+            "run_id": initialisation,
+            "last_run_initialisation_time": initialisation,
+            "last_run_availability_time": _normalise_model_timestamp(
+                record.get("last_run_availability_time")
+            ),
+            "update_interval_seconds": record.get("update_interval_seconds"),
+        }
+    except Exception as e:
+        print(f"[METADATA HATA] GFS model sürümü alınamadı: {e}")
+        return None
+
 
 # --- VERİ ÇEKME (+180 SAAT / FAST-FETCH) ---
 def fetch_full_weather_data():
@@ -138,14 +205,11 @@ def fetch_full_weather_data():
             "synoptic_alerts": synoptic_alerts
         }
 
-        # Türkiye saatiyle güncelleme adı
-        now_tr = datetime.now(TR_TZ)
-        run_name = f"Güncelleme ({now_tr.strftime('%H:%M')})"
         print("[STEP 1 BAŞARILI] Hava durumu verisi alındı.")
-        return run_name, payload
+        return payload
     except Exception as e:
         print(f"[STEP 1 HATA] Open-Meteo erişim hatası: {e}")
-        return None, None
+        return None
 
 # --- RAPOR VE SES METNİ OLUŞTURUCU ---
 def analyze_and_build_output(current_run_name, payload, previous_runs):
@@ -258,78 +322,141 @@ def analyze_and_build_output(current_run_name, payload, previous_runs):
     return full_text_report, speech_text
 
 # --- GOOGLE CLOUD TTS MOTORU (1.2X HIZ) ---
-async def generate_speech_gcp(text, output_file="summary.mp3"):
-    print("[STEP 3] Google Cloud TTS ile 1.2x hızında ses dosyası üretiliyor...")
+def generate_speech_gcp(text, output_file="summary.mp3"):
+    """Synchronous TTS function; the caller runs it in a background thread."""
+    print("[TTS] Google Cloud TTS ile 1.2x hızında ses dosyası üretiliyor...")
     if not GCP_SA_KEY:
-        print("[STEP 3 ATLANDI] GCP_SA_KEY bulunamadı, ses üretimi atlanıyor.")
+        print("[TTS ATLANDI] GCP_SA_KEY bulunamadı; metin bildirimi yine gönderilecek.")
         return None
-
     try:
         key_dict = json.loads(GCP_SA_KEY)
         credentials = service_account.Credentials.from_service_account_info(key_dict)
         client = texttospeech.TextToSpeechClient(credentials=credentials)
-
         synthesis_input = texttospeech.SynthesisInput(text=text)
         voice = texttospeech.VoiceSelectionParams(
             language_code="tr-TR",
             name="tr-TR-Wavenet-C",
-            ssml_gender=texttospeech.SsmlVoiceGender.MALE
+            ssml_gender=texttospeech.SsmlVoiceGender.MALE,
         )
         audio_config = texttospeech.AudioConfig(
             audio_encoding=texttospeech.AudioEncoding.MP3,
-            speaking_rate=1.2
+            speaking_rate=1.2,
         )
-        response = client.synthesize_speech(input=synthesis_input, voice=voice, audio_config=audio_config)
-
-        with open(output_file, "wb") as out:
-            out.write(response.audio_content)
-        print("[STEP 3 BAŞARILI] Ses dosyası hazırlandı.")
+        response = client.synthesize_speech(
+            input=synthesis_input, voice=voice, audio_config=audio_config
+        )
+        with open(output_file, "wb") as output:
+            output.write(response.audio_content)
+        print("[TTS BAŞARILI] Ses dosyası hazırlandı.")
         return output_file
     except Exception as e:
-        print(f"[STEP 3 HATA] GCP TTS Hatası: {e}")
+        print(f"[TTS HATA] Google Cloud TTS: {e}")
         return None
 
 # --- TELEGRAM GÖNDERİCİ ---
-async def send_telegram_alert(text, audio_path=None):
-    print("[STEP 4] Telegram mesajı iletiliyor...")
+async def send_telegram_text(text):
     if not TELEGRAM_TOKEN or not CHAT_ID:
-        print("[STEP 4 HATA] TELEGRAM_TOKEN veya CHAT_ID GitHub Secrets alanında eksik!")
-        return
+        raise RuntimeError("TELEGRAM_TOKEN veya CHAT_ID eksik.")
+    async with Bot(token=TELEGRAM_TOKEN) as bot:
+        await bot.send_message(chat_id=CHAT_ID, text=text)
+    print("[TELEGRAM] Metin bildirimi gönderildi.")
 
+
+async def send_telegram_voice(audio_path):
+    if not TELEGRAM_TOKEN or not CHAT_ID:
+        raise RuntimeError("TELEGRAM_TOKEN veya CHAT_ID eksik.")
+    if not audio_path or not os.path.exists(audio_path):
+        return
     try:
         async with Bot(token=TELEGRAM_TOKEN) as bot:
-            print(f"[STEP 4.1] Chat ID ({CHAT_ID}) adresine metin gönderiliyor...")
-            await bot.send_message(chat_id=CHAT_ID, text=text)
-            print("[STEP 4.1 BAŞARILI] Metin gönderildi.")
-
-            if audio_path and os.path.exists(audio_path):
-                print("[STEP 4.2] Ses dosyası gönderiliyor...")
-                with open(audio_path, "rb") as voice:
-                    await bot.send_voice(chat_id=CHAT_ID, voice=voice)
-                print("[STEP 4.2 BAŞARILI] Ses dosyası gönderildi.")
-                os.remove(audio_path)
-    except Exception as e:
-        print(f"[STEP 4 HATA] Telegram Gönderim Hatası: {e}")
-        raise e
+            with open(audio_path, "rb") as voice:
+                await bot.send_voice(chat_id=CHAT_ID, voice=voice)
+        print("[TELEGRAM] Ses bildirimi gönderildi.")
+    finally:
+        if os.path.exists(audio_path):
+            os.remove(audio_path)
 
 # --- ANA ÇALIŞTIRICI ---
-async def main():
-    init_db()
-    print("[LOG START] Otomasyon Başlatıldı.")
-
-    run_name, payload = fetch_full_weather_data()
-    if not payload:
-        print("[LOG ABORT] Hava verisi alınamadığı için işlem durduruldu.")
+async def process_gfs_update():
+    metadata = await asyncio.to_thread(fetch_model_update_metadata)
+    if not metadata:
+        print("[SKIP] Model metadata alınamadı; sonraki kontrolde tekrar denenecek.")
         return
+    run_id = metadata["run_id"]
+
+    # Open-Meteo recommends allowing 10 minutes after availability so all
+    # geographically distributed API servers have received the new run.
+    available_at = metadata.get("last_run_availability_time")
+    if available_at:
+        try:
+            available_dt = datetime.fromisoformat(available_at.replace("Z", "+00:00"))
+            if available_dt.tzinfo is None:
+                available_dt = available_dt.replace(tzinfo=timezone.utc)
+            ready_at = available_dt.timestamp() + 600
+            if datetime.now(timezone.utc).timestamp() < ready_at:
+                remaining = int(ready_at - datetime.now(timezone.utc).timestamp())
+                print(f"[WAIT] GFS verisi sunuculara yayılıyor; yaklaşık {remaining} saniye sonra tekrar kontrol.")
+                return
+        except (TypeError, ValueError):
+            print("[METADATA UYARI] Availability zamanı çözümlenemedi; normal kontrole devam ediliyor.")
 
     previous_runs = get_previous_runs()
-    full_text_report, speech_text = analyze_and_build_output(run_name, payload, previous_runs)
+    if previous_runs and previous_runs[0][0] == run_id:
+        print(f"[UNCHANGED] GFS run zaten işlendi: {run_id}")
+        return
 
-    save_run(run_name, payload)
+    print(f"[UPDATE] Yeni GFS run tespit edildi: {run_id}")
+    payload = await asyncio.to_thread(fetch_full_weather_data)
+    if not payload:
+        print("[RETRY] Forecast verisi alınamadı; run işlenmiş olarak kaydedilmedi.")
+        return
+    payload["model_metadata"] = metadata
+    full_text_report, speech_text = analyze_and_build_output(
+        run_id, payload, previous_runs
+    )
+    audio_task = asyncio.create_task(
+        asyncio.to_thread(generate_speech_gcp, speech_text)
+    )
+    try:
+        await send_telegram_text(full_text_report)
+    except Exception:
+        try:
+            audio_file = await audio_task
+            if audio_file and os.path.exists(audio_file):
+                os.remove(audio_file)
+        except Exception:
+            pass
+        raise
 
-    audio_file = await generate_speech_gcp(speech_text)
-    await send_telegram_alert(full_text_report, audio_path=audio_file)
-    print("[LOG COMPLETE] Süreç sorunsuz tamamlandı.")
+    save_run(run_id, payload)
+    audio_file = await audio_task
+    if audio_file:
+        try:
+            await send_telegram_voice(audio_file)
+        except Exception as e:
+            print(f"[VOICE HATA] Ses gönderilemedi: {e}")
+    else:
+        print("[VOICE] Ses üretilemedi; metin bildirimi gönderilmiş durumda.")
+    print(f"[COMPLETE] GFS run işlendi: {run_id}")
+
+
+async def main():
+    init_db()
+    print(
+        f"[START] GFS Watch çalışıyor. Kontrol aralığı: "
+        f"{POLL_INTERVAL_SECONDS // 60} dakika; model: {MODEL_NAME}."
+    )
+    while True:
+        try:
+            await process_gfs_update()
+        except Exception as e:
+            print(f"[LOOP HATA] {type(e).__name__}: {e}")
+        print(f"[WAIT] {POLL_INTERVAL_SECONDS} saniye sonra tekrar kontrol.")
+        await asyncio.sleep(POLL_INTERVAL_SECONDS)
+
 
 if __name__ == "__main__":
-    asyncio.run(main())
+    try:
+        asyncio.run(main())
+    except KeyboardInterrupt:
+        print("[STOP] GFS Watch kontrollü şekilde durduruldu.")
