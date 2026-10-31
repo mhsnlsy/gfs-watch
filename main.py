@@ -36,6 +36,7 @@ NOAA_GFS_S3_BASE = "https://noaa-gfs-bdp-pds.s3.amazonaws.com"
 NOAA_CYCLE_LOOKBACK = 6
 MIN_FORECAST_HOURS = 180
 RETENTION_DAYS = 10
+PUBLIC_DATA_DIR = os.getenv("PUBLIC_DATA_DIR", "public")
 
 # --- VERİTABANI İŞLEMLERİ ---
 def init_db():
@@ -123,6 +124,104 @@ def save_run(run_name, forecast_dict):
         conn.commit()
     finally:
         conn.close()
+
+def _write_json_atomically(path, document):
+    """Write UTF-8 JSON atomically so readers never see a partial file."""
+    directory = os.path.dirname(path)
+    os.makedirs(directory, exist_ok=True)
+    temp_path = None
+    try:
+        with tempfile.NamedTemporaryFile(
+            mode="w",
+            encoding="utf-8",
+            suffix=".tmp",
+            prefix=".forecast-",
+            dir=directory,
+            delete=False,
+        ) as temp_file:
+            temp_path = temp_file.name
+            json.dump(document, temp_file, ensure_ascii=False, indent=2, allow_nan=False)
+            temp_file.write("\\n")
+        os.replace(temp_path, path)
+    finally:
+        if temp_path and os.path.exists(temp_path):
+            os.remove(temp_path)
+
+
+def export_public_forecast_json(run_id, payload):
+    """Export a stable latest.json plus an immutable file for this GFS run."""
+    run_dt = _parse_utc_datetime(run_id)
+    current = payload.get("current", {})
+    daily = payload.get("daily", {})
+    forecast = []
+
+    for local_time, values in sorted(payload.get("timeline_180h", {}).items()):
+        local_dt = datetime.strptime(local_time, "%Y-%m-%dT%H:%M").replace(tzinfo=TR_TZ)
+        forecast.append({
+            "forecast_hour": int(values.get("step_hour", 0)),
+            "valid_time_utc": local_dt.astimezone(timezone.utc).isoformat(timespec="minutes"),
+            "valid_time_istanbul": local_dt.isoformat(timespec="minutes"),
+            "temperature_2m_c": values.get("temp"),
+            "precipitation_6h_mm": values.get("precip"),
+        })
+
+    dates = daily.get("time", [])
+    daily_summary = []
+    for index, date_value in enumerate(dates):
+        daily_summary.append({
+            "date_istanbul": date_value,
+            "temperature_min_c": daily.get("temp_min", [])[index],
+            "temperature_max_c": daily.get("temp_max", [])[index],
+            "precipitation_total_mm": daily.get("precip_sum", [])[index],
+            "wind_speed_max_10m_kmh": daily.get("wind_max", [])[index],
+        })
+
+    model_metadata = payload.get("model_metadata", {})
+    document = {
+        "schema": "gfs-watch.forecast.v1",
+        "model": MODEL_NAME,
+        "run_id_utc": run_dt.isoformat(timespec="seconds"),
+        "forecast_valid_until_utc": (
+            run_dt + timedelta(hours=MIN_FORECAST_HOURS)
+        ).isoformat(timespec="seconds"),
+        "published_at_utc": datetime.now(timezone.utc).isoformat(timespec="seconds"),
+        "forecast_horizon_hours": MIN_FORECAST_HOURS,
+        "location": {
+            "name": "Istanbul",
+            "latitude": LAT,
+            "longitude": LON,
+            "nearest_gfs_grid_latitude": GRID_LAT,
+            "nearest_gfs_grid_longitude": GRID_LON,
+        },
+        "sources": {
+            "forecast": payload.get("data_source", "NOAA/NCEP GFS 0.25° GRIB2"),
+            "current_conditions": "Open-Meteo live current-conditions snapshot",
+        },
+        "noaa_source_file": {
+            "f180_available": model_metadata.get("noaa_f180_available", True),
+            "f180_last_modified_utc": model_metadata.get("last_modified_time"),
+            "global_grib2_size_bytes": model_metadata.get("source_object_size_bytes"),
+        },
+        "current_conditions": {
+            "temperature_2m_c": current.get("temp"),
+            "precipitation_mm": current.get("precip"),
+            "wind_speed_10m_kmh": current.get("wind"),
+            "surface_pressure_hpa": current.get("pressure"),
+        },
+        "daily_summary": daily_summary,
+        "forecast_6_hourly": forecast,
+    }
+
+    run_filename = run_dt.strftime("%Y%m%dT%HZ") + ".json"
+    _write_json_atomically(
+        os.path.join(PUBLIC_DATA_DIR, "runs", run_filename), document
+    )
+    _write_json_atomically(os.path.join(PUBLIC_DATA_DIR, "latest.json"), document)
+    print(
+        f"[JSON EXPORT] public/latest.json ve public/runs/{run_filename} "
+        f"yazıldı ({len(forecast)} tahmin noktası)."
+    )
+
 
 # --- NOAA GFS +180 DOSYA VARLIĞI ---
 def _normalise_model_timestamp(value):
@@ -414,7 +513,7 @@ def fetch_full_weather_data(run_id):
             temperature = step_data["temperature"]
             wind_u = step_data["wind_u"] or {}
             wind_v = step_data["wind_v"] or {}
-            pressure = step_data["pressure"] or {}
+            # Pressure is not part of the requested point forecast payload.
 
             temp_c = {
                 name: float(value) - 273.15
@@ -864,6 +963,7 @@ async def process_gfs_update(strict=False):
         return
 
     payload["model_metadata"] = metadata
+    export_public_forecast_json(run_id, payload)
     full_text_report, speech_text = analyze_and_build_output(
         run_id, payload, previous_runs
     )
