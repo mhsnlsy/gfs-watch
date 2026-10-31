@@ -58,12 +58,12 @@ This is a downloadable public data file, not a live feed automatically consumed 
 
 - The Telegram report identifies the output type, model-cycle time in TSİ and UTC, report creation time, and the full +180-hour validity interval in TSİ.
 - Daily summaries use Turkish weekday names and calendar dates instead of relative labels such as "tomorrow" or "the following day".
-- The voice script also uses weekday names for daily summaries. Regional pressure findings are excluded from the voice script.
+- The voice script also uses weekday names for daily summaries. Regional pressure findings and all previous-run change/comparison narration are excluded from the voice script; run-to-run changes remain in the written report and comparison image.
 
 ## Notification behaviour
 
 - One text notification is sent per eligible GFS run; there are no separate notifications for forecast changes.
-- When a previous processed run exists, each automatic new-run notification also sends a PNG comparison chart to Telegram. It contains paired daily temperature candlesticks (first/last six-hour sample as open/close; daily low/high as wick), daily precipitation totals and daily maximum wind speed for dates shared by both runs.
+- When a previous processed run exists, every automatic GFS cycle notification (00Z, 06Z, 12Z and 18Z) also sends a PNG comparison chart to Telegram. It contains paired daily temperature candlesticks (first/last six-hour sample as open/close; daily low/high as wick), daily precipitation totals and daily maximum wind speed for dates shared by both runs.
 - The first processed run has no previous run to compare and therefore sends no comparison image. Manual report resends do not generate or send comparison images.
 - Telegram text delivery does not wait for TTS. Audio generation starts concurrently in a background thread.
 - TTS generation and Telegram voice delivery each retry up to three times after failures. If audio cannot be produced or sent, the text report remains delivered.
