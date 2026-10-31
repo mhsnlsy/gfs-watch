@@ -902,74 +902,8 @@ def analyze_and_build_output(current_run_name, payload, previous_runs):
             day_text += " Rüzgâr hızı yüksek."
         speech_parts.append(day_text)
 
-    comparison_events = []
-    comparison_points = 0
-
-    if previous_runs:
-        try:
-            prev_json = json.loads(previous_runs[0][1])
-            prev_timeline = prev_json.get("timeline_180h", {})
-
-            # Iterate by valid local time, then add all variable changes for
-            # that timestamp together. The final list is chronological.
-            for time_key in sorted(timeline):
-                if time_key not in prev_timeline:
-                    continue
-                comparison_points += 1
-                curr_data = timeline[time_key]
-                prev_data = prev_timeline[time_key]
-                valid_local = datetime.strptime(
-                    time_key, "%Y-%m-%dT%H:%M"
-                ).replace(tzinfo=TR_TZ)
-                time_label = (
-                    f"{_format_tr_date(valid_local)} "
-                    f"{valid_local.hour:02d}:{valid_local.minute:02d}"
-                )
-                changes_at_time = []
-
-                t_diff = round(
-                    float(curr_data["temp"]) - float(prev_data["temp"]), 1
-                )
-                if abs(t_diff) >= TEMPERATURE_CHANGE_THRESHOLD_C:
-                    direction = "daha yüksek" if t_diff > 0 else "daha düşük"
-                    changes_at_time.append(
-                        f"Sıcaklık {abs(t_diff):.1f}°C {direction}"
-                    )
-
-                current_precip = curr_data.get("precip")
-                previous_precip = prev_data.get("precip")
-                if current_precip is not None and previous_precip is not None:
-                    p_diff = round(
-                        float(current_precip) - float(previous_precip), 2
-                    )
-                    if abs(p_diff) >= PRECIPITATION_CHANGE_THRESHOLD_MM:
-                        direction = "daha fazla" if p_diff > 0 else "daha az"
-                        changes_at_time.append(
-                            f"bu saatte biten 6 saatlik yağış "
-                            f"{abs(p_diff):.2f} mm {direction}"
-                        )
-
-                current_wind = curr_data.get("wind")
-                previous_wind = prev_data.get("wind")
-                if current_wind is not None and previous_wind is not None:
-                    w_diff = round(
-                        float(current_wind) - float(previous_wind), 1
-                    )
-                    if abs(w_diff) >= WIND_CHANGE_THRESHOLD_KMH:
-                        direction = "daha hızlı" if w_diff > 0 else "daha yavaş"
-                        changes_at_time.append(
-                            f"10 m rüzgâr hızı {abs(w_diff):.1f} km/sa {direction}"
-                        )
-
-                if changes_at_time:
-                    comparison_events.append(
-                        f"• {time_label} TSİ — " + "; ".join(changes_at_time) + "."
-                    )
-        except Exception as exc:
-            print(f"[UYARI] Kıyaslama yapılırken hata oluştu: {exc}")
-
-    # Run-to-run changes are intentionally omitted from speech.
-    # They remain available in the written report and Telegram comparison chart.
+    # Run-to-run changes are shown only in the four-cycle comparison image,
+    # not repeated in the text report or voice script.
 
     # Pressure findings are written to the text report only, never to speech.
     speech_text = " ".join(speech_parts)
@@ -1011,30 +945,6 @@ def analyze_and_build_output(current_run_name, payload, previous_runs):
             f"• {day_label}: {t_min}–{t_max}°C | Yağış: {p_sum} mm | "
             f"Maks. rüzgâr: {w_max} km/sa{wind_tag}"
         )
-
-    if previous_runs:
-        previous_run_utc = _parse_utc_datetime(previous_runs[0][0])
-        previous_run_local = previous_run_utc.astimezone(TR_TZ)
-        text_report_lines.extend([
-            "",
-            "🔁 ÖNCEKİ GFS DÖNGÜSÜYLE KIYAS",
-            (
-                f"Önceki döngü: {_format_tr_datetime(previous_run_local)} TSİ "
-                f"({previous_run_utc:%H}Z UTC)"
-            ),
-            f"Ortak karşılaştırma zamanı: {comparison_points}",
-        ])
-        if comparison_events:
-            text_report_lines.append("Değişiklikler (TSİ, kronolojik sırayla):")
-            text_report_lines.extend(comparison_events)
-        elif comparison_points:
-            text_report_lines.append(
-                "Belirlenen eşikleri aşan sıcaklık, yağış veya rüzgâr değişikliği yok."
-            )
-        else:
-            text_report_lines.append(
-                "İki döngü arasında karşılaştırılabilir ortak zaman bulunamadı."
-            )
 
     if synoptic:
         text_report_lines.extend([
