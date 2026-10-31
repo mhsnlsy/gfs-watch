@@ -8,7 +8,7 @@ on:
       - "site/**"
   workflow_dispatch:
   workflow_run:
-    workflows: ["GFS Watch"]
+    workflows: ["GFS Watch", "Station Observation"]
     types: [completed]
 
 permissions:
