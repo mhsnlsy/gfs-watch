@@ -1,6 +1,6 @@
 # GFS Watch
 
-A point-specific GFS forecast watcher for 41.014°N, 28.950°E. GitHub Actions checks GFS run publication metadata and sends one Telegram text and voice notification per exact model run after at least +180 forecast hours are available.
+A point-specific GFS forecast watcher for 41.014°N, 28.950°E. GitHub Actions checks NOAA's published GFS +180-hour GRIB2 objects and sends one Telegram text and voice notification per exact model run after the point-specific NOAA subset is available.
 
 ## Data sources and point-specific forecast retrieval
 
