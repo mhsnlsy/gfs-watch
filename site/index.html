@@ -29,12 +29,12 @@
   </header>
   <main class="shell">
     <section class="hero">
-      <div><div class="eyebrow"><span class="dot"></span> İstanbul için model tabanlı tahmin</div><h1>Şehrin havasını<br><span>önceden görün.</span></h1><p class="intro">İstanbul'un Havası, NOAA'nın küresel GFS modelini doğrudan işleyerek sıcaklık, yağış, rüzgâr ve bölgesel basınç görünümünü tek bir yerde sunar.</p><div class="hero-meta"><span class="meta-chip" id="cycle-chip">Model döngüsü yükleniyor</span><span class="meta-chip" id="updated-chip">Veri zamanı bekleniyor</span></div></div>
-      <article class="weather-card"><div class="weather-top"><div><div class="label">GFS başlangıç analizi</div><div class="place">İstanbul · 41.014°N, 28.950°E</div></div><span class="model-state" id="freshness">Veri bekleniyor</span></div><div class="temp-row"><div class="temperature" id="temperature">—°</div><div class="weather-symbol" id="weather-symbol" aria-hidden="true">☁️</div></div><div class="temp-caption">Modelin başlangıç sıcaklığı · canlı istasyon ölçümü değildir</div><div class="weather-stats"><div class="stat"><div class="name">Rüzgâr</div><div class="value" id="wind">—<span class="unit">km/sa</span></div></div><div class="stat"><div class="name">Yağış</div><div class="value" id="rain">—<span class="unit">mm</span></div></div><div class="stat"><div class="name">Deniz seviyesi basıncı</div><div class="value" id="pressure">—<span class="unit">hPa</span></div></div></div></article>
+      <div><div class="eyebrow"><span class="dot"></span> Canlı MGM istasyon gözlemi + NOAA GFS tahmini</div><h1>Şehrin havasını<br><span>önceden görün.</span></h1><p class="intro">İstanbul'un Havası, NOAA'nın küresel GFS modelini doğrudan işleyerek sıcaklık, yağış, rüzgâr ve bölgesel basınç görünümünü tek bir yerde sunar.</p><div class="hero-meta"><span class="meta-chip" id="cycle-chip">Model döngüsü yükleniyor</span><span class="meta-chip" id="updated-chip">Veri zamanı bekleniyor</span></div></div>
+      <article class="weather-card"><div class="weather-top"><div><div class="label">Canlı meteoroloji istasyonu · MGM 18101</div><div class="place">Eyüpsultan · İstanbul</div></div><span class="model-state" id="freshness">Veri bekleniyor</span></div><div class="temp-row"><div class="temperature" id="temperature">—°</div><div class="weather-symbol" id="weather-symbol" aria-hidden="true">☁️</div></div><div class="temp-caption" id="station-observation-meta">MGM Eyüpsultan istasyonunun son ölçümü · zaman damgası sayfada gösterilir</div><div class="weather-stats"><div class="stat"><div class="name">Rüzgâr</div><div class="value" id="wind">—<span class="unit">km/sa</span></div></div><div class="stat"><div class="name">Yağış</div><div class="value" id="rain">—<span class="unit">mm</span></div></div><div class="stat"><div class="name">Nem</div><div class="value" id="humidity">—<span class="unit">%</span></div></div></div></article>
     </section>
     <section class="section" id="tahmin"><div class="section-head"><div><div class="section-kicker">Önümüzdeki günler</div><h2>8 günlük tahmin</h2></div><div class="section-note">Günlük en düşük / en yüksek sıcaklık<br>Toplam yağış ve en yüksek rüzgâr</div></div><div class="daily-grid" id="daily-grid"><div class="loading">Tahmin verisi yükleniyor…</div></div></section>
     <section class="section" id="seyir"><div class="section-head"><div><div class="section-kicker">Modelin ileriye bakışı</div><h2>180 saatlik tahmin seyri</h2></div><div class="chart-toolbar" role="group" aria-label="Grafik değişkeni"><button class="tab active" type="button" data-metric="temperature">Sıcaklık</button><button class="tab" type="button" data-metric="precipitation">Yağış</button></div></div><div class="chart-card"><div class="chart-legend"><span><i class="legend-dot"></i><span id="chart-legend-text">2 m sıcaklık · °C</span></span><span id="chart-range">6 saatlik örnekler</span></div><div class="chart-wrap" id="forecast-chart"><div class="chart-empty">Tahmin grafiği yükleniyor…</div></div></div></section>
-    <section class="section" id="basinc"><div class="section-head"><div><div class="section-kicker">Bölgesel meteoroloji</div><h2>Basınç düzeni ve kaynak</h2></div><div class="section-note">İstanbul merkezli 2.500 km çaplı<br>bölgesel analiz</div></div><div class="lower-grid"><article class="pressure-card"><div class="label">Bölgesel basınç değerlendirmesi</div><ul class="pressure-list" id="pressure-findings"><li class="loading">Analiz yükleniyor…</li></ul></article><article class="info-card"><div class="label">Veri hakkında</div><p>Kaynak: NOAA / NCEP GFS 0.25° küresel tahmin modeli. Değerler İstanbul'a en yakın model grid noktası olan 41.000°N, 29.000°E için hazırlanır.</p><p>GFS başlangıç analizi bir meteoroloji istasyonunun anlık gözlemi değildir. Tahminler modelin yayın zamanına, çözünürlüğüne ve atmosferik belirsizliğe bağlıdır.</p><div class="source-row"><span>Model: <strong>GFS 0.25°</strong></span><span id="valid-until">Geçerlilik: —</span></div></article></div></section>
+    <section class="section" id="basinc"><div class="section-head"><div><div class="section-kicker">Bölgesel meteoroloji</div><h2>Basınç düzeni ve kaynak</h2></div><div class="section-note">İstanbul merkezli 2.500 km çaplı<br>bölgesel analiz</div></div><div class="lower-grid"><article class="pressure-card"><div class="label">Bölgesel basınç değerlendirmesi</div><ul class="pressure-list" id="pressure-findings"><li class="loading">Analiz yükleniyor…</li></ul></article><article class="info-card"><div class="label">Veri hakkında</div><p>Anlık sıcaklık, son 1 saatlik yağış, rüzgâr ve nem: MGM Eyüpsultan istasyonu (18101). WStatMap bu Türkiye istasyon gözlemlerini MGM kaynaklı olarak yayımlar.</p><p>180 saatlik tahmin: NOAA / NCEP GFS 0.25° küresel modelinin İstanbul'a en yakın grid noktası (41.000°N, 29.000°E). İstasyon ölçümü ile model tahmini ayrı kaynaklardır.</p><div class="source-row"><span>Model: <strong>GFS 0.25°</strong></span><span id="valid-until">Geçerlilik: —</span></div></article></div></section>
   </main>
   <footer class="shell footer"><span><strong>İstanbul'un Havası</strong> · GFS Watch v2.1.0</span><span>Veri kaynağı: NOAA / NCEP · Otomatik yenileme: 5 dakika</span></footer>
   <script>
@@ -85,12 +85,22 @@
     }
     function render(data){
       forecastData=data;
-      const current=data.current_conditions||{};
-      $("temperature").textContent=fmt(current.temperature_2m_c,1)+"°";
-      $("wind").innerHTML=fmt(current.wind_speed_10m_kmh,0)+'<span class="unit">km/sa</span>';
-      $("rain").innerHTML=fmt(current.precipitation_mm,1)+'<span class="unit">mm</span>';
-      $("pressure").innerHTML=fmt(current.mean_sea_level_pressure_hpa,0)+'<span class="unit">hPa</span>';
-      $("weather-symbol").textContent=symbolFor(current.precipitation_mm||0);
+      const station=data.station_observation||{};
+      const hasStation=!!data.station_observation;
+      $("temperature").textContent=hasStation&&numeric(station.temperature_2m_c)?fmt(station.temperature_2m_c,1)+"°":"—°";
+      $("wind").innerHTML=hasStation&&numeric(station.wind_speed_10m_kmh)?fmt(station.wind_speed_10m_kmh,1)+'<span class="unit">km/sa</span>':'—<span class="unit">km/sa</span>';
+      $("rain").innerHTML=hasStation&&numeric(station.precipitation_1h_mm)?fmt(station.precipitation_1h_mm,1)+'<span class="unit">mm / 1 sa</span>':'—<span class="unit">mm / 1 sa</span>';
+      $("humidity").innerHTML=hasStation&&numeric(station.humidity_percent)?fmt(station.humidity_percent,0)+'<span class="unit">%</span>':'—<span class="unit">%</span>';
+      $("weather-symbol").textContent=symbolFor(hasStation?station.precipitation_1h_mm||0:0);
+      if(hasStation){
+        const observed=station.observed_at_utc?new Date(station.observed_at_utc):null;
+        const observedText=observed&&!Number.isNaN(observed.getTime())?new Intl.DateTimeFormat("tr-TR",{timeZone:"Europe/Istanbul",dateStyle:"short",timeStyle:"short"}).format(observed):"zaman bilinmiyor";
+        $("station-observation-meta").textContent=(station.is_stale?"Gecikmeli ölçüm":"Son ölçüm")+" · "+observedText+" TSİ · MGM / WStatMap";
+        $("freshness").textContent=station.is_stale?"Ölçüm gecikmiş":"İstasyon verisi";
+      }else{
+        $("station-observation-meta").textContent="MGM Eyüpsultan 18101 verisine şu anda ulaşılamıyor.";
+        $("freshness").textContent="İstasyon verisi yok";
+      }
       if(data.run_id_utc)$("cycle-chip").textContent="GFS döngüsü · "+timeTR(data.run_id_utc);
       if(data.published_at_utc){
         $("updated-chip").textContent="Yayınlandı · "+timeTR(data.published_at_utc);
