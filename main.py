@@ -349,7 +349,7 @@ def analyse_regional_pressure_grid(pressure_grid):
         )
         haversine = (
             np.sin(delta_lat / 2.0) ** 2
-            + math.cos(lat1) * math.cos(lat2) * np.sin(delta_lon / 2.0) ** 2
+            + math.cos(lat1) * np.cos(lat2) * np.sin(delta_lon / 2.0) ** 2
         )
         distance_km = 6371.0 * 2.0 * np.arcsin(
             np.sqrt(np.clip(haversine, 0.0, 1.0))
