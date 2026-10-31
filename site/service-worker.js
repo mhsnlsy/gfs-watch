@@ -1,4 +1,4 @@
-const CACHE_NAME = "istanbul-hava-shell-v3";
+const CACHE_NAME = "istanbul-hava-shell-v4";
 const APP_SHELL = ["./", "./manifest.webmanifest", "./icon.svg"];
 
 self.addEventListener("install", event => {
@@ -29,3 +29,29 @@ self.addEventListener("fetch", event => {
   }
 });
 
+self.addEventListener("push", event => {
+  let payload = {};
+  try { payload = event.data ? event.data.json() : {}; }
+  catch (_) { payload = { body: "Yeni İstanbul GFS hava raporu yayımlandı." }; }
+  event.waitUntil(self.registration.showNotification(payload.title || "İstanbul'un Havası", {
+    body: payload.body || "Yeni GFS hava raporu yayımlandı.",
+    icon: "./icon.svg",
+    badge: "./icon.svg",
+    tag: payload.tag || "istanbul-gfs-report",
+    data: { url: payload.url || "./#bildirimler" }
+  }));
+});
+
+self.addEventListener("notificationclick", event => {
+  event.notification.close();
+  const destination = new URL(event.notification.data?.url || "./#bildirimler", self.location.href).href;
+  event.waitUntil(clients.matchAll({ type: "window", includeUncontrolled: true }).then(windowClients => {
+    for (const client of windowClients) {
+      if (client.url.startsWith(self.location.origin) && "focus" in client) {
+        client.navigate(destination);
+        return client.focus();
+      }
+    }
+    return clients.openWindow(destination);
+  }));
+});
