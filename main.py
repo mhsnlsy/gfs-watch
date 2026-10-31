@@ -1661,10 +1661,3 @@ if __name__ == "__main__":
                 asyncio.run(main())
     except KeyboardInterrupt:
         print("[STOP] GFS Watch kontrollü şekilde durduruldu.")
-            asyncio.run(run_manual_report(manual_run_id))
-        elif os.getenv("GFS_WATCH_ONCE", "").strip().lower() in {"1", "true", "yes"}:
-            asyncio.run(run_once())
-        else:
-            asyncio.run(main())
-    except KeyboardInterrupt:
-        print("[STOP] GFS Watch kontrollü şekilde durduruldu.")
