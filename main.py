@@ -22,13 +22,15 @@ TR_TZ = ZoneInfo("Europe/Istanbul")  # İstanbul saat dilimi
 POLL_INTERVAL_SECONDS = max(60, int(os.getenv("POLL_INTERVAL_SECONDS", "600")))
 DATA_DIR = "/data" if os.path.isdir("/data") else "."
 DB_PATH = os.getenv("DB_PATH", os.path.join(DATA_DIR, "gfs_watch.db"))
-MODEL_NAME = "gfs_seamless"
-# Open-Meteo exposes model run metadata as per-model JSON files, not
-# through the retired /v1/model-updates endpoint.
+MODEL_NAME = "ncep_gfs_global"
+# Open-Meteo publishes GFS progress metadata separately from its completed
+# time-series metadata. This lets us track the active 00/06/12/18 UTC run.
 MODEL_METADATA_URLS = (
-    "https://api.open-meteo.com/data/ncep_gfs013/static/meta.json",
-    "https://api.open-meteo.com/data/ncep_gfs025/static/meta.json",
+    "https://openmeteo.s3.amazonaws.com/data_spatial/ncep_gfs013/in-progress.json",
+    "https://openmeteo.s3.amazonaws.com/data_spatial/ncep_gfs013/latest.json",
 )
+SINGLE_RUNS_URL = "https://single-runs-api.open-meteo.com/v1/forecast"
+MIN_FORECAST_HOURS = 180
 RETENTION_DAYS = 10
 
 SYNOPTIC_POINTS = {
@@ -121,116 +123,159 @@ def _normalise_model_timestamp(value):
         return str(value)
 
 
+def _parse_utc_datetime(value):
+    parsed = datetime.fromisoformat(str(value).replace("Z", "+00:00"))
+    if parsed.tzinfo is None:
+        parsed = parsed.replace(tzinfo=timezone.utc)
+    return parsed.astimezone(timezone.utc)
+
+
 def fetch_model_update_metadata():
     errors = []
     for metadata_url in MODEL_METADATA_URLS:
         try:
-            response = requests.get(metadata_url, timeout=15)
+            response = requests.get(
+                metadata_url,
+                headers={"Cache-Control": "no-cache"},
+                timeout=15,
+            )
             response.raise_for_status()
             record = response.json()
             if not isinstance(record, dict):
                 raise ValueError(f"Beklenmeyen metadata yanıtı: {record}")
 
-            initialisation = _normalise_model_timestamp(
-                record.get("last_run_initialisation_time")
+            reference_time = record.get("reference_time")
+            valid_times = record.get("valid_times") or []
+            if not reference_time or not valid_times:
+                raise ValueError(
+                    "Metadata içinde reference_time veya valid_times bulunamadı."
+                )
+
+            run_dt = _parse_utc_datetime(reference_time)
+            valid_datetimes = [_parse_utc_datetime(value) for value in valid_times]
+            last_valid_dt = max(valid_datetimes)
+            available_hours = max(
+                0, int((last_valid_dt - run_dt).total_seconds() // 3600)
             )
-            if not initialisation:
-                raise ValueError(f"GFS model başlangıç zamanı bulunamadı: {record}")
+            run_id = run_dt.isoformat(timespec="seconds")
+            modified_at = record.get("last_modified_time")
 
             return {
                 "model": MODEL_NAME,
                 "metadata_source": metadata_url,
-                "run_id": initialisation,
-                "last_run_initialisation_time": initialisation,
-                "last_run_availability_time": _normalise_model_timestamp(
-                    record.get("last_run_availability_time")
-                ),
-                "update_interval_seconds": record.get("update_interval_seconds"),
+                "run_id": run_id,
+                "last_run_initialisation_time": run_id,
+                "last_run_availability_time": _normalise_model_timestamp(modified_at),
+                "last_modified_time": _normalise_model_timestamp(modified_at),
+                "last_valid_time": last_valid_dt.isoformat(timespec="minutes"),
+                "forecast_horizon_hours": available_hours,
+                "completed": bool(record.get("completed", False)),
             }
         except Exception as e:
             errors.append(f"{metadata_url}: {type(e).__name__}: {e}")
 
-    print("[METADATA HATA] GFS model sürümü alınamadı. " + " | ".join(errors))
+    print("[METADATA HATA] GFS ilerleme bilgisi alınamadı. " + " | ".join(errors))
     return None
 
 
 # --- VERİ ÇEKME (+180 SAAT / FAST-FETCH) ---
-def fetch_full_weather_data():
-    print("[STEP 1] Open-Meteo verileri çekiliyor...")
-    local_url = "https://api.open-meteo.com/v1/forecast"
-    
-    local_params = {
-        "latitude": LAT,
-        "longitude": LON,
-        "current": "temperature_2m,precipitation,rain,snowfall,wind_speed_10m,surface_pressure",
-        "daily": "temperature_2m_max,temperature_2m_min,precipitation_sum,wind_speed_10m_max",
-        "hourly": "temperature_2m,precipitation,snowfall,surface_pressure,wind_speed_10m",
-        "forecast_hours": 181,
-        "models": "gfs_seamless",
-        "timezone": "Europe/Istanbul"
-    }
-
+def fetch_full_weather_data(run_id):
+    print(f"[STEP 1] Open-Meteo Single Runs API verisi çekiliyor: {run_id}")
     try:
-        res = requests.get(local_url, params=local_params, timeout=15)
+        run_dt = _parse_utc_datetime(run_id)
+        run_param = run_dt.strftime("%Y-%m-%dT%H:%M")
+        local_params = {
+            "latitude": LAT,
+            "longitude": LON,
+            "run": run_param,
+            "models": MODEL_NAME,
+            "current": "temperature_2m,precipitation,rain,snowfall,wind_speed_10m,surface_pressure",
+            "daily": "temperature_2m_max,temperature_2m_min,precipitation_sum,wind_speed_10m_max",
+            "hourly": "temperature_2m,precipitation,snowfall,surface_pressure,wind_speed_10m",
+            "forecast_hours": MIN_FORECAST_HOURS + 1,
+            "timezone": "Europe/Istanbul",
+        }
+
+        res = requests.get(SINGLE_RUNS_URL, params=local_params, timeout=30)
+        if res.status_code in (404, 425, 503):
+            print(
+                f"[PENDING] Single Runs API henüz {run_param} çalışmasını sunmuyor "
+                f"(HTTP {res.status_code}); sonraki kontrolde tekrar denenecek."
+            )
+            return {
+                "_pending_single_run": True,
+                "_run_id": run_id,
+                "_http_status": res.status_code,
+            }
         res.raise_for_status()
         data = res.json()
 
         current = data.get("current", {})
         daily = data.get("daily", {})
         hourly = data.get("hourly", {})
-
         times = hourly.get("time", [])
         temps = hourly.get("temperature_2m", [])
         precips = hourly.get("precipitation", [])
 
-        # Do not notify on a partially propagated GFS run. The hourly API
-        # request starts at the current hour; require data through +180h.
         if not times:
-            raise ValueError("Open-Meteo hourly time dizisi boş döndü.")
+            raise ValueError("Single Runs API hourly time dizisi boş döndü.")
 
-        last_time = datetime.fromisoformat(str(times[-1]).replace("Z", "+00:00"))
-        if last_time.tzinfo is None:
-            last_time = last_time.replace(tzinfo=TR_TZ)
-        else:
-            last_time = last_time.astimezone(TR_TZ)
-        current_hour = datetime.now(TR_TZ).replace(minute=0, second=0, microsecond=0)
-        available_hours = int((last_time - current_hour).total_seconds() // 3600)
+        first_dt = _parse_utc_datetime(times[0])
+        last_dt = _parse_utc_datetime(times[-1])
+        if abs((first_dt - run_dt).total_seconds()) > 3600:
+            raise ValueError(
+                f"Single Runs API yanlış başlangıç saati döndürdü: {times[0]} "
+                f"(beklenen {run_param})."
+            )
 
-        if available_hours < 180 or len(times) < 181:
+        available_hours = max(
+            0, int((last_dt - run_dt).total_seconds() // 3600)
+        )
+        if available_hours < MIN_FORECAST_HOURS or len(times) < MIN_FORECAST_HOURS + 1:
             print(
-                f"[PENDING] GFS verisi yalnızca +{max(0, available_hours)} saate kadar hazır; "
-                "bildirim için +180 saat bekleniyor. Sonraki kontrolde yeniden denenecek."
+                f"[PENDING] Tekil GFS çalışması yalnızca +{available_hours} saate kadar "
+                f"erişilebilir; +{MIN_FORECAST_HOURS} saat bekleniyor."
             )
             return {
-                "_pending_forecast_hours": max(0, available_hours),
-                "_required_forecast_hours": 180,
+                "_pending_single_run": True,
+                "_run_id": run_id,
+                "_available_hours": available_hours,
             }
 
         forecast_timeline = {}
-        for i in range(0, min(181, len(times)), 6):
+        for i in range(0, min(MIN_FORECAST_HOURS + 1, len(times)), 6):
             t_str = times[i]
             forecast_timeline[t_str] = {
-                "step_hour": i,
+                "step_hour": int(
+                    (_parse_utc_datetime(t_str) - run_dt).total_seconds() // 3600
+                ),
                 "temp": round(temps[i], 1) if i < len(temps) else 0.0,
-                "precip": round(precips[i], 2) if i < len(precips) else 0.0
+                "precip": round(precips[i], 2) if i < len(precips) else 0.0,
             }
 
         synoptic_alerts = []
+        live_url = "https://api.open-meteo.com/v1/forecast"
         for region, (r_lat, r_lon) in SYNOPTIC_POINTS.items():
             r_params = {
                 "latitude": r_lat,
                 "longitude": r_lon,
                 "current": "pressure_msl",
-                "models": "gfs_seamless"
+                "models": MODEL_NAME,
             }
             try:
-                r_res = requests.get(local_url, params=r_params, timeout=6).json()
-                r_press = round(r_res.get("current", {}).get("pressure_msl", 1013.0), 1)
-                
+                r_res = requests.get(live_url, params=r_params, timeout=6)
+                r_res.raise_for_status()
+                r_press = round(
+                    r_res.json().get("current", {}).get("pressure_msl", 1013.0), 1
+                )
                 if r_press <= 1015.0:
-                    synoptic_alerts.append(f"{region} üzerinde alçak basınç ({r_press} hPa)")
+                    synoptic_alerts.append(
+                        f"{region} üzerinde alçak basınç ({r_press} hPa)"
+                    )
                 elif r_press >= 1023.0:
-                    synoptic_alerts.append(f"{region} üzerinde yüksek basınç ({r_press} hPa)")
+                    synoptic_alerts.append(
+                        f"{region} üzerinde yüksek basınç ({r_press} hPa)"
+                    )
             except Exception:
                 continue
 
@@ -239,25 +284,29 @@ def fetch_full_weather_data():
                 "temp": round(current.get("temperature_2m", 0.0), 1),
                 "precip": round(current.get("precipitation", 0.0), 2),
                 "wind": round(current.get("wind_speed_10m", 0.0), 1),
-                "pressure": round(current.get("surface_pressure", 1013.0), 1)
+                "pressure": round(current.get("surface_pressure", 1013.0), 1),
             },
             "daily": {
                 "time": daily.get("time", []),
                 "temp_max": daily.get("temperature_2m_max", []),
                 "temp_min": daily.get("temperature_2m_min", []),
                 "precip_sum": daily.get("precipitation_sum", []),
-                "wind_max": daily.get("wind_speed_10m_max", [])
+                "wind_max": daily.get("wind_speed_10m_max", []),
             },
             "timeline_180h": forecast_timeline,
             "forecast_horizon_hours": available_hours,
-            "synoptic_alerts": synoptic_alerts
+            "synoptic_alerts": synoptic_alerts,
         }
 
-        print("[STEP 1 BAŞARILI] Hava durumu verisi alındı.")
+        print(
+            f"[STEP 1 BAŞARILI] Tam {run_param} GFS çalışması alındı; "
+            f"+{available_hours} saat."
+        )
         return payload
     except Exception as e:
-        print(f"[STEP 1 HATA] Open-Meteo erişim hatası: {e}")
+        print(f"[STEP 1 HATA] Open-Meteo Single Runs API erişim hatası: {e}")
         return None
+
 
 # --- RAPOR VE SES METNİ OLUŞTURUCU ---
 def analyze_and_build_output(current_run_name, payload, previous_runs):
@@ -461,53 +510,64 @@ async def process_gfs_update(strict=False):
     await asyncio.to_thread(prune_old_runs)
     metadata = await asyncio.to_thread(fetch_model_update_metadata)
     if not metadata:
-        message = "GFS model metadata alınamadı; doğru Open-Meteo model adresleri kontrol edilmeli."
+        message = "GFS in-progress/latest metadata alınamadı."
         print(f"[SKIP] {message}")
         if strict:
             raise RuntimeError(message)
         return
-    run_id = metadata["run_id"]
 
-    # Open-Meteo recommends allowing 10 minutes after availability so all
-    # geographically distributed API servers have received the new run.
-    available_at = metadata.get("last_run_availability_time")
-    if available_at:
-        try:
-            available_dt = datetime.fromisoformat(available_at.replace("Z", "+00:00"))
-            if available_dt.tzinfo is None:
-                available_dt = available_dt.replace(tzinfo=timezone.utc)
-            ready_at = available_dt.timestamp() + 600
-            remaining = ready_at - datetime.now(timezone.utc).timestamp()
-            if remaining > 0:
-                print(
-                    f"[WAIT] GFS verisinin tüm sunuculara yayılması için "
-                    f"{int(remaining)} saniye bekleniyor."
-                )
-                # Wait only for the remaining consistency window, then fetch
-                # this exact new run without adding another polling interval.
-                await asyncio.sleep(remaining)
-        except (TypeError, ValueError):
-            print("[METADATA UYARI] Availability zamanı çözümlenemedi; normal kontrole devam ediliyor.")
+    run_id = metadata["run_id"]
+    available_hours = int(metadata.get("forecast_horizon_hours", 0))
+    print(
+        f"[MODEL] GFS run {run_id}; yayınlanan tahmin: +{available_hours} saat; "
+        f"hedef: +{MIN_FORECAST_HOURS} saat."
+    )
+
+    # Do not use the current time as the reference. The threshold is measured
+    # from this exact GFS run's UTC initialisation time.
+    if available_hours < MIN_FORECAST_HOURS:
+        print(
+            f"[PENDING] {run_id} henüz +{MIN_FORECAST_HOURS} saate ulaşmadı "
+            f"(şu an +{available_hours}). Sonraki kontrolde yeniden bakılacak."
+        )
+        return
 
     previous_runs = get_previous_runs()
     if previous_runs and previous_runs[0][0] == run_id:
         print(f"[UNCHANGED] GFS run zaten işlendi: {run_id}")
         return
 
-    print(f"[UPDATE] Yeni GFS run tespit edildi: {run_id}")
-    payload = await asyncio.to_thread(fetch_full_weather_data)
-    if payload and "_pending_forecast_hours" in payload:
+    # Open-Meteo recommends waiting 10 minutes after a model update to allow
+    # geographically distributed API servers to become consistent.
+    available_at = metadata.get("last_modified_time")
+    if available_at:
+        try:
+            available_dt = _parse_utc_datetime(available_at)
+            remaining = available_dt.timestamp() + 600 - datetime.now(timezone.utc).timestamp()
+            if remaining > 0:
+                print(
+                    f"[WAIT] GFS verisinin sunucular arasında tutarlı hale gelmesi için "
+                    f"{int(remaining)} saniye bekleniyor."
+                )
+                await asyncio.sleep(remaining)
+        except (TypeError, ValueError):
+            print("[METADATA UYARI] last_modified_time çözümlenemedi; devam ediliyor.")
+
+    print(f"[UPDATE] +180 saat eşiğine ulaşan GFS run alınıyor: {run_id}")
+    payload = await asyncio.to_thread(fetch_full_weather_data, run_id)
+    if payload and "_pending_single_run" in payload:
         print(
-            f"[PENDING] GFS run {run_id} henüz +180 saate ulaşmadı; "
-            "bu run kaydedilmeyecek ve sonraki kontrolde tekrar denenecek."
+            f"[PENDING] {run_id} Single Runs API üzerinde henüz hazır değil; "
+            "sonraki kontrolde tekrar denenecek."
         )
         return
     if not payload:
-        message = "Forecast verisi alınamadı; GFS run işlenmiş olarak kaydedilmedi."
+        message = f"{run_id} için Single Runs API tahmini alınamadı."
         print(f"[RETRY] {message}")
         if strict:
             raise RuntimeError(message)
         return
+
     payload["model_metadata"] = metadata
     full_text_report, speech_text = analyze_and_build_output(
         run_id, payload, previous_runs
@@ -533,7 +593,7 @@ async def process_gfs_update(strict=False):
             print(f"[VOICE HATA] Ses gönderilemedi: {e}")
     else:
         print("[VOICE] Ses üretilemedi; metin bildirimi gönderilmiş durumda.")
-    print(f"[COMPLETE] GFS run işlendi: {run_id}")
+    print(f"[COMPLETE] GFS run işlendi ve +180 saat bildirimi gönderildi: {run_id}")
 
 
 async def main():
