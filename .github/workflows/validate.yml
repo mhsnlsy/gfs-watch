@@ -7,11 +7,13 @@ on:
     paths:
       - "main.py"
       - "requirements.txt"
+      - "site/**"
       - ".github/workflows/**"
   pull_request:
     paths:
       - "main.py"
       - "requirements.txt"
+      - "site/**"
       - ".github/workflows/**"
   workflow_dispatch:
 
@@ -27,3 +29,15 @@ jobs:
           python-version: "3.12"
       - name: Validate Python syntax
         run: python -m py_compile main.py
+      - name: Validate website JavaScript syntax
+        run: |
+          python - <<'PY'
+          from pathlib import Path
+          import re
+          html = Path("site/index.html").read_text(encoding="utf-8")
+          match = re.search(r"<script>(.*?)</script>", html, re.S)
+          if not match:
+              raise SystemExit("No inline website script found")
+          Path("/tmp/site-script.js").write_text(match.group(1), encoding="utf-8")
+          PY
+          node --check /tmp/site-script.js
