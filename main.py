@@ -458,10 +458,15 @@ async def process_gfs_update():
             if available_dt.tzinfo is None:
                 available_dt = available_dt.replace(tzinfo=timezone.utc)
             ready_at = available_dt.timestamp() + 600
-            if datetime.now(timezone.utc).timestamp() < ready_at:
-                remaining = int(ready_at - datetime.now(timezone.utc).timestamp())
-                print(f"[WAIT] GFS verisi sunuculara yayılıyor; yaklaşık {remaining} saniye sonra tekrar kontrol.")
-                return
+            remaining = ready_at - datetime.now(timezone.utc).timestamp()
+            if remaining > 0:
+                print(
+                    f"[WAIT] GFS verisinin tüm sunuculara yayılması için "
+                    f"{int(remaining)} saniye bekleniyor."
+                )
+                # Wait only for the remaining consistency window, then fetch
+                # this exact new run without adding another polling interval.
+                await asyncio.sleep(remaining)
         except (TypeError, ValueError):
             print("[METADATA UYARI] Availability zamanı çözümlenemedi; normal kontrole devam ediliyor.")
 
