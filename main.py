@@ -523,8 +523,18 @@ async def main():
         await asyncio.sleep(POLL_INTERVAL_SECONDS)
 
 
+async def run_once():
+    """Run one GFS check and exit; used by scheduled GitHub Actions."""
+    init_db()
+    print(f"[START] GFS Watch tek kontrol modunda çalışıyor; model: {MODEL_NAME}.")
+    await process_gfs_update()
+
+
 if __name__ == "__main__":
     try:
-        asyncio.run(main())
+        if os.getenv("GFS_WATCH_ONCE", "").strip().lower() in {"1", "true", "yes"}:
+            asyncio.run(run_once())
+        else:
+            asyncio.run(main())
     except KeyboardInterrupt:
         print("[STOP] GFS Watch kontrollü şekilde durduruldu.")
