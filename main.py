@@ -2170,9 +2170,10 @@ async def run_scheduled_watch():
             break
         await asyncio.sleep(min(poll_seconds, remaining))
 
-    print(
-        f"[WATCH TIMEOUT] {target_run_id} için izleme penceresi sona erdi; "
-        "NOAA f180 henüz işlenememiş olabilir."
+    raise RuntimeError(
+        f"[WATCH TIMEOUT] {target_run_id} için {window_minutes} dakikalık "
+        "izleme penceresi sona erdi; NOAA f180 işlenemedi. "
+        "GitHub Actions bu çalışmayı başarısız işaretlemeli."
     )
 
 
