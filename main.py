@@ -466,7 +466,9 @@ def fetch_full_weather_data(run_id):
             forecast_timeline[time_key] = {
                 "step_hour": lead,
                 "temp": istanbul_temp,
-                "precip": istanbul_precip,
+                # A 06Z/12Z/18Z run has no precipitation interval before its
+                # own initialization; do not compare that lead-0 placeholder.
+                "precip": None if lead == 0 else istanbul_precip,
             }
 
             day_key = valid_local.date().isoformat()
@@ -622,10 +624,13 @@ def analyze_and_build_output(current_run_name, payload, previous_runs):
                         direction = "artış" if t_diff > 0 else "düşüş"
                         temp_shifts.append(f"+{step}. saatte {abs(t_diff)} derece {direction}")
 
-                    p_diff = round(curr_data["precip"] - p_data["precip"], 2)
-                    if abs(p_diff) >= 1.00:
-                        p_dir = "artış" if p_diff > 0 else "azalma"
-                        precip_shifts.append(f"+{step}. saatte {abs(p_diff)} milimetre {p_dir}")
+                    current_precip = curr_data.get("precip")
+                    previous_precip = p_data.get("precip")
+                    if current_precip is not None and previous_precip is not None:
+                        p_diff = round(current_precip - previous_precip, 2)
+                        if abs(p_diff) >= 1.00:
+                            p_dir = "artış" if p_diff > 0 else "azalma"
+                            precip_shifts.append(f"+{step}. saatte {abs(p_diff)} milimetre {p_dir}")
         except Exception as e:
             print(f"[UYARI] Kıyaslama yapılırken hata oluştu: {e}")
 
