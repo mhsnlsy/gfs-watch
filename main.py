@@ -328,11 +328,14 @@ def analyse_regional_pressure_grid(pressure_grid):
         if not pressure_grid:
             raise ValueError("f000 GRIB2 içinde deniz seviyesi basınç alanı yok.")
 
-        pressure_values, pressure_latitudes, pressure_longitudes = pressure_grid
+        pressure_values, pressure_latitudes, pressure_longitudes = (
+            np.asarray(array, dtype=float).reshape(-1)
+            for array in pressure_grid
+        )
         if not (
-            len(pressure_values)
-            == len(pressure_latitudes)
-            == len(pressure_longitudes)
+            pressure_values.size
+            == pressure_latitudes.size
+            == pressure_longitudes.size
         ):
             raise ValueError("Basınç GRIB2 koordinat ve değer dizileri uyuşmuyor.")
 
@@ -398,7 +401,7 @@ def analyse_regional_pressure_grid(pressure_grid):
                 + (((pressure_longitudes - LON + 180.0) % 360.0) - 180.0) ** 2
             ).argmin()
         )
-        centre_pressure_hpa = float(pressure_values[nearest_index]) / 100.0
+        centre_pressure_hpa = float(np.asarray(pressure_values[nearest_index]).item()) / 100.0
         print(
             f"[BASINÇ GRIB2] 2.500 km çaplı dairede "
             f"{int(np.count_nonzero(inside))} grid noktası; "
