@@ -12,6 +12,7 @@ on:
       - ".github/workflows/**"
   pull_request:
     paths:
+      - "scripts/**"
       - "main.py"
       - "requirements.txt"
       - "site/**"
