@@ -902,8 +902,6 @@ def analyze_and_build_output(current_run_name, payload, previous_runs):
             day_text += " Rüzgâr hızı yüksek."
         speech_parts.append(day_text)
 
-    temp_shifts = []
-    precip_shifts = []
     comparison_events = []
     comparison_points = 0
 
@@ -937,11 +935,6 @@ def analyze_and_build_output(current_run_name, payload, previous_runs):
                     changes_at_time.append(
                         f"Sıcaklık {abs(t_diff):.1f}°C {direction}"
                     )
-                    legacy_direction = "artış" if t_diff > 0 else "düşüş"
-                    temp_shifts.append(
-                        f"+{curr_data['step_hour']}. saatte "
-                        f"{abs(t_diff):.1f} derece {legacy_direction}"
-                    )
 
                 current_precip = curr_data.get("precip")
                 previous_precip = prev_data.get("precip")
@@ -954,11 +947,6 @@ def analyze_and_build_output(current_run_name, payload, previous_runs):
                         changes_at_time.append(
                             f"bu saatte biten 6 saatlik yağış "
                             f"{abs(p_diff):.2f} mm {direction}"
-                        )
-                        legacy_direction = "artış" if p_diff > 0 else "azalma"
-                        precip_shifts.append(
-                            f"+{curr_data['step_hour']}. saatte "
-                            f"{abs(p_diff):.2f} milimetre {legacy_direction}"
                         )
 
                 current_wind = curr_data.get("wind")
