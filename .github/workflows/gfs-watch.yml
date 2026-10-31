@@ -1,13 +1,6 @@
 name: GFS Watch
 
 on:
-  push:
-    branches:
-      - main
-    paths:
-      - "main.py"
-      - "requirements.txt"
-      - ".github/workflows/gfs-watch.yml"
   # Start 3h50 after each GFS cycle begins (Istanbul = UTC+3).
   # One workflow run caches newly available GRIB2 lead files every 5 minutes,
   # while checking the final f180 object every 15 seconds for up to 90 minutes.
