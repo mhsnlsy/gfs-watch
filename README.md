@@ -63,6 +63,8 @@ This is a downloadable public data file, not a live feed automatically consumed 
 ## Notification behaviour
 
 - One text notification is sent per eligible GFS run; there are no separate notifications for forecast changes.
+- When a previous processed run exists, each automatic new-run notification also sends a PNG comparison chart to Telegram. It contains paired daily temperature candlesticks (first/last six-hour sample as open/close; daily low/high as wick), daily precipitation totals and daily maximum wind speed for dates shared by both runs.
+- The first processed run has no previous run to compare and therefore sends no comparison image. Manual report resends do not generate or send comparison images.
 - Telegram text delivery does not wait for TTS. Audio generation starts concurrently in a background thread.
 - TTS generation and Telegram voice delivery each retry up to three times after failures. If audio cannot be produced or sent, the text report remains delivered.
 - GitHub Actions prevents overlapping GFS Watch jobs.
