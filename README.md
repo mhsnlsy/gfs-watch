@@ -1,6 +1,8 @@
 # GFS Watch
 
-An Istanbul-focused GFS forecast watcher. It polls Open-Meteo model metadata every 10 minutes and sends a Telegram text report as soon as a new GFS run is detected. Google Cloud Text-to-Speech runs concurrently; the voice message is sent when audio generation finishes.
+An Istanbul-focused GFS forecast watcher. It polls Open-Meteo model metadata every 10 minutes and sends one Telegram notification for every new GFS run. Forecast differences are included in the report for context but do not create separate notifications.
+
+Telegram text is sent immediately without waiting for speech synthesis. Google Cloud Text-to-Speech runs concurrently; the voice message is sent as soon as it is ready.
 
 ## Fly.io deployment
 
@@ -18,7 +20,7 @@ An Istanbul-focused GFS forecast watcher. It polls Open-Meteo model metadata eve
    fly secrets set TELEGRAM_TOKEN="..." CHAT_ID="..." GCP_SA_KEY='...'
    ```
 
-   `GCP_SA_KEY` is the service-account JSON as a single-line JSON string. If it is absent, text alerts still work and voice generation is skipped.
+   `GCP_SA_KEY` is the service-account JSON as a single-line JSON string. If it is absent or TTS fails, the text notification is still delivered.
 
 3. Deploy and ensure exactly one worker:
 
@@ -32,11 +34,12 @@ An Istanbul-focused GFS forecast watcher. It polls Open-Meteo model metadata eve
    - `POLL_INTERVAL_SECONDS`: defaults to `600` (10 minutes).
    - `DB_PATH`: defaults to `/data/gfs_watch.db` on Fly and `./gfs_watch.db` locally.
 
-SQLite state is stored on the mounted volume so processed model run IDs survive restarts. Keep one worker instance to avoid duplicate polling and notifications.
-
-## Notification behaviour
+## Run history and notification behaviour
 
 - The run ID comes from Open-Meteo's `last_run_initialisation_time`, not the local clock.
+- Every new GFS run produces one text notification. There are no separate notifications for significant forecast changes.
+- Records older than 10 days are deleted at startup and on every polling cycle. The persistent volume preserves the remaining history across restarts.
 - If metadata, forecast retrieval, or Telegram text delivery fails, the run is not marked processed and is retried on the next polling cycle.
-- Telegram text is sent without waiting for TTS. TTS starts in a background thread and the voice message follows when ready.
-- If TTS or voice delivery fails, the text report remains delivered; audio is not automatically retried.
+- Telegram text delivery does not wait for TTS. Audio generation starts concurrently in a background thread.
+- TTS generation and Telegram voice delivery each retry up to three times after failures. If audio still cannot be produced or sent, the text report remains delivered.
+- Keep exactly one worker instance to avoid concurrent polling and duplicate notifications.
