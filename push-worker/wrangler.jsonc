@@ -1,0 +1,20 @@
+{
+  "$schema": "node_modules/wrangler/config-schema.json",
+  "name": "gfs-watch-push",
+  "main": "src/index.js",
+  "compatibility_date": "2026-10-31",
+  "workers_dev": true,
+  "observability": {
+    "enabled": true
+  },
+  "vars": {
+    "ALLOWED_ORIGIN": "https://mhsnlsy.github.io"
+  },
+  "d1_databases": [
+    {
+      "binding": "DB",
+      "database_name": "gfs-watch-push",
+      "migrations_dir": "migrations"
+    }
+  ]
+}
