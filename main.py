@@ -29,12 +29,11 @@ POLL_INTERVAL_SECONDS = max(60, int(os.getenv("POLL_INTERVAL_SECONDS", "600")))
 DATA_DIR = "/data" if os.path.isdir("/data") else "."
 DB_PATH = os.getenv("DB_PATH", os.path.join(DATA_DIR, "gfs_watch.db"))
 MODEL_NAME = "ncep_gfs_global"
-# Open-Meteo publishes GFS progress metadata separately from its completed
-# time-series metadata. This lets us track the active 00/06/12/18 UTC run.
-MODEL_METADATA_URLS = (
-    "https://openmeteo.s3.amazonaws.com/data_spatial/ncep_gfs013/in-progress.json",
-    "https://openmeteo.s3.amazonaws.com/data_spatial/ncep_gfs013/latest.json",
-)
+# Detect completed +180 GFS cycles directly from NOAA's public S3 inventory.
+# A successful HEAD confirms the exact global GRIB2 f180 object is published,
+# without downloading the hundreds-of-megabytes global file.
+NOAA_GFS_S3_BASE = "https://noaa-gfs-bdp-pds.s3.amazonaws.com"
+NOAA_CYCLE_LOOKBACK = 6
 MIN_FORECAST_HOURS = 180
 RETENTION_DAYS = 10
 
@@ -95,6 +94,16 @@ def get_previous_runs():
     conn.close()
     return rows
 
+def get_processed_run_ids():
+    """Return all retained run IDs so older unprocessed cycles are not repeated."""
+    conn = sqlite3.connect(DB_PATH)
+    try:
+        cursor = conn.cursor()
+        cursor.execute("SELECT run_name FROM gfs_runs_v3")
+        return {row[0] for row in cursor.fetchall()}
+    finally:
+        conn.close()
+
 def save_run(run_name, forecast_dict):
     conn = sqlite3.connect(DB_PATH)
     try:
@@ -115,7 +124,7 @@ def save_run(run_name, forecast_dict):
     finally:
         conn.close()
 
-# --- GFS MODEL SÜRÜMÜ METADATA ---
+# --- NOAA GFS +180 DOSYA VARLIĞI ---
 def _normalise_model_timestamp(value):
     if value is None:
         return None
@@ -138,67 +147,83 @@ def _parse_utc_datetime(value):
     return parsed.astimezone(timezone.utc)
 
 
-def fetch_model_update_metadata():
+def fetch_noaa_available_runs():
+    """Find recent GFS cycles by checking NOAA's public f180 GRIB2 S3 objects."""
+    now = datetime.now(timezone.utc)
+    latest_cycle_hour = (now.hour // 6) * 6
+    latest_cycle = now.replace(
+        hour=latest_cycle_hour, minute=0, second=0, microsecond=0
+    )
     candidates = []
     errors = []
-    for metadata_url in MODEL_METADATA_URLS:
+    session = requests.Session()
+    session.headers.update({"User-Agent": "GFS-Watch/1.0"})
+
+    for offset in range(NOAA_CYCLE_LOOKBACK):
+        run_dt = latest_cycle - timedelta(hours=6 * offset)
+        date_token = run_dt.strftime("%Y%m%d")
+        cycle = run_dt.strftime("%H")
+        filename = f"gfs.t{cycle}z.pgrb2.0p25.f{MIN_FORECAST_HOURS:03d}"
+        object_url = (
+            f"{NOAA_GFS_S3_BASE}/gfs.{date_token}/{cycle}/atmos/{filename}"
+        )
+        run_id = run_dt.isoformat(timespec="seconds")
+
         try:
-            response = requests.get(
-                metadata_url,
+            response = session.head(
+                object_url,
                 headers={"Cache-Control": "no-cache"},
                 timeout=15,
+                allow_redirects=True,
             )
-            response.raise_for_status()
-            record = response.json()
-            if not isinstance(record, dict):
-                raise ValueError(f"Beklenmeyen metadata yanıtı: {record}")
+            if response.status_code == 200:
+                content_length = int(response.headers.get("Content-Length", "0") or 0)
+                if content_length <= 0:
+                    print(
+                        f"[NOAA S3 UYARI] {run_id} f180 başlığı boş içerik uzunluğu döndürdü."
+                    )
+                    continue
 
-            reference_time = record.get("reference_time")
-            valid_times = record.get("valid_times") or []
-            if not reference_time or not valid_times:
-                raise ValueError(
-                    "Metadata içinde reference_time veya valid_times bulunamadı."
+                modified_at = _normalise_model_timestamp(
+                    response.headers.get("Last-Modified")
                 )
-
-            run_dt = _parse_utc_datetime(reference_time)
-            valid_datetimes = [_parse_utc_datetime(value) for value in valid_times]
-            last_valid_dt = max(valid_datetimes)
-            available_hours = max(
-                0, int((last_valid_dt - run_dt).total_seconds() // 3600)
-            )
-            run_id = run_dt.isoformat(timespec="seconds")
-            modified_at = record.get("last_modified_time")
-
-            candidates.append({
-                "model": MODEL_NAME,
-                "metadata_source": metadata_url,
-                "run_id": run_id,
-                "last_run_initialisation_time": run_id,
-                "last_run_availability_time": _normalise_model_timestamp(modified_at),
-                "last_modified_time": _normalise_model_timestamp(modified_at),
-                "last_valid_time": last_valid_dt.isoformat(timespec="minutes"),
-                "forecast_horizon_hours": available_hours,
-                "completed": bool(record.get("completed", False)),
-            })
-        except Exception as e:
-            errors.append(f"{metadata_url}: {type(e).__name__}: {e}")
+                candidates.append({
+                    "model": MODEL_NAME,
+                    "metadata_source": "NOAA/NCEP public S3 f180 GRIB2 object",
+                    "run_id": run_id,
+                    "last_run_initialisation_time": run_id,
+                    "last_run_availability_time": modified_at,
+                    "last_modified_time": modified_at,
+                    "last_valid_time": (
+                        run_dt + timedelta(hours=MIN_FORECAST_HOURS)
+                    ).isoformat(timespec="minutes"),
+                    "forecast_horizon_hours": MIN_FORECAST_HOURS,
+                    "completed": True,
+                    "noaa_f180_available": True,
+                    "source_object_size_bytes": content_length,
+                })
+                print(
+                    f"[NOAA READY] {run_id} +180 GRIB2 dosyası yayımlanmış; "
+                    f"S3 nesne boyutu {content_length:,} byte."
+                )
+            elif response.status_code in (403, 404, 405):
+                print(
+                    f"[NOAA PENDING] {run_id} +180 GRIB2 dosyası henüz S3'te yok "
+                    f"(HTTP {response.status_code})."
+                )
+            else:
+                errors.append(
+                    f"{run_id}: NOAA S3 HTTP {response.status_code}"
+                )
+        except requests.RequestException as exc:
+            errors.append(f"{run_id}: {type(exc).__name__}: {exc}")
 
     if not candidates:
-        print("[METADATA HATA] GFS ilerleme bilgisi alınamadı. " + " | ".join(errors))
+        suffix = " | ".join(errors) if errors else "Henüz yayımlanmış +180 dosyası yok."
+        print("[NOAA S3 PENDING] " + suffix)
         return []
 
-    # The active run and most recently completed run are both important:
-    # while a new cycle is still below +180h, the preceding completed cycle
-    # may already be eligible and must not be hidden by in-progress.json.
-    by_run = {}
-    for candidate in candidates:
-        current = by_run.get(candidate["run_id"])
-        if current is None or (
-            candidate["forecast_horizon_hours"] > current["forecast_horizon_hours"]
-        ):
-            by_run[candidate["run_id"]] = candidate
-
-    return sorted(by_run.values(), key=lambda item: item["run_id"])
+    return sorted(candidates, key=lambda item: item["run_id"])
 
 
 # --- VERİ ÇEKME (+180 SAAT / FAST-FETCH) ---
@@ -764,16 +789,16 @@ async def send_telegram_voice(audio_path, max_attempts=3):
 # --- ANA ÇALIŞTIRICI ---
 async def process_gfs_update(strict=False):
     await asyncio.to_thread(prune_old_runs)
-    candidates = await asyncio.to_thread(fetch_model_update_metadata)
+    candidates = await asyncio.to_thread(fetch_noaa_available_runs)
     if not candidates:
-        message = "GFS in-progress/latest metadata alınamadı."
+        message = "NOAA S3 üzerinde henüz +180 GFS GRIB2 dosyası yayımlanmadı."
         print(f"[SKIP] {message}")
         if strict:
             raise RuntimeError(message)
         return
 
     previous_runs = get_previous_runs()
-    processed_run_ids = {row[0] for row in previous_runs}
+    processed_run_ids = await asyncio.to_thread(get_processed_run_ids)
     pending_runs = [
         item for item in candidates
         if item["run_id"] not in processed_run_ids
@@ -809,28 +834,14 @@ async def process_gfs_update(strict=False):
         f"hedef: +{MIN_FORECAST_HOURS} saat."
     )
 
-    # Do not hold a GitHub Actions runner while the source is distributing a run.
-    # In-progress metadata may be updated repeatedly; the scheduled 10-minute
-    # checks will retry the exact NOAA/NCEP GRIB2 file without blocking a job.
-    available_at = metadata.get("last_modified_time")
-    if available_at and metadata.get("completed", False):
-        try:
-            available_dt = _parse_utc_datetime(available_at)
-            remaining = available_dt.timestamp() + 600 - datetime.now(timezone.utc).timestamp()
-            if remaining > 0:
-                print(
-                    f"[PENDING] Tamamlanmış GFS koşusu için dağıtık sunucu tutarlılığı "
-                    f"bekleniyor; yaklaşık {int(remaining)} saniye sonra zamanlanmış "
-                    "kontrolde tekrar denenecek."
-                )
-                return
-        except (TypeError, ValueError):
-            print("[METADATA UYARI] last_modified_time çözümlenemedi; devam ediliyor.")
-    elif not metadata.get("completed", False):
-        print(
-            f"[INFO] {run_id} hâlâ işleniyor (+{available_hours} saat mevcut). "
-            "Tekil koşu arşivi henüz hazır olmayabilir; API kontrolü yapılacak."
-        )
+    # The S3 f180 object itself is the trigger. Its successful HEAD response
+    # confirms the global +180 GRIB2 object has been published; fetch the
+    # compact single-point NOMADS subset immediately and retry missing files
+    # on the next scheduled check.
+    print(
+        f"[NOAA TRIGGER] {run_id} +180 dosyası NOAA S3'te hazır; "
+        "tek koordinatlı NOMADS GRIB2 parçaları alınıyor."
+    )
 
     print(f"[UPDATE] +180 saat eşiğine ulaşan GFS run alınıyor: {run_id}")
     payload = await asyncio.to_thread(fetch_full_weather_data, run_id)
