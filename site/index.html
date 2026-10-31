@@ -39,6 +39,7 @@
   <footer class="shell footer"><span><strong>İstanbul'un Havası</strong> · GFS Watch v2.1.0</span><span>Veri kaynağı: NOAA / NCEP · Otomatik yenileme: 5 dakika</span></footer>
   <script>
     const DATA_URL="./data/latest.json";
+    const STATION_URL="./data/station-observation.json";
     let forecastData=null,activeMetric="temperature";
     const $=id=>document.getElementById(id);
     const numeric=value=>typeof value==="number"&&Number.isFinite(value);
@@ -94,9 +95,11 @@
       $("weather-symbol").textContent=symbolFor(hasStation?station.precipitation_1h_mm||0:0);
       if(hasStation){
         const observed=station.observed_at_utc?new Date(station.observed_at_utc):null;
-        const observedText=observed&&!Number.isNaN(observed.getTime())?new Intl.DateTimeFormat("tr-TR",{timeZone:"Europe/Istanbul",dateStyle:"short",timeStyle:"short"}).format(observed):"zaman bilinmiyor";
-        $("station-observation-meta").textContent=(station.is_stale?"Gecikmeli ölçüm":"Son ölçüm")+" · "+observedText+" TSİ · MGM / WStatMap";
-        $("freshness").textContent=station.is_stale?"Ölçüm gecikmiş":"İstasyon verisi";
+        const observedValid=observed&&!Number.isNaN(observed.getTime());
+        const stale=!!station.is_stale||!observedValid||(Date.now()-observed.getTime()>90*60*1000);
+        const observedText=observedValid?new Intl.DateTimeFormat("tr-TR",{timeZone:"Europe/Istanbul",dateStyle:"short",timeStyle:"short"}).format(observed):"zaman bilinmiyor";
+        $("station-observation-meta").textContent=(stale?"Gecikmeli ölçüm":"Son ölçüm")+" · "+observedText+" TSİ · MGM / WStatMap";
+        $("freshness").textContent=stale?"Ölçüm gecikmiş":"İstasyon verisi";
       }else{
         $("station-observation-meta").textContent="MGM Eyüpsultan 18101 verisine şu anda ulaşılamıyor.";
         $("freshness").textContent="İstasyon verisi yok";
@@ -105,7 +108,6 @@
       if(data.published_at_utc){
         $("updated-chip").textContent="Yayınlandı · "+timeTR(data.published_at_utc);
         const age=(Date.now()-new Date(data.published_at_utc).getTime())/3600000;
-        $("freshness").textContent=age>24?"Eski model verisi":age>12?"Son güncelleme bekleniyor":"Model verisi hazır";
         if(age>24){$("freshness").style.color="#f1c98b";$("freshness").style.background="rgba(241,201,139,.1)";}
       }
       if(data.forecast_valid_until_utc)$("valid-until").textContent="Son geçerlilik: "+new Intl.DateTimeFormat("tr-TR",{timeZone:"Europe/Istanbul",day:"2-digit",month:"2-digit"}).format(new Date(data.forecast_valid_until_utc));
@@ -113,10 +115,21 @@
     }
     async function loadForecast(){
       try{
-        const response=await fetch(DATA_URL+"?t="+Date.now(),{cache:"no-store"});
+        const cacheKey=Date.now();
+        const [response,stationResponse]=await Promise.all([
+          fetch(DATA_URL+"?t="+cacheKey,{cache:"no-store"}),
+          fetch(STATION_URL+"?t="+cacheKey,{cache:"no-store"}).catch(()=>null)
+        ]);
         if(!response.ok)throw new Error("Tahmin verisi şu anda alınamıyor.");
         const data=await response.json();
         if(!data||data.schema!=="gfs-watch.forecast.v1")throw new Error("Tahmin verisinin biçimi beklenenden farklı.");
+        data.station_observation=null;
+        if(stationResponse&&stationResponse.ok){
+          const stationDocument=await stationResponse.json();
+          if(stationDocument&&stationDocument.schema==="gfs-watch.station-observation.v1"){
+            data.station_observation=stationDocument.station_observation||null;
+          }
+        }
         render(data);
       }catch(error){
         $("freshness").textContent="Veriye ulaşılamadı";$("temperature").textContent="—°";
