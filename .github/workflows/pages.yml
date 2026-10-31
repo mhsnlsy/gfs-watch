@@ -75,3 +75,5 @@ jobs:
       - name: Deploy website
         id: deployment
         uses: actions/deploy-pages@v4
+
+# Re-deploy when the public notification archive is refreshed.
