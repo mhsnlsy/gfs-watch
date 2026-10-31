@@ -62,8 +62,8 @@ jobs:
           if [ -d public ]; then
             cp -a public/. "$RUNNER_TEMP/public/"
           fi
-          git checkout -B gfs-watch-state origin/gfs-watch-state
           rm -rf public
+          git checkout -B gfs-watch-state origin/gfs-watch-state
           mkdir -p public/runs
           cp -a "$RUNNER_TEMP/public/." public/
           find public/runs -type f -name '*.json' -mtime +10 -delete
