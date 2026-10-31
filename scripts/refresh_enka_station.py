@@ -16,14 +16,14 @@ ISTANBUL = ZoneInfo("Europe/Istanbul")
 
 
 def clean(value):
-    value = re.sub(r"<script\\b[^>]*>.*?</script>", " ", value, flags=re.I | re.S)
-    value = re.sub(r"<style\\b[^>]*>.*?</style>", " ", value, flags=re.I | re.S)
+    value = re.sub(r"<script\b[^>]*>.*?</script>", " ", value, flags=re.I | re.S)
+    value = re.sub(r"<style\b[^>]*>.*?</style>", " ", value, flags=re.I | re.S)
     value = re.sub(r"<[^>]+>", " ", value)
-    return re.sub(r"\\s+", " ", unescape(value)).strip()
+    return re.sub(r"\s+", " ", unescape(value)).strip()
 
 
 def number(value):
-    match = re.search(r"[-+]?\\d+(?:[.,]\\d+)?", value or "")
+    match = re.search(r"[-+]?\d+(?:[.,]\d+)?", value or "")
     return float(match.group(0).replace(",", ".")) if match else None
 
 
@@ -42,7 +42,7 @@ def fetch():
     page = response.text
     page_text = clean(page)
 
-    stamp = re.search(r"(\\d{1,2}/\\d{1,2}/\\d{2,4})\\s+(\\d{1,2}:\\d{2})", page_text)
+    stamp = re.search(r"(\d{1,2}/\d{1,2}/\d{2,4})\s+(\d{1,2}:\d{2})", page_text)
     if not stamp:
         raise ValueError("ENKA Istinye observation timestamp not found")
     stamp_text = f"{stamp.group(1)} {stamp.group(2)}"
@@ -57,8 +57,8 @@ def fetch():
         raise ValueError(f"Unrecognized ENKA timestamp: {stamp_text}")
 
     rows = {}
-    for row in re.findall(r"<tr\\b[^>]*>(.*?)</tr>", page, flags=re.I | re.S):
-        cells = [clean(x) for x in re.findall(r"<t[dh]\\b[^>]*>(.*?)</t[dh]>", row, flags=re.I | re.S)]
+    for row in re.findall(r"<tr\b[^>]*>(.*?)</tr>", page, flags=re.I | re.S):
+        cells = [clean(x) for x in re.findall(r"<t[dh]\b[^>]*>(.*?)</t[dh]>", row, flags=re.I | re.S)]
         if len(cells) >= 2:
             rows[cells[0].strip().lower()] = " ".join(cells[1:])
 
@@ -76,7 +76,7 @@ def fetch():
     wind_speed = number(wind_line)
     direction_line = row_value("rüzgar")
     direction_match = re.search(
-        r"\\b(NNE|ENE|ESE|SSE|SSW|WSW|WNW|NNW|N|NE|E|SE|S|SW|W|NW)\\b",
+        r"\b(NNE|ENE|ESE|SSE|SSW|WSW|WNW|NNW|N|NE|E|SE|S|SW|W|NW)\b",
         direction_line,
         flags=re.I,
     )
@@ -133,7 +133,7 @@ def main():
         "station_observation": observation,
         "updated_at_utc": datetime.now(timezone.utc).isoformat(timespec="seconds"),
     }
-    OUT.write_text(json.dumps(document, ensure_ascii=False, indent=2) + "\\n", encoding="utf-8")
+    OUT.write_text(json.dumps(document, ensure_ascii=False, indent=2) + "\n", encoding="utf-8")
     print(f"New ENKA İstinye observation published: {observation['observed_at_utc']}")
 
 
