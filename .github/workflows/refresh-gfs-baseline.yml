@@ -1,0 +1,67 @@
+name: Refresh exact GFS baseline
+
+on:
+  push:
+    branches:
+      - main
+    paths:
+      - ".github/workflows/refresh-gfs-baseline.yml"
+
+permissions:
+  contents: write
+
+concurrency:
+  group: gfs-watch-run
+  cancel-in-progress: false
+
+jobs:
+  refresh-baseline:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Check out repository
+        uses: actions/checkout@v7
+        with:
+          fetch-depth: 0
+      - name: Set up Python
+        uses: actions/setup-python@v7
+        with:
+          python-version: "3.12"
+      - name: Install application dependencies
+        run: python -m pip install -r requirements.txt
+      - name: Restore run history
+        run: |
+          git fetch origin gfs-watch-state
+          if git cat-file -e origin/gfs-watch-state:gfs_watch.db 2>/dev/null; then
+            git show origin/gfs-watch-state:gfs_watch.db > gfs_watch.db
+          fi
+      - name: Refresh 00Z baseline from the exact Single Runs API
+        env:
+          DB_PATH: gfs_watch.db
+        run: |
+          python - <<'PY'
+          import main
+
+          main.init_db()
+          run_id = "2026-10-31T00:00:00+00:00"
+          payload = main.fetch_full_weather_data(run_id)
+          assert payload is not None, "Could not retrieve the archived 00Z baseline"
+          assert payload.get("forecast_horizon_hours") == 180, (
+              f"Expected +180h baseline, got {payload.get('forecast_horizon_hours')}"
+          )
+          main.save_run(run_id, payload)
+          print("Exact 00Z baseline refreshed; no Telegram notification was sent.")
+          PY
+      - name: Save updated run history
+        run: |
+          cp gfs_watch.db "$RUNNER_TEMP/gfs_watch.db"
+          git checkout -B gfs-watch-state origin/gfs-watch-state
+          cp "$RUNNER_TEMP/gfs_watch.db" gfs_watch.db
+          git add -f gfs_watch.db
+          if git diff --cached --quiet; then
+            echo "Run history was already current."
+            exit 0
+          fi
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git commit -m "Refresh exact GFS 00Z baseline"
+          git push origin gfs-watch-state
