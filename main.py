@@ -784,11 +784,8 @@ def fetch_full_weather_data(run_id, min_request_interval=10.0):
         last_request_at = 0.0
 
         for position, lead in enumerate(download_order):
-            if position:
-                elapsed = time.monotonic() - last_request_at
-                if elapsed < min_request_interval:
-                    time.sleep(min_request_interval - elapsed)
-
+            # Cached forecast slices require no NOMADS request and therefore
+            # must not incur the network pacing delay.
             grib_bytes = _read_noaa_cache_file(run_id, lead)
             if grib_bytes is not None:
                 print(
