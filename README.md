@@ -22,16 +22,17 @@ The repository runs GFS Watch through GitHub Actions. No separate server or loca
    - `CHAT_ID` — Telegram chat ID (required).
    - `GCP_SA_KEY` — Google Cloud service-account JSON in one line (optional; without it, text notifications still work).
 3. Open the **Actions** tab and select **GFS Watch**. Use **Run workflow** to test it.
-4. The scheduled workflow checks for new GFS runs every 10 minutes. GitHub may delay scheduled starts during periods of high load.
+4. The scheduled workflow checks for new GFS runs every 5 minutes during four Istanbul-time windows: 06:30–08:30, 12:30–14:30, 18:30–20:30 and 00:30–02:30. GitHub may delay scheduled starts during periods of high load.
 
 The workflow installs the ecCodes system library and Python package automatically on its GitHub-hosted runner.
 
 ## Run tracking and +180-hour threshold
 
-- Every 10 minutes, the workflow checks NOAA S3 for the latest six GFS cycle files (00Z, 06Z, 12Z and 18Z, including recent prior cycles).
+- During the four daily Istanbul-time windows (06:30–08:30, 12:30–14:30, 18:30–20:30 and 00:30–02:30), the workflow checks NOAA S3 every five minutes for the latest six GFS cycle files (00Z, 06Z, 12Z and 18Z, including recent prior cycles).
 - A run becomes eligible as soon as its exact global `f180` GRIB2 object exists on NOAA S3. This is the run-discovery trigger; Open-Meteo metadata and its archive API are not required.
-- The watcher then requests the compact single-point +180 file from NOAA/NCEP NOMADS first. If the filtered NOMADS data or any earlier six-hour step is not yet available, the run remains unprocessed and is retried on the next scheduled check.
-- Each NOMADS subset request is spaced by at least 10 seconds. A full +0 to +180 timeline uses six-hour forecast steps and only the nearest GFS grid cell for the configured coordinate.
+- Before +180 is published, the watcher incrementally prefetches up to four available early forecast files (f000–f174) per check and stores them in a GitHub Actions cache shared with the next check. When the exact global f180 object appears, the watcher reuses those cached files and downloads only the missing forecast steps.
+- A full +0 to +180 timeline still uses all 31 six-hour forecast steps and only the nearest GFS grid cell for the configured coordinate. Cache entries are removed after a run is processed and abandoned cycle caches are pruned after 48 hours.
+- Each actual NOMADS subset HTTP request remains spaced by at least 10 seconds, in line with the NOMADS Grib Filter guidance. Cached files do not incur network pacing delays.
 
 ## Public machine-readable JSON
 
@@ -48,9 +49,8 @@ This is a downloadable public data file, not a live feed automatically consumed 
 
 - The SQLite database is stored in the `gfs-watch-state` branch and restored before each check.
 - The latest 10 days of run history are retained.
-- Each eligible run is compared with the immediately preceding stored run at common valid timestamps. Temperature changes of at least 2 °C, six-hour precipitation changes of at least 1 mm and 10 m wind-speed changes of at least 10 km/h are included in the written report.
-- Comparison events are sorted by their valid time and labelled with the full Europe/Istanbul weekday, date and clock time. The six-hour precipitation comparison refers to the accumulation period ending at that displayed time.
-- The first lead of a new cycle has no six-hour precipitation interval preceding its own initialisation, so that point is excluded from precipitation comparisons.
+- Run-to-run temperature, six-hour precipitation and 10 m wind-speed changes are presented in the four-cycle comparison image, not repeated in the text report or voice script.
+- The comparison image uses a shared set of overlapping Istanbul calendar dates across all four cycles. Every panel labels each date with its Turkish weekday. The first lead of a new cycle has no six-hour precipitation interval preceding its own initialisation, so that point is excluded from precipitation comparisons.
 - At model initialisation, a separate NOAA/NCEP mean-sea-level pressure subset is analysed inside a 2,500 km diameter circle centred on 41.014°N, 28.950°E. High/low pressure findings are written in the text report only and are not included in the voice script.
 - Do not delete or manually edit the `gfs_watch.db` file in the state branch; the workflow maintains it.
 
@@ -58,7 +58,7 @@ This is a downloadable public data file, not a live feed automatically consumed 
 
 - The Telegram report identifies the output type, model-cycle time in TSİ and UTC, report creation time, and the full +180-hour validity interval in TSİ.
 - Daily summaries use Turkish weekday names and calendar dates instead of relative labels such as "tomorrow" or "the following day".
-- The voice script also uses weekday names for daily summaries. Regional pressure findings and all previous-run change/comparison narration are excluded from the voice script; run-to-run changes remain in the written report and comparison image.
+- The voice script also uses weekday names for daily summaries. Regional pressure findings and all previous-run change/comparison narration are excluded from the voice script. Run-to-run changes appear only in the four-cycle comparison image.
 
 ## Notification behaviour
 
