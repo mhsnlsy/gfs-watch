@@ -1,0 +1,25 @@
+{
+  "schema": "gfs-watch.station-observation.v1",
+  "station_observation": {
+    "station_name": "ENKA Balmumcu",
+    "station_id": "ENKA-BALMUMCU-VANTAGE-PRO",
+    "source": "ENKA Balmumcu Vantage PRO weather station",
+    "source_url": "https://w.enka.com/weather/currentvalues.html",
+    "station_home_url": "https://w.enka.com/weather/index.html",
+    "latitude": 41.1,
+    "longitude": 28.9,
+    "elevation_m": 107,
+    "observed_at_utc": "2026-10-31T17:10:00+00:00",
+    "age_minutes": 3.5,
+    "is_stale": false,
+    "temperature_2m_c": 13.8,
+    "wind_speed_10m_kmh": 9.6,
+    "wind_speed_10m_knots": 5.2,
+    "wind_direction_cardinal": "NE",
+    "precipitation_1h_mm": null,
+    "precipitation_daily_mm": 0.0,
+    "humidity_percent": 87.0,
+    "station_pressure_hpa": 1020.5
+  },
+  "updated_at_utc": "2026-10-31T17:13:32+00:00"
+}
