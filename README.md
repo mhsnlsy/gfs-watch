@@ -48,9 +48,17 @@ This is a downloadable public data file, not a live feed automatically consumed 
 
 - The SQLite database is stored in the `gfs-watch-state` branch and restored before each check.
 - The latest 10 days of run history are retained.
-- Each eligible run is compared with the immediately preceding stored run at common valid timestamps. Temperature changes of at least 2 °C and six-hour precipitation changes of at least 1 mm are included in the report.
+- Each eligible run is compared with the immediately preceding stored run at common valid timestamps. Temperature changes of at least 2 °C, six-hour precipitation changes of at least 1 mm and 10 m wind-speed changes of at least 10 km/h are included in the written report.
+- Comparison events are sorted by their valid time and labelled with the full Europe/Istanbul weekday, date and clock time. The six-hour precipitation comparison refers to the accumulation period ending at that displayed time.
 - The first lead of a new cycle has no six-hour precipitation interval preceding its own initialisation, so that point is excluded from precipitation comparisons.
+- At model initialisation, a separate NOAA/NCEP mean-sea-level pressure subset is analysed inside a 2,500 km diameter circle centred on 41.014°N, 28.950°E. High/low pressure findings are written in the text report only and are not included in the voice script.
 - Do not delete or manually edit the `gfs_watch.db` file in the state branch; the workflow maintains it.
+
+## Report clarity
+
+- The Telegram report identifies the output type, model-cycle time in TSİ and UTC, report creation time, and the full +180-hour validity interval in TSİ.
+- Daily summaries use Turkish weekday names and calendar dates instead of relative labels such as "tomorrow" or "the following day".
+- The voice script also uses weekday names for daily summaries. Regional pressure findings are excluded from the voice script.
 
 ## Notification behaviour
 
