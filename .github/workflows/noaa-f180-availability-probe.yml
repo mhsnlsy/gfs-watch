@@ -1,0 +1,45 @@
+name: NOAA GFS f180 Availability Probe
+
+on:
+  push:
+    branches:
+      - main
+    paths:
+      - ".github/workflows/noaa-f180-availability-probe.yml"
+
+jobs:
+  probe:
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - name: Check NOAA S3 forecast-hour file headers
+        run: |
+          python - <<'PY'
+          from datetime import datetime, timezone, timedelta
+          import requests
+
+          session = requests.Session()
+          session.headers["User-Agent"] = "GFS-Watch/1.0"
+          base = "https://noaa-gfs-bdp-pds.s3.amazonaws.com"
+
+          now = datetime.now(timezone.utc)
+          latest_cycle_hour = (now.hour // 6) * 6
+          latest = now.replace(hour=latest_cycle_hour, minute=0, second=0, microsecond=0)
+          for offset in range(5):
+              run = latest - timedelta(hours=6 * offset)
+              date_token = run.strftime("%Y%m%d")
+              cycle = run.strftime("%H")
+              key = f"gfs.{date_token}/{cycle}/atmos/gfs.t{cycle}z.pgrb2.0p25.f180"
+              url = f"{base}/{key}"
+              try:
+                  r = session.head(url, timeout=20, allow_redirects=True)
+                  print({
+                      "run": run.isoformat(),
+                      "status": r.status_code,
+                      "content_length": r.headers.get("Content-Length"),
+                      "last_modified": r.headers.get("Last-Modified"),
+                      "etag": r.headers.get("ETag"),
+                  })
+              except Exception as exc:
+                  print({"run": run.isoformat(), "error": f"{type(exc).__name__}: {exc}"})
+          PY
