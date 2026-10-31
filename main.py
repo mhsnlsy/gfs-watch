@@ -2210,14 +2210,13 @@ async def process_gfs_update(strict=False):
     audio_task = asyncio.create_task(generate_speech_with_retry(speech_text))
     try:
         await send_telegram_text(full_text_report)
-    except Exception:
-        try:
-            audio_file = await audio_task
-            if audio_file and os.path.exists(audio_file):
-                os.remove(audio_file)
-        except Exception:
-            pass
-        raise
+    except Exception as telegram_exc:
+        # Telegram is an optional delivery channel; the public Pages archive
+        # must still receive each scheduled report if Telegram is unavailable.
+        print(
+            f"[TELEGRAM TEXT UYARI] Metin Telegram'a gönderilemedi: {telegram_exc}. "
+            "Web raporu ve medya arşivi yine de hazırlanacak."
+        )
 
     save_run(run_id, payload)
 
