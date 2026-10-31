@@ -50,6 +50,7 @@ jobs:
         env:
           GFS_WATCH_ONCE: "1"
           DB_PATH: gfs_watch.db
+          PUBLIC_DATA_DIR: public
           TELEGRAM_TOKEN: ${{ secrets.TELEGRAM_TOKEN }}
           CHAT_ID: ${{ secrets.CHAT_ID }}
           GCP_SA_KEY: ${{ secrets.GCP_SA_KEY }}
@@ -57,9 +58,17 @@ jobs:
       - name: Save GFS run history
         run: |
           cp gfs_watch.db "$RUNNER_TEMP/gfs_watch.db"
+          mkdir -p "$RUNNER_TEMP/public"
+          if [ -d public ]; then
+            cp -a public/. "$RUNNER_TEMP/public/"
+          fi
           git checkout -B gfs-watch-state origin/gfs-watch-state
+          rm -rf public
+          mkdir -p public/runs
+          cp -a "$RUNNER_TEMP/public/." public/
+          find public/runs -type f -name '*.json' -mtime +10 -delete
           cp "$RUNNER_TEMP/gfs_watch.db" gfs_watch.db
-          git add -f gfs_watch.db
+          git add -f gfs_watch.db public
           if git diff --cached --quiet; then
             echo "GFS run history has not changed."
             exit 0
