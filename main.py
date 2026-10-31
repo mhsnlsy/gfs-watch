@@ -29,7 +29,7 @@ TELEGRAM_TOKEN = os.getenv("TELEGRAM_TOKEN")
 CHAT_ID = os.getenv("CHAT_ID")
 GCP_SA_KEY = os.getenv("GCP_SA_KEY")
 APP_NAME = "İstanbul'un Havası"
-APP_VERSION = "2.0.1"
+APP_VERSION = "2.1.0"
 
 LAT = 41.014
 LON = 28.950
