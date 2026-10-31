@@ -1941,12 +1941,62 @@ async def main():
     )
 
 
+async def run_scheduled_watch():
+    """Prefetch early GRIB2 fields, then poll NOAA S3 frequently for exact f180 readiness."""
+    init_db()
+    window_minutes = max(10, int(os.getenv("GFS_WATCH_WINDOW_MINUTES", "90")))
+    poll_seconds = max(15, int(os.getenv("GFS_WATCH_POLL_SECONDS", "30")))
+    now = datetime.now(timezone.utc)
+    target_hour = (now.hour // 6) * 6
+    target_dt = now.replace(hour=target_hour, minute=0, second=0, microsecond=0)
+    target_run_id = target_dt.isoformat(timespec="seconds")
+    deadline = time.monotonic() + window_minutes * 60
+
+    print(
+        f"[WATCH START] Hedef GFS döngüsü: {target_run_id}; "
+        f"izleme {window_minutes} dakika, S3 kontrol aralığı {poll_seconds} saniye."
+    )
+    existing_runs = await asyncio.to_thread(get_processed_run_ids)
+    if target_run_id in existing_runs:
+        print(f"[WATCH SKIP] {target_run_id} daha önce işlendi.")
+        return
+
+    while time.monotonic() < deadline:
+        try:
+            await process_gfs_update(strict=False)
+            processed_runs = await asyncio.to_thread(get_processed_run_ids)
+            if target_run_id in processed_runs:
+                print(
+                    f"[WATCH COMPLETE] {target_run_id} GRIB2 döngüsü işlendi "
+                    "ve bildirim süreci tamamlandı."
+                )
+                return
+        except Exception as exc:
+            print(
+                f"[WATCH RETRY] Kontrol sırasında hata oluştu: "
+                f"{type(exc).__name__}: {exc}"
+            )
+
+        remaining = deadline - time.monotonic()
+        if remaining <= 0:
+            break
+        await asyncio.sleep(min(poll_seconds, remaining))
+
+    print(
+        f"[WATCH TIMEOUT] {target_run_id} için izleme penceresi sona erdi; "
+        "NOAA f180 henüz işlenememiş olabilir."
+    )
+
+
 async def run_once():
-    """Run one GFS check and exit; used by scheduled GitHub Actions."""
+    """Run a one-off check or the continuous scheduled watch window."""
+    if os.getenv("GFS_WATCH_CONTINUOUS", "").strip().lower() in {"1", "true", "yes"}:
+        await run_scheduled_watch()
+        return
+
     init_db()
     print(f"[START] GFS Watch tek kontrol modunda çalışıyor; model: {MODEL_NAME}.")
     await process_gfs_update(strict=True)
-
 
 if __name__ == "__main__":
     try:
