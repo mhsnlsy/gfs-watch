@@ -1,4 +1,4 @@
-# v9.5.0 - Istanbul Timezone Fix (UTC+3), 180h Forecast & 1.2x Speech
+"""GFS Watch: native NOAA GFS GRIB2 forecasts and Telegram reporting."""
 import os
 import json
 import sqlite3
@@ -33,9 +33,7 @@ LAT = 41.014
 LON = 28.950
 GRID_LAT = round(LAT * 4.0) / 4.0
 GRID_LON = round(LON * 4.0) / 4.0
-LOCATION_NAME = f"İstanbul ({LAT:.3f}, {LON:.3f})"
 TR_TZ = ZoneInfo("Europe/Istanbul")  # İstanbul saat dilimi
-POLL_INTERVAL_SECONDS = max(60, int(os.getenv("POLL_INTERVAL_SECONDS", "600")))
 DATA_DIR = "/data" if os.path.isdir("/data") else "."
 DB_PATH = os.getenv("DB_PATH", os.path.join(DATA_DIR, "gfs_watch.db"))
 MODEL_NAME = "ncep_gfs_global"
@@ -67,9 +65,6 @@ REGIONAL_PRESSURE_DIAMETER_KM = 2500.0
 REGIONAL_PRESSURE_RADIUS_KM = REGIONAL_PRESSURE_DIAMETER_KM / 2.0
 HIGH_PRESSURE_THRESHOLD_HPA = 1023.0
 LOW_PRESSURE_THRESHOLD_HPA = 1015.0
-TEMPERATURE_CHANGE_THRESHOLD_C = 2.0
-PRECIPITATION_CHANGE_THRESHOLD_MM = 1.0
-WIND_CHANGE_THRESHOLD_KMH = 10.0
 
 TR_WEEKDAYS = (
     "Pazartesi", "Salı", "Çarşamba", "Perşembe",
@@ -501,14 +496,6 @@ def fetch_noaa_available_runs():
 
 
 # --- VERİ ÇEKME (+180 SAAT / FAST-FETCH) ---
-def _parse_forecast_local_time(value):
-    """Convert an ISO timestamp in Europe/Istanbul to an aware UTC datetime."""
-    parsed = datetime.fromisoformat(str(value).replace("Z", "+00:00"))
-    if parsed.tzinfo is None:
-        parsed = parsed.replace(tzinfo=TR_TZ)
-    return parsed.astimezone(timezone.utc)
-
-
 def _noaa_run_cache_dir(run_id):
     run_dt = _parse_utc_datetime(run_id)
     return os.path.join(
