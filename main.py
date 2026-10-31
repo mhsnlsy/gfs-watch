@@ -867,7 +867,7 @@ def prefetch_latest_noaa_cycle(skip_run_ids=None, target_run_id=None):
 
     print(
         f"[NOAA PREFETCH BATCH] {run_id}: bu kontrolde {downloaded} yeni dosya; "
-        f"önbellekte toplam {cached_count + downloaded}/30."
+        f"önbellekte toplam {cached_count + downloaded}/{len(leads)}."
     )
     return downloaded
 
@@ -1742,9 +1742,9 @@ async def process_gfs_update(strict=False):
             f"[PENDING] {run_id} NOAA GRIB2 dosyası henüz tam olarak hazır değil; "
             f"sonraki kontrolde tekrar denenecek. Ayrıntı: {payload.get('_reason', 'dosya eksik')}"
         )
-        # The global f180 inventory can become ready before every NOMADS
-        # point-subset file. Continue filling the same cycle cache in small
-        # batches while the full forecast is retried at the next check.
+        # The f180 inventory may be published while one or more preceding
+        # lead files are still unavailable. Keep completing the same GRIB2
+        # cache; the next 15-second check retries the final assembly.
         await asyncio.to_thread(
             prefetch_latest_noaa_cycle, None, run_id
         )
