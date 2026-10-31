@@ -48,12 +48,12 @@
       <div class="section-head report-head">
         <div><div class="section-kicker">GÜN BOYUNCA 4 MODEL DÖNGÜSÜ</div><h2>Son hava raporları</h2><p class="section-description">Her yeni GFS raporu, görseli ve seslendirmesiyle burada arşivlenir. En son dört bildirim gösterilir.</p></div>
         <div class="notification-controls">
-          <button class="notification-button" id="enable-notifications" type="button">Cihaz bildirimlerini aç</button>
+          <button class="notification-button" id="enable-notifications" type="button">Arka plan bildirimlerini aç</button>
           <span id="notification-status" class="notification-status" aria-live="polite">Tarayıcı bildirimi kapalı</span>
         </div>
       </div>
       <div id="notifications-list" class="notification-list" aria-live="polite"><div class="chart-empty">Son raporlar yükleniyor…</div></div>
-      <p class="notification-footnote">Bildirim izni verildiğinde, bu sayfa açıkken yeni rapor geldiğinde cihazına bildirim gönderilir. Tarayıcı tamamen kapalıyken bildirim için ayrıca bir Web Push servisi gerekir.</p>
+      <p class="notification-footnote">Push aboneliği etkinleştirildiğinde yeni GFS raporları, bu web uygulaması kapalıyken de cihazına bildirim olarak gönderilebilir.</p>
     </section>
     <section class="section" id="seyir">
       <div class="section-head">
@@ -193,6 +193,7 @@
     let notificationRegistration=null;
     let notificationsReady=false;
     let latestNotificationItems=[];
+    let pushApiUrl="";
     function formatNotificationTime(value){
       const date=new Date(value);
       if(Number.isNaN(date.getTime()))return "Zaman bilgisi yok";
@@ -201,6 +202,21 @@
     function notificationAsset(path){
       if(!path)return null;
       return new URL("./data/notifications/"+path,window.location.href).href;
+    }
+    async function loadPushConfig(){
+      try{
+        const response=await fetch("./push-config.json?t="+Date.now(),{cache:"no-store"});
+        if(!response.ok)throw new Error("Push ayarı bulunamadı.");
+        const config=await response.json();
+        pushApiUrl=String(config.apiBaseUrl||"").trim().replace(/\\/+$/,"");
+      }catch(_){pushApiUrl="";}
+      return pushApiUrl;
+    }
+    function decodeVapidKey(value){
+      const padding="=".repeat((4-value.length%4)%4);
+      const base64=(value+padding).replace(/-/g,"+").replace(/_/g,"/");
+      const raw=window.atob(base64);
+      return Uint8Array.from(raw,char=>char.charCodeAt(0));
     }
     function renderNotifications(items){
       const list=$("notifications-list");
@@ -226,6 +242,10 @@
     }
     async function notifyForNewReports(items){
       if(!items.length||!("Notification" in window)||Notification.permission!=="granted")return;
+      try{
+        const registration=notificationRegistration||await navigator.serviceWorker.ready;
+        if(registration.pushManager&&await registration.pushManager.getSubscription())return;
+      }catch(_){}
       let lastSeen=null;
       try{lastSeen=localStorage.getItem("gfs-last-notified-report");}catch(_){}
       if(!lastSeen){
@@ -235,8 +255,7 @@
       const unseen=[];
       for(const item of items){if(lastSeen!=="__none__"&&item.id===lastSeen)break;unseen.push(item);}
       if(unseen.length){
-        let registration=notificationRegistration;
-        if(!registration&&"serviceWorker" in navigator)registration=await navigator.serviceWorker.ready;
+        const registration=notificationRegistration||await navigator.serviceWorker.ready;
         for(const item of unseen.reverse()){
           const body=String(item.summary||"Yeni İstanbul GFS hava raporu yayımlandı.").slice(0,180);
           if(registration&&registration.showNotification){
@@ -275,11 +294,45 @@
     }
     async function registerAppWorker(){
       if(!("serviceWorker" in navigator)){
-        $("notification-status").textContent="Bu tarayıcı arka plan uygulama desteği sunmuyor.";
+        $("notification-status").textContent="Bu tarayıcı cihaz bildirimlerini desteklemiyor.";
         return;
       }
       try{notificationRegistration=await navigator.serviceWorker.register("./service-worker.js");}
       catch(error){$("notification-status").textContent="Arka plan bileşeni yüklenemedi.";}
+    }
+    async function refreshPushStatus(){
+      const button=$("enable-notifications");
+      if(!("Notification" in window)||!notificationRegistration||!notificationRegistration.pushManager){
+        $("notification-status").textContent="Bu ortam Web Push desteği sunmuyor. iPhone'da Ana Ekran uygulamasını kullan.";
+        button.disabled=false;
+        return;
+      }
+      if(!pushApiUrl){
+        $("notification-status").textContent="Push sunucusu bağlantısı henüz tamamlanmadı.";
+        button.textContent="Arka plan bildirimlerini aç";
+        button.disabled=false;
+        return;
+      }
+      if(Notification.permission==="granted"){
+        try{
+          const subscription=await notificationRegistration.pushManager.getSubscription();
+          if(subscription){
+            $("notification-status").textContent="Arka plan Web Push aktif · Uygulama kapalıyken de bildirim alabilir.";
+            button.textContent="Push bildirimleri aktif";
+            button.disabled=true;
+            return;
+          }
+          $("notification-status").textContent="Bildirim izni var; arka plan aboneliği henüz kurulmadı.";
+        }catch(_){
+          $("notification-status").textContent="Push aboneliği kontrol edilemedi.";
+        }
+      }else if(Notification.permission==="denied"){
+        $("notification-status").textContent="Bildirim izni kapalı. iPhone ayarlarından izin vermelisin.";
+      }else{
+        $("notification-status").textContent="Arka plan bildirimi henüz etkin değil.";
+      }
+      button.textContent="Arka plan bildirimlerini aç";
+      button.disabled=false;
     }
     async function enableNotifications(){
       const button=$("enable-notifications");
@@ -289,28 +342,53 @@
       }
       button.disabled=true;
       try{
-        const permission=await Notification.requestPermission();
-        if(permission==="granted"){
-          $("notification-status").textContent="Bildirim izni açık · Yeni raporlar sayfa açıkken bildirilir.";
-          button.textContent="Bildirimler açık";
-          try{localStorage.setItem("gfs-last-notified-report",latestNotificationItems[0]?latestNotificationItems[0].id:"__none__");}catch(_){}
-        }else{
-          $("notification-status").textContent="Bildirim izni verilmedi. Tarayıcı ayarlarından değiştirebilirsin.";
+        const permission=Notification.permission==="granted"
+          ?"granted"
+          :await Notification.requestPermission();
+        if(permission!=="granted"){
+          $("notification-status").textContent="Bildirim izni verilmedi. iPhone ayarlarından değiştirebilirsin.";
           button.disabled=false;
+          return;
         }
+        if(!pushApiUrl)await loadPushConfig();
+        if(!pushApiUrl)throw new Error("Push sunucusu henüz yapılandırılmadı.");
+        const registration=notificationRegistration||await navigator.serviceWorker.ready;
+        if(!registration.pushManager)throw new Error("Bu tarayıcı Push API desteği sunmuyor.");
+        const keyResponse=await fetch(pushApiUrl+"/vapid-public-key",{cache:"no-store"});
+        if(!keyResponse.ok)throw new Error("Push sunucusuna ulaşılamadı ("+keyResponse.status+").");
+        const keyData=await keyResponse.json();
+        if(!keyData.publicKey)throw new Error("Push sunucusunun açık anahtarı eksik.");
+        let subscription=await registration.pushManager.getSubscription();
+        if(!subscription){
+          subscription=await registration.pushManager.subscribe({
+            userVisibleOnly:true,
+            applicationServerKey:decodeVapidKey(keyData.publicKey)
+          });
+        }
+        const saveResponse=await fetch(pushApiUrl+"/subscribe",{
+          method:"POST",
+          headers:{"Content-Type":"application/json"},
+          body:JSON.stringify(subscription)
+        });
+        if(!saveResponse.ok){
+          const detail=await saveResponse.json().catch(()=>({}));
+          throw new Error(detail.error||"Abonelik sunucuya kaydedilemedi ("+saveResponse.status+").");
+        }
+        try{localStorage.setItem("gfs-last-notified-report",latestNotificationItems[0]?latestNotificationItems[0].id:"__none__");}catch(_){}
+        $("notification-status").textContent="Arka plan Web Push aktif · Uygulama kapalıyken de bildirim alabilir.";
+        button.textContent="Push bildirimleri aktif";
+        button.disabled=true;
       }catch(error){
-        $("notification-status").textContent="Bildirim izni alınamadı.";
+        $("notification-status").textContent=error.message||"Push aboneliği kurulamadı.";
+        button.textContent="Arka plan bildirimlerini aç";
         button.disabled=false;
       }
     }
     $("enable-notifications").addEventListener("click",enableNotifications);
     async function startPage(){
       await registerAppWorker();
-      if("Notification" in window&&Notification.permission==="granted"){
-        $("notification-status").textContent="Bildirim izni açık · Yeni raporlar sayfa açıkken bildirilir.";
-        $("enable-notifications").textContent="Bildirimler açık";
-        $("enable-notifications").disabled=true;
-      }
+      await loadPushConfig();
+      await refreshPushStatus();
       await Promise.all([loadForecast(),loadNotifications()]);
       window.setInterval(()=>{loadForecast();loadNotifications();},300000);
     }
