@@ -35,7 +35,6 @@ MODEL_METADATA_URLS = (
     "https://openmeteo.s3.amazonaws.com/data_spatial/ncep_gfs013/in-progress.json",
     "https://openmeteo.s3.amazonaws.com/data_spatial/ncep_gfs013/latest.json",
 )
-SINGLE_RUNS_URL = "https://single-runs-api.open-meteo.com/v1/forecast"
 MIN_FORECAST_HOURS = 180
 RETENTION_DAYS = 10
 
@@ -101,8 +100,7 @@ def save_run(run_name, forecast_dict):
     try:
         cursor = conn.cursor()
         serialized = json.dumps(forecast_dict)
-        # Refresh an existing run in place (used to migrate the first
-        # baseline to exact Single Runs API data without creating duplicates).
+        # Refresh an existing run in place without creating duplicates.
         cursor.execute("""
             UPDATE gfs_runs_v3
             SET timestamp = CURRENT_TIMESTAMP, forecast_json = ?
@@ -813,7 +811,7 @@ async def process_gfs_update(strict=False):
 
     # Do not hold a GitHub Actions runner while the source is distributing a run.
     # In-progress metadata may be updated repeatedly; the scheduled 10-minute
-    # checks will retry the exact Single Runs endpoint without blocking a job.
+    # checks will retry the exact NOAA/NCEP GRIB2 file without blocking a job.
     available_at = metadata.get("last_modified_time")
     if available_at and metadata.get("completed", False):
         try:
