@@ -4,6 +4,9 @@
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width,initial-scale=1">
   <meta name="theme-color" content="#081827">
+  <meta name="apple-mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+  <link rel="manifest" href="./manifest.webmanifest">
   <meta name="description" content="İstanbul için NOAA GFS modeline dayalı 180 saatlik hava tahmini, sıcaklık, yağış, rüzgâr ve bölgesel basınç analizi.">
   <title>İstanbul'un Havası — İstanbul Hava Tahmini</title>
   <link rel="preconnect" href="https://fonts.googleapis.com">
@@ -19,24 +22,57 @@
     .chart-card,.pressure-card,.info-card{background:linear-gradient(145deg,rgba(18,43,61,.94),rgba(12,31,46,.96));border:1px solid var(--line);border-radius:21px;padding:22px}.chart-toolbar{display:flex;align-items:center;gap:7px}.tab{border:1px solid var(--line);background:rgba(255,255,255,.035);color:#aabdc8;padding:8px 12px;border-radius:999px;font:600 11px "DM Sans",sans-serif;cursor:pointer}.tab.active{background:rgba(125,211,215,.13);border-color:rgba(125,211,215,.35);color:#c6f0ec}.chart-legend{display:flex;gap:16px;color:#9fb4c0;font-size:11px;margin-top:7px}.legend-dot{display:inline-block;width:7px;height:7px;border-radius:50%;background:var(--cyan);margin-right:6px}.chart-wrap{width:100%;overflow:hidden;margin-top:14px}.chart-wrap svg{display:block;width:100%;height:auto;overflow:visible}.chart-empty{color:var(--muted);font-size:13px;padding:28px 0}
     .lower-grid{display:grid;grid-template-columns:1.2fr .8fr;gap:14px}.pressure-list{list-style:none;padding:0;margin:15px 0 0;display:grid;gap:11px}.pressure-list li{display:flex;gap:10px;align-items:flex-start;color:#c7d5dc;font-size:13px;line-height:1.5}.pressure-icon{color:var(--gold);font-size:15px}.pressure-empty{color:var(--muted);font-size:12px;margin-top:15px}.info-card p{color:#a8bdc8;font-size:12px;line-height:1.75;margin:12px 0 0}.source-row{display:flex;align-items:center;justify-content:space-between;gap:15px;padding-top:16px;margin-top:18px;border-top:1px solid var(--line);color:#8da5b3;font-size:10px}.footer{border-top:1px solid var(--line);margin-top:38px;padding:24px 0 34px;color:#8299a7;font-size:11px;display:flex;justify-content:space-between;gap:20px}.footer strong{color:#b5c7d1;font-weight:600}.loading,.error{color:#b5c7d1;font-size:12px}.error{color:#f0bd9f}
     @media(max-width:850px){.hero{grid-template-columns:1fr;gap:20px;padding-top:38px}.daily-grid{grid-template-columns:repeat(4,minmax(0,1fr))}.lower-grid{grid-template-columns:1fr}.intro{max-width:660px}}@media(max-width:560px){.shell{width:min(100% - 28px,1120px)}.topbar{height:66px}.brand{font-size:15px}.brand-mark{width:34px;height:34px} .version{font-size:10px;padding:6px 8px}nav{display:none}.hero{padding:34px 0 18px}h1{font-size:42px}.weather-card{padding:20px;min-height:0}.temperature{font-size:64px}.weather-stats{gap:6px}.stat{padding:10px 8px}.stat .value{font-size:17px}.section{padding:22px 0}.section-head{align-items:flex-start;flex-direction:column;gap:9px}.section-note{text-align:left}.daily-grid{gap:7px}.day{padding:12px 4px}.day-range{font-size:12px}.chart-card,.pressure-card,.info-card{padding:17px}.footer{flex-direction:column;gap:8px}}
+    /* Notification archive, paired charts, mobile-first refinements. */
+    .chart-stack{display:grid;gap:14px}.chart-card-head{display:flex;align-items:center;justify-content:space-between;gap:12px;margin-bottom:5px}.chart-title{font:700 18px Manrope,sans-serif;letter-spacing:-.03em}.chart-subtitle,.chart-count{font-size:11px;color:var(--muted);margin-top:4px}.chart-count{white-space:nowrap}.chart-wrap{overflow-x:auto;overscroll-behavior-x:contain;scrollbar-color:#315267 transparent}.chart-wrap svg{min-width:640px}
+    .section-description{color:var(--muted);font-size:12px;line-height:1.6;max-width:560px;margin:10px 0 0}.notification-controls{display:flex;flex-direction:column;align-items:flex-end;gap:7px}.notification-button{appearance:none;border:1px solid rgba(125,211,215,.4);background:rgba(125,211,215,.12);color:#d8f7f1;border-radius:12px;padding:11px 15px;font:700 12px "DM Sans",sans-serif;cursor:pointer;min-height:42px}.notification-button:hover{background:rgba(125,211,215,.2)}.notification-button:disabled{opacity:.7;cursor:default}.notification-status{font-size:10px;color:var(--muted);text-align:right}.notification-footnote{margin:12px 2px 0;color:#8fa7b5;font-size:11px;line-height:1.6}.notification-list{display:grid;gap:13px}.notification-card{background:linear-gradient(145deg,rgba(18,43,61,.94),rgba(12,31,46,.96));border:1px solid var(--line);border-radius:19px;padding:20px;min-width:0}.notification-card-top{display:flex;justify-content:space-between;gap:12px;align-items:flex-start}.notification-kicker{font-size:9px;letter-spacing:.15em;color:var(--cyan);font-weight:700}.notification-card h3{font:700 17px Manrope,sans-serif;margin:6px 0 4px;letter-spacing:-.035em}.notification-meta{font-size:10px;color:var(--muted)}.notification-dot{width:8px;height:8px;background:var(--green);border-radius:50%;margin-top:4px;box-shadow:0 0 0 5px rgba(143,215,186,.1);flex:none}.notification-summary{color:#c1d2dc;font-size:12px;line-height:1.75;white-space:normal;margin:15px 0}.notification-image-link{display:block;border:1px solid var(--line);border-radius:12px;overflow:hidden;background:#0b1c29}.notification-image{display:block;width:100%;height:auto;max-height:460px;object-fit:contain}.media-pending{color:#8299a7;font-size:11px;padding:8px 0}.audio-block{margin-top:13px;padding:13px;border:1px solid var(--line);background:rgba(2,15,24,.2);border-radius:12px}.audio-label{display:block;font-size:9px;letter-spacing:.13em;color:var(--muted);font-weight:700;margin-bottom:9px}.audio-block audio{display:block;width:100%;height:42px}.report-text{margin-top:12px;border-top:1px solid var(--line);padding-top:11px}.report-text summary{font-size:11px;color:#b8d6df;cursor:pointer}.report-text pre{white-space:pre-wrap;overflow-wrap:anywhere;max-height:360px;overflow:auto;color:#aabdc8;font:11px/1.7 "DM Sans",sans-serif;margin:12px 0 0}
+    button,a,audio,summary{-webkit-tap-highlight-color:transparent}button:focus-visible,a:focus-visible,summary:focus-visible{outline:2px solid var(--cyan);outline-offset:3px}
+    @media(max-width:850px){.shell{width:min(100% - 32px,1120px)}.topbar{gap:10px}.hero{grid-template-columns:1fr;gap:18px;padding-top:34px}.weather-card{min-height:0}.daily-grid{grid-template-columns:repeat(4,minmax(0,1fr))}.lower-grid{grid-template-columns:1fr}.chart-card{padding:18px}}
+    @media(max-width:560px){.shell{width:calc(100% - 24px)}.topbar{height:auto;min-height:64px;padding:10px 0}.brand{font-size:14px;gap:9px}.brand small{font-size:8px;letter-spacing:.09em}.brand-mark{width:32px;height:32px;border-radius:10px}.version{font-size:9px;padding:6px 7px}.top-right{margin-left:auto}.hero{padding:28px 0 16px;gap:15px}h1{font-size:clamp(38px,11vw,46px);line-height:1.02}.intro{font-size:13px;line-height:1.65}.hero-meta{margin-top:17px}.meta-chip{font-size:10px;padding:8px}.weather-card{padding:17px;border-radius:19px}.weather-top{gap:8px}.label{font-size:9px;letter-spacing:.1em}.place{font-size:16px}.model-state{font-size:9px;padding:6px 8px}.temperature{font-size:60px}.weather-symbol{font-size:36px}.temp-row{margin-top:22px}.temp-caption{font-size:10px;line-height:1.5}.weather-stats{grid-template-columns:repeat(3,minmax(0,1fr));gap:6px;margin-top:17px}.stat{padding:10px 8px}.stat .name{font-size:9px}.stat .value{font-size:15px;overflow-wrap:anywhere}.stat .unit{font-size:9px;margin-left:2px}.section{padding:19px 0}.section-head{align-items:flex-start;flex-direction:column;gap:8px;margin-bottom:13px}h2{font-size:21px}.section-note{text-align:left;font-size:10px}.daily-grid{grid-template-columns:repeat(2,minmax(0,1fr));gap:7px}.day{padding:11px 5px;border-radius:12px}.day-icon{margin:8px 0;font-size:20px}.day-name{font-size:10px}.day-range{font-size:13px}.day-rain,.day-wind{font-size:9px}.chart-stack{gap:10px}.chart-card{padding:14px;border-radius:16px}.chart-title{font-size:16px}.chart-subtitle,.chart-count{font-size:9px}.chart-wrap{margin-top:9px}.chart-wrap svg{min-width:620px}.report-head{gap:12px}.notification-controls{align-items:stretch;width:100%}.notification-button{width:100%;min-height:46px}.notification-status{text-align:left}.notification-card{padding:15px;border-radius:15px}.notification-card h3{font-size:15px}.notification-summary{font-size:11px;margin:12px 0}.notification-image{max-height:300px}.notification-footnote{font-size:10px}.chart-card,.pressure-card,.info-card{padding:15px}.source-row{font-size:9px}.footer{flex-direction:column;gap:8px;margin-top:24px;padding-bottom:26px;font-size:10px}}
+    @media(prefers-reduced-motion:reduce){html{scroll-behavior:auto}*{animation-duration:.01ms!important;transition-duration:.01ms!important}}
   </style>
 </head>
 <body>
   <header class="shell topbar">
     <a class="brand" href="#" aria-label="İstanbul'un Havası ana sayfa"><span class="brand-mark">☀</span><span>İstanbul'un Havası<small>Şehir için hava tahmini</small></span></a>
-    <nav aria-label="Ana gezinme"><a href="#tahmin">8 günlük tahmin</a><a href="#seyir">180 saatlik seyir</a><a href="#basinc">Basınç analizi</a></nav>
+    <nav aria-label="Ana gezinme"><a href="#bildirimler">Raporlar</a><a href="#tahmin">8 günlük tahmin</a><a href="#seyir">180 saatlik seyir</a><a href="#basinc">Basınç analizi</a></nav>
     <div class="top-right"><span class="version">GFS Watch · v2.1.0</span></div>
   </header>
   <main class="shell">
     <section class="hero">
-      <div><div class="eyebrow"><span class="dot"></span> Canlı ölçüm · ENKA Balmumcu istasyonu</div><h1>Şehrin havasını<br><span>önceden görün.</span></h1><p class="intro">Balmumcu’daki ENKA Vantage PRO istasyonundan alınan gerçek ölçümler. Bu kart yalnızca istasyon gözlemlerini gösterir; model tahminleri aşağıdaki ayrı bölümlerde sunulur.</p><div class="hero-meta"><span class="meta-chip">ENKA Vantage PRO</span><span class="meta-chip">Balmumcu · İstanbul</span></div></div>
-      <article class="weather-card station-card" role="region" aria-labelledby="station-card-title"><div class="weather-top"><div><div class="label">GERÇEK İSTASYON GÖZLEMİ · ENKA VANTAGE PRO</div><div class="place" id="station-card-title">Balmumcu · İstanbul</div></div><span class="model-state" id="freshness">Veri bekleniyor</span></div><div class="temp-row"><div class="temperature" id="temperature">—°</div><div class="weather-symbol" id="weather-symbol" aria-hidden="true">☁️</div></div><div class="temp-caption" id="station-observation-meta">ENKA Balmumcu istasyonunun son ölçümü · zaman damgası sayfada gösterilir</div><div class="weather-stats"><div class="stat"><div class="name">Rüzgâr</div><div class="value" id="wind">—<span class="unit">km/sa</span></div></div><div class="stat"><div class="name">Günlük yağış</div><div class="value" id="rain">—<span class="unit">mm</span></div></div><div class="stat"><div class="name">Nem</div><div class="value" id="humidity">—<span class="unit">%</span></div></div></div><div class="station-alert" id="station-alert" role="status" aria-live="polite" hidden></div></article>
+      <div><div class="eyebrow"><span class="dot"></span> Canlı yerel istasyon gözlemi</div><h1>Şehrin havasını<br><span>önceden görün.</span></h1><p class="intro">Balmumcu çevresindeki meteoroloji istasyonundan alınan gerçek ölçümler. Bu kart yalnızca istasyon gözlemlerini gösterir; model tahminleri aşağıdaki ayrı bölümlerde sunulur.</p><div class="hero-meta"><span class="meta-chip">Gerçek ölçüm</span><span class="meta-chip">Balmumcu · İstanbul</span></div></div>
+      <article class="weather-card station-card" role="region" aria-labelledby="station-card-title"><div class="weather-top"><div><div class="label">GERÇEK İSTASYON GÖZLEMİ</div><div class="place" id="station-card-title">Balmumcu · İstanbul</div></div><span class="model-state" id="freshness">Veri bekleniyor</span></div><div class="temp-row"><div class="temperature" id="temperature">—°</div><div class="weather-symbol" id="weather-symbol" aria-hidden="true">☁️</div></div><div class="temp-caption" id="station-observation-meta">Son istasyon ölçümü · zaman damgası sayfada gösterilir</div><div class="weather-stats"><div class="stat"><div class="name">Rüzgâr</div><div class="value" id="wind">—<span class="unit">km/sa</span></div></div><div class="stat"><div class="name">Günlük yağış</div><div class="value" id="rain">—<span class="unit">mm</span></div></div><div class="stat"><div class="name">Nem</div><div class="value" id="humidity">—<span class="unit">%</span></div></div></div><div class="station-alert" id="station-alert" role="status" aria-live="polite" hidden></div></article>
     </section>
     <section class="section" id="tahmin"><div class="section-head"><div><div class="section-kicker">NOAA / NCEP GFS · MODEL TAHMİNİ</div><h2>8 günlük tahmin</h2></div><div class="section-note"><span id="cycle-chip">Model döngüsü yükleniyor</span><br><span id="updated-chip">Yayın zamanı bekleniyor</span><br>Günlük en düşük / en yüksek sıcaklık</div></div><div class="daily-grid" id="daily-grid"><div class="loading">Tahmin verisi yükleniyor…</div></div></section>
-    <section class="section" id="seyir"><div class="section-head"><div><div class="section-kicker">NOAA / NCEP GFS · MODEL TAHMİNİ</div><h2>180 saatlik tahmin seyri</h2></div><div class="chart-toolbar" role="group" aria-label="Grafik değişkeni"><button class="tab active" type="button" data-metric="temperature">Sıcaklık</button><button class="tab" type="button" data-metric="precipitation">Yağış</button></div></div><div class="chart-card"><div class="chart-legend"><span><i class="legend-dot"></i><span id="chart-legend-text">2 m sıcaklık · °C</span></span><span id="chart-range">6 saatlik örnekler</span></div><div class="chart-wrap" id="forecast-chart"><div class="chart-empty">Tahmin grafiği yükleniyor…</div></div></div></section>
-    <section class="section" id="basinc"><div class="section-head"><div><div class="section-kicker">NOAA / NCEP GFS · MODEL ANALİZİ</div><h2>Basınç düzeni ve kaynak</h2></div><div class="section-note">İstanbul merkezli 2.500 km çaplı<br>bölgesel analiz</div></div><div class="lower-grid"><article class="pressure-card"><div class="label">Bölgesel basınç değerlendirmesi</div><ul class="pressure-list" id="pressure-findings"><li class="loading">Analiz yükleniyor…</li></ul></article><article class="info-card"><div class="label">Veri hakkında</div><p>Anlık sıcaklık, rüzgâr ve nem; günlük yağış toplamı: ENKA Balmumcu Vantage PRO meteoroloji istasyonu. İstasyon konumu yaklaşık 41.1°K, 28.9°D; rakım 107 m.</p><p>180 saatlik tahmin: NOAA / NCEP GFS 0.25° küresel modelinin İstanbul'a en yakın grid noktası (41.000°N, 29.000°E). İstasyon ölçümü ile model tahmini ayrı kaynaklardır.</p><div class="source-row"><span>Model: <strong>GFS 0.25°</strong></span><span id="valid-until">Geçerlilik: —</span></div></article></div></section>
+    <section class="section" id="bildirimler">
+      <div class="section-head report-head">
+        <div><div class="section-kicker">GÜN BOYUNCA 4 MODEL DÖNGÜSÜ</div><h2>Son hava raporları</h2><p class="section-description">Her yeni GFS raporu, görseli ve seslendirmesiyle burada arşivlenir. En son dört bildirim gösterilir.</p></div>
+        <div class="notification-controls">
+          <button class="notification-button" id="enable-notifications" type="button">Cihaz bildirimlerini aç</button>
+          <span id="notification-status" class="notification-status" aria-live="polite">Tarayıcı bildirimi kapalı</span>
+        </div>
+      </div>
+      <div id="notifications-list" class="notification-list" aria-live="polite"><div class="chart-empty">Son raporlar yükleniyor…</div></div>
+      <p class="notification-footnote">Bildirim izni verildiğinde, bu sayfa açıkken yeni rapor geldiğinde cihazına bildirim gönderilir. Tarayıcı tamamen kapalıyken bildirim için ayrıca bir Web Push servisi gerekir.</p>
+    </section>
+    <section class="section" id="seyir">
+      <div class="section-head">
+        <div><div class="section-kicker">NOAA / NCEP GFS · MODEL TAHMİNİ</div><h2>180 saatlik tahmin seyri</h2></div>
+        <div class="section-note">Sıcaklık ve yağış aynı anda görünür<br>Her iki grafik de aynı model döngüsünü kullanır</div>
+      </div>
+      <div class="chart-stack">
+        <article class="chart-card">
+          <div class="chart-card-head"><div><div class="chart-title">Sıcaklık</div><div class="chart-subtitle">2 metre sıcaklığı · °C</div></div><span class="chart-count" id="temperature-count">Saatlik tahmin</span></div>
+          <div class="chart-wrap" id="temperature-chart"><div class="chart-empty">Sıcaklık grafiği yükleniyor…</div></div>
+        </article>
+        <article class="chart-card">
+          <div class="chart-card-head"><div><div class="chart-title">Yağış</div><div class="chart-subtitle">6 saatlik yağış miktarı · mm</div></div><span class="chart-count" id="precipitation-count">Saatlik tahmin</span></div>
+          <div class="chart-wrap" id="precipitation-chart"><div class="chart-empty">Yağış grafiği yükleniyor…</div></div>
+        </article>
+      </div>
+    </section>
+    <section class="section" id="basinc"><div class="section-head"><div><div class="section-kicker">NOAA / NCEP GFS · MODEL ANALİZİ</div><h2>Basınç düzeni ve kaynak</h2></div><div class="section-note">İstanbul merkezli 2.500 km çaplı<br>bölgesel analiz</div></div><div class="lower-grid"><article class="pressure-card"><div class="label">Bölgesel basınç değerlendirmesi</div><ul class="pressure-list" id="pressure-findings"><li class="loading">Analiz yükleniyor…</li></ul></article><article class="info-card"><div class="label">Veri hakkında</div><p>Anlık sıcaklık, rüzgâr, nem ve günlük yağış verileri yerel meteoroloji istasyonundan alınır. İstasyon kaynağı: ENKA Balmumcu Vantage PRO. Konum yaklaşık 41.1°K, 28.9°D; rakım 107 m.</p><p>180 saatlik tahmin: NOAA / NCEP GFS 0.25° küresel modelinin İstanbul'a en yakın grid noktası (41.000°N, 29.000°E). İstasyon ölçümü ile model tahmini ayrı kaynaklardır.</p><div class="source-row"><span>Model: <strong>GFS 0.25°</strong></span><span id="valid-until">Geçerlilik: —</span></div></article></div></section>
   </main>
-  <footer class="shell footer"><span><strong>İstanbul'un Havası</strong> · GFS Watch v2.1.0</span><span>Veri kaynakları: ENKA Balmumcu Vantage PRO · NOAA / NCEP GFS · Otomatik yenileme: 5 dakika</span></footer>
+  <footer class="shell footer"><span><strong>İstanbul'un Havası</strong> · GFS Watch v2.1.0</span><span>Veri kaynakları:  Balmumcu Vantage PRO · NOAA / NCEP GFS · Otomatik yenileme: 5 dakika</span></footer>
   <script>
     const DATA_URL="./data/latest.json";
     const STATION_URL="./data/station-observation.json";
@@ -62,27 +98,35 @@
       if(!Array.isArray(findings)||!findings.length){list.innerHTML='<li class="pressure-empty">Bu tahmin döngüsü için bölgesel basınç yorumu bulunmuyor.</li>';return;}
       list.innerHTML=findings.map(text=>'<li><span class="pressure-icon">◈</span><span>'+esc(text)+'</span></li>').join("");
     }
-    function renderChart(){
+    function renderChart(metric,targetId){
+      const container=$(targetId);
       const points=forecastData&&forecastData.forecast_6_hourly;
-      const field=activeMetric==="temperature"?"temperature_2m_c":"precipitation_6h_mm";
-      const title=activeMetric==="temperature"?"2 m sıcaklık · °C":"6 saatlik yağış · mm";
-      $("chart-legend-text").textContent=title;
-      $("chart-range").textContent=Array.isArray(points)?points.length+" tahmin noktası":"";
-      if(!Array.isArray(points)){$("forecast-chart").innerHTML='<div class="chart-empty">Tahmin grafiği bulunamadı.</div>';return;}
+      const temperature=metric==="temperature";
+      const field=temperature?"temperature_2m_c":"precipitation_6h_mm";
+      const title=temperature?"2 m sıcaklık · °C":"6 saatlik yağış · mm";
+      const counter=$(temperature?"temperature-count":"precipitation-count");
+      if(!Array.isArray(points)){container.innerHTML='<div class="chart-empty">Tahmin verisi bulunamadı.</div>';return;}
       const valid=points.map((p,i)=>({i,value:p[field],date:p.valid_time_istanbul})).filter(p=>numeric(p.value));
-      if(valid.length<2){$("forecast-chart").innerHTML='<div class="chart-empty">Bu değişken için yeterli grafik verisi bulunmuyor.</div>';return;}
-      const width=900,height=260,left=48,right=18,top=18,bottom=40;
+      counter.textContent=valid.length+" ölçüm noktası";
+      if(valid.length<2){container.innerHTML='<div class="chart-empty">Bu değişken için yeterli grafik verisi bulunmuyor.</div>';return;}
+      const width=900,height=250,left=48,right=18,top=18,bottom=40;
       const min=Math.min(...valid.map(p=>p.value)),max=Math.max(...valid.map(p=>p.value));
-      const span=(max-min)||1,low=min-span*.16,high=max+span*.16;
+      const span=(max-min)||1,low=temperature?min-span*.16:Math.max(0,min-span*.12),high=max+span*.16;
       const xFor=i=>left+(i/(points.length-1))*(width-left-right),yFor=v=>top+((high-v)/(high-low))*(height-top-bottom);
       const coords=valid.map(p=>({x:xFor(p.i),y:yFor(p.value),value:p.value,date:p.date}));
       const line=coords.map((p,i)=>(i?"L":"M")+p.x.toFixed(1)+" "+p.y.toFixed(1)).join(" ");
       const last=coords[coords.length-1],first=coords[0],area=line+" L "+last.x.toFixed(1)+" "+(height-bottom)+" L "+first.x.toFixed(1)+" "+(height-bottom)+" Z";
       const ticks=[0,1,2,3].map(i=>low+(high-low)*i/3);
-      const grid=ticks.map(v=>{const y=yFor(v);return '<line x1="'+left+'" y1="'+y+'" x2="'+(width-right)+'" y2="'+y+'" stroke="rgba(194,220,232,.12)" stroke-dasharray="4 6"/><text x="'+(left-10)+'" y="'+(y+4)+'" fill="#91a9b8" font-size="11" text-anchor="end">'+fmt(v,activeMetric==="temperature"?0:1)+'</text>';}).join("");
-      const markers=coords.filter((p,i)=>i===0||i===coords.length-1||i%5===0).map(p=>'<circle cx="'+p.x+'" cy="'+p.y+'" r="3.5" fill="#c8f2ec" stroke="#133548" stroke-width="2"/>').join("");
+      const grid=ticks.map(v=>{const y=yFor(v);return '<line x1="'+left+'" y1="'+y+'" x2="'+(width-right)+'" y2="'+y+'" stroke="rgba(194,220,232,.12)" stroke-dasharray="4 6"/><text x="'+(left-10)+'" y="'+(y+4)+'" fill="#91a9b8" font-size="11" text-anchor="end">'+fmt(v,temperature?0:1)+'</text>';}).join("");
+      const markers=coords.filter((p,i)=>i===0||i===coords.length-1||i%8===0).map(p=>'<circle cx="'+p.x+'" cy="'+p.y+'" r="3.2" fill="#c8f2ec" stroke="#133548" stroke-width="2"/>').join("");
       const labels=[coords[0],coords[Math.floor(coords.length/2)],coords[coords.length-1]].map(p=>'<text x="'+p.x+'" y="'+(height-12)+'" fill="#91a9b8" font-size="11" text-anchor="middle">'+esc(new Intl.DateTimeFormat("tr-TR",{timeZone:"Europe/Istanbul",day:"2-digit",month:"2-digit",hour:"2-digit"}).format(new Date(p.date)))+'</text>').join("");
-      $("forecast-chart").innerHTML='<svg viewBox="0 0 '+width+' '+height+'" role="img" aria-label="'+title+' grafiği"><defs><linearGradient id="chartFill" x1="0" x2="0" y1="0" y2="1"><stop offset="0%" stop-color="#7dd3d7" stop-opacity=".28"/><stop offset="100%" stop-color="#7dd3d7" stop-opacity="0"/></linearGradient></defs>'+grid+'<path d="'+area+'" fill="url(#chartFill)"/><path d="'+line+'" fill="none" stroke="#7dd3d7" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"/>'+markers+labels+'</svg>';
+      const gradientId=targetId+"-fill";
+      const stroke=temperature?"#7dd3d7":"#8abce8";
+      container.innerHTML='<svg viewBox="0 0 '+width+' '+height+'" role="img" aria-label="'+title+' grafiği"><defs><linearGradient id="'+gradientId+'" x1="0" x2="0" y1="0" y2="1"><stop offset="0%" stop-color="'+stroke+'" stop-opacity=".28"/><stop offset="100%" stop-color="'+stroke+'" stop-opacity="0"/></linearGradient></defs>'+grid+'<path d="'+area+'" fill="url(#'+gradientId+')"/><path d="'+line+'" fill="none" stroke="'+stroke+'" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"/>'+markers+labels+'</svg>';
+    }
+    function renderCharts(){
+      renderChart("temperature","temperature-chart");
+      renderChart("precipitation","precipitation-chart");
     }
     function render(data){
       forecastData=data;
@@ -100,18 +144,18 @@
         const stale=!!station.is_stale||!observedValid||ageMinutes>90;
         const observedText=observedValid?new Intl.DateTimeFormat("tr-TR",{timeZone:"Europe/Istanbul",dateStyle:"short",timeStyle:"short"}).format(observed):"zaman bilinmiyor";
         const ageText=ageMinutes===null?"":ageMinutes<60?Math.round(ageMinutes)+" dk önce":(ageMinutes/60).toFixed(1).replace(".",",")+" saat önce";
-        $("station-observation-meta").textContent=(stale?"Gecikmeli ölçüm":"Son ölçüm")+" · "+observedText+" TSİ · "+ageText+" · ENKA Vantage PRO";
+        $("station-observation-meta").textContent=(stale?"Gecikmeli ölçüm":"Son ölçüm")+" · "+observedText+" TSİ · "+ageText+" ·  Vantage PRO";
         $("freshness").textContent=stale?"ÖLÇÜM ESKİ":"CANLI ÖLÇÜM";
         $("freshness").classList.toggle("stale",stale);
         const alert=$("station-alert");
         alert.hidden=!stale;
         if(stale)alert.textContent=observedValid?"⚠ İstasyon ölçümü "+Math.round(ageMinutes)+" dakika önce alınmış. 90 dakikayı aştığı için güncel hava koşulu olarak değerlendirmeyin.":"⚠ Ölçüm zaman damgası doğrulanamadı. İstasyon verisi güncel kabul edilmemeli.";
       }else{
-        $("station-observation-meta").textContent="ENKA Balmumcu istasyon verisine şu anda ulaşılamıyor.";
+        $("station-observation-meta").textContent=" Balmumcu istasyon verisine şu anda ulaşılamıyor.";
         $("freshness").textContent="İSTASYON VERİSİ YOK";
         $("freshness").classList.add("stale");
         $("station-alert").hidden=false;
-        $("station-alert").textContent="⚠ ENKA Balmumcu istasyon verisi alınamadı. Kartta güncel ölçüm bulunmuyor.";
+        $("station-alert").textContent="⚠  Balmumcu istasyon verisi alınamadı. Kartta güncel ölçüm bulunmuyor.";
       }
       if(data.run_id_utc)$("cycle-chip").textContent="GFS döngüsü · "+timeTR(data.run_id_utc);
       if(data.published_at_utc){
@@ -119,7 +163,7 @@
         const age=(Date.now()-new Date(data.published_at_utc).getTime())/3600000;
       }
       if(data.forecast_valid_until_utc)$("valid-until").textContent="Son geçerlilik: "+new Intl.DateTimeFormat("tr-TR",{timeZone:"Europe/Istanbul",day:"2-digit",month:"2-digit"}).format(new Date(data.forecast_valid_until_utc));
-      renderDaily(data.daily_summary);renderFindings(data.regional_pressure_analysis&&data.regional_pressure_analysis.findings);renderChart();
+      renderDaily(data.daily_summary);renderFindings(data.regional_pressure_analysis&&data.regional_pressure_analysis.findings);renderCharts();
     }
     async function loadForecast(){
       try{
@@ -145,12 +189,123 @@
         $("forecast-chart").innerHTML='<div class="chart-empty">Veri kaynağına şu anda ulaşılamıyor. Sayfa otomatik olarak yeniden deneyecek.</div>';
       }
     }
-    document.querySelectorAll("[data-metric]").forEach(button=>button.addEventListener("click",()=>{
-      activeMetric=button.dataset.metric;
-      document.querySelectorAll("[data-metric]").forEach(item=>item.classList.toggle("active",item===button));
-      if(forecastData)renderChart();
-    }));
-    loadForecast();window.setInterval(loadForecast,300000);
+    let notificationRegistration=null;
+    let notificationsReady=false;
+    let latestNotificationItems=[];
+    function formatNotificationTime(value){
+      const date=new Date(value);
+      if(Number.isNaN(date.getTime()))return "Zaman bilgisi yok";
+      return new Intl.DateTimeFormat("tr-TR",{timeZone:"Europe/Istanbul",dateStyle:"medium",timeStyle:"short"}).format(date);
+    }
+    function notificationAsset(path){
+      if(!path)return null;
+      return new URL("./data/notifications/"+path,window.location.href).href;
+    }
+    function renderNotifications(items){
+      const list=$("notifications-list");
+      if(!Array.isArray(items)||!items.length){
+        list.innerHTML='<div class="chart-empty">Henüz yayınlanmış bir rapor bulunmuyor. Yeni model döngüsü tamamlandığında rapor burada görünecek.</div>';
+        return;
+      }
+      list.innerHTML=items.map(item=>{
+        const image=notificationAsset(item.image_path);
+        const audio=notificationAsset(item.audio_path);
+        const summary=esc(item.summary||"Rapor özeti bulunmuyor.");
+        const report=esc(item.report_text||"");
+        const date=esc(item.published_at_istanbul||formatNotificationTime(item.published_at_utc));
+        const cycle=esc(item.cycle_label||"GFS model raporu");
+        return '<article class="notification-card">'+
+          '<div class="notification-card-top"><div><div class="notification-kicker">GFS MODEL BİLDİRİMİ</div><h3>'+esc(item.title||"İstanbul hava raporu")+'</h3><div class="notification-meta">'+cycle+' · '+date+'</div></div><span class="notification-dot" aria-hidden="true"></span></div>'+
+          '<p class="notification-summary">'+summary+'</p>'+
+          (image?'<a class="notification-image-link" href="'+image+'" target="_blank" rel="noopener"><img class="notification-image" src="'+image+'" alt="Dört GFS döngüsünün tahmin karşılaştırma grafiği" loading="lazy"></a>':'<div class="media-pending">Bu rapor için karşılaştırma görseli bulunmuyor.</div>')+
+          (audio?'<div class="audio-block"><span class="audio-label">SES RAPORU · 1,27×</span><audio controls preload="none" src="'+audio+'">Tarayıcın ses oynatmayı desteklemiyor.</audio></div>':'<div class="media-pending">Bu rapor için ses dosyası bulunmuyor.</div>')+
+          (report?'<details class="report-text"><summary>Yazılı raporu görüntüle</summary><pre>'+report+'</pre></details>':'')+
+          '</article>';
+      }).join("");
+    }
+    async function notifyForNewReports(items){
+      if(!items.length||!("Notification" in window)||Notification.permission!=="granted")return;
+      let lastSeen=null;
+      try{lastSeen=localStorage.getItem("gfs-last-notified-report");}catch(_){}
+      if(!lastSeen){
+        try{localStorage.setItem("gfs-last-notified-report",items[0].id);}catch(_){}
+        return;
+      }
+      const unseen=[];
+      for(const item of items){if(item.id===lastSeen)break;unseen.push(item);}
+      if(unseen.length){
+        const registration=notificationRegistration||await navigator.serviceWorker.ready;
+        for(const item of unseen.reverse()){
+          const body=String(item.summary||"Yeni İstanbul GFS hava raporu yayımlandı.").slice(0,180);
+          if(registration&&registration.showNotification){
+            await registration.showNotification(item.title||"Yeni İstanbul hava raporu",{
+              body,icon:"./icon.svg",badge:"./icon.svg",tag:"gfs-"+item.id,
+              data:{url:"./#bildirimler"}
+            });
+          }else{
+            new Notification(item.title||"Yeni İstanbul hava raporu",{body});
+          }
+        }
+        try{localStorage.setItem("gfs-last-notified-report",items[0].id);}catch(_){}
+      }
+    }
+    async function loadNotifications(){
+      try{
+        const response=await fetch("./data/notifications/latest.json?t="+Date.now(),{cache:"no-store"});
+        if(!response.ok)throw new Error("Rapor arşivi henüz oluşturulmadı.");
+        const document=await response.json();
+        if(document.schema!=="gfs-watch.notifications.v1"||!Array.isArray(document.items))throw new Error("Rapor arşivi biçimi geçersiz.");
+        latestNotificationItems=document.items.slice(0,4);
+        renderNotifications(latestNotificationItems);
+        if(notificationsReady)await notifyForNewReports(latestNotificationItems);
+        else{
+          try{if(!localStorage.getItem("gfs-last-notified-report")&&latestNotificationItems[0])localStorage.setItem("gfs-last-notified-report",latestNotificationItems[0].id);}catch(_){}
+          notificationsReady=true;
+        }
+      }catch(error){
+        $("notifications-list").innerHTML='<div class="chart-empty">Rapor arşivi henüz hazır değil. İlk sonraki GFS bildirimi geldiğinde burada görünecek.</div>';
+        notificationsReady=true;
+      }
+    }
+    async function registerAppWorker(){
+      if(!("serviceWorker" in navigator))return;
+      try{notificationRegistration=await navigator.serviceWorker.register("./service-worker.js");}
+      catch(error){$("notification-status").textContent="Arka plan bileşeni yüklenemedi.";}
+    }
+    async function enableNotifications(){
+      const button=$("enable-notifications");
+      if(!("Notification" in window)){
+        $("notification-status").textContent="Bu tarayıcı cihaz bildirimlerini desteklemiyor.";
+        return;
+      }
+      button.disabled=true;
+      try{
+        const permission=await Notification.requestPermission();
+        if(permission==="granted"){
+          $("notification-status").textContent="Bildirim izni açık · Yeni raporlar sayfa açıkken bildirilir.";
+          button.textContent="Bildirimler açık";
+          try{if(latestNotificationItems[0])localStorage.setItem("gfs-last-notified-report",latestNotificationItems[0].id);}catch(_){}
+        }else{
+          $("notification-status").textContent="Bildirim izni verilmedi. Tarayıcı ayarlarından değiştirebilirsin.";
+          button.disabled=false;
+        }
+      }catch(error){
+        $("notification-status").textContent="Bildirim izni alınamadı.";
+        button.disabled=false;
+      }
+    }
+    $("enable-notifications").addEventListener("click",enableNotifications);
+    async function startPage(){
+      await registerAppWorker();
+      if("Notification" in window&&Notification.permission==="granted"){
+        $("notification-status").textContent="Bildirim izni açık · Yeni raporlar sayfa açıkken bildirilir.";
+        $("enable-notifications").textContent="Bildirimler açık";
+        $("enable-notifications").disabled=true;
+      }
+      await Promise.all([loadForecast(),loadNotifications()]);
+      window.setInterval(()=>{loadForecast();loadNotifications();},300000);
+    }
+    startPage();
   </script>
 </body>
 </html>
