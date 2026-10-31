@@ -1436,16 +1436,16 @@ def analyze_and_build_output(current_run_name, payload, previous_runs):
         ).astimezone(TR_TZ)
         station_age_note = " (gecikmeli ölçüm)" if station.get("is_stale") else ""
         speech_parts.append(
-            f"Eyüpsultan MGM istasyonunda{station_age_note}, "
+            f"ENKA Balmumcu istasyonunda{station_age_note}, "
             f"{_format_tr_datetime(observed_local)} itibarıyla"
         )
         if station.get("temperature_2m_c") is not None:
             speech_parts.append(
                 f"sıcaklık {station['temperature_2m_c']:.1f} derece."
             )
-        if station.get("precipitation_1h_mm") is not None:
+        if station.get("precipitation_daily_mm") is not None:
             speech_parts.append(
-                f"Son bir saatte yağış {station['precipitation_1h_mm']:.1f} milimetre."
+                f"Günlük toplam yağış {station['precipitation_daily_mm']:.1f} milimetre."
             )
         if station.get("wind_speed_10m_kmh") is not None:
             speech_parts.append(
@@ -1511,28 +1511,28 @@ def analyze_and_build_output(current_run_name, payload, previous_runs):
         ).astimezone(TR_TZ)
         freshness_label = "GECİKMELİ ÖLÇÜM" if station.get("is_stale") else "SON İSTASYON ÖLÇÜMÜ"
         text_report_lines.extend([
-            f"📡 EYÜPSULTAN GERÇEK İSTASYON GÖZLEMİ | MGM 18101 · {freshness_label}",
+            f"📡 ENKA BALMUMCU GERÇEK İSTASYON GÖZLEMİ | VANTAGE PRO · {freshness_label}",
             f"🕒 Ölçüm zamanı: {_format_tr_datetime(observed_local)} TSİ",
         ])
         if station.get("temperature_2m_c") is not None:
             text_report_lines.append(
                 f"🌡 İstasyon sıcaklığı: {station['temperature_2m_c']:.1f}°C"
             )
-        if station.get("precipitation_1h_mm") is not None:
+        if station.get("precipitation_daily_mm") is not None:
             text_report_lines.append(
-                f"🌧 Son 1 saat yağış: {station['precipitation_1h_mm']:.1f} mm"
+                f"🌧 Günlük toplam yağış: {station['precipitation_daily_mm']:.1f} mm"
             )
         if station.get("wind_speed_10m_kmh") is not None:
             text_report_lines.append(
                 f"💨 İstasyon rüzgârı: {station['wind_speed_10m_kmh']:.1f} km/sa"
             )
         text_report_lines.extend([
-            "Kaynak: MGM son durum gözlemi · WStatMap istasyon 18101",
+            "Kaynak: ENKA Balmumcu · Davis Vantage PRO istasyonu · canlı tablo ölçümü", 
             "",
         ])
     else:
         text_report_lines.extend([
-            "📡 EYÜPSULTAN İSTASYON GÖZLEMİ: Bu rapor hazırlanırken MGM verisi alınamadı.",
+            "📡 ENKA BALMUMCU İSTASYON GÖZLEMİ: Bu rapor hazırlanırken ENKA verisi alınamadı.",
             "",
         ])
     text_report_lines.append("📅 ÖNÜMÜZDEKİ 3 GÜN")
