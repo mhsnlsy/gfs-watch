@@ -741,18 +741,12 @@ async def process_gfs_update(strict=False):
 
 
 async def main():
-    init_db()
+    """Disable the legacy in-process polling mode."""
     print(
-        f"[START] GFS Watch çalışıyor. Kontrol aralığı: "
-        f"{POLL_INTERVAL_SECONDS // 60} dakika; model: {MODEL_NAME}."
+        "[STOP] Eski sürekli çalışma modu devre dışı. "
+        "GFS Watch yalnızca GFS_WATCH_ONCE=1 ile tek-seferlik "
+        "GitHub Actions kontrolü olarak çalıştırılır."
     )
-    while True:
-        try:
-            await process_gfs_update()
-        except Exception as e:
-            print(f"[LOOP HATA] {type(e).__name__}: {e}")
-        print(f"[WAIT] {POLL_INTERVAL_SECONDS} saniye sonra tekrar kontrol.")
-        await asyncio.sleep(POLL_INTERVAL_SECONDS)
 
 
 async def run_once():
