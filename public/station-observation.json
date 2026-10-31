@@ -18,8 +18,8 @@
     "wind_direction_cardinal": "NE",
     "precipitation_1h_mm": null,
     "precipitation_daily_mm": 3.6,
-    "humidity_percent": 89.0,
+    "humidity_percent": 89,
     "station_pressure_hpa": 1020.9
   },
-  "updated_at_utc": "2026-10-31T19:49:43+00:00"
+  "updated_at_utc": "2026-10-31T19:50:16+00:00"
 }
