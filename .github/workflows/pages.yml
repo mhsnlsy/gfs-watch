@@ -8,6 +8,7 @@ on:
       - "site/**"
       - "public/latest.json"
       - "public/station-observation.json"
+      - "public/notifications/**"
   workflow_dispatch:
 
 permissions:
@@ -50,6 +51,10 @@ jobs:
             cp forecast-data/public/station-observation.json _site/data/station-observation.json
           else
             printf '{"schema":"gfs-watch.station-observation.v1","station_observation":null}\n' > _site/data/station-observation.json
+          fi
+          if [ -d forecast-data/public/notifications ]; then
+            mkdir -p _site/data/notifications
+            cp -a forecast-data/public/notifications/. _site/data/notifications/
           fi
           touch _site/.nojekyll
           echo "Website bundle prepared with the latest GFS forecast."
