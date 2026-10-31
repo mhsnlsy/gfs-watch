@@ -39,8 +39,8 @@ DATA_DIR = "/data" if os.path.isdir("/data") else "."
 DB_PATH = os.getenv("DB_PATH", os.path.join(DATA_DIR, "gfs_watch.db"))
 MODEL_NAME = "ncep_gfs_global"
 # Detect completed +180 GFS cycles directly from NOAA's public S3 inventory.
-# A successful HEAD confirms the exact global GRIB2 f180 object is published,
-# without downloading the hundreds-of-megabytes global file.
+# Selected GRIB2 messages are fetched from the same S3 objects via .idx ranges,
+# avoiding the hundreds-of-megabytes full global file and all weather APIs.
 NOAA_GFS_S3_BASE = "https://noaa-gfs-bdp-pds.s3.amazonaws.com"
 NOAA_RANGE_DOWNLOAD_WORKERS = max(2, int(os.getenv("NOAA_RANGE_DOWNLOAD_WORKERS", "8")))
 NOAA_CYCLE_LOOKBACK = 6
@@ -48,9 +48,6 @@ MIN_FORECAST_HOURS = 180
 RETENTION_DAYS = 10
 PUBLIC_DATA_DIR = os.getenv("PUBLIC_DATA_DIR", "public")
 NOAA_CACHE_DIR = os.getenv("NOAA_CACHE_DIR", "noaa_cache")
-NOAA_REQUEST_INTERVAL_SECONDS = max(
-    1.0, float(os.getenv("NOAA_REQUEST_INTERVAL_SECONDS", "10"))
-)
 NOAA_PREFETCH_FILES_PER_CHECK = max(
     1, int(os.getenv("NOAA_PREFETCH_FILES_PER_CHECK", "4"))
 )
@@ -269,7 +266,7 @@ def export_public_forecast_json(run_id, payload):
         },
         "sources": {
             "forecast": payload.get("data_source", "NOAA/NCEP GFS 0.25° GRIB2"),
-            "current_conditions": "NOAA/NCEP GFS f000 native GRIB2 initial fields",
+            "model_initial_conditions": "NOAA/NCEP GFS f000 native GRIB2 initial fields",
         },
         "noaa_source_file": {
             "f180_available": model_metadata.get("noaa_f180_available", True),
@@ -280,7 +277,7 @@ def export_public_forecast_json(run_id, payload):
             "temperature_2m_c": current.get("temp"),
             "precipitation_mm": current.get("precip"),
             "wind_speed_10m_kmh": current.get("wind"),
-            "surface_pressure_hpa": current.get("pressure"),
+            "mean_sea_level_pressure_hpa": current.get("pressure"),
         },
         "daily_summary": daily_summary,
         "regional_pressure_analysis": {
@@ -428,7 +425,6 @@ def fetch_noaa_available_runs():
 
     for offset in range(NOAA_CYCLE_LOOKBACK):
         run_dt = latest_cycle - timedelta(hours=6 * offset)
-        date_token = run_dt.strftime("%Y%m%d")
         cycle = run_dt.strftime("%H")
         filename = f"gfs.t{cycle}z.pgrb2.0p25.f{MIN_FORECAST_HOURS:03d}"
         object_url = (
@@ -817,8 +813,8 @@ def prefetch_latest_noaa_cycle(skip_run_ids=None, target_run_id=None):
     return downloaded
 
 
-def fetch_full_weather_data(run_id, min_request_interval=10.0):
-    """Fetch an exact GFS cycle; keep polite NOAA pacing configurable for one-off tools."""
+def fetch_full_weather_data(run_id):
+    """Fetch the exact GFS cycle from native NOAA S3 GRIB2 byte ranges."""
     print(f"[STEP 1] NOAA/NCEP GRIB2 verisi çekiliyor: {run_id}")
     try:
         run_dt = _parse_utc_datetime(run_id)
@@ -840,8 +836,7 @@ def fetch_full_weather_data(run_id, min_request_interval=10.0):
         decoded_steps = {}
 
         for position, lead in enumerate(download_order):
-            # Cached forecast slices require no NOMADS request and therefore
-            # must not incur the network pacing delay.
+            # Cached direct-S3 GRIB2 message bundles are ready for immediate decoding.
             grib_bytes = _read_noaa_cache_file(run_id, lead)
             if grib_bytes is not None:
                 print(
@@ -879,8 +874,8 @@ def fetch_full_weather_data(run_id, min_request_interval=10.0):
                 "pressure_grid": None,
             }
 
-            # ecCodes reads GRIB messages from a file object. The filtered
-            # area is small (typically tens of KB, not the 500+ MB global file).
+            # ecCodes reads the selected native GRIB2 messages from a file object.
+            # The .idx byte ranges avoid downloading unrelated global fields.
             with tempfile.NamedTemporaryFile(suffix=".grib2") as temp_file:
                 temp_file.write(grib_bytes)
                 temp_file.flush()
@@ -1113,17 +1108,12 @@ def analyze_and_build_output(current_run_name, payload, previous_runs):
     synoptic = payload.get("synoptic_alerts", [])
 
     curr_t = curr["temp"]
-    curr_p = curr["precip"]
     curr_w = curr["wind"]
 
-    # The voice script receives weekday/date names for each daily summary.
-    # Other voice-format changes are intentionally left for a later pass.
-    speech_parts = [f"İstanbul'da anlık sıcaklık {curr_t} derece."]
-    speech_parts.append(
-        f"Yağış {curr_p} milimetre." if curr_p > 0 else "Yağış beklenmiyor."
-    )
+    # f000 is the GFS model's own initial field, not a live observation.
+    speech_parts = [f"GFS başlangıç analizine göre İstanbul'da sıcaklık {curr_t} derece."]
     if curr_w > 20.0:
-        speech_parts.append("Hava rüzgarlı.")
+        speech_parts.append("Başlangıç analizinde rüzgâr hızı yüksek.")
 
     speech_parts.append("Önümüzdeki üç günün özeti:")
     daily_indices = range(1, min(4, len(daily.get("time", []))))
@@ -1168,9 +1158,8 @@ def analyze_and_build_output(current_run_name, payload, previous_runs):
         f"🕒 Rapor zamanı: {_format_tr_datetime(now_local)} TSİ",
         f"📍 Koordinat: {LAT:.3f}°N, {LON:.3f}°E",
         "",
-        f"🌡 Anlık sıcaklık: {curr_t}°C",
-        f"🌧 Anlık yağış: {curr_p} mm",
-        f"💨 Anlık rüzgâr: {curr_w} km/sa",
+        f"🌡 GFS başlangıç sıcaklığı: {curr_t}°C",
+        f"💨 GFS başlangıç rüzgârı: {curr_w} km/sa",
         "",
         "📅 ÖNÜMÜZDEKİ 3 GÜN",
     ]
@@ -1642,13 +1631,12 @@ async def process_gfs_update(strict=False):
         f"hedef: +{MIN_FORECAST_HOURS} saat."
     )
 
-    # The S3 f180 object itself is the trigger. Its successful HEAD response
-    # confirms the global +180 GRIB2 object has been published; fetch the
-    # compact single-point NOMADS subset immediately and retry missing files
-    # on the next scheduled check.
+    # The S3 f180 GRIB2 object itself is the trigger. Once its HEAD request
+    # succeeds, fetch the selected native GRIB2 messages by .idx byte ranges.
+    # No weather API or NOMADS filtering endpoint is involved.
     print(
         f"[NOAA TRIGGER] {run_id} +180 dosyası NOAA S3'te hazır; "
-        "tek koordinatlı NOMADS GRIB2 parçaları alınıyor."
+        "gerekli GRIB2 mesajları NOAA S3'ten doğrudan byte-range ile alınıyor."
     )
 
     print(f"[UPDATE] +180 saat eşiğine ulaşan GFS run alınıyor: {run_id}")
