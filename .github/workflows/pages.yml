@@ -1,5 +1,7 @@
 name: Deploy İstanbul'un Havası
 
+# Manual refresh note: notification feed content is published from gfs-watch-state.
+
 on:
   push:
     branches: [main, gfs-watch-state]
