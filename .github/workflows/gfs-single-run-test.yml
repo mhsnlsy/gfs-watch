@@ -11,47 +11,37 @@ jobs:
   integration:
     runs-on: ubuntu-latest
     steps:
+      - name: Check out repository
+        uses: actions/checkout@v7
       - name: Set up Python
         uses: actions/setup-python@v7
         with:
           python-version: "3.12"
-      - name: Install requests
-        run: python -m pip install requests
-      - name: Isolate Single Runs API parameters
+      - name: Install application dependencies
+        run: python -m pip install -r requirements.txt
+      - name: Verify exact archived run, timezone handling, and daily aggregation
         run: |
           python - <<'PY'
-          import requests
+          import main
 
-          base = {
-              "latitude": 41.014,
-              "longitude": 28.950,
-              "run": "2026-10-31T00:00",
-              "models": "ncep_gfs_global",
-              "forecast_hours": 181,
-              "timezone": "Europe/Istanbul",
-          }
-          variants = {
-              "hourly_only": {"hourly": "temperature_2m,precipitation,snowfall,surface_pressure,wind_speed_10m"},
-              "daily_only": {"daily": "temperature_2m_max,temperature_2m_min,precipitation_sum,wind_speed_10m_max"},
-              "current_only": {"current": "temperature_2m,precipitation,rain,snowfall,wind_speed_10m,surface_pressure"},
-              "full": {
-                  "current": "temperature_2m,precipitation,rain,snowfall,wind_speed_10m,surface_pressure",
-                  "daily": "temperature_2m_max,temperature_2m_min,precipitation_sum,wind_speed_10m_max",
-                  "hourly": "temperature_2m,precipitation,snowfall,surface_pressure,wind_speed_10m",
-              },
-          }
-          for name, extra in variants.items():
-              params = {**base, **extra}
-              response = requests.get(
-                  "https://single-runs-api.open-meteo.com/v1/forecast",
-                  params=params,
-                  timeout=30,
-              )
-              print("\nVARIANT:", name, "STATUS:", response.status_code)
-              if response.status_code != 200:
-                  print("ERROR BODY:", response.text[:2000])
-                  continue
-              data = response.json()
-              times = data.get("hourly", {}).get("time", [])
-              print("hourly rows:", len(times), "first:", times[0] if times else "-", "last:", times[-1] if times else "-")
+          run_id = "2026-10-31T00:00:00+00:00"
+          payload = main.fetch_full_weather_data(run_id)
+          assert payload is not None, "Single Runs API returned no forecast payload"
+          assert "_pending_single_run" not in payload, "Archived run unexpectedly pending"
+          assert payload["forecast_horizon_hours"] == 180, (
+              f"Expected exactly 180 hours, got {payload.get('forecast_horizon_hours')}"
+          )
+          assert len(payload["timeline_180h"]) == 31, (
+              f"Expected 31 six-hour timeline points, got {len(payload['timeline_180h'])}"
+          )
+          assert len(payload["daily"]["time"]) >= 7, (
+              f"Expected a daily summary derived from hourly data: {payload['daily']['time']}"
+          )
+          assert len(payload["daily"]["temp_max"]) == len(payload["daily"]["time"])
+          assert len(payload["daily"]["precip_sum"]) == len(payload["daily"]["time"])
+          print("RUN:", run_id)
+          print("FORECAST HORIZON:", payload["forecast_horizon_hours"])
+          print("TIMELINE POINTS:", len(payload["timeline_180h"]))
+          print("DAILY BUCKETS:", len(payload["daily"]["time"]))
+          print("SINGLE-RUN INTEGRATION TEST PASSED")
           PY
