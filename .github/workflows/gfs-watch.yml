@@ -9,7 +9,8 @@ on:
       - "requirements.txt"
       - ".github/workflows/gfs-watch.yml"
   # Start 3h50 after each GFS cycle begins (Istanbul = UTC+3).
-  # One workflow run then polls NOAA S3 every 30 seconds for up to 90 minutes.
+  # One workflow run caches newly available GRIB2 lead files every 5 minutes,
+  # while checking the final f180 object every 15 seconds for up to 90 minutes.
   schedule:
     - cron: "50 3 * * *"   # 06:50 Istanbul, 00Z cycle
     - cron: "50 9 * * *"   # 12:50 Istanbul, 06Z cycle
@@ -75,7 +76,8 @@ jobs:
           GCP_SA_KEY: ${{ secrets.GCP_SA_KEY }}
           NOAA_CACHE_DIR: noaa_cache
           NOAA_PREFETCH_MIN_AGE_HOURS: "3.8333"
-          NOAA_PREFETCH_FILES_PER_CHECK: "4"
+          NOAA_PREFETCH_FILES_PER_CHECK: "141"
+          NOAA_PREFETCH_INTERVAL_SECONDS: "300"
           NOAA_RANGE_DOWNLOAD_WORKERS: "8"
         run: python -u main.py
       - name: Save partial NOAA forecast cache
