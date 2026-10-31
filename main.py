@@ -1066,121 +1066,59 @@ def fetch_full_weather_data(run_id):
         }
 
         for position, lead in enumerate(download_order):
-            # Cached direct-S3 GRIB2 message bundles are ready for immediate decoding.
-            grib_bytes = _read_noaa_cache_file(run_id, lead)
-            if grib_bytes is not None:
-                print(
-                    f"[NOAA CACHE HIT] f{lead:03d}: "
-                    f"{len(grib_bytes)} byte önbellekten alındı."
-                )
+            step_data = _read_noaa_decoded_cache_file(run_id, lead)
+            if step_data is not None:
+                print(f"[NOAA DECODED CACHE HIT] f{lead:03d}: önceden çözümlenmiş İstanbul verisi kullanılıyor.")
             else:
-                _, filename = _noaa_s3_object_url(run_dt, lead)
-                print(
-                    f"[NOAA S3] {filename} doğrudan GRIB2 byte-range ile alınıyor "
-                    f"({position + 1}/{len(download_order)})..."
-                )
-                grib_bytes, error, _ = _download_noaa_grib_file(
-                    session, run_dt, lead, headers
-                )
-                if error:
+                grib_bytes = _read_noaa_cache_file(run_id, lead)
+                if grib_bytes is not None:
                     print(
-                        f"[PENDING] NOAA GRIB dosyası f{lead:03d} alınamadı: "
-                        f"{error}; sonraki kontrolde tekrar denenecek."
+                        f"[NOAA GRIB2 CACHE HIT] f{lead:03d}: "
+                        f"{len(grib_bytes)} byte ham GRIB2 önbellekten alındı."
+                    )
+                else:
+                    _, filename = _noaa_s3_object_url(run_dt, lead)
+                    print(
+                        f"[NOAA S3] {filename} doğrudan GRIB2 byte-range ile alınıyor "
+                        f"({position + 1}/{len(download_order)})..."
+                    )
+                    grib_bytes, error, _ = _download_noaa_grib_file(
+                        session, run_dt, lead, headers
+                    )
+                    if error:
+                        print(
+                            f"[PENDING] NOAA GRIB dosyası f{lead:03d} alınamadı: "
+                            f"{error}; sonraki kontrolde tekrar denenecek."
+                        )
+                        return {
+                            "_pending_noaa_gfs": True,
+                            "_run_id": run_id,
+                            "_forecast_hour": lead,
+                            "_reason": error,
+                        }
+                    _write_noaa_cache_file(run_id, lead, grib_bytes)
+
+                step_data, decode_error = _decode_noaa_grib_step(
+                    run_id, lead, grib_bytes
+                )
+                if decode_error:
+                    print(
+                        f"[PENDING] NOAA f{lead:03d} GRIB2 çözümlenemedi: "
+                        f"{decode_error}"
                     )
                     return {
                         "_pending_noaa_gfs": True,
                         "_run_id": run_id,
                         "_forecast_hour": lead,
-                        "_reason": error,
+                        "_reason": decode_error,
                     }
-                _write_noaa_cache_file(run_id, lead, grib_bytes)
+                _write_noaa_decoded_cache_file(run_id, lead, step_data)
 
-            filename = f"gfs.t{cycle}z.pgrb2.0p25.f{lead:03d}"
-            step_data = {
-                "temperature": None,
-                "wind_u": None,
-                "wind_v": None,
-                "precip_records": {},
-                "pressure_grid": None,
-            }
-
-            # ecCodes reads the selected native GRIB2 messages from a file object.
-            # The .idx byte ranges avoid downloading unrelated global fields.
-            with tempfile.NamedTemporaryFile(suffix=".grib2") as temp_file:
-                temp_file.write(grib_bytes)
-                temp_file.flush()
-                with open(temp_file.name, "rb") as grib_file:
-                    while True:
-                        gid = eccodes.codes_grib_new_from_file(grib_file)
-                        if gid is None:
-                            break
-                        try:
-                            short_name = str(eccodes.codes_get(gid, "shortName"))
-                            try:
-                                level_type = str(eccodes.codes_get(gid, "typeOfLevel"))
-                                level = int(eccodes.codes_get(gid, "level"))
-                                start_step = int(eccodes.codes_get(gid, "startStep"))
-                                end_step = int(eccodes.codes_get(gid, "endStep"))
-                            except Exception:
-                                continue
-
-                            is_target = (
-                                (short_name == "2t" and level_type == "heightAboveGround" and level == 2)
-                                or (short_name in ("10u", "10v") and level_type == "heightAboveGround" and level == 10)
-                                or (short_name == "tp" and level_type == "surface")
-                                or (short_name == "prmsl" and level_type == "meanSea")
-                            )
-                            if not is_target:
-                                continue
-
-                            values = np.asarray(eccodes.codes_get_values(gid), dtype=float)
-                            latitudes = np.asarray(eccodes.codes_get_array(gid, "latitudes"), dtype=float)
-                            longitudes = np.asarray(eccodes.codes_get_array(gid, "longitudes"), dtype=float)
-                            if len(values) != len(latitudes) or len(values) != len(longitudes):
-                                raise ValueError(f"GRIB grid mismatch in {filename}")
-
-                            if short_name == "prmsl":
-                                step_data["pressure_grid"] = (
-                                    values, latitudes, longitudes
-                                )
-                                continue
-
-                            samples = {}
-                            for point_name, (point_lat, point_lon) in points.items():
-                                distances = (
-                                    (latitudes - point_lat) ** 2
-                                    + (((longitudes - point_lon + 180.0) % 360.0) - 180.0) ** 2
-                                )
-                                nearest_index = int(distances.argmin())
-                                samples[point_name] = float(values[nearest_index])
-
-                            if short_name == "2t":
-                                step_data["temperature"] = samples
-                            elif short_name == "10u":
-                                step_data["wind_u"] = samples
-                            elif short_name == "10v":
-                                step_data["wind_v"] = samples
-                            elif short_name == "tp":
-                                # GFS may include period totals and full-run
-                                # cumulative totals in one file. Key by interval
-                                # to deduplicate repeated messages.
-                                step_data["precip_records"][(start_step, end_step)] = samples
-                        finally:
-                            eccodes.codes_release(gid)
-
-            if not step_data["temperature"]:
-                print(f"[PENDING] NOAA f{lead:03d} içinde 2 m sıcaklık alanı bulunamadı.")
-                return {
-                    "_pending_noaa_gfs": True,
-                    "_run_id": run_id,
-                    "_forecast_hour": lead,
-                    "_reason": "missing 2m temperature field",
-                }
             decoded_steps[lead] = step_data
             print(
                 f"[NOAA BAŞARILI] f{lead:03d}: "
-                f"{len(step_data['precip_records'])} yağış alanı, "
-                f"{len(grib_bytes)} byte GRIB2 çözüldü."
+                f"{len(step_data['precip_records'])} yağış aralığı; "
+                "önceden çözümlenmiş veri hazır."
             )
 
         # Construct the canonical timeline in Istanbul local time so a 06Z run
@@ -1299,9 +1237,9 @@ def fetch_full_weather_data(run_id):
             float(initial_wind_u.get("Istanbul", 0.0)),
             float(initial_wind_v.get("Istanbul", 0.0)),
         ) * 3.6
-        synoptic_alerts, initial_pressure_hpa = analyse_regional_pressure_grid(
-            initial.get("pressure_grid")
-        )
+        pressure_analysis = initial.get("pressure_analysis") or {}
+        synoptic_alerts = pressure_analysis.get("alerts", [])
+        initial_pressure_hpa = pressure_analysis.get("centre_pressure_hpa")
         current = {
             "temp": round(float(initial_temp["Istanbul"]) - 273.15, 1),
             "precip": 0.0,
