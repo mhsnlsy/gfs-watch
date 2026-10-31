@@ -1,2 +1,10 @@
 fly.toml
 .venv
+.git
+.github
+__pycache__
+*.py[cod]
+.env
+venv
+gfs_watch.db
+summary.mp3
