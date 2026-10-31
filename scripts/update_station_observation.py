@@ -138,32 +138,32 @@ def fetch_observation():
 
 
 def main():
-    target = sys.argv[1] if len(sys.argv) > 1 else "forecast-data/public/latest.json"
-    if not os.path.isfile(target):
-        raise FileNotFoundError(f"Published forecast JSON not found: {target}")
-
-    with open(target, "r", encoding="utf-8") as source:
-        document = json.load(source)
-    if document.get("schema") != "gfs-watch.forecast.v1":
-        raise ValueError("Unexpected forecast JSON schema; refusing to overwrite.")
-
-    station = fetch_observation()
-    previous = document.get("station_observation")
-    if previous == station:
-        print(
-            f"[STATION UNCHANGED] Eyüpsultan 18101 observation "
-            f"{station['observed_at_utc']} is already published."
-        )
-        return
-
-    document["station_observation"] = station
-    document["station_observation_updated_at_utc"] = (
-        datetime.now(timezone.utc).isoformat(timespec="seconds")
+    target = (
+        sys.argv[1]
+        if len(sys.argv) > 1
+        else "forecast-data/public/station-observation.json"
     )
+    station = fetch_observation()
+    document = {
+        "schema": "gfs-watch.station-observation.v1",
+        "station_observation": station,
+        "updated_at_utc": datetime.now(timezone.utc).isoformat(timespec="seconds"),
+    }
+
+    if os.path.isfile(target):
+        with open(target, "r", encoding="utf-8") as source:
+            previous_document = json.load(source)
+        if previous_document.get("station_observation") == station:
+            print(
+                f"[STATION UNCHANGED] Eyüpsultan 18101 observation "
+                f"{station['observed_at_utc']} is already published."
+            )
+            return
 
     directory = os.path.dirname(os.path.abspath(target))
+    os.makedirs(directory, exist_ok=True)
     fd, temporary = tempfile.mkstemp(
-        prefix=".latest-station-", suffix=".tmp", dir=directory
+        prefix=".station-observation-", suffix=".tmp", dir=directory
     )
     try:
         with os.fdopen(fd, "w", encoding="utf-8") as output:
@@ -185,7 +185,6 @@ def main():
         f"{station['wind_speed_10m_kmh']} km/h | "
         f"{station['observed_at_utc']} UTC"
     )
-
 
 if __name__ == "__main__":
     main()
