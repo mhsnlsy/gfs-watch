@@ -425,6 +425,7 @@ def fetch_noaa_available_runs():
 
     for offset in range(NOAA_CYCLE_LOOKBACK):
         run_dt = latest_cycle - timedelta(hours=6 * offset)
+        date_token = run_dt.strftime("%Y%m%d")
         cycle = run_dt.strftime("%H")
         filename = f"gfs.t{cycle}z.pgrb2.0p25.f{MIN_FORECAST_HOURS:03d}"
         object_url = (
