@@ -28,6 +28,8 @@ from telegram import Bot
 TELEGRAM_TOKEN = os.getenv("TELEGRAM_TOKEN")
 CHAT_ID = os.getenv("CHAT_ID")
 GCP_SA_KEY = os.getenv("GCP_SA_KEY")
+APP_NAME = "Boğaziçi Hava"
+APP_VERSION = "2.0.0"
 
 LAT = 41.014
 LON = 28.950
@@ -1305,7 +1307,8 @@ def analyze_and_build_output(current_run_name, payload, previous_runs):
     ).astimezone(TR_TZ)
 
     text_report_lines = [
-        "🌦 İSTANBUL GFS TAHMİN RAPORU",
+        f"🌦 {APP_NAME.upper()} | v{APP_VERSION}",
+        "İSTANBUL GFS TAHMİN RAPORU",
         "📄 Çıktı: Yazılı tahmin raporu",
         f"🛰 Model döngüsü: {_format_tr_datetime(run_local)} TSİ ({run_utc:%H}Z UTC)",
         (
