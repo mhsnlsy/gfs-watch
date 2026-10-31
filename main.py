@@ -99,13 +99,24 @@ def get_previous_runs():
 
 def save_run(run_name, forecast_dict):
     conn = sqlite3.connect(DB_PATH)
-    cursor = conn.cursor()
-    cursor.execute("""
-        INSERT INTO gfs_runs_v3 (run_name, forecast_json)
-        VALUES (?, ?)
-    """, (run_name, json.dumps(forecast_dict)))
-    conn.commit()
-    conn.close()
+    try:
+        cursor = conn.cursor()
+        serialized = json.dumps(forecast_dict)
+        # Refresh an existing run in place (used to migrate the first
+        # baseline to exact Single Runs API data without creating duplicates).
+        cursor.execute("""
+            UPDATE gfs_runs_v3
+            SET timestamp = CURRENT_TIMESTAMP, forecast_json = ?
+            WHERE run_name = ?
+        """, (serialized, run_name))
+        if cursor.rowcount == 0:
+            cursor.execute("""
+                INSERT INTO gfs_runs_v3 (run_name, forecast_json)
+                VALUES (?, ?)
+            """, (run_name, serialized))
+        conn.commit()
+    finally:
+        conn.close()
 
 # --- GFS MODEL SÜRÜMÜ METADATA ---
 def _normalise_model_timestamp(value):
