@@ -1,0 +1,30 @@
+name: Telegram Smoke Test
+
+on:
+  push:
+    branches:
+      - main
+    paths:
+      - ".github/workflows/telegram-smoke-test.yml"
+
+permissions: {}
+
+jobs:
+  send-test-message:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Send a one-time Telegram test message
+        env:
+          TELEGRAM_TOKEN: ${{ secrets.TELEGRAM_TOKEN }}
+          CHAT_ID: ${{ secrets.CHAT_ID }}
+        run: |
+          set -euo pipefail
+          : "${TELEGRAM_TOKEN:?TELEGRAM_TOKEN secret is missing}"
+          : "${CHAT_ID:?CHAT_ID secret is missing}"
+          response="$(curl --silent --show-error --fail-with-body \
+            --request POST \
+            --data-urlencode "chat_id=${CHAT_ID}" \
+            --data-urlencode "text=🧪 GFS Watch test: Telegram metin bildirimi başarıyla iletildi. Bu bir test mesajıdır; yeni bir GFS tahmin döngüsü değildir." \
+            "https://api.telegram.org/bot${TELEGRAM_TOKEN}/sendMessage")"
+          echo "${response}" | jq --exit-status '.ok == true' >/dev/null
+          echo "Telegram test message sent successfully."
