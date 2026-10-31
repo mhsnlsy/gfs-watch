@@ -1448,8 +1448,11 @@ def analyze_and_build_output(current_run_name, payload, previous_runs):
                 f"Günlük toplam yağış {station['precipitation_daily_mm']:.1f} milimetre."
             )
         if station.get("wind_speed_10m_kmh") is not None:
+            direction = station.get("wind_direction_cardinal")
+            direction_text = f", yönü {direction}" if direction else ""
             speech_parts.append(
-                f"Rüzgâr {station['wind_speed_10m_kmh']:.1f} kilometre saat."
+                f"Rüzgâr{direction_text}, "
+                f"{station['wind_speed_10m_kmh']:.1f} kilometre saat."
             )
     speech_parts.append(
         f"GFS başlangıç analizine göre İstanbul'da sıcaklık {curr_t} derece."
@@ -1523,8 +1526,11 @@ def analyze_and_build_output(current_run_name, payload, previous_runs):
                 f"🌧 Günlük toplam yağış: {station['precipitation_daily_mm']:.1f} mm"
             )
         if station.get("wind_speed_10m_kmh") is not None:
+            direction = station.get("wind_direction_cardinal")
+            direction_text = f" · yön: {direction}" if direction else ""
             text_report_lines.append(
                 f"💨 İstasyon rüzgârı: {station['wind_speed_10m_kmh']:.1f} km/sa"
+                f"{direction_text}"
             )
         text_report_lines.extend([
             "Kaynak: ENKA Balmumcu · Davis Vantage PRO istasyonu · canlı tablo ölçümü", 
