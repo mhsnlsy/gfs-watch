@@ -229,7 +229,18 @@ def fetch_full_weather_data(run_id):
         }
 
         res = requests.get(SINGLE_RUNS_URL, params=local_params, timeout=30)
-        if res.status_code in (404, 425, 503):
+        pending_reason = ""
+        if res.status_code == 400:
+            try:
+                error_body = res.json()
+                pending_reason = str(error_body.get("reason", ""))
+            except (ValueError, AttributeError):
+                pending_reason = ""
+        run_not_ready = (
+            "requested model run is not available" in pending_reason.lower()
+            or "run is not available" in pending_reason.lower()
+        )
+        if res.status_code in (404, 425, 503) or run_not_ready:
             print(
                 f"[PENDING] Single Runs API henüz {run_param} çalışmasını sunmuyor "
                 f"(HTTP {res.status_code}); sonraki kontrolde tekrar denenecek."
@@ -238,6 +249,7 @@ def fetch_full_weather_data(run_id):
                 "_pending_single_run": True,
                 "_run_id": run_id,
                 "_http_status": res.status_code,
+                "_reason": pending_reason,
             }
         res.raise_for_status()
         data = res.json()
