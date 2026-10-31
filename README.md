@@ -50,8 +50,8 @@ This is a downloadable public data file, not a live feed automatically consumed 
 
 - The SQLite database is stored in the `gfs-watch-state` branch and restored before each check.
 - The latest 10 days of run history are retained.
-- Run-to-run temperature, six-hour precipitation and 10 m wind-speed changes are presented in the four-cycle comparison image, not repeated in the text report or voice script.
-- The comparison image uses a shared set of overlapping Istanbul calendar dates across all four cycles. Every panel labels each date with its Turkish weekday. The first lead of a new cycle has no six-hour precipitation interval preceding its own initialisation, so that point is excluded from precipitation comparisons.
+- Run-to-run temperature, precipitation-total and 10 m wind-speed changes are presented in the four-cycle comparison image, not repeated in the text report or voice script.
+- The comparison image uses a shared set of overlapping Istanbul calendar dates across all four cycles. Every panel labels each date with its Turkish weekday. The first lead of a new cycle has no precipitation interval preceding its own initialisation, so that point is excluded from precipitation comparisons.
 - At model initialisation, the native f000 NOAA/NCEP mean-sea-level pressure GRIB2 field is analysed inside a 2,500 km diameter circle centred on 41.014°N, 28.950°E. High/low pressure findings are written in the text report only and are not included in the voice script.
 - Do not delete or manually edit the `gfs_watch.db` file in the state branch; the workflow maintains it.
 
@@ -65,7 +65,7 @@ This is a downloadable public data file, not a live feed automatically consumed 
 
 - One text notification is sent per eligible GFS run; there are no separate notifications for forecast changes.
 - Every automatic GFS cycle notification (00Z, 06Z, 12Z and 18Z) also sends a four-cycle PNG comparison chart to Telegram: the current run plus the three immediately preceding six-hour cycles. For example, a 12Z notification compares 18Z (previous day), 00Z, 06Z and the new 12Z run.
-- The chart contains grouped daily temperature candlesticks (first/last six-hour sample as open/close; daily low/high as wick), grouped daily precipitation totals and grouped daily maximum wind speed. All four runs use the same set of overlapping Istanbul calendar dates and consistent colours across panels.
+- The chart contains grouped daily temperature candlesticks (first/last native forecast sample as open/close; daily low/high as wick), grouped daily precipitation totals and grouped daily maximum wind speed. All four runs use the same set of overlapping Istanbul calendar dates and consistent colours across panels.
 - The three exact preceding runs are loaded from SQLite in read-only mode. If a run is missing from retained history, its NOAA/NCEP forecast is fetched read-only for chart generation; this fallback does not save a DB row, alter notification state or update public JSON. Manual report resends do not generate or send comparison images.
 - Telegram text delivery does not wait for TTS. Audio generation starts concurrently in a background thread.
 - TTS generation and Telegram voice delivery each retry up to three times after failures. If audio cannot be produced or sent, the text report remains delivered.
