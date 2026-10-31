@@ -74,6 +74,7 @@ jobs:
             git show origin/gfs-watch-state:gfs_watch.db > gfs_watch.db
           fi
       - name: Check GFS once
+        id: check-gfs
         env:
           GFS_WATCH_ONCE: "1"
           DB_PATH: gfs_watch.db
@@ -86,7 +87,7 @@ jobs:
           NOAA_REQUEST_INTERVAL_SECONDS: "10"
         run: python -u main.py
       - name: Save partial NOAA forecast cache
-        if: always()
+        if: always() && steps.check-gfs.outputs.noaa_cache_updated == 'true'
         continue-on-error: true
         uses: actions/cache/save@v6
         with:
