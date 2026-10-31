@@ -3,7 +3,7 @@ import os
 import json
 import sqlite3
 import asyncio
-from datetime import datetime, timezone
+from datetime import datetime, timedelta, timezone
 from zoneinfo import ZoneInfo  # Türkiye saati için yerleşik kütüphane
 import requests
 from google.cloud import texttospeech
@@ -165,7 +165,7 @@ def fetch_full_weather_data():
         "current": "temperature_2m,precipitation,rain,snowfall,wind_speed_10m,surface_pressure",
         "daily": "temperature_2m_max,temperature_2m_min,precipitation_sum,wind_speed_10m_max",
         "hourly": "temperature_2m,precipitation,snowfall,surface_pressure,wind_speed_10m",
-        "forecast_days": 8,
+        "forecast_hours": 181,
         "models": "gfs_seamless",
         "timezone": "Europe/Istanbul"
     }
@@ -182,6 +182,29 @@ def fetch_full_weather_data():
         times = hourly.get("time", [])
         temps = hourly.get("temperature_2m", [])
         precips = hourly.get("precipitation", [])
+
+        # Do not notify on a partially propagated GFS run. The hourly API
+        # request starts at the current hour; require data through +180h.
+        if not times:
+            raise ValueError("Open-Meteo hourly time dizisi boş döndü.")
+
+        last_time = datetime.fromisoformat(str(times[-1]).replace("Z", "+00:00"))
+        if last_time.tzinfo is None:
+            last_time = last_time.replace(tzinfo=TR_TZ)
+        else:
+            last_time = last_time.astimezone(TR_TZ)
+        current_hour = datetime.now(TR_TZ).replace(minute=0, second=0, microsecond=0)
+        available_hours = int((last_time - current_hour).total_seconds() // 3600)
+
+        if available_hours < 180 or len(times) < 181:
+            print(
+                f"[PENDING] GFS verisi yalnızca +{max(0, available_hours)} saate kadar hazır; "
+                "bildirim için +180 saat bekleniyor. Sonraki kontrolde yeniden denenecek."
+            )
+            return {
+                "_pending_forecast_hours": max(0, available_hours),
+                "_required_forecast_hours": 180,
+            }
 
         forecast_timeline = {}
         for i in range(0, min(181, len(times)), 6):
@@ -226,6 +249,7 @@ def fetch_full_weather_data():
                 "wind_max": daily.get("wind_speed_10m_max", [])
             },
             "timeline_180h": forecast_timeline,
+            "forecast_horizon_hours": available_hours,
             "synoptic_alerts": synoptic_alerts
         }
 
@@ -472,6 +496,12 @@ async def process_gfs_update(strict=False):
 
     print(f"[UPDATE] Yeni GFS run tespit edildi: {run_id}")
     payload = await asyncio.to_thread(fetch_full_weather_data)
+    if payload and "_pending_forecast_hours" in payload:
+        print(
+            f"[PENDING] GFS run {run_id} henüz +180 saate ulaşmadı; "
+            "bu run kaydedilmeyecek ve sonraki kontrolde tekrar denenecek."
+        )
+        return
     if not payload:
         message = "Forecast verisi alınamadı; GFS run işlenmiş olarak kaydedilmedi."
         print(f"[RETRY] {message}")
