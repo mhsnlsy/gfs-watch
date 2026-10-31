@@ -50,6 +50,31 @@
       .notification-image{height:auto;object-fit:contain}
     }
 
+  
+    /* Touch-device layout: do not depend on CSS viewport width alone.
+       This also covers Android browsers using desktop-site emulation. */
+    @media (pointer: coarse) {
+      html, body { width:100%; max-width:100%; overflow-x:clip; }
+      .shell { width:calc(100% - 28px) !important; max-width:1120px; min-width:0; }
+      main.shell { display:block; }
+      .hero, .lower-grid { grid-template-columns:minmax(0,1fr) !important; }
+      .hero > *, .section, .section-head, .chart-stack, .chart-card,
+      .notification-list, .notification-card, .lower-grid > *,
+      .pressure-card, .info-card { width:100%; min-width:0; max-width:100%; }
+      .notification-list { display:grid; grid-template-columns:minmax(0,1fr) !important; }
+      .chart-wrap { display:block; width:100%; min-width:0; max-width:100%; overflow:hidden; }
+      .chart-wrap svg { display:block; width:100% !important; min-width:0 !important; max-width:100% !important; height:auto; }
+      .notification-image-link { display:block; width:100%; max-width:100%; }
+      .notification-image { display:block; width:100% !important; max-width:100% !important; height:auto; object-fit:contain; }
+      .audio-block, .audio-block audio { display:block; width:100%; max-width:100%; min-width:0; }
+      .notification-card-top { min-width:0; }
+      .notification-card-top > div { min-width:0; overflow-wrap:anywhere; }
+      .notification-meta, .notification-summary, .report-text pre { overflow-wrap:anywhere; }
+      .daily-grid { grid-template-columns:repeat(2,minmax(0,1fr)); }
+      .topbar { height:auto; min-height:64px; flex-wrap:wrap; }
+      .topbar nav { display:flex; order:3; width:100%; max-width:100%; overflow-x:auto; }
+    }
+
   </style>
 </head>
 <body>
