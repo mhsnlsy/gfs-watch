@@ -942,8 +942,9 @@ def prefetch_noaa_cycle_if_due(skip_run_ids=None, target_run_id=None):
         return 0
 
     _LAST_NOAA_PREFETCH_RUN_ID = run_id
-    _LAST_NOAA_PREFETCH_AT = now_monotonic
-    return prefetch_latest_noaa_cycle(skip_run_ids, target_run_id)
+    result = prefetch_latest_noaa_cycle(skip_run_ids, target_run_id)
+    _LAST_NOAA_PREFETCH_AT = time.monotonic()
+    return result
 
 
 def prefetch_latest_noaa_cycle(skip_run_ids=None, target_run_id=None):
@@ -1038,7 +1039,7 @@ def prefetch_latest_noaa_cycle(skip_run_ids=None, target_run_id=None):
 
 
 def fetch_full_weather_data(run_id):
-    """Fetch the exact GFS cycle from native NOAA S3 GRIB2 byte ranges."""
+    """Assemble the full GFS cycle from predecoded cache and the final f180 GRIB2."""
     print(f"[STEP 1] NOAA/NCEP GRIB2 verisi çekiliyor: {run_id}")
     try:
         run_dt = _parse_utc_datetime(run_id)
@@ -1836,7 +1837,8 @@ async def process_gfs_update(strict=False):
 
     print(
         f"[FINAL CACHE READY] {run_id}: f000-f177 arasındaki "
-        "tüm GRIB2 girdileri hazır; f180 son veri olarak birleştiriliyor."
+        "140 GRIB2 girdisinin İstanbul değerleri önceden çözüldü; "
+        "yalnızca f180 son dosyası işlenip birleştirilecek."
     )
     print(f"[UPDATE] +180 saat eşiğine ulaşan GFS run alınıyor: {run_id}")
     payload = await asyncio.to_thread(fetch_full_weather_data, run_id)
