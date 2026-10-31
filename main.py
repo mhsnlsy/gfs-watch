@@ -9,6 +9,8 @@ import tempfile
 import time
 import shutil
 import traceback
+import re
+from html import unescape
 from concurrent.futures import ThreadPoolExecutor, as_completed
 from datetime import datetime, timedelta, timezone
 from zoneinfo import ZoneInfo  # Türkiye saati için yerleşik kütüphane
@@ -419,138 +421,164 @@ def analyse_regional_pressure_grid(pressure_grid):
         raise
 
 
-def _mgm_number(value):
-    """Return a finite MGM numeric observation, excluding missing-value sentinels."""
+def _enka_clean_html(fragment):
+    fragment = re.sub(
+        r"<script\b[^>]*>.*?</script>", " ", fragment, flags=re.I | re.S
+    )
+    fragment = re.sub(
+        r"<style\b[^>]*>.*?</style>", " ", fragment, flags=re.I | re.S
+    )
+    fragment = re.sub(r"<[^>]+>", " ", fragment)
+    return re.sub(r"\s+", " ", unescape(fragment)).strip()
+
+
+def _enka_first_number(value):
+    match = re.search(r"[-+]?\d+(?:[.,]\d+)?", value or "")
+    if not match:
+        return None
     try:
-        number = float(value)
-    except (TypeError, ValueError):
+        number = float(match.group(0).replace(",", "."))
+    except ValueError:
         return None
-    if not math.isfinite(number) or number <= -9000:
-        return None
-    return number
+    return number if math.isfinite(number) else None
 
 
-def fetch_mgm_station_observation():
-    """Fetch the latest official MGM observation for Eyüpsultan station 18101."""
-    station_number = 18101
-    base_url = "https://servis.mgm.gov.tr"
+def fetch_enka_station_observation():
+    """Fetch current measured values from ENKA's Balmumcu Vantage PRO station."""
+    current_url = "https://w.enka.com/weather/currentvalues.html"
+    home_url = "https://w.enka.com/weather/index.html"
     headers = {
-        "Accept": "application/json, text/plain, */*",
         "User-Agent": "Mozilla/5.0 (compatible; GFS-Watch/1.0)",
-        "Origin": "https://www.mgm.gov.tr",
-        "Referer": "https://www.mgm.gov.tr/",
+        "Accept": "text/html,application/xhtml+xml",
+        "Referer": home_url,
     }
-    session = requests.Session()
-    session.headers.update(headers)
-
     try:
-        centres_response = session.get(
-            f"{base_url}/web/merkezler",
-            params={"il": "istanbul"},
-            timeout=20,
-        )
-        centres_response.raise_for_status()
-        centres = centres_response.json()
-        if not isinstance(centres, list):
-            raise ValueError("MGM merkez listesi beklenen JSON dizisi değil.")
+        response = requests.get(current_url, headers=headers, timeout=25)
+        response.raise_for_status()
+        response.encoding = response.apparent_encoding or "utf-8"
+        page = response.text
+        page_text = _enka_clean_html(page)
 
-        centre = next(
-            (
-                item for item in centres
-                if any(
-                    str(item.get(key, "")).strip() == str(station_number)
-                    for key in (
-                        "sondurumIstNo", "istNo", "istasyonNo",
-                        "sonDurumIstNo", "sondurumIstasyonNo",
-                    )
-                )
-            ),
-            None,
+        timestamp_match = re.search(
+            r"As\s+of\s*:?\s*(\d{1,2}/\d{1,2}/\d{2,4})\s+(\d{1,2}:\d{2})",
+            page_text,
+            flags=re.I,
         )
-        if not centre:
-            raise LookupError(
-                f"MGM İstanbul merkez listesinde {station_number} "
-                "son durum istasyon kodu bulunamadı."
-            )
+        if not timestamp_match:
+            raise ValueError("ENKA sayfasında ölçüm zaman damgası bulunamadı.")
 
-        centre_id = centre.get("merkezId")
-        if centre_id in (None, ""):
+        timestamp_text = (
+            f"{timestamp_match.group(1)} {timestamp_match.group(2)}"
+        )
+        observed_local = None
+        for date_format in (
+            "%d/%m/%y %H:%M",
+            "%d/%m/%Y %H:%M",
+            "%m/%d/%y %H:%M",
+        ):
+            try:
+                observed_local = datetime.strptime(
+                    timestamp_text, date_format
+                ).replace(tzinfo=TR_TZ)
+                break
+            except ValueError:
+                continue
+        if observed_local is None:
             raise ValueError(
-                f"MGM {station_number} kaydında merkezId alanı bulunamadı."
+                f"ENKA zaman damgası çözümlenemedi: {timestamp_text}"
+            )
+        observed_utc = observed_local.astimezone(timezone.utc)
+
+        rows = []
+        for row_html in re.findall(
+            r"<tr\b[^>]*>(.*?)</tr>", page, flags=re.I | re.S
+        ):
+            cells = re.findall(
+                r"<t[dh]\b[^>]*>(.*?)</t[dh]>",
+                row_html,
+                flags=re.I | re.S,
+            )
+            cleaned = [_enka_clean_html(cell) for cell in cells]
+            if len(cleaned) >= 2:
+                rows.append(cleaned)
+
+        temperature = None
+        humidity = None
+        wind_speed_knots = None
+        wind_direction = None
+        daily_rain = None
+        pressure = None
+        for cells in rows:
+            label = cells[0].strip().lower()
+            if "day temperature" in label or label == "temperature":
+                temperature = _enka_first_number(cells[1])
+            elif label == "humidity":
+                humidity = _enka_first_number(cells[1])
+            elif "wind - 10 min avg" in label or "wind – 10 min avg" in label:
+                wind_speed_knots = _enka_first_number(cells[1])
+            elif label == "wind":
+                wind_text = cells[1]
+                direction_match = re.match(
+                    r"\s*(NNE|ENE|ESE|SSE|SSW|WSW|WNW|NNW|N|NE|E|SE|S|SW|W|NW)\b",
+                    wind_text,
+                    flags=re.I,
+                )
+                if direction_match:
+                    wind_direction = direction_match.group(1).upper()
+                if wind_speed_knots is None:
+                    wind_speed_knots = _enka_first_number(wind_text)
+            elif label == "daily rain":
+                daily_rain = _enka_first_number(cells[1])
+            elif label.startswith("barometer (hpa)"):
+                pressure = _enka_first_number(cells[1])
+
+        if temperature is None or wind_speed_knots is None or daily_rain is None:
+            raise ValueError(
+                "ENKA anlık tablosunda sıcaklık/rüzgâr/günlük yağış "
+                f"alanları eksik: T={temperature}, wind_kt={wind_speed_knots}, "
+                f"daily_rain={daily_rain}"
             )
 
-        observation_response = session.get(
-            f"{base_url}/web/sondurumlar",
-            params={"merkezid": centre_id},
-            timeout=20,
-        )
-        observation_response.raise_for_status()
-        observations = observation_response.json()
-        if not isinstance(observations, list) or not observations:
-            raise LookupError("MGM istasyon gözlem yanıtı boş.")
-
-        observation = next(
-            (
-                item for item in observations
-                if str(item.get("istNo", "")).strip() == str(station_number)
-            ),
-            observations[0],
-        )
-        observed_at = observation.get("veriZamani")
-        if not observed_at:
-            raise ValueError("MGM gözleminde veriZamani alanı bulunamadı.")
-
-        observed_dt = _parse_utc_datetime(observed_at)
         age_minutes = max(
             0.0,
-            (datetime.now(timezone.utc) - observed_dt).total_seconds() / 60.0,
+            (datetime.now(timezone.utc) - observed_utc).total_seconds() / 60.0,
         )
         result = {
-            "station_name": "Eyüpsultan",
-            "station_number": station_number,
-            "source": "MGM / WStatMap istasyon 18101",
-            "source_url": "https://wstatmap.com/stations/eyupsultan-18101",
-            "observed_at_utc": observed_dt.isoformat(timespec="seconds"),
+            "station_name": "ENKA Balmumcu",
+            "station_id": "ENKA-BALMUMCU-VANTAGE-PRO",
+            "source": "ENKA Balmumcu Vantage PRO weather station",
+            "source_url": current_url,
+            "station_home_url": home_url,
+            "latitude": 41.1,
+            "longitude": 28.9,
+            "elevation_m": 107,
+            "observed_at_utc": observed_utc.isoformat(timespec="seconds"),
             "age_minutes": round(age_minutes, 1),
             "is_stale": age_minutes > 90,
-            "temperature_2m_c": _mgm_number(observation.get("sicaklik")),
-            "wind_speed_10m_kmh": _mgm_number(observation.get("ruzgarHiz")),
-            "wind_direction_degrees": _mgm_number(observation.get("ruzgarYon")),
-            "precipitation_1h_mm": _mgm_number(observation.get("yagis1Saat")),
-            "precipitation_10m_mm": _mgm_number(observation.get("yagis10Dk")),
-            "precipitation_6h_mm": _mgm_number(observation.get("yagis6Saat")),
-            "precipitation_24h_mm": _mgm_number(observation.get("yagis24Saat")),
-            "humidity_percent": _mgm_number(observation.get("nem")),
-            "station_pressure_hpa": _mgm_number(observation.get("aktuelBasinc")),
-            "sea_level_pressure_hpa": _mgm_number(
-                observation.get("denizeIndirgenmisBasinc")
-            ),
+            "temperature_2m_c": temperature,
+            "wind_speed_10m_kmh": round(wind_speed_knots * 1.852, 1),
+            "wind_speed_10m_knots": wind_speed_knots,
+            "wind_direction_cardinal": wind_direction,
+            "precipitation_1h_mm": None,
+            "precipitation_daily_mm": daily_rain,
+            "humidity_percent": humidity,
+            "station_pressure_hpa": pressure,
         }
-        if all(
-            result.get(field) is None
-            for field in (
-                "temperature_2m_c",
-                "wind_speed_10m_kmh",
-                "precipitation_1h_mm",
-            )
-        ):
-            raise ValueError("MGM gözleminde sıcaklık, rüzgâr ve yağış değerleri boş.")
-
         state = "STALE" if result["is_stale"] else "LIVE"
         print(
-            f"[MGM {state}] Eyüpsultan 18101 | "
-            f"{result['temperature_2m_c']}°C | "
-            f"yağış 1s {result['precipitation_1h_mm']} mm | "
+            f"[ENKA {state}] Balmumcu Vantage PRO | "
+            f"{temperature}°C | günlük yağış {daily_rain} mm | "
             f"rüzgâr {result['wind_speed_10m_kmh']} km/sa | "
-            f"gözlem {result['observed_at_utc']}"
+            f"ölçüm {result['observed_at_utc']}"
         )
         return result
     except Exception as exc:
         print(
-            f"[MGM STATION WARNING] Eyüpsultan 18101 verisi alınamadı: "
+            f"[ENKA STATION WARNING] Balmumcu verisi alınamadı: "
             f"{type(exc).__name__}: {exc}"
         )
         return None
+
 
 
 def fetch_noaa_available_runs():
@@ -2037,7 +2065,7 @@ async def process_gfs_update(strict=False):
 
     payload["model_metadata"] = metadata
     payload["station_observation"] = await asyncio.to_thread(
-        fetch_mgm_station_observation
+        fetch_enka_station_observation
     )
     export_public_forecast_json(run_id, payload)
     full_text_report, speech_text = analyze_and_build_output(
@@ -2279,7 +2307,7 @@ async def run_manual_report(run_id):
         "run_id": normalized_run_id,
     }
     payload["station_observation"] = await asyncio.to_thread(
-        fetch_mgm_station_observation
+        fetch_enka_station_observation
     )
     full_text_report, speech_text = analyze_and_build_output(
         normalized_run_id, payload, previous_runs
