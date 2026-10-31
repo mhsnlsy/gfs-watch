@@ -14,12 +14,8 @@ jobs:
   cancel-stale:
     runs-on: ubuntu-latest
     steps:
-      - name: Cancel old and queued GFS executions
+      - name: Confirm legacy watcher cancellation
         env:
           GH_TOKEN: ${{ github.token }}
         run: |
-          for run_id in 41192429589 41192893065 41193252440; do
-            echo "Requesting cancellation for workflow run ${run_id}"
-            gh api --silent --method POST "repos/${GITHUB_REPOSITORY}/actions/runs/${run_id}/cancel" || true
-          done
-          echo "Cancellation requests submitted."
+          gh api --include --method POST "repos/${GITHUB_REPOSITORY}/actions/runs/41192429589/cancel"
