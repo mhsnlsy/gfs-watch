@@ -1,0 +1,118 @@
+name: GFS GRIB Decode Probe
+
+on:
+  push:
+    branches:
+      - main
+    paths:
+      - ".github/workflows/gfs-grib-decode-probe.yml"
+
+jobs:
+  decode:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - name: Install GRIB decoder
+        run: |
+          sudo apt-get update -qq
+          sudo apt-get install -y -qq libeccodes-dev libeccodes-tools
+          python -m pip install eccodes
+
+      - name: Download and inspect exact NOAA 06Z f180 subset
+        run: |
+          python - <<'PY'
+          import requests
+          import json
+          import eccodes
+
+          url = "https://nomads.ncep.noaa.gov/cgi-bin/filter_gfs_0p25.pl"
+          params = {
+              "file": "gfs.t06z.pgrb2.0p25.f180",
+              "var_TMP": "on",
+              "lev_2_m_above_ground": "on",
+              "var_APCP": "on",
+              "lev_surface": "on",
+              "var_UGRD": "on",
+              "var_VGRD": "on",
+              "lev_10_m_above_ground": "on",
+              "var_PRMSL": "on",
+              "lev_mean_sea_level": "on",
+              "subregion": "",
+              "leftlon": "27",
+              "rightlon": "39",
+              "toplat": "47",
+              "bottomlat": "33",
+              "dir": "/gfs.20261031/06/atmos",
+          }
+          response = requests.get(url, params=params, timeout=90)
+          print("[FILTER]", response.status_code, len(response.content), response.headers.get("Content-Type"))
+          response.raise_for_status()
+          if not response.content.startswith(b"GRIB"):
+              print(response.text[:2000])
+              raise RuntimeError("NOAA filter did not return a GRIB2 payload")
+
+          path = "/tmp/gfs_06z_f180_istanbul.grib2"
+          with open(path, "wb") as handle:
+              handle.write(response.content)
+
+          print("[GRIB HEADER]", response.content[:16].hex())
+          points = {
+              "Istanbul": (41.014, 28.950),
+              "Balkanlar": (45.0, 18.0),
+              "Karadeniz_Kirim": (46.0, 35.0),
+              "Orta_Akdeniz": (38.0, 15.0),
+              "Dogu_Akdeniz": (34.0, 30.0),
+          }
+
+          rows = []
+          with open(path, "rb") as handle:
+              while True:
+                  gid = eccodes.codes_grib_new_from_file(handle)
+                  if gid is None:
+                      break
+                  try:
+                      row = {}
+                      for key in ["shortName", "name", "typeOfLevel", "level",
+                                  "stepRange", "startStep", "endStep", "validityDate",
+                                  "validityTime", "dataDate", "dataTime"]:
+                          try:
+                              row[key] = eccodes.codes_get(gid, key)
+                          except Exception:
+                              pass
+                      values = eccodes.codes_get_values(gid)
+                      row["numberOfValues"] = len(values)
+                      row["min"] = float(min(values))
+                      row["max"] = float(max(values))
+                      row["samples"] = {}
+                      for name, (lat, lon) in points.items():
+                          nearest = eccodes.codes_grib_find_nearest(gid, lat, lon)
+                          if nearest:
+                              row["samples"][name] = {
+                                  "value": float(nearest[0]["value"]),
+                                  "lat": float(nearest[0]["lat"]),
+                                  "lon": float(nearest[0]["lon"]),
+                              }
+                      rows.append(row)
+                  finally:
+                      eccodes.codes_release(gid)
+
+          print("[DECODED MESSAGE COUNT]", len(rows))
+          print(json.dumps(rows, ensure_ascii=False, indent=2))
+          if not rows:
+              raise RuntimeError("No GRIB messages decoded")
+          PY
+
+      - name: Probe NOMADS OPeNDAP metadata (read-only)
+        continue-on-error: true
+        run: |
+          python - <<'PY'
+          import requests
+          base = "https://nomads.ncep.noaa.gov/dods/gfs_0p25/gfs20261031/gfs_0p25_06z"
+          for suffix in [".dds", ".info"]:
+              try:
+                  r = requests.get(base + suffix, timeout=25)
+                  print(f"[OPENDAP {suffix}] HTTP {r.status_code} bytes={len(r.content)}")
+                  print(r.text[:1500])
+              except Exception as e:
+                  print(f"[OPENDAP {suffix}] {e!r}")
+          PY
