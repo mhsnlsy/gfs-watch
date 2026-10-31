@@ -3,10 +3,10 @@ app = 'gfs-watch'
 primary_region = 'ams'
 
 [build]
-  builder = 'paketobuildpacks/builder:base'
+  dockerfile = "Dockerfile"
 
 [processes]
-  worker = "python main.py"
+  worker = "python -u main.py"
 
 [[mounts]]
   source = "gfs_data"
