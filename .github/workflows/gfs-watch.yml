@@ -1,6 +1,13 @@
 name: GFS Watch
 
 on:
+  push:
+    branches:
+      - main
+    paths:
+      - "main.py"
+      - "requirements.txt"
+      - ".github/workflows/gfs-watch.yml"
   schedule:
     # Run every 10 minutes, offset from the start of the hour to reduce queue delays.
     - cron: "7,17,27,37,47,57 * * * *"
