@@ -85,20 +85,19 @@
   </header>
   <main class="shell">
     <section class="hero">
-      <div><div class="eyebrow"><span class="dot"></span> Canlı yerel istasyon gözlemi</div><h1>Şehrin havasını<br><span>önceden görün.</span></h1><p class="intro">Balmumcu çevresindeki meteoroloji istasyonundan alınan gerçek ölçümler. Bu kart yalnızca istasyon gözlemlerini gösterir; model tahminleri aşağıdaki ayrı bölümlerde sunulur.</p><div class="hero-meta"><span class="meta-chip">Gerçek ölçüm</span><span class="meta-chip">Balmumcu · İstanbul</span></div></div>
+      <div><div class="eyebrow"><span class="dot"></span> Canlı yerel istasyon gözlemi</div><h1>Şehrin havasını<br><span>önceden görün.</span></h1><p class="intro">İstinye'deki ENKA meteoroloji istasyonundan alınan gerçek ölçümler. Bu kart yalnızca istasyon gözlemlerini gösterir; model tahminleri aşağıdaki ayrı bölümlerde sunulur.</p><div class="hero-meta"><span class="meta-chip">Gerçek ölçüm</span><span class="meta-chip">ENKA İstinye · İstanbul</span></div></div>
       <article class="weather-card station-card" role="region" aria-labelledby="station-card-title"><div class="weather-top"><div><div class="label">GERÇEK İSTASYON GÖZLEMİ</div><div class="place" id="station-card-title">Balmumcu · İstanbul</div></div><span class="model-state" id="freshness">Veri bekleniyor</span></div><div class="temp-row"><div class="temperature" id="temperature">—°</div><div class="weather-symbol" id="weather-symbol" aria-hidden="true">☁️</div></div><div class="temp-caption" id="station-observation-meta">Son istasyon ölçümü · zaman damgası sayfada gösterilir</div><div class="weather-stats"><div class="stat"><div class="name">Rüzgâr</div><div class="value" id="wind">—<span class="unit">km/sa</span></div></div><div class="stat"><div class="name">Günlük yağış</div><div class="value" id="rain">—<span class="unit">mm</span></div></div><div class="stat"><div class="name">Nem</div><div class="value" id="humidity">—<span class="unit">%</span></div></div></div><div class="station-alert" id="station-alert" role="status" aria-live="polite" hidden></div></article>
     </section>
     <section class="section" id="tahmin"><div class="section-head"><div><div class="section-kicker">NOAA / NCEP GFS · MODEL TAHMİNİ</div><h2>8 günlük tahmin</h2></div><div class="section-note"><span id="cycle-chip">Model döngüsü yükleniyor</span><br><span id="updated-chip">Yayın zamanı bekleniyor</span><br>Günlük en düşük / en yüksek sıcaklık</div></div><div class="daily-grid" id="daily-grid"><div class="loading">Tahmin verisi yükleniyor…</div></div></section>
     <section class="section" id="bildirimler">
       <div class="section-head report-head">
-        <div><div class="section-kicker">GÜN BOYUNCA 4 MODEL DÖNGÜSÜ</div><h2>Son hava raporları</h2><p class="section-description">Her yeni GFS raporu, görseli ve seslendirmesiyle burada arşivlenir. En son dört bildirim gösterilir.</p></div>
+        <div><div class="section-kicker">GÜN BOYUNCA 4 MODEL DÖNGÜSÜ</div><h2>Son hava raporları</h2><p class="section-description">Her yeni GFS raporu, görseli ve seslendirmesiyle burada arşivlenir. En son dört rapor gösterilir.</p></div>
         <div class="notification-controls">
-          <button class="notification-button" id="enable-notifications" type="button">Arka plan bildirimlerini aç</button>
-          <span id="notification-status" class="notification-status" aria-live="polite">Tarayıcı bildirimi kapalı</span>
+          <span id="notification-status" class="notification-status" aria-live="polite">Otomatik yenileme aktif · 5 dakikada bir</span>
         </div>
       </div>
       <div id="notifications-list" class="notification-list" aria-live="polite"><div class="chart-empty">Son raporlar yükleniyor…</div></div>
-      <p class="notification-footnote">Push aboneliği etkinleştirildiğinde yeni GFS raporları, bu web uygulaması kapalıyken de cihazına bildirim olarak gönderilebilir.</p>
+      <p class="notification-footnote">Rapor arşivi, bu sayfa açık olduğu sürece 5 dakikada bir otomatik güncellenir.</p>
     </section>
     <section class="section" id="seyir">
       <div class="section-head">
@@ -201,7 +200,7 @@
         $("freshness").textContent="İSTASYON VERİSİ YOK";
         $("freshness").classList.add("stale");
         $("station-alert").hidden=false;
-        $("station-alert").textContent="⚠  Balmumcu istasyon verisi alınamadı. Kartta güncel ölçüm bulunmuyor.";
+        $("station-alert").textContent="⚠  ENKA İstinye istasyon verisi alınamadı. Kartta güncel ölçüm bulunmuyor.";
       }
       if(data.run_id_utc)$("cycle-chip").textContent="GFS döngüsü · "+timeTR(data.run_id_utc);
       if(data.published_at_utc){
@@ -235,10 +234,7 @@
         $("forecast-chart").innerHTML='<div class="chart-empty">Veri kaynağına şu anda ulaşılamıyor. Sayfa otomatik olarak yeniden deneyecek.</div>';
       }
     }
-    let notificationRegistration=null;
-    let notificationsReady=false;
     let latestNotificationItems=[];
-    let pushApiUrl="";
     function formatNotificationTime(value){
       const date=new Date(value);
       if(Number.isNaN(date.getTime()))return "Zaman bilgisi yok";
@@ -247,22 +243,6 @@
     function notificationAsset(path){
       if(!path)return null;
       return new URL("./data/notifications/"+path,window.location.href).href;
-    }
-    async function loadPushConfig(){
-      try{
-        const response=await fetch("./push-config.json?t="+Date.now(),{cache:"no-store"});
-        if(!response.ok)throw new Error("Push ayarı bulunamadı.");
-        const config=await response.json();
-        pushApiUrl=String(config.apiBaseUrl||"").trim();
-        while(pushApiUrl.endsWith("/"))pushApiUrl=pushApiUrl.slice(0,-1);
-      }catch(_){pushApiUrl="";}
-      return pushApiUrl;
-    }
-    function decodeVapidKey(value){
-      const padding="=".repeat((4-value.length%4)%4);
-      const base64=(value+padding).replace(/-/g,"+").replace(/_/g,"/");
-      const raw=window.atob(base64);
-      return Uint8Array.from(raw,char=>char.charCodeAt(0));
     }
     function renderNotifications(items){
       const list=$("notifications-list");
@@ -286,36 +266,6 @@
           '</article>';
       }).join("");
     }
-    async function notifyForNewReports(items){
-      if(!items.length||!("Notification" in window)||Notification.permission!=="granted")return;
-      try{
-        const registration=notificationRegistration||await navigator.serviceWorker.ready;
-        if(registration.pushManager&&await registration.pushManager.getSubscription())return;
-      }catch(_){}
-      let lastSeen=null;
-      try{lastSeen=localStorage.getItem("gfs-last-notified-report");}catch(_){}
-      if(!lastSeen){
-        try{localStorage.setItem("gfs-last-notified-report",items[0].id);}catch(_){}
-        return;
-      }
-      const unseen=[];
-      for(const item of items){if(lastSeen!=="__none__"&&item.id===lastSeen)break;unseen.push(item);}
-      if(unseen.length){
-        const registration=notificationRegistration||await navigator.serviceWorker.ready;
-        for(const item of unseen.reverse()){
-          const body=String(item.summary||"Yeni İstanbul GFS hava raporu yayımlandı.").slice(0,180);
-          if(registration&&registration.showNotification){
-            await registration.showNotification(item.title||"Yeni İstanbul hava raporu",{
-              body,icon:"./icon.svg",badge:"./icon.svg",tag:"gfs-"+item.id,
-              data:{url:"./#bildirimler"}
-            });
-          }else{
-            new Notification(item.title||"Yeni İstanbul hava raporu",{body});
-          }
-        }
-        try{localStorage.setItem("gfs-last-notified-report",items[0].id);}catch(_){}
-      }
-    }
     async function loadNotifications(){
       try{
         const response=await fetch("./data/notifications/latest.json?t="+Date.now(),{cache:"no-store"});
@@ -324,117 +274,13 @@
         if(document.schema!=="gfs-watch.notifications.v1"||!Array.isArray(document.items))throw new Error("Rapor arşivi biçimi geçersiz.");
         latestNotificationItems=document.items.slice(0,4);
         renderNotifications(latestNotificationItems);
-        if(notificationsReady)await notifyForNewReports(latestNotificationItems);
-        else{
-          try{
-            const lastSeen=localStorage.getItem("gfs-last-notified-report");
-            if(lastSeen)await notifyForNewReports(latestNotificationItems);
-            else if(latestNotificationItems[0])localStorage.setItem("gfs-last-notified-report",latestNotificationItems[0].id);
-          }catch(_){}
-          notificationsReady=true;
-        }
+        $("notification-status").textContent="Otomatik yenileme aktif · Son kontrol: "+new Intl.DateTimeFormat("tr-TR",{timeZone:"Europe/Istanbul",hour:"2-digit",minute:"2-digit"}).format(new Date());
       }catch(error){
-        $("notifications-list").innerHTML='<div class="chart-empty">Rapor arşivi henüz hazır değil. İlk sonraki GFS bildirimi geldiğinde burada görünecek.</div>';
-        notificationsReady=true;
+        $("notifications-list").innerHTML='<div class="chart-empty">Rapor arşivi şu anda alınamıyor. Sayfa açıkken otomatik olarak yeniden denenecek.</div>';
+        $("notification-status").textContent="Rapor arşivi bağlantısı bekleniyor · 5 dakikada bir yeniden denenir";
       }
     }
-    async function registerAppWorker(){
-      if(!("serviceWorker" in navigator)){
-        $("notification-status").textContent="Bu tarayıcı cihaz bildirimlerini desteklemiyor.";
-        return;
-      }
-      try{notificationRegistration=await navigator.serviceWorker.register("./service-worker.js");}
-      catch(error){$("notification-status").textContent="Arka plan bileşeni yüklenemedi.";}
-    }
-    async function refreshPushStatus(){
-      const button=$("enable-notifications");
-      if(!("Notification" in window)||!notificationRegistration||!notificationRegistration.pushManager){
-        $("notification-status").textContent="Bu ortam Web Push desteği sunmuyor. iPhone'da Ana Ekran uygulamasını kullan.";
-        button.disabled=false;
-        return;
-      }
-      if(!pushApiUrl){
-        $("notification-status").textContent="Push sunucusu bağlantısı henüz tamamlanmadı.";
-        button.textContent="Arka plan bildirimlerini aç";
-        button.disabled=false;
-        return;
-      }
-      if(Notification.permission==="granted"){
-        try{
-          const subscription=await notificationRegistration.pushManager.getSubscription();
-          if(subscription){
-            $("notification-status").textContent="Arka plan Web Push aktif · Uygulama kapalıyken de bildirim alabilir.";
-            button.textContent="Push bildirimleri aktif";
-            button.disabled=true;
-            return;
-          }
-          $("notification-status").textContent="Bildirim izni var; arka plan aboneliği henüz kurulmadı.";
-        }catch(_){
-          $("notification-status").textContent="Push aboneliği kontrol edilemedi.";
-        }
-      }else if(Notification.permission==="denied"){
-        $("notification-status").textContent="Bildirim izni kapalı. iPhone ayarlarından izin vermelisin.";
-      }else{
-        $("notification-status").textContent="Arka plan bildirimi henüz etkin değil.";
-      }
-      button.textContent="Arka plan bildirimlerini aç";
-      button.disabled=false;
-    }
-    async function enableNotifications(){
-      const button=$("enable-notifications");
-      if(!("Notification" in window)){
-        $("notification-status").textContent="Bu tarayıcı cihaz bildirimlerini desteklemiyor.";
-        return;
-      }
-      button.disabled=true;
-      try{
-        const permission=Notification.permission==="granted"
-          ?"granted"
-          :await Notification.requestPermission();
-        if(permission!=="granted"){
-          $("notification-status").textContent="Bildirim izni verilmedi. iPhone ayarlarından değiştirebilirsin.";
-          button.disabled=false;
-          return;
-        }
-        if(!pushApiUrl)await loadPushConfig();
-        if(!pushApiUrl)throw new Error("Push sunucusu henüz yapılandırılmadı.");
-        const registration=notificationRegistration||await navigator.serviceWorker.ready;
-        if(!registration.pushManager)throw new Error("Bu tarayıcı Push API desteği sunmuyor.");
-        const keyResponse=await fetch(pushApiUrl+"/vapid-public-key",{cache:"no-store"});
-        if(!keyResponse.ok)throw new Error("Push sunucusuna ulaşılamadı ("+keyResponse.status+").");
-        const keyData=await keyResponse.json();
-        if(!keyData.publicKey)throw new Error("Push sunucusunun açık anahtarı eksik.");
-        let subscription=await registration.pushManager.getSubscription();
-        if(!subscription){
-          subscription=await registration.pushManager.subscribe({
-            userVisibleOnly:true,
-            applicationServerKey:decodeVapidKey(keyData.publicKey)
-          });
-        }
-        const saveResponse=await fetch(pushApiUrl+"/subscribe",{
-          method:"POST",
-          headers:{"Content-Type":"application/json"},
-          body:JSON.stringify(subscription)
-        });
-        if(!saveResponse.ok){
-          const detail=await saveResponse.json().catch(()=>({}));
-          throw new Error(detail.error||"Abonelik sunucuya kaydedilemedi ("+saveResponse.status+").");
-        }
-        try{localStorage.setItem("gfs-last-notified-report",latestNotificationItems[0]?latestNotificationItems[0].id:"__none__");}catch(_){}
-        $("notification-status").textContent="Arka plan Web Push aktif · Uygulama kapalıyken de bildirim alabilir.";
-        button.textContent="Push bildirimleri aktif";
-        button.disabled=true;
-      }catch(error){
-        $("notification-status").textContent=error.message||"Push aboneliği kurulamadı.";
-        button.textContent="Arka plan bildirimlerini aç";
-        button.disabled=false;
-      }
-    }
-    $("enable-notifications").addEventListener("click",enableNotifications);
     async function startPage(){
-      await registerAppWorker();
-      await loadPushConfig();
-      await refreshPushStatus();
       await Promise.all([loadForecast(),loadNotifications()]);
       window.setInterval(()=>{loadForecast();loadNotifications();},300000);
     }
