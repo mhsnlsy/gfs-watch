@@ -1,0 +1,79 @@
+name: GFS Source Probe
+
+on:
+  push:
+    branches:
+      - main
+    paths:
+      - ".github/workflows/gfs-source-probe.yml"
+
+jobs:
+  probe:
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - name: Check NOAA NOMADS and AWS GFS objects
+        run: |
+          python - <<'PY'
+          import requests
+
+          date = "20261031"
+          cycle = "06"
+          filename = "gfs.t06z.pgrb2.0p25.f180"
+          roots = {
+              "NOMADS": f"https://nomads.ncep.noaa.gov/pub/data/nccf/com/gfs/prod/gfs.{date}/{cycle}/atmos/",
+              "AWS": f"https://noaa-gfs-bdp-pds.s3.amazonaws.com/gfs.{date}/{cycle}/atmos/",
+          }
+
+          headers = {"Range": "bytes=0-2047", "Cache-Control": "no-cache"}
+          for name, root in roots.items():
+              print(f"\n[{name}] {root}")
+              for suffix in [".idx", ""]:
+                  url = root + filename + suffix
+                  try:
+                      response = requests.get(url, headers=headers, timeout=35)
+                      print({
+                          "object": filename + suffix,
+                          "status": response.status_code,
+                          "bytes_received": len(response.content),
+                          "content_type": response.headers.get("Content-Type"),
+                          "content_range": response.headers.get("Content-Range"),
+                          "first_bytes": response.content[:16].hex(),
+                      })
+                  except Exception as exc:
+                      print({"object": filename + suffix, "error": repr(exc)})
+
+          filter_url = "https://nomads.ncep.noaa.gov/cgi-bin/filter_gfs_0p25.pl"
+          params = {
+              "file": filename,
+              "var_TMP": "on",
+              "lev_2_m_above_ground": "on",
+              "var_APCP": "on",
+              "lev_surface": "on",
+              "var_UGRD": "on",
+              "var_VGRD": "on",
+              "lev_10_m_above_ground": "on",
+              "var_PRMSL": "on",
+              "lev_mean_sea_level": "on",
+              "subregion": "",
+              "leftlon": "27",
+              "rightlon": "31",
+              "toplat": "43",
+              "bottomlat": "39",
+              "dir": f"/gfs.{date}/{cycle}/atmos",
+          }
+          print("\n[NOMADS FILTER] subset Istanbul region, forecast hour 180")
+          try:
+              response = requests.get(filter_url, params=params, headers=headers, timeout=45)
+              print({
+                  "status": response.status_code,
+                  "bytes_received": len(response.content),
+                  "content_type": response.headers.get("Content-Type"),
+                  "content_range": response.headers.get("Content-Range"),
+                  "url": response.url,
+                  "first_bytes": response.content[:32].hex(),
+                  "text_preview": response.text[:300] if "text" in response.headers.get("Content-Type", "") else "",
+              })
+          except Exception as exc:
+              print({"error": repr(exc)})
+          PY
