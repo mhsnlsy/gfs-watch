@@ -1,25 +1,25 @@
 {
   "schema": "gfs-watch.station-observation.v1",
   "station_observation": {
-    "station_name": "ENKA Balmumcu",
-    "station_id": "ENKA-BALMUMCU-VANTAGE-PRO",
-    "source": "ENKA Balmumcu Vantage PRO weather station",
-    "source_url": "https://w.enka.com/weather/currentvalues.html",
-    "station_home_url": "https://w.enka.com/weather/index.html",
-    "latitude": 41.1,
-    "longitude": 28.9,
-    "elevation_m": 107,
-    "observed_at_utc": "2026-10-31T17:10:00+00:00",
-    "age_minutes": 3.5,
+    "station_name": "ENKA İstinye",
+    "station_id": "ENKA-ISTINYE-VANTAGE-PRO",
+    "source": "ENKA İstinye Vantage PRO weather station",
+    "source_url": "https://www.enkaspor.com/weather/currentvaluestr.html",
+    "station_home_url": "https://www.enkaspor.com/weather/indextr.html",
+    "latitude": 41.1124167,
+    "longitude": 29.0373833,
+    "elevation_m": 113,
+    "observed_at_utc": "2026-10-31T19:45:00+00:00",
+    "age_minutes": 4.7,
     "is_stale": false,
-    "temperature_2m_c": 13.8,
-    "wind_speed_10m_kmh": 9.6,
-    "wind_speed_10m_knots": 5.2,
+    "temperature_2m_c": 13.5,
+    "wind_speed_10m_kmh": 3.1,
+    "wind_speed_10m_knots": 1.7,
     "wind_direction_cardinal": "NE",
     "precipitation_1h_mm": null,
-    "precipitation_daily_mm": 0.0,
-    "humidity_percent": 87.0,
-    "station_pressure_hpa": 1020.5
+    "precipitation_daily_mm": 3.6,
+    "humidity_percent": 89.0,
+    "station_pressure_hpa": 1020.9
   },
-  "updated_at_utc": "2026-10-31T17:13:32+00:00"
+  "updated_at_utc": "2026-10-31T19:49:43+00:00"
 }
