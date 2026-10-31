@@ -43,3 +43,17 @@ jobs:
           Path("/tmp/site-script.js").write_text(match.group(1), encoding="utf-8")
           PY
           node --check /tmp/site-script.js
+      - name: Validate Web Push code and config
+        run: |
+          node --check push-worker/src/index.js
+          node --check push-worker/send-notification.mjs
+          python -m json.tool push-worker/wrangler.jsonc > /dev/null
+          python -m json.tool push-worker/package.json > /dev/null
+          python -m json.tool site/push-config.json > /dev/null
+          python - <<'PY'
+          import sqlite3
+          from pathlib import Path
+          db = sqlite3.connect(":memory:")
+          db.executescript(Path("push-worker/migrations/0001_initial.sql").read_text())
+          print("Web Push schema is valid.")
+          PY
