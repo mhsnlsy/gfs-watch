@@ -42,7 +42,7 @@ jobs:
       - name: Install station client
         run: python -m pip install --disable-pip-version-check requests
 
-      - name: Fetch latest MGM observation
+      - name: Fetch latest ENKA Balmumcu observation
         run: python source/scripts/update_station_observation.py forecast-data/public/station-observation.json
 
       - name: Publish changed station observation
@@ -50,11 +50,11 @@ jobs:
         run: |
           git config user.name "github-actions[bot]"
           git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
-          git add public/latest.json
+          git add public/station-observation.json
           if git diff --cached --quiet; then
             echo "No new station observation to publish."
           else
-            git commit -m "Refresh Eyupsultan station observation"
+            git commit -m "Refresh ENKA Balmumcu station observation"
             for attempt in 1 2 3; do
               git fetch origin gfs-watch-state
               git rebase origin/gfs-watch-state
