@@ -77,7 +77,6 @@ jobs:
           NOAA_PREFETCH_MIN_AGE_HOURS: "3.8333"
           NOAA_PREFETCH_FILES_PER_CHECK: "4"
           NOAA_RANGE_DOWNLOAD_WORKERS: "8"
-          NOAA_GRIB2_SMOKE_TEST_RUN_ID: "2026-10-31T06:00:00+00:00"
         run: python -u main.py
       - name: Save partial NOAA forecast cache
         if: always() && steps.check-gfs.outputs.noaa_cache_updated == 'true'
