@@ -1,0 +1,46 @@
+name: Single Runs API smoke test
+
+on:
+  push:
+    branches:
+      - main
+    paths:
+      - ".github/workflows/single-run-smoke.yml"
+
+jobs:
+  smoke-test:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Set up Python
+        uses: actions/setup-python@v7
+        with:
+          python-version: "3.12"
+      - name: Verify an archived GFS run can be retrieved
+        run: |
+          python - <<'PY'
+          import requests
+
+          params = {
+              "latitude": 41.014,
+              "longitude": 28.950,
+              "run": "2026-10-31T00:00",
+              "models": "ncep_gfs_global",
+              "hourly": "temperature_2m,precipitation",
+              "forecast_hours": 181,
+              "timezone": "Europe/Istanbul",
+          }
+          response = requests.get(
+              "https://single-runs-api.open-meteo.com/v1/forecast",
+              params=params,
+              timeout=30,
+          )
+          print("HTTP status:", response.status_code)
+          response.raise_for_status()
+          data = response.json()
+          times = data.get("hourly", {}).get("time", [])
+          print("First forecast time:", times[0] if times else "MISSING")
+          print("Last forecast time:", times[-1] if times else "MISSING")
+          print("Returned hourly rows:", len(times))
+          assert len(times) >= 181, "Single Runs API did not return the requested 181 hours"
+          print("SINGLE RUNS API SMOKE TEST PASSED")
+          PY
