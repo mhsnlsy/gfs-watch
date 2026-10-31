@@ -179,6 +179,14 @@ def fetch_model_update_metadata():
 
 
 # --- VERİ ÇEKME (+180 SAAT / FAST-FETCH) ---
+def _parse_forecast_local_time(value):
+    """Convert an API time string in Europe/Istanbul to an aware UTC datetime."""
+    parsed = datetime.fromisoformat(str(value).replace("Z", "+00:00"))
+    if parsed.tzinfo is None:
+        parsed = parsed.replace(tzinfo=TR_TZ)
+    return parsed.astimezone(timezone.utc)
+
+
 def fetch_full_weather_data(run_id):
     print(f"[STEP 1] Open-Meteo Single Runs API verisi çekiliyor: {run_id}")
     try:
@@ -220,8 +228,8 @@ def fetch_full_weather_data(run_id):
         if not times:
             raise ValueError("Single Runs API hourly time dizisi boş döndü.")
 
-        first_dt = _parse_utc_datetime(times[0])
-        last_dt = _parse_utc_datetime(times[-1])
+        first_dt = _parse_forecast_local_time(times[0])
+        last_dt = _parse_forecast_local_time(times[-1])
         if abs((first_dt - run_dt).total_seconds()) > 3600:
             raise ValueError(
                 f"Single Runs API yanlış başlangıç saati döndürdü: {times[0]} "
@@ -247,7 +255,7 @@ def fetch_full_weather_data(run_id):
             t_str = times[i]
             forecast_timeline[t_str] = {
                 "step_hour": int(
-                    (_parse_utc_datetime(t_str) - run_dt).total_seconds() // 3600
+                    (_parse_forecast_local_time(t_str) - run_dt).total_seconds() // 3600
                 ),
                 "temp": round(temps[i], 1) if i < len(temps) else 0.0,
                 "precip": round(precips[i], 2) if i < len(precips) else 0.0,
@@ -383,6 +391,7 @@ def analyze_and_build_output(current_run_name, payload, previous_runs):
 
     text_report_lines = [
         f"🌐 MODEL GÜNCELLEME RAPORU",
+        f"🛰 GFS run: {current_run_name} UTC | Tahmin kapsamı: +{payload.get('forecast_horizon_hours', MIN_FORECAST_HOURS)} saat",
         f"📍 Konum: {LOCATION_NAME} | ⏱ Zaman: {now_tr_str}\n",
         f"🌡 Anlık Sıcaklık: {curr_t} °C",
         f"🌧 Anlık Yağış: {curr_p} mm",
