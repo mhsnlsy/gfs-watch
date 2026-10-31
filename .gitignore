@@ -3,3 +3,4 @@ __pycache__/
 .env
 gfs_watch.db
 summary.mp3
+noaa_cache/
