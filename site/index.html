@@ -89,7 +89,7 @@
       const station=data.station_observation||{};
       const hasStation=!!data.station_observation;
       $("temperature").textContent=hasStation&&numeric(station.temperature_2m_c)?fmt(station.temperature_2m_c,1)+"°":"—°";
-      $("wind").innerHTML=hasStation&&numeric(station.wind_speed_10m_kmh)?fmt(station.wind_speed_10m_kmh,1)+'<span class="unit">km/sa</span>':'—<span class="unit">km/sa</span>';
+      $("wind").innerHTML=hasStation&&numeric(station.wind_speed_10m_kmh)?(station.wind_direction_cardinal?esc(station.wind_direction_cardinal)+" · ":"")+fmt(station.wind_speed_10m_kmh,1)+'<span class="unit">km/sa</span>':'—<span class="unit">km/sa</span>';
       $("rain").innerHTML=hasStation&&numeric(station.precipitation_daily_mm)?fmt(station.precipitation_daily_mm,1)+'<span class="unit">mm bugün</span>':'—<span class="unit">mm bugün</span>';
       $("humidity").innerHTML=hasStation&&numeric(station.humidity_percent)?fmt(station.humidity_percent,0)+'<span class="unit">%</span>':'—<span class="unit">%</span>';
       $("weather-symbol").textContent=symbolFor(hasStation?station.precipitation_1h_mm||0:0);
@@ -101,7 +101,7 @@
         $("station-observation-meta").textContent=(stale?"Gecikmeli ölçüm":"Son ölçüm")+" · "+observedText+" TSİ · ENKA Vantage PRO";
         $("freshness").textContent=stale?"Ölçüm gecikmiş":"İstasyon verisi";
       }else{
-        $("station-observation-meta").textContent="MGM Eyüpsultan 18101 verisine şu anda ulaşılamıyor.";
+        $("station-observation-meta").textContent="ENKA Balmumcu istasyon verisine şu anda ulaşılamıyor.";
         $("freshness").textContent="İstasyon verisi yok";
       }
       if(data.run_id_utc)$("cycle-chip").textContent="GFS döngüsü · "+timeTR(data.run_id_utc);
