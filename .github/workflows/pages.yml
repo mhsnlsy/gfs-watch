@@ -1,6 +1,11 @@
 name: Deploy İstanbul'un Havası
 
 on:
+  push:
+    branches: [main]
+    paths:
+      - ".github/workflows/pages.yml"
+      - "site/**"
   workflow_dispatch:
   workflow_run:
     workflows: ["GFS Watch"]
