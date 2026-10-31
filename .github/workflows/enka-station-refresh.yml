@@ -1,6 +1,11 @@
 name: ENKA Station Refresh
 
 on:
+  push:
+    branches: [main]
+    paths:
+      - "scripts/refresh_enka_station.py"
+      - ".github/workflows/enka-station-refresh.yml"
   schedule:
     - cron: "*/5 * * * *"
   workflow_dispatch:
