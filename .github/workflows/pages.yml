@@ -1,0 +1,58 @@
+name: Deploy İstanbul'un Havası
+
+on:
+  workflow_dispatch:
+  workflow_run:
+    workflows: ["GFS Watch"]
+    types: [completed]
+
+permissions:
+  contents: read
+  pages: write
+  id-token: write
+
+concurrency:
+  group: github-pages
+  cancel-in-progress: true
+
+jobs:
+  deploy:
+    if: \${{ github.event_name != 'workflow_run' || github.event.workflow_run.conclusion == 'success' }}
+    environment:
+      name: github-pages
+      url: \${{ steps.deployment.outputs.page_url }}
+    runs-on: ubuntu-latest
+    steps:
+      - name: Check out website source
+        uses: actions/checkout@v7
+        with:
+          ref: main
+          path: source
+
+      - name: Check out published forecast data
+        uses: actions/checkout@v7
+        with:
+          ref: gfs-watch-state
+          path: forecast-data
+
+      - name: Prepare website files
+        run: |
+          test -s forecast-data/public/latest.json
+          python -m json.tool forecast-data/public/latest.json > /dev/null
+          mkdir -p _site/data
+          cp -a source/site/. _site/
+          cp forecast-data/public/latest.json _site/data/latest.json
+          touch _site/.nojekyll
+          echo "Website bundle prepared with the latest GFS forecast."
+
+      - name: Configure GitHub Pages
+        uses: actions/configure-pages@v5
+
+      - name: Upload website artifact
+        uses: actions/upload-pages-artifact@v4
+        with:
+          path: _site
+
+      - name: Deploy website
+        id: deployment
+        uses: actions/deploy-pages@v4
