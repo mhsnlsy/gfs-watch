@@ -1951,7 +1951,7 @@ async def run_scheduled_watch():
     """Prefetch early GRIB2 fields, then poll NOAA S3 frequently for exact f180 readiness."""
     init_db()
     window_minutes = max(10, int(os.getenv("GFS_WATCH_WINDOW_MINUTES", "90")))
-    poll_seconds = max(15, int(os.getenv("GFS_WATCH_POLL_SECONDS", "30")))
+    poll_seconds = max(15, int(os.getenv("GFS_WATCH_POLL_SECONDS", "15")))
     now = datetime.now(timezone.utc)
     target_hour = (now.hour // 6) * 6
     target_dt = now.replace(hour=target_hour, minute=0, second=0, microsecond=0)
