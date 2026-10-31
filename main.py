@@ -21,7 +21,9 @@ GCP_SA_KEY = os.getenv("GCP_SA_KEY")
 
 LAT = 41.014
 LON = 28.950
-LOCATION_NAME = "İstanbul"
+GRID_LAT = round(LAT * 4.0) / 4.0
+GRID_LON = round(LON * 4.0) / 4.0
+LOCATION_NAME = f"İstanbul ({LAT:.3f}, {LON:.3f})"
 TR_TZ = ZoneInfo("Europe/Istanbul")  # İstanbul saat dilimi
 POLL_INTERVAL_SECONDS = max(60, int(os.getenv("POLL_INTERVAL_SECONDS", "600")))
 DATA_DIR = "/data" if os.path.isdir("/data") else "."
@@ -36,13 +38,6 @@ MODEL_METADATA_URLS = (
 SINGLE_RUNS_URL = "https://single-runs-api.open-meteo.com/v1/forecast"
 MIN_FORECAST_HOURS = 180
 RETENTION_DAYS = 10
-
-SYNOPTIC_POINTS = {
-    "Balkanlar": (45.0, 18.0),
-    "Karadeniz / Kırım çevresi": (46.0, 35.0),
-    "Orta Akdeniz": (38.0, 15.0),
-    "Doğu Akdeniz": (34.0, 30.0)
-}
 
 # --- VERİTABANI İŞLEMLERİ ---
 def init_db():
@@ -225,10 +220,9 @@ def fetch_full_weather_data(run_id):
         date_token = run_dt.strftime("%Y%m%d")
         cycle = run_dt.strftime("%H")
         filter_url = "https://nomads.ncep.noaa.gov/cgi-bin/filter_gfs_0p25.pl"
-        points = {
-            "Istanbul": (LAT, LON),
-            **SYNOPTIC_POINTS,
-        }
+        # Only retrieve the model grid cell nearest to the requested coordinate.
+        # For 41.014N, 28.950E this is the GFS 0.25-degree node at 41.000N, 29.000E.
+        points = {"Istanbul": (LAT, LON)}
         session = requests.Session()
         headers = {"User-Agent": "GFS-Watch/1.0"}
 
@@ -257,13 +251,11 @@ def fetch_full_weather_data(run_id):
                 "var_UGRD": "on",
                 "var_VGRD": "on",
                 "lev_10_m_above_ground": "on",
-                "var_PRMSL": "on",
-                "lev_mean_sea_level": "on",
                 "subregion": "",
-                "leftlon": "10",
-                "rightlon": "42",
-                "toplat": "50",
-                "bottomlat": "30",
+                "leftlon": f"{GRID_LON - 0.1:.2f}",
+                "rightlon": f"{GRID_LON + 0.1:.2f}",
+                "toplat": f"{GRID_LAT + 0.1:.2f}",
+                "bottomlat": f"{GRID_LAT - 0.1:.2f}",
                 "dir": f"/gfs.{date_token}/{cycle}/atmos",
             }
 
@@ -309,7 +301,6 @@ def fetch_full_weather_data(run_id):
                 "temperature": None,
                 "wind_u": None,
                 "wind_v": None,
-                "pressure": None,
                 "precip_records": {},
             }
 
@@ -336,7 +327,6 @@ def fetch_full_weather_data(run_id):
                             is_target = (
                                 (short_name == "2t" and level_type == "heightAboveGround" and level == 2)
                                 or (short_name in ("10u", "10v") and level_type == "heightAboveGround" and level == 10)
-                                or (short_name == "prmsl" and level_type == "meanSea")
                                 or (short_name == "tp" and level_type == "surface")
                             )
                             if not is_target:
@@ -363,8 +353,6 @@ def fetch_full_weather_data(run_id):
                                 step_data["wind_u"] = samples
                             elif short_name == "10v":
                                 step_data["wind_v"] = samples
-                            elif short_name == "prmsl":
-                                step_data["pressure"] = samples
                             elif short_name == "tp":
                                 # GFS may include both the 6-hour period total
                                 # and the full-run cumulative total in one file.
@@ -381,15 +369,6 @@ def fetch_full_weather_data(run_id):
                     "_forecast_hour": lead,
                     "_reason": "missing 2m temperature field",
                 }
-            if lead > 0 and not step_data["pressure"]:
-                print(f"[PENDING] NOAA f{lead:03d} içinde basınç alanı bulunamadı.")
-                return {
-                    "_pending_noaa_gfs": True,
-                    "_run_id": run_id,
-                    "_forecast_hour": lead,
-                    "_reason": "missing mean sea level pressure field",
-                }
-
             decoded_steps[lead] = step_data
             print(
                 f"[NOAA BAŞARILI] f{lead:03d}: "
@@ -402,7 +381,6 @@ def fetch_full_weather_data(run_id):
         forecast_timeline = {}
         daily_buckets = {}
         previous_cumulative_precip = {name: None for name in points}
-        regional_pressures = {}
 
         for lead in lead_hours:
             step_data = decoded_steps[lead]
@@ -480,12 +458,6 @@ def fetch_full_weather_data(run_id):
                 bucket["precips"].append(istanbul_precip)
             bucket["winds"].append(istanbul_wind)
 
-            if lead == 0:
-                regional_pressures = {
-                    name: float(value) / 100.0
-                    for name, value in pressure.items()
-                }
-
         daily_dates = sorted(daily_buckets)
         daily = {
             "time": daily_dates,
@@ -534,22 +506,12 @@ def fetch_full_weather_data(run_id):
                 "temp": round(temp_c["Istanbul"], 1),
                 "precip": 0.0,
                 "wind": round(wind_kmh.get("Istanbul", 0.0), 1),
-                "pressure": round(regional_pressures.get("Istanbul", 1013.0), 1),
+                "pressure": 1013.0,
             }
 
+        # All forecast values are now point-specific; no regional pressure
+        # sample points are fetched or reported.
         synoptic_alerts = []
-        for region in SYNOPTIC_POINTS:
-            pressure_value = regional_pressures.get(region)
-            if pressure_value is None:
-                continue
-            if pressure_value <= 1015.0:
-                synoptic_alerts.append(
-                    f"{region} üzerinde alçak basınç ({pressure_value:.1f} hPa)"
-                )
-            elif pressure_value >= 1023.0:
-                synoptic_alerts.append(
-                    f"{region} üzerinde yüksek basınç ({pressure_value:.1f} hPa)"
-                )
 
         payload = {
             "current": current,
@@ -557,7 +519,10 @@ def fetch_full_weather_data(run_id):
             "timeline_180h": forecast_timeline,
             "forecast_horizon_hours": MIN_FORECAST_HOURS,
             "synoptic_alerts": synoptic_alerts,
-            "data_source": "NOAA/NCEP GFS 0.25° GRIB2 (NOMADS)",
+            "data_source": (
+                "NOAA/NCEP GFS 0.25° GRIB2 (NOMADS); "
+                f"hedef {LAT:.3f}N, {LON:.3f}E; en yakın grid {GRID_LAT:.3f}N, {GRID_LON:.3f}E"
+            ),
         }
 
         print(
@@ -661,7 +626,7 @@ def analyze_and_build_output(current_run_name, payload, previous_runs):
         f"🌐 MODEL GÜNCELLEME RAPORU",
         f"🛰 GFS run: {current_run_name} UTC | Tahmin kapsamı: +{payload.get('forecast_horizon_hours', MIN_FORECAST_HOURS)} saat",
         f"📡 Veri kaynağı: {payload.get('data_source', 'NOAA/NCEP GFS 0.25° GRIB2')}\n",
-        f"📍 Konum: {LOCATION_NAME} | ⏱ Zaman: {now_tr_str}\n",
+        f"📍 Nokta: {LOCATION_NAME} | GFS grid: {GRID_LAT:.3f}N, {GRID_LON:.3f}E | ⏱ Zaman: {now_tr_str}\n",
         f"🌡 Anlık Sıcaklık: {curr_t} °C",
         f"🌧 Anlık Yağış: {curr_p} mm",
         f"💨 Anlık Rüzgar: {curr_w} km/s {'(Rüzgarlı 🌬️)' if curr_w > 20.0 else ''}\n",
