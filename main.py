@@ -491,7 +491,7 @@ def fetch_noaa_available_runs():
 
 # --- VERİ ÇEKME (+180 SAAT / FAST-FETCH) ---
 def _parse_forecast_local_time(value):
-    """Convert an API time string in Europe/Istanbul to an aware UTC datetime."""
+    """Convert an ISO timestamp in Europe/Istanbul to an aware UTC datetime."""
     parsed = datetime.fromisoformat(str(value).replace("Z", "+00:00"))
     if parsed.tzinfo is None:
         parsed = parsed.replace(tzinfo=TR_TZ)
