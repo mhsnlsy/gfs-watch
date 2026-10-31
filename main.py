@@ -545,7 +545,7 @@ def fetch_mgm_station_observation():
             f"gözlem {result['observed_at_utc']}"
         )
         return result
-    except (requests.RequestException, ValueError, TypeError, LookupError) as exc:
+    except Exception as exc:
         print(
             f"[MGM STATION WARNING] Eyüpsultan 18101 verisi alınamadı: "
             f"{type(exc).__name__}: {exc}"
