@@ -4,8 +4,8 @@ A point-specific GFS forecast watcher for 41.014°N, 28.950°E. GitHub Actions c
 
 ## Data sources and point-specific forecast retrieval
 
-- Open-Meteo's public `in-progress.json` and `latest.json` files are used only to discover the active and latest completed GFS run and estimate how far its valid-time sequence has been published. An in-progress metadata horizon is not treated as proof that every forecast file has been archived.
-- WXCharts identifies NOAA/NCEP as its GFS source. Instead of scraping third-party chart pages, this project reads the underlying operational NOAA/NCEP GFS 0.25° GRIB2 data directly.
+- Run discovery is performed directly against NOAA's public `noaa-gfs-bdp-pds` S3 inventory. The watcher sends lightweight HTTP HEAD requests for each recent 00Z/06Z/12Z/18Z cycle's `f180` GRIB2 object. A successful response confirms that the exact +180-hour global model file has been published; it does not download the 500+ MB object.
+- WXCharts identifies NOAA/NCEP as its GFS source. Instead of scraping third-party chart pages or waiting for a secondary archive API, this project reads the underlying operational NOAA/NCEP GFS 0.25° GRIB2 data directly.
 - Forecast files are requested through the [NOAA/NCEP NOMADS regional GRIB filter](https://nomads.ncep.noaa.gov/cgi-bin/filter_gfs_0p25.pl). The filter is constrained to a tiny bounding box around the requested location; the global GRIB files are not downloaded.
 - Requested coordinate: **41.014°N, 28.950°E**. The nearest native GFS 0.25° grid node is **41.000°N, 29.000°E**. Forecast values represent that model grid cell, not an interpolation over all of Istanbul.
 - GRIB2 messages are decoded with ecCodes. The point forecast uses 2 m temperature, 10 m U/V wind components and surface precipitation. The live current-condition snapshot is retrieved separately from the Forecast API at the exact requested latitude/longitude.
@@ -28,9 +28,9 @@ The workflow installs the ecCodes system library and Python package automaticall
 
 ## Run tracking and +180-hour threshold
 
-- The workflow checks both Open-Meteo GFS metadata documents and calculates the forecast horizon from each run's UTC initialisation time to its latest published valid time.
-- A run is not notified or marked as processed until at least +180 forecast hours are published.
-- The exact selected cycle is then requested from NOAA/NCEP. The +180 file is checked first; if it is not ready, the run remains pending and is retried on a later scheduled check.
+- Every 10 minutes, the workflow checks NOAA S3 for the latest six GFS cycle files (00Z, 06Z, 12Z and 18Z, including recent prior cycles).
+- A run becomes eligible as soon as its exact global `f180` GRIB2 object exists on NOAA S3. This is the run-discovery trigger; Open-Meteo metadata and its archive API are not required.
+- The watcher then requests the compact single-point +180 file from NOAA/NCEP NOMADS first. If the filtered NOMADS data or any earlier six-hour step is not yet available, the run remains unprocessed and is retried on the next scheduled check.
 - Each NOMADS subset request is spaced by at least 10 seconds. A full +0 to +180 timeline uses six-hour forecast steps and only the nearest GFS grid cell for the configured coordinate.
 
 ## Run history and comparisons
