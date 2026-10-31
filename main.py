@@ -799,9 +799,14 @@ async def process_gfs_update(strict=False):
 
     previous_runs = get_previous_runs()
     processed_run_ids = await asyncio.to_thread(get_processed_run_ids)
+    latest_processed_run = max(processed_run_ids) if processed_run_ids else None
     pending_runs = [
         item for item in candidates
         if item["run_id"] not in processed_run_ids
+        and (
+            latest_processed_run is None
+            or item["run_id"] > latest_processed_run
+        )
     ]
 
     if not pending_runs:
