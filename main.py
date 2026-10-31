@@ -141,7 +141,7 @@ def _write_json_atomically(path, document):
         ) as temp_file:
             temp_path = temp_file.name
             json.dump(document, temp_file, ensure_ascii=False, indent=2, allow_nan=False)
-            temp_file.write("\\n")
+            temp_file.write("\n")
         os.replace(temp_path, path)
     finally:
         if temp_path and os.path.exists(temp_path):
@@ -920,7 +920,21 @@ async def process_gfs_update(strict=False):
                 latest_saved_dt.strftime("%Y%m%dT%HZ") + ".json",
             )
             latest_path = os.path.join(PUBLIC_DATA_DIR, "latest.json")
-            if not (os.path.isfile(archive_path) and os.path.isfile(latest_path)):
+            expected_run_id = latest_saved_dt.isoformat(timespec="seconds")
+            files_match_run = False
+            try:
+                with open(archive_path, "r", encoding="utf-8") as archive_file:
+                    archive_document = json.load(archive_file)
+                with open(latest_path, "r", encoding="utf-8") as latest_file:
+                    latest_document = json.load(latest_file)
+                files_match_run = (
+                    archive_document.get("run_id_utc") == expected_run_id
+                    and latest_document.get("run_id_utc") == expected_run_id
+                )
+            except (OSError, ValueError, TypeError):
+                files_match_run = False
+
+            if not files_match_run:
                 try:
                     export_public_forecast_json(
                         latest_saved_run, json.loads(latest_saved_json)
