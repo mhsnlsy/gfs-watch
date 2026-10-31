@@ -274,7 +274,7 @@
         const response=await fetch("./push-config.json?t="+Date.now(),{cache:"no-store"});
         if(!response.ok)throw new Error("config unavailable");
         const config=await response.json();
-        pushApiUrl=String(config.apiBaseUrl||"").trim().replace(/\\/+$/,"");
+        pushApiUrl=String(config.apiBaseUrl||"").trim().replace(/\/+$/,"");
       }catch(_){pushApiUrl="";}
       return pushApiUrl;
     }
