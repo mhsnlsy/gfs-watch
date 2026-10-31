@@ -3,6 +3,7 @@ import os
 import json
 import sqlite3
 import asyncio
+import io
 import math
 import tempfile
 import time
@@ -10,6 +11,11 @@ from datetime import datetime, timedelta, timezone
 from zoneinfo import ZoneInfo  # Türkiye saati için yerleşik kütüphane
 import requests
 import numpy as np
+import matplotlib
+matplotlib.use("Agg")
+import matplotlib.pyplot as plt
+from matplotlib.lines import Line2D
+from matplotlib.patches import Rectangle
 import eccodes
 from google.cloud import texttospeech
 from google.oauth2 import service_account
@@ -1122,6 +1128,156 @@ async def send_telegram_text(text):
     print("[TELEGRAM] Metin bildirimi gönderildi.")
 
 
+def create_comparison_chart(current_run_id, payload, previous_runs):
+    """Build a three-panel image comparing this run with the immediately previous run."""
+    if not previous_runs:
+        print("[KIYAS GÖRSELİ] Önceki GFS kaydı yok; ilk çalışma için görsel atlandı.")
+        return None
+
+    try:
+        previous_run_id, previous_json = previous_runs[0]
+        previous_payload = json.loads(previous_json)
+        current_daily = payload.get("daily", {})
+        previous_daily = previous_payload.get("daily", {})
+
+        def daily_values(daily):
+            dates = daily.get("time", [])
+            keys = ("temp_min", "temp_max", "precip_sum", "wind_max")
+            if any(len(daily.get(key, [])) != len(dates) for key in keys):
+                raise ValueError("Günlük özet dizilerinin uzunlukları uyuşmuyor.")
+            return {
+                day: {
+                    "temp_min": float(daily["temp_min"][i]),
+                    "temp_max": float(daily["temp_max"][i]),
+                    "precip": float(daily["precip_sum"][i]),
+                    "wind": float(daily["wind_max"][i]),
+                }
+                for i, day in enumerate(dates)
+            }
+
+        current_values = daily_values(current_daily)
+        previous_values = daily_values(previous_daily)
+        dates = sorted(set(current_values) & set(previous_values))
+        if not dates:
+            print("[KIYAS GÖRSELİ] Ortak tahmin günü bulunamadı; görsel atlandı.")
+            return None
+
+        def temperature_ohlc(forecast, day):
+            samples = [
+                (key, values) for key, values in forecast.items()
+                if key[:10] == day and values.get("temp") is not None
+            ]
+            samples.sort(key=lambda item: item[0])
+            if not samples:
+                return None
+            temps = [float(item[1]["temp"]) for item in samples]
+            return temps[0], temps[-1], max(temps), min(temps)
+
+        current_timeline = payload.get("timeline_180h", {})
+        previous_timeline = previous_payload.get("timeline_180h", {})
+        current_ohlc = [temperature_ohlc(current_timeline, day) for day in dates]
+        previous_ohlc = [temperature_ohlc(previous_timeline, day) for day in dates]
+
+        previous_dt = _parse_utc_datetime(previous_run_id).astimezone(TR_TZ)
+        current_dt = _parse_utc_datetime(current_run_id).astimezone(TR_TZ)
+        previous_label = f"Önceki: {previous_dt:%d.%m %H}Z"
+        current_label = f"Yeni: {current_dt:%d.%m %H}Z"
+
+        fig, axes = plt.subplots(
+            3, 1, figsize=(15, 11), sharex=True,
+            gridspec_kw={"height_ratios": [1.5, 1, 1]},
+        )
+        fig.suptitle(
+            "İSTANBUL GFS | SON ÇALIŞMA – ÖNCEKİ ÇALIŞMA",
+            fontsize=17, fontweight="bold", y=0.985,
+        )
+        x_positions = list(range(len(dates)))
+        candle_specs = [
+            (previous_ohlc, -0.18, "#3977A8", previous_label),
+            (current_ohlc, 0.18, "#E58A32", current_label),
+        ]
+
+        ax = axes[0]
+        for series, offset, color, label in candle_specs:
+            for index, values in enumerate(series):
+                if values is None:
+                    continue
+                open_value, close_value, high_value, low_value = values
+                x = x_positions[index] + offset
+                ax.vlines(x, low_value, high_value, color=color, linewidth=1.7)
+                body_bottom = min(open_value, close_value)
+                body_height = max(abs(close_value - open_value), 0.12)
+                ax.add_patch(Rectangle(
+                    (x - 0.105, body_bottom), 0.21, body_height,
+                    facecolor=color, edgecolor=color, alpha=0.82,
+                ))
+        ax.set_title("Sıcaklık | Günlük mum: açılış–kapanış, fitil: min–maks (°C)", loc="left")
+        ax.set_ylabel("°C")
+        ax.grid(axis="y", alpha=0.25)
+        ax.legend(
+            handles=[
+                Line2D([0], [0], color=color, linewidth=5, label=label)
+                for _, _, color, label in candle_specs
+            ],
+            loc="upper left", ncol=2, frameon=False,
+        )
+
+        width = 0.36
+        for ax, metric, title, ylabel in (
+            (axes[1], "precip", "Günlük toplam yağış", "mm"),
+            (axes[2], "wind", "Günlük en yüksek rüzgâr", "km/sa"),
+        ):
+            previous_data = [previous_values[day][metric] for day in dates]
+            current_data = [current_values[day][metric] for day in dates]
+            ax.bar(
+                [x - width / 2 for x in x_positions], previous_data,
+                width=width, color="#3977A8", label=previous_label,
+            )
+            ax.bar(
+                [x + width / 2 for x in x_positions], current_data,
+                width=width, color="#E58A32", label=current_label,
+            )
+            ax.set_title(title, loc="left")
+            ax.set_ylabel(ylabel)
+            ax.grid(axis="y", alpha=0.25)
+            ax.legend(loc="upper left", ncol=2, frameon=False)
+
+        axes[-1].set_xticks(x_positions)
+        axes[-1].set_xticklabels(
+            [datetime.strptime(day, "%Y-%m-%d").strftime("%d.%m") for day in dates]
+        )
+        axes[-1].set_xlabel("İstanbul yerel tarihi")
+        fig.text(
+            0.01, 0.012,
+            "Kaynak: NOAA/NCEP GFS 0.25° | Aynı takvim günlerinde ortak tahmin aralığı",
+            fontsize=9, color="#555555",
+        )
+        fig.tight_layout(rect=(0, 0.035, 1, 0.96))
+
+        image_buffer = io.BytesIO()
+        fig.savefig(image_buffer, format="png", dpi=150, bbox_inches="tight")
+        image_buffer.seek(0)
+        print(f"[KIYAS GÖRSELİ] {len(dates)} ortak gün için grafik hazırlandı.")
+        return image_buffer
+    except Exception as exc:
+        print(f"[KIYAS GÖRSELİ HATA] Grafik oluşturulamadı: {exc}")
+        return None
+    finally:
+        if "fig" in locals():
+            plt.close(fig)
+
+
+async def send_telegram_photo(photo, caption):
+    if not TELEGRAM_TOKEN or not CHAT_ID:
+        raise RuntimeError("TELEGRAM_TOKEN veya CHAT_ID eksik.")
+    if not photo:
+        return
+    photo.seek(0)
+    async with Bot(token=TELEGRAM_TOKEN) as bot:
+        await bot.send_photo(chat_id=CHAT_ID, photo=photo, caption=caption)
+    print("[TELEGRAM] GFS karşılaştırma görseli gönderildi.")
+
+
 async def send_telegram_voice(audio_path, max_attempts=3):
     if not TELEGRAM_TOKEN or not CHAT_ID:
         raise RuntimeError("TELEGRAM_TOKEN veya CHAT_ID eksik.")
@@ -1279,6 +1435,25 @@ async def process_gfs_update(strict=False):
         raise
 
     save_run(run_id, payload)
+
+    # Send the visual comparison only for automatic new-run notifications.
+    # It is isolated from manual resends and cannot block history persistence.
+    chart_buffer = create_comparison_chart(run_id, payload, previous_runs)
+    if chart_buffer:
+        try:
+            previous_run_id = previous_runs[0][0]
+            caption = (
+                f"📊 GFS tahmin karşılaştırması | Yeni: "
+                f"{_format_tr_datetime(_parse_utc_datetime(run_id).astimezone(TR_TZ))} TSİ\n"
+                f"Önceki: "
+                f"{_format_tr_datetime(_parse_utc_datetime(previous_run_id).astimezone(TR_TZ))} TSİ"
+            )
+            await send_telegram_photo(chart_buffer, caption)
+        except Exception as exc:
+            print(f"[KIYAS GÖRSELİ GÖNDERİM HATASI] {exc}")
+        finally:
+            chart_buffer.close()
+
     audio_file = await audio_task
     if audio_file:
         try:
