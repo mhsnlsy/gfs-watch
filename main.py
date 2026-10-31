@@ -8,6 +8,7 @@ import math
 import tempfile
 import time
 import shutil
+from concurrent.futures import ThreadPoolExecutor, as_completed
 from datetime import datetime, timedelta, timezone
 from zoneinfo import ZoneInfo  # Türkiye saati için yerleşik kütüphane
 import requests
@@ -41,7 +42,7 @@ MODEL_NAME = "ncep_gfs_global"
 # A successful HEAD confirms the exact global GRIB2 f180 object is published,
 # without downloading the hundreds-of-megabytes global file.
 NOAA_GFS_S3_BASE = "https://noaa-gfs-bdp-pds.s3.amazonaws.com"
-NOAA_NOMADS_FILTER_URL = "https://nomads.ncep.noaa.gov/cgi-bin/filter_gfs_0p25.pl"
+NOAA_RANGE_DOWNLOAD_WORKERS = max(2, int(os.getenv("NOAA_RANGE_DOWNLOAD_WORKERS", "8")))
 NOAA_CYCLE_LOOKBACK = 6
 MIN_FORECAST_HOURS = 180
 RETENTION_DAYS = 10
@@ -268,7 +269,7 @@ def export_public_forecast_json(run_id, payload):
         },
         "sources": {
             "forecast": payload.get("data_source", "NOAA/NCEP GFS 0.25° GRIB2"),
-            "current_conditions": "Open-Meteo live current-conditions snapshot",
+            "current_conditions": "NOAA/NCEP GFS f000 native GRIB2 initial fields",
         },
         "noaa_source_file": {
             "f180_available": model_metadata.get("noaa_f180_available", True),
@@ -324,72 +325,13 @@ def _parse_utc_datetime(value):
     return parsed.astimezone(timezone.utc)
 
 
-def fetch_regional_pressure_anomalies(session, filter_url, run_dt, headers, last_request_at):
-    """Find the highest and lowest MSLP values inside a 2,500 km diameter circle."""
-    elapsed = time.monotonic() - last_request_at
-    if elapsed < 10.0:
-        time.sleep(10.0 - elapsed)
-
-    date_token = run_dt.strftime("%Y%m%d")
-    cycle = run_dt.strftime("%H")
-    filename = f"gfs.t{cycle}z.pgrb2.0p25.f000"
-    lat_delta = REGIONAL_PRESSURE_RADIUS_KM / 111.32
-    lon_delta = REGIONAL_PRESSURE_RADIUS_KM / (
-        111.32 * math.cos(math.radians(LAT))
-    )
-    params = {
-        "file": filename,
-        "var_PRMSL": "on",
-        "lev_mean_sea_level": "on",
-        "subregion": "",
-        "leftlon": f"{LON - lon_delta:.2f}",
-        "rightlon": f"{LON + lon_delta:.2f}",
-        "toplat": f"{LAT + lat_delta:.2f}",
-        "bottomlat": f"{LAT - lat_delta:.2f}",
-        "dir": f"/gfs.{date_token}/{cycle}/atmos",
-    }
-
+def analyse_regional_pressure_grid(pressure_grid):
+    """Analyse the native NOAA GRIB2 MSLP field around Istanbul."""
     try:
-        response = session.get(
-            filter_url, params=params, headers=headers, timeout=120
-        )
-        response.raise_for_status()
-        grib_bytes = response.content
-        if not grib_bytes.startswith(b"GRIB"):
-            raise ValueError("Bölgesel basınç isteği GRIB2 yerine başka yanıt döndürdü.")
+        if not pressure_grid:
+            raise ValueError("f000 GRIB2 içinde deniz seviyesi basınç alanı yok.")
 
-        pressure_values = None
-        pressure_latitudes = None
-        pressure_longitudes = None
-        with tempfile.NamedTemporaryFile(suffix=".grib2") as temp_file:
-            temp_file.write(grib_bytes)
-            temp_file.flush()
-            with open(temp_file.name, "rb") as grib_file:
-                while True:
-                    gid = eccodes.codes_grib_new_from_file(grib_file)
-                    if gid is None:
-                        break
-                    try:
-                        short_name = str(eccodes.codes_get(gid, "shortName"))
-                        level_type = str(eccodes.codes_get(gid, "typeOfLevel"))
-                        if short_name != "prmsl" or level_type != "meanSea":
-                            continue
-                        pressure_values = np.asarray(
-                            eccodes.codes_get_values(gid), dtype=float
-                        )
-                        pressure_latitudes = np.asarray(
-                            eccodes.codes_get_array(gid, "latitudes"), dtype=float
-                        )
-                        pressure_longitudes = np.asarray(
-                            eccodes.codes_get_array(gid, "longitudes"), dtype=float
-                        )
-                        break
-                    finally:
-                        eccodes.codes_release(gid)
-
-        if pressure_values is None:
-            raise ValueError("GRIB2 içinde deniz seviyesi basınç alanı bulunamadı.")
-
+        pressure_values, pressure_latitudes, pressure_longitudes = pressure_grid
         if not (
             len(pressure_values)
             == len(pressure_latitudes)
@@ -406,7 +348,7 @@ def fetch_regional_pressure_anomalies(session, filter_url, run_dt, headers, last
         )
         haversine = (
             np.sin(delta_lat / 2.0) ** 2
-            + math.cos(lat1) * np.cos(lat2) * np.sin(delta_lon / 2.0) ** 2
+            + math.cos(lat1) * math.cos(lat2) * np.sin(delta_lon / 2.0) ** 2
         )
         distance_km = 6371.0 * 2.0 * np.arcsin(
             np.sqrt(np.clip(haversine, 0.0, 1.0))
@@ -453,14 +395,23 @@ def fetch_regional_pressure_anomalies(session, filter_url, run_dt, headers, last
                 f"(alan içindeki basınç aralığı {minimum:.1f}–{maximum:.1f} hPa)."
             )
 
-        print(
-            f"[BASINÇ] 2.500 km çaplı dairede {int(np.count_nonzero(inside))} "
-            f"grid noktası incelendi; min {minimum:.1f}, max {maximum:.1f} hPa."
+        nearest_index = int(
+            (
+                (pressure_latitudes - LAT) ** 2
+                + (((pressure_longitudes - LON + 180.0) % 360.0) - 180.0) ** 2
+            ).argmin()
         )
-        return findings
+        centre_pressure_hpa = float(pressure_values[nearest_index]) / 100.0
+        print(
+            f"[BASINÇ GRIB2] 2.500 km çaplı dairede "
+            f"{int(np.count_nonzero(inside))} grid noktası; "
+            f"min {minimum:.1f}, max {maximum:.1f} hPa; "
+            f"İstanbul {centre_pressure_hpa:.1f} hPa."
+        )
+        return findings, round(centre_pressure_hpa, 1)
     except Exception as exc:
-        print(f"[BASINÇ UYARI] Bölgesel basınç analizi yapılamadı: {exc}")
-        return ["Bölgesel basınç verisi alınamadı; bu döngü için analiz yapılamadı."]
+        print(f"[BASINÇ UYARI] GRIB2 bölgesel basınç analizi yapılamadı: {exc}")
+        raise
 
 
 def fetch_noaa_available_runs():
@@ -609,53 +560,146 @@ def _write_noaa_cache_file(run_id, lead, grib_bytes):
     _mark_noaa_cache_updated()
 
 
-def _noaa_filter_request(run_dt, lead):
+def _noaa_s3_object_url(run_dt, lead):
     date_token = run_dt.strftime("%Y%m%d")
     cycle = run_dt.strftime("%H")
     filename = f"gfs.t{cycle}z.pgrb2.0p25.f{int(lead):03d}"
-    params = {
-        "file": filename,
-        "var_TMP": "on",
-        "lev_2_m_above_ground": "on",
-        "var_APCP": "on",
-        "lev_surface": "on",
-        "var_UGRD": "on",
-        "var_VGRD": "on",
-        "lev_10_m_above_ground": "on",
-        "subregion": "",
-        "leftlon": f"{GRID_LON - 0.1:.2f}",
-        "rightlon": f"{GRID_LON + 0.1:.2f}",
-        "toplat": f"{GRID_LAT + 0.1:.2f}",
-        "bottomlat": f"{GRID_LAT - 0.1:.2f}",
-        "dir": f"/gfs.{date_token}/{cycle}/atmos",
-    }
-    return filename, params
+    return (
+        f"{NOAA_GFS_S3_BASE}/gfs.{date_token}/{cycle}/atmos/{filename}",
+        filename,
+    )
+
+
+def _noaa_index_record_matches(parts, lead):
+    if len(parts) < 6:
+        return False
+    variable = parts[3].strip().upper()
+    level = parts[4].strip().lower()
+    if variable == "TMP" and level == "2 m above ground":
+        return True
+    if variable in ("UGRD", "VGRD") and level == "10 m above ground":
+        return True
+    if variable == "APCP" and level == "surface":
+        return True
+    if lead == 0 and variable == "PRMSL" and level == "mean sea level":
+        return True
+    return False
 
 
 def _download_noaa_grib_file(session, run_dt, lead, headers):
-    filename, params = _noaa_filter_request(run_dt, lead)
+    """Download only required native GRIB2 messages from NOAA S3 using .idx byte ranges."""
+    object_url, filename = _noaa_s3_object_url(run_dt, lead)
     try:
-        response = session.get(
-            NOAA_NOMADS_FILTER_URL,
-            params=params,
+        index_response = session.get(
+            object_url + ".idx",
             headers=headers,
-            timeout=75,
+            timeout=30,
         )
+        if index_response.status_code != 200:
+            return None, f"IDX HTTP {index_response.status_code}", filename
+
+        head_response = session.head(
+            object_url,
+            headers={"Cache-Control": "no-cache", **headers},
+            timeout=30,
+            allow_redirects=True,
+        )
+        if head_response.status_code != 200:
+            return None, f"GRIB2 HEAD HTTP {head_response.status_code}", filename
+        try:
+            object_size = int(head_response.headers.get("Content-Length", "0") or 0)
+        except (TypeError, ValueError):
+            object_size = 0
+        if object_size <= 0:
+            return None, "GRIB2 Content-Length geçersiz", filename
+
+        records = []
+        all_offsets = set()
+        for line in index_response.text.splitlines():
+            parts = line.strip().split(":")
+            if len(parts) < 6:
+                continue
+            try:
+                offset = int(parts[1])
+            except (TypeError, ValueError):
+                continue
+            all_offsets.add(offset)
+            if _noaa_index_record_matches(parts, int(lead)):
+                records.append((offset, parts[3].strip().upper(), parts[4].strip()))
+
+        if not records:
+            return None, "IDX içinde gerekli TMP/UGRD/VGRD/APCP alanları bulunamadı", filename
+
+        # A GRIB message may be represented by multiple .idx submessages at
+        # the same byte offset. Fetch its byte range only once.
+        selected_offsets = sorted({item[0] for item in records})
+        sorted_offsets = sorted(all_offsets)
+        next_offset = {
+            offset: (
+                sorted_offsets[position + 1]
+                if position + 1 < len(sorted_offsets)
+                else object_size
+            )
+            for position, offset in enumerate(sorted_offsets)
+        }
+        ranges = []
+        for offset in selected_offsets:
+            end = next_offset[offset] - 1
+            if end < offset or end >= object_size:
+                return None, f"IDX byte aralığı geçersiz: {offset}-{end}", filename
+            ranges.append((offset, end))
+
+        def fetch_range(byte_range):
+            start, end = byte_range
+            response = requests.get(
+                object_url,
+                headers={
+                    **headers,
+                    "Range": f"bytes={start}-{end}",
+                },
+                timeout=75,
+            )
+            if response.status_code != 206:
+                return None, f"Range HTTP {response.status_code} ({start}-{end})"
+            content = response.content
+            expected_size = end - start + 1
+            if len(content) != expected_size:
+                return None, (
+                    f"Range boyutu uyuşmuyor ({start}-{end}): "
+                    f"{len(content)} / {expected_size} byte"
+                )
+            if not content.startswith(b"GRIB"):
+                return None, f"Range GRIB2 başlangıcı taşımıyor ({start}-{end})"
+            return (start, content), None
+
+        downloaded_ranges = []
+        errors = []
+        workers = min(NOAA_RANGE_DOWNLOAD_WORKERS, len(ranges))
+        with ThreadPoolExecutor(max_workers=max(1, workers)) as executor:
+            futures = [executor.submit(fetch_range, byte_range) for byte_range in ranges]
+            for future in as_completed(futures):
+                item, error = future.result()
+                if error:
+                    errors.append(error)
+                else:
+                    downloaded_ranges.append(item)
+
+        if errors:
+            return None, "; ".join(errors[:3]), filename
+        downloaded_ranges.sort(key=lambda item: item[0])
+        grib_bytes = b"".join(content for _, content in downloaded_ranges)
+        if not grib_bytes.startswith(b"GRIB"):
+            return None, "İndirilen aralıklar geçerli GRIB2 oluşturmadı", filename
+
+        print(
+            f"[NOAA S3 RANGE] {filename}: {len(downloaded_ranges)} GRIB2 mesajı, "
+            f"{len(grib_bytes):,} byte / {object_size:,} byte."
+        )
+        return grib_bytes, None, filename
     except requests.RequestException as exc:
         return None, f"{type(exc).__name__}: {exc}", filename
-
-    if response.status_code in (404, 408, 425, 429, 500, 502, 503, 504):
-        return None, f"HTTP {response.status_code}", filename
-    try:
-        response.raise_for_status()
-    except requests.RequestException as exc:
+    except Exception as exc:
         return None, f"{type(exc).__name__}: {exc}", filename
-
-    grib_bytes = response.content
-    if not grib_bytes.startswith(b"GRIB"):
-        preview = grib_bytes[:250].decode("utf-8", errors="replace")
-        return None, f"GRIB2 yerine başka yanıt: {preview}", filename
-    return grib_bytes, None, filename
 
 
 def prune_noaa_cache():
@@ -737,26 +781,19 @@ def prefetch_latest_noaa_cycle(skip_run_ids=None, target_run_id=None):
     batch = missing[:NOAA_PREFETCH_FILES_PER_CHECK]
     session = requests.Session()
     headers = {"User-Agent": "GFS-Watch/1.0"}
-    last_request_at = 0.0
     downloaded = 0
 
     print(
         f"[NOAA PREFETCH] {run_id}: {cached_count}/30 hazır; "
-        f"bu kontrolde en fazla {len(batch)} dosya indirilecek."
+        f"bu kontrolde en fazla {len(batch)} dosya indirilecek (doğrudan S3 GRIB2)."
     )
     try:
         for lead in batch:
-            if last_request_at:
-                elapsed = time.monotonic() - last_request_at
-                if elapsed < NOAA_REQUEST_INTERVAL_SECONDS:
-                    time.sleep(NOAA_REQUEST_INTERVAL_SECONDS - elapsed)
-
-            filename, _ = _noaa_filter_request(run_dt, lead)
-            print(f"[NOAA PREFETCH] {filename} indiriliyor...")
+            _, filename = _noaa_s3_object_url(run_dt, lead)
+            print(f"[NOAA PREFETCH] {filename} GRIB2 mesajları S3 byte-range ile indiriliyor...")
             grib_bytes, error, _ = _download_noaa_grib_file(
                 session, run_dt, lead, headers
             )
-            last_request_at = time.monotonic()
             if error:
                 print(
                     f"[NOAA PREFETCH PENDING] {filename} henüz alınamadı: {error}; "
@@ -787,7 +824,7 @@ def fetch_full_weather_data(run_id, min_request_interval=10.0):
         run_dt = _parse_utc_datetime(run_id)
         date_token = run_dt.strftime("%Y%m%d")
         cycle = run_dt.strftime("%H")
-        filter_url = "https://nomads.ncep.noaa.gov/cgi-bin/filter_gfs_0p25.pl"
+        # Required native GRIB2 messages are fetched directly from NOAA's public S3 bucket.
         # Only retrieve the model grid cell nearest to the requested coordinate.
         # For 41.014N, 28.950E this is the GFS 0.25-degree node at 41.000N, 29.000E.
         points = {"Istanbul": (LAT, LON)}
@@ -801,7 +838,6 @@ def fetch_full_weather_data(run_id, min_request_interval=10.0):
             h for h in lead_hours if h != MIN_FORECAST_HOURS
         ]
         decoded_steps = {}
-        last_request_at = 0.0
 
         for position, lead in enumerate(download_order):
             # Cached forecast slices require no NOMADS request and therefore
@@ -813,20 +849,14 @@ def fetch_full_weather_data(run_id, min_request_interval=10.0):
                     f"{len(grib_bytes)} byte önbellekten alındı."
                 )
             else:
-                if last_request_at:
-                    elapsed = time.monotonic() - last_request_at
-                    if elapsed < min_request_interval:
-                        time.sleep(min_request_interval - elapsed)
-
-                filename, _ = _noaa_filter_request(run_dt, lead)
+                _, filename = _noaa_s3_object_url(run_dt, lead)
                 print(
-                    f"[NOAA] {filename} indiriliyor "
+                    f"[NOAA S3] {filename} doğrudan GRIB2 byte-range ile alınıyor "
                     f"({position + 1}/{len(download_order)})..."
                 )
                 grib_bytes, error, _ = _download_noaa_grib_file(
                     session, run_dt, lead, headers
                 )
-                last_request_at = time.monotonic()
                 if error:
                     print(
                         f"[PENDING] NOAA GRIB dosyası f{lead:03d} alınamadı: "
@@ -846,6 +876,7 @@ def fetch_full_weather_data(run_id, min_request_interval=10.0):
                 "wind_u": None,
                 "wind_v": None,
                 "precip_records": {},
+                "pressure_grid": None,
             }
 
             # ecCodes reads GRIB messages from a file object. The filtered
@@ -872,15 +903,22 @@ def fetch_full_weather_data(run_id, min_request_interval=10.0):
                                 (short_name == "2t" and level_type == "heightAboveGround" and level == 2)
                                 or (short_name in ("10u", "10v") and level_type == "heightAboveGround" and level == 10)
                                 or (short_name == "tp" and level_type == "surface")
+                                or (short_name == "prmsl" and level_type == "meanSea")
                             )
                             if not is_target:
                                 continue
 
-                            values = eccodes.codes_get_values(gid)
-                            latitudes = eccodes.codes_get_array(gid, "latitudes")
-                            longitudes = eccodes.codes_get_array(gid, "longitudes")
+                            values = np.asarray(eccodes.codes_get_values(gid), dtype=float)
+                            latitudes = np.asarray(eccodes.codes_get_array(gid, "latitudes"), dtype=float)
+                            longitudes = np.asarray(eccodes.codes_get_array(gid, "longitudes"), dtype=float)
                             if len(values) != len(latitudes) or len(values) != len(longitudes):
                                 raise ValueError(f"GRIB grid mismatch in {filename}")
+
+                            if short_name == "prmsl":
+                                step_data["pressure_grid"] = (
+                                    values, latitudes, longitudes
+                                )
+                                continue
 
                             samples = {}
                             for point_name, (point_lat, point_lon) in points.items():
@@ -1024,42 +1062,25 @@ def fetch_full_weather_data(run_id, min_request_interval=10.0):
             ],
         }
 
-        # Current conditions remain a live observation/nowcast; the entire
-        # forecast and all comparisons are sourced from this exact NOAA run.
-        current = {}
-        live_url = "https://api.open-meteo.com/v1/forecast"
-        live_params = {
-            "latitude": LAT,
-            "longitude": LON,
-            "current": "temperature_2m,precipitation,rain,snowfall,wind_speed_10m,surface_pressure",
-            "models": "gfs_seamless",
-            "timezone": "Europe/Istanbul",
-        }
-        try:
-            live_res = requests.get(live_url, params=live_params, timeout=15)
-            live_res.raise_for_status()
-            live_current = live_res.json().get("current", {})
-            current = {
-                "temp": round(live_current.get("temperature_2m", 0.0), 1),
-                "precip": round(live_current.get("precipitation", 0.0), 2),
-                "wind": round(live_current.get("wind_speed_10m", 0.0), 1),
-                "pressure": round(live_current.get("surface_pressure", 1013.0), 1),
-            }
-        except Exception as exc:
-            print(f"[CURRENT UYARI] Canlı koşullar alınamadı; NOAA run başlangıcı kullanılacak: {exc}")
-            current = {
-                "temp": round(temp_c["Istanbul"], 1),
-                "precip": 0.0,
-                "wind": round(wind_kmh.get("Istanbul", 0.0), 1),
-                "pressure": 1013.0,
-            }
-
-        # Regional pressure analysis is intentionally separate from the
-        # point forecast: one MSLP GRIB2 subset, valid at model initialisation,
-        # covering a 2,500 km diameter circle centred on the requested point.
-        synoptic_alerts = fetch_regional_pressure_anomalies(
-            session, filter_url, run_dt, headers, last_request_at
+        # Current snapshot and regional MSLP diagnostics are both decoded from
+        # the same f000 native NOAA GRIB2 file. No weather API is called.
+        initial = decoded_steps[0]
+        initial_temp = initial["temperature"]
+        initial_wind_u = initial["wind_u"] or {}
+        initial_wind_v = initial["wind_v"] or {}
+        current_wind = math.hypot(
+            float(initial_wind_u.get("Istanbul", 0.0)),
+            float(initial_wind_v.get("Istanbul", 0.0)),
+        ) * 3.6
+        synoptic_alerts, initial_pressure_hpa = analyse_regional_pressure_grid(
+            initial.get("pressure_grid")
         )
+        current = {
+            "temp": round(float(initial_temp["Istanbul"]) - 273.15, 1),
+            "precip": 0.0,
+            "wind": round(current_wind, 1),
+            "pressure": initial_pressure_hpa,
+        }
 
         payload = {
             "current": current,
@@ -1068,7 +1089,7 @@ def fetch_full_weather_data(run_id, min_request_interval=10.0):
             "forecast_horizon_hours": MIN_FORECAST_HOURS,
             "synoptic_alerts": synoptic_alerts,
             "data_source": (
-                "NOAA/NCEP GFS 0.25° GRIB2 (NOMADS); "
+                "NOAA/NCEP GFS 0.25° native GRIB2 (public S3 byte-range); "
                 f"hedef {LAT:.3f}N, {LON:.3f}E; en yakın grid {GRID_LAT:.3f}N, {GRID_LON:.3f}E"
             ),
         }
