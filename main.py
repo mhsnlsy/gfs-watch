@@ -24,6 +24,7 @@ DATA_DIR = "/data" if os.path.isdir("/data") else "."
 DB_PATH = os.getenv("DB_PATH", os.path.join(DATA_DIR, "gfs_watch.db"))
 MODEL_UPDATES_URL = "https://api.open-meteo.com/v1/model-updates"
 MODEL_NAME = "gfs_seamless"
+RETENTION_DAYS = 10
 
 SYNOPTIC_POINTS = {
     "Balkanlar": (45.0, 18.0),
@@ -35,17 +36,48 @@ SYNOPTIC_POINTS = {
 # --- VERİTABANI İŞLEMLERİ ---
 def init_db():
     conn = sqlite3.connect(DB_PATH)
-    cursor = conn.cursor()
-    cursor.execute("""
-        CREATE TABLE IF NOT EXISTS gfs_runs_v3 (
-            id INTEGER PRIMARY KEY AUTOINCREMENT,
-            timestamp DATETIME DEFAULT CURRENT_TIMESTAMP,
-            run_name TEXT,
-            forecast_json TEXT
+    try:
+        cursor = conn.cursor()
+        cursor.execute("""
+            CREATE TABLE IF NOT EXISTS gfs_runs_v3 (
+                id INTEGER PRIMARY KEY AUTOINCREMENT,
+                timestamp DATETIME DEFAULT CURRENT_TIMESTAMP,
+                run_name TEXT,
+                forecast_json TEXT
+            )
+        """)
+        cursor.execute("""
+            CREATE INDEX IF NOT EXISTS idx_gfs_runs_v3_timestamp
+            ON gfs_runs_v3(timestamp)
+        """)
+        cursor.execute(
+            "DELETE FROM gfs_runs_v3 WHERE timestamp < datetime('now', ?)",
+            (f"-{RETENTION_DAYS} days",),
         )
-    """)
-    conn.commit()
-    conn.close()
+        deleted = cursor.rowcount
+        conn.commit()
+        if deleted:
+            print(f"[DB] {deleted} eski kayıt silindi; saklama süresi {RETENTION_DAYS} gün.")
+    finally:
+        conn.close()
+
+
+def prune_old_runs():
+    conn = sqlite3.connect(DB_PATH)
+    try:
+        cursor = conn.cursor()
+        cursor.execute(
+            "DELETE FROM gfs_runs_v3 WHERE timestamp < datetime('now', ?)",
+            (f"-{RETENTION_DAYS} days",),
+        )
+        deleted = cursor.rowcount
+        conn.commit()
+        if deleted:
+            print(f"[DB] {deleted} eski kayıt silindi; saklama süresi {RETENTION_DAYS} gün.")
+        return deleted
+    finally:
+        conn.close()
+
 
 def get_previous_runs():
     conn = sqlite3.connect(DB_PATH)
@@ -353,6 +385,25 @@ def generate_speech_gcp(text, output_file="summary.mp3"):
         print(f"[TTS HATA] Google Cloud TTS: {e}")
         return None
 
+
+async def generate_speech_with_retry(text, max_attempts=3):
+    """Generate audio in a worker thread, retrying transient TTS failures."""
+    if not GCP_SA_KEY:
+        print("[TTS ATLANDI] GCP_SA_KEY yok; metin bildirimi tek başına gönderilecek.")
+        return None
+
+    for attempt in range(1, max_attempts + 1):
+        audio_file = await asyncio.to_thread(generate_speech_gcp, text)
+        if audio_file:
+            return audio_file
+        if attempt < max_attempts:
+            delay = 5 * attempt
+            print(f"[TTS RETRY] {attempt}/{max_attempts}; {delay} saniye sonra tekrar.")
+            await asyncio.sleep(delay)
+
+    print("[TTS BAŞARISIZ] Ses üretilemedi; metin bildirimi gönderilmiş durumda.")
+    return None
+
 # --- TELEGRAM GÖNDERİCİ ---
 async def send_telegram_text(text):
     if not TELEGRAM_TOKEN or not CHAT_ID:
@@ -362,22 +413,36 @@ async def send_telegram_text(text):
     print("[TELEGRAM] Metin bildirimi gönderildi.")
 
 
-async def send_telegram_voice(audio_path):
+async def send_telegram_voice(audio_path, max_attempts=3):
     if not TELEGRAM_TOKEN or not CHAT_ID:
         raise RuntimeError("TELEGRAM_TOKEN veya CHAT_ID eksik.")
     if not audio_path or not os.path.exists(audio_path):
         return
+
     try:
-        async with Bot(token=TELEGRAM_TOKEN) as bot:
-            with open(audio_path, "rb") as voice:
-                await bot.send_voice(chat_id=CHAT_ID, voice=voice)
-        print("[TELEGRAM] Ses bildirimi gönderildi.")
+        for attempt in range(1, max_attempts + 1):
+            try:
+                async with Bot(token=TELEGRAM_TOKEN) as bot:
+                    with open(audio_path, "rb") as voice:
+                        await bot.send_voice(chat_id=CHAT_ID, voice=voice)
+                print("[TELEGRAM] Ses bildirimi gönderildi.")
+                return
+            except Exception as e:
+                if attempt >= max_attempts:
+                    raise
+                delay = 5 * attempt
+                print(
+                    f"[VOICE RETRY] Gönderim denemesi {attempt}/{max_attempts} "
+                    f"başarısız: {e}. {delay} saniye sonra tekrar."
+                )
+                await asyncio.sleep(delay)
     finally:
         if os.path.exists(audio_path):
             os.remove(audio_path)
 
 # --- ANA ÇALIŞTIRICI ---
 async def process_gfs_update():
+    await asyncio.to_thread(prune_old_runs)
     metadata = await asyncio.to_thread(fetch_model_update_metadata)
     if not metadata:
         print("[SKIP] Model metadata alınamadı; sonraki kontrolde tekrar denenecek.")
@@ -414,9 +479,7 @@ async def process_gfs_update():
     full_text_report, speech_text = analyze_and_build_output(
         run_id, payload, previous_runs
     )
-    audio_task = asyncio.create_task(
-        asyncio.to_thread(generate_speech_gcp, speech_text)
-    )
+    audio_task = asyncio.create_task(generate_speech_with_retry(speech_text))
     try:
         await send_telegram_text(full_text_report)
     except Exception:
