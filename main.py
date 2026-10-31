@@ -223,6 +223,136 @@ def _write_json_atomically(path, document):
             os.remove(temp_path)
 
 
+def _write_bytes_atomically(path, content):
+    """Write binary media atomically so Pages never receives a partial file."""
+    directory = os.path.dirname(path)
+    os.makedirs(directory, exist_ok=True)
+    temp_path = None
+    try:
+        with tempfile.NamedTemporaryFile(
+            mode="wb",
+            suffix=".tmp",
+            prefix=".media-",
+            dir=directory,
+            delete=False,
+        ) as temp_file:
+            temp_path = temp_file.name
+            temp_file.write(content)
+        os.replace(temp_path, path)
+    finally:
+        if temp_path and os.path.exists(temp_path):
+            os.remove(temp_path)
+
+
+def save_public_notification_image(run_id, chart_buffer):
+    """Archive the comparison image for the public notification feed."""
+    if not chart_buffer:
+        return None
+    run_dt = _parse_utc_datetime(run_id)
+    run_key = run_dt.strftime("%Y%m%dT%HZ")
+    notification_dir = os.path.join(PUBLIC_DATA_DIR, "notifications")
+    media_dir = os.path.join(notification_dir, "media")
+    filename = f"gfs-{run_key}-comparison.png"
+    content = chart_buffer.getvalue()
+    if not content:
+        return None
+    _write_bytes_atomically(os.path.join(media_dir, filename), content)
+    print(f"[WEB NOTIFICATION] Karşılaştırma görseli arşivlendi: {filename}")
+    return f"media/{filename}"
+
+
+def publish_public_notification(
+    run_id, full_text_report, speech_text, image_path=None, audio_file=None
+):
+    """Publish one GFS report with optional image/audio; retain the latest four."""
+    run_dt = _parse_utc_datetime(run_id)
+    run_key = run_dt.strftime("%Y%m%dT%HZ")
+    notification_dir = os.path.join(PUBLIC_DATA_DIR, "notifications")
+    media_dir = os.path.join(notification_dir, "media")
+    os.makedirs(media_dir, exist_ok=True)
+
+    audio_path = None
+    if audio_file and os.path.isfile(audio_file):
+        audio_filename = f"gfs-{run_key}-voice.mp3"
+        with open(audio_file, "rb") as source_file:
+            audio_content = source_file.read()
+        if audio_content:
+            _write_bytes_atomically(
+                os.path.join(media_dir, audio_filename), audio_content
+            )
+            audio_path = f"media/{audio_filename}"
+
+    run_local = run_dt.astimezone(TR_TZ)
+    summary = (
+        speech_text
+        .replace("ENKA Balmumcu istasyonunda", "yerel istasyonda")
+        .replace("ENKA BALMUMCU", "yerel istasyon")
+    )
+    web_report = (
+        full_text_report
+        .replace("ENKA BALMUMCU", "YEREL İSTASYON")
+        .replace("ENKA Balmumcu", "Yerel istasyon")
+        .replace("ENKA Vantage PRO", "meteoroloji istasyonu")
+    )
+    entry = {
+        "id": run_key,
+        "title": "İstanbul GFS tahmin raporu",
+        "run_id_utc": run_dt.isoformat(timespec="seconds"),
+        "published_at_utc": datetime.now(timezone.utc).isoformat(timespec="seconds"),
+        "published_at_istanbul": _format_tr_datetime(datetime.now(TR_TZ)),
+        "cycle_label": f"{run_dt:%H}Z · {run_local:%d.%m.%Y %H:%M} TSİ",
+        "summary": summary,
+        "report_text": web_report,
+        "image_path": image_path,
+        "audio_path": audio_path,
+    }
+
+    manifest_path = os.path.join(notification_dir, "latest.json")
+    try:
+        with open(manifest_path, "r", encoding="utf-8") as manifest_file:
+            existing = json.load(manifest_file)
+        previous_items = existing.get("items", [])
+        if not isinstance(previous_items, list):
+            previous_items = []
+    except (OSError, ValueError, TypeError):
+        previous_items = []
+
+    retained = [item for item in previous_items if item.get("id") != run_key]
+    retained.append(entry)
+    retained.sort(
+        key=lambda item: item.get("run_id_utc", ""),
+        reverse=True,
+    )
+    retained = retained[:4]
+
+    _write_json_atomically(
+        manifest_path,
+        {
+            "schema": "gfs-watch.notifications.v1",
+            "updated_at_utc": datetime.now(timezone.utc).isoformat(timespec="seconds"),
+            "items": retained,
+        },
+    )
+
+    keep_files = set()
+    for item in retained:
+        for field in ("image_path", "audio_path"):
+            relative_path = item.get(field)
+            if relative_path:
+                keep_files.add(os.path.basename(relative_path))
+    for filename in os.listdir(media_dir):
+        if filename.startswith("gfs-") and filename not in keep_files:
+            try:
+                os.remove(os.path.join(media_dir, filename))
+            except OSError as exc:
+                print(f"[WEB NOTIFICATION UYARI] Eski medya silinemedi: {exc}")
+
+    print(
+        f"[WEB NOTIFICATION] {run_key} web akışına eklendi; "
+        f"son {len(retained)} rapor tutuluyor."
+    )
+
+
 def export_public_forecast_json(run_id, payload):
     """Export a stable latest.json plus an immutable file for this GFS run."""
     run_dt = _parse_utc_datetime(run_id)
@@ -2094,6 +2224,7 @@ async def process_gfs_update(strict=False):
     # Compare the current cycle with the exact three prior six-hour cycles.
     # Missing history is fetched from NOAA in read-only mode; DB/JSON state is untouched.
     chart_buffer = None
+    notification_image_path = None
     try:
         comparison_runs = await load_previous_three_runs_for_comparison(run_id)
         chart_buffer = create_comparison_chart(run_id, payload, comparison_runs)
@@ -2114,6 +2245,12 @@ async def process_gfs_update(strict=False):
                 "Eski → yeni: " + " → ".join(cycle_labels)
             )
             await send_telegram_photo(chart_buffer, caption)
+            try:
+                notification_image_path = await asyncio.to_thread(
+                    save_public_notification_image, run_id, chart_buffer
+                )
+            except Exception as media_exc:
+                print(f"[WEB GÖRSEL ARŞİV HATASI] {media_exc}")
     except Exception as exc:
         print(f"[KIYAS GÖRSELİ GÖNDERİM HATASI] {exc}")
     finally:
@@ -2121,6 +2258,18 @@ async def process_gfs_update(strict=False):
             chart_buffer.close()
 
     audio_file = await audio_task
+    try:
+        await asyncio.to_thread(
+            publish_public_notification,
+            run_id,
+            full_text_report,
+            speech_text,
+            notification_image_path,
+            audio_file,
+        )
+    except Exception as media_exc:
+        print(f"[WEB NOTIFICATION HATA] Rapor Pages akışına yazılamadı: {media_exc}")
+
     if audio_file:
         try:
             await send_telegram_voice(audio_file)
