@@ -567,6 +567,68 @@ def _write_noaa_cache_file(run_id, lead, grib_bytes):
     _mark_noaa_cache_updated()
 
 
+def _noaa_decoded_cache_file(run_id, lead):
+    return os.path.join(
+        _noaa_run_cache_dir(run_id), f"f{int(lead):03d}.decoded.json"
+    )
+
+
+def _read_noaa_decoded_cache_file(run_id, lead):
+    cache_path = _noaa_decoded_cache_file(run_id, lead)
+    try:
+        with open(cache_path, "r", encoding="utf-8") as cache_file:
+            document = json.load(cache_file)
+        precip_records = {
+            (int(item["start_step"]), int(item["end_step"])): item["samples"]
+            for item in document.get("precip_records", [])
+        }
+        if not isinstance(document.get("temperature"), dict):
+            raise ValueError("decoded temperature field is missing")
+        return {
+            "temperature": document["temperature"],
+            "wind_u": document.get("wind_u") or {},
+            "wind_v": document.get("wind_v") or {},
+            "precip_records": precip_records,
+            "pressure_analysis": document.get("pressure_analysis"),
+        }
+    except FileNotFoundError:
+        return None
+    except (OSError, ValueError, TypeError, KeyError) as exc:
+        print(f"[NOAA DECODED CACHE INVALID] {cache_path}: {exc}; yeniden oluşturulacak.")
+        try:
+            os.remove(cache_path)
+            _mark_noaa_cache_updated()
+        except OSError:
+            pass
+        return None
+
+
+def _write_noaa_decoded_cache_file(run_id, lead, step_data):
+    cache_path = _noaa_decoded_cache_file(run_id, lead)
+    os.makedirs(os.path.dirname(cache_path), exist_ok=True)
+    document = {
+        "temperature": step_data.get("temperature") or {},
+        "wind_u": step_data.get("wind_u") or {},
+        "wind_v": step_data.get("wind_v") or {},
+        "precip_records": [
+            {
+                "start_step": int(interval[0]),
+                "end_step": int(interval[1]),
+                "samples": samples,
+            }
+            for interval, samples in step_data.get("precip_records", {}).items()
+        ],
+        "pressure_analysis": step_data.get("pressure_analysis"),
+    }
+    temporary_path = cache_path + f".{os.getpid()}.tmp"
+    with open(temporary_path, "w", encoding="utf-8") as cache_file:
+        json.dump(document, cache_file, ensure_ascii=False, separators=(",", ":"))
+        cache_file.flush()
+        os.fsync(cache_file.fileno())
+    os.replace(temporary_path, cache_path)
+    _mark_noaa_cache_updated()
+
+
 def _noaa_s3_object_url(run_dt, lead):
     date_token = run_dt.strftime("%Y%m%d")
     cycle = run_dt.strftime("%H")
@@ -709,6 +771,96 @@ def _download_noaa_grib_file(session, run_dt, lead, headers):
         return None, f"{type(exc).__name__}: {exc}", filename
 
 
+def _decode_noaa_grib_step(run_id, lead, grib_bytes):
+    """Decode one native GRIB2 lead into compact Istanbul values before final assembly."""
+    filename = f"gfs.t{_parse_utc_datetime(run_id):%H}z.pgrb2.0p25.f{int(lead):03d}"
+    points = {"Istanbul": (LAT, LON)}
+    step_data = {
+        "temperature": None,
+        "wind_u": None,
+        "wind_v": None,
+        "precip_records": {},
+        "pressure_analysis": None,
+        "pressure_grid": None,
+    }
+
+    try:
+        with tempfile.NamedTemporaryFile(suffix=".grib2") as temp_file:
+            temp_file.write(grib_bytes)
+            temp_file.flush()
+            with open(temp_file.name, "rb") as grib_file:
+                while True:
+                    gid = eccodes.codes_grib_new_from_file(grib_file)
+                    if gid is None:
+                        break
+                    try:
+                        short_name = str(eccodes.codes_get(gid, "shortName"))
+                        try:
+                            level_type = str(eccodes.codes_get(gid, "typeOfLevel"))
+                            level = int(eccodes.codes_get(gid, "level"))
+                            start_step = int(eccodes.codes_get(gid, "startStep"))
+                            end_step = int(eccodes.codes_get(gid, "endStep"))
+                        except Exception:
+                            continue
+
+                        is_target = (
+                            (short_name == "2t" and level_type == "heightAboveGround" and level == 2)
+                            or (short_name in ("10u", "10v") and level_type == "heightAboveGround" and level == 10)
+                            or (short_name == "tp" and level_type == "surface")
+                            or (short_name == "prmsl" and level_type == "meanSea")
+                        )
+                        if not is_target:
+                            continue
+
+                        values = np.asarray(eccodes.codes_get_values(gid), dtype=float)
+                        latitudes = np.asarray(eccodes.codes_get_array(gid, "latitudes"), dtype=float)
+                        longitudes = np.asarray(eccodes.codes_get_array(gid, "longitudes"), dtype=float)
+                        if len(values) != len(latitudes) or len(values) != len(longitudes):
+                            raise ValueError(f"GRIB grid mismatch in {filename}")
+
+                        if short_name == "prmsl":
+                            step_data["pressure_grid"] = (values, latitudes, longitudes)
+                            continue
+
+                        samples = {}
+                        for point_name, (point_lat, point_lon) in points.items():
+                            distances = (
+                                (latitudes - point_lat) ** 2
+                                + (((longitudes - point_lon + 180.0) % 360.0) - 180.0) ** 2
+                            )
+                            nearest_index = int(distances.argmin())
+                            samples[point_name] = float(values[nearest_index])
+
+                        if short_name == "2t":
+                            step_data["temperature"] = samples
+                        elif short_name == "10u":
+                            step_data["wind_u"] = samples
+                        elif short_name == "10v":
+                            step_data["wind_v"] = samples
+                        elif short_name == "tp":
+                            step_data["precip_records"][(start_step, end_step)] = samples
+                    finally:
+                        eccodes.codes_release(gid)
+
+        if not step_data["temperature"]:
+            return None, "missing 2m temperature field"
+
+        if int(lead) == 0:
+            alerts, centre_pressure_hpa = analyse_regional_pressure_grid(
+                step_data.pop("pressure_grid")
+            )
+            step_data["pressure_analysis"] = {
+                "alerts": alerts,
+                "centre_pressure_hpa": centre_pressure_hpa,
+            }
+        else:
+            step_data.pop("pressure_grid", None)
+
+        return step_data, None
+    except Exception as exc:
+        return None, f"{type(exc).__name__}: {exc}"
+
+
 def prune_noaa_cache():
     """Remove abandoned cycle caches; active cycles are kept until processed."""
     if not os.path.isdir(NOAA_CACHE_DIR):
@@ -761,7 +913,7 @@ def missing_noaa_cache_leads(run_id, max_hour=MIN_FORECAST_HOURS - 3):
     """List forecast leads that must be cached before the final f180 trigger."""
     return [
         lead for lead in gfs_forecast_hours(max_hour)
-        if _read_noaa_cache_file(run_id, lead) is None
+        if _read_noaa_decoded_cache_file(run_id, lead) is None
     ]
 
 
@@ -826,7 +978,7 @@ def prefetch_latest_noaa_cycle(skip_run_ids=None, target_run_id=None):
     leads = gfs_forecast_hours(MIN_FORECAST_HOURS - 3)
     missing = [
         lead for lead in leads
-        if _read_noaa_cache_file(run_id, lead) is None
+        if _read_noaa_decoded_cache_file(run_id, lead) is None
     ]
     cached_count = len(leads) - len(missing)
     if not missing:
@@ -846,28 +998,41 @@ def prefetch_latest_noaa_cycle(skip_run_ids=None, target_run_id=None):
         for lead in batch:
             _, filename = _noaa_s3_object_url(run_dt, lead)
             print(f"[NOAA PREFETCH] {filename} GRIB2 mesajları S3 byte-range ile indiriliyor...")
-            grib_bytes, error, _ = _download_noaa_grib_file(
-                session, run_dt, lead, headers
+            grib_bytes = _read_noaa_cache_file(run_id, lead)
+            if grib_bytes is None:
+                grib_bytes, error, _ = _download_noaa_grib_file(
+                    session, run_dt, lead, headers
+                )
+                if error:
+                    print(
+                        f"[NOAA PREFETCH PENDING] {filename} henüz alınamadı: {error}; "
+                        "sonraki kontrolde tekrar denenecek."
+                    )
+                    break
+                _write_noaa_cache_file(run_id, lead, grib_bytes)
+
+            step_data, decode_error = _decode_noaa_grib_step(
+                run_id, lead, grib_bytes
             )
-            if error:
+            if decode_error:
                 print(
-                    f"[NOAA PREFETCH PENDING] {filename} henüz alınamadı: {error}; "
-                    "sonraki kontrolde tekrar denenecek."
+                    f"[NOAA PREFETCH DECODE PENDING] {filename}: {decode_error}; "
+                    "sonraki taramada tekrar denenecek."
                 )
                 break
-
-            _write_noaa_cache_file(run_id, lead, grib_bytes)
+            _write_noaa_decoded_cache_file(run_id, lead, step_data)
             downloaded += 1
             print(
                 f"[NOAA PREFETCH OK] {filename}: "
-                f"{len(grib_bytes)} byte önbelleğe alındı."
+                f"{len(grib_bytes)} byte GRIB2 indirildi ve Istanbul verileri "
+                "önceden çözümlenerek önbelleğe alındı."
             )
     finally:
         session.close()
 
     print(
-        f"[NOAA PREFETCH BATCH] {run_id}: bu kontrolde {downloaded} yeni dosya; "
-        f"önbellekte toplam {cached_count + downloaded}/{len(leads)}."
+        f"[NOAA PREFETCH BATCH] {run_id}: bu kontrolde {downloaded} yeni GRIB2 lead "
+        f"önceden çözüldü; hazır veri {cached_count + downloaded}/{len(leads)}."
     )
     return downloaded
 
