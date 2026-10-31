@@ -1350,10 +1350,10 @@ def analyze_and_build_output(current_run_name, payload, previous_runs):
     return full_text_report, speech_text
 
 
-# --- GOOGLE CLOUD TTS MOTORU (1.2X HIZ) ---
+# --- GOOGLE CLOUD TTS MOTORU (1.27X HIZ) ---
 def generate_speech_gcp(text, output_file="summary.mp3"):
     """Synchronous TTS function; the caller runs it in a background thread."""
-    print("[TTS] Google Cloud TTS ile 1.2x hızında ses dosyası üretiliyor...")
+    print("[TTS] Google Cloud TTS ile 1.27x hızında ses dosyası üretiliyor...")
     if not GCP_SA_KEY:
         print("[TTS ATLANDI] GCP_SA_KEY bulunamadı; metin bildirimi yine gönderilecek.")
         return None
@@ -1369,7 +1369,7 @@ def generate_speech_gcp(text, output_file="summary.mp3"):
         )
         audio_config = texttospeech.AudioConfig(
             audio_encoding=texttospeech.AudioEncoding.MP3,
-            speaking_rate=1.2,
+            speaking_rate=1.27,
         )
         response = client.synthesize_speech(
             input=synthesis_input, voice=voice, audio_config=audio_config
