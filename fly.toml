@@ -11,6 +11,7 @@ primary_region = 'ams'
 [[mounts]]
   source = "gfs_data"
   destination = "/data"
+  initial_size = "1GB"
 
 [[vm]]
   processes = ["worker"]
