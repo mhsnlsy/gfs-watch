@@ -1,6 +1,13 @@
 name: GFS Watch
 
 on:
+  # Run immediately when the watcher code or workflow changes on the default branch.
+  push:
+    branches: [main]
+    paths:
+      - "main.py"
+      - ".github/workflows/gfs-watch.yml"
+      - "requirements.txt"
   # Poll NOAA/NCEP every five minutes to catch newly published cycle files.
   schedule:
     - cron: "*/5 * * * *"
