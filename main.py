@@ -536,8 +536,8 @@ def _parse_forecast_local_time(value):
     return parsed.astimezone(timezone.utc)
 
 
-def fetch_full_weather_data(run_id):
-    """Fetch an exact GFS cycle directly from NOAA/NCEP NOMADS GRIB2 files."""
+def fetch_full_weather_data(run_id, min_request_interval=10.0):
+    """Fetch an exact GFS cycle; keep polite NOAA pacing configurable for one-off tools."""
     print(f"[STEP 1] NOAA/NCEP GRIB2 verisi çekiliyor: {run_id}")
     try:
         run_dt = _parse_utc_datetime(run_id)
@@ -562,8 +562,8 @@ def fetch_full_weather_data(run_id):
         for position, lead in enumerate(download_order):
             if position:
                 elapsed = time.monotonic() - last_request_at
-                if elapsed < 10.0:
-                    time.sleep(10.0 - elapsed)
+                if elapsed < min_request_interval:
+                    time.sleep(min_request_interval - elapsed)
 
             filename = f"gfs.t{cycle}z.pgrb2.0p25.f{lead:03d}"
             params = {
@@ -1581,9 +1581,11 @@ async def run_manual_multi_comparison(run_ids):
         else:
             print(
                 f"[MANUAL FOUR-CYCLE] {run_id} SQLite'da yok; "
-                "NOAA/NCEP'den salt okunur alınıyor."
+                "NOAA/NCEP'den salt okunur alınıyor (bu geçici işlemde 1 sn istek aralığı)."
             )
-            forecast_payload = await asyncio.to_thread(fetch_full_weather_data, run_id)
+            forecast_payload = await asyncio.to_thread(
+                fetch_full_weather_data, run_id, 1.0
+            )
             if not forecast_payload or "_pending_noaa_gfs" in forecast_payload:
                 reason = (forecast_payload or {}).get(
                     "_reason", "NOAA forecast data unavailable"
