@@ -234,7 +234,8 @@
       const unseen=[];
       for(const item of items){if(lastSeen!=="__none__"&&item.id===lastSeen)break;unseen.push(item);}
       if(unseen.length){
-        const registration=notificationRegistration||await navigator.serviceWorker.ready;
+        let registration=notificationRegistration;
+        if(!registration&&"serviceWorker" in navigator)registration=await navigator.serviceWorker.ready;
         for(const item of unseen.reverse()){
           const body=String(item.summary||"Yeni İstanbul GFS hava raporu yayımlandı.").slice(0,180);
           if(registration&&registration.showNotification){
