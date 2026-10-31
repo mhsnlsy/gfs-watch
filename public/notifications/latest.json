@@ -1,7 +1,17 @@
 {
   "schema": "gfs-watch.notifications.v1",
-  "updated_at_utc": "2026-10-31T17:45:51+00:00",
+  "updated_at_utc": "2026-10-31T17:57:04+00:00",
   "items": [
+    {
+      "id": "TEST-20261031T2057",
+      "title": "TEST — Yeni GFS raporu yayımlandı",
+      "run_id_utc": null,
+      "published_at_utc": "2026-10-31T17:57:04+00:00",
+      "published_at_istanbul": "Cumartesi 31 Ekim 2026 20:57",
+      "cycle_label": "MANUEL TEST · 31.10.2026 20:57 TSİ",
+      "summary": "Bu, Pages bildirim sistemini denemek için gönderilen manuel bir test bildirimidir. Gerçek bir meteorolojik güncelleme değildir.",
+      "report_text": "🔔 GFS WATCH — MANUEL BİLDİRİM TESTİ\n\nBu kayıt, yeni GFS raporu gelmiş gibi Pages bildirim akışını sınamak için manuel olarak yayımlandı.\n\nBu bir testtir; gerçek bir meteorolojik güncelleme veya yeni GFS model çalıştırması değildir.\n\nKontrol edilenler: bildirim akışının güncellenmesi, son raporlar listesinde görünmesi ve izin verilmiş açık PWA/tarayıcıda cihaz bildirimi oluşturulması."
+    },
     {
       "id": "20261031T12Z",
       "title": "İstanbul GFS tahmin raporu",
