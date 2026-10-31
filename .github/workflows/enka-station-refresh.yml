@@ -12,6 +12,8 @@ on:
 
 permissions:
   contents: write
+  pages: write
+  id-token: write
 
 concurrency:
   group: enka-station-refresh
@@ -21,6 +23,8 @@ jobs:
   refresh:
     runs-on: ubuntu-latest
     timeout-minutes: 3
+    outputs:
+      changed: ${{ steps.publish.outputs.changed }}
     steps:
       - name: Check out station data branch
         uses: actions/checkout@v7
@@ -36,8 +40,10 @@ jobs:
       - name: Fetch ENKA observation
         run: python scripts/refresh_enka_station.py
       - name: Publish only when ENKA has a new measurement
+        id: publish
         run: |
           if git diff --quiet -- public/station-observation.json; then
+            echo "changed=false" >> "$GITHUB_OUTPUT"
             echo "No new ENKA observation; skipping commit and Pages deployment."
             exit 0
           fi
@@ -46,3 +52,59 @@ jobs:
           git add public/station-observation.json
           git commit -m "Refresh ENKA station observation"
           git push origin HEAD:gfs-watch-state
+          echo "changed=true" >> "$GITHUB_OUTPUT"
+
+  deploy:
+    needs: refresh
+    if: needs.refresh.outputs.changed == 'true'
+    runs-on: ubuntu-latest
+    environment:
+      name: github-pages
+      url: ${{ steps.deployment.outputs.page_url }}
+    steps:
+      - name: Check out website source
+        uses: actions/checkout@v7
+        with:
+          ref: main
+          path: source
+      - name: Check out published forecast data
+        uses: actions/checkout@v7
+        with:
+          ref: gfs-watch-state
+          path: forecast-data
+      - name: Prepare website files
+        env:
+          PUSH_API_URL: ${{ vars.PUSH_API_URL }}
+        run: |
+          test -s forecast-data/public/latest.json
+          python -m json.tool forecast-data/public/latest.json > /dev/null
+          mkdir -p _site/data
+          cp -a source/site/. _site/
+          printf '{"apiBaseUrl":"%s"}\\n' "$PUSH_API_URL" > _site/push-config.json
+          cp forecast-data/public/latest.json _site/data/latest.json
+          if [ -s forecast-data/public/station-observation.json ]; then
+            python -m json.tool forecast-data/public/station-observation.json > /dev/null
+            cp forecast-data/public/station-observation.json _site/data/station-observation.json
+          else
+            printf '{"schema":"gfs-watch.station-observation.v1","station_observation":null}\\n' > _site/data/station-observation.json
+          fi
+          if [ -d forecast-data/public/notifications ]; then
+            if [ -s forecast-data/public/notifications/latest.json ]; then
+              python -m json.tool forecast-data/public/notifications/latest.json > /dev/null
+            fi
+            mkdir -p _site/data/notifications
+            cp -a forecast-data/public/notifications/. _site/data/notifications/
+          fi
+          touch _site/.nojekyll
+          echo "Website bundle prepared with latest GFS and ENKA data."
+      - name: Configure GitHub Pages
+        uses: actions/configure-pages@v5
+        with:
+          enablement: true
+      - name: Upload website artifact
+        uses: actions/upload-pages-artifact@v4
+        with:
+          path: _site
+      - name: Deploy website
+        id: deployment
+        uses: actions/deploy-pages@v4
