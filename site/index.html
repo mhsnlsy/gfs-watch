@@ -208,7 +208,8 @@
         const response=await fetch("./push-config.json?t="+Date.now(),{cache:"no-store"});
         if(!response.ok)throw new Error("Push ayarı bulunamadı.");
         const config=await response.json();
-        pushApiUrl=String(config.apiBaseUrl||"").trim().replace(/\\/+$/,"");
+        pushApiUrl=String(config.apiBaseUrl||"").trim();
+        while(pushApiUrl.endsWith("/"))pushApiUrl=pushApiUrl.slice(0,-1);
       }catch(_){pushApiUrl="";}
       return pushApiUrl;
     }
