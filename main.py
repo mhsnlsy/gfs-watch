@@ -1256,10 +1256,24 @@ def create_comparison_chart(current_run_id, payload, previous_runs):
             ax.set_ylabel(ylabel)
             ax.grid(axis="y", alpha=0.25)
 
-        axes[-1].set_xticks(x_positions)
-        axes[-1].set_xticklabels(
-            [datetime.strptime(day, "%Y-%m-%d").strftime("%d.%m") for day in dates]
+        turkish_weekdays = (
+            "Pazartesi", "Salı", "Çarşamba", "Perşembe",
+            "Cuma", "Cumartesi", "Pazar",
         )
+        date_labels = []
+        for day in dates:
+            local_date = datetime.strptime(day, "%Y-%m-%d")
+            date_labels.append(
+                f"{local_date:%d.%m}\\n{turkish_weekdays[local_date.weekday()]}"
+            )
+
+        # Shared x-axes hide labels on upper panels by default. Re-enable them
+        # so every metric can be read with its own date and Turkish weekday.
+        for axis in axes:
+            axis.set_xticks(x_positions)
+            axis.set_xticklabels(date_labels, fontsize=9)
+        for axis in axes[:-1]:
+            axis.tick_params(axis="x", labelbottom=True)
         axes[-1].set_xlabel("İstanbul yerel tarihi")
         fig.text(
             0.01, 0.012,
