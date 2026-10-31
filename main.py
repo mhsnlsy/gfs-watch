@@ -5,6 +5,7 @@ import sqlite3
 import asyncio
 import math
 import tempfile
+import time
 from datetime import datetime, timedelta, timezone
 from zoneinfo import ZoneInfo  # Türkiye saati için yerleşik kütüphane
 import requests
