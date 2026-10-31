@@ -9,6 +9,7 @@ import time
 from datetime import datetime, timedelta, timezone
 from zoneinfo import ZoneInfo  # Türkiye saati için yerleşik kütüphane
 import requests
+import numpy as np
 import eccodes
 from google.cloud import texttospeech
 from google.oauth2 import service_account
@@ -37,6 +38,40 @@ NOAA_CYCLE_LOOKBACK = 6
 MIN_FORECAST_HOURS = 180
 RETENTION_DAYS = 10
 PUBLIC_DATA_DIR = os.getenv("PUBLIC_DATA_DIR", "public")
+REGIONAL_PRESSURE_DIAMETER_KM = 2500.0
+REGIONAL_PRESSURE_RADIUS_KM = REGIONAL_PRESSURE_DIAMETER_KM / 2.0
+HIGH_PRESSURE_THRESHOLD_HPA = 1023.0
+LOW_PRESSURE_THRESHOLD_HPA = 1015.0
+TEMPERATURE_CHANGE_THRESHOLD_C = 2.0
+PRECIPITATION_CHANGE_THRESHOLD_MM = 1.0
+WIND_CHANGE_THRESHOLD_KMH = 10.0
+
+TR_WEEKDAYS = (
+    "Pazartesi", "Salı", "Çarşamba", "Perşembe",
+    "Cuma", "Cumartesi", "Pazar",
+)
+TR_MONTHS = (
+    "Ocak", "Şubat", "Mart", "Nisan", "Mayıs", "Haziran",
+    "Temmuz", "Ağustos", "Eylül", "Ekim", "Kasım", "Aralık",
+)
+
+
+def _format_tr_date(value):
+    if isinstance(value, str):
+        value = datetime.fromisoformat(value).date()
+    elif isinstance(value, datetime):
+        value = value.date()
+    return f"{TR_WEEKDAYS[value.weekday()]} {value.day} {TR_MONTHS[value.month - 1]}"
+
+
+def _format_tr_datetime(value):
+    if value.tzinfo is None:
+        value = value.replace(tzinfo=TR_TZ)
+    value = value.astimezone(TR_TZ)
+    return (
+        f"{_format_tr_date(value)} {value.year} "
+        f"{value.hour:02d}:{value.minute:02d}"
+    )
 
 # --- VERİTABANI İŞLEMLERİ ---
 def init_db():
@@ -162,6 +197,7 @@ def export_public_forecast_json(run_id, payload):
             "valid_time_utc": local_dt.astimezone(timezone.utc).isoformat(timespec="minutes"),
             "valid_time_istanbul": local_dt.isoformat(timespec="minutes"),
             "temperature_2m_c": values.get("temp"),
+            "wind_speed_10m_kmh": values.get("wind"),
             "precipitation_6h_mm": values.get("precip"),
         })
 
@@ -209,6 +245,11 @@ def export_public_forecast_json(run_id, payload):
             "surface_pressure_hpa": current.get("pressure"),
         },
         "daily_summary": daily_summary,
+        "regional_pressure_analysis": {
+            "valid_time_utc": run_dt.isoformat(timespec="seconds"),
+            "diameter_km": REGIONAL_PRESSURE_DIAMETER_KM,
+            "findings": payload.get("synoptic_alerts", []),
+        },
         "forecast_6_hourly": forecast,
     }
 
@@ -244,6 +285,145 @@ def _parse_utc_datetime(value):
     if parsed.tzinfo is None:
         parsed = parsed.replace(tzinfo=timezone.utc)
     return parsed.astimezone(timezone.utc)
+
+
+def fetch_regional_pressure_anomalies(session, filter_url, run_dt, headers, last_request_at):
+    """Find the highest and lowest MSLP values inside a 2,500 km diameter circle."""
+    elapsed = time.monotonic() - last_request_at
+    if elapsed < 10.0:
+        time.sleep(10.0 - elapsed)
+
+    date_token = run_dt.strftime("%Y%m%d")
+    cycle = run_dt.strftime("%H")
+    filename = f"gfs.t{cycle}z.pgrb2.0p25.f000"
+    lat_delta = REGIONAL_PRESSURE_RADIUS_KM / 111.32
+    lon_delta = REGIONAL_PRESSURE_RADIUS_KM / (
+        111.32 * math.cos(math.radians(LAT))
+    )
+    params = {
+        "file": filename,
+        "var_PRMSL": "on",
+        "lev_mean_sea_level": "on",
+        "subregion": "",
+        "leftlon": f"{LON - lon_delta:.2f}",
+        "rightlon": f"{LON + lon_delta:.2f}",
+        "toplat": f"{LAT + lat_delta:.2f}",
+        "bottomlat": f"{LAT - lat_delta:.2f}",
+        "dir": f"/gfs.{date_token}/{cycle}/atmos",
+    }
+
+    try:
+        response = session.get(
+            filter_url, params=params, headers=headers, timeout=120
+        )
+        response.raise_for_status()
+        grib_bytes = response.content
+        if not grib_bytes.startswith(b"GRIB"):
+            raise ValueError("Bölgesel basınç isteği GRIB2 yerine başka yanıt döndürdü.")
+
+        pressure_values = None
+        pressure_latitudes = None
+        pressure_longitudes = None
+        with tempfile.NamedTemporaryFile(suffix=".grib2") as temp_file:
+            temp_file.write(grib_bytes)
+            temp_file.flush()
+            with open(temp_file.name, "rb") as grib_file:
+                while True:
+                    gid = eccodes.codes_grib_new_from_file(grib_file)
+                    if gid is None:
+                        break
+                    try:
+                        short_name = str(eccodes.codes_get(gid, "shortName"))
+                        level_type = str(eccodes.codes_get(gid, "typeOfLevel"))
+                        if short_name != "prmsl" or level_type != "meanSea":
+                            continue
+                        pressure_values = np.asarray(
+                            eccodes.codes_get_values(gid), dtype=float
+                        )
+                        pressure_latitudes = np.asarray(
+                            eccodes.codes_get_array(gid, "latitudes"), dtype=float
+                        )
+                        pressure_longitudes = np.asarray(
+                            eccodes.codes_get_array(gid, "longitudes"), dtype=float
+                        )
+                        break
+                    finally:
+                        eccodes.codes_release(gid)
+
+        if pressure_values is None:
+            raise ValueError("GRIB2 içinde deniz seviyesi basınç alanı bulunamadı.")
+
+        if not (
+            len(pressure_values)
+            == len(pressure_latitudes)
+            == len(pressure_longitudes)
+        ):
+            raise ValueError("Basınç GRIB2 koordinat ve değer dizileri uyuşmuyor.")
+
+        # Great-circle distance from the requested Istanbul coordinate.
+        lat1 = math.radians(LAT)
+        lat2 = np.radians(pressure_latitudes)
+        delta_lat = lat2 - lat1
+        delta_lon = np.radians(
+            ((pressure_longitudes - LON + 180.0) % 360.0) - 180.0
+        )
+        haversine = (
+            np.sin(delta_lat / 2.0) ** 2
+            + math.cos(lat1) * np.cos(lat2) * np.sin(delta_lon / 2.0) ** 2
+        )
+        distance_km = 6371.0 * 2.0 * np.arcsin(
+            np.sqrt(np.clip(haversine, 0.0, 1.0))
+        )
+        inside = (
+            (distance_km <= REGIONAL_PRESSURE_RADIUS_KM)
+            & np.isfinite(pressure_values)
+        )
+        if not np.any(inside):
+            raise ValueError("2.500 km çaplı dairenin içinde geçerli basınç noktası bulunamadı.")
+
+        regional_hpa = pressure_values[inside] / 100.0
+        regional_lats = pressure_latitudes[inside]
+        regional_lons = pressure_longitudes[inside]
+        max_index = int(np.argmax(regional_hpa))
+        min_index = int(np.argmin(regional_hpa))
+
+        def coordinate_label(index):
+            latitude = float(regional_lats[index])
+            longitude = float(regional_lons[index])
+            lat_hemi = "N" if latitude >= 0 else "S"
+            lon_hemi = "E" if longitude >= 0 else "W"
+            return (
+                f"{abs(latitude):.1f}°{lat_hemi}, "
+                f"{abs(longitude):.1f}°{lon_hemi}"
+            )
+
+        maximum = float(regional_hpa[max_index])
+        minimum = float(regional_hpa[min_index])
+        findings = []
+        if maximum >= HIGH_PRESSURE_THRESHOLD_HPA:
+            findings.append(
+                f"Yüksek basınç merkezi: {maximum:.1f} hPa "
+                f"({coordinate_label(max_index)})"
+            )
+        if minimum <= LOW_PRESSURE_THRESHOLD_HPA:
+            findings.append(
+                f"Alçak basınç merkezi: {minimum:.1f} hPa "
+                f"({coordinate_label(min_index)})"
+            )
+        if not findings:
+            findings.append(
+                "Belirgin yüksek veya alçak basınç merkezi saptanmadı "
+                f"(alan içindeki basınç aralığı {minimum:.1f}–{maximum:.1f} hPa)."
+            )
+
+        print(
+            f"[BASINÇ] 2.500 km çaplı dairede {int(np.count_nonzero(inside))} "
+            f"grid noktası incelendi; min {minimum:.1f}, max {maximum:.1f} hPa."
+        )
+        return findings
+    except Exception as exc:
+        print(f"[BASINÇ UYARI] Bölgesel basınç analizi yapılamadı: {exc}")
+        return ["Bölgesel basınç verisi alınamadı; bu döngü için analiz yapılamadı."]
 
 
 def fetch_noaa_available_runs():
@@ -566,6 +746,7 @@ def fetch_full_weather_data(run_id):
             forecast_timeline[time_key] = {
                 "step_hour": lead,
                 "temp": istanbul_temp,
+                "wind": istanbul_wind,
                 # A 06Z/12Z/18Z run has no precipitation interval before its
                 # own initialization; do not compare that lead-0 placeholder.
                 "precip": None if lead == 0 else istanbul_precip,
@@ -631,9 +812,12 @@ def fetch_full_weather_data(run_id):
                 "pressure": 1013.0,
             }
 
-        # All forecast values are now point-specific; no regional pressure
-        # sample points are fetched or reported.
-        synoptic_alerts = []
+        # Regional pressure analysis is intentionally separate from the
+        # point forecast: one MSLP GRIB2 subset, valid at model initialisation,
+        # covering a 2,500 km diameter circle centred on the requested point.
+        synoptic_alerts = fetch_regional_pressure_anomalies(
+            session, filter_url, run_dt, headers, last_request_at
+        )
 
         payload = {
             "current": current,
@@ -663,66 +847,123 @@ def analyze_and_build_output(current_run_name, payload, previous_runs):
     curr = payload["current"]
     daily = payload["daily"]
     timeline = payload["timeline_180h"]
-    synoptic = payload["synoptic_alerts"]
+    synoptic = payload.get("synoptic_alerts", [])
 
     curr_t = curr["temp"]
     curr_p = curr["precip"]
     curr_w = curr["wind"]
 
+    # The voice script receives weekday/date names for each daily summary.
+    # Other voice-format changes are intentionally left for a later pass.
     speech_parts = [f"İstanbul'da anlık sıcaklık {curr_t} derece."]
-    speech_parts.append(f"Yağış {curr_p} milimetre." if curr_p > 0 else "Yağış beklenmiyor.")
+    speech_parts.append(
+        f"Yağış {curr_p} milimetre." if curr_p > 0 else "Yağış beklenmiyor."
+    )
     if curr_w > 20.0:
         speech_parts.append("Hava rüzgarlı.")
 
-    speech_parts.append("Önümüzdeki 3 günlük özete baktığımızda:")
-    day_labels = ["Yarın", "Sonraki gün", "3. gün"]
-    
-    for idx, i in enumerate(range(1, min(4, len(daily.get("time", []))))):
-        label = day_labels[idx] if idx < len(day_labels) else f"{idx+1}. gün"
-        t_max = round(daily["temp_max"][i], 1) if i < len(daily["temp_max"]) else 0.0
-        t_min = round(daily["temp_min"][i], 1) if i < len(daily["temp_min"]) else 0.0
-        p_sum = round(daily["precip_sum"][i], 1) if i < len(daily["precip_sum"]) else 0.0
-        w_max = round(daily["wind_max"][i], 1) if i < len(daily["wind_max"]) else 0.0
+    speech_parts.append("Önümüzdeki üç günün özeti:")
+    daily_indices = range(1, min(4, len(daily.get("time", []))))
+    for i in daily_indices:
+        day_label = _format_tr_date(daily["time"][i])
+        t_max = round(daily["temp_max"][i], 1)
+        t_min = round(daily["temp_min"][i], 1)
+        p_sum = round(daily["precip_sum"][i], 1)
+        w_max = round(daily["wind_max"][i], 1)
 
-        day_text = f"{label}: En düşük {t_min}, en yüksek {t_max} derece."
-        day_text += f" Toplam yağış {p_sum} milimetre." if p_sum > 0 else " Yağışsız."
+        day_text = f"{day_label}: En düşük {t_min}, en yüksek {t_max} derece."
+        day_text += (
+            f" Toplam yağış {p_sum} milimetre."
+            if p_sum > 0 else " Yağış beklenmiyor."
+        )
         if w_max > 20.0:
-            day_text += " Hava rüzgarlı."
-
+            day_text += " Rüzgâr hızı yüksek."
         speech_parts.append(day_text)
 
     temp_shifts = []
     precip_shifts = []
+    comparison_events = []
     comparison_points = 0
 
-    if previous_runs and len(previous_runs) > 0:
+    if previous_runs:
         try:
             prev_json = json.loads(previous_runs[0][1])
             prev_timeline = prev_json.get("timeline_180h", {})
 
-            for time_key, curr_data in timeline.items():
-                if time_key in prev_timeline:
-                    comparison_points += 1
-                    p_data = prev_timeline[time_key]
-                    step = curr_data["step_hour"]
+            # Iterate by valid local time, then add all variable changes for
+            # that timestamp together. The final list is chronological.
+            for time_key in sorted(timeline):
+                if time_key not in prev_timeline:
+                    continue
+                comparison_points += 1
+                curr_data = timeline[time_key]
+                prev_data = prev_timeline[time_key]
+                valid_local = datetime.strptime(
+                    time_key, "%Y-%m-%dT%H:%M"
+                ).replace(tzinfo=TR_TZ)
+                time_label = (
+                    f"{_format_tr_date(valid_local)} "
+                    f"{valid_local.hour:02d}:{valid_local.minute:02d}"
+                )
+                changes_at_time = []
 
-                    t_diff = round(curr_data["temp"] - p_data["temp"], 1)
-                    if abs(t_diff) >= 2.0:
-                        direction = "artış" if t_diff > 0 else "düşüş"
-                        temp_shifts.append(f"+{step}. saatte {abs(t_diff)} derece {direction}")
+                t_diff = round(
+                    float(curr_data["temp"]) - float(prev_data["temp"]), 1
+                )
+                if abs(t_diff) >= TEMPERATURE_CHANGE_THRESHOLD_C:
+                    direction = "daha yüksek" if t_diff > 0 else "daha düşük"
+                    changes_at_time.append(
+                        f"Sıcaklık {abs(t_diff):.1f}°C {direction}"
+                    )
+                    legacy_direction = "artış" if t_diff > 0 else "düşüş"
+                    temp_shifts.append(
+                        f"+{curr_data['step_hour']}. saatte "
+                        f"{abs(t_diff):.1f} derece {legacy_direction}"
+                    )
 
-                    current_precip = curr_data.get("precip")
-                    previous_precip = p_data.get("precip")
-                    if current_precip is not None and previous_precip is not None:
-                        p_diff = round(current_precip - previous_precip, 2)
-                        if abs(p_diff) >= 1.00:
-                            p_dir = "artış" if p_diff > 0 else "azalma"
-                            precip_shifts.append(f"+{step}. saatte {abs(p_diff)} milimetre {p_dir}")
-        except Exception as e:
-            print(f"[UYARI] Kıyaslama yapılırken hata oluştu: {e}")
+                current_precip = curr_data.get("precip")
+                previous_precip = prev_data.get("precip")
+                if current_precip is not None and previous_precip is not None:
+                    p_diff = round(
+                        float(current_precip) - float(previous_precip), 2
+                    )
+                    if abs(p_diff) >= PRECIPITATION_CHANGE_THRESHOLD_MM:
+                        direction = "daha fazla" if p_diff > 0 else "daha az"
+                        changes_at_time.append(
+                            f"bu saatte biten 6 saatlik yağış "
+                            f"{abs(p_diff):.2f} mm {direction}"
+                        )
+                        legacy_direction = "artış" if p_diff > 0 else "azalma"
+                        precip_shifts.append(
+                            f"+{curr_data['step_hour']}. saatte "
+                            f"{abs(p_diff):.2f} milimetre {legacy_direction}"
+                        )
 
+                current_wind = curr_data.get("wind")
+                previous_wind = prev_data.get("wind")
+                if current_wind is not None and previous_wind is not None:
+                    w_diff = round(
+                        float(current_wind) - float(previous_wind), 1
+                    )
+                    if abs(w_diff) >= WIND_CHANGE_THRESHOLD_KMH:
+                        direction = "daha hızlı" if w_diff > 0 else "daha yavaş"
+                        changes_at_time.append(
+                            f"10 m rüzgâr hızı {abs(w_diff):.1f} km/sa {direction}"
+                        )
+
+                if changes_at_time:
+                    comparison_events.append(
+                        f"• {time_label} TSİ — " + "; ".join(changes_at_time) + "."
+                    )
+        except Exception as exc:
+            print(f"[UYARI] Kıyaslama yapılırken hata oluştu: {exc}")
+
+    # Keep the existing comparison narration structure for now. The requested
+    # detailed day/time voice redesign can be handled separately later.
     if temp_shifts or precip_shifts:
-        speech_parts.append("Önceki GFS çalışmasıyla kıyaslandığında ilerleyen saatlerde değişimler var.")
+        speech_parts.append(
+            "Önceki GFS çalışmasıyla kıyaslandığında ilerleyen saatlerde değişimler var."
+        )
         if temp_shifts:
             speech_parts.append("Sıcaklıkta: " + ", ".join(temp_shifts[:2]) + ".")
         if precip_shifts:
@@ -737,66 +978,89 @@ def analyze_and_build_output(current_run_name, payload, previous_runs):
             "Önceki GFS çalışmasıyla ortak zaman dilimi bulunamadı; kıyaslama yapılamadı."
         )
 
-    if synoptic:
-        speech_parts.append("Bölgesel basınç haritasında: " + ", ".join(synoptic) + " tespit edildi.")
-
+    # Pressure findings are written to the text report only, never to speech.
     speech_text = " ".join(speech_parts)
 
-    now_tr_str = datetime.now(TR_TZ).strftime('%Y-%m-%d %H:%M')
+    now_local = datetime.now(TR_TZ)
+    run_utc = _parse_utc_datetime(current_run_name)
+    run_local = run_utc.astimezone(TR_TZ)
+    forecast_end_local = (
+        run_utc + timedelta(hours=payload.get("forecast_horizon_hours", MIN_FORECAST_HOURS))
+    ).astimezone(TR_TZ)
 
     text_report_lines = [
-        f"🌐 MODEL GÜNCELLEME RAPORU",
-        f"🛰 GFS run: {current_run_name} UTC | Tahmin kapsamı: +{payload.get('forecast_horizon_hours', MIN_FORECAST_HOURS)} saat",
-        f"📡 Veri kaynağı: {payload.get('data_source', 'NOAA/NCEP GFS 0.25° GRIB2')}\n",
-        f"📍 Nokta: {LOCATION_NAME} | GFS grid: {GRID_LAT:.3f}N, {GRID_LON:.3f}E | ⏱ Zaman: {now_tr_str}\n",
-        f"🌡 Anlık Sıcaklık: {curr_t} °C",
-        f"🌧 Anlık Yağış: {curr_p} mm",
-        f"💨 Anlık Rüzgar: {curr_w} km/s {'(Rüzgarlı 🌬️)' if curr_w > 20.0 else ''}\n",
-        f"📅 ÖNÜMÜZDEKİ 3 GÜNLÜK ÖZET (6 saatlik GFS adımları):"
+        "🌦 İSTANBUL GFS TAHMİN RAPORU",
+        "📄 Çıktı: Yazılı tahmin raporu",
+        f"🛰 Model döngüsü: {_format_tr_datetime(run_local)} TSİ ({run_utc:%H}Z UTC)",
+        (
+            f"🗓 Tahmin aralığı: {_format_tr_datetime(run_local)} – "
+            f"{_format_tr_datetime(forecast_end_local)} TSİ "
+            f"(+{payload.get('forecast_horizon_hours', MIN_FORECAST_HOURS)} saat)"
+        ),
+        f"🕒 Rapor zamanı: {_format_tr_datetime(now_local)} TSİ",
+        f"📍 Koordinat: {LAT:.3f}°N, {LON:.3f}°E",
+        "",
+        f"🌡 Anlık sıcaklık: {curr_t}°C",
+        f"🌧 Anlık yağış: {curr_p} mm",
+        f"💨 Anlık rüzgâr: {curr_w} km/sa",
+        "",
+        "📅 ÖNÜMÜZDEKİ 3 GÜN",
     ]
 
-    for idx, i in enumerate(range(1, min(4, len(daily.get("time", []))))):
-        label = day_labels[idx] if idx < len(day_labels) else f"{idx+1}. gün"
-        t_max = round(daily["temp_max"][i], 1) if i < len(daily["temp_max"]) else 0.0
-        t_min = round(daily["temp_min"][i], 1) if i < len(daily["temp_min"]) else 0.0
-        p_sum = round(daily["precip_sum"][i], 1) if i < len(daily["precip_sum"]) else 0.0
-        w_max = round(daily["wind_max"][i], 1) if i < len(daily["wind_max"]) else 0.0
-
-        wind_tag = " | 🌬️ Rüzgarlı" if w_max > 20.0 else ""
-        text_report_lines.append(f"• {label}: {t_min}°C / {t_max}°C | Yağış: {p_sum} mm{wind_tag}")
+    for i in daily_indices:
+        day_label = _format_tr_date(daily["time"][i])
+        t_max = round(daily["temp_max"][i], 1)
+        t_min = round(daily["temp_min"][i], 1)
+        p_sum = round(daily["precip_sum"][i], 1)
+        w_max = round(daily["wind_max"][i], 1)
+        wind_tag = " | Rüzgârlı" if w_max > 20.0 else ""
+        text_report_lines.append(
+            f"• {day_label}: {t_min}–{t_max}°C | Yağış: {p_sum} mm | "
+            f"Maks. rüzgâr: {w_max} km/sa{wind_tag}"
+        )
 
     if previous_runs:
-        text_report_lines.append(
-            f"\\n🔁 GFS KIYASLAMASI | Önceki run: {previous_runs[0][0]}"
-        )
-        text_report_lines.append(
-            f"• Karşılaştırılan ortak 6 saatlik dilim: {comparison_points}"
-        )
-        if temp_shifts or precip_shifts:
-            text_report_lines.append("⚡ +180 Saate Kadar 6 Saatlik Dilim Değişiklikleri:")
-            if temp_shifts:
-                text_report_lines.append("• Sıcaklık: " + ", ".join(temp_shifts))
-            if precip_shifts:
-                text_report_lines.append("• Yağış: " + ", ".join(precip_shifts))
+        previous_run_utc = _parse_utc_datetime(previous_runs[0][0])
+        previous_run_local = previous_run_utc.astimezone(TR_TZ)
+        text_report_lines.extend([
+            "",
+            "🔁 ÖNCEKİ GFS DÖNGÜSÜYLE KIYAS",
+            (
+                f"Önceki döngü: {_format_tr_datetime(previous_run_local)} TSİ "
+                f"({previous_run_utc:%H}Z UTC)"
+            ),
+            f"Ortak karşılaştırma zamanı: {comparison_points}",
+        ])
+        if comparison_events:
+            text_report_lines.append("Değişiklikler (TSİ, kronolojik sırayla):")
+            text_report_lines.extend(comparison_events)
         elif comparison_points:
             text_report_lines.append(
-                "• Belirlenen eşikleri aşan sıcaklık veya yağış değişikliği yok."
+                "Belirlenen eşikleri aşan sıcaklık, yağış veya rüzgâr değişikliği yok."
             )
         else:
             text_report_lines.append(
-                "• Ortak zaman dilimi bulunamadı; kıyaslama yapılamadı."
+                "İki döngü arasında karşılaştırılabilir ortak zaman bulunamadı."
             )
 
     if synoptic:
-        text_report_lines.append("\n🌀 2000 km Çaplı Bölgesel Basınç Durumu:")
+        text_report_lines.extend([
+            "",
+            "🌀 BASINÇ DURUMU | İstanbul merkezli 2.500 km çaplı alan",
+            (
+                f"Geçerlilik zamanı: {_format_tr_datetime(run_local)} TSİ "
+                "(model başlangıç saati)"
+            ),
+        ])
         for syn_item in synoptic:
             text_report_lines.append(f"• {syn_item}")
 
-    text_report_lines.append(f"\n🎙 Seslendirme Metni:\n\"{speech_text}\"")
+    text_report_lines.append(f"\n🎙 Seslendirme metni:\n“{speech_text}”")
     full_text_report = "\n".join(text_report_lines)
 
-    print("[STEP 2 BAŞARILI] Rapor hazırlandı.")
+    print("[STEP 2 BAŞARILI] Rapor ve ses metni hazırlandı.")
     return full_text_report, speech_text
+
 
 # --- GOOGLE CLOUD TTS MOTORU (1.2X HIZ) ---
 def generate_speech_gcp(text, output_file="summary.mp3"):
