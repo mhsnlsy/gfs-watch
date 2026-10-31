@@ -955,12 +955,6 @@ def prefetch_latest_noaa_cycle(skip_run_ids=None, target_run_id=None):
     if run_id in skip_run_ids:
         print(f"[NOAA PREFETCH SKIP] {run_id} zaten NOAA +180 envanterinde.")
         return 0
-    if not target_run_id and age_hours < NOAA_PREFETCH_MIN_AGE_HOURS:
-        print(
-            f"[NOAA PREFETCH SKIP] {run_id} döngüsü henüz {age_hours:.1f} saatlik; "
-            f"ön indirme eşiği {NOAA_PREFETCH_MIN_AGE_HOURS:.4f} saat."
-        )
-        return 0
 
     os.makedirs(NOAA_CACHE_DIR, exist_ok=True)
     # f000-f120 are hourly; after f120, 0.25-degree GFS files are 3-hourly.
@@ -2190,7 +2184,9 @@ async def run_once():
 
     init_db()
     print(f"[START] GFS Watch tek kontrol modunda çalışıyor; model: {MODEL_NAME}.")
-    await process_gfs_update(strict=True)
+    # Scheduled five-minute polls are expected to find incomplete cycles.
+    # Persist partial prefetch work and resume on the next invocation.
+    await process_gfs_update(strict=False)
 
 if __name__ == "__main__":
     try:
