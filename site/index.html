@@ -93,11 +93,12 @@
       <div class="section-head report-head">
         <div><div class="section-kicker">GÜN BOYUNCA 4 MODEL DÖNGÜSÜ</div><h2>Son hava raporları</h2><p class="section-description">Her yeni GFS raporu, görseli ve seslendirmesiyle burada arşivlenir. En son dört rapor gösterilir.</p></div>
         <div class="notification-controls">
-          <span id="notification-status" class="notification-status" aria-live="polite">Otomatik yenileme aktif · 5 dakikada bir</span>
+          <button class="notification-button" id="enable-notifications" type="button">Cihaz bildirimlerini aç</button>
+          <span id="notification-status" class="notification-status" aria-live="polite">Yalnızca yeni GFS raporları için bildirim</span>
         </div>
       </div>
       <div id="notifications-list" class="notification-list" aria-live="polite"><div class="chart-empty">Son raporlar yükleniyor…</div></div>
-      <p class="notification-footnote">Rapor arşivi, bu sayfa açık olduğu sürece 5 dakikada bir otomatik güncellenir.</p>
+      <p class="notification-footnote">Cihaz bildirimi yalnızca yeni GFS raporlarında gönderilir; ENKA istasyon ölçümleri bildirim oluşturmaz. Rapor arşivi sayfa açıkken 5 dakikada bir yenilenir.</p>
     </section>
     <section class="section" id="seyir">
       <div class="section-head">
@@ -234,6 +235,8 @@
         $("forecast-chart").innerHTML='<div class="chart-empty">Veri kaynağına şu anda ulaşılamıyor. Sayfa otomatik olarak yeniden deneyecek.</div>';
       }
     }
+    let notificationRegistration=null;
+    let pushApiUrl="";
     let latestNotificationItems=[];
     function formatNotificationTime(value){
       const date=new Date(value);
@@ -266,6 +269,92 @@
           '</article>';
       }).join("");
     }
+    async function loadPushConfig(){
+      try{
+        const response=await fetch("./push-config.json?t="+Date.now(),{cache:"no-store"});
+        if(!response.ok)throw new Error("config unavailable");
+        const config=await response.json();
+        pushApiUrl=String(config.apiBaseUrl||"").trim().replace(/\\/+$/,"");
+      }catch(_){pushApiUrl="";}
+      return pushApiUrl;
+    }
+    function decodeVapidKey(value){
+      const padding="=".repeat((4-value.length%4)%4);
+      const base64=(value+padding).replace(/-/g,"+").replace(/_/g,"/");
+      const raw=window.atob(base64);
+      return Uint8Array.from(raw,char=>char.charCodeAt(0));
+    }
+    async function registerAppWorker(){
+      if(!("serviceWorker" in navigator))return;
+      try{notificationRegistration=await navigator.serviceWorker.register("./service-worker.js");}
+      catch(_){notificationRegistration=null;}
+    }
+    async function refreshPushStatus(){
+      const button=$("enable-notifications");
+      if(!("Notification" in window)||!notificationRegistration||!notificationRegistration.pushManager){
+        $("notification-status").textContent="Bu tarayıcı cihaz bildirimlerini desteklemiyor.";
+        button.disabled=true;
+        return;
+      }
+      if(Notification.permission==="denied"){
+        $("notification-status").textContent="Bildirim izni tarayıcı ayarlarında kapalı.";
+        button.textContent="Bildirim iznini kontrol et";
+        button.disabled=true;
+        return;
+      }
+      if(pushApiUrl&&Notification.permission==="granted"){
+        try{
+          const subscription=await notificationRegistration.pushManager.getSubscription();
+          if(subscription){
+            $("notification-status").textContent="GFS bildirimleri etkin · Sayfa kapalıyken de gönderilebilir.";
+            button.textContent="GFS bildirimleri açık";
+            button.disabled=true;
+            return;
+          }
+        }catch(_){}
+      }
+      $("notification-status").textContent="Yalnızca yeni GFS raporları için bildirim";
+      button.textContent="Cihaz bildirimlerini aç";
+      button.disabled=false;
+    }
+    async function enableNotifications(){
+      const button=$("enable-notifications");
+      button.disabled=true;
+      try{
+        if(!("Notification" in window))throw new Error("Bu tarayıcı cihaz bildirimlerini desteklemiyor.");
+        const permission=Notification.permission==="granted"?"granted":await Notification.requestPermission();
+        if(permission!=="granted")throw new Error("Bildirim izni verilmedi.");
+        if(!pushApiUrl)await loadPushConfig();
+        if(!pushApiUrl)throw new Error("Bildirim kurulumu şu anda tamamlanamıyor. Biraz sonra yeniden dene.");
+        const registration=notificationRegistration||await navigator.serviceWorker.ready;
+        if(!registration.pushManager)throw new Error("Bu tarayıcı arka plan bildirimlerini desteklemiyor.");
+        const keyResponse=await fetch(pushApiUrl+"/vapid-public-key",{cache:"no-store"});
+        if(!keyResponse.ok)throw new Error("Bildirim kurulumu şu anda tamamlanamıyor.");
+        const keyData=await keyResponse.json();
+        if(!keyData.publicKey)throw new Error("Bildirim kurulumu şu anda tamamlanamıyor.");
+        let subscription=await registration.pushManager.getSubscription();
+        if(!subscription){
+          subscription=await registration.pushManager.subscribe({
+            userVisibleOnly:true,
+            applicationServerKey:decodeVapidKey(keyData.publicKey)
+          });
+        }
+        const saved=await fetch(pushApiUrl+"/subscribe",{
+          method:"POST",
+          headers:{"Content-Type":"application/json"},
+          body:JSON.stringify(subscription)
+        });
+        if(!saved.ok)throw new Error("Cihaz aboneliği kaydedilemedi. Yeniden deneyebilirsin.");
+        $("notification-status").textContent="GFS bildirimleri etkin · Sayfa kapalıyken de gönderilebilir.";
+        button.textContent="GFS bildirimleri açık";
+        button.disabled=true;
+      }catch(error){
+        $("notification-status").textContent=error.message||"Bildirim kurulumu tamamlanamadı.";
+        button.textContent="Cihaz bildirimlerini aç";
+        button.disabled=false;
+      }
+    }
+    $("enable-notifications").addEventListener("click",enableNotifications);
     async function loadNotifications(){
       try{
         const response=await fetch("./data/notifications/latest.json?t="+Date.now(),{cache:"no-store"});
@@ -281,6 +370,9 @@
       }
     }
     async function startPage(){
+      await registerAppWorker();
+      await loadPushConfig();
+      await refreshPushStatus();
       await Promise.all([loadForecast(),loadNotifications()]);
       window.setInterval(()=>{loadForecast();loadNotifications();},300000);
     }
