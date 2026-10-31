@@ -14,7 +14,7 @@ on:
   workflow_dispatch:
 
 concurrency:
-  group: gfs-watch-run
+  group: gfs-watch-run-v2
   cancel-in-progress: true
 
 permissions:
