@@ -21,7 +21,8 @@ The repository runs GFS Watch through GitHub Actions. No separate server, local 
 - The workflow checks both Open-Meteo's `in-progress.json` and `latest.json` for the `ncep_gfs013` model.
 - Progress is measured from each run's own UTC `reference_time` to its latest published `valid_times`; it is not measured from the current clock.
 - A run is not notified or marked as processed until at least +180 forecast hours have been published.
-- Once eligible, the workflow retrieves that exact run through Open-Meteo's Single Runs API using its `run=` initialisation time and requests the full 181 hourly points from +0 to +180.
+- Once eligible, the workflow retrieves that exact run through Open-Meteo's Single Runs API using its `run=` initialisation time and requests the full 181 hourly points from +0 to +180. Daily summaries are aggregated from that run's hourly data because the API's `daily` parameter is not supported for runs that begin at 06Z/12Z/18Z in Istanbul time.
+- The report's current-condition snapshot is taken separately from the live Forecast API; the 3-day forecast and all run-to-run comparisons use the exact selected GFS run.
 - If the Single Runs API has not yet made the run available, the workflow leaves it unprocessed and retries on a later check.
 - When multiple unprocessed runs are eligible, the oldest eligible run is handled first to preserve chronological comparisons.
 
