@@ -1566,7 +1566,7 @@ def analyze_and_build_output(current_run_name, payload, previous_runs):
         ).astimezone(TR_TZ)
         station_age_note = " (gecikmeli ölçüm)" if station.get("is_stale") else ""
         speech_parts.append(
-            f"ENKA Balmumcu istasyonunda{station_age_note}, "
+            f"Balmumcu istasyonunda{station_age_note}, "
             f"{_format_tr_datetime(observed_local)} itibarıyla"
         )
         if station.get("temperature_2m_c") is not None:
