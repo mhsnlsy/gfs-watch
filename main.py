@@ -50,11 +50,16 @@ RETENTION_DAYS = 10
 PUBLIC_DATA_DIR = os.getenv("PUBLIC_DATA_DIR", "public")
 NOAA_CACHE_DIR = os.getenv("NOAA_CACHE_DIR", "noaa_cache")
 NOAA_PREFETCH_FILES_PER_CHECK = max(
-    1, int(os.getenv("NOAA_PREFETCH_FILES_PER_CHECK", "4"))
+    1, int(os.getenv("NOAA_PREFETCH_FILES_PER_CHECK", "141"))
+)
+NOAA_PREFETCH_INTERVAL_SECONDS = max(
+    60, int(os.getenv("NOAA_PREFETCH_INTERVAL_SECONDS", "300"))
 )
 NOAA_PREFETCH_MIN_AGE_HOURS = max(
     0.0, float(os.getenv("NOAA_PREFETCH_MIN_AGE_HOURS", "2"))
 )
+_LAST_NOAA_PREFETCH_RUN_ID = None
+_LAST_NOAA_PREFETCH_AT = 0.0
 NOAA_CACHE_RETENTION_HOURS = max(
     12.0, float(os.getenv("NOAA_CACHE_RETENTION_HOURS", "48"))
 )
@@ -743,8 +748,54 @@ def clear_noaa_run_cache(run_id):
             print(f"[NOAA CACHE UYARI] İşlenen önbellek temizlenemedi: {exc}")
 
 
+def gfs_forecast_hours(max_hour=MIN_FORECAST_HOURS):
+    """Return native GFS 0.25-degree lead hours: hourly to 120h, then every 3h."""
+    max_hour = max(0, int(max_hour))
+    hours = list(range(0, min(max_hour, 120) + 1))
+    if max_hour >= 123:
+        hours.extend(range(123, max_hour + 1, 3))
+    return hours
+
+
+def missing_noaa_cache_leads(run_id, max_hour=MIN_FORECAST_HOURS - 3):
+    """List forecast leads that must be cached before the final f180 trigger."""
+    return [
+        lead for lead in gfs_forecast_hours(max_hour)
+        if _read_noaa_cache_file(run_id, lead) is None
+    ]
+
+
+def prefetch_noaa_cycle_if_due(skip_run_ids=None, target_run_id=None):
+    """Run the incremental prefetch at most once every five minutes per GFS cycle."""
+    global _LAST_NOAA_PREFETCH_RUN_ID, _LAST_NOAA_PREFETCH_AT
+
+    if target_run_id:
+        run_dt = _parse_utc_datetime(target_run_id)
+    else:
+        now = datetime.now(timezone.utc)
+        cycle_hour = (now.hour // 6) * 6
+        run_dt = now.replace(hour=cycle_hour, minute=0, second=0, microsecond=0)
+
+    run_id = run_dt.isoformat(timespec="seconds")
+    now_monotonic = time.monotonic()
+    if (
+        _LAST_NOAA_PREFETCH_RUN_ID == run_id
+        and now_monotonic - _LAST_NOAA_PREFETCH_AT < NOAA_PREFETCH_INTERVAL_SECONDS
+    ):
+        elapsed = now_monotonic - _LAST_NOAA_PREFETCH_AT
+        print(
+            f"[NOAA PREFETCH WAIT] {run_id}: son taramadan {elapsed:.0f} saniye geçti; "
+            f"yeni tarama {NOAA_PREFETCH_INTERVAL_SECONDS} saniyede bir yapılacak."
+        )
+        return 0
+
+    _LAST_NOAA_PREFETCH_RUN_ID = run_id
+    _LAST_NOAA_PREFETCH_AT = now_monotonic
+    return prefetch_latest_noaa_cycle(skip_run_ids, target_run_id)
+
+
 def prefetch_latest_noaa_cycle(skip_run_ids=None, target_run_id=None):
-    """Fetch a small batch of available forecast files for the current or target cycle."""
+    """Cache every available GFS input file through f177 for the current or target cycle."""
     skip_run_ids = set(skip_run_ids or ())
     now = datetime.now(timezone.utc)
 
@@ -770,14 +821,16 @@ def prefetch_latest_noaa_cycle(skip_run_ids=None, target_run_id=None):
         return 0
 
     os.makedirs(NOAA_CACHE_DIR, exist_ok=True)
-    leads = list(range(0, MIN_FORECAST_HOURS, 6))
+    # f000-f120 are hourly; after f120, 0.25-degree GFS files are 3-hourly.
+    # f177 is the final predecessor of the f180 completion trigger.
+    leads = gfs_forecast_hours(MIN_FORECAST_HOURS - 3)
     missing = [
         lead for lead in leads
         if _read_noaa_cache_file(run_id, lead) is None
     ]
     cached_count = len(leads) - len(missing)
     if not missing:
-        print(f"[NOAA PREFETCH READY] {run_id}: 30/30 tahmin dosyası önbellekte.")
+        print(f"[NOAA PREFETCH READY] {run_id}: {len(leads)}/{len(leads)} GRIB2 dosyası önbellekte.")
         return 0
 
     batch = missing[:NOAA_PREFETCH_FILES_PER_CHECK]
@@ -786,7 +839,7 @@ def prefetch_latest_noaa_cycle(skip_run_ids=None, target_run_id=None):
     downloaded = 0
 
     print(
-        f"[NOAA PREFETCH] {run_id}: {cached_count}/30 hazır; "
+        f"[NOAA PREFETCH] {run_id}: {cached_count}/{len(leads)} hazır; "
         f"bu kontrolde en fazla {len(batch)} dosya indirilecek (doğrudan S3 GRIB2)."
     )
     try:
@@ -835,11 +888,17 @@ def fetch_full_weather_data(run_id):
 
         # Probe the target horizon first. Metadata can report +180 while a
         # particular GRIB forecast file is still being published.
-        lead_hours = list(range(0, MIN_FORECAST_HOURS + 1, 6))
+        # Build the native GFS 0.25-degree timeline: hourly to +120h,
+        # then +123h, +126h, ... +180h. This explicitly includes f177 and f180.
+        lead_hours = gfs_forecast_hours(MIN_FORECAST_HOURS)
         download_order = [MIN_FORECAST_HOURS] + [
             h for h in lead_hours if h != MIN_FORECAST_HOURS
         ]
         decoded_steps = {}
+        previous_lead_by_lead = {
+            lead: (lead_hours[index - 1] if index > 0 else None)
+            for index, lead in enumerate(lead_hours)
+        }
 
         for position, lead in enumerate(download_order):
             # Cached direct-S3 GRIB2 message bundles are ready for immediate decoding.
@@ -937,9 +996,9 @@ def fetch_full_weather_data(run_id):
                             elif short_name == "10v":
                                 step_data["wind_v"] = samples
                             elif short_name == "tp":
-                                # GFS may include both the 6-hour period total
-                                # and the full-run cumulative total in one file.
-                                # Key by interval to deduplicate repeated messages.
+                                # GFS may include period totals and full-run
+                                # cumulative totals in one file. Key by interval
+                                # to deduplicate repeated messages.
                                 step_data["precip_records"][(start_step, end_step)] = samples
                         finally:
                             eccodes.codes_release(gid)
@@ -988,12 +1047,14 @@ def fetch_full_weather_data(run_id):
                     wind_kmh[name] = math.hypot(float(u_value), float(v_value)) * 3.6
 
             # Select only the precipitation interval ending at this lead.
-            # Prefer (lead-6, lead); if unavailable, difference cumulative
-            # (0, lead) totals against the prior cumulative total.
+            # GFS 0.25-degree output is hourly through +120h and 3-hourly after.
+            # Prefer the exact interval since the preceding available lead;
+            # otherwise difference the cumulative (0, lead) field.
             precip_by_point = {name: 0.0 for name in points}
             if lead > 0:
                 records = step_data["precip_records"]
-                interval_key = (lead - 6, lead)
+                interval_start = previous_lead_by_lead[lead]
+                interval_key = (interval_start, lead)
                 if interval_key in records:
                     precip_by_point = {
                         name: max(0.0, float(records[interval_key].get(name, 0.0)))
@@ -1010,7 +1071,7 @@ def fetch_full_weather_data(run_id):
                             precip_by_point[name] = max(0.0, current_total - previous_total)
                 else:
                     print(
-                        f"[NOAA UYARI] f{lead:03d} için 6 saatlik yağış aralığı "
+                        f"[NOAA UYARI] f{lead:03d} için beklenen yağış aralığı "
                         "bulunamadı; bu dilim 0 mm olarak alınacak."
                     )
 
@@ -1545,7 +1606,7 @@ async def process_gfs_update(strict=False):
     await asyncio.to_thread(prune_noaa_cache)
     candidates = await asyncio.to_thread(fetch_noaa_available_runs)
     if not candidates:
-        await asyncio.to_thread(prefetch_latest_noaa_cycle)
+        await asyncio.to_thread(prefetch_noaa_cycle_if_due)
         message = "NOAA S3 üzerinde henüz +180 GFS GRIB2 dosyası yayımlanmadı."
         print(f"[SKIP] {message}")
         if strict:
@@ -1603,7 +1664,7 @@ async def process_gfs_update(strict=False):
         latest_run = candidates[-1]["run_id"]
         print(f"[UNCHANGED] Son GFS çalışmaları zaten işlendi; en güncel run: {latest_run}")
         await asyncio.to_thread(
-            prefetch_latest_noaa_cycle,
+            prefetch_noaa_cycle_if_due,
             {item["run_id"] for item in candidates},
         )
         return
@@ -1621,7 +1682,7 @@ async def process_gfs_update(strict=False):
             "Tamamlanmış ve daha eski başka bir bekleyen run da bulunamadı."
         )
         await asyncio.to_thread(
-            prefetch_latest_noaa_cycle,
+            prefetch_noaa_cycle_if_due,
             {item["run_id"] for item in candidates},
         )
         return
@@ -1645,6 +1706,35 @@ async def process_gfs_update(strict=False):
         "gerekli GRIB2 mesajları NOAA S3'ten doğrudan byte-range ile alınıyor."
     )
 
+    missing_cache_leads = await asyncio.to_thread(
+        missing_noaa_cache_leads, run_id, MIN_FORECAST_HOURS - 3
+    )
+    if missing_cache_leads:
+        print(
+            f"[FINAL CACHE WAIT] {run_id}: f180 öncesi "
+            f"{len(missing_cache_leads)} GRIB2 dosyası eksik; "
+            f"ilk eksik f{missing_cache_leads[0]:03d}. "
+            "Önce önbellek tamamlanacak, sonra f180 ile birleştirilecek."
+        )
+        # f180 is visible, so catch up immediately rather than waiting for
+        # the regular five-minute prefetch interval.
+        await asyncio.to_thread(prefetch_latest_noaa_cycle, None, run_id)
+        missing_cache_leads = await asyncio.to_thread(
+            missing_noaa_cache_leads, run_id, MIN_FORECAST_HOURS - 3
+        )
+        if missing_cache_leads:
+            print(
+                f"[FINAL CACHE WAIT] {run_id}: önbellekte hâlâ "
+                f"{len(missing_cache_leads)} dosya eksik; "
+                f"ilk eksik f{missing_cache_leads[0]:03d}. "
+                "Sonraki 15 saniyelik f180 kontrolünde tekrar denenecek."
+            )
+            return
+
+    print(
+        f"[FINAL CACHE READY] {run_id}: f000-f177 arasındaki "
+        "tüm GRIB2 girdileri hazır; f180 son veri olarak birleştiriliyor."
+    )
     print(f"[UPDATE] +180 saat eşiğine ulaşan GFS run alınıyor: {run_id}")
     payload = await asyncio.to_thread(fetch_full_weather_data, run_id)
     if payload and "_pending_noaa_gfs" in payload:
@@ -2002,13 +2092,19 @@ async def run_once():
     smoke_test_run_id = os.getenv("NOAA_GRIB2_SMOKE_TEST_RUN_ID", "").strip()
     if smoke_test_run_id:
         init_db()
-        print(f"[GRIB2 SMOKE TEST] {smoke_test_run_id} için 31 adım doğrudan S3'ten indiriliyor.")
+        expected_steps = len(gfs_forecast_hours(MIN_FORECAST_HOURS))
+        print(
+            f"[GRIB2 SMOKE TEST] {smoke_test_run_id} için "
+            f"{expected_steps} adım doğrudan S3'ten indiriliyor."
+        )
         payload = await asyncio.to_thread(fetch_full_weather_data, smoke_test_run_id)
         if not payload or "_pending_noaa_gfs" in payload:
             raise RuntimeError(f"NOAA direct GRIB2 smoke test failed: {payload}")
         point_count = len(payload.get("timeline_180h", {}))
-        if point_count != 31:
-            raise RuntimeError(f"GRIB2 smoke test expected 31 forecast points, got {point_count}")
+        if point_count != expected_steps:
+            raise RuntimeError(
+                f"GRIB2 smoke test expected {expected_steps} forecast points, got {point_count}"
+            )
         print(
             f"[GRIB2 SMOKE TEST OK] {smoke_test_run_id}: "
             f"{point_count} forecast steps; no Telegram message sent."
