@@ -1,4 +1,5 @@
 name: One-off GFS Four-Cycle Comparison
+# Re-run after adding date and Turkish weekday labels to every chart panel.
 
 on:
   push:
