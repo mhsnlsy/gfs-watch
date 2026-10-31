@@ -2244,13 +2244,13 @@ async def process_gfs_update(strict=False):
                 "📊 İstanbul GFS | Dört döngü karşılaştırması\n"
                 "Eski → yeni: " + " → ".join(cycle_labels)
             )
-            await send_telegram_photo(chart_buffer, caption)
             try:
                 notification_image_path = await asyncio.to_thread(
                     save_public_notification_image, run_id, chart_buffer
                 )
             except Exception as media_exc:
                 print(f"[WEB GÖRSEL ARŞİV HATASI] {media_exc}")
+            await send_telegram_photo(chart_buffer, caption)
     except Exception as exc:
         print(f"[KIYAS GÖRSELİ GÖNDERİM HATASI] {exc}")
     finally:
