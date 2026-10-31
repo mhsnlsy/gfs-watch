@@ -83,6 +83,7 @@ jobs:
           CHAT_ID: ${{ secrets.CHAT_ID }}
           GCP_SA_KEY: ${{ secrets.GCP_SA_KEY }}
           NOAA_CACHE_DIR: noaa_cache
+          NOAA_PREFETCH_MIN_AGE_HOURS: "4.1667"
           NOAA_PREFETCH_FILES_PER_CHECK: "4"
           NOAA_REQUEST_INTERVAL_SECONDS: "10"
         run: python -u main.py
