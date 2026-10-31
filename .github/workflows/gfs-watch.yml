@@ -1,17 +1,12 @@
 name: GFS Watch
 
 on:
-  # Run immediately when the watcher code or workflow changes on the default branch.
-  push:
-    branches: [main]
-    paths:
-      - "main.py"
-      - ".github/workflows/gfs-watch.yml"
-      - "requirements.txt"
-  # Start one 90-minute watch for each GFS cycle (Istanbul local times: 06:50, 12:50, 18:50, 00:50).
-  # GitHub cron uses UTC; these correspond to 03:50, 09:50, 15:50, 21:50 UTC.
+  # Primary watch windows, plus a delayed backup in case GitHub drops/delays a scheduled event.
+  # UTC primary: 03:50, 09:50, 15:50, 21:50; backup: 04:20, 10:20, 16:20, 22:20.
+  # Each watch targets the latest 6-hour GFS cycle and safely skips cycles already processed.
   schedule:
     - cron: "50 3,9,15,21 * * *"
+    - cron: "20 4,10,16,22 * * *"
   workflow_dispatch:
 
 concurrency:
