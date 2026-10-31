@@ -282,6 +282,7 @@ def export_public_forecast_json(run_id, payload):
             "wind_speed_10m_kmh": current.get("wind"),
             "mean_sea_level_pressure_hpa": current.get("pressure"),
         },
+        "station_observation": payload.get("station_observation"),
         "daily_summary": daily_summary,
         "regional_pressure_analysis": {
             "valid_time_utc": run_dt.isoformat(timespec="seconds"),
@@ -416,6 +417,140 @@ def analyse_regional_pressure_grid(pressure_grid):
         print(f"[BASINÇ UYARI] GRIB2 bölgesel basınç analizi yapılamadı: {type(exc).__name__}: {exc}")
         traceback.print_exc()
         raise
+
+
+def _mgm_number(value):
+    """Return a finite MGM numeric observation, excluding missing-value sentinels."""
+    try:
+        number = float(value)
+    except (TypeError, ValueError):
+        return None
+    if not math.isfinite(number) or number <= -9000:
+        return None
+    return number
+
+
+def fetch_mgm_station_observation():
+    """Fetch the latest official MGM observation for Eyüpsultan station 18101."""
+    station_number = 18101
+    base_url = "https://servis.mgm.gov.tr"
+    headers = {
+        "Accept": "application/json, text/plain, */*",
+        "User-Agent": "Mozilla/5.0 (compatible; GFS-Watch/1.0)",
+        "Origin": "https://www.mgm.gov.tr",
+        "Referer": "https://www.mgm.gov.tr/",
+    }
+    session = requests.Session()
+    session.headers.update(headers)
+
+    try:
+        centres_response = session.get(
+            f"{base_url}/web/merkezler",
+            params={"il": "istanbul"},
+            timeout=20,
+        )
+        centres_response.raise_for_status()
+        centres = centres_response.json()
+        if not isinstance(centres, list):
+            raise ValueError("MGM merkez listesi beklenen JSON dizisi değil.")
+
+        centre = next(
+            (
+                item for item in centres
+                if any(
+                    str(item.get(key, "")).strip() == str(station_number)
+                    for key in (
+                        "sondurumIstNo", "istNo", "istasyonNo",
+                        "sonDurumIstNo", "sondurumIstasyonNo",
+                    )
+                )
+            ),
+            None,
+        )
+        if not centre:
+            raise LookupError(
+                f"MGM İstanbul merkez listesinde {station_number} "
+                "son durum istasyon kodu bulunamadı."
+            )
+
+        centre_id = centre.get("merkezId")
+        if centre_id in (None, ""):
+            raise ValueError(
+                f"MGM {station_number} kaydında merkezId alanı bulunamadı."
+            )
+
+        observation_response = session.get(
+            f"{base_url}/web/sondurumlar",
+            params={"merkezid": centre_id},
+            timeout=20,
+        )
+        observation_response.raise_for_status()
+        observations = observation_response.json()
+        if not isinstance(observations, list) or not observations:
+            raise LookupError("MGM istasyon gözlem yanıtı boş.")
+
+        observation = next(
+            (
+                item for item in observations
+                if str(item.get("istNo", "")).strip() == str(station_number)
+            ),
+            observations[0],
+        )
+        observed_at = observation.get("veriZamani")
+        if not observed_at:
+            raise ValueError("MGM gözleminde veriZamani alanı bulunamadı.")
+
+        observed_dt = _parse_utc_datetime(observed_at)
+        age_minutes = max(
+            0.0,
+            (datetime.now(timezone.utc) - observed_dt).total_seconds() / 60.0,
+        )
+        result = {
+            "station_name": "Eyüpsultan",
+            "station_number": station_number,
+            "source": "MGM / WStatMap istasyon 18101",
+            "source_url": "https://wstatmap.com/stations/eyupsultan-18101",
+            "observed_at_utc": observed_dt.isoformat(timespec="seconds"),
+            "age_minutes": round(age_minutes, 1),
+            "is_stale": age_minutes > 90,
+            "temperature_2m_c": _mgm_number(observation.get("sicaklik")),
+            "wind_speed_10m_kmh": _mgm_number(observation.get("ruzgarHiz")),
+            "wind_direction_degrees": _mgm_number(observation.get("ruzgarYon")),
+            "precipitation_1h_mm": _mgm_number(observation.get("yagis1Saat")),
+            "precipitation_10m_mm": _mgm_number(observation.get("yagis10Dk")),
+            "precipitation_6h_mm": _mgm_number(observation.get("yagis6Saat")),
+            "precipitation_24h_mm": _mgm_number(observation.get("yagis24Saat")),
+            "humidity_percent": _mgm_number(observation.get("nem")),
+            "station_pressure_hpa": _mgm_number(observation.get("aktuelBasinc")),
+            "sea_level_pressure_hpa": _mgm_number(
+                observation.get("denizeIndirgenmisBasinc")
+            ),
+        }
+        if all(
+            result.get(field) is None
+            for field in (
+                "temperature_2m_c",
+                "wind_speed_10m_kmh",
+                "precipitation_1h_mm",
+            )
+        ):
+            raise ValueError("MGM gözleminde sıcaklık, rüzgâr ve yağış değerleri boş.")
+
+        state = "STALE" if result["is_stale"] else "LIVE"
+        print(
+            f"[MGM {state}] Eyüpsultan 18101 | "
+            f"{result['temperature_2m_c']}°C | "
+            f"yağış 1s {result['precipitation_1h_mm']} mm | "
+            f"rüzgâr {result['wind_speed_10m_kmh']} km/sa | "
+            f"gözlem {result['observed_at_utc']}"
+        )
+        return result
+    except (requests.RequestException, ValueError, TypeError, LookupError) as exc:
+        print(
+            f"[MGM STATION WARNING] Eyüpsultan 18101 verisi alınamadı: "
+            f"{type(exc).__name__}: {exc}"
+        )
+        return None
 
 
 def fetch_noaa_available_runs():
@@ -1264,8 +1399,33 @@ def analyze_and_build_output(current_run_name, payload, previous_runs):
     curr_t = curr["temp"]
     curr_w = curr["wind"]
 
-    # f000 is the GFS model's own initial field, not a live observation.
-    speech_parts = [f"GFS başlangıç analizine göre İstanbul'da sıcaklık {curr_t} derece."]
+    # The station observation is kept distinct from the GFS model initial field.
+    station = payload.get("station_observation")
+    speech_parts = []
+    if station:
+        observed_local = _parse_utc_datetime(
+            station["observed_at_utc"]
+        ).astimezone(TR_TZ)
+        station_age_note = " (gecikmeli ölçüm)" if station.get("is_stale") else ""
+        speech_parts.append(
+            f"Eyüpsultan MGM istasyonunda{station_age_note}, "
+            f"{_format_tr_datetime(observed_local)} itibarıyla"
+        )
+        if station.get("temperature_2m_c") is not None:
+            speech_parts.append(
+                f"sıcaklık {station['temperature_2m_c']:.1f} derece."
+            )
+        if station.get("precipitation_1h_mm") is not None:
+            speech_parts.append(
+                f"Son bir saatte yağış {station['precipitation_1h_mm']:.1f} milimetre."
+            )
+        if station.get("wind_speed_10m_kmh") is not None:
+            speech_parts.append(
+                f"Rüzgâr {station['wind_speed_10m_kmh']:.1f} kilometre saat."
+            )
+    speech_parts.append(
+        f"GFS başlangıç analizine göre İstanbul'da sıcaklık {curr_t} derece."
+    )
     if curr_w > 20.0:
         speech_parts.append("Başlangıç analizinde rüzgâr hızı yüksek.")
 
@@ -1316,7 +1476,38 @@ def analyze_and_build_output(current_run_name, payload, previous_runs):
         f"🌡 GFS başlangıç sıcaklığı: {curr_t}°C",
         f"💨 GFS başlangıç rüzgârı: {curr_w} km/sa",
         "",
-        "📅 ÖNÜMÜZDEKİ 3 GÜN",
+    ]
+    if station:
+        observed_local = _parse_utc_datetime(
+            station["observed_at_utc"]
+        ).astimezone(TR_TZ)
+        freshness_label = "GECİKMELİ ÖLÇÜM" if station.get("is_stale") else "SON İSTASYON ÖLÇÜMÜ"
+        text_report_lines.extend([
+            f"📡 EYÜPSULTAN GERÇEK İSTASYON GÖZLEMİ | MGM 18101 · {freshness_label}",
+            f"🕒 Ölçüm zamanı: {_format_tr_datetime(observed_local)} TSİ",
+        ])
+        if station.get("temperature_2m_c") is not None:
+            text_report_lines.append(
+                f"🌡 İstasyon sıcaklığı: {station['temperature_2m_c']:.1f}°C"
+            )
+        if station.get("precipitation_1h_mm") is not None:
+            text_report_lines.append(
+                f"🌧 Son 1 saat yağış: {station['precipitation_1h_mm']:.1f} mm"
+            )
+        if station.get("wind_speed_10m_kmh") is not None:
+            text_report_lines.append(
+                f"💨 İstasyon rüzgârı: {station['wind_speed_10m_kmh']:.1f} km/sa"
+            )
+        text_report_lines.extend([
+            "Kaynak: MGM son durum gözlemi · WStatMap istasyon 18101",
+            "",
+        ])
+    else:
+        text_report_lines.extend([
+            "📡 EYÜPSULTAN İSTASYON GÖZLEMİ: Bu rapor hazırlanırken MGM verisi alınamadı.",
+            "",
+        ])
+    text_report_lines.append("📅 ÖNÜMÜZDEKİ 3 GÜN")
     ]
 
     for i in daily_indices:
@@ -1846,6 +2037,9 @@ async def process_gfs_update(strict=False):
         return
 
     payload["model_metadata"] = metadata
+    payload["station_observation"] = await asyncio.to_thread(
+        fetch_mgm_station_observation
+    )
     export_public_forecast_json(run_id, payload)
     full_text_report, speech_text = analyze_and_build_output(
         run_id, payload, previous_runs
@@ -2085,6 +2279,9 @@ async def run_manual_report(run_id):
         "manual_resend": True,
         "run_id": normalized_run_id,
     }
+    payload["station_observation"] = await asyncio.to_thread(
+        fetch_mgm_station_observation
+    )
     full_text_report, speech_text = analyze_and_build_output(
         normalized_run_id, payload, previous_runs
     )
