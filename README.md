@@ -1,16 +1,16 @@
 # GFS Watch
 
-An Istanbul-focused GFS forecast watcher. GitHub Actions checks GFS run publication metadata and sends one Telegram text and voice notification per exact model run after at least +180 forecast hours are available.
+A point-specific GFS forecast watcher for 41.014°N, 28.950°E. GitHub Actions checks GFS run publication metadata and sends one Telegram text and voice notification per exact model run after at least +180 forecast hours are available.
 
-## Data sources and forecast retrieval
+## Data sources and point-specific forecast retrieval
 
-- Open-Meteo's public `in-progress.json` and `latest.json` files are used only to discover the active and latest completed GFS run, and to determine the published forecast horizon.
-- Forecast values are retrieved directly from NOAA/NCEP's operational GFS 0.25° GRIB2 files through the [NOMADS regional GRIB filter](https://nomads.ncep.noaa.gov/cgi-bin/filter_gfs_0p25.pl). This avoids waiting for a secondary archive API to publish an otherwise available GFS cycle.
-- The filter returns a small regional subset covering Istanbul, the Balkans, the Black Sea/Crimea and the Mediterranean. The global GRIB files are not downloaded in full.
-- GRIB2 messages are decoded with ecCodes. The report uses 2 m temperature, 10 m U/V wind components, mean-sea-level pressure and surface precipitation.
-- Values are converted to °C, km/h, hPa and mm. Precipitation uses the specific six-hour accumulation period when available; cumulative run totals are not added repeatedly.
+- Open-Meteo's public `in-progress.json` and `latest.json` files are used only to discover the active and latest completed GFS run and estimate how far its valid-time sequence has been published. An in-progress metadata horizon is not treated as proof that every forecast file has been archived.
+- WXCharts identifies NOAA/NCEP as its GFS source. Instead of scraping third-party chart pages, this project reads the underlying operational NOAA/NCEP GFS 0.25° GRIB2 data directly.
+- Forecast files are requested through the [NOAA/NCEP NOMADS regional GRIB filter](https://nomads.ncep.noaa.gov/cgi-bin/filter_gfs_0p25.pl). The filter is constrained to a tiny bounding box around the requested location; the global GRIB files are not downloaded.
+- Requested coordinate: **41.014°N, 28.950°E**. The nearest native GFS 0.25° grid node is **41.000°N, 29.000°E**. Forecast values represent that model grid cell, not an interpolation over all of Istanbul.
+- GRIB2 messages are decoded with ecCodes. The point forecast uses 2 m temperature, 10 m U/V wind components and surface precipitation. The live current-condition snapshot is retrieved separately from the Forecast API at the exact requested latitude/longitude.
+- Values are converted to °C, km/h and mm. Precipitation uses the specific six-hour accumulation period when available; cumulative run totals are not added repeatedly.
 - The forecast timeline contains the 31 six-hour valid times from +0 to +180. Daily minima/maxima, precipitation totals and wind maxima are aggregated from those six-hour samples, so daily extremes are sample-based rather than hourly.
-- The current-condition snapshot is separate and is retrieved from the live Forecast API. The forecast and run-to-run comparison use the exact selected NOAA GFS cycle.
 
 ## GitHub Actions deployment
 
@@ -31,7 +31,7 @@ The workflow installs the ecCodes system library and Python package automaticall
 - The workflow checks both Open-Meteo GFS metadata documents and calculates the forecast horizon from each run's UTC initialisation time to its latest published valid time.
 - A run is not notified or marked as processed until at least +180 forecast hours are published.
 - The exact selected cycle is then requested from NOAA/NCEP. The +180 file is checked first; if it is not ready, the run remains pending and is retried on a later scheduled check.
-- NOAA filter requests are spaced to respect the service's request guidance. A full +0 to +180 timeline uses six-hour forecast steps.
+- Each NOMADS subset request is spaced by at least 10 seconds. A full +0 to +180 timeline uses six-hour forecast steps and only the nearest GFS grid cell for the configured coordinate.
 
 ## Run history and comparisons
 
