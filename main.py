@@ -131,6 +131,7 @@ def _parse_utc_datetime(value):
 
 
 def fetch_model_update_metadata():
+    candidates = []
     errors = []
     for metadata_url in MODEL_METADATA_URLS:
         try:
@@ -160,7 +161,7 @@ def fetch_model_update_metadata():
             run_id = run_dt.isoformat(timespec="seconds")
             modified_at = record.get("last_modified_time")
 
-            return {
+            candidates.append({
                 "model": MODEL_NAME,
                 "metadata_source": metadata_url,
                 "run_id": run_id,
@@ -170,12 +171,26 @@ def fetch_model_update_metadata():
                 "last_valid_time": last_valid_dt.isoformat(timespec="minutes"),
                 "forecast_horizon_hours": available_hours,
                 "completed": bool(record.get("completed", False)),
-            }
+            })
         except Exception as e:
             errors.append(f"{metadata_url}: {type(e).__name__}: {e}")
 
-    print("[METADATA HATA] GFS ilerleme bilgisi alınamadı. " + " | ".join(errors))
-    return None
+    if not candidates:
+        print("[METADATA HATA] GFS ilerleme bilgisi alınamadı. " + " | ".join(errors))
+        return []
+
+    # The active run and most recently completed run are both important:
+    # while a new cycle is still below +180h, the preceding completed cycle
+    # may already be eligible and must not be hidden by in-progress.json.
+    by_run = {}
+    for candidate in candidates:
+        current = by_run.get(candidate["run_id"])
+        if current is None or (
+            candidate["forecast_horizon_hours"] > current["forecast_horizon_hours"]
+        ):
+            by_run[candidate["run_id"]] = candidate
+
+    return sorted(by_run.values(), key=lambda item: item["run_id"])
 
 
 # --- VERİ ÇEKME (+180 SAAT / FAST-FETCH) ---
@@ -517,37 +532,53 @@ async def send_telegram_voice(audio_path, max_attempts=3):
 # --- ANA ÇALIŞTIRICI ---
 async def process_gfs_update(strict=False):
     await asyncio.to_thread(prune_old_runs)
-    metadata = await asyncio.to_thread(fetch_model_update_metadata)
-    if not metadata:
+    candidates = await asyncio.to_thread(fetch_model_update_metadata)
+    if not candidates:
         message = "GFS in-progress/latest metadata alınamadı."
         print(f"[SKIP] {message}")
         if strict:
             raise RuntimeError(message)
         return
 
+    previous_runs = get_previous_runs()
+    processed_run_ids = {row[0] for row in previous_runs}
+    pending_runs = [
+        item for item in candidates
+        if item["run_id"] not in processed_run_ids
+    ]
+
+    if not pending_runs:
+        latest_run = candidates[-1]["run_id"]
+        print(f"[UNCHANGED] Son GFS çalışmaları zaten işlendi; en güncel run: {latest_run}")
+        return
+
+    eligible_runs = [
+        item for item in pending_runs
+        if int(item.get("forecast_horizon_hours", 0)) >= MIN_FORECAST_HOURS
+    ]
+    if not eligible_runs:
+        newest_pending = pending_runs[-1]
+        available_hours = int(newest_pending.get("forecast_horizon_hours", 0))
+        print(
+            f"[PENDING] GFS run {newest_pending['run_id']} şu an +{available_hours} saat; "
+            f"bildirim için +{MIN_FORECAST_HOURS} saat gerekiyor. "
+            "Tamamlanmış ve daha eski başka bir bekleyen run da bulunamadı."
+        )
+        return
+
+    # Process the oldest eligible unprocessed run first. This ensures that
+    # if two cycles become eligible between checks, comparisons remain
+    # chronological and no run is skipped.
+    metadata = eligible_runs[0]
     run_id = metadata["run_id"]
-    available_hours = int(metadata.get("forecast_horizon_hours", 0))
+    available_hours = int(metadata["forecast_horizon_hours"])
     print(
         f"[MODEL] GFS run {run_id}; yayınlanan tahmin: +{available_hours} saat; "
         f"hedef: +{MIN_FORECAST_HOURS} saat."
     )
 
-    # Do not use the current time as the reference. The threshold is measured
-    # from this exact GFS run's UTC initialisation time.
-    if available_hours < MIN_FORECAST_HOURS:
-        print(
-            f"[PENDING] {run_id} henüz +{MIN_FORECAST_HOURS} saate ulaşmadı "
-            f"(şu an +{available_hours}). Sonraki kontrolde yeniden bakılacak."
-        )
-        return
-
-    previous_runs = get_previous_runs()
-    if previous_runs and previous_runs[0][0] == run_id:
-        print(f"[UNCHANGED] GFS run zaten işlendi: {run_id}")
-        return
-
-    # Open-Meteo recommends waiting 10 minutes after a model update to allow
-    # geographically distributed API servers to become consistent.
+    # Open-Meteo recommends waiting 10 minutes after an update for distributed
+    # API consistency. Only wait when the metadata itself is less than 10m old.
     available_at = metadata.get("last_modified_time")
     if available_at:
         try:
