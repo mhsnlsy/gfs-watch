@@ -681,21 +681,28 @@ async def process_gfs_update(strict=False):
         f"hedef: +{MIN_FORECAST_HOURS} saat."
     )
 
-    # Open-Meteo recommends waiting 10 minutes after an update for distributed
-    # API consistency. Only wait when the metadata itself is less than 10m old.
+    # Do not hold a GitHub Actions runner while the source is distributing a run.
+    # In-progress metadata may be updated repeatedly; the scheduled 10-minute
+    # checks will retry the exact Single Runs endpoint without blocking a job.
     available_at = metadata.get("last_modified_time")
-    if available_at:
+    if available_at and metadata.get("completed", False):
         try:
             available_dt = _parse_utc_datetime(available_at)
             remaining = available_dt.timestamp() + 600 - datetime.now(timezone.utc).timestamp()
             if remaining > 0:
                 print(
-                    f"[WAIT] GFS verisinin sunucular arasında tutarlı hale gelmesi için "
-                    f"{int(remaining)} saniye bekleniyor."
+                    f"[PENDING] Tamamlanmış GFS koşusu için dağıtık sunucu tutarlılığı "
+                    f"bekleniyor; yaklaşık {int(remaining)} saniye sonra zamanlanmış "
+                    "kontrolde tekrar denenecek."
                 )
-                await asyncio.sleep(remaining)
+                return
         except (TypeError, ValueError):
             print("[METADATA UYARI] last_modified_time çözümlenemedi; devam ediliyor.")
+    elif not metadata.get("completed", False):
+        print(
+            f"[INFO] {run_id} hâlâ işleniyor (+{available_hours} saat mevcut). "
+            "Tekil koşu arşivi henüz hazır olmayabilir; API kontrolü yapılacak."
+        )
 
     print(f"[UPDATE] +180 saat eşiğine ulaşan GFS run alınıyor: {run_id}")
     payload = await asyncio.to_thread(fetch_full_weather_data, run_id)
