@@ -39,6 +39,6 @@ jobs:
         env:
           DB_PATH: gfs_watch.db
           GFS_WATCH_COMPARE_RUN_IDS: "2026-10-30T12:00:00+00:00,2026-10-30T18:00:00+00:00,2026-10-31T00:00:00+00:00,2026-10-31T06:00:00+00:00"
-          TELEGRAM_TOKEN: \${{ secrets.TELEGRAM_TOKEN }}
-          CHAT_ID: \${{ secrets.CHAT_ID }}
+          TELEGRAM_TOKEN: ${{ secrets.TELEGRAM_TOKEN }}
+          CHAT_ID: ${{ secrets.CHAT_ID }}
         run: python -u main.py
