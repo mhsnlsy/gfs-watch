@@ -3,7 +3,7 @@
   "model": "ncep_gfs_global",
   "run_id_utc": "2026-10-31T06:00:00+00:00",
   "forecast_valid_until_utc": "2026-11-07T18:00:00+00:00",
-  "published_at_utc": "2026-10-31T12:24:38+00:00",
+  "published_at_utc": "2026-10-31T12:28:21+00:00",
   "forecast_horizon_hours": 180,
   "location": {
     "name": "Istanbul",
