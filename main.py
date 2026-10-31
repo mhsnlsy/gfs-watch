@@ -136,6 +136,22 @@ def get_previous_runs():
     conn.close()
     return rows
 
+def get_run_payload(run_id):
+    """Read one exact stored forecast without modifying the SQLite history."""
+    target = _parse_utc_datetime(run_id)
+    conn = sqlite3.connect(f"file:{DB_PATH}?mode=ro", uri=True)
+    try:
+        rows = conn.execute(
+            "SELECT run_name, forecast_json FROM gfs_runs_v3"
+        ).fetchall()
+        for stored_run_id, forecast_json in rows:
+            if _parse_utc_datetime(stored_run_id) == target:
+                return stored_run_id, json.loads(forecast_json)
+        return None
+    finally:
+        conn.close()
+
+
 def get_processed_run_ids():
     """Return all retained run IDs so older unprocessed cycles are not repeated."""
     conn = sqlite3.connect(DB_PATH)
@@ -1477,6 +1493,74 @@ async def process_gfs_update(strict=False):
     print(f"[COMPLETE] GFS run işlendi ve +180 saat bildirimi gönderildi: {run_id}")
 
 
+async def run_manual_comparison(previous_run_id, current_run_id):
+    """Send a one-off comparison image; never writes DB, JSON, or run state."""
+    previous_dt = _parse_utc_datetime(previous_run_id)
+    current_dt = _parse_utc_datetime(current_run_id)
+    if previous_dt >= current_dt:
+        raise ValueError("Karşılaştırma için önceki run, yeni run'dan eski olmalı.")
+
+    print(
+        f"[MANUAL COMPARE] {previous_dt.isoformat()} -> {current_dt.isoformat()}; "
+        "GFS geçmişi salt okunur kullanılacak."
+    )
+
+    previous_record = await asyncio.to_thread(
+        get_run_payload, previous_dt.isoformat(timespec="seconds")
+    )
+    current_record = await asyncio.to_thread(
+        get_run_payload, current_dt.isoformat(timespec="seconds")
+    )
+
+    if previous_record:
+        previous_stored_id, previous_payload = previous_record
+        print(f"[MANUAL COMPARE] Önceki tahmin SQLite geçmişinden alındı: {previous_stored_id}")
+    else:
+        print("[MANUAL COMPARE] Önceki kayıt DB'de yok; NOAA'dan salt okunur çekiliyor.")
+        previous_payload = await asyncio.to_thread(
+            fetch_full_weather_data, previous_dt.isoformat(timespec="seconds")
+        )
+        if not previous_payload or "_pending_noaa_gfs" in previous_payload:
+            raise RuntimeError("00Z tahmini NOAA'dan alınamadı veya henüz hazır değil.")
+        previous_stored_id = previous_dt.isoformat(timespec="seconds")
+
+    if current_record:
+        current_stored_id, current_payload = current_record
+        print(f"[MANUAL COMPARE] Yeni tahmin SQLite geçmişinden alındı: {current_stored_id}")
+    else:
+        print("[MANUAL COMPARE] Yeni kayıt DB'de yok; NOAA'dan salt okunur çekiliyor.")
+        current_payload = await asyncio.to_thread(
+            fetch_full_weather_data, current_dt.isoformat(timespec="seconds")
+        )
+        if not current_payload or "_pending_noaa_gfs" in current_payload:
+            raise RuntimeError("06Z tahmini NOAA'dan alınamadı veya henüz hazır değil.")
+        current_stored_id = current_dt.isoformat(timespec="seconds")
+
+    chart = create_comparison_chart(
+        current_stored_id,
+        current_payload,
+        [(previous_stored_id, json.dumps(previous_payload, ensure_ascii=False))],
+    )
+    if not chart:
+        raise RuntimeError("Karşılaştırma görseli üretilemedi.")
+
+    try:
+        caption = (
+            "📊 İstanbul GFS | 00Z → 06Z karşılaştırması\n"
+            f"Önceki: {_format_tr_datetime(previous_dt.astimezone(TR_TZ))} TSİ\n"
+            f"Yeni: {_format_tr_datetime(current_dt.astimezone(TR_TZ))} TSİ\n"
+            "Sıcaklık mumları, günlük toplam yağış ve günlük maksimum rüzgâr."
+        )
+        await send_telegram_photo(chart, caption)
+    finally:
+        chart.close()
+
+    print(
+        "[MANUAL COMPARE COMPLETE] Tek karşılaştırma görseli Telegram'a gönderildi; "
+        "SQLite ve JSON geçmişinde değişiklik yapılmadı."
+    )
+
+
 async def run_manual_report(run_id):
     """Send one selected GFS run without changing processed-run history."""
     init_db()
@@ -1563,8 +1647,20 @@ async def run_once():
 
 if __name__ == "__main__":
     try:
-        manual_run_id = os.getenv("GFS_WATCH_MANUAL_RUN_ID", "").strip()
-        if manual_run_id:
+        compare_previous = os.getenv("GFS_WATCH_COMPARE_PREVIOUS_RUN_ID", "").strip()
+        compare_current = os.getenv("GFS_WATCH_COMPARE_CURRENT_RUN_ID", "").strip()
+        if compare_previous and compare_current:
+            asyncio.run(run_manual_comparison(compare_previous, compare_current))
+        else:
+            manual_run_id = os.getenv("GFS_WATCH_MANUAL_RUN_ID", "").strip()
+            if manual_run_id:
+                asyncio.run(run_manual_report(manual_run_id))
+            elif os.getenv("GFS_WATCH_ONCE", "").strip().lower() in {"1", "true", "yes"}:
+                asyncio.run(run_once())
+            else:
+                asyncio.run(main())
+    except KeyboardInterrupt:
+        print("[STOP] GFS Watch kontrollü şekilde durduruldu.")
             asyncio.run(run_manual_report(manual_run_id))
         elif os.getenv("GFS_WATCH_ONCE", "").strip().lower() in {"1", "true", "yes"}:
             asyncio.run(run_once())
