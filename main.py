@@ -1965,18 +1965,21 @@ async def run_scheduled_watch():
     while time.monotonic() < deadline:
         try:
             await process_gfs_update(strict=False)
-            processed_runs = await asyncio.to_thread(get_processed_run_ids)
-            if target_run_id in processed_runs:
-                print(
-                    f"[WATCH COMPLETE] {target_run_id} GRIB2 döngüsü işlendi "
-                    "ve bildirim süreci tamamlandı."
-                )
-                return
         except Exception as exc:
             print(
                 f"[WATCH RETRY] Kontrol sırasında hata oluştu: "
                 f"{type(exc).__name__}: {exc}"
             )
+
+        # Check outside the try block: a Telegram/chart error can happen after
+        # save_run(), and the target cycle must not be processed or sent twice.
+        processed_runs = await asyncio.to_thread(get_processed_run_ids)
+        if target_run_id in processed_runs:
+            print(
+                f"[WATCH COMPLETE] {target_run_id} GRIB2 döngüsü işlendi "
+                "ve bildirim süreci tamamlandı."
+            )
+            return
 
         remaining = deadline - time.monotonic()
         if remaining <= 0:
