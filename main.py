@@ -570,7 +570,7 @@ def _mark_noaa_cache_updated():
     if output_path:
         try:
             with open(output_path, "a", encoding="utf-8") as output_file:
-                output_file.write("noaa_cache_updated=true\\n")
+                output_file.write("noaa_cache_updated=true\n")
         except OSError as exc:
             print(f"[NOAA CACHE UYARI] GitHub output yazılamadı: {exc}")
 
