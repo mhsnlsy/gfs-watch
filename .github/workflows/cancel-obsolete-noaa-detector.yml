@@ -1,0 +1,21 @@
+name: Cancel obsolete NOAA detector run
+
+on:
+  push:
+    branches:
+      - main
+    paths:
+      - ".github/workflows/cancel-obsolete-noaa-detector.yml"
+
+permissions:
+  actions: write
+
+jobs:
+  cancel:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Cancel intermediate run
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          gh api --include --method POST "repos/${GITHUB_REPOSITORY}/actions/runs/41196810192/cancel"
