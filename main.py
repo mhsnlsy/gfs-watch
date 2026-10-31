@@ -697,24 +697,29 @@ def clear_noaa_run_cache(run_id):
             print(f"[NOAA CACHE UYARI] İşlenen önbellek temizlenemedi: {exc}")
 
 
-def prefetch_latest_noaa_cycle(skip_run_ids=None):
-    """Fetch a small batch of early forecast files before the cycle reaches +180h."""
+def prefetch_latest_noaa_cycle(skip_run_ids=None, target_run_id=None):
+    """Fetch a small batch of available forecast files for the current or target cycle."""
     skip_run_ids = set(skip_run_ids or ())
     now = datetime.now(timezone.utc)
-    cycle_hour = (now.hour // 6) * 6
-    run_dt = now.replace(
-        hour=cycle_hour, minute=0, second=0, microsecond=0
-    )
+
+    if target_run_id:
+        run_dt = _parse_utc_datetime(target_run_id)
+    else:
+        cycle_hour = (now.hour // 6) * 6
+        run_dt = now.replace(
+            hour=cycle_hour, minute=0, second=0, microsecond=0
+        )
+
     run_id = run_dt.isoformat(timespec="seconds")
     age_hours = (now - run_dt).total_seconds() / 3600.0
 
     if run_id in skip_run_ids:
         print(f"[NOAA PREFETCH SKIP] {run_id} zaten NOAA +180 envanterinde.")
         return 0
-    if age_hours < NOAA_PREFETCH_MIN_AGE_HOURS:
+    if not target_run_id and age_hours < NOAA_PREFETCH_MIN_AGE_HOURS:
         print(
             f"[NOAA PREFETCH SKIP] {run_id} döngüsü henüz {age_hours:.1f} saatlik; "
-            f"ön indirme eşiği {NOAA_PREFETCH_MIN_AGE_HOURS:.1f} saat."
+            f"ön indirme eşiği {NOAA_PREFETCH_MIN_AGE_HOURS:.4f} saat."
         )
         return 0
 
@@ -1631,6 +1636,12 @@ async def process_gfs_update(strict=False):
         print(
             f"[PENDING] {run_id} NOAA GRIB2 dosyası henüz tam olarak hazır değil; "
             f"sonraki kontrolde tekrar denenecek. Ayrıntı: {payload.get('_reason', 'dosya eksik')}"
+        )
+        # The global f180 inventory can become ready before every NOMADS
+        # point-subset file. Continue filling the same cycle cache in small
+        # batches while the full forecast is retried at the next check.
+        await asyncio.to_thread(
+            prefetch_latest_noaa_cycle, None, run_id
         )
         return
     if not payload:
