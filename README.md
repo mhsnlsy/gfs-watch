@@ -33,6 +33,17 @@ The workflow installs the ecCodes system library and Python package automaticall
 - The watcher then requests the compact single-point +180 file from NOAA/NCEP NOMADS first. If the filtered NOMADS data or any earlier six-hour step is not yet available, the run remains unprocessed and is retried on the next scheduled check.
 - Each NOMADS subset request is spaced by at least 10 seconds. A full +0 to +180 timeline uses six-hour forecast steps and only the nearest GFS grid cell for the configured coordinate.
 
+## Public machine-readable JSON
+
+After a GFS run has been successfully processed, the workflow publishes JSON files on the public `gfs-watch-state` branch:
+
+- [Latest forecast JSON](https://raw.githubusercontent.com/mhsnlsy/gfs-watch/gfs-watch-state/public/latest.json) — always points to the latest processed run.
+- Archived run JSON files use `public/runs/YYYYMMDDTHHZ.json`, for example `20261031T06Z.json`. The workflow retains the latest 10 days of run files.
+
+The JSON includes the exact requested coordinate (41.014°N, 28.950°E), the nearest native GFS grid point (41.000°N, 29.000°E), the GFS run time, 31 six-hour forecast points through +180 hours, daily summaries, units and source metadata. Forecast timestamps include both UTC and Europe/Istanbul time. The live current-conditions snapshot is separately labelled as Open-Meteo; the forecast itself is NOAA/NCEP GFS.
+
+This is a downloadable public data file, not a live feed automatically consumed by WXCharts or Meteopt. Those platforms would need to support and be configured for a custom data source.
+
 ## Run history and comparisons
 
 - The SQLite database is stored in the `gfs-watch-state` branch and restored before each check.
