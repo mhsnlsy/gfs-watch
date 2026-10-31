@@ -1,14 +1,14 @@
 # GFS Watch
 
-A point-specific GFS forecast watcher for 41.014°N, 28.950°E. GitHub Actions checks NOAA's published GFS +180-hour GRIB2 objects and sends one Telegram text and voice notification per exact model run after the point-specific NOAA subset is available.
+A point-specific GFS forecast watcher for 41.014°N, 28.950°E. GitHub Actions reads native NOAA GFS GRIB2 messages directly from the public S3 bucket, prefetches forecast fields before +180 is published, and sends one Telegram notification as soon as the f180 cycle is ready.
 
-## Data sources and point-specific forecast retrieval
+## Data sources and direct GRIB2 retrieval
 
 - Run discovery is performed directly against NOAA's public `noaa-gfs-bdp-pds` S3 inventory. The watcher sends lightweight HTTP HEAD requests for each recent 00Z/06Z/12Z/18Z cycle's `f180` GRIB2 object. A successful response confirms that the exact +180-hour global model file has been published; it does not download the 500+ MB object.
 - WXCharts identifies NOAA/NCEP as its GFS source. Instead of scraping third-party chart pages or waiting for a secondary archive API, this project reads the underlying operational NOAA/NCEP GFS 0.25° GRIB2 data directly.
-- Forecast files are requested through the [NOAA/NCEP NOMADS regional GRIB filter](https://nomads.ncep.noaa.gov/cgi-bin/filter_gfs_0p25.pl). The filter is constrained to a tiny bounding box around the requested location; the global GRIB files are not downloaded.
+- Forecast data is not requested from a weather API or the NOMADS filter service. For each native GFS GRIB2 object, the watcher reads its small adjacent `.idx` inventory, selects the required GRIB2 records, and downloads those exact byte ranges directly from NOAA S3. This avoids downloading the full roughly 500 MB global file while retaining the original GRIB2 messages.
 - Requested coordinate: **41.014°N, 28.950°E**. The nearest native GFS 0.25° grid node is **41.000°N, 29.000°E**. Forecast values represent that model grid cell, not an interpolation over all of Istanbul.
-- GRIB2 messages are decoded with ecCodes. The point forecast uses 2 m temperature, 10 m U/V wind components and surface precipitation. The live current-condition snapshot is retrieved separately from the Forecast API at the exact requested latitude/longitude.
+- GRIB2 messages are decoded locally with ecCodes. The point forecast uses 2 m temperature, 10 m U/V wind components and surface precipitation. The current/model-start snapshot and regional mean-sea-level pressure analysis are also decoded from the same cycle's f000 GRIB2 fields; no Open-Meteo or other weather API is called.
 - Values are converted to °C, km/h and mm. Precipitation uses the specific six-hour accumulation period when available; cumulative run totals are not added repeatedly.
 - The forecast timeline contains the 31 six-hour valid times from +0 to +180. Daily minima/maxima, precipitation totals and wind maxima are aggregated from those six-hour samples, so daily extremes are sample-based rather than hourly.
 
@@ -22,18 +22,18 @@ The repository runs GFS Watch through GitHub Actions. No separate server or loca
    - `CHAT_ID` — Telegram chat ID (required).
    - `GCP_SA_KEY` — Google Cloud service-account JSON in one line (optional; without it, text notifications still work).
 3. Open the **Actions** tab and select **GFS Watch**. Use **Run workflow** to test it.
-4. The scheduled workflow checks for new GFS runs every 5 minutes during four Istanbul-time windows: 06:30–08:30, 12:30–14:30, 18:30–20:30 and 00:30–02:30. GitHub may delay scheduled starts during periods of high load.
+4. The scheduled workflow starts at 06:50, 12:50, 18:50 and 00:50 Istanbul time. Each scheduled job stays active for up to 90 minutes and polls NOAA S3 every 30 seconds. GitHub may delay scheduled starts during periods of high load.
 
 The workflow installs the ecCodes system library and Python package automatically on its GitHub-hosted runner.
 
 ## Run tracking and +180-hour threshold
 
-- During the four daily Istanbul-time windows (06:30–08:30, 12:30–14:30, 18:30–20:30 and 00:30–02:30), the workflow checks NOAA S3 every five minutes for the latest six GFS cycle files (00Z, 06Z, 12Z and 18Z, including recent prior cycles).
-- A run becomes eligible as soon as its exact global `f180` GRIB2 object exists on NOAA S3. This is the run-discovery trigger; Open-Meteo metadata and its archive API are not required.
-- Before +180 is published, the watcher starts incremental prefetching 4 hours 10 minutes after each six-hour cycle begins: 07:10 for 00Z, 13:10 for 06Z, 19:10 for 12Z and 01:10 for 18Z (Istanbul time). Each check fetches up to four available early forecast files (f000–f174) and stores them in a GitHub Actions cache shared with the next check.
-- When the exact global f180 object appears, the watcher reuses cached files and downloads only what is missing. If the global f180 object is published before the NOMADS point subset is ready, the watcher continues filling that same cycle's cache while retrying the full forecast on subsequent checks.
-- A full +0 to +180 timeline still uses all 31 six-hour forecast steps and only the nearest GFS grid cell for the configured coordinate. Cache entries are removed after a run is processed and abandoned cycle caches are pruned after 48 hours.
-- Each actual NOMADS subset HTTP request remains spaced by at least 10 seconds, in line with the NOMADS Grib Filter guidance. Cached files do not incur network pacing delays.
+- A single scheduled workflow begins 3 hours 50 minutes after each six-hour GFS cycle starts: 06:50 for 00Z, 12:50 for 06Z, 18:50 for 12Z and 00:50 for 18Z (Istanbul time).
+- Each scheduled job remains active for up to 90 minutes. Before +180 is published, it incrementally downloads up to four available early forecast files per polling cycle (f000–f174) using direct NOAA S3 `.idx` byte ranges, and keeps them in local cache during that job.
+- NOAA's exact global `f180` GRIB2 object is checked directly on S3. After it appears, the watcher downloads only the selected f180 GRIB2 messages, reuses the already cached f000–f174 messages, and locally decodes the complete 31-point six-hour forecast.
+- NOAA S3 availability is polled every 30 seconds during the 90-minute watch window. This avoids waiting for another scheduled five-minute run after f180 appears; actual GitHub job start times can still be delayed by GitHub Actions scheduling.
+- The selected fields are 2 m temperature, 10 m U/V wind, surface precipitation, and f000 mean-sea-level pressure. The pressure analysis uses the native global PRMSL GRIB2 field and evaluates a 2,500 km diameter circle centred on 41.014°N, 28.950°E.
+- The full +0 to +180 timeline uses all 31 six-hour forecast steps and the nearest GFS grid cell for the configured point. Cache entries are removed after a run is processed; abandoned cycle caches are pruned after 48 hours.
 
 ## Public machine-readable JSON
 
@@ -42,7 +42,7 @@ After a GFS run has been successfully processed, the workflow publishes JSON fil
 - [Latest forecast JSON](https://raw.githubusercontent.com/mhsnlsy/gfs-watch/gfs-watch-state/public/latest.json) — always points to the latest processed run.
 - Archived run JSON files use `public/runs/YYYYMMDDTHHZ.json`, for example `20261031T06Z.json`. The workflow retains the latest 10 days of run files.
 
-The JSON includes the exact requested coordinate (41.014°N, 28.950°E), the nearest native GFS grid point (41.000°N, 29.000°E), the GFS run time, 31 six-hour forecast points through +180 hours, daily summaries, units and source metadata. Forecast timestamps include both UTC and Europe/Istanbul time. The live current-conditions snapshot is separately labelled as Open-Meteo; the forecast itself is NOAA/NCEP GFS.
+The JSON includes the exact requested coordinate (41.014°N, 28.950°E), the nearest native GFS grid point (41.000°N, 29.000°E), the GFS run time, 31 six-hour forecast points through +180 hours, daily summaries, units and source metadata. Forecast timestamps include both UTC and Europe/Istanbul time. The initial-condition snapshot comes from the run's f000 GRIB2 fields; it is a model initial state, not a live observation.
 
 This is a downloadable public data file, not a live feed automatically consumed by WXCharts or Meteopt. Those platforms would need to support and be configured for a custom data source.
 
@@ -52,7 +52,7 @@ This is a downloadable public data file, not a live feed automatically consumed 
 - The latest 10 days of run history are retained.
 - Run-to-run temperature, six-hour precipitation and 10 m wind-speed changes are presented in the four-cycle comparison image, not repeated in the text report or voice script.
 - The comparison image uses a shared set of overlapping Istanbul calendar dates across all four cycles. Every panel labels each date with its Turkish weekday. The first lead of a new cycle has no six-hour precipitation interval preceding its own initialisation, so that point is excluded from precipitation comparisons.
-- At model initialisation, a separate NOAA/NCEP mean-sea-level pressure subset is analysed inside a 2,500 km diameter circle centred on 41.014°N, 28.950°E. High/low pressure findings are written in the text report only and are not included in the voice script.
+- At model initialisation, the native f000 NOAA/NCEP mean-sea-level pressure GRIB2 field is analysed inside a 2,500 km diameter circle centred on 41.014°N, 28.950°E. High/low pressure findings are written in the text report only and are not included in the voice script.
 - Do not delete or manually edit the `gfs_watch.db` file in the state branch; the workflow maintains it.
 
 ## Report clarity
