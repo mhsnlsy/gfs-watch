@@ -232,7 +232,7 @@
         return;
       }
       const unseen=[];
-      for(const item of items){if(item.id===lastSeen)break;unseen.push(item);}
+      for(const item of items){if(lastSeen!=="__none__"&&item.id===lastSeen)break;unseen.push(item);}
       if(unseen.length){
         const registration=notificationRegistration||await navigator.serviceWorker.ready;
         for(const item of unseen.reverse()){
@@ -259,7 +259,11 @@
         renderNotifications(latestNotificationItems);
         if(notificationsReady)await notifyForNewReports(latestNotificationItems);
         else{
-          try{if(!localStorage.getItem("gfs-last-notified-report")&&latestNotificationItems[0])localStorage.setItem("gfs-last-notified-report",latestNotificationItems[0].id);}catch(_){}
+          try{
+            const lastSeen=localStorage.getItem("gfs-last-notified-report");
+            if(lastSeen)await notifyForNewReports(latestNotificationItems);
+            else if(latestNotificationItems[0])localStorage.setItem("gfs-last-notified-report",latestNotificationItems[0].id);
+          }catch(_){}
           notificationsReady=true;
         }
       }catch(error){
@@ -268,7 +272,10 @@
       }
     }
     async function registerAppWorker(){
-      if(!("serviceWorker" in navigator))return;
+      if(!("serviceWorker" in navigator)){
+        $("notification-status").textContent="Bu tarayıcı arka plan uygulama desteği sunmuyor.";
+        return;
+      }
       try{notificationRegistration=await navigator.serviceWorker.register("./service-worker.js");}
       catch(error){$("notification-status").textContent="Arka plan bileşeni yüklenemedi.";}
     }
@@ -284,7 +291,7 @@
         if(permission==="granted"){
           $("notification-status").textContent="Bildirim izni açık · Yeni raporlar sayfa açıkken bildirilir.";
           button.textContent="Bildirimler açık";
-          try{if(latestNotificationItems[0])localStorage.setItem("gfs-last-notified-report",latestNotificationItems[0].id);}catch(_){}
+          try{localStorage.setItem("gfs-last-notified-report",latestNotificationItems[0]?latestNotificationItems[0].id:"__none__");}catch(_){}
         }else{
           $("notification-status").textContent="Bildirim izni verilmedi. Tarayıcı ayarlarından değiştirebilirsin.";
           button.disabled=false;
