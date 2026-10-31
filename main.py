@@ -3,9 +3,12 @@ import os
 import json
 import sqlite3
 import asyncio
+import math
+import tempfile
 from datetime import datetime, timedelta, timezone
 from zoneinfo import ZoneInfo  # Türkiye saati için yerleşik kütüphane
 import requests
+import eccodes
 from google.cloud import texttospeech
 from google.oauth2 import service_account
 from telegram import Bot
@@ -214,130 +217,295 @@ def _parse_forecast_local_time(value):
 
 
 def fetch_full_weather_data(run_id):
-    print(f"[STEP 1] Open-Meteo Single Runs API verisi çekiliyor: {run_id}")
+    """Fetch an exact GFS cycle directly from NOAA/NCEP NOMADS GRIB2 files."""
+    print(f"[STEP 1] NOAA/NCEP GRIB2 verisi çekiliyor: {run_id}")
     try:
         run_dt = _parse_utc_datetime(run_id)
-        run_param = run_dt.strftime("%Y-%m-%dT%H:%M")
-        local_params = {
-            "latitude": LAT,
-            "longitude": LON,
-            "run": run_param,
-            "models": MODEL_NAME,
-            "hourly": "temperature_2m,precipitation,snowfall,surface_pressure,wind_speed_10m",
-            "forecast_hours": MIN_FORECAST_HOURS + 1,
-            "timezone": "Europe/Istanbul",
+        date_token = run_dt.strftime("%Y%m%d")
+        cycle = run_dt.strftime("%H")
+        filter_url = "https://nomads.ncep.noaa.gov/cgi-bin/filter_gfs_0p25.pl"
+        points = {
+            "Istanbul": (LAT, LON),
+            **SYNOPTIC_POINTS,
         }
+        session = requests.Session()
+        headers = {"User-Agent": "GFS-Watch/1.0"}
 
-        res = requests.get(SINGLE_RUNS_URL, params=local_params, timeout=30)
-        pending_reason = ""
-        if res.status_code == 400:
+        # Probe the target horizon first. Metadata can report +180 while a
+        # particular GRIB forecast file is still being published.
+        lead_hours = list(range(0, MIN_FORECAST_HOURS + 1, 6))
+        download_order = [MIN_FORECAST_HOURS] + [
+            h for h in lead_hours if h != MIN_FORECAST_HOURS
+        ]
+        decoded_steps = {}
+        last_request_at = 0.0
+
+        for position, lead in enumerate(download_order):
+            if position:
+                elapsed = time.monotonic() - last_request_at
+                if elapsed < 10.0:
+                    time.sleep(10.0 - elapsed)
+
+            filename = f"gfs.t{cycle}z.pgrb2.0p25.f{lead:03d}"
+            params = {
+                "file": filename,
+                "var_TMP": "on",
+                "lev_2_m_above_ground": "on",
+                "var_APCP": "on",
+                "lev_surface": "on",
+                "var_UGRD": "on",
+                "var_VGRD": "on",
+                "lev_10_m_above_ground": "on",
+                "var_PRMSL": "on",
+                "lev_mean_sea_level": "on",
+                "subregion": "",
+                "leftlon": "10",
+                "rightlon": "42",
+                "toplat": "50",
+                "bottomlat": "30",
+                "dir": f"/gfs.{date_token}/{cycle}/atmos",
+            }
+
+            print(f"[NOAA] {filename} indiriliyor ({position + 1}/{len(download_order)})...")
             try:
-                error_body = res.json()
-                pending_reason = str(error_body.get("reason", ""))
-            except (ValueError, AttributeError):
-                pending_reason = ""
-        run_not_ready = (
-            "requested model run is not available" in pending_reason.lower()
-            or "run is not available" in pending_reason.lower()
-        )
-        if res.status_code in (404, 425, 503) or run_not_ready:
-            print(
-                f"[PENDING] Single Runs API henüz {run_param} çalışmasını sunmuyor "
-                f"(HTTP {res.status_code}); sonraki kontrolde tekrar denenecek."
-            )
-            return {
-                "_pending_single_run": True,
-                "_run_id": run_id,
-                "_http_status": res.status_code,
-                "_reason": pending_reason,
-            }
-        res.raise_for_status()
-        data = res.json()
+                response = session.get(
+                    filter_url, params=params, headers=headers, timeout=75
+                )
+                last_request_at = time.monotonic()
+            except requests.RequestException as exc:
+                print(f"[PENDING] NOAA NOMADS bağlantı hatası f{lead:03d}: {exc}")
+                return {
+                    "_pending_noaa_gfs": True,
+                    "_run_id": run_id,
+                    "_forecast_hour": lead,
+                    "_reason": str(exc),
+                }
 
-        hourly = data.get("hourly", {})
-        times = hourly.get("time", [])
-        temps = hourly.get("temperature_2m", [])
-        precips = hourly.get("precipitation", [])
-        winds = hourly.get("wind_speed_10m", [])
+            if response.status_code in (404, 408, 425, 429, 500, 502, 503, 504):
+                print(
+                    f"[PENDING] NOAA GRIB dosyası f{lead:03d} henüz hazır değil "
+                    f"(HTTP {response.status_code}); sonraki kontrolde tekrar denenecek."
+                )
+                return {
+                    "_pending_noaa_gfs": True,
+                    "_run_id": run_id,
+                    "_forecast_hour": lead,
+                    "_http_status": response.status_code,
+                }
+            response.raise_for_status()
+            grib_bytes = response.content
+            if not grib_bytes.startswith(b"GRIB"):
+                preview = grib_bytes[:250].decode("utf-8", errors="replace")
+                print(f"[NOAA HATA] f{lead:03d} GRIB2 yerine yanıt döndü: {preview}")
+                return {
+                    "_pending_noaa_gfs": True,
+                    "_run_id": run_id,
+                    "_forecast_hour": lead,
+                    "_reason": "NOAA filter response is not GRIB2",
+                }
 
-        if not times:
-            raise ValueError("Single Runs API hourly time dizisi boş döndü.")
-
-        first_dt = _parse_forecast_local_time(times[0])
-        last_dt = _parse_forecast_local_time(times[-1])
-        if abs((first_dt - run_dt).total_seconds()) > 3600:
-            raise ValueError(
-                f"Single Runs API yanlış başlangıç saati döndürdü: {times[0]} "
-                f"(beklenen {run_param})."
-            )
-
-        available_hours = max(
-            0, int((last_dt - run_dt).total_seconds() // 3600)
-        )
-        if available_hours < MIN_FORECAST_HOURS or len(times) < MIN_FORECAST_HOURS + 1:
-            print(
-                f"[PENDING] Tekil GFS çalışması yalnızca +{available_hours} saate "
-                f"kadar erişilebilir; +{MIN_FORECAST_HOURS} saat bekleniyor."
-            )
-            return {
-                "_pending_single_run": True,
-                "_run_id": run_id,
-                "_available_hours": available_hours,
+            step_data = {
+                "temperature": None,
+                "wind_u": None,
+                "wind_v": None,
+                "pressure": None,
+                "precip_records": {},
             }
 
-        # Aggregate exact-run hourly values into Istanbul calendar days.
-        # The Single Runs API only supports daily= when the run starts at
-        # midnight in the requested timezone; 06Z/12Z/18Z runs do not.
+            # ecCodes reads GRIB messages from a file object. The filtered
+            # area is small (typically tens of KB, not the 500+ MB global file).
+            with tempfile.NamedTemporaryFile(suffix=".grib2") as temp_file:
+                temp_file.write(grib_bytes)
+                temp_file.flush()
+                with open(temp_file.name, "rb") as grib_file:
+                    while True:
+                        gid = eccodes.codes_grib_new_from_file(grib_file)
+                        if gid is None:
+                            break
+                        try:
+                            short_name = str(eccodes.codes_get(gid, "shortName"))
+                            try:
+                                level_type = str(eccodes.codes_get(gid, "typeOfLevel"))
+                                level = int(eccodes.codes_get(gid, "level"))
+                                start_step = int(eccodes.codes_get(gid, "startStep"))
+                                end_step = int(eccodes.codes_get(gid, "endStep"))
+                            except Exception:
+                                continue
+
+                            is_target = (
+                                (short_name == "2t" and level_type == "heightAboveGround" and level == 2)
+                                or (short_name in ("10u", "10v") and level_type == "heightAboveGround" and level == 10)
+                                or (short_name == "prmsl" and level_type == "meanSea")
+                                or (short_name == "tp" and level_type == "surface")
+                            )
+                            if not is_target:
+                                continue
+
+                            values = eccodes.codes_get_values(gid)
+                            latitudes = eccodes.codes_get_array(gid, "latitudes")
+                            longitudes = eccodes.codes_get_array(gid, "longitudes")
+                            if len(values) != len(latitudes) or len(values) != len(longitudes):
+                                raise ValueError(f"GRIB grid mismatch in {filename}")
+
+                            samples = {}
+                            for point_name, (point_lat, point_lon) in points.items():
+                                distances = (
+                                    (latitudes - point_lat) ** 2
+                                    + (((longitudes - point_lon + 180.0) % 360.0) - 180.0) ** 2
+                                )
+                                nearest_index = int(distances.argmin())
+                                samples[point_name] = float(values[nearest_index])
+
+                            if short_name == "2t":
+                                step_data["temperature"] = samples
+                            elif short_name == "10u":
+                                step_data["wind_u"] = samples
+                            elif short_name == "10v":
+                                step_data["wind_v"] = samples
+                            elif short_name == "prmsl":
+                                step_data["pressure"] = samples
+                            elif short_name == "tp":
+                                # GFS may include both the 6-hour period total
+                                # and the full-run cumulative total in one file.
+                                # Key by interval to deduplicate repeated messages.
+                                step_data["precip_records"][(start_step, end_step)] = samples
+                        finally:
+                            eccodes.codes_release(gid)
+
+            if not step_data["temperature"]:
+                print(f"[PENDING] NOAA f{lead:03d} içinde 2 m sıcaklık alanı bulunamadı.")
+                return {
+                    "_pending_noaa_gfs": True,
+                    "_run_id": run_id,
+                    "_forecast_hour": lead,
+                    "_reason": "missing 2m temperature field",
+                }
+            if lead > 0 and not step_data["pressure"]:
+                print(f"[PENDING] NOAA f{lead:03d} içinde basınç alanı bulunamadı.")
+                return {
+                    "_pending_noaa_gfs": True,
+                    "_run_id": run_id,
+                    "_forecast_hour": lead,
+                    "_reason": "missing mean sea level pressure field",
+                }
+
+            decoded_steps[lead] = step_data
+            print(
+                f"[NOAA BAŞARILI] f{lead:03d}: "
+                f"{len(step_data['precip_records'])} yağış alanı, "
+                f"{len(grib_bytes)} byte GRIB2 çözüldü."
+            )
+
+        # Construct the canonical timeline in Istanbul local time so a 06Z run
+        # and the previous 00Z run share identical valid-time comparison keys.
+        forecast_timeline = {}
         daily_buckets = {}
-        for i, time_value in enumerate(times):
-            local_dt = datetime.fromisoformat(str(time_value).replace("Z", "+00:00"))
-            if local_dt.tzinfo is None:
-                local_dt = local_dt.replace(tzinfo=TR_TZ)
-            day = local_dt.astimezone(TR_TZ).date().isoformat()
+        previous_cumulative_precip = {name: None for name in points}
+        regional_pressures = {}
+
+        for lead in lead_hours:
+            step_data = decoded_steps[lead]
+            valid_utc = run_dt + timedelta(hours=lead)
+            valid_local = valid_utc.astimezone(TR_TZ)
+            time_key = valid_local.strftime("%Y-%m-%dT%H:%M")
+
+            temperature = step_data["temperature"]
+            wind_u = step_data["wind_u"] or {}
+            wind_v = step_data["wind_v"] or {}
+            pressure = step_data["pressure"] or {}
+
+            temp_c = {
+                name: float(value) - 273.15
+                for name, value in temperature.items()
+            }
+            wind_kmh = {}
+            for name in points:
+                u_value = wind_u.get(name)
+                v_value = wind_v.get(name)
+                if u_value is not None and v_value is not None:
+                    wind_kmh[name] = math.hypot(float(u_value), float(v_value)) * 3.6
+
+            # Select only the precipitation interval ending at this lead.
+            # Prefer (lead-6, lead); if unavailable, difference cumulative
+            # (0, lead) totals against the prior cumulative total.
+            precip_by_point = {name: 0.0 for name in points}
+            if lead > 0:
+                records = step_data["precip_records"]
+                interval_key = (lead - 6, lead)
+                if interval_key in records:
+                    precip_by_point = {
+                        name: max(0.0, float(records[interval_key].get(name, 0.0)))
+                        for name in points
+                    }
+                elif (0, lead) in records:
+                    cumulative = records[(0, lead)]
+                    for name in points:
+                        current_total = float(cumulative.get(name, 0.0))
+                        previous_total = previous_cumulative_precip[name]
+                        if previous_total is None:
+                            precip_by_point[name] = 0.0
+                        else:
+                            precip_by_point[name] = max(0.0, current_total - previous_total)
+                else:
+                    print(
+                        f"[NOAA UYARI] f{lead:03d} için 6 saatlik yağış aralığı "
+                        "bulunamadı; bu dilim 0 mm olarak alınacak."
+                    )
+
+            cumulative_key = (0, lead)
+            if cumulative_key in step_data["precip_records"]:
+                for name in points:
+                    previous_cumulative_precip[name] = float(
+                        step_data["precip_records"][cumulative_key].get(name, 0.0)
+                    )
+
+            istanbul_temp = round(temp_c["Istanbul"], 1)
+            istanbul_precip = round(precip_by_point["Istanbul"], 2)
+            istanbul_wind = round(wind_kmh.get("Istanbul", 0.0), 1)
+            forecast_timeline[time_key] = {
+                "step_hour": lead,
+                "temp": istanbul_temp,
+                "precip": istanbul_precip,
+            }
+
+            day_key = valid_local.date().isoformat()
             bucket = daily_buckets.setdefault(
-                day, {"temps": [], "precips": [], "winds": []}
+                day_key, {"temps": [], "precips": [], "winds": []}
             )
-            if i < len(temps) and temps[i] is not None:
-                bucket["temps"].append(float(temps[i]))
-            if i < len(precips) and precips[i] is not None:
-                bucket["precips"].append(float(precips[i]))
-            if i < len(winds) and winds[i] is not None:
-                bucket["winds"].append(float(winds[i]))
+            bucket["temps"].append(istanbul_temp)
+            if lead > 0:
+                bucket["precips"].append(istanbul_precip)
+            bucket["winds"].append(istanbul_wind)
+
+            if lead == 0:
+                regional_pressures = {
+                    name: float(value) / 100.0
+                    for name, value in pressure.items()
+                }
 
         daily_dates = sorted(daily_buckets)
         daily = {
             "time": daily_dates,
             "temp_max": [
-                round(max(daily_buckets[d]["temps"]), 1) if daily_buckets[d]["temps"] else 0.0
-                for d in daily_dates
+                round(max(daily_buckets[day]["temps"]), 1)
+                for day in daily_dates
             ],
             "temp_min": [
-                round(min(daily_buckets[d]["temps"]), 1) if daily_buckets[d]["temps"] else 0.0
-                for d in daily_dates
+                round(min(daily_buckets[day]["temps"]), 1)
+                for day in daily_dates
             ],
             "precip_sum": [
-                round(sum(daily_buckets[d]["precips"]), 1)
-                for d in daily_dates
+                round(sum(daily_buckets[day]["precips"]), 1)
+                for day in daily_dates
             ],
             "wind_max": [
-                round(max(daily_buckets[d]["winds"]), 1) if daily_buckets[d]["winds"] else 0.0
-                for d in daily_dates
+                round(max(daily_buckets[day]["winds"]), 1)
+                for day in daily_dates
             ],
         }
 
-        forecast_timeline = {}
-        for i in range(0, min(MIN_FORECAST_HOURS + 1, len(times)), 6):
-            t_str = times[i]
-            forecast_timeline[t_str] = {
-                "step_hour": int(
-                    (_parse_forecast_local_time(t_str) - run_dt).total_seconds() // 3600
-                ),
-                "temp": round(temps[i], 1) if i < len(temps) and temps[i] is not None else 0.0,
-                "precip": round(precips[i], 2) if i < len(precips) and precips[i] is not None else 0.0,
-            }
-
-        # Current conditions come from the live Forecast API; all forecast
-        # comparisons and daily summaries remain tied to the exact selected run.
+        # Current conditions remain a live observation/nowcast; the entire
+        # forecast and all comparisons are sourced from this exact NOAA run.
         current = {}
         live_url = "https://api.open-meteo.com/v1/forecast"
         live_params = {
@@ -357,55 +525,45 @@ def fetch_full_weather_data(run_id):
                 "wind": round(live_current.get("wind_speed_10m", 0.0), 1),
                 "pressure": round(live_current.get("surface_pressure", 1013.0), 1),
             }
-        except Exception as e:
-            print(f"[CURRENT UYARI] Canlı koşullar alınamadı; run başlangıcı kullanılacak: {e}")
+        except Exception as exc:
+            print(f"[CURRENT UYARI] Canlı koşullar alınamadı; NOAA run başlangıcı kullanılacak: {exc}")
             current = {
-                "temp": round(temps[0], 1) if temps and temps[0] is not None else 0.0,
-                "precip": round(precips[0], 2) if precips and precips[0] is not None else 0.0,
-                "wind": round(winds[0], 1) if winds and winds[0] is not None else 0.0,
-                "pressure": 1013.0,
+                "temp": round(temp_c["Istanbul"], 1),
+                "precip": 0.0,
+                "wind": round(wind_kmh.get("Istanbul", 0.0), 1),
+                "pressure": round(regional_pressures.get("Istanbul", 1013.0), 1),
             }
 
         synoptic_alerts = []
-        for region, (r_lat, r_lon) in SYNOPTIC_POINTS.items():
-            r_params = {
-                "latitude": r_lat,
-                "longitude": r_lon,
-                "current": "pressure_msl",
-                "models": "gfs_seamless",
-            }
-            try:
-                r_res = requests.get(live_url, params=r_params, timeout=6)
-                r_res.raise_for_status()
-                r_press = round(
-                    r_res.json().get("current", {}).get("pressure_msl", 1013.0), 1
-                )
-                if r_press <= 1015.0:
-                    synoptic_alerts.append(
-                        f"{region} üzerinde alçak basınç ({r_press} hPa)"
-                    )
-                elif r_press >= 1023.0:
-                    synoptic_alerts.append(
-                        f"{region} üzerinde yüksek basınç ({r_press} hPa)"
-                    )
-            except Exception:
+        for region in SYNOPTIC_POINTS:
+            pressure_value = regional_pressures.get(region)
+            if pressure_value is None:
                 continue
+            if pressure_value <= 1015.0:
+                synoptic_alerts.append(
+                    f"{region} üzerinde alçak basınç ({pressure_value:.1f} hPa)"
+                )
+            elif pressure_value >= 1023.0:
+                synoptic_alerts.append(
+                    f"{region} üzerinde yüksek basınç ({pressure_value:.1f} hPa)"
+                )
 
         payload = {
             "current": current,
             "daily": daily,
             "timeline_180h": forecast_timeline,
-            "forecast_horizon_hours": available_hours,
+            "forecast_horizon_hours": MIN_FORECAST_HOURS,
             "synoptic_alerts": synoptic_alerts,
+            "data_source": "NOAA/NCEP GFS 0.25° GRIB2 (NOMADS)",
         }
 
         print(
-            f"[STEP 1 BAŞARILI] Tam {run_param} GFS çalışması alındı; "
-            f"+{available_hours} saat."
+            f"[STEP 1 BAŞARILI] NOAA/NCEP {run_id} GFS çalışması alındı; "
+            f"+{MIN_FORECAST_HOURS} saat; {len(forecast_timeline)} zaman noktası."
         )
         return payload
-    except Exception as e:
-        print(f"[STEP 1 HATA] Open-Meteo Single Runs API erişim hatası: {e}")
+    except Exception as exc:
+        print(f"[STEP 1 HATA] NOAA/NCEP GRIB2 veri erişimi/çözümleme hatası: {exc}")
         return None
 
 
@@ -496,6 +654,7 @@ def analyze_and_build_output(current_run_name, payload, previous_runs):
     text_report_lines = [
         f"🌐 MODEL GÜNCELLEME RAPORU",
         f"🛰 GFS run: {current_run_name} UTC | Tahmin kapsamı: +{payload.get('forecast_horizon_hours', MIN_FORECAST_HOURS)} saat",
+        f"📡 Veri kaynağı: {payload.get('data_source', 'NOAA/NCEP GFS 0.25° GRIB2')}\n",
         f"📍 Konum: {LOCATION_NAME} | ⏱ Zaman: {now_tr_str}\n",
         f"🌡 Anlık Sıcaklık: {curr_t} °C",
         f"🌧 Anlık Yağış: {curr_p} mm",
@@ -706,14 +865,14 @@ async def process_gfs_update(strict=False):
 
     print(f"[UPDATE] +180 saat eşiğine ulaşan GFS run alınıyor: {run_id}")
     payload = await asyncio.to_thread(fetch_full_weather_data, run_id)
-    if payload and "_pending_single_run" in payload:
+    if payload and "_pending_noaa_gfs" in payload:
         print(
-            f"[PENDING] {run_id} Single Runs API üzerinde henüz hazır değil; "
-            "sonraki kontrolde tekrar denenecek."
+            f"[PENDING] {run_id} NOAA GRIB2 dosyası henüz tam olarak hazır değil; "
+            f"sonraki kontrolde tekrar denenecek. Ayrıntı: {payload.get('_reason', 'dosya eksik')}"
         )
         return
     if not payload:
-        message = f"{run_id} için Single Runs API tahmini alınamadı."
+        message = f"{run_id} için NOAA/NCEP GRIB2 tahmini alınamadı."
         print(f"[RETRY] {message}")
         if strict:
             raise RuntimeError(message)
