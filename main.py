@@ -212,8 +212,6 @@ def fetch_full_weather_data(run_id):
             "longitude": LON,
             "run": run_param,
             "models": MODEL_NAME,
-            "current": "temperature_2m,precipitation,rain,snowfall,wind_speed_10m,surface_pressure",
-            "daily": "temperature_2m_max,temperature_2m_min,precipitation_sum,wind_speed_10m_max",
             "hourly": "temperature_2m,precipitation,snowfall,surface_pressure,wind_speed_10m",
             "forecast_hours": MIN_FORECAST_HOURS + 1,
             "timezone": "Europe/Istanbul",
@@ -233,12 +231,11 @@ def fetch_full_weather_data(run_id):
         res.raise_for_status()
         data = res.json()
 
-        current = data.get("current", {})
-        daily = data.get("daily", {})
         hourly = data.get("hourly", {})
         times = hourly.get("time", [])
         temps = hourly.get("temperature_2m", [])
         precips = hourly.get("precipitation", [])
+        winds = hourly.get("wind_speed_10m", [])
 
         if not times:
             raise ValueError("Single Runs API hourly time dizisi boş döndü.")
@@ -256,14 +253,54 @@ def fetch_full_weather_data(run_id):
         )
         if available_hours < MIN_FORECAST_HOURS or len(times) < MIN_FORECAST_HOURS + 1:
             print(
-                f"[PENDING] Tekil GFS çalışması yalnızca +{available_hours} saate kadar "
-                f"erişilebilir; +{MIN_FORECAST_HOURS} saat bekleniyor."
+                f"[PENDING] Tekil GFS çalışması yalnızca +{available_hours} saate "
+                f"kadar erişilebilir; +{MIN_FORECAST_HOURS} saat bekleniyor."
             )
             return {
                 "_pending_single_run": True,
                 "_run_id": run_id,
                 "_available_hours": available_hours,
             }
+
+        # Aggregate exact-run hourly values into Istanbul calendar days.
+        # The Single Runs API only supports daily= when the run starts at
+        # midnight in the requested timezone; 06Z/12Z/18Z runs do not.
+        daily_buckets = {}
+        for i, time_value in enumerate(times):
+            local_dt = datetime.fromisoformat(str(time_value).replace("Z", "+00:00"))
+            if local_dt.tzinfo is None:
+                local_dt = local_dt.replace(tzinfo=TR_TZ)
+            day = local_dt.astimezone(TR_TZ).date().isoformat()
+            bucket = daily_buckets.setdefault(
+                day, {"temps": [], "precips": [], "winds": []}
+            )
+            if i < len(temps) and temps[i] is not None:
+                bucket["temps"].append(float(temps[i]))
+            if i < len(precips) and precips[i] is not None:
+                bucket["precips"].append(float(precips[i]))
+            if i < len(winds) and winds[i] is not None:
+                bucket["winds"].append(float(winds[i]))
+
+        daily_dates = sorted(daily_buckets)
+        daily = {
+            "time": daily_dates,
+            "temp_max": [
+                round(max(daily_buckets[d]["temps"]), 1) if daily_buckets[d]["temps"] else 0.0
+                for d in daily_dates
+            ],
+            "temp_min": [
+                round(min(daily_buckets[d]["temps"]), 1) if daily_buckets[d]["temps"] else 0.0
+                for d in daily_dates
+            ],
+            "precip_sum": [
+                round(sum(daily_buckets[d]["precips"]), 1)
+                for d in daily_dates
+            ],
+            "wind_max": [
+                round(max(daily_buckets[d]["winds"]), 1) if daily_buckets[d]["winds"] else 0.0
+                for d in daily_dates
+            ],
+        }
 
         forecast_timeline = {}
         for i in range(0, min(MIN_FORECAST_HOURS + 1, len(times)), 6):
@@ -272,18 +309,47 @@ def fetch_full_weather_data(run_id):
                 "step_hour": int(
                     (_parse_forecast_local_time(t_str) - run_dt).total_seconds() // 3600
                 ),
-                "temp": round(temps[i], 1) if i < len(temps) else 0.0,
-                "precip": round(precips[i], 2) if i < len(precips) else 0.0,
+                "temp": round(temps[i], 1) if i < len(temps) and temps[i] is not None else 0.0,
+                "precip": round(precips[i], 2) if i < len(precips) and precips[i] is not None else 0.0,
+            }
+
+        # Current conditions come from the live Forecast API; all forecast
+        # comparisons and daily summaries remain tied to the exact selected run.
+        current = {}
+        live_url = "https://api.open-meteo.com/v1/forecast"
+        live_params = {
+            "latitude": LAT,
+            "longitude": LON,
+            "current": "temperature_2m,precipitation,rain,snowfall,wind_speed_10m,surface_pressure",
+            "models": "gfs_seamless",
+            "timezone": "Europe/Istanbul",
+        }
+        try:
+            live_res = requests.get(live_url, params=live_params, timeout=15)
+            live_res.raise_for_status()
+            live_current = live_res.json().get("current", {})
+            current = {
+                "temp": round(live_current.get("temperature_2m", 0.0), 1),
+                "precip": round(live_current.get("precipitation", 0.0), 2),
+                "wind": round(live_current.get("wind_speed_10m", 0.0), 1),
+                "pressure": round(live_current.get("surface_pressure", 1013.0), 1),
+            }
+        except Exception as e:
+            print(f"[CURRENT UYARI] Canlı koşullar alınamadı; run başlangıcı kullanılacak: {e}")
+            current = {
+                "temp": round(temps[0], 1) if temps and temps[0] is not None else 0.0,
+                "precip": round(precips[0], 2) if precips and precips[0] is not None else 0.0,
+                "wind": round(winds[0], 1) if winds and winds[0] is not None else 0.0,
+                "pressure": 1013.0,
             }
 
         synoptic_alerts = []
-        live_url = "https://api.open-meteo.com/v1/forecast"
         for region, (r_lat, r_lon) in SYNOPTIC_POINTS.items():
             r_params = {
                 "latitude": r_lat,
                 "longitude": r_lon,
                 "current": "pressure_msl",
-                "models": MODEL_NAME,
+                "models": "gfs_seamless",
             }
             try:
                 r_res = requests.get(live_url, params=r_params, timeout=6)
@@ -303,19 +369,8 @@ def fetch_full_weather_data(run_id):
                 continue
 
         payload = {
-            "current": {
-                "temp": round(current.get("temperature_2m", 0.0), 1),
-                "precip": round(current.get("precipitation", 0.0), 2),
-                "wind": round(current.get("wind_speed_10m", 0.0), 1),
-                "pressure": round(current.get("surface_pressure", 1013.0), 1),
-            },
-            "daily": {
-                "time": daily.get("time", []),
-                "temp_max": daily.get("temperature_2m_max", []),
-                "temp_min": daily.get("temperature_2m_min", []),
-                "precip_sum": daily.get("precipitation_sum", []),
-                "wind_max": daily.get("wind_speed_10m_max", []),
-            },
+            "current": current,
+            "daily": daily,
             "timeline_180h": forecast_timeline,
             "forecast_horizon_hours": available_hours,
             "synoptic_alerts": synoptic_alerts,
