@@ -56,7 +56,7 @@ jobs:
 
   deploy:
     needs: refresh
-    if: needs.refresh.outputs.changed == 'true'
+    if: needs.refresh.outputs.changed == 'true' || github.event_name == 'push'
     runs-on: ubuntu-latest
     environment:
       name: github-pages
