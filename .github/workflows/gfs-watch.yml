@@ -8,9 +8,10 @@ on:
       - "main.py"
       - ".github/workflows/gfs-watch.yml"
       - "requirements.txt"
-  # Poll NOAA/NCEP every five minutes to catch newly published cycle files.
+  # Start one 90-minute watch for each GFS cycle (Istanbul local times: 06:50, 12:50, 18:50, 00:50).
+  # GitHub cron uses UTC; these correspond to 03:50, 09:50, 15:50, 21:50 UTC.
   schedule:
-    - cron: "*/5 * * * *"
+    - cron: "50 3,9,15,21 * * *"
   workflow_dispatch:
 
 concurrency:
@@ -23,7 +24,7 @@ permissions:
 jobs:
   check-gfs:
     runs-on: ubuntu-latest
-    timeout-minutes: 20
+    timeout-minutes: 110
     steps:
       - name: Check out application
         uses: actions/checkout@v7
@@ -57,12 +58,12 @@ jobs:
           if git cat-file -e origin/gfs-watch-state:gfs_watch.db 2>/dev/null; then
             git show origin/gfs-watch-state:gfs_watch.db > gfs_watch.db
           fi
-      - name: Check GFS once
+      - name: Watch NOAA until GFS cycle is ready
         id: check-gfs
         env:
           GFS_WATCH_ONCE: "1"
-          GFS_WATCH_CONTINUOUS: "0"
-          GFS_WATCH_WINDOW_MINUTES: "10"
+          GFS_WATCH_CONTINUOUS: "1"
+          GFS_WATCH_WINDOW_MINUTES: "90"
           GFS_WATCH_POLL_SECONDS: "15"
           DB_PATH: gfs_watch.db
           PUBLIC_DATA_DIR: public
