@@ -83,15 +83,35 @@ jobs:
                       row["numberOfValues"] = len(values)
                       row["min"] = float(min(values))
                       row["max"] = float(max(values))
+                      for key in ["gridType", "Ni", "Nj",
+                                  "latitudeOfFirstGridPointInDegrees",
+                                  "latitudeOfLastGridPointInDegrees",
+                                  "longitudeOfFirstGridPointInDegrees",
+                                  "longitudeOfLastGridPointInDegrees",
+                                  "iDirectionIncrementInDegrees",
+                                  "jDirectionIncrementInDegrees"]:
+                          try:
+                              row[key] = eccodes.codes_get(gid, key)
+                          except Exception:
+                              pass
                       row["samples"] = {}
-                      for name, (lat, lon) in points.items():
-                          nearest = eccodes.codes_grib_find_nearest(gid, lat, lon)
-                          if nearest:
+                      try:
+                          latitudes = eccodes.codes_get_array(gid, "latitudes")
+                          longitudes = eccodes.codes_get_array(gid, "longitudes")
+                          for name, (lat, lon) in points.items():
+                              if len(values) == 0:
+                                  continue
+                              # Avoid ecCodes area-membership checks for subset grids;
+                              # select the geographically nearest grid point directly.
+                              distances = (latitudes - lat) ** 2 + (((longitudes - lon + 180) % 360) - 180) ** 2
+                              index = int(distances.argmin())
                               row["samples"][name] = {
-                                  "value": float(nearest[0]["value"]),
-                                  "lat": float(nearest[0]["lat"]),
-                                  "lon": float(nearest[0]["lon"]),
+                                  "value": float(values[index]),
+                                  "lat": float(latitudes[index]),
+                                  "lon": float(longitudes[index]),
                               }
+                      except Exception as exc:
+                          row["sample_error"] = repr(exc)
                       rows.append(row)
                   finally:
                       eccodes.codes_release(gid)
