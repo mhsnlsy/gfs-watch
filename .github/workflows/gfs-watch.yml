@@ -8,25 +8,13 @@ on:
       - "main.py"
       - "requirements.txt"
       - ".github/workflows/gfs-watch.yml"
-  # GitHub Actions cron is UTC. These windows are Istanbul time (UTC+3),
-  # every 5 minutes, with both window endpoints included.
+  # Start 3h50 after each GFS cycle begins (Istanbul = UTC+3).
+  # One workflow run then polls NOAA S3 every 30 seconds for up to 90 minutes.
   schedule:
-    # 06:30–08:30 Istanbul
-    - cron: "30-59/5 3 * * *"
-    - cron: "*/5 4 * * *"
-    - cron: "0-30/5 5 * * *"
-    # 12:30–14:30 Istanbul
-    - cron: "30-59/5 9 * * *"
-    - cron: "*/5 10 * * *"
-    - cron: "0-30/5 11 * * *"
-    # 18:30–20:30 Istanbul
-    - cron: "30-59/5 15 * * *"
-    - cron: "*/5 16 * * *"
-    - cron: "0-30/5 17 * * *"
-    # 00:30–02:30 Istanbul (previous UTC date)
-    - cron: "30-59/5 21 * * *"
-    - cron: "*/5 22 * * *"
-    - cron: "0-30/5 23 * * *"
+    - cron: "50 3 * * *"   # 06:50 Istanbul, 00Z cycle
+    - cron: "50 9 * * *"   # 12:50 Istanbul, 06Z cycle
+    - cron: "50 15 * * *"  # 18:50 Istanbul, 12Z cycle
+    - cron: "50 21 * * *"  # 00:50 Istanbul, 18Z cycle
   workflow_dispatch:
 
 concurrency:
@@ -39,7 +27,7 @@ permissions:
 jobs:
   check-gfs:
     runs-on: ubuntu-latest
-    timeout-minutes: 30
+    timeout-minutes: 110
     steps:
       - name: Check out application
         uses: actions/checkout@v7
@@ -77,15 +65,18 @@ jobs:
         id: check-gfs
         env:
           GFS_WATCH_ONCE: "1"
+          GFS_WATCH_CONTINUOUS: ${{ github.event_name == 'schedule' && '1' || '0' }}
+          GFS_WATCH_WINDOW_MINUTES: "90"
+          GFS_WATCH_POLL_SECONDS: "30"
           DB_PATH: gfs_watch.db
           PUBLIC_DATA_DIR: public
           TELEGRAM_TOKEN: ${{ secrets.TELEGRAM_TOKEN }}
           CHAT_ID: ${{ secrets.CHAT_ID }}
           GCP_SA_KEY: ${{ secrets.GCP_SA_KEY }}
           NOAA_CACHE_DIR: noaa_cache
-          NOAA_PREFETCH_MIN_AGE_HOURS: "4.1667"
+          NOAA_PREFETCH_MIN_AGE_HOURS: "3.8333"
           NOAA_PREFETCH_FILES_PER_CHECK: "4"
-          NOAA_REQUEST_INTERVAL_SECONDS: "10"
+          NOAA_RANGE_DOWNLOAD_WORKERS: "8"
         run: python -u main.py
       - name: Save partial NOAA forecast cache
         if: always() && steps.check-gfs.outputs.noaa_cache_updated == 'true'
