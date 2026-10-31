@@ -433,6 +433,7 @@ def analyze_and_build_output(current_run_name, payload, previous_runs):
 
     temp_shifts = []
     precip_shifts = []
+    comparison_points = 0
 
     if previous_runs and len(previous_runs) > 0:
         try:
@@ -441,6 +442,7 @@ def analyze_and_build_output(current_run_name, payload, previous_runs):
 
             for time_key, curr_data in timeline.items():
                 if time_key in prev_timeline:
+                    comparison_points += 1
                     p_data = prev_timeline[time_key]
                     step = curr_data["step_hour"]
 
@@ -457,11 +459,20 @@ def analyze_and_build_output(current_run_name, payload, previous_runs):
             print(f"[UYARI] Kıyaslama yapılırken hata oluştu: {e}")
 
     if temp_shifts or precip_shifts:
-        speech_parts.append("Önceki çıktıya kıyasla ilerleyen saatlerde değişimler var.")
+        speech_parts.append("Önceki GFS çalışmasıyla kıyaslandığında ilerleyen saatlerde değişimler var.")
         if temp_shifts:
             speech_parts.append("Sıcaklıkta: " + ", ".join(temp_shifts[:2]) + ".")
         if precip_shifts:
             speech_parts.append("Yağışta: " + ", ".join(precip_shifts[:2]) + ".")
+    elif previous_runs and comparison_points:
+        speech_parts.append(
+            "Önceki GFS çalışmasıyla kıyaslama yapıldı; belirlenen eşiklerin üzerinde "
+            "sıcaklık veya yağış değişikliği yok."
+        )
+    elif previous_runs:
+        speech_parts.append(
+            "Önceki GFS çalışmasıyla ortak zaman dilimi bulunamadı; kıyaslama yapılamadı."
+        )
 
     if synoptic:
         speech_parts.append("Bölgesel basınç haritasında: " + ", ".join(synoptic) + " tespit edildi.")
@@ -490,12 +501,27 @@ def analyze_and_build_output(current_run_name, payload, previous_runs):
         wind_tag = " | 🌬️ Rüzgarlı" if w_max > 20.0 else ""
         text_report_lines.append(f"• {label}: {t_min}°C / {t_max}°C | Yağış: {p_sum} mm{wind_tag}")
 
-    if temp_shifts or precip_shifts:
-        text_report_lines.append("\n⚡ +180 Saate Kadar 6 Saatlik Dilim Değişiklikleri:")
-        if temp_shifts:
-            text_report_lines.append("• Sıcaklık: " + ", ".join(temp_shifts))
-        if precip_shifts:
-            text_report_lines.append("• Yağış: " + ", ".join(precip_shifts))
+    if previous_runs:
+        text_report_lines.append(
+            f"\\n🔁 GFS KIYASLAMASI | Önceki run: {previous_runs[0][0]}"
+        )
+        text_report_lines.append(
+            f"• Karşılaştırılan ortak 6 saatlik dilim: {comparison_points}"
+        )
+        if temp_shifts or precip_shifts:
+            text_report_lines.append("⚡ +180 Saate Kadar 6 Saatlik Dilim Değişiklikleri:")
+            if temp_shifts:
+                text_report_lines.append("• Sıcaklık: " + ", ".join(temp_shifts))
+            if precip_shifts:
+                text_report_lines.append("• Yağış: " + ", ".join(precip_shifts))
+        elif comparison_points:
+            text_report_lines.append(
+                "• Belirlenen eşikleri aşan sıcaklık veya yağış değişikliği yok."
+            )
+        else:
+            text_report_lines.append(
+                "• Ortak zaman dilimi bulunamadı; kıyaslama yapılamadı."
+            )
 
     if synoptic:
         text_report_lines.append("\n🌀 2000 km Çaplı Bölgesel Basınç Durumu:")
