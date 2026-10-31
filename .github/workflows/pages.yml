@@ -7,6 +7,7 @@ on:
       - ".github/workflows/pages.yml"
       - "site/**"
       - "public/latest.json"
+      - "public/station-observation.json"
   workflow_dispatch:
 
 permissions:
@@ -44,6 +45,12 @@ jobs:
           mkdir -p _site/data
           cp -a source/site/. _site/
           cp forecast-data/public/latest.json _site/data/latest.json
+          if [ -s forecast-data/public/station-observation.json ]; then
+            python -m json.tool forecast-data/public/station-observation.json > /dev/null
+            cp forecast-data/public/station-observation.json _site/data/station-observation.json
+          else
+            printf '{"schema":"gfs-watch.station-observation.v1","station_observation":null}\n' > _site/data/station-observation.json
+          fi
           touch _site/.nojekyll
           echo "Website bundle prepared with the latest GFS forecast."
 
