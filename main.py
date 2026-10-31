@@ -909,6 +909,27 @@ async def process_gfs_update(strict=False):
     ]
 
     if not pending_runs:
+        # Backfill the public JSON once for runs processed before JSON publishing
+        # was enabled. Do not rewrite it on every poll after both files exist.
+        if previous_runs:
+            latest_saved_run, latest_saved_json = previous_runs[0]
+            latest_saved_dt = _parse_utc_datetime(latest_saved_run)
+            archive_path = os.path.join(
+                PUBLIC_DATA_DIR,
+                "runs",
+                latest_saved_dt.strftime("%Y%m%dT%HZ") + ".json",
+            )
+            latest_path = os.path.join(PUBLIC_DATA_DIR, "latest.json")
+            if not (os.path.isfile(archive_path) and os.path.isfile(latest_path)):
+                try:
+                    export_public_forecast_json(
+                        latest_saved_run, json.loads(latest_saved_json)
+                    )
+                except Exception as exc:
+                    print(f"[JSON BACKFILL HATA] Son kayıt dışa aktarılamadı: {exc}")
+                    if strict:
+                        raise
+
         latest_run = candidates[-1]["run_id"]
         print(f"[UNCHANGED] Son GFS çalışmaları zaten işlendi; en güncel run: {latest_run}")
         return
