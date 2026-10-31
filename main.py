@@ -665,7 +665,7 @@ def analyze_and_build_output(current_run_name, payload, previous_runs):
         f"🌡 Anlık Sıcaklık: {curr_t} °C",
         f"🌧 Anlık Yağış: {curr_p} mm",
         f"💨 Anlık Rüzgar: {curr_w} km/s {'(Rüzgarlı 🌬️)' if curr_w > 20.0 else ''}\n",
-        f"📅 ÖNÜMÜZDEKİ 3 GÜNLÜK ÖZET:"
+        f"📅 ÖNÜMÜZDEKİ 3 GÜNLÜK ÖZET (6 saatlik GFS adımları):"
     ]
 
     for idx, i in enumerate(range(1, min(4, len(daily.get("time", []))))):
