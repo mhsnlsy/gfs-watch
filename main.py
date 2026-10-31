@@ -8,6 +8,7 @@ import math
 import tempfile
 import time
 import shutil
+import traceback
 from concurrent.futures import ThreadPoolExecutor, as_completed
 from datetime import datetime, timedelta, timezone
 from zoneinfo import ZoneInfo  # Türkiye saati için yerleşik kütüphane
@@ -410,7 +411,8 @@ def analyse_regional_pressure_grid(pressure_grid):
         )
         return findings, round(centre_pressure_hpa, 1)
     except Exception as exc:
-        print(f"[BASINÇ UYARI] GRIB2 bölgesel basınç analizi yapılamadı: {exc}")
+        print(f"[BASINÇ UYARI] GRIB2 bölgesel basınç analizi yapılamadı: {type(exc).__name__}: {exc}")
+        traceback.print_exc()
         raise
 
 
