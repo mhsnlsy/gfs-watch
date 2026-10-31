@@ -1,6 +1,11 @@
 name: Station Observation
 
 on:
+  push:
+    branches: [main]
+    paths:
+      - "scripts/update_station_observation.py"
+      - ".github/workflows/station-observation.yml"
   schedule:
     - cron: "*/5 * * * *"
   workflow_dispatch:
