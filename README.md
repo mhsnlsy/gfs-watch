@@ -30,7 +30,8 @@ The workflow installs the ecCodes system library and Python package automaticall
 
 - During the four daily Istanbul-time windows (06:30–08:30, 12:30–14:30, 18:30–20:30 and 00:30–02:30), the workflow checks NOAA S3 every five minutes for the latest six GFS cycle files (00Z, 06Z, 12Z and 18Z, including recent prior cycles).
 - A run becomes eligible as soon as its exact global `f180` GRIB2 object exists on NOAA S3. This is the run-discovery trigger; Open-Meteo metadata and its archive API are not required.
-- Before +180 is published, the watcher incrementally prefetches up to four available early forecast files (f000–f174) per check and stores them in a GitHub Actions cache shared with the next check. When the exact global f180 object appears, the watcher reuses those cached files and downloads only the missing forecast steps.
+- Before +180 is published, the watcher starts incremental prefetching 4 hours 10 minutes after each six-hour cycle begins: 07:10 for 00Z, 13:10 for 06Z, 19:10 for 12Z and 01:10 for 18Z (Istanbul time). Each check fetches up to four available early forecast files (f000–f174) and stores them in a GitHub Actions cache shared with the next check.
+- When the exact global f180 object appears, the watcher reuses cached files and downloads only what is missing. If the global f180 object is published before the NOMADS point subset is ready, the watcher continues filling that same cycle's cache while retrying the full forecast on subsequent checks.
 - A full +0 to +180 timeline still uses all 31 six-hour forecast steps and only the nearest GFS grid cell for the configured coordinate. Cache entries are removed after a run is processed and abandoned cycle caches are pruned after 48 hours.
 - Each actual NOMADS subset HTTP request remains spaced by at least 10 seconds, in line with the NOMADS Grib Filter guidance. Cached files do not incur network pacing delays.
 
