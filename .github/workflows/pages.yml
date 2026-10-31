@@ -53,6 +53,9 @@ jobs:
             printf '{"schema":"gfs-watch.station-observation.v1","station_observation":null}\n' > _site/data/station-observation.json
           fi
           if [ -d forecast-data/public/notifications ]; then
+            if [ -s forecast-data/public/notifications/latest.json ]; then
+              python -m json.tool forecast-data/public/notifications/latest.json > /dev/null
+            fi
             mkdir -p _site/data/notifications
             cp -a forecast-data/public/notifications/. _site/data/notifications/
           fi
