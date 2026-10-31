@@ -1264,7 +1264,7 @@ def create_comparison_chart(current_run_id, payload, previous_runs):
         for day in dates:
             local_date = datetime.strptime(day, "%Y-%m-%d")
             date_labels.append(
-                f"{local_date:%d.%m}\\n{turkish_weekdays[local_date.weekday()]}"
+                f"{local_date:%d.%m}\n{turkish_weekdays[local_date.weekday()]}"
             )
 
         # Shared x-axes hide labels on upper panels by default. Re-enable them
