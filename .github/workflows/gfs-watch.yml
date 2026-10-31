@@ -55,7 +55,7 @@ jobs:
           cp gfs_watch.db "$RUNNER_TEMP/gfs_watch.db"
           git checkout -B gfs-watch-state origin/gfs-watch-state
           cp "$RUNNER_TEMP/gfs_watch.db" gfs_watch.db
-          git add gfs_watch.db
+          git add -f gfs_watch.db
           if git diff --cached --quiet; then
             echo "GFS run history has not changed."
             exit 0
