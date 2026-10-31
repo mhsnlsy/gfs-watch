@@ -1290,6 +1290,74 @@ async def process_gfs_update(strict=False):
     print(f"[COMPLETE] GFS run işlendi ve +180 saat bildirimi gönderildi: {run_id}")
 
 
+async def run_manual_report(run_id):
+    """Send one selected GFS run without changing processed-run history."""
+    init_db()
+    run_dt = _parse_utc_datetime(run_id)
+    normalized_run_id = run_dt.isoformat(timespec="seconds")
+    print(
+        f"[MANUAL] {normalized_run_id} için tek seferlik rapor hazırlanıyor; "
+        "GFS geçmişi güncellenmeyecek."
+    )
+
+    stored_runs = await asyncio.to_thread(get_previous_runs)
+    earlier_runs = [
+        row for row in stored_runs
+        if _parse_utc_datetime(row[0]) < run_dt
+    ]
+    previous_runs = sorted(earlier_runs, key=lambda row: row[0], reverse=True)[:1]
+
+    payload = await asyncio.to_thread(
+        fetch_full_weather_data, normalized_run_id
+    )
+    if payload and "_pending_noaa_gfs" in payload:
+        raise RuntimeError(
+            f"{normalized_run_id} için NOAA verisi henüz alınamadı: "
+            f"{payload.get('_reason', payload.get('_http_status', 'eksik GRIB2'))}"
+        )
+    if not payload:
+        raise RuntimeError(
+            f"{normalized_run_id} için NOAA/NCEP GRIB2 tahmini oluşturulamadı."
+        )
+
+    # This is a manual resend of an already processed model cycle. It does not
+    # export JSON, save another DB row, or change the run's notification state.
+    payload["model_metadata"] = {
+        "manual_resend": True,
+        "run_id": normalized_run_id,
+    }
+    full_text_report, speech_text = analyze_and_build_output(
+        normalized_run_id, payload, previous_runs
+    )
+
+    audio_task = asyncio.create_task(generate_speech_with_retry(speech_text))
+    try:
+        await send_telegram_text(full_text_report)
+    except Exception:
+        try:
+            audio_file = await audio_task
+            if audio_file and os.path.exists(audio_file):
+                os.remove(audio_file)
+        except Exception:
+            pass
+        raise
+
+    audio_file = await audio_task
+    if audio_file:
+        try:
+            await send_telegram_voice(audio_file)
+        except Exception as exc:
+            print(f"[MANUAL VOICE HATA] Ses gönderilemedi: {exc}")
+            raise
+    else:
+        print("[MANUAL VOICE] Ses üretilemedi; metin raporu gönderildi.")
+
+    print(
+        f"[MANUAL COMPLETE] {normalized_run_id} metin raporu gönderildi; "
+        "işlenmiş GFS geçmişi değiştirilmedi."
+    )
+
+
 async def main():
     """Disable the legacy in-process polling mode."""
     print(
@@ -1308,7 +1376,10 @@ async def run_once():
 
 if __name__ == "__main__":
     try:
-        if os.getenv("GFS_WATCH_ONCE", "").strip().lower() in {"1", "true", "yes"}:
+        manual_run_id = os.getenv("GFS_WATCH_MANUAL_RUN_ID", "").strip()
+        if manual_run_id:
+            asyncio.run(run_manual_report(manual_run_id))
+        elif os.getenv("GFS_WATCH_ONCE", "").strip().lower() in {"1", "true", "yes"}:
             asyncio.run(run_once())
         else:
             asyncio.run(main())
