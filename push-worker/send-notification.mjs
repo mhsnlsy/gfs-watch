@@ -25,7 +25,8 @@ async function api(path, options = {}) {
   return data;
 }
 
-const feed = JSON.parse(await readFile("public/notifications/latest.json", "utf8"));
+const feedPath = process.env.NOTIFICATION_FEED_PATH || "public/notifications/latest.json";
+const feed = JSON.parse(await readFile(feedPath, "utf8"));
 if (feed.schema !== "gfs-watch.notifications.v1" || !Array.isArray(feed.items)) {
   throw new Error("Notification feed is invalid.");
 }
