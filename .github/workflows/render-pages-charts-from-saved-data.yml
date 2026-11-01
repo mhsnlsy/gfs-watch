@@ -5,6 +5,7 @@ on:
   push:
     branches: [main]
     paths:
+      - "main.py"
       - "scripts/rebuild_latest_pages_charts_from_saved_data.py"
       - ".github/workflows/render-pages-charts-from-saved-data.yml"
 
