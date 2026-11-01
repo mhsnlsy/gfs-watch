@@ -143,6 +143,37 @@ async function main() {
     console.log("[WSTAT REQUESTS]", JSON.stringify([...stationRequests]));
     console.log("[WSTAT RESPONSES]", JSON.stringify(stationResponses));
     console.log("[WSTAT RESOURCES]", JSON.stringify(await page.evaluate(() => performance.getEntriesByType("resource").map(entry => entry.name).filter(name => /wstatmap/i.test(name)))));
+    const apiDiagnostics = await page.evaluate(async () => {
+      const urls = [
+        "https://api.wstatmap.com/v1/forecast/point/?lat=41.1028&lon=28.9242&past_hours=24&station_id=1963",
+        "https://api.wstatmap.com/v1/historical/station/data?station_id=1963&hours=24"
+      ];
+      const results = [];
+      for (const url of urls) {
+        try {
+          const response = await fetch(url, { credentials: "include", cache: "no-store" });
+          const body = await response.text();
+          results.push({url,status:response.status,headers:Object.fromEntries(response.headers.entries()),body:body.slice(0,12000)});
+        } catch (error) {
+          results.push({url,error:String(error)});
+        }
+      }
+      const resources = performance.getEntriesByType("resource").filter(entry => /api\\.wstatmap\\.com/.test(entry.name)).map(entry => ({name:entry.name,responseStatus:entry.responseStatus,transferSize:entry.transferSize}));
+      const chunks = performance.getEntriesByType("resource").filter(entry => /_next\\/static\\/chunks\\/.*\\.js/.test(entry.name)).map(entry => entry.name);
+      const code = [];
+      for (const url of chunks) {
+        try {
+          const response = await fetch(url);
+          const source = await response.text();
+          for (const term of ["historical/station/data","forecast/point","Deniz Seviyesi Basıncı","station_pressure","X-API-KEY","apiKey"]) {
+            const at = source.indexOf(term);
+            if (at >= 0) code.push({url,term,excerpt:source.slice(Math.max(0,at-500),at+1200)});
+          }
+        } catch {}
+      }
+      return {results,resources,code};
+    });
+    console.log("[WSTAT API DIAGNOSTICS]", JSON.stringify(apiDiagnostics));
     if (/Just a moment|Checking your browser|Access denied/i.test(bodyText)) {
       throw new Error("WStatMap sayfası otomatik erişim doğrulaması gösterdi; veri alınmadı.");
     }
