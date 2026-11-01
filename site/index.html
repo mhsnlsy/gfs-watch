@@ -192,6 +192,30 @@
       .station-card .stat .unit{font-size:8px}
       .station-card .stat .detail{font-size:8px}
     }
+
+    /* Interactive forecast chart tooltips: hover on desktop, tap on touch screens. */
+    .chart-wrap{position:relative}
+    .chart-tooltip{
+      position:absolute;z-index:12;min-width:176px;max-width:min(238px,calc(100% - 12px));
+      padding:9px 11px;border:1px solid rgba(125,211,215,.42);border-radius:10px;
+      background:rgba(4,18,29,.97);box-shadow:0 9px 28px rgba(0,0,0,.38);
+      color:#eaf5f8;font-size:10px;line-height:1.45;pointer-events:none;
+      transform:translate(-50%,calc(-100% - 10px));backdrop-filter:blur(8px)
+    }
+    .chart-tooltip[hidden]{display:none}
+    .chart-tooltip.below{transform:translate(-50%,9px)}
+    .chart-tooltip-time{font-weight:700;color:#c9f3ed;font-size:10px;margin-bottom:4px}
+    .chart-tooltip-value{font:700 13px Manrope,sans-serif;color:#fff}
+    .chart-tooltip-meta{color:#9fb6c2;font-size:9px;margin-top:4px}
+    .chart-crosshair{pointer-events:none}
+    .chart-hit-area{fill:transparent;pointer-events:all;cursor:crosshair;touch-action:pan-y}
+    @media(max-width:560px){
+      .chart-tooltip{min-width:158px;max-width:min(216px,calc(100% - 8px));padding:8px 9px;font-size:9px}
+      .chart-tooltip-time{font-size:9px}
+      .chart-tooltip-value{font-size:12px}
+      .chart-tooltip-meta{font-size:8px}
+    }
+
   </style>
 </head>
 <body>
@@ -228,7 +252,7 @@
           <div class="chart-wrap" id="temperature-chart"><div class="chart-empty">Sıcaklık grafiği yükleniyor…</div></div>
         </article>
         <article class="chart-card">
-          <div class="chart-card-head"><div><div class="chart-title">Yağış</div><div class="chart-subtitle">6 saatlik yağış miktarı · mm</div></div><span class="chart-count" id="precipitation-count">Saatlik tahmin</span></div>
+          <div class="chart-card-head"><div><div class="chart-title">Yağış</div><div class="chart-subtitle">Tahmin aralığında biriken yağış · mm</div></div><span class="chart-count" id="precipitation-count">Saatlik tahmin</span></div>
           <div class="chart-wrap" id="precipitation-chart"><div class="chart-empty">Yağış grafiği yükleniyor…</div></div>
         </article>
       </div>
@@ -310,22 +334,149 @@
       const items=findings.map(readablePressureFinding).map(item=>item.text);
       list.innerHTML=items.map(text=>'<li><span class="pressure-icon">◈</span><span>'+esc(text)+'</span></li>').join("");
     }
+    const chartDateTimeTR=value=>{
+      const date=new Date(value);
+      const dayMonth=new Intl.DateTimeFormat("tr-TR",{timeZone:"Europe/Istanbul",day:"numeric",month:"long"}).format(date);
+      const clock=new Intl.DateTimeFormat("tr-TR",{timeZone:"Europe/Istanbul",hour:"2-digit",minute:"2-digit",hourCycle:"h23"}).format(date);
+      return dayMonth+" "+clock;
+    };
+    function attachForecastChartTooltip(container,svg,coords,temperature,width,height,top,bottom){
+      const ns="http://www.w3.org/2000/svg";
+      const tooltip=document.createElement("div");
+      tooltip.className="chart-tooltip";
+      tooltip.hidden=true;
+      tooltip.setAttribute("role","tooltip");
+      container.appendChild(tooltip);
+
+      const cursorLine=document.createElementNS(ns,"line");
+      cursorLine.setAttribute("class","chart-crosshair");
+      cursorLine.setAttribute("y1",String(top));
+      cursorLine.setAttribute("y2",String(height-bottom));
+      cursorLine.setAttribute("stroke","#e8fbf7");
+      cursorLine.setAttribute("stroke-width","1");
+      cursorLine.setAttribute("stroke-dasharray","3 4");
+      cursorLine.setAttribute("opacity",".78");
+      cursorLine.setAttribute("visibility","hidden");
+
+      const cursorDot=document.createElementNS(ns,"circle");
+      cursorDot.setAttribute("class","chart-crosshair");
+      cursorDot.setAttribute("r","5");
+      cursorDot.setAttribute("fill",temperature?"#7dd3d7":"#8abce8");
+      cursorDot.setAttribute("stroke","#f4ffff");
+      cursorDot.setAttribute("stroke-width","2");
+      cursorDot.setAttribute("visibility","hidden");
+      svg.appendChild(cursorLine);
+      svg.appendChild(cursorDot);
+
+      const hitArea=document.createElementNS(ns,"rect");
+      hitArea.setAttribute("class","chart-hit-area");
+      hitArea.setAttribute("x","48");
+      hitArea.setAttribute("y",String(top));
+      hitArea.setAttribute("width",String(width-48-18));
+      hitArea.setAttribute("height",String(height-top-bottom));
+      hitArea.setAttribute("aria-label","Grafikte bir noktaya dokunarak tarih, saat ve tahmin değerini görüntüleyin");
+      hitArea.setAttribute("tabindex","0");
+      svg.appendChild(hitArea);
+
+      const hideTooltip=()=>{
+        tooltip.hidden=true;
+        cursorLine.setAttribute("visibility","hidden");
+        cursorDot.setAttribute("visibility","hidden");
+      };
+      const showPoint=point=>{
+        if(!point)return;
+        cursorLine.setAttribute("x1",String(point.x));
+        cursorLine.setAttribute("x2",String(point.x));
+        cursorDot.setAttribute("cx",String(point.x));
+        cursorDot.setAttribute("cy",String(point.y));
+        cursorLine.setAttribute("visibility","visible");
+        cursorDot.setAttribute("visibility","visible");
+
+        const valueLabel=temperature
+          ? "Sıcaklık: "+fmt(point.value,1)+" °C"
+          : "Yağış: "+fmt(point.value,2)+" mm";
+        const intervalLabel=!temperature&&point.intervalStart
+          ? '<div class="chart-tooltip-meta">Yağış aralığı: '+esc(chartDateTimeTR(point.intervalStart))+' – '+esc(chartDateTimeTR(point.date))+' TSİ</div>'
+          : "";
+        const intervalDuration=!temperature&&point.intervalHours
+          ? '<div class="chart-tooltip-meta">'+point.intervalHours+' saatlik yağış dilimi</div>'
+          : "";
+        tooltip.innerHTML=
+          '<div class="chart-tooltip-time">'+esc(chartDateTimeTR(point.date))+' TSİ</div>'+
+          '<div class="chart-tooltip-value">'+esc(valueLabel)+'</div>'+
+          intervalLabel+
+          '<div class="chart-tooltip-meta">Tahmin adımı: +'+esc(point.forecastHour)+' saat</div>'+
+          intervalDuration;
+        tooltip.hidden=false;
+
+        const wrapRect=container.getBoundingClientRect();
+        const svgRect=svg.getBoundingClientRect();
+        const localX=(point.x/width)*svgRect.width+(svgRect.left-wrapRect.left);
+        const localY=(point.y/height)*svgRect.height+(svgRect.top-wrapRect.top);
+        const half=tooltip.offsetWidth/2;
+        const clampedX=Math.max(half+5,Math.min(wrapRect.width-half-5,localX));
+        tooltip.style.left=clampedX+"px";
+        tooltip.style.top=Math.max(7,localY)+"px";
+        tooltip.classList.toggle("below",localY<105);
+      };
+      const selectNearestPoint=event=>{
+        const rect=svg.getBoundingClientRect();
+        if(!rect.width)return;
+        const chartX=(event.clientX-rect.left)*(width/rect.width);
+        let nearest=coords[0],distance=Math.abs(coords[0].x-chartX);
+        for(let index=1;index<coords.length;index++){
+          const candidateDistance=Math.abs(coords[index].x-chartX);
+          if(candidateDistance<distance){
+            nearest=coords[index];
+            distance=candidateDistance;
+          }
+        }
+        showPoint(nearest);
+      };
+
+      hitArea.addEventListener("pointermove",event=>{
+        if(event.pointerType!=="touch")selectNearestPoint(event);
+      });
+      hitArea.addEventListener("pointerdown",event=>selectNearestPoint(event));
+      hitArea.addEventListener("pointerleave",event=>{
+        if(event.pointerType!=="touch")hideTooltip();
+      });
+      hitArea.addEventListener("keydown",event=>{
+        if(event.key!=="ArrowLeft"&&event.key!=="ArrowRight")return;
+        event.preventDefault();
+        const currentX=Number(cursorDot.getAttribute("cx"));
+        let currentIndex=coords.findIndex(point=>point.x===currentX);
+        if(currentIndex<0)currentIndex=0;
+        currentIndex=Math.max(0,Math.min(coords.length-1,currentIndex+(event.key==="ArrowRight"?1:-1)));
+        showPoint(coords[currentIndex]);
+      });
+    }
     function renderChart(metric,targetId){
       const container=$(targetId);
       const points=forecastData&&forecastData.forecast_6_hourly;
       const temperature=metric==="temperature";
       const field=temperature?"temperature_2m_c":"precipitation_6h_mm";
-      const title=temperature?"2 m sıcaklık · °C":"6 saatlik yağış · mm";
+      const title=temperature?"2 m sıcaklık · °C":"Tahmin aralığında yağış · mm";
       const counter=$(temperature?"temperature-count":"precipitation-count");
       if(!Array.isArray(points)){container.innerHTML='<div class="chart-empty">Tahmin verisi bulunamadı.</div>';return;}
-      const valid=points.map((p,i)=>({i,value:p[field],date:p.valid_time_istanbul})).filter(p=>numeric(p.value));
+      const valid=points.map((p,i)=>({i,value:p[field],date:p.valid_time_istanbul,forecastHour:p.forecast_hour})).filter(p=>numeric(p.value));
       counter.textContent=valid.length+" ölçüm noktası";
       if(valid.length<2){container.innerHTML='<div class="chart-empty">Bu değişken için yeterli grafik verisi bulunmuyor.</div>';return;}
       const width=900,height=250,left=48,right=18,top=18,bottom=40;
       const min=Math.min(...valid.map(p=>p.value)),max=Math.max(...valid.map(p=>p.value));
       const span=(max-min)||1,low=temperature?min-span*.16:Math.max(0,min-span*.12),high=max+span*.16;
       const xFor=i=>left+(i/(points.length-1))*(width-left-right),yFor=v=>top+((high-v)/(high-low))*(height-top-bottom);
-      const coords=valid.map(p=>({x:xFor(p.i),y:yFor(p.value),value:p.value,date:p.date}));
+      const coords=valid.map(p=>{
+        const previous=points[p.i-1];
+        const intervalStart=!temperature&&previous?previous.valid_time_istanbul:null;
+        const intervalHours=intervalStart
+          ? Math.max(0,Math.round((new Date(p.date)-new Date(intervalStart))/3600000))
+          : 0;
+        return {
+          x:xFor(p.i),y:yFor(p.value),value:p.value,date:p.date,
+          forecastHour:p.forecastHour,intervalStart,intervalHours
+        };
+      });
       const line=coords.map((p,i)=>(i?"L":"M")+p.x.toFixed(1)+" "+p.y.toFixed(1)).join(" ");
       const last=coords[coords.length-1],first=coords[0],area=line+" L "+last.x.toFixed(1)+" "+(height-bottom)+" L "+first.x.toFixed(1)+" "+(height-bottom)+" Z";
       const ticks=[0,1,2,3].map(i=>low+(high-low)*i/3);
@@ -335,6 +486,8 @@
       const gradientId=targetId+"-fill";
       const stroke=temperature?"#7dd3d7":"#8abce8";
       container.innerHTML='<svg viewBox="0 0 '+width+' '+height+'" role="img" aria-label="'+title+' grafiği"><defs><linearGradient id="'+gradientId+'" x1="0" x2="0" y1="0" y2="1"><stop offset="0%" stop-color="'+stroke+'" stop-opacity=".28"/><stop offset="100%" stop-color="'+stroke+'" stop-opacity="0"/></linearGradient></defs>'+grid+'<path d="'+area+'" fill="url(#'+gradientId+')"/><path d="'+line+'" fill="none" stroke="'+stroke+'" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"/>'+markers+labels+'</svg>';
+      const svg=container.querySelector("svg");
+      attachForecastChartTooltip(container,svg,coords,temperature,width,height,top,bottom);
     }
     function renderCharts(){
       renderChart("temperature","temperature-chart");
