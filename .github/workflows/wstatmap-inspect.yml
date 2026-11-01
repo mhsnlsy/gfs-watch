@@ -2,7 +2,7 @@ name: Validate WStatMap Eyüpsultan scraper
 
 on:
   push:
-    branches: [feature/wstatmap-eyupsultan-inspection]
+    branches: [main]
     paths:
       - "scripts/eyupsultan_weather.mjs"
       - ".github/workflows/wstatmap-inspect.yml"
