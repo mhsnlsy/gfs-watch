@@ -2143,7 +2143,8 @@ def _prepare_comparison_chart_data(current_run_id, payload, previous_runs):
             + ", ".join(missing_850)
         )
 
-    colors = ["#3977A8", "#2A9D8F", "#8E6CBE", "#E58A32"]
+    # Deep-navy report canvas with four color-blind-friendly, high-contrast cycle accents.
+    colors = ["#55D6D2", "#7EB8FF", "#FFC66D", "#C3A5FF"]
     count = len(series)
     offsets = [
         (index - (count - 1) / 2) * min(0.20, 0.80 / count)
@@ -2170,6 +2171,35 @@ def _comparison_temperature_ohlc(forecast, day):
         return None
     temperatures = [float(item[1]["temp"]) for item in samples]
     return temperatures[0], temperatures[-1], max(temperatures), min(temperatures)
+
+
+GFS_REPORT_FIGURE_BG = "#0A1B29"
+GFS_REPORT_AXIS_BG = "#102A3A"
+GFS_REPORT_PANEL_BG = "#153448"
+GFS_REPORT_TEXT = "#EAF4F7"
+GFS_REPORT_MUTED = "#B7CBD5"
+GFS_REPORT_GRID = "#456579"
+GFS_REPORT_SPINE = "#416174"
+GFS_REPORT_LEGEND_EDGE = "#36586C"
+
+
+def _style_dark_comparison_axis(axis):
+    """Apply the same high-contrast dark palette to Telegram and Pages charts."""
+    axis.set_facecolor(GFS_REPORT_AXIS_BG)
+    axis.set_axisbelow(True)
+    axis.grid(axis="y", color=GFS_REPORT_GRID, alpha=0.42, linewidth=0.9)
+    axis.tick_params(
+        axis="both", which="both",
+        colors=GFS_REPORT_MUTED,
+        labelcolor=GFS_REPORT_MUTED,
+        width=0.9, length=3,
+    )
+    axis.xaxis.label.set_color(GFS_REPORT_TEXT)
+    axis.yaxis.label.set_color(GFS_REPORT_TEXT)
+    axis.title.set_color(GFS_REPORT_TEXT)
+    for spine in axis.spines.values():
+        spine.set_color(GFS_REPORT_SPINE)
+        spine.set_linewidth(0.9)
 
 
 def _comparison_legend_handles(series, colors):
@@ -2242,8 +2272,8 @@ def _draw_comparison_bar_axis(axis, chart_data, metric, title, ylabel):
                 f"850 hPa verisi yalnızca {available}/{len(series)} döngüde mevcut\\n"
                 "Kayıtlı tahminlerde eksik değer var; sütunlar uydurulmadı.",
                 transform=axis.transAxes, ha="center", va="center",
-                fontsize=12, fontweight="bold", color="#8a4b16",
-                bbox={"boxstyle": "round,pad=0.7", "facecolor": "#fff7ed", "edgecolor": "#e8c9a8"},
+                fontsize=12, fontweight="bold", color="#FFE2AE",
+                bbox={"boxstyle": "round,pad=0.7", "facecolor": "#3A3023", "edgecolor": "#A77B43"},
             )
 
 
@@ -2279,6 +2309,7 @@ def create_comparison_chart(current_run_id, payload, previous_runs):
         fig.suptitle(
             f"İSTANBUL GFS | SON {count} DÖNGÜ KARŞILAŞTIRMASI",
             fontsize=19, fontweight="bold", y=0.99,
+            color=GFS_REPORT_TEXT,
         )
         _draw_comparison_temperature_axis(axes[0], chart_data)
         axes[0].legend(
@@ -2288,14 +2319,16 @@ def create_comparison_chart(current_run_id, payload, previous_runs):
         _draw_comparison_bar_axis(axes[1], chart_data, "precip", "Günlük toplam yağış", "mm")
         _draw_comparison_bar_axis(axes[2], chart_data, "wind", "Yüzey rüzgârı | 10 m günlük en yüksek hız", "km/sa")
         _draw_comparison_bar_axis(axes[3], chart_data, "wind_850", "850 hPa rüzgârı | Günlük en yüksek hız", "km/sa")
+        fig.patch.set_facecolor(GFS_REPORT_FIGURE_BG)
         for axis in axes:
+            _style_dark_comparison_axis(axis)
             _format_comparison_date_axis(axis, dates)
-            axis.tick_params(axis="x", labelbottom=True)
+            axis.tick_params(axis="x", labelbottom=True, labelcolor=GFS_REPORT_MUTED)
         fig.text(
             0.01, 0.012,
             "Renkler her panelde aynı GFS döngüsünü gösterir | "
             "Kaynak: NOAA/NCEP GFS 0.25° | Yalnızca tüm döngülerde ortak günler",
-            fontsize=9.5, color="#555555",
+            fontsize=9.5, color=GFS_REPORT_MUTED,
         )
         fig.tight_layout(rect=(0, 0.035, 1, 0.95))
         image_buffer = io.BytesIO()
@@ -2337,6 +2370,7 @@ def create_pages_comparison_charts(current_run_id, payload, previous_runs):
                 fig.suptitle(
                     f"İSTANBUL GFS | {label.upper()} · SON {len(series)} DÖNGÜ",
                     fontsize=20, fontweight="bold", y=0.97,
+                    color=GFS_REPORT_TEXT,
                 )
                 if metric == "temperature":
                     _draw_comparison_temperature_axis(axis, chart_data)
@@ -2347,8 +2381,9 @@ def create_pages_comparison_charts(current_run_id, payload, previous_runs):
                 else:
                     _draw_comparison_bar_axis(axis, chart_data, "wind_850", title, ylabel)
                 # Stronger typography and contrast for readable numeric values on desktop and mobile.
-                axis.set_facecolor("#fbfdff")
-                fig.patch.set_facecolor("#ffffff")
+                axis.set_facecolor(GFS_REPORT_AXIS_BG)
+                fig.patch.set_facecolor(GFS_REPORT_FIGURE_BG)
+                _style_dark_comparison_axis(axis)
                 # Put every metric heading in a dedicated figure-level band.
                 # The title never shares the plotting axes with the 12Z/18Z legend.
                 # Pages chart: clear the axis-level title added by shared
@@ -2358,23 +2393,23 @@ def create_pages_comparison_charts(current_run_id, payload, previous_runs):
                 axis.title.set_visible(False)
                 fig.text(
                     0.085, 0.675, title, ha="left", va="bottom",
-                    fontsize=18, fontweight="bold", color="#142b42",
+                    fontsize=18, fontweight="bold", color=GFS_REPORT_TEXT,
                 )
-                axis.set_ylabel(ylabel, fontsize=16, fontweight="bold", color="#142b42", labelpad=7)
+                axis.set_ylabel(ylabel, fontsize=16, fontweight="bold", color=GFS_REPORT_TEXT, labelpad=7)
                 axis.tick_params(
-                    axis="y", which="major", labelsize=15, labelcolor="#102a43",
-                    width=1.0, length=4, colors="#526779", pad=5,
+                    axis="y", which="major", labelsize=15, labelcolor=GFS_REPORT_MUTED,
+                    width=1.0, length=4, colors=GFS_REPORT_MUTED, pad=5,
                 )
                 axis.tick_params(
-                    axis="x", which="major", labelsize=14, labelcolor="#18364f",
-                    width=0.9, length=3, colors="#526779", pad=5,
+                    axis="x", which="major", labelsize=14, labelcolor=GFS_REPORT_MUTED,
+                    width=0.9, length=3, colors=GFS_REPORT_MUTED, pad=5,
                     labelbottom=True,
                 )
                 for tick_label in axis.get_yticklabels():
                     tick_label.set_fontweight("bold")
                 for tick_label in axis.get_xticklabels():
                     tick_label.set_fontweight("semibold")
-                axis.grid(axis="y", color="#9aafbf", alpha=0.38, linewidth=0.9)
+                axis.grid(axis="y", color=GFS_REPORT_GRID, alpha=0.42, linewidth=0.9)
                 axis.set_axisbelow(True)
                 # Rebuild a predictable full-width plotting area for every metric.
                 # Do not manually reposition the Axes after Matplotlib lays it out.
@@ -2393,15 +2428,15 @@ def create_pages_comparison_charts(current_run_id, payload, previous_runs):
                 # This prevents long cycle names from colliding in a four-column row.
                 fig.legend(
                     handles=legend, loc="upper center", bbox_to_anchor=(0.5, 0.925),
-                    ncol=2, fontsize=12, frameon=True, facecolor="#ffffff",
-                    edgecolor="#d5e0e8", framealpha=0.96, labelcolor="#17324a",
+                    ncol=2, fontsize=12, frameon=True, facecolor=GFS_REPORT_PANEL_BG,
+                    edgecolor=GFS_REPORT_LEGEND_EDGE, framealpha=0.98, labelcolor=GFS_REPORT_TEXT,
                     borderpad=0.75, handlelength=2.0, columnspacing=3.0,
                     labelspacing=0.9, handletextpad=0.8,
                 )
                 fig.text(
                     0.01, 0.012,
                     "Renkler her panelde aynı GFS döngüsünü gösterir | Kaynak: NOAA/NCEP GFS 0.25°",
-                    fontsize=10.5, color="#40566a",
+                    fontsize=10.5, color=GFS_REPORT_MUTED,
                 )
                 # Keep three non-overlapping vertical bands: report title,
                 # two-row cycle legend, metric heading, then plotting area.
