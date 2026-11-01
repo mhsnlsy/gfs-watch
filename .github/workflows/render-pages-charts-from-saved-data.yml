@@ -18,7 +18,7 @@ concurrency:
 jobs:
   render:
     runs-on: ubuntu-latest
-    timeout-minutes: 20
+    timeout-minutes: 60
     steps:
       - name: Check out source
         uses: actions/checkout@v7
@@ -58,7 +58,7 @@ jobs:
             echo 'Rendered charts are unchanged.'
             exit 0
           fi
-          git commit -m 'Apply larger typography to latest Pages charts'
+          git commit -m 'Backfill 850 hPa data and rebuild Pages charts'
           for attempt in 1 2 3; do
             if git push origin HEAD:gfs-watch-state; then
               echo 'Updated chart PNGs published.'
