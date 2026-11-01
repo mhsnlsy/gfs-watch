@@ -54,11 +54,6 @@ NOAA_CACHE_DIR = os.getenv("NOAA_CACHE_DIR", "noaa_cache")
 NOAA_PREFETCH_FILES_PER_CHECK = max(
     1, int(os.getenv("NOAA_PREFETCH_FILES_PER_CHECK", "141"))
 )
-NOAA_PREFETCH_INTERVAL_SECONDS = max(
-    60, int(os.getenv("NOAA_PREFETCH_INTERVAL_SECONDS", "300"))
-)
-_LAST_NOAA_PREFETCH_RUN_ID = None
-_LAST_NOAA_PREFETCH_AT = 0.0
 NOAA_CACHE_RETENTION_HOURS = max(
     12.0, float(os.getenv("NOAA_CACHE_RETENTION_HOURS", "48"))
 )
@@ -1197,33 +1192,8 @@ def missing_noaa_cache_leads(run_id, max_hour=MIN_FORECAST_HOURS - 3):
 
 
 def prefetch_noaa_cycle_if_due(skip_run_ids=None, target_run_id=None):
-    """Run the incremental prefetch at most once every five minutes per GFS cycle."""
-    global _LAST_NOAA_PREFETCH_RUN_ID, _LAST_NOAA_PREFETCH_AT
-
-    if target_run_id:
-        run_dt = _parse_utc_datetime(target_run_id)
-    else:
-        now = datetime.now(timezone.utc)
-        cycle_hour = (now.hour // 6) * 6
-        run_dt = now.replace(hour=cycle_hour, minute=0, second=0, microsecond=0)
-
-    run_id = run_dt.isoformat(timespec="seconds")
-    now_monotonic = time.monotonic()
-    if (
-        _LAST_NOAA_PREFETCH_RUN_ID == run_id
-        and now_monotonic - _LAST_NOAA_PREFETCH_AT < NOAA_PREFETCH_INTERVAL_SECONDS
-    ):
-        elapsed = now_monotonic - _LAST_NOAA_PREFETCH_AT
-        print(
-            f"[NOAA PREFETCH WAIT] {run_id}: son taramadan {elapsed:.0f} saniye geçti; "
-            f"yeni tarama {NOAA_PREFETCH_INTERVAL_SECONDS} saniyede bir yapılacak."
-        )
-        return 0
-
-    _LAST_NOAA_PREFETCH_RUN_ID = run_id
-    result = prefetch_latest_noaa_cycle(skip_run_ids, target_run_id)
-    _LAST_NOAA_PREFETCH_AT = time.monotonic()
-    return result
+    """Run one incremental prefetch for this poll; the watch loop owns the cadence."""
+    return prefetch_latest_noaa_cycle(skip_run_ids, target_run_id)
 
 
 def prefetch_latest_noaa_cycle(skip_run_ids=None, target_run_id=None):
