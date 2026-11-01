@@ -1,6 +1,11 @@
 name: ENKA Weather
 
 on:
+  push:
+    branches: [main]
+    paths:
+      - ".github/workflows/enka-weather.yml"
+      - "enka_weather.py"
   schedule:
     # Poll ENKA every five minutes, around the clock (GitHub cron is UTC).
     - cron: "*/5 * * * *"
