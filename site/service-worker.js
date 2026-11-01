@@ -1,4 +1,4 @@
-const CACHE_NAME = "istanbul-hava-shell-v6";
+const CACHE_NAME = "istanbul-hava-shell-v7";
 const APP_SHELL = ["./", "./manifest.webmanifest", "./icon.svg"];
 
 self.addEventListener("install", event => {
@@ -24,7 +24,7 @@ self.addEventListener("fetch", event => {
   if (request.url.includes("/data/")) return;
   if (request.mode === "navigate") {
     event.respondWith(
-      fetch(request).catch(() => caches.match("./"))
+      fetch(request, { cache: "no-store" }).catch(() => caches.match("./"))
     );
   }
 });
