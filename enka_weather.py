@@ -311,7 +311,7 @@ def update_temperature_history(observation):
         "station_id": observation["station_id"],
         "station_name": observation["station_name"],
         "sampling_interval_minutes": 5,
-        "aggregation_interval_minutes": 90,
+        "aggregation_interval_minutes": 60,
         "retention_days": 7,
         "updated_at_utc": logged_at.isoformat(timespec="seconds"),
         "samples": retained,
