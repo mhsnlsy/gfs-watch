@@ -257,7 +257,7 @@
         </article>
       </div>
     </section>
-    <section class="section" id="basinc"><div class="section-head"><div><div class="section-kicker">NOAA / NCEP GFS · MODEL ANALİZİ</div><h2>Basınç düzeni ve kaynak</h2></div><div class="section-note">İstanbul merkezli 2.500 km çaplı<br>bölgesel analiz</div></div><div class="lower-grid"><article class="pressure-card"><div class="label">Bölgesel basınç merkezleri ve İstanbul'a etkisi</div><p class="pressure-explainer">Her merkez için bulunduğu ülke ve coğrafi bölge, İstanbul'a göre yaklaşık yönü ve uzaklığı ile yüksek veya alçak basıncın olası hava etkisi açıklanır.</p><ul class="pressure-list" id="pressure-findings"><li class="loading">Analiz yükleniyor…</li></ul></article><article class="info-card"><div class="label">Veri hakkında</div><p>Anlık sıcaklık, rüzgâr, nem ve günlük yağış verileri yerel meteoroloji istasyonundan alınır. İstasyon kaynağı: ENKA ENKA Balmumcu Vantage PRO. Konum: İstanbul, Balmumcu çevresi; rakım 107 m.</p><p>180 saatlik tahmin: NOAA / NCEP GFS 0.25° küresel modelinin İstanbul'a en yakın grid hücresi kullanılır. İstasyon ölçümü ile model tahmini ayrı kaynaklardır.</p><div class="source-row"><span>Model: <strong>GFS 0.25°</strong></span><span id="valid-until">Geçerlilik: —</span></div></article></div></section>
+    <section class="section" id="basinc"><div class="section-head"><div><div class="section-kicker">NOAA / NCEP GFS · MODEL ANALİZİ</div><h2>Basınç düzeni ve kaynak</h2></div><div class="section-note">İstanbul merkezli 2.500 km çaplı<br>bölgesel analiz</div></div><div class="lower-grid"><article class="pressure-card"><div class="label">Bölgesel basınç merkezleri ve İstanbul'a etkisi</div><ul class="pressure-list" id="pressure-findings"><li class="loading">Analiz yükleniyor…</li></ul></article><article class="info-card"><div class="label">Veri hakkında</div><p>Anlık sıcaklık, rüzgâr, nem ve günlük yağış verileri yerel meteoroloji istasyonundan alınır. İstasyon kaynağı: ENKA ENKA Balmumcu Vantage PRO. Konum: İstanbul, Balmumcu çevresi; rakım 107 m.</p><p>180 saatlik tahmin: NOAA / NCEP GFS 0.25° küresel modelinin İstanbul'a en yakın grid hücresi kullanılır. İstasyon ölçümü ile model tahmini ayrı kaynaklardır.</p><div class="source-row"><span>Model: <strong>GFS 0.25°</strong></span><span id="valid-until">Geçerlilik: —</span></div></article></div></section>
   </main>
   <footer class="shell footer"><span><strong>İstanbul'un Havası</strong> · GFS Watch v2.1.0</span><span>Veri kaynakları:  ENKA Balmumcu Vantage PRO · NOAA / NCEP GFS · Otomatik yenileme: 5 dakika</span></footer>
   <script>
@@ -316,22 +316,10 @@
       const directions=["kuzey","kuzeydoğu","doğu","güneydoğu","güney","güneybatı","batı","kuzeybatı"];
       return distance<50?"İstanbul'un yakın çevresinde":"İstanbul'un yaklaşık "+Math.round(distance)+" km "+directions[Math.floor((bearing+22.5)/45)%8]+" yönünde";
     }
-    function readablePressureFinding(value){
-      const text=String(value);
-      const amount=text.match(/(\d+(?:\.\d+)?)\s*hPa/i);
-      if(!amount)return {text,legacy:false};
-      if(/yüksek basınç|en yüksek basınç/i.test(text)){
-        return {text:"Yüksek basınç: "+amount[1]+" hPa",legacy:true};
-      }
-      if(/alçak basınç|en düşük basınç/i.test(text)){
-        return {text:"Alçak basınç: "+amount[1]+" hPa",legacy:true};
-      }
-      return {text,legacy:false};
-    }
     function renderFindings(findings,istanbulPressure){
       const list=$("pressure-findings");
       if(!Array.isArray(findings)||!findings.length){list.innerHTML='<li class="pressure-empty">Bu tahmin döngüsü için bölgesel basınç yorumu bulunmuyor.</li>';return;}
-      const items=findings.map(readablePressureFinding).map(item=>item.text);
+      const items=findings.map(value=>String(value));
       list.innerHTML=items.map(text=>'<li><span class="pressure-icon">◈</span><span>'+esc(text)+'</span></li>').join("");
     }
     const chartDateTimeTR=value=>{
