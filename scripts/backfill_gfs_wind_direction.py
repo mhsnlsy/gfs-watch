@@ -106,7 +106,7 @@ def backfill_latest_wind_direction() -> bool:
     run_id = document.get("run_id_utc")
     if not run_id:
         raise RuntimeError("Yayımlanmış GFS tahmininde run_id_utc eksik.")
-    run_id = _parse_utc_datetime(run_id).isoformat(timespec="seconds")
+    run_id = archive._parse_utc_datetime(run_id).isoformat(timespec="seconds")
 
     points_by_hour = {}
     for point in document.get("forecast_6_hourly", []):
@@ -153,7 +153,7 @@ def backfill_latest_wind_direction() -> bool:
     missing_cache = []
 
     for lead in missing_hours:
-        decoded = _read_noaa_decoded_cache_file(run_id, lead)
+        decoded = archive._read_noaa_decoded_cache_file(run_id, lead)
         if decoded and decoded.get("wind_u") and decoded.get("wind_v"):
             u_value = decoded["wind_u"].get("Istanbul")
             v_value = decoded["wind_v"].get("Istanbul")
@@ -209,13 +209,13 @@ def backfill_latest_wind_direction() -> bool:
     }
     archive._write_json_atomically(str(latest_path), document)
 
-    run_dt = _parse_utc_datetime(run_id)
+    run_dt = archive._parse_utc_datetime(run_id)
     archive_path = (
-        Path(PUBLIC_DATA_DIR)
+        Path(archive.PUBLIC_DATA_DIR)
         / "runs"
         / (run_dt.strftime("%Y%m%dT%HZ") + ".json")
     )
-    _write_json_atomically(str(archive_path), document)
+    archive._write_json_atomically(str(archive_path), document)
 
     print(
         f"[WIND DIRECTION OK] {run_id}: {available}/{measurable} ölçülebilir saat "
