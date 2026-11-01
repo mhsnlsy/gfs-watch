@@ -210,7 +210,7 @@ def update_temperature_history(observation):
     )
     temporary_path.replace(history_path)
     print(
-        f"[TEMPERATURE LOG] {observation['temperature_2m_c']}°C kaydedildi; "
+        f"[TEMPERATURE LOG] Geçmiş dosyası güncellendi; "
         f"toplam {len(retained)} kayıt, 7 günlük kayan arşiv."
     )
     return len(retained)
