@@ -72,6 +72,40 @@ def _nearest_istanbul_value(gid) -> tuple[float, float, float]:
     return value, float(lats[index]), float(lons[index])
 
 
+def _matches_grib_field(expected_kind: str, short_name: str, param_id: int,
+                        level_type: str, level: int) -> bool:
+    """Match ECMWF fields across ecCodes level encodings used by Open Data.
+
+    ECMWF's Open Data catalogue labels 2t/10u/10v as single-surface (sfc)
+    parameters. Depending on the GRIB edition/table, ecCodes can expose these
+    either as typeOfLevel=surface (level 0) or heightAboveGround (2/10).
+    """
+    aliases = {
+        "t850": {"t"}, "ws850": {"ws", "si"}, "msl": {"msl"},
+        "t2m": {"2t", "t2m"}, "u10": {"10u"}, "v10": {"10v"}, "tp": {"tp"},
+    }
+    parameter_ids = {
+        "t850": {130}, "ws850": {10, 207}, "msl": {151},
+        "t2m": {167}, "u10": {165}, "v10": {166}, "tp": {228},
+    }
+    if expected_kind not in aliases:
+        return False
+    if short_name not in aliases[expected_kind] and param_id not in parameter_ids[expected_kind]:
+        return False
+
+    if expected_kind in {"t850", "ws850"}:
+        return level_type == "isobaricInhPa" and level == 850
+    if expected_kind == "msl":
+        return level_type in {"meanSea", "surface"}
+    if expected_kind == "t2m":
+        return level_type == "surface" or (level_type == "heightAboveGround" and level == 2)
+    if expected_kind in {"u10", "v10"}:
+        return level_type == "surface" or (level_type == "heightAboveGround" and level == 10)
+    if expected_kind == "tp":
+        return level_type in {"surface", "meanSea"}
+    return False
+
+
 def read_grib_point(path: Path, expected_kind: str) -> dict[int, tuple[float, float, float]]:
     """Read a compact {forecast_hour: (value, lat, lon)} series from a GRIB file."""
     from eccodes import (
@@ -84,6 +118,7 @@ def read_grib_point(path: Path, expected_kind: str) -> dict[int, tuple[float, fl
         raise ValueError(f"Unsupported GRIB kind: {expected_kind}")
 
     output: dict[int, tuple[float, float, float]] = {}
+    available_fields: set[tuple[int, str, str, int]] = set()
     with path.open("rb") as source:
         while True:
             gid = codes_grib_new_from_file(source)
@@ -91,24 +126,12 @@ def read_grib_point(path: Path, expected_kind: str) -> dict[int, tuple[float, fl
                 break
             try:
                 short_name = str(codes_get(gid, "shortName")).lower()
+                param_id = int(codes_get(gid, "paramId"))
                 step = int(codes_get(gid, "endStep"))
                 level_type = str(codes_get(gid, "typeOfLevel"))
                 level = int(codes_get(gid, "level"))
-                if expected_kind == "t850":
-                    matches = short_name == "t" and level_type == "isobaricInhPa" and level == 850
-                elif expected_kind == "ws850":
-                    matches = short_name in {"ws", "si"} and level_type == "isobaricInhPa" and level == 850
-                elif expected_kind == "t2m":
-                    matches = short_name == "2t" and level_type == "heightAboveGround" and level == 2
-                elif expected_kind == "u10":
-                    matches = short_name == "10u" and level_type == "heightAboveGround" and level == 10
-                elif expected_kind == "v10":
-                    matches = short_name == "10v" and level_type == "heightAboveGround" and level == 10
-                elif expected_kind == "tp":
-                    matches = short_name == "tp" and level_type in {"surface", "meanSea"}
-                else:
-                    matches = short_name == "msl" and level_type in {"meanSea", "surface"}
-                if not matches:
+                available_fields.add((param_id, short_name, level_type, level))
+                if not _matches_grib_field(expected_kind, short_name, param_id, level_type, level):
                     continue
                 if step in output:
                     raise ValueError(f"Duplicate {expected_kind} field at step {step}.")
@@ -117,7 +140,14 @@ def read_grib_point(path: Path, expected_kind: str) -> dict[int, tuple[float, fl
                 codes_release(gid)
 
     if not output:
-        raise RuntimeError(f"No {expected_kind} fields found in {path.name}.")
+        preview = ", ".join(
+            f"{param}/{name}/{level_type}/{level}"
+            for param, name, level_type, level in sorted(available_fields)[:18]
+        ) or "no readable GRIB fields"
+        raise RuntimeError(
+            f"No {expected_kind} fields found in {path.name}. "
+            f"Available GRIB fields (paramId/shortName/typeOfLevel/level): {preview}"
+        )
     return output
 
 
