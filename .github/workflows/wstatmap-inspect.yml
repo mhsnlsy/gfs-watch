@@ -1,6 +1,11 @@
 name: Inspect WStatMap station page
 
 on:
+  push:
+    branches: [feature/wstatmap-eyupsultan-inspection]
+    paths:
+      - "scripts/inspect_wstatmap_station.mjs"
+      - ".github/workflows/wstatmap-inspect.yml"
   pull_request:
     paths:
       - "scripts/inspect_wstatmap_station.mjs"
