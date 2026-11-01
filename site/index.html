@@ -1114,7 +1114,7 @@
       const low=Math.floor((rawLow-padding)*2)/2;
       const high=Math.ceil((rawHigh+padding)*2)/2;
       const span=Math.max(.5,high-low);
-      const x=index=>left+(index/(points.length-1))*plotW;
+      const x=index=>left+(points[index].hour/180)*plotW;
       const y=value=>top+((high-value)/span)*plotH;
       const grid=Array.from({length:5},(_,index)=>{
         const value=low+span*index/4,py=y(value);
