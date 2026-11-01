@@ -59,7 +59,7 @@ def main() -> None:
         raise AssertionError("Missing ECMWF website contract: " + ", ".join(missing))
 
     station_card_start = html.index('<article class="weather-card station-card"')
-    history_start = html.index('<section class="history-panel station-history-inline"')
+    history_start = html.index('<section class="station-history-inline history-panel"')
     history_end = html.index('</section>', history_start)
     station_card_end = html.index('</article>', history_end)
     if not (station_card_start < history_start < history_end < station_card_end):
