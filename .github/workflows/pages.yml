@@ -91,7 +91,7 @@ jobs:
 
       - name: Verify the deployed forecast is the expected GFS cycle
         env:
-          PAGE_URL: \${{ steps.deployment.outputs.page_url }}
+          PAGE_URL: ${{ steps.deployment.outputs.page_url }}
         run: |
           expected_run_id="$(python - <<'PY'
           import json
@@ -99,7 +99,7 @@ jobs:
               print(json.load(source)["run_id_utc"])
           PY
           )"
-          url="\${PAGE_URL%/}/data/latest.json"
+          url="${PAGE_URL%/}/data/latest.json"
           for attempt in $(seq 1 18); do
             if curl --fail --silent --show-error "$url" -o "$RUNNER_TEMP/live-latest.json"; then
               actual_run_id="$(python - <<'PY'
