@@ -1,4 +1,4 @@
-const CACHE_NAME = "istanbul-hava-shell-v5";
+const CACHE_NAME = "istanbul-hava-shell-v6";
 const APP_SHELL = ["./", "./manifest.webmanifest", "./icon.svg"];
 
 self.addEventListener("install", event => {
