@@ -108,13 +108,13 @@ async function main() {
     const stationRequests = new Set();
     const stationResponses = [];
     page.on("request", request => {
-      if (/wstatmap\\.com/i.test(request.url())) stationRequests.add(request.url());
+      if (/wstatmap\.com/i.test(request.url())) stationRequests.add(request.url());
     });
     page.on("response", async response => {
-      if (!/wstatmap\\.com/i.test(response.url())) return;
+      if (!/wstatmap\.com/i.test(response.url()) && !/api\.wstatmap\.com/i.test(response.url())) return;
       const contentType = response.headers()["content-type"] || "";
       stationResponses.push({url:response.url(),status:response.status(),contentType});
-      if (/json|javascript|text/i.test(contentType)) {
+      if (/api\.wstatmap\.com/i.test(response.url()) && /json|text/i.test(contentType)) {
         try {
           const body = await response.text();
           if (/api|station|history|observ|weather|data|graph/i.test(response.url()) || /pressure|basınç|history|historical|temperature|sıcaklık/i.test(body)) {
