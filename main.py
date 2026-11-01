@@ -484,6 +484,10 @@ def pressure_region_name(latitude, longitude):
              (45.8, 36.8), (45.0, 36.7), (44.4, 36.0), (44.0, 34.8)],
         ),
         (
+            "Kuzeybatı Ukrayna (Volın bölgesi)",
+            [(50.0, 22.0), (52.5, 22.0), (52.5, 28.5), (50.0, 28.5)],
+        ),
+        (
             "Romanya",
             [(43.6, 20.2), (45.2, 20.2), (47.0, 22.0), (48.2, 23.0),
              (48.2, 26.8), (47.8, 28.5), (45.4, 29.7), (44.0, 29.7),
@@ -546,6 +550,10 @@ def pressure_region_name(latitude, longitude):
         (
             "Kuzey Makedonya, Balkanlar",
             [(40.8, 20.4), (42.4, 20.4), (42.4, 23.0), (40.8, 23.0)],
+        ),
+        (
+            "Batı Yunanistan ve İyon Denizi açıkları",
+            [(35.0, 19.0), (41.0, 19.0), (41.0, 23.0), (35.0, 23.0)],
         ),
         (
             "Kuzeydoğu Yunanistan (Trakya ve Makedonya)",
