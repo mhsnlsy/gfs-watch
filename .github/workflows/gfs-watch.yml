@@ -7,6 +7,7 @@ on:
       - "main.py"
       - "requirements.txt"
       - ".github/workflows/gfs-watch.yml"
+      - "scripts/backfill_gfs_wind_direction.py"
   workflow_dispatch:
 
 concurrency:
@@ -59,14 +60,14 @@ jobs:
           if git cat-file -e origin/gfs-watch-state:gfs_watch.db 2>/dev/null; then
             git show origin/gfs-watch-state:gfs_watch.db > gfs_watch.db
           fi
-          # Restore the existing manifest and its media before report generation.
-          # This lets each new run retain the previous four reports instead of
-          # replacing the website feed with a one-item manifest.
-          if git cat-file -e origin/gfs-watch-state:public/notifications/latest.json 2>/dev/null; then
-            git archive origin/gfs-watch-state public/notifications | tar -x -C .
-            echo "Previous Pages notification archive restored."
+          # Restore the complete public data tree so a targeted wind-direction
+          # repair can update the existing GFS cycle without waiting for a new f180.
+          if git cat-file -e origin/gfs-watch-state:public/latest.json 2>/dev/null; then
+            git archive origin/gfs-watch-state public | tar -x -C .
+            echo "Previous Pages forecast, run archive and notification media restored."
           else
-            echo "No previous Pages notification archive exists; first report will create it."
+            mkdir -p public
+            echo "No previous Pages forecast exists; the next completed GFS cycle will create it."
           fi
       - name: Record latest processed GFS cycle
         run: |
@@ -83,6 +84,15 @@ jobs:
               output.write(run_id)
           print(f"Previously processed latest GFS cycle: {run_id}")
           PY
+      - name: Backfill missing 72-hour wind direction from native GFS U/V cache
+        id: wind-direction-backfill
+        continue-on-error: true
+        env:
+          PUBLIC_DATA_DIR: public
+          NOAA_CACHE_DIR: noaa_cache_v2
+          NOAA_RANGE_DOWNLOAD_WORKERS: "8"
+          WIND_DIRECTION_FETCH_WORKERS: "4"
+        run: python -u scripts/backfill_gfs_wind_direction.py
       - name: Discover NOAA cycles, prefetch and process one reportable cycle
         id: check-gfs
         continue-on-error: true
@@ -116,9 +126,12 @@ jobs:
           if [ "$after" != "none" ] && [ "$after" != "$before" ]; then
             echo "gfs_updated=true" >> "$GITHUB_OUTPUT"
             echo "New GFS cycle processed: $after"
+          elif [ "${{ steps.wind-direction-backfill.outputs.updated }}" = "true" ]; then
+            echo "gfs_updated=true" >> "$GITHUB_OUTPUT"
+            echo "Existing GFS cycle gained a fresh 72-hour wind-direction payload."
           else
             echo "gfs_updated=false" >> "$GITHUB_OUTPUT"
-            echo "No new completed GFS cycle was generated in this session."
+            echo "No new GFS cycle or wind-direction backfill was generated in this session."
           fi
       - name: Save partial NOAA forecast cache
         if: always() && steps.check-gfs.outputs.noaa_cache_updated == 'true'
