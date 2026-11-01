@@ -303,6 +303,13 @@ def build_document(run_dt: datetime, mean: dict, spread: dict, regional_pressure
         if not isinstance((mean if key.startswith("mean_") else spread).get(key), dict):
             raise RuntimeError(f"Internal ECMWF field collection missing: {key} ({label}).")
 
+    # Accumulated precipitation is commonly absent at f000 in GRIB archives.
+    # f000 is the zero baseline, not a missing forecast value.
+    mean_tp = dict(mean["mean_tp"])
+    spread_tp = dict(spread["spread_tp"])
+    mean_tp.setdefault(0, (0.0, LATITUDE, LONGITUDE))
+    spread_tp.setdefault(0, (0.0, LATITUDE, LONGITUDE))
+
     forecasts = []
     grid_lat = grid_lon = None
     previous_tp_mean = 0.0
@@ -320,8 +327,8 @@ def build_document(run_dt: datetime, mean: dict, spread: dict, regional_pressure
         v10_mean, _, _ = _value_at(mean["mean_v10"], step, "10m v wind mean")
         u10_sd, _, _ = _value_at(spread["spread_u10"], step, "10m u wind spread")
         v10_sd, _, _ = _value_at(spread["spread_v10"], step, "10m v wind spread")
-        tp_mean, _, _ = _value_at(mean["mean_tp"], step, "total precipitation mean")
-        tp_sd, _, _ = _value_at(spread["spread_tp"], step, "total precipitation spread")
+        tp_mean, _, _ = _value_at(mean_tp, step, "total precipitation mean")
+        tp_sd, _, _ = _value_at(spread_tp, step, "total precipitation spread")
         wind10 = math.hypot(u10_mean, v10_mean) * 3.6
         wind10_sd = math.hypot(u10_sd, v10_sd) * 3.6
         precip_interval_mm = max(0.0, (tp_mean - previous_tp_mean) * 1000.0)
