@@ -259,6 +259,25 @@
     .history-chart{height:170px;width:100%;margin-top:5px;min-width:0}
     .history-chart svg{width:100%;height:100%;display:block;overflow:visible}
     .history-chart-meta{font-size:9px;color:#91aab5;line-height:1.4;margin-top:2px;min-height:0}
+    /* Keep the live-observation content unchanged; tighten only its frame and spacing. */
+    .dashboard-top{align-items:start}
+    .dashboard-top .station-card{
+      align-self:start;
+      height:fit-content;
+      min-height:0;
+      padding:12px 14px 10px;
+    }
+    .dashboard-top .station-overview{margin-top:12px}
+    .dashboard-top .station-card .temp-row{margin-top:14px}
+    .dashboard-top .station-card .weather-stats{margin-top:13px;row-gap:8px}
+    .dashboard-top .station-card .stat{padding:6px 8px}
+    @media(max-width:560px){
+      .dashboard-top .station-card{padding:12px 13px 10px}
+      .dashboard-top .station-overview{margin-top:10px}
+      .dashboard-top .station-card .temp-row{margin-top:12px}
+      .dashboard-top .station-card .weather-stats{margin-top:12px;row-gap:7px}
+      .dashboard-top .station-card .stat{padding:5px 7px}
+    }
     @media(max-width:900px){.dashboard-top{grid-template-columns:minmax(0,1fr);}.history-charts{grid-template-columns:repeat(2,minmax(0,1fr))}}
     @media(max-width:560px){.dashboard-top{padding:20px 0 15px;gap:11px}.dashboard-top .station-card{padding:17px}.dashboard-top .station-card .weather-stats{grid-template-columns:repeat(2,minmax(0,1fr));margin-top:17px}.history-panel{padding:12px}.history-panel-head{margin-bottom:9px}.history-charts{grid-template-columns:minmax(0,1fr);gap:7px}.history-chart-card{padding:9px 9px 6px}.history-chart{height:140px;margin-top:4px}.history-chart-meta{margin-top:1px}}
 \n  </style>
