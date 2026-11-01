@@ -59,6 +59,15 @@ def run_offline_tests() -> None:
         mean, spread, regional_pressure,
     )
     validate_document(document)
+    mean_without_tp_zero = {**mean, "mean_tp": dict(mean["mean_tp"])}
+    spread_without_tp_zero = {**spread, "spread_tp": dict(spread["spread_tp"])}
+    del mean_without_tp_zero["mean_tp"][0]
+    del spread_without_tp_zero["spread_tp"][0]
+    zero_baseline_document = build_document(
+        datetime(2026, 11, 1, 0, tzinfo=timezone.utc),
+        mean_without_tp_zero, spread_without_tp_zero, regional_pressure,
+    )
+    assert zero_baseline_document["forecasts"][0]["precipitation_interval_mm"] == 0.0
     assert document["schema"] == SCHEMA
     assert document["forecasts"][0]["temperature_850hpa"]["mean_c"] == 1.0
     assert document["forecasts"][0]["wind_850hpa"]["mean_kmh"] == 36.0
