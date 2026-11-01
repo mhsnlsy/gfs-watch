@@ -2227,9 +2227,12 @@ def _draw_comparison_bar_axis(axis, chart_data, metric, title, ylabel):
         )
         if available < len(series):
             axis.text(
-                0.99, 0.94,
-                f"850 hPa verisi {available}/{len(series)} döngüde mevcut; önceki arşivlerde bu alan yok.",
-                transform=axis.transAxes, ha="right", va="top", fontsize=8, color="#777777",
+                0.5, 0.52,
+                f"850 hPa verisi yalnızca {available}/{len(series)} döngüde mevcut\\n"
+                "Kayıtlı tahminlerde eksik değer var; sütunlar uydurulmadı.",
+                transform=axis.transAxes, ha="center", va="center",
+                fontsize=12, fontweight="bold", color="#8a4b16",
+                bbox={"boxstyle": "round,pad=0.7", "facecolor": "#fff7ed", "edgecolor": "#e8c9a8"},
             )
 
 
@@ -2341,6 +2344,7 @@ def create_pages_comparison_charts(current_run_id, payload, previous_runs):
                 # drawing helpers; it otherwise duplicates and collides with
                 # the dedicated metric heading above the plot.
                 axis.title.set_text("")
+                axis.title.set_visible(False)
                 fig.text(
                     0.085, 0.675, title, ha="left", va="bottom",
                     fontsize=18, fontweight="bold", color="#142b42",
