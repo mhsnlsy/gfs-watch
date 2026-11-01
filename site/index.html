@@ -8,7 +8,7 @@
   <meta name="apple-mobile-web-app-capable" content="yes">
   <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
   <link rel="manifest" href="./manifest.webmanifest">
-  <meta name="description" content="İstanbul için NOAA GFS modeline dayalı 180 saatlik hava tahmini, sıcaklık, yağış, rüzgâr ve bölgesel basınç analizi.">
+  <meta name="description" content="İstanbul için GFS ve ECMWF hava tahmini, 72 saatlik sıcaklık, yağış, rüzgâr ve bölgesel basınç analizi.">
   <title>İstanbul'un Havası — İstanbul Hava Tahmini</title>
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
@@ -409,7 +409,7 @@
 <body>
   <header class="shell topbar">
     <a class="brand" href="#" aria-label="İstanbul'un Havası ana sayfa"><span class="brand-mark">☀</span><span>İstanbul'un Havası<small>Şehir için hava tahmini</small></span></a>
-    <nav aria-label="Ana gezinme"><a href="#bildirimler">Raporlar</a><a href="#tahmin">8 günlük tahmin</a><a href="#seyir">180 saatlik seyir</a><a href="#basinc">Basınç analizi</a></nav>
+    <nav aria-label="Ana gezinme"><a href="#bildirimler">Raporlar</a><a href="#tahmin">8 günlük tahmin</a><a href="#basinc">Basınç analizi</a></nav>
     <div class="top-right"><div class="model-picker" role="group" aria-label="Tahmin modeli"><button type="button" id="model-gfs-button" class="active" aria-pressed="true">GFS</button><button type="button" id="model-ecmwf-button" aria-pressed="false">ECMWF IFS</button></div><span class="version">GFS Watch · v3.0.0</span></div>
   </header>
   <main class="shell">
@@ -445,7 +445,7 @@
       </section>
     </section>
     <div id="gfs-model-view">
-    <section class="section" id="tahmin"><div class="section-head"><div><div class="section-kicker">NOAA / NCEP GFS · MODEL TAHMİNİ</div><h2>8 günlük tahmin</h2></div><div class="section-note"><span id="cycle-chip">Model döngüsü yükleniyor</span><br><span id="updated-chip">Yayın zamanı bekleniyor</span><br>Günlük en düşük / en yüksek sıcaklık</div></div><div class="daily-grid" id="daily-grid"><div class="loading">Tahmin verisi yükleniyor…</div></div></section>
+</section>
     <section class="section" id="bildirimler">
       <div class="section-head report-head">
         <div><div class="section-kicker">GÜN BOYUNCA 4 MODEL DÖNGÜSÜ</div><h2>Son hava raporları</h2><p class="section-description">Her yeni GFS raporu, görseli ve seslendirmesiyle burada arşivlenir. En son dört rapor gösterilir.</p></div>
@@ -457,42 +457,20 @@
       <div id="notifications-list" class="notification-list" aria-live="polite"><div class="chart-empty">Son raporlar yükleniyor…</div></div>
       <p class="notification-footnote">Cihaz bildirimi yalnızca yeni GFS raporlarında gönderilir; ENKA istasyon ölçümleri bildirim oluşturmaz. Rapor arşivi sayfa açıkken 5 dakikada bir yenilenir.</p>
     </section>
-    <section class="section" id="seyir">
-      <div class="section-head">
-        <div><div class="section-kicker">NOAA / NCEP GFS · MODEL TAHMİNİ</div><h2>180 saatlik tahmin seyri</h2></div>
-        <div class="section-note">Sıcaklık ve yağış aynı anda görünür<br>Her iki grafik 3 saatlik adımlarla gösterilir</div>
-      </div>
-      <div class="chart-stack">
-        <article class="chart-card">
-          <div class="chart-card-head"><div><div class="chart-title">Sıcaklık</div><div class="chart-subtitle">3 saatlik tahmin adımı · 2 metre sıcaklığı · °C</div></div><span class="chart-count" id="temperature-count">3 saatlik tahmin</span></div>
-          <div class="chart-wrap" id="temperature-chart"><div class="chart-empty">Sıcaklık grafiği yükleniyor…</div></div>
-        </article>
-        <article class="chart-card">
-          <div class="chart-card-head"><div><div class="chart-title">Yağış</div><div class="chart-subtitle">3 saatlik toplam yağış · mm</div></div><span class="chart-count" id="precipitation-count">3 saatlik tahmin</span></div>
-          <div class="chart-wrap" id="precipitation-chart"><div class="chart-empty">Yağış grafiği yükleniyor…</div></div>
-        </article>
-      </div>
-    </section>
-    <section class="section" id="basinc"><div class="section-head"><div><div class="section-kicker">NOAA / NCEP GFS · MODEL ANALİZİ</div><h2>Basınç düzeni ve kaynak</h2></div><div class="section-note">İstanbul merkezli 2.500 km çaplı<br>bölgesel analiz</div></div><div class="lower-grid"><article class="pressure-card"><div class="label">Bölgesel basınç merkezleri ve İstanbul'a etkisi</div><ul class="pressure-list" id="pressure-findings"><li class="loading">Analiz yükleniyor…</li></ul></article><article class="info-card"><div class="label">Veri hakkında</div><p>Anlık sıcaklık, rüzgâr, nem ve yağış verileri seçilen istasyondan alınır: ENKA Balmumcu Vantage PRO veya WStatMap üzerinden MGM Eyüpsultan 18101. Karttaki seçimle istasyon değişir. Basınç, kaynak sayfasında ölçüm mevcutsa gösterilir.</p><p>180 saatlik tahmin: NOAA / NCEP GFS 0.25° küresel modelinin İstanbul'a en yakın grid hücresi kullanılır. İstasyon ölçümü ile model tahmini ayrı kaynaklardır.</p><div class="source-row"><span>Model: <strong>GFS 0.25°</strong></span><span id="valid-until">Geçerlilik: —</span></div></article></div></section>
+</section>
+    <section class="section" id="basinc"><div class="section-head"><div><div class="section-kicker">NOAA / NCEP GFS · MODEL ANALİZİ</div><h2>Basınç düzeni ve kaynak</h2></div><div class="section-note">İstanbul merkezli 2.500 km çaplı<br>bölgesel analiz</div></div><div class="lower-grid"><article class="pressure-card"><div class="label">Bölgesel basınç merkezleri ve İstanbul'a etkisi</div><ul class="pressure-list" id="pressure-findings"><li class="loading">Analiz yükleniyor…</li></ul></article><article class="info-card"><div class="label">Veri hakkında</div><p>Anlık sıcaklık, rüzgâr, nem ve yağış verileri seçilen istasyondan alınır: ENKA Balmumcu Vantage PRO veya WStatMap üzerinden MGM Eyüpsultan 18101. Karttaki seçimle istasyon değişir. Basınç, kaynak sayfasında ölçüm mevcutsa gösterilir.</p><p>NOAA / NCEP GFS 0.25° küresel modelinin İstanbul'a en yakın grid hücresi kullanılır. İstasyon ölçümü ile model tahmini ayrı kaynaklardır.</p><div class="source-row"><span>Model: <strong>GFS 0.25°</strong></span><span id="valid-until">Geçerlilik: —</span></div></article></div></section>
+    <section class="section" id="tahmin"><div class="section-head"><div><div class="section-kicker">NOAA / NCEP GFS · MODEL TAHMİNİ</div><h2>8 günlük tahmin</h2></div><div class="section-note"><span id="cycle-chip">Model döngüsü yükleniyor</span><br><span id="updated-chip">Yayın zamanı bekleniyor</span><br>Günlük en düşük / en yüksek sıcaklık</div></div><div class="daily-grid" id="daily-grid"><div class="loading">Tahmin verisi yükleniyor…</div></div>
     </div>
     <div id="ecmwf-model-view" hidden aria-label="ECMWF tahmin görünümü">
       <div class="section-head" style="padding-top:30px"><div><div class="section-kicker">ECMWF IFS · HRES + ENS</div><h2>ECMWF IFS HRES + ENS · İstanbul</h2><p class="section-description">GFS ile aynı kart, grafik, günlük tahmin ve basınç analizi düzeni. 2 m sıcaklık, 10 m rüzgâr ve yağış IFS HRES; 850 hPa ve basınç alanları IFS ensemble verisidir.</p></div><div class="section-note"><span id="ecmwf-run-meta">ECMWF döngüsü bekleniyor</span><br><span id="ecmwf-updated-chip">Yayın zamanı</span><br>Günlük en düşük / en yüksek sıcaklık</div></div>
       <div id="ecmwf-data-status" class="ecmwf-model-status" role="status" aria-live="polite">ECMWF IFS verisi yükleniyor…</div>
-<section class="section" id="ecmwf-tahmin"><div class="section-head"><div><div class="section-kicker">ECMWF IFS · MODEL TAHMİNİ</div><h2>8 günlük tahmin</h2></div><div class="section-note"><span id="ecmwf-daily-cycle-chip">ECMWF döngüsü yükleniyor</span><br><span id="ecmwf-daily-updated-chip">Yayın zamanı bekleniyor</span><br>Günlük en düşük / en yüksek sıcaklık · HRES yüzey tahmini</div></div><div class="daily-grid" id="ecmwf-daily-grid"><div class="loading">ECMWF tahmini yükleniyor…</div></div></section>
+</section>
 <section class="section" id="ecmwf-seyir">
       <div class="section-head">
-        <div><div class="section-kicker">ECMWF IFS ENS · MODEL TAHMİNİ</div><h2>180 saatlik tahmin seyri</h2></div>
-        <div class="section-note">Sıcaklık ve yağış aynı anda görünür<br>ECMWF yayın adımları korunur</div>
+        <div><div class="section-kicker">ECMWF IFS ENS · RÜZGÂR ANALİZİ</div><h2>Rüzgâr çevrim karşılaştırması</h2></div>
+        <div class="section-note">Son dört ECMWF çıktısı<br>Yüzey ve 850 hPa rüzgâr hızı</div>
       </div>
       <div class="chart-stack">
-        <article class="chart-card">
-          <div class="chart-card-head"><div><div class="chart-title">Sıcaklık · 2 m</div><div class="chart-subtitle">Son dört ECMWF çıktısı · aynı geçerlilik saatleri · °C</div></div><span class="chart-count" id="ecmwf-comparison-temperature-count">4 çıktı</span></div>
-          <div class="chart-wrap" id="ecmwf-comparison-temperature-chart"><div class="chart-empty">Dört çevrim karşılaştırması yükleniyor…</div></div>
-        </article>
-        <article class="chart-card">
-          <div class="chart-card-head"><div><div class="chart-title">Yağış · 6 saatlik toplam</div><div class="chart-subtitle">Aynı altı saatlik geçerlilik aralığı · mm</div></div><span class="chart-count" id="ecmwf-comparison-precipitation-count">4 çıktı</span></div>
-          <div class="chart-wrap" id="ecmwf-comparison-precipitation-chart"><div class="chart-empty">Dört çevrim karşılaştırması yükleniyor…</div></div>
-        </article>
         <article class="chart-card">
           <div class="chart-card-head"><div><div class="chart-title">Rüzgâr · 10 m</div><div class="chart-subtitle">Yüzey rüzgâr hızı · km/sa</div></div><span class="chart-count" id="ecmwf-comparison-wind10-count">4 çıktı</span></div>
           <div class="chart-wrap" id="ecmwf-comparison-wind10-chart"><div class="chart-empty">Dört çevrim karşılaştırması yükleniyor…</div></div>
@@ -503,8 +481,9 @@
         </article>
       </div>
     </section>
-<section class="section" id="ecmwf-basinc"><div class="section-head"><div><div class="section-kicker">ECMWF IFS ENS · MODEL ANALİZİ</div><h2>Basınç düzeni ve kaynak</h2></div><div class="section-note">İstanbul merkezli 0.25° grid<br>ensemble basınç analizi</div></div><div class="lower-grid"><article class="pressure-card"><div class="label">Bölgesel basınç merkezleri ve İstanbul'a etkisi</div><ul class="pressure-list" id="ecmwf-pressure-findings"><li class="loading">Analiz yükleniyor…</li></ul></article><article class="info-card"><div class="label">Veri hakkında</div><p>Anlık sıcaklık, rüzgâr, nem ve günlük yağış verileri yerel meteoroloji istasyonundan alınır. İstasyon gözlemleri model seçiminden bağımsız olarak üst bölümde ortak gösterilir.</p><p>180 saatlik yüzey tahmini IFS HRES oper/fc; 850 hPa ve basınç analizi IFS ENS em/es ürününden alınır. İstasyon ölçümü ile model tahmini ayrı kaynaklardır.</p><div class="source-row"><span>Model: <strong>ECMWF IFS HRES + ENS 0.25°</strong></span><span id="ecmwf-valid-until">Geçerlilik: —</span></div></article></div></section>
+<section class="section" id="ecmwf-basinc"><div class="section-head"><div><div class="section-kicker">ECMWF IFS ENS · MODEL ANALİZİ</div><h2>Basınç düzeni ve kaynak</h2></div><div class="section-note">İstanbul merkezli 0.25° grid<br>ensemble basınç analizi</div></div><div class="lower-grid"><article class="pressure-card"><div class="label">Bölgesel basınç merkezleri ve İstanbul'a etkisi</div><ul class="pressure-list" id="ecmwf-pressure-findings"><li class="loading">Analiz yükleniyor…</li></ul></article><article class="info-card"><div class="label">Veri hakkında</div><p>Anlık sıcaklık, rüzgâr, nem ve günlük yağış verileri yerel meteoroloji istasyonundan alınır. İstasyon gözlemleri model seçiminden bağımsız olarak üst bölümde ortak gösterilir.</p><p>Yüzey tahmini IFS HRES oper/fc; 850 hPa ve basınç analizi IFS ENS em/es ürününden alınır. İstasyon ölçümü ile model tahmini ayrı kaynaklardır.</p><div class="source-row"><span>Model: <strong>ECMWF IFS HRES + ENS 0.25°</strong></span><span id="ecmwf-valid-until">Geçerlilik: —</span></div></article></div></section>
       <section class="section" aria-label="ECMWF veri kaynağı ve lisans"><p class="ecmwf-source-note">Kaynak: <a href="https://www.ecmwf.int/en/forecasts/datasets/open-data" target="_blank" rel="noopener">ECMWF Open Data</a> · IFS HRES oper/fc + IFS ENS em/es · <strong>© ECMWF, CC BY 4.0</strong>. 2 m sıcaklık, 10 m rüzgâr ve yağış HRES yüzey tahminidir; 850 hPa ve MSLP ensemble ortalaması/standart sapmasıdır. Yüzey alanları için ENS standart sapması Open Data ürününde bulunmadığından gösterilmez.</p></section>
+<section class="section" id="ecmwf-tahmin"><div class="section-head"><div><div class="section-kicker">ECMWF IFS · MODEL TAHMİNİ</div><h2>8 günlük tahmin</h2></div><div class="section-note"><span id="ecmwf-daily-cycle-chip">ECMWF döngüsü yükleniyor</span><br><span id="ecmwf-daily-updated-chip">Yayın zamanı bekleniyor</span><br>Günlük en düşük / en yüksek sıcaklık · HRES yüzey tahmini</div></div><div class="daily-grid" id="ecmwf-daily-grid"><div class="loading">ECMWF tahmini yükleniyor…</div></div>
     </div>
   </main>
   <footer class="shell footer"><span><strong>İstanbul'un Havası</strong> · GFS Watch v3.0.0</span><span>Veri kaynakları: ENKA Balmumcu Vantage PRO · WStatMap / MGM Eyüpsultan 18101 · NOAA / NCEP GFS · ECMWF Open Data · Otomatik yenileme: 5 dakika</span></footer>
@@ -842,8 +821,6 @@
       if(typeof document!=="undefined")attachStationHistoryTooltip(holder,holder.querySelector("svg"),coords,width,height,top,bottom,"#c4d9e6");
     }
     function renderCharts(){
-      renderChart("temperature","temperature-chart");
-      renderChart("precipitation","precipitation-chart");
     }
     function attachStationHistoryTooltip(holder,svg,coords,width,height,top,bottom,color){
       if(!coords.length||typeof document==="undefined")return;
@@ -1326,8 +1303,6 @@
       $("ecmwf-valid-until").textContent="Son geçerlilik: "+new Intl.DateTimeFormat("tr-TR",{timeZone:"Europe/Istanbul",day:"2-digit",month:"2-digit"}).format(new Date(document.forecast_valid_until_utc));
       renderDaily(viewData.daily_summary,"ecmwf-daily-grid");
       const comparisonRuns=Array.isArray(document.comparison_runs)?document.comparison_runs:[];
-      renderEcmwfComparisonChart("temperature","ecmwf-comparison-temperature-chart",comparisonRuns);
-      renderEcmwfComparisonChart("precipitation","ecmwf-comparison-precipitation-chart",comparisonRuns);
       renderEcmwfComparisonChart("wind10","ecmwf-comparison-wind10-chart",comparisonRuns);
       renderEcmwfComparisonChart("wind850","ecmwf-comparison-wind850-chart",comparisonRuns);
       renderFindings(viewData.regional_pressure_analysis&&viewData.regional_pressure_analysis.findings,first.mslp&&first.mslp.mean_hpa,"ecmwf-pressure-findings");
