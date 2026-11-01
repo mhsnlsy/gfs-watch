@@ -1,6 +1,7 @@
 """Fetch the live ENKA Balmumcu Vantage PRO observation."""
 import json
 import math
+import os
 import re
 from datetime import datetime, timezone
 from html import unescape
@@ -141,6 +142,80 @@ def fetch_enka_station_observation():
     }
 
 
+def update_temperature_history(observation):
+    """Append this poll's fresh temperature sample to a rolling seven-day log."""
+    history_path = Path(
+        os.getenv(
+            "STATION_TEMPERATURE_HISTORY_PATH",
+            "public/station-temperature-history.json",
+        )
+    )
+    history_path.parent.mkdir(parents=True, exist_ok=True)
+
+    if history_path.exists():
+        with history_path.open("r", encoding="utf-8") as source:
+            history = json.load(source)
+        if history.get("schema") != "gfs-watch.station-temperature-history.v1":
+            raise ValueError("İstasyon sıcaklık geçmişi şeması beklenenden farklı.")
+        samples = history.get("samples")
+        if not isinstance(samples, list):
+            raise ValueError("İstasyon sıcaklık geçmişi samples alanı liste değil.")
+    else:
+        samples = []
+
+    # Do not create a new point from an old/stale reading.
+    if observation.get("is_stale") or observation.get("temperature_2m_c") is None:
+        print(
+            "[TEMPERATURE LOG] ENKA ölçümü eski veya geçersiz; "
+            "bu kontrol için yeni sıcaklık kaydı eklenmedi."
+        )
+        return len(samples)
+
+    logged_at = datetime.now(timezone.utc)
+    samples.append({
+        "logged_at_utc": logged_at.isoformat(timespec="seconds"),
+        "observed_at_utc": observation["observed_at_utc"],
+        "temperature_2m_c": float(observation["temperature_2m_c"]),
+    })
+
+    # Keep seven days: 2,016 samples at the intended five-minute cadence.
+    cutoff = logged_at.timestamp() - 7 * 24 * 60 * 60
+    retained = []
+    for sample in samples:
+        try:
+            timestamp = datetime.fromisoformat(
+                str(sample["logged_at_utc"]).replace("Z", "+00:00")
+            ).timestamp()
+            temperature = float(sample["temperature_2m_c"])
+            if math.isfinite(temperature) and timestamp >= cutoff:
+                retained.append(sample)
+        except (KeyError, TypeError, ValueError, OverflowError):
+            continue
+    retained = retained[-2016:]
+
+    document = {
+        "schema": "gfs-watch.station-temperature-history.v1",
+        "station_id": observation["station_id"],
+        "station_name": observation["station_name"],
+        "sampling_interval_minutes": 5,
+        "aggregation_interval_minutes": 90,
+        "retention_days": 7,
+        "updated_at_utc": logged_at.isoformat(timespec="seconds"),
+        "samples": retained,
+    }
+    temporary_path = history_path.with_suffix(history_path.suffix + ".tmp")
+    temporary_path.write_text(
+        json.dumps(document, ensure_ascii=False, indent=2, allow_nan=False) + "\n",
+        encoding="utf-8",
+    )
+    temporary_path.replace(history_path)
+    print(
+        f"[TEMPERATURE LOG] {observation['temperature_2m_c']}°C kaydedildi; "
+        f"toplam {len(retained)} kayıt, 7 günlük kayan arşiv."
+    )
+    return len(retained)
+
+
 def main():
     observation = fetch_enka_station_observation()
     document = {
@@ -153,6 +228,7 @@ def main():
         json.dumps(document, ensure_ascii=False, indent=2) + "\n",
         encoding="utf-8",
     )
+    update_temperature_history(observation)
     print(
         f"[ENKA LIVE] {observation['station_name']} | "
         f"{observation['temperature_2m_c']}°C | "
