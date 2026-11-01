@@ -6,7 +6,7 @@ on:
   workflow_dispatch:
 
 concurrency:
-  group: gfs-watch-run-v4
+  group: gfs-watch-run-v5
   cancel-in-progress: false
 
 permissions:
@@ -21,7 +21,7 @@ jobs:
     outputs:
       gfs_updated: ${{ steps.report.outputs.gfs_updated }}
     runs-on: ubuntu-latest
-    timeout-minutes: 360
+    timeout-minutes: 60
     steps:
       - name: Check out application
         uses: actions/checkout@v7
@@ -77,9 +77,6 @@ jobs:
         continue-on-error: true
         env:
           GFS_WATCH_ONCE: "1"
-          GFS_WATCH_CONTINUOUS: "1"
-          GFS_WATCH_WINDOW_MINUTES: "330"
-          GFS_WATCH_POLL_SECONDS: "300"
           DB_PATH: gfs_watch.db
           PUBLIC_DATA_DIR: public
           TELEGRAM_TOKEN: ${{ secrets.TELEGRAM_TOKEN }}
@@ -154,18 +151,24 @@ jobs:
           done
           echo "Could not publish GFS run history after five attempts."
           exit 1
-      - name: Queue the next five-and-a-half-hour watch session
-        if: always() && !cancelled()
+  queue-next-check:
+    name: Queue the next automatic NOAA check
+    needs: check-gfs
+    if: always() && !cancelled()
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    permissions:
+      actions: write
+      contents: read
+    steps:
+      - name: Wait five minutes and dispatch the next check
         env:
           GH_TOKEN: ${{ github.token }}
         run: |
-          now=$(date -u +%s)
-          next=$(( (now / 300 + 1) * 300 ))
-          delay=$(( next - now ))
-          echo "Next all-cycle watch starts at $(date -u -d "@$next" +'%Y-%m-%dT%H:%M:%SZ')."
-          sleep "$delay"
+          echo "Next NOMADS/S3 discovery check in five minutes."
+          sleep 300
           gh workflow run gfs-watch.yml --ref main --repo "$GITHUB_REPOSITORY"
-          echo "Next automatic GFS watch session queued."
+          echo "Next automatic GFS check queued."
 
   deploy-pages:
     name: Publish latest report to GitHub Pages
