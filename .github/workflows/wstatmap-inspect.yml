@@ -1,0 +1,33 @@
+name: Validate WStatMap Eyüpsultan scraper
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - "scripts/eyupsultan_weather.mjs"
+      - ".github/workflows/wstatmap-inspect.yml"
+  pull_request:
+    paths:
+      - "scripts/eyupsultan_weather.mjs"
+      - ".github/workflows/wstatmap-inspect.yml"
+
+permissions:
+  contents: read
+
+jobs:
+  scrape:
+    runs-on: ubuntu-latest
+    timeout-minutes: 8
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "22"
+      - name: Check runner Chrome
+        run: |
+          command -v google-chrome
+          google-chrome --version
+      - name: Install Playwright
+        run: npm install --no-save playwright
+      - name: Scrape and validate live Eyüpsultan observations
+        run: node scripts/eyupsultan_weather.mjs

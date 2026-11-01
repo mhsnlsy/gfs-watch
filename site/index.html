@@ -326,7 +326,13 @@
     @media(max-width:720px){.model-picker button{padding:8px 10px;font-size:10px}.ecmwf-summary-grid{grid-template-columns:1fr 1fr}.ecmwf-chart-grid{grid-template-columns:1fr}.ecmwf-chart-grid .chart-card:last-child{grid-column:auto}}
     @media(max-width:560px){.top-right{gap:4px}.model-picker{gap:2px;padding:3px}.model-picker button{padding:7px 8px;font-size:9.5px}.version{display:none}.ecmwf-summary-grid{grid-template-columns:1fr}.ecmwf-model-heading{align-items:flex-start;flex-direction:column}}
 
-  </style>
+  
+    .station-switch{display:flex;gap:5px;width:max-content;max-width:100%;margin-top:11px;padding:3px;border:1px solid rgba(204,225,239,.13);border-radius:999px;background:rgba(3,15,24,.34);position:relative;z-index:1}
+    .station-switch button{appearance:none;border:1px solid transparent;border-radius:999px;padding:7px 11px;background:transparent;color:#9fb5c1;font:700 10px "DM Sans",sans-serif;white-space:nowrap;cursor:pointer;transition:background .18s,border-color .18s,color .18s}
+    .station-switch button.active{background:rgba(125,211,215,.15);border-color:rgba(125,211,215,.32);color:#d8fbf3}
+    .station-switch button:focus-visible{outline:2px solid var(--cyan);outline-offset:2px}
+    @media(max-width:560px){.station-switch{margin-top:9px}.station-switch button{padding:6px 9px;font-size:9px}}
+</style>
 </head>
 <body>
   <header class="shell topbar">
@@ -338,8 +344,12 @@
     <section class="dashboard-top" aria-label="Gerçek istasyon gözlemleri ve son 24 saatlik trendler">
       <article class="weather-card station-card" role="region" aria-labelledby="station-card-title">
         <div class="weather-top"><div><div class="label">GERÇEK İSTASYON GÖZLEMİ</div><div class="place" id="station-card-title">ENKA Balmumcu · İstanbul</div></div><span class="model-state" id="freshness">Veri bekleniyor</span></div>
+        <div class="station-switch" role="group" aria-label="İstasyon seçimi">
+          <button type="button" id="station-enka-button" class="active" aria-pressed="true">ENKA Balmumcu</button>
+          <button type="button" id="station-eyupsultan-button" aria-pressed="false">Eyüpsultan</button>
+        </div>
         <div class="station-overview"><div class="station-current"><div class="temp-row"><div class="temperature" id="temperature">—°</div><div class="weather-symbol" id="weather-symbol" aria-hidden="true">☁️</div></div><div class="temp-caption" id="station-observation-meta">Son istasyon ölçümü bekleniyor</div></div></div>
-        <div class="weather-stats"><div class="stat"><div class="name">Rüzgâr</div><div class="value" id="wind">—<span class="unit">km/sa</span></div><div class="detail" id="wind-direction">—</div></div><div class="stat"><div class="name">Nem</div><div class="value" id="humidity">—<span class="unit">%</span></div></div><div class="stat"><div class="name">Yağış</div><div class="value" id="rain">—<span class="unit">mm</span></div><div class="detail">Bugün</div></div><div class="stat"><div class="name">Basınç</div><div class="value" id="pressure">—<span class="unit">hPa</span></div></div></div>
+        <div class="weather-stats"><div class="stat"><div class="name">Rüzgâr</div><div class="value" id="wind">—<span class="unit">km/sa</span></div><div class="detail" id="wind-direction">—</div></div><div class="stat"><div class="name">Nem</div><div class="value" id="humidity">—<span class="unit">%</span></div></div><div class="stat"><div class="name">Yağış</div><div class="value" id="rain">—<span class="unit">mm</span></div><div class="detail">Bugün</div></div><div class="stat"><div class="name">Basınç</div><div class="value" id="pressure">—<span class="unit">hPa</span></div><div class="detail" id="pressure-detail"></div></div></div>
         <div class="station-alert" id="station-alert" role="status" aria-live="polite" hidden></div>
       </article>
       <section class="history-panel" aria-label="ENKA son 24 saat geçmişi">
@@ -379,7 +389,7 @@
         </article>
       </div>
     </section>
-    <section class="section" id="basinc"><div class="section-head"><div><div class="section-kicker">NOAA / NCEP GFS · MODEL ANALİZİ</div><h2>Basınç düzeni ve kaynak</h2></div><div class="section-note">İstanbul merkezli 2.500 km çaplı<br>bölgesel analiz</div></div><div class="lower-grid"><article class="pressure-card"><div class="label">Bölgesel basınç merkezleri ve İstanbul'a etkisi</div><ul class="pressure-list" id="pressure-findings"><li class="loading">Analiz yükleniyor…</li></ul></article><article class="info-card"><div class="label">Veri hakkında</div><p>Anlık sıcaklık, rüzgâr, nem ve günlük yağış verileri yerel meteoroloji istasyonundan alınır. İstasyon kaynağı: ENKA ENKA Balmumcu Vantage PRO. Konum: İstanbul, Balmumcu çevresi; rakım 107 m.</p><p>180 saatlik tahmin: NOAA / NCEP GFS 0.25° küresel modelinin İstanbul'a en yakın grid hücresi kullanılır. İstasyon ölçümü ile model tahmini ayrı kaynaklardır.</p><div class="source-row"><span>Model: <strong>GFS 0.25°</strong></span><span id="valid-until">Geçerlilik: —</span></div></article></div></section>
+    <section class="section" id="basinc"><div class="section-head"><div><div class="section-kicker">NOAA / NCEP GFS · MODEL ANALİZİ</div><h2>Basınç düzeni ve kaynak</h2></div><div class="section-note">İstanbul merkezli 2.500 km çaplı<br>bölgesel analiz</div></div><div class="lower-grid"><article class="pressure-card"><div class="label">Bölgesel basınç merkezleri ve İstanbul'a etkisi</div><ul class="pressure-list" id="pressure-findings"><li class="loading">Analiz yükleniyor…</li></ul></article><article class="info-card"><div class="label">Veri hakkında</div><p>Anlık sıcaklık, rüzgâr, nem ve yağış verileri seçilen istasyondan alınır: ENKA Balmumcu Vantage PRO veya WStatMap üzerinden MGM Eyüpsultan 18101. Karttaki seçimle istasyon değişir. Basınç, kaynak sayfasında ölçüm mevcutsa gösterilir.</p><p>180 saatlik tahmin: NOAA / NCEP GFS 0.25° küresel modelinin İstanbul'a en yakın grid hücresi kullanılır. İstasyon ölçümü ile model tahmini ayrı kaynaklardır.</p><div class="source-row"><span>Model: <strong>GFS 0.25°</strong></span><span id="valid-until">Geçerlilik: —</span></div></article></div></section>
     </div>
     <div id="ecmwf-model-view" hidden aria-label="ECMWF tahmin görünümü">
       <div class="section-head" style="padding-top:30px"><div><div class="section-kicker">ECMWF IFS · HRES + ENS</div><h2>ECMWF IFS HRES + ENS · İstanbul</h2><p class="section-description">GFS ile aynı kart, grafik, günlük tahmin ve basınç analizi düzeni. 2 m sıcaklık, 10 m rüzgâr ve yağış IFS HRES; 850 hPa ve basınç alanları IFS ensemble verisidir.</p></div><div class="section-note"><span id="ecmwf-run-meta">ECMWF döngüsü bekleniyor</span><br><span id="ecmwf-updated-chip">Yayın zamanı</span><br>Günlük en düşük / en yüksek sıcaklık</div></div>
@@ -405,12 +415,14 @@
       <section class="section" aria-label="ECMWF veri kaynağı ve lisans"><p class="ecmwf-source-note">Kaynak: <a href="https://www.ecmwf.int/en/forecasts/datasets/open-data" target="_blank" rel="noopener">ECMWF Open Data</a> · IFS HRES oper/fc + IFS ENS em/es · <strong>© ECMWF, CC BY 4.0</strong>. 2 m sıcaklık, 10 m rüzgâr ve yağış HRES yüzey tahminidir; 850 hPa ve MSLP ensemble ortalaması/standart sapmasıdır. Yüzey alanları için ENS standart sapması Open Data ürününde bulunmadığından gösterilmez.</p></section>
     </div>
   </main>
-  <footer class="shell footer"><span><strong>İstanbul'un Havası</strong> · GFS Watch v3.0.0</span><span>Veri kaynakları: ENKA Balmumcu Vantage PRO · NOAA / NCEP GFS · ECMWF Open Data · Otomatik yenileme: 5 dakika</span></footer>
+  <footer class="shell footer"><span><strong>İstanbul'un Havası</strong> · GFS Watch v3.0.0</span><span>Veri kaynakları: ENKA Balmumcu Vantage PRO · WStatMap / MGM Eyüpsultan 18101 · NOAA / NCEP GFS · ECMWF Open Data · Otomatik yenileme: 5 dakika</span></footer>
   <script>
     const DATA_URL="./data/latest.json";
     const ECMWF_DATA_URL="./data/ecmwf/latest.json";
     const STATION_URL="./data/station-observation.json";
     const STATION_HISTORY_URL="./data/station-temperature-history.json";
+    const EYUPSULTAN_STATION_URL="./data/eyupsultan-station-observation.json";
+    let enkaStationObservation=null,eyupsultanStationObservation=null,activeStation="enka";
     let forecastData=null,activeMetric="temperature";
     const $=id=>document.getElementById(id);
     const numeric=value=>typeof value==="number"&&Number.isFinite(value);
@@ -849,10 +861,10 @@
       holder.innerHTML='<svg viewBox="0 0 '+width+' '+height+'" role="img" aria-label="ENKA yazılı ölçümlerinden türetilen son 24 saatlik yağış birikimi"><defs><linearGradient id="enka-rain-fill" x1="0" x2="0" y1="0" y2="1"><stop offset="0%" stop-color="#83c9eb" stop-opacity=".3"/><stop offset="100%" stop-color="#83c9eb" stop-opacity=".02"/></linearGradient></defs>'+grid+'<path d="'+area+'" fill="url(#enka-rain-fill)"/><polyline points="'+points+'" fill="none" stroke="#83c9eb" stroke-width="2.8" stroke-linecap="round" stroke-linejoin="round"/>'+labels+'</svg>';
       if(meta)meta.textContent="24 saatte türetilen birikim: "+total.toLocaleString("tr-TR",{maximumFractionDigits:1})+" mm · ENKA arşiv ölçümleri";
     }
-    function render(data){
-      forecastData=data;
-      const station=data.station_observation||{};
-      const hasStation=!!data.station_observation;
+    function renderStationCard(station){
+      const hasStation=!!station;
+      const stationName=station&&station.station_name?station.station_name:(activeStation==="enka"?"ENKA Balmumcu":"Eyüpsultan");
+      $("station-card-title").textContent=stationName+" · İstanbul";
       $("temperature").textContent=hasStation&&numeric(station.temperature_2m_c)?fmt(station.temperature_2m_c,1)+"°":"—°";
       $("wind").innerHTML=hasStation&&numeric(station.wind_speed_10m_kmh)?fmt(station.wind_speed_10m_kmh,1)+'<span class="unit">km/sa</span>':'—<span class="unit">km/sa</span>';
       const direction=hasStation?(station.wind_direction_tr||windDirectionTr[station.wind_direction_cardinal]||station.wind_direction_cardinal):null;
@@ -860,27 +872,46 @@
       $("rain").innerHTML=hasStation&&numeric(station.precipitation_daily_mm)?fmt(station.precipitation_daily_mm,1)+'<span class="unit">mm</span>':'—<span class="unit">mm</span>';
       $("humidity").innerHTML=hasStation&&numeric(station.humidity_percent)?fmt(station.humidity_percent,0)+'<span class="unit">%</span>':'—<span class="unit">%</span>';
       $("pressure").innerHTML=hasStation&&numeric(station.station_pressure_hpa)?fmt(station.station_pressure_hpa,0)+'<span class="unit">hPa</span>':'—<span class="unit">hPa</span>';
+      $("pressure-detail").textContent=hasStation&&station.pressure_type==="mean_sea_level"?"Deniz seviyesi": "";
       $("weather-symbol").textContent=symbolFor(hasStation?station.precipitation_1h_mm||0:0);
       if(hasStation){
         const observed=station.observed_at_utc?new Date(station.observed_at_utc):null;
         const observedValid=observed&&!Number.isNaN(observed.getTime());
         const ageMinutes=observedValid?Math.max(0,(Date.now()-observed.getTime())/60000):null;
-        const stale=!!station.is_stale||!observedValid||ageMinutes>15;
+        const staleAfter=Number.isFinite(station.stale_after_minutes)?station.stale_after_minutes:(station.station_id==="18101"?20:15);
+        const stale=!!station.is_stale||!observedValid||ageMinutes>staleAfter;
         const observedText=observedValid?new Intl.DateTimeFormat("tr-TR",{timeZone:"Europe/Istanbul",dateStyle:"short",timeStyle:"short"}).format(observed):"zaman bilinmiyor";
         const ageText=ageMinutes===null?"":ageMinutes<60?Math.round(ageMinutes)+" dk önce":(ageMinutes/60).toFixed(1).replace(".",",")+" saat önce";
-        $("station-observation-meta").textContent=(stale?"Gecikmeli ölçüm":"Son ölçüm")+" · "+observedText+" TSİ · "+ageText+" ·  Vantage PRO";
+        const sourceLabel=station.station_id==="18101"?"WStatMap · MGM 18101":"ENKA Vantage PRO";
+        $("station-observation-meta").textContent=(stale?"Gecikmeli ölçüm":"Son ölçüm")+" · "+observedText+" TSİ · "+ageText+" · "+sourceLabel;
         $("freshness").textContent=stale?"ÖLÇÜM ESKİ":"CANLI ÖLÇÜM";
         $("freshness").classList.toggle("stale",stale);
         const alert=$("station-alert");
         alert.hidden=!stale;
-        if(stale)alert.textContent=observedValid?"⚠ İstasyon ölçümü "+Math.round(ageMinutes)+" dakika önce alınmış. 15 dakikayı aştığı için güncel hava koşulu olarak değerlendirmeyin.":"⚠ Ölçüm zaman damgası doğrulanamadı. İstasyon verisi güncel kabul edilmemeli.";
+        if(stale)alert.textContent=observedValid?"⚠ İstasyon ölçümü "+Math.round(ageMinutes)+" dakika önce alınmış. Güncellik eşiği "+staleAfter+" dakikayı aştığı için güncel hava koşulu olarak değerlendirmeyin.":"⚠ Ölçüm zaman damgası doğrulanamadı. İstasyon verisi güncel kabul edilmemeli.";
       }else{
-        $("station-observation-meta").textContent=" ENKA Balmumcu istasyon verisine şu anda ulaşılamıyor.";
+        $("station-observation-meta").textContent=stationName+" istasyon verisine şu anda ulaşılamıyor.";
         $("freshness").textContent="İSTASYON VERİSİ YOK";
         $("freshness").classList.add("stale");
         $("station-alert").hidden=false;
-        $("station-alert").textContent="⚠  ENKA Balmumcu istasyon verisi alınamadı. Kartta güncel ölçüm bulunmuyor.";
+        $("station-alert").textContent="⚠ "+stationName+" istasyon verisi alınamadı. Kartta güncel ölçüm bulunmuyor.";
       }
+    }
+    function selectStation(stationKey){
+      if(stationKey!=="enka"&&stationKey!=="eyupsultan")return;
+      activeStation=stationKey;
+      $("station-enka-button").classList.toggle("active",stationKey==="enka");
+      $("station-eyupsultan-button").classList.toggle("active",stationKey==="eyupsultan");
+      $("station-enka-button").setAttribute("aria-pressed",stationKey==="enka"?"true":"false");
+      $("station-eyupsultan-button").setAttribute("aria-pressed",stationKey==="eyupsultan"?"true":"false");
+      renderStationCard(stationKey==="enka"?enkaStationObservation:eyupsultanStationObservation);
+    }
+    $("station-enka-button").addEventListener("click",()=>selectStation("enka"));
+    $("station-eyupsultan-button").addEventListener("click",()=>selectStation("eyupsultan"));
+
+    function render(data){
+      forecastData=data;
+      renderStationCard(activeStation==="enka"?enkaStationObservation:eyupsultanStationObservation);
       if(data.run_id_utc)$("cycle-chip").textContent="GFS döngüsü · "+timeTR(data.run_id_utc);
       if(data.published_at_utc){
         $("updated-chip").textContent="Yayınlandı · "+timeTR(data.published_at_utc);
@@ -892,20 +923,31 @@
     async function loadForecast(){
       try{
         const cacheKey=Date.now();
-        const [response,stationResponse,historyResponse]=await Promise.all([
+        const [response,stationResponse,historyResponse,eyupsultanResponse]=await Promise.all([
           fetch(DATA_URL+"?t="+cacheKey,{cache:"no-store"}),
           fetch(STATION_URL+"?t="+cacheKey,{cache:"no-store"}).catch(()=>null),
-          fetch(STATION_HISTORY_URL+"?t="+cacheKey,{cache:"no-store"}).catch(()=>null)
+          fetch(STATION_HISTORY_URL+"?t="+cacheKey,{cache:"no-store"}).catch(()=>null),
+          fetch(EYUPSULTAN_STATION_URL+"?t="+cacheKey,{cache:"no-store"}).catch(()=>null)
         ]);
         if(!response.ok)throw new Error("Tahmin verisi şu anda alınamıyor.");
         const data=await response.json();
         if(!data||data.schema!=="gfs-watch.forecast.v1")throw new Error("Tahmin verisinin biçimi beklenenden farklı.");
-        data.station_observation=null;
+        enkaStationObservation=null;
+        eyupsultanStationObservation=null;
         if(stationResponse&&stationResponse.ok){
           const stationDocument=await stationResponse.json();
           if(stationDocument&&stationDocument.schema==="gfs-watch.station-observation.v1"){
-            data.station_observation=stationDocument.station_observation||null;
+            enkaStationObservation=stationDocument.station_observation||null;
           }
+        }
+        if(eyupsultanResponse&&eyupsultanResponse.ok){
+          try{
+            const eyupsultanDocument=await eyupsultanResponse.json();
+            const candidate=eyupsultanDocument&&eyupsultanDocument.station_observation;
+            if(eyupsultanDocument.schema==="gfs-watch.station-observation.v1"&&candidate&&String(candidate.station_id)==="18101"){
+              eyupsultanStationObservation=candidate;
+            }
+          }catch(_){eyupsultanStationObservation=null;}
         }
         render(data);
         let temperatureSamples=[];

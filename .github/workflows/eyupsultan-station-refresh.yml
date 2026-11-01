@@ -1,0 +1,87 @@
+name: Eyüpsultan Station Refresh
+
+on:
+  schedule:
+    - cron: "*/5 * * * *"
+  workflow_dispatch:
+  push:
+    branches: [main]
+    paths:
+      - "scripts/eyupsultan_weather.mjs"
+      - ".github/workflows/eyupsultan-station-refresh.yml"
+
+permissions:
+  contents: write
+  actions: write
+
+concurrency:
+  group: eyupsultan-weather-refresh
+  cancel-in-progress: false
+
+jobs:
+  refresh:
+    runs-on: ubuntu-latest
+    timeout-minutes: 8
+    steps:
+      - name: Check out application
+        uses: actions/checkout@v4
+        with:
+          ref: main
+
+      - name: Check out published station data
+        uses: actions/checkout@v4
+        with:
+          ref: gfs-watch-state
+          path: forecast-data
+
+      - name: Set up Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: "22"
+
+      - name: Verify runner Chrome
+        run: google-chrome --version
+
+      - name: Install Playwright
+        run: npm install --no-save playwright
+
+      - name: Fetch and validate WStatMap Eyüpsultan observation
+        run: node scripts/eyupsultan_weather.mjs
+        env:
+          EYUPSULTAN_PREVIOUS_OBSERVATION_PATH: forecast-data/public/eyupsultan-station-observation.json
+          EYUPSULTAN_TEMPERATURE_HISTORY_PATH: forecast-data/public/eyupsultan-station-temperature-history.json
+
+      - name: Publish Eyüpsultan observation and history
+        id: publish
+        run: |
+          cp public/eyupsultan-station-observation.json forecast-data/public/eyupsultan-station-observation.json
+          cp public/eyupsultan-station-temperature-history.json forecast-data/public/eyupsultan-station-temperature-history.json
+          cd forecast-data
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add public/eyupsultan-station-observation.json public/eyupsultan-station-temperature-history.json
+          if git diff --cached --quiet; then
+            echo "changed=false" >> "$GITHUB_OUTPUT"
+            echo "No Eyüpsultan data changes to publish."
+            exit 0
+          fi
+          git commit -m "Refresh WStatMap Eyüpsultan observation"
+          for attempt in 1 2 3 4 5; do
+            git pull --rebase origin gfs-watch-state
+            if git push origin gfs-watch-state; then
+              echo "changed=true" >> "$GITHUB_OUTPUT"
+              echo "Eyüpsultan data pushed to gfs-watch-state."
+              exit 0
+            fi
+            sleep $((attempt * 2))
+          done
+          echo "Could not publish Eyüpsultan data after five attempts."
+          exit 1
+
+      - name: Deploy refreshed station data to GitHub Pages
+        if: steps.publish.outputs.changed == 'true'
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          gh workflow run pages.yml --ref main --repo "$GITHUB_REPOSITORY"
+          echo "GitHub Pages deployment requested."
