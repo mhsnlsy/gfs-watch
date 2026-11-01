@@ -21,7 +21,7 @@ permissions:
 
 concurrency:
   group: ecmwf-eps-forecast
-  cancel-in-progress: false
+  cancel-in-progress: true
 
 jobs:
   fetch-and-publish:
