@@ -153,17 +153,17 @@ def fetch_enka_station_observation():
     if temperature is None:
         temperature = _text_number(
             page_text,
-            r"\bDay\s+Temperature\s*: ?([-+]?\d+(?:[.,]\d+)?)\s*°?\s*C\b",
+            r"\bDay\s+Temperature\s*:?\s*([-+]?\d+(?:[.,]\d+)?)\s*°?\s*C\b",
         )
     if humidity is None:
         humidity = _text_number(
             page_text,
-            r"\bHumidity\s*: ?([-+]?\d+(?:[.,]\d+)?)\s*%",
+            r"\bHumidity\s*:?\s*([-+]?\d+(?:[.,]\d+)?)\s*%",
         )
     if wind_knots is None:
         wind_knots = _text_number(
             page_text,
-            r"\bWind\s*[-–—]\s*10\s*Min(?:ute)?s?\s*Avg\.?\s*: ?([-+]?\d+(?:[.,]\d+)?)\s*kt\b",
+            r"\bWind\s*[-–—]\s*10\s*Min(?:ute)?s?\s*Avg\.?\s*:?\s*([-+]?\d+(?:[.,]\d+)?)\s*kt\b",
         )
     if wind_direction is None:
         direction_match = re.search(
@@ -176,12 +176,12 @@ def fetch_enka_station_observation():
     if daily_rain is None:
         daily_rain = _text_number(
             page_text,
-            r"\bDaily\s+Rain\s*: ?([-+]?\d+(?:[.,]\d+)?)\s*mm\b",
+            r"\bDaily\s+Rain\s*:?\s*([-+]?\d+(?:[.,]\d+)?)\s*mm\b",
         )
     if pressure is None:
         pressure = _text_number(
             page_text,
-            r"\bBarometer\s*\(hPa\)\s*: ?([-+]?\d+(?:[.,]\d+)?)",
+            r"\bBarometer\s*\(hPa\)\s*:?\s*([-+]?\d+(?:[.,]\d+)?)",
         )
 
     missing = [
