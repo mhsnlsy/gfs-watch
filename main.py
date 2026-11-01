@@ -2318,7 +2318,7 @@ def create_pages_comparison_charts(current_run_id, payload, previous_runs):
         dates = chart_data["dates"]
         legend = _comparison_legend_handles(series, chart_data["colors"])
         for metric, label, title, ylabel in specifications:
-            fig, axis = plt.subplots(1, 1, figsize=(16, 8))
+            fig, axis = plt.subplots(1, 1, figsize=(16, 7))
             try:
                 fig.suptitle(
                     f"İSTANBUL GFS | {label.upper()} · SON {len(series)} DÖNGÜ",
@@ -2352,14 +2352,21 @@ def create_pages_comparison_charts(current_run_id, payload, previous_runs):
                     tick_label.set_fontweight("semibold")
                 axis.grid(axis="y", color="#9aafbf", alpha=0.38, linewidth=0.9)
                 axis.set_axisbelow(True)
-                # Use the full chart width and a fixed daily domain; prevent autoscaling
-                # or an empty 850 hPa series from collapsing the plotting area.
-                axis.set_aspect("auto")
-                axis.set_xlim(-0.5, len(dates) - 0.5)
-                _format_comparison_date_axis(axis, dates)
-                axis.tick_params(axis="x", labelsize=14, labelbottom=True)
+                # Rebuild a predictable full-width plotting area for every metric.
+                # Do not manually reposition the Axes after Matplotlib lays it out.
+                axis.set_aspect("auto", adjustable="box")
+                axis.set_xlim(-0.5, max(0.5, len(dates) - 0.5))
+                axis.set_xticks(list(range(len(dates))))
+                weekday_names = ("Pzt", "Sal", "Çar", "Per", "Cum", "Cmt", "Paz")
+                date_labels = []
+                for day in dates:
+                    date_value = datetime.strptime(day, "%Y-%m-%d")
+                    date_labels.append(f"{date_value:%d.%m} {weekday_names[date_value.weekday()]}")
+                axis.set_xticklabels(date_labels, fontsize=14, fontweight="semibold")
+                axis.tick_params(axis="x", labelsize=14, labelbottom=True, pad=7)
+                axis.margins(x=0.015)
                 axis.legend(
-                    handles=legend, loc="lower left", bbox_to_anchor=(0, 1.015, 1, 0.12),
+                    handles=legend, loc="lower left", bbox_to_anchor=(0, 1.02, 1, 0.12),
                     mode="expand", ncol=min(4, len(series)), fontsize=13,
                     frameon=True, facecolor="#ffffff", edgecolor="#d5e0e8",
                     framealpha=0.94, labelcolor="#17324a", borderpad=0.55,
@@ -2370,8 +2377,7 @@ def create_pages_comparison_charts(current_run_id, payload, previous_runs):
                     "Renkler her panelde aynı GFS döngüsünü gösterir | Kaynak: NOAA/NCEP GFS 0.25°",
                     fontsize=10.5, color="#40566a",
                 )
-                fig.subplots_adjust(left=0.085, right=0.985, bottom=0.16, top=0.78)
-                axis.set_position([0.085, 0.16, 0.90, 0.62])
+                fig.subplots_adjust(left=0.085, right=0.985, bottom=0.18, top=0.79)
                 buffer = io.BytesIO()
                 fig.savefig(buffer, format="png", dpi=150)
                 buffer.seek(0)
