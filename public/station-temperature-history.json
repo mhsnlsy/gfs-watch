@@ -1,0 +1,10 @@
+{
+  "schema": "gfs-watch.station-temperature-history.v1",
+  "station_id": "ENKA-BALMUMCU-VANTAGE-PRO",
+  "station_name": "ENKA Balmumcu",
+  "sampling_interval_minutes": 5,
+  "aggregation_interval_minutes": 90,
+  "retention_days": 7,
+  "updated_at_utc": null,
+  "samples": []
+}
