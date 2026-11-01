@@ -1,12 +1,10 @@
 name: GFS Watch
 
 on:
-  # Primary watch windows, plus a delayed backup in case GitHub drops/delays a scheduled event.
-  # UTC primary: 03:50, 09:50, 15:50, 21:50; backup: 04:20, 10:20, 16:20, 22:20.
-  # Each watch targets the latest 6-hour GFS cycle and safely skips cycles already processed.
+  # Check NOAA every 15 minutes. Each run is a short retry; an unpublished f180
+  # file is checked again automatically instead of exhausting one 90-minute window.
   schedule:
-    - cron: "50 3,9,15,21 * * *"
-    - cron: "20 4,10,16,22 * * *"
+    - cron: "*/15 * * * *"
   workflow_dispatch:
 
 concurrency:
@@ -21,7 +19,7 @@ permissions:
 jobs:
   check-gfs:
     runs-on: ubuntu-latest
-    timeout-minutes: 110
+    timeout-minutes: 60
     steps:
       - name: Check out application
         uses: actions/checkout@v7
@@ -59,9 +57,6 @@ jobs:
         id: check-gfs
         env:
           GFS_WATCH_ONCE: "1"
-          GFS_WATCH_CONTINUOUS: "1"
-          GFS_WATCH_WINDOW_MINUTES: "90"
-          GFS_WATCH_POLL_SECONDS: "15"
           DB_PATH: gfs_watch.db
           PUBLIC_DATA_DIR: public
           TELEGRAM_TOKEN: ${{ secrets.TELEGRAM_TOKEN }}
