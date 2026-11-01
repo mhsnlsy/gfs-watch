@@ -389,7 +389,7 @@
         $("freshness").classList.toggle("stale",stale);
         const alert=$("station-alert");
         alert.hidden=!stale;
-        if(stale)alert.textContent=observedValid?"⚠ İstasyon ölçümü "+Math.round(ageMinutes)+" dakika önce alınmış. 90 dakikayı aştığı için güncel hava koşulu olarak değerlendirmeyin.":"⚠ Ölçüm zaman damgası doğrulanamadı. İstasyon verisi güncel kabul edilmemeli.";
+        if(stale)alert.textContent=observedValid?"⚠ İstasyon ölçümü "+Math.round(ageMinutes)+" dakika önce alınmış. 15 dakikayı aştığı için güncel hava koşulu olarak değerlendirmeyin.":"⚠ Ölçüm zaman damgası doğrulanamadı. İstasyon verisi güncel kabul edilmemeli.";
       }else{
         $("station-observation-meta").textContent=" ENKA Balmumcu istasyon verisine şu anda ulaşılamıyor.";
         $("freshness").textContent="İSTASYON VERİSİ YOK";
