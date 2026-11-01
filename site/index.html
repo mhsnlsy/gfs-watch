@@ -87,9 +87,9 @@
     .station-trend-head{display:flex;align-items:center;justify-content:space-between;gap:8px;margin-bottom:6px}
     .station-trend-title{font-size:9px;letter-spacing:.1em;font-weight:700;color:#c4e4e4}
     .station-trend-unit{font-size:9px;color:#9bb6c2}
-    .station-trend-image-wrap{position:relative;min-height:66px;display:grid;place-items:center;overflow:hidden;border-radius:8px;background:#f3f6f6}
-    .station-trend img{display:block;width:100%;height:72px;object-fit:contain}
-    .station-trend-empty{padding:10px;color:#526875;text-align:center;font-size:9px;line-height:1.4}
+    .station-trend-chart-wrap{position:relative;min-height:80px;display:flex;align-items:center;overflow:hidden;border-radius:8px;background:rgba(4,18,29,.28)}
+    .station-trend-graph{width:100%;min-width:0}.station-trend-graph svg{display:block;width:100%;height:auto;max-width:100%}
+    .station-trend-empty{padding:13px 8px;color:#9bb6c2;text-align:center;font-size:9px;line-height:1.5}
     .station-trend-source{font-size:8px;color:#91aab5;margin-top:5px;text-align:right}
     .station-card .temp-caption{font-size:10px;margin-top:8px;line-height:1.5}
     .station-card .weather-stats{gap:7px;margin-top:14px}
@@ -105,8 +105,8 @@
       .station-card .weather-symbol{font-size:30px}
       .station-trend{padding:8px 8px 6px}
       .station-trend-title{font-size:8px;letter-spacing:.07em}
-      .station-trend-image-wrap{min-height:59px}
-      .station-trend img{height:64px}
+      .station-trend-chart-wrap{min-height:70px}
+      .station-trend-graph svg{width:100%}
       .station-card .weather-stats{gap:5px;margin-top:12px}
       .station-card .stat{padding:8px 7px}
       .station-card .stat .value{font-size:14px}
@@ -122,7 +122,7 @@
   <main class="shell">
     <section class="hero">
       <div><div class="eyebrow"><span class="dot"></span> Canlı yerel istasyon gözlemi</div><h1>Şehrin havasını<br><span>önceden görün.</span></h1><p class="intro">Balmumcu'daki ENKA meteoroloji istasyonundan alınan gerçek ölçümler. Bu kart yalnızca istasyon gözlemlerini gösterir; model tahminleri aşağıdaki ayrı bölümlerde sunulur.</p><div class="hero-meta"><span class="meta-chip">Gerçek ölçüm</span><span class="meta-chip">ENKA Balmumcu · İstanbul</span></div></div>
-      <article class="weather-card station-card" role="region" aria-labelledby="station-card-title"><div class="weather-top"><div><div class="label">GERÇEK İSTASYON GÖZLEMİ</div><div class="place" id="station-card-title">ENKA Balmumcu · İstanbul</div></div><span class="model-state" id="freshness">Veri bekleniyor</span></div><div class="station-overview"><div class="temp-row"><div class="temperature" id="temperature">—°</div><div class="weather-symbol" id="weather-symbol" aria-hidden="true">☁️</div></div><div class="station-trend"><div class="station-trend-head"><span class="station-trend-title">SON 24 SAAT · SICAKLIK</span><span class="station-trend-unit">°C</span></div><div class="station-trend-image-wrap"><img id="station-temperature-trend" alt="ENKA Balmumcu istasyonunda son 24 saatlik sıcaklık grafiği" loading="lazy"><span class="station-trend-empty" id="station-trend-empty" hidden>24 saatlik grafik şu anda alınamıyor.</span></div><div class="station-trend-source">Kaynak: ENKA Balmumcu</div></div></div><div class="temp-caption" id="station-observation-meta">Son istasyon ölçümü · zaman damgası sayfada gösterilir</div><div class="weather-stats"><div class="stat"><div class="name">Rüzgâr</div><div class="value" id="wind">—<span class="unit">km/sa</span></div></div><div class="stat"><div class="name">Günlük yağış</div><div class="value" id="rain">—<span class="unit">mm</span></div></div><div class="stat"><div class="name">Nem</div><div class="value" id="humidity">—<span class="unit">%</span></div></div></div><div class="station-alert" id="station-alert" role="status" aria-live="polite" hidden></div></article>
+      <article class="weather-card station-card" role="region" aria-labelledby="station-card-title"><div class="weather-top"><div><div class="label">GERÇEK İSTASYON GÖZLEMİ</div><div class="place" id="station-card-title">ENKA Balmumcu · İstanbul</div></div><span class="model-state" id="freshness">Veri bekleniyor</span></div><div class="station-overview"><div class="temp-row"><div class="temperature" id="temperature">—°</div><div class="weather-symbol" id="weather-symbol" aria-hidden="true">☁️</div></div><div class="station-trend"><div class="station-trend-head"><span class="station-trend-title">SON 24 SAAT · SICAKLIK</span><span class="station-trend-unit">°C</span></div><div class="station-trend-chart-wrap"><div id="station-temperature-trend" class="station-trend-graph" role="img" aria-label="ENKA Balmumcu son 24 saat sıcaklık trendi, 90 dakikalık dilimler halinde"><div class="station-trend-empty">İlk sıcaklık kayıtları bekleniyor…</div></div></div><div class="station-trend-source" id="station-trend-meta">Her dilim 90 dakika · ortalama ve min–maks</div></div></div><div class="temp-caption" id="station-observation-meta">Son istasyon ölçümü · zaman damgası sayfada gösterilir</div><div class="weather-stats"><div class="stat"><div class="name">Rüzgâr</div><div class="value" id="wind">—<span class="unit">km/sa</span></div></div><div class="stat"><div class="name">Günlük yağış</div><div class="value" id="rain">—<span class="unit">mm</span></div></div><div class="stat"><div class="name">Nem</div><div class="value" id="humidity">—<span class="unit">%</span></div></div></div><div class="station-alert" id="station-alert" role="status" aria-live="polite" hidden></div></article>
     </section>
     <section class="section" id="tahmin"><div class="section-head"><div><div class="section-kicker">NOAA / NCEP GFS · MODEL TAHMİNİ</div><h2>8 günlük tahmin</h2></div><div class="section-note"><span id="cycle-chip">Model döngüsü yükleniyor</span><br><span id="updated-chip">Yayın zamanı bekleniyor</span><br>Günlük en düşük / en yüksek sıcaklık</div></div><div class="daily-grid" id="daily-grid"><div class="loading">Tahmin verisi yükleniyor…</div></div></section>
     <section class="section" id="bildirimler">
@@ -158,6 +158,7 @@
   <script>
     const DATA_URL="./data/latest.json";
     const STATION_URL="./data/station-observation.json";
+    const STATION_HISTORY_URL="./data/station-temperature-history.json";
     let forecastData=null,activeMetric="temperature";
     const $=id=>document.getElementById(id);
     const numeric=value=>typeof value==="number"&&Number.isFinite(value);
@@ -216,6 +217,97 @@
       renderChart("temperature","temperature-chart");
       renderChart("precipitation","precipitation-chart");
     }
+    function renderStationTemperatureTrend(samples){
+      const holder=$("station-temperature-trend");
+      const meta=$("station-trend-meta");
+      if(!holder)return;
+      const now=Date.now();
+      const windowMs=24*60*60*1000;
+      const bucketMs=90*60*1000;
+      const start=now-windowMs;
+      const valid=(Array.isArray(samples)?samples:[])
+        .map(sample=>({
+          time:Date.parse(sample.logged_at_utc||""),
+          temperature:Number(sample.temperature_2m_c)
+        }))
+        .filter(sample=>Number.isFinite(sample.time)&&Number.isFinite(sample.temperature)&&sample.time>=start&&sample.time<=now)
+        .sort((a,b)=>a.time-b.time);
+
+      const firstBucket=Math.floor(start/bucketMs)*bucketMs;
+      const bins=[];
+      for(let bucketStart=firstBucket;bucketStart<now;bucketStart+=bucketMs){
+        bins.push({start:bucketStart,values:[]});
+      }
+      valid.forEach(sample=>{
+        const index=Math.floor((sample.time-firstBucket)/bucketMs);
+        if(index>=0&&index<bins.length)bins[index].values.push(sample.temperature);
+      });
+
+      const populated=bins.map((bin,index)=>({
+        index,
+        start:bin.start,
+        count:bin.values.length,
+        min:bin.values.length?Math.min(...bin.values):null,
+        max:bin.values.length?Math.max(...bin.values):null,
+        mean:bin.values.length?bin.values.reduce((sum,value)=>sum+value,0)/bin.values.length:null
+      })).filter(bin=>bin.count);
+
+      if(meta)meta.textContent=valid.length+" kayıt · 90 dk dilimler · ortalama ve min–maks";
+      if(!populated.length){
+        holder.innerHTML='<div class="station-trend-empty">İlk sıcaklık kaydı bekleniyor. ENKA ölçümü geldikçe grafik dolacak.</div>';
+        return;
+      }
+
+      const allValues=valid.map(sample=>sample.temperature);
+      let low=Math.floor(Math.min(...allValues)-0.5);
+      let high=Math.ceil(Math.max(...allValues)+0.5);
+      if(high-low<2){low-=0.5;high+=0.5;}
+      const width=620,height=142,left=36,right=12,top=12,bottom=27;
+      const plotWidth=width-left-right,plotHeight=height-top-bottom;
+      const xForTime=time=>left+((time-start)/windowMs)*plotWidth;
+      const yFor=value=>top+((high-value)/(high-low))*plotHeight;
+      const tickValues=[low,(low+high)/2,high];
+      const horizontalGrid=tickValues.map(value=>{
+        const y=yFor(value);
+        return '<line x1="'+left+'" y1="'+y.toFixed(1)+'" x2="'+(width-right)+'" y2="'+y.toFixed(1)+'" stroke="rgba(190,218,228,.13)" stroke-dasharray="3 5"/><text x="'+(left-8)+'" y="'+(y+3).toFixed(1)+'" fill="#91a9b8" font-size="10" text-anchor="end">'+esc(fmt(value,1))+'</text>';
+      }).join("");
+
+      const verticalGrid=bins.map((bin,index)=>{
+        const x=xForTime(bin.start);
+        const shade=index%2===0?'rgba(125,211,215,.035)':'rgba(255,255,255,.012)';
+        return '<rect x="'+x.toFixed(1)+'" y="'+top+'" width="'+(plotWidth*bucketMs/windowMs).toFixed(1)+'" height="'+plotHeight+'" fill="'+shade+'"/><line x1="'+x.toFixed(1)+'" y1="'+top+'" x2="'+x.toFixed(1)+'" y2="'+(height-bottom)+'" stroke="rgba(190,218,228,.12)" stroke-dasharray="2 5"/>';
+      }).join("");
+
+      let meanPath="";
+      let previousIndex=-2;
+      populated.forEach(bin=>{
+        const x=xForTime(bin.start+bucketMs/2);
+        const y=yFor(bin.mean);
+        meanPath+=(bin.index===previousIndex+1?" L ":" M ")+x.toFixed(1)+" "+y.toFixed(1);
+        previousIndex=bin.index;
+      });
+      const ranges=populated.map(bin=>{
+        const x=xForTime(bin.start+bucketMs/2);
+        const yMin=yFor(bin.max),yMax=yFor(bin.min);
+        const cap=5;
+        return '<line x1="'+x.toFixed(1)+'" y1="'+yMin.toFixed(1)+'" x2="'+x.toFixed(1)+'" y2="'+yMax.toFixed(1)+'" stroke="rgba(125,211,215,.62)" stroke-width="5" stroke-linecap="round"/><line x1="'+(x-cap).toFixed(1)+'" y1="'+yMin.toFixed(1)+'" x2="'+(x+cap).toFixed(1)+'" y2="'+yMin.toFixed(1)+'" stroke="#b9e7df" stroke-width="1.5"/><line x1="'+(x-cap).toFixed(1)+'" y1="'+yMax.toFixed(1)+'" x2="'+(x+cap).toFixed(1)+'" y2="'+yMax.toFixed(1)+'" stroke="#b9e7df" stroke-width="1.5"/>';
+      }).join("");
+      const meanPoints=populated.map(bin=>{
+        const x=xForTime(bin.start+bucketMs/2),y=yFor(bin.mean);
+        return '<circle cx="'+x.toFixed(1)+'" cy="'+y.toFixed(1)+'" r="3.8" fill="#d9fff4" stroke="#1c5260" stroke-width="1.8"><title>'+esc(fmt(bin.mean,1))+' °C ortalama · '+bin.count+' kayıt · min '+esc(fmt(bin.min,1))+' °C · maks '+esc(fmt(bin.max,1))+' °C</title></circle>';
+      }).join("");
+      const timeLabels=bins.map((bin,index)=>{
+        if(index%4!==0&&index!==bins.length-1)return "";
+        const x=xForTime(bin.start);
+        const label=new Intl.DateTimeFormat("tr-TR",{timeZone:"Europe/Istanbul",hour:"2-digit",minute:"2-digit"}).format(new Date(bin.start));
+        return '<text x="'+x.toFixed(1)+'" y="'+(height-8)+'" fill="#91a9b8" font-size="9" text-anchor="middle">'+label+'</text>';
+      }).join("");
+      const last=valid[valid.length-1];
+      const lastTime=new Intl.DateTimeFormat("tr-TR",{timeZone:"Europe/Istanbul",hour:"2-digit",minute:"2-digit"}).format(new Date(last.time));
+      const lastValue=fmt(last.temperature,1);
+      holder.innerHTML='<svg viewBox="0 0 '+width+' '+height+'" role="img" aria-label="Son 24 saat sıcaklık geçmişi; 90 dakikalık dilimlerde ortalama, minimum ve maksimum değerler"><defs><linearGradient id="station-trend-line" x1="0" x2="1" y1="0" y2="0"><stop offset="0%" stop-color="#6caeb7"/><stop offset="100%" stop-color="#a4e7d5"/></linearGradient></defs>'+verticalGrid+horizontalGrid+'<path d="'+meanPath+'" fill="none" stroke="url(#station-trend-line)" stroke-width="2.6" stroke-linecap="round" stroke-linejoin="round"/>'+ranges+meanPoints+timeLabels+'</svg>';
+      if(meta)meta.textContent=valid.length+" kayıt · son ölçüm "+lastValue+" °C ("+lastTime+") · 90 dk ortalama / min–maks";
+    }
     function render(data){
       forecastData=data;
       const station=data.station_observation||{};
@@ -262,9 +354,10 @@
     async function loadForecast(){
       try{
         const cacheKey=Date.now();
-        const [response,stationResponse]=await Promise.all([
+        const [response,stationResponse,historyResponse]=await Promise.all([
           fetch(DATA_URL+"?t="+cacheKey,{cache:"no-store"}),
-          fetch(STATION_URL+"?t="+cacheKey,{cache:"no-store"}).catch(()=>null)
+          fetch(STATION_URL+"?t="+cacheKey,{cache:"no-store"}).catch(()=>null),
+          fetch(STATION_HISTORY_URL+"?t="+cacheKey,{cache:"no-store"}).catch(()=>null)
         ]);
         if(!response.ok)throw new Error("Tahmin verisi şu anda alınamıyor.");
         const data=await response.json();
@@ -277,6 +370,16 @@
           }
         }
         render(data);
+        let temperatureSamples=[];
+        if(historyResponse&&historyResponse.ok){
+          try{
+            const historyDocument=await historyResponse.json();
+            if(historyDocument&&historyDocument.schema==="gfs-watch.station-temperature-history.v1"&&Array.isArray(historyDocument.samples)){
+              temperatureSamples=historyDocument.samples;
+            }
+          }catch(_){temperatureSamples=[];}
+        }
+        renderStationTemperatureTrend(temperatureSamples);
       }catch(error){
         $("freshness").textContent="Veriye ulaşılamadı";$("temperature").textContent="—°";
         $("daily-grid").innerHTML='<div class="error">'+esc(error.message)+'</div>';
