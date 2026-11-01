@@ -293,7 +293,7 @@
       return distance<50?"İstanbul'un yakın çevresinde":"İstanbul'un yaklaşık "+Math.round(distance)+" km "+directions[Math.floor((bearing+22.5)/45)%8]+" yönünde";
     }
     function readablePressureFinding(value){
-      const match=String(value).match(/\\(\\s*(-?\\d+(?:\\.\\d+)?)°N\\s*,\\s*(-?\\d+(?:\\.\\d+)?)°E\\s*\\)/i);
+      const match=String(value).match(/\(\s*(-?\d+(?:\.\d+)?)°N\s*,\s*(-?\d+(?:\.\d+)?)°E\s*\)/i);
       if(!match)return {text:String(value),legacy:false};
       const latitude=Number(match[1]),longitude=Number(match[2]);
       const location=pressureRegionName(latitude,longitude);
@@ -309,7 +309,7 @@
       const readable=findings.map(readablePressureFinding);
       const items=readable.map(item=>item.text);
       if(readable.some(item=>item.legacy)){
-        const pressureValues=items.map(text=>{const match=text.match(/(?:merkezi|değeri):\\s*(\\d+(?:\\.\\d+)?)\\s*hPa/i);return match?Number(match[1]):null;}).filter(value=>Number.isFinite(value));
+        const pressureValues=items.map(text=>{const match=text.match(/(?:merkezi|değeri):\s*(\d+(?:\.\d+)?)\s*hPa/i);return match?Number(match[1]):null;}).filter(value=>Number.isFinite(value));
         let summary="";
         if(typeof istanbulPressure==="number"&&Number.isFinite(istanbulPressure)){
           summary="İstanbul'daki GFS başlangıç basıncı "+istanbulPressure.toFixed(1)+" hPa.";
