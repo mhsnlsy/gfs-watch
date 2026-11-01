@@ -262,14 +262,14 @@
       let low=Math.floor(Math.min(...allValues)-0.5);
       let high=Math.ceil(Math.max(...allValues)+0.5);
       if(high-low<2){low-=0.5;high+=0.5;}
-      const width=620,height=142,left=36,right=12,top=12,bottom=27;
+      const width=420,height=160,left=38,right=12,top=12,bottom=30;
       const plotWidth=width-left-right,plotHeight=height-top-bottom;
       const xForTime=time=>left+((time-start)/windowMs)*plotWidth;
-      const yFor=value=>top+((high-value)/(high-low))*plotHeight;
+      const yFor=value=>top+((high-value)/(high-low))*plotHeight;\n      const xForBin=bin=>Math.max(left+3,Math.min(width-right-3,xForTime(Math.min(bin.start+bucketMs/2,now))));
       const tickValues=[low,(low+high)/2,high];
       const horizontalGrid=tickValues.map(value=>{
         const y=yFor(value);
-        return '<line x1="'+left+'" y1="'+y.toFixed(1)+'" x2="'+(width-right)+'" y2="'+y.toFixed(1)+'" stroke="rgba(190,218,228,.13)" stroke-dasharray="3 5"/><text x="'+(left-8)+'" y="'+(y+3).toFixed(1)+'" fill="#91a9b8" font-size="10" text-anchor="end">'+esc(fmt(value,1))+'</text>';
+        return '<line x1="'+left+'" y1="'+y.toFixed(1)+'" x2="'+(width-right)+'" y2="'+y.toFixed(1)+'" stroke="rgba(190,218,228,.13)" stroke-dasharray="3 5"/><text x="'+(left-8)+'" y="'+(y+3).toFixed(1)+'" fill="#91a9b8" font-size="12" text-anchor="end">'+esc(fmt(value,1))+'</text>';
       }).join("");
 
       const verticalGrid=bins.map((bin,index)=>{
@@ -281,7 +281,7 @@
       let meanPath="";
       let previousIndex=-2;
       populated.forEach(bin=>{
-        const x=xForTime(bin.start+bucketMs/2);
+        const x=xForBin(bin);
         const y=yFor(bin.mean);
         meanPath+=(bin.index===previousIndex+1?" L ":" M ")+x.toFixed(1)+" "+y.toFixed(1);
         previousIndex=bin.index;
@@ -293,14 +293,14 @@
         return '<line x1="'+x.toFixed(1)+'" y1="'+yMin.toFixed(1)+'" x2="'+x.toFixed(1)+'" y2="'+yMax.toFixed(1)+'" stroke="rgba(125,211,215,.62)" stroke-width="5" stroke-linecap="round"/><line x1="'+(x-cap).toFixed(1)+'" y1="'+yMin.toFixed(1)+'" x2="'+(x+cap).toFixed(1)+'" y2="'+yMin.toFixed(1)+'" stroke="#b9e7df" stroke-width="1.5"/><line x1="'+(x-cap).toFixed(1)+'" y1="'+yMax.toFixed(1)+'" x2="'+(x+cap).toFixed(1)+'" y2="'+yMax.toFixed(1)+'" stroke="#b9e7df" stroke-width="1.5"/>';
       }).join("");
       const meanPoints=populated.map(bin=>{
-        const x=xForTime(bin.start+bucketMs/2),y=yFor(bin.mean);
+        const x=xForBin(bin),y=yFor(bin.mean);
         return '<circle cx="'+x.toFixed(1)+'" cy="'+y.toFixed(1)+'" r="3.8" fill="#d9fff4" stroke="#1c5260" stroke-width="1.8"><title>'+esc(fmt(bin.mean,1))+' °C ortalama · '+bin.count+' kayıt · min '+esc(fmt(bin.min,1))+' °C · maks '+esc(fmt(bin.max,1))+' °C</title></circle>';
       }).join("");
       const timeLabels=bins.map((bin,index)=>{
         if(index%4!==0&&index!==bins.length-1)return "";
         const x=xForTime(bin.start);
         const label=new Intl.DateTimeFormat("tr-TR",{timeZone:"Europe/Istanbul",hour:"2-digit",minute:"2-digit"}).format(new Date(bin.start));
-        return '<text x="'+x.toFixed(1)+'" y="'+(height-8)+'" fill="#91a9b8" font-size="9" text-anchor="middle">'+label+'</text>';
+        return '<text x="'+x.toFixed(1)+'" y="'+(height-8)+'" fill="#91a9b8" font-size="11" text-anchor="middle">'+label+'</text>';
       }).join("");
       const last=valid[valid.length-1];
       const lastTime=new Intl.DateTimeFormat("tr-TR",{timeZone:"Europe/Istanbul",hour:"2-digit",minute:"2-digit"}).format(new Date(last.time));
