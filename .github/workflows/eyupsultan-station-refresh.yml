@@ -39,10 +39,11 @@ jobs:
         with:
           node-version: "22"
 
-      - name: Install Playwright and Chromium
-        run: |
-          npm install --no-save playwright
-          npx playwright install --with-deps chromium
+      - name: Verify runner Chrome
+        run: google-chrome --version
+
+      - name: Install Playwright
+        run: npm install --no-save playwright
 
       - name: Fetch and validate WStatMap Eyüpsultan observation
         run: node scripts/eyupsultan_weather.mjs
