@@ -2,11 +2,12 @@
 <html lang="tr">
 <head>
   <meta charset="utf-8">
-  <meta name="viewport" content="width=device-width,initial-scale=1">
+  <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
   <meta http-equiv="refresh" content="300">
   <meta name="theme-color" content="#081827">
   <meta name="apple-mobile-web-app-capable" content="yes">
   <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+  <meta name="apple-mobile-web-app-title" content="İstanbul Hava">
   <link rel="manifest" href="./manifest.webmanifest">
   <meta name="description" content="İstanbul için GFS ve ECMWF hava tahmini, 72 saatlik sıcaklık, yağış, rüzgâr ve bölgesel basınç analizi.">
   <title>İstanbul'un Havası — İstanbul Hava Tahmini</title>
@@ -486,6 +487,87 @@
       outline:0!important;
       border:0!important;
       box-shadow:none!important;
+    }
+
+
+    /* Unified responsive pass: 1080p desktop, 16:8 landscape phones and modern iPhone safe areas. */
+    :root { --page-gutter: clamp(14px, 2.2vw, 32px); }
+    html { min-height:100%; scroll-padding-top:calc(76px + env(safe-area-inset-top)); }
+    body { min-height:100vh; min-height:100dvh; padding-left:env(safe-area-inset-left); padding-right:env(safe-area-inset-right); }
+    .shell { width:min(1480px,calc(100% - var(--page-gutter)*2)); }
+    main.shell { padding-bottom:max(12px,env(safe-area-inset-bottom)); }
+    .topbar { min-height:76px; height:auto; padding-top:max(8px,env(safe-area-inset-top)); gap:18px; }
+    .dashboard-top { grid-template-columns:minmax(360px,.82fr) minmax(0,1.18fr); gap:clamp(14px,1.5vw,24px); }
+    .dashboard-top > *, .dashboard-left, .station-card, .next-72h-panel, .section, .section-head,
+    .chart-stack, .chart-card, .notification-card, .lower-grid > * { min-width:0; }
+    .next-72h-chart { min-height:150px; }
+    .chart-wrap, .ecmwf-chart, .ecmwf-table-wrap { max-width:100%; }
+    img, svg, video, canvas { max-width:100%; }
+    button, .tab, .model-picker button, .station-switch button, .notification-button {
+      touch-action:manipulation;
+    }
+    button, .tab, .model-picker button, .station-switch button { min-height:40px; }
+    .station-switch button { min-height:36px; }
+    .notification-button { min-height:46px; }
+    @media (min-width:1600px) {
+      .shell { width:min(1560px,calc(100% - 64px)); }
+      .dashboard-top { grid-template-columns:minmax(420px,.78fr) minmax(0,1.22fr); }
+      .next-72h-chart { height:210px; }
+      .section { padding-top:36px; padding-bottom:36px; }
+      h2 { font-size:26px; }
+    }
+    @media (max-width:1100px) {
+      .dashboard-top { grid-template-columns:minmax(0,1fr); }
+      .dashboard-left { display:block; }
+      .dashboard-top .station-card { width:100%; }
+      .next-72h-grid { grid-template-columns:repeat(2,minmax(0,1fr)); }
+    }
+    @media (max-width:700px) {
+      html { scroll-padding-top:calc(64px + env(safe-area-inset-top)); }
+      .shell { width:calc(100% - 24px); }
+      .topbar { padding-top:max(8px,env(safe-area-inset-top)); }
+      .dashboard-top { grid-template-columns:minmax(0,1fr); }
+      .dashboard-left { display:block; }
+      .dashboard-top .station-card { width:100%; max-width:none; }
+      .next-72h-grid { grid-template-columns:minmax(0,1fr); }
+      .next-72h-chart { height:clamp(160px,42vw,210px); }
+      .chart-wrap { overflow-x:auto; -webkit-overflow-scrolling:touch; }
+      .chart-wrap svg { min-width:560px; }
+      .ecmwf-chart { overflow-x:auto; -webkit-overflow-scrolling:touch; }
+      .ecmwf-chart svg { min-width:520px; }
+      .notification-images { grid-template-columns:minmax(0,1fr)!important; }
+      .daily-grid { grid-template-columns:repeat(4,minmax(0,1fr)); }
+      .notification-controls { align-items:stretch; width:100%; }
+      .notification-button { width:100%; }
+    }
+    @media (max-width:390px) {
+      .shell { width:calc(100% - 20px); }
+      .brand { font-size:13px; }
+      .brand small { font-size:7px; }
+      .model-picker button { padding:7px 8px; font-size:9px; }
+      .dashboard-top .station-card { padding:12px 11px; }
+      .dashboard-top .station-card .stat { padding-left:4px; padding-right:4px; }
+      .dashboard-top .station-card .stat .value { font-size:11px; }
+      .station-switch { width:100%; }
+      .station-switch button { flex:1; padding-left:5px; padding-right:5px; font-size:8px; }
+      .daily-grid { grid-template-columns:repeat(2,minmax(0,1fr)); }
+    }
+    /* iPhone landscape / 16:8-class phone viewports: compact chrome, retain two-column forecast. */
+    @media (orientation:landscape) and (max-height:600px) and (pointer:coarse) {
+      .topbar { min-height:54px; flex-wrap:nowrap; padding-top:env(safe-area-inset-top); }
+      .topbar nav { display:flex; order:initial; width:auto; overflow-x:auto; gap:12px; }
+      .topbar nav a { font-size:10px; }
+      .hero { padding-top:16px; }
+      .dashboard-top { grid-template-columns:minmax(270px,.8fr) minmax(0,1.2fr); gap:10px; }
+      .dashboard-left { display:block; }
+      .next-72h-grid { grid-template-columns:repeat(2,minmax(0,1fr)); gap:8px; }
+      .next-72h-chart { height:125px; }
+      .station-history-inline .history-charts { grid-template-columns:repeat(2,minmax(0,1fr)); }
+      .daily-grid { grid-template-columns:repeat(4,minmax(0,1fr)); }
+      .section { padding-top:16px; padding-bottom:16px; }
+    }
+    @media (prefers-reduced-motion:reduce) {
+      *,*::before,*::after { scroll-behavior:auto!important; animation-duration:.01ms!important; transition-duration:.01ms!important; }
     }
 
 </style>
