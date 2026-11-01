@@ -50,7 +50,7 @@ def main() -> None:
     charts = archive.create_pages_comparison_charts(
         current_run_id, current_payload, previous_runs
     )
-    expected = {"temperature", "precipitation", "wind_10m", "wind_850"}
+    expected = {"temperature", "temperature_850", "precipitation", "wind_10m"}
     if set(charts) != expected:
         for buffer in charts.values():
             buffer.close()
