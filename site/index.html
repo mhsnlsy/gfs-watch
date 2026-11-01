@@ -75,6 +75,42 @@
       .topbar nav { display:flex; order:3; width:100%; max-width:100%; overflow-x:auto; }
     }
 
+
+    /* Compact station card with an embedded ENKA 24-hour temperature history. */
+    .station-card{padding:19px 20px;min-height:0}
+    .station-card .place{font-size:17px}
+    .station-overview{display:grid;grid-template-columns:minmax(112px,.78fr) minmax(0,1.22fr);gap:13px;align-items:center;margin-top:15px;position:relative}
+    .station-card .temp-row{margin:0;gap:7px;min-width:0}
+    .station-card .temperature{font-size:clamp(46px,5.1vw,64px)}
+    .station-card .weather-symbol{font-size:35px}
+    .station-trend{min-width:0;align-self:stretch;padding:9px 10px 7px;border:1px solid rgba(176,221,228,.15);border-radius:13px;background:rgba(4,19,30,.22)}
+    .station-trend-head{display:flex;align-items:center;justify-content:space-between;gap:8px;margin-bottom:6px}
+    .station-trend-title{font-size:9px;letter-spacing:.1em;font-weight:700;color:#c4e4e4}
+    .station-trend-unit{font-size:9px;color:#9bb6c2}
+    .station-trend-image-wrap{position:relative;min-height:66px;display:grid;place-items:center;overflow:hidden;border-radius:8px;background:#f3f6f6}
+    .station-trend img{display:block;width:100%;height:72px;object-fit:contain}
+    .station-trend-empty{padding:10px;color:#526875;text-align:center;font-size:9px;line-height:1.4}
+    .station-trend-source{font-size:8px;color:#91aab5;margin-top:5px;text-align:right}
+    .station-card .temp-caption{font-size:10px;margin-top:8px;line-height:1.5}
+    .station-card .weather-stats{gap:7px;margin-top:14px}
+    .station-card .stat{padding:9px 10px}
+    .station-card .stat .value{font-size:16px;margin-top:4px}
+    .station-card .stat .name{font-size:9px}
+    .station-card .stat .unit{font-size:9px}
+    .station-card .station-alert{margin-top:9px;padding:9px 11px}
+    @media(max-width:560px){
+      .station-card{padding:16px}
+      .station-overview{grid-template-columns:minmax(100px,.75fr) minmax(0,1.25fr);gap:9px;margin-top:13px}
+      .station-card .temperature{font-size:clamp(43px,13vw,54px)}
+      .station-card .weather-symbol{font-size:30px}
+      .station-trend{padding:8px 8px 6px}
+      .station-trend-title{font-size:8px;letter-spacing:.07em}
+      .station-trend-image-wrap{min-height:59px}
+      .station-trend img{height:64px}
+      .station-card .weather-stats{gap:5px;margin-top:12px}
+      .station-card .stat{padding:8px 7px}
+      .station-card .stat .value{font-size:14px}
+    }
   </style>
 </head>
 <body>
@@ -86,7 +122,7 @@
   <main class="shell">
     <section class="hero">
       <div><div class="eyebrow"><span class="dot"></span> Canlı yerel istasyon gözlemi</div><h1>Şehrin havasını<br><span>önceden görün.</span></h1><p class="intro">Balmumcu'daki ENKA meteoroloji istasyonundan alınan gerçek ölçümler. Bu kart yalnızca istasyon gözlemlerini gösterir; model tahminleri aşağıdaki ayrı bölümlerde sunulur.</p><div class="hero-meta"><span class="meta-chip">Gerçek ölçüm</span><span class="meta-chip">ENKA Balmumcu · İstanbul</span></div></div>
-      <article class="weather-card station-card" role="region" aria-labelledby="station-card-title"><div class="weather-top"><div><div class="label">GERÇEK İSTASYON GÖZLEMİ</div><div class="place" id="station-card-title">ENKA Balmumcu · İstanbul</div></div><span class="model-state" id="freshness">Veri bekleniyor</span></div><div class="temp-row"><div class="temperature" id="temperature">—°</div><div class="weather-symbol" id="weather-symbol" aria-hidden="true">☁️</div></div><div class="temp-caption" id="station-observation-meta">Son istasyon ölçümü · zaman damgası sayfada gösterilir</div><div class="weather-stats"><div class="stat"><div class="name">Rüzgâr</div><div class="value" id="wind">—<span class="unit">km/sa</span></div></div><div class="stat"><div class="name">Günlük yağış</div><div class="value" id="rain">—<span class="unit">mm</span></div></div><div class="stat"><div class="name">Nem</div><div class="value" id="humidity">—<span class="unit">%</span></div></div></div><div class="station-alert" id="station-alert" role="status" aria-live="polite" hidden></div></article>
+      <article class="weather-card station-card" role="region" aria-labelledby="station-card-title"><div class="weather-top"><div><div class="label">GERÇEK İSTASYON GÖZLEMİ</div><div class="place" id="station-card-title">ENKA Balmumcu · İstanbul</div></div><span class="model-state" id="freshness">Veri bekleniyor</span></div><div class="station-overview"><div class="temp-row"><div class="temperature" id="temperature">—°</div><div class="weather-symbol" id="weather-symbol" aria-hidden="true">☁️</div></div><div class="station-trend"><div class="station-trend-head"><span class="station-trend-title">SON 24 SAAT · SICAKLIK</span><span class="station-trend-unit">°C</span></div><div class="station-trend-image-wrap"><img id="station-temperature-trend" alt="ENKA Balmumcu istasyonunda son 24 saatlik sıcaklık grafiği" loading="lazy"><span class="station-trend-empty" id="station-trend-empty" hidden>24 saatlik grafik şu anda alınamıyor.</span></div><div class="station-trend-source">Kaynak: ENKA Balmumcu</div></div></div><div class="temp-caption" id="station-observation-meta">Son istasyon ölçümü · zaman damgası sayfada gösterilir</div><div class="weather-stats"><div class="stat"><div class="name">Rüzgâr</div><div class="value" id="wind">—<span class="unit">km/sa</span></div></div><div class="stat"><div class="name">Günlük yağış</div><div class="value" id="rain">—<span class="unit">mm</span></div></div><div class="stat"><div class="name">Nem</div><div class="value" id="humidity">—<span class="unit">%</span></div></div></div><div class="station-alert" id="station-alert" role="status" aria-live="polite" hidden></div></article>
     </section>
     <section class="section" id="tahmin"><div class="section-head"><div><div class="section-kicker">NOAA / NCEP GFS · MODEL TAHMİNİ</div><h2>8 günlük tahmin</h2></div><div class="section-note"><span id="cycle-chip">Model döngüsü yükleniyor</span><br><span id="updated-chip">Yayın zamanı bekleniyor</span><br>Günlük en düşük / en yüksek sıcaklık</div></div><div class="daily-grid" id="daily-grid"><div class="loading">Tahmin verisi yükleniyor…</div></div></section>
     <section class="section" id="bildirimler">
@@ -125,6 +161,12 @@
     let forecastData=null,activeMetric="temperature";
     const $=id=>document.getElementById(id);
     const numeric=value=>typeof value==="number"&&Number.isFinite(value);
+    const windDirectionTr={
+      N:"Kuzey",NNE:"Kuzey-kuzeydoğu",NE:"Kuzeydoğu",ENE:"Doğu-kuzeydoğu",
+      E:"Doğu",ESE:"Doğu-güneydoğu",SE:"Güneydoğu",SSE:"Güney-güneydoğu",
+      S:"Güney",SSW:"Güney-güneybatı",SW:"Güneybatı",WSW:"Batı-güneybatı",
+      W:"Batı",WNW:"Batı-kuzeybatı",NW:"Kuzeybatı",NNW:"Kuzey-kuzeybatı"
+    };
     const fmt=(value,digits=1)=>numeric(value)?value.toLocaleString("tr-TR",{minimumFractionDigits:digits,maximumFractionDigits:digits}):"—";
     const esc=value=>String(value??"").replace(/[&<>"']/g,char=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[char]));
     const timeTR=value=>new Intl.DateTimeFormat("tr-TR",{timeZone:"Europe/Istanbul",day:"2-digit",month:"2-digit",hour:"2-digit",minute:"2-digit"}).format(new Date(value));
@@ -179,7 +221,13 @@
       const station=data.station_observation||{};
       const hasStation=!!data.station_observation;
       $("temperature").textContent=hasStation&&numeric(station.temperature_2m_c)?fmt(station.temperature_2m_c,1)+"°":"—°";
-      $("wind").innerHTML=hasStation&&numeric(station.wind_speed_10m_kmh)?(station.wind_direction_cardinal?esc(station.wind_direction_cardinal)+" · ":"")+fmt(station.wind_speed_10m_kmh,1)+'<span class="unit">km/sa</span>':'—<span class="unit">km/sa</span>';
+      const trendImage=$("station-temperature-trend");
+      if(trendImage){
+        trendImage.onload=()=>{$("station-trend-empty").hidden=true;};
+        trendImage.onerror=()=>{$("station-trend-empty").hidden=false;};
+        trendImage.src="https://w.enka.com/weather/OutsideTempHistory.gif?t="+Math.floor(Date.now()/300000);
+      }
+      $("wind").innerHTML=hasStation&&numeric(station.wind_speed_10m_kmh)?((station.wind_direction_tr||windDirectionTr[station.wind_direction_cardinal]||station.wind_direction_cardinal)?esc(station.wind_direction_tr||windDirectionTr[station.wind_direction_cardinal]||station.wind_direction_cardinal)+" · ":"")+fmt(station.wind_speed_10m_kmh,1)+'<span class="unit">km/sa</span>':'—<span class="unit">km/sa</span>';
       $("rain").innerHTML=hasStation&&numeric(station.precipitation_daily_mm)?fmt(station.precipitation_daily_mm,1)+'<span class="unit">mm bugün</span>':'—<span class="unit">mm bugün</span>';
       $("humidity").innerHTML=hasStation&&numeric(station.humidity_percent)?fmt(station.humidity_percent,0)+'<span class="unit">%</span>':'—<span class="unit">%</span>';
       $("weather-symbol").textContent=symbolFor(hasStation?station.precipitation_1h_mm||0:0);
