@@ -1,118 +1,104 @@
-"""Recreate the most recent Telegram GFS media and publish it to Pages.
+"""Refresh the latest Pages report charts with the new 850 hPa wind field.
 
-This is a one-off archival operation. It reads the saved SQLite run history,
-does not send anything to Telegram, and only writes public/notifications/.
+The historical notification text/audio is preserved. This job does not send
+a Telegram message; it only rebuilds the current Pages forecast and its four
+separate chart images from the corresponding NOAA GFS cycle.
 """
 from __future__ import annotations
 
 import asyncio
-import importlib.util
 import json
 import os
-import sys
+from datetime import datetime, timezone
 from pathlib import Path
 
-
-ROOT = Path(__file__).resolve().parents[1]
-sys.path.insert(0, str(ROOT))
-
-import main as archive  # noqa: E402
-
-
-def load_legacy_module():
-    legacy_path = os.environ.get("LEGACY_MAIN_PATH")
-    if not legacy_path:
-        raise RuntimeError("LEGACY_MAIN_PATH is required")
-    spec = importlib.util.spec_from_file_location("legacy_gfs_main", legacy_path)
-    if spec is None or spec.loader is None:
-        raise RuntimeError("Could not load historical GFS source")
-    module = importlib.util.module_from_spec(spec)
-    spec.loader.exec_module(module)
-    return module
+import main as archive
 
 
 def main() -> None:
-    target_run_id = os.environ.get("TARGET_RUN_ID", "2026-10-31T12:00:00+00:00")
     latest_path = Path(archive.PUBLIC_DATA_DIR) / "latest.json"
-    if not latest_path.is_file():
-        raise RuntimeError(f"Missing published forecast: {latest_path}")
+    manifest_path = Path(archive.PUBLIC_DATA_DIR) / "notifications" / "latest.json"
+    if not latest_path.is_file() or not manifest_path.is_file():
+        raise RuntimeError("Latest forecast or notification manifest is missing.")
 
     latest = json.loads(latest_path.read_text(encoding="utf-8"))
-    published_run_id = latest.get("run_id_utc")
+    target_run_id = os.environ.get("TARGET_RUN_ID", "").strip() or latest.get("run_id_utc")
+    if not target_run_id:
+        raise RuntimeError("No latest GFS run ID is available.")
+    target_run_id = archive._parse_utc_datetime(target_run_id).isoformat(timespec="seconds")
+    published_run_id = archive._parse_utc_datetime(latest.get("run_id_utc")).isoformat(timespec="seconds")
     if published_run_id != target_run_id:
         raise RuntimeError(
-            "Safety check: requested Telegram report does not match latest.json. "
-            f"Expected {target_run_id}, found {published_run_id}."
+            "Safety check: target must match public/latest.json. "
+            f"Expected {published_run_id}, received {target_run_id}.
         )
 
-    legacy = load_legacy_module()
-    record = legacy.get_run_payload(target_run_id)
-    if not record:
-        raise RuntimeError(f"Saved SQLite forecast not found for {target_run_id}")
-    stored_run_id, payload = record
-
-    previous_runs = asyncio.run(
-        legacy.load_previous_three_runs_for_comparison(stored_run_id)
+    run_dt = archive._parse_utc_datetime(target_run_id)
+    run_key = run_dt.strftime("%Y%m%dT%HZ")
+    manifest = json.loads(manifest_path.read_text(encoding="utf-8"))
+    item = next(
+        (entry for entry in manifest.get("items", []) if entry.get("run_id_utc") == target_run_id),
+        None,
     )
-    if len(previous_runs) != 3:
-        raise RuntimeError(
-            f"Expected three earlier GFS cycles, found {len(previous_runs)}"
-        )
+    if item is None:
+        raise RuntimeError(f"Notification entry for {target_run_id} was not found.")
 
     print(
-        "[ARCHIVE] Rebuilding the Telegram report from saved run "
-        f"{stored_run_id} and the three preceding cycles."
+        f"[PAGES BACKFILL] Rebuilding {run_key} from NOAA GFS to add 850 hPa wind."
     )
-    full_text_report, speech_text = legacy.analyze_and_build_output(
-        stored_run_id, payload, previous_runs
-    )
+    payload = archive.fetch_full_weather_data(target_run_id)
+    if not payload or "_pending_noaa_gfs" in payload:
+        raise RuntimeError(
+            "NOAA forecast could not be rebuilt: "
+            f"{(payload or {}).get('_reason', 'no data returned')}"
+        )
 
-    chart = legacy.create_comparison_chart(
-        stored_run_id, payload, previous_runs
-    )
-    if chart is None:
-        raise RuntimeError("Historical four-cycle comparison image could not be rebuilt")
+    payload["station_observation"] = latest.get("station_observation")
+    noaa = latest.get("noaa_source_file", {})
+    payload["model_metadata"] = {
+        "noaa_f180_available": noaa.get("f180_available", True),
+        "last_modified_time": noaa.get("f180_last_modified_utc"),
+        "source_name": noaa.get("f180_source_name"),
+        "source_url": noaa.get("f180_source_url"),
+        "source_object_size_bytes": noaa.get("global_grib2_size_bytes"),
+    }
 
-    audio_file = None
+    wind_850 = payload.get("daily", {}).get("wind_850_max", [])
+    if not wind_850 or len(wind_850) != len(payload.get("daily", {}).get("time", [])):
+        raise RuntimeError("850 hPa daily wind series is missing or incomplete.")
+
+    archive.export_public_forecast_json(target_run_id, payload)
+    previous_runs = asyncio.run(
+        archive.load_previous_three_runs_for_comparison(target_run_id)
+    )
+    if len(previous_runs) != 3:
+        raise RuntimeError(f"Expected three earlier GFS cycles, found {len(previous_runs)}.")
+
+    charts = archive.create_pages_comparison_charts(target_run_id, payload, previous_runs)
+    expected_metrics = {"temperature", "precipitation", "wind_10m", "wind_850"}
+    if set(charts) != expected_metrics:
+        for buffer in charts.values():
+            buffer.close()
+        raise RuntimeError(f"Expected four Pages images; generated {sorted(charts)}.")
+
     try:
-        image_path = archive.save_public_notification_image(stored_run_id, chart)
-        if not image_path:
-            raise RuntimeError("Comparison image could not be saved")
-
-        # Use the exact historical TTS implementation that sent this report
-        # to Telegram (Turkish WaveNet C, 1.2x).
-        audio_file = asyncio.run(
-            legacy.generate_speech_with_retry(speech_text)
-        )
-        if not audio_file or not Path(audio_file).is_file():
-            raise RuntimeError("Historical Telegram voice report could not be regenerated")
-
-        archive.publish_public_notification(
-            stored_run_id,
-            full_text_report,
-            speech_text,
-            image_path,
-            audio_file,
-        )
-
-        manifest_path = Path(archive.PUBLIC_DATA_DIR) / "notifications" / "latest.json"
-        manifest = json.loads(manifest_path.read_text(encoding="utf-8"))
-        item = next(
-            entry for entry in manifest.get("items", [])
-            if entry.get("id") == Path(image_path).stem.replace(
-                "gfs-", ""
-            ).replace("-comparison", "")
-        )
-        print(
-            "[ARCHIVE COMPLETE] "
-            f"image={item.get('image_path')} "
-            f"audio={item.get('audio_path')} "
-            f"items={len(manifest.get('items', []))}"
-        )
+        images = archive.save_public_notification_images(target_run_id, charts)
     finally:
-        chart.close()
-        if audio_file and Path(audio_file).is_file():
-            Path(audio_file).unlink()
+        for buffer in charts.values():
+            buffer.close()
+    if len(images) != 4:
+        raise RuntimeError(f"Expected four archived Pages images, saved {len(images)}.")
+
+    item["images"] = images
+    item["image_path"] = None
+    manifest["updated_at_utc"] = datetime.now(timezone.utc).isoformat(timespec="seconds")
+    archive._write_json_atomically(str(manifest_path), manifest)
+
+    print(
+        "[PAGES BACKFILL COMPLETE] "
+        f"run={target_run_id}; images={len(images)}; "
+        f"850 hPa daily samples={len(wind_850)}; Telegram was not sent."
+    )
 
 
 if __name__ == "__main__":
