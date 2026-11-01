@@ -1,22 +1,21 @@
-name: Inspect WStatMap station page
+name: Validate WStatMap Eyüpsultan scraper
 
 on:
   push:
     branches: [feature/wstatmap-eyupsultan-inspection]
     paths:
-      - "scripts/inspect_wstatmap_station.mjs"
-      - "eyupsultan_weather.py"
+      - "scripts/eyupsultan_weather.mjs"
       - ".github/workflows/wstatmap-inspect.yml"
   pull_request:
     paths:
-      - "scripts/inspect_wstatmap_station.mjs"
+      - "scripts/eyupsultan_weather.mjs"
       - ".github/workflows/wstatmap-inspect.yml"
 
 permissions:
   contents: read
 
 jobs:
-  inspect:
+  scrape:
     runs-on: ubuntu-latest
     timeout-minutes: 8
     steps:
@@ -24,16 +23,9 @@ jobs:
       - uses: actions/setup-node@v4
         with:
           node-version: "22"
-      - name: Install Playwright
+      - name: Install Playwright and Chromium
         run: |
           npm install --no-save playwright
           npx playwright install --with-deps chromium
-      - name: Inspect rendered station page and its public requests
-        run: node scripts/inspect_wstatmap_station.mjs
-      - uses: actions/setup-python@v5
-        with:
-          python-version: "3.12"
-      - name: Validate WStatMap station scraper against live page
-        run: |
-          python -m pip install --disable-pip-version-check requests
-          python -u eyupsultan_weather.py --dry-run
+      - name: Scrape and validate live Eyüpsultan observations
+        run: node scripts/eyupsultan_weather.mjs
