@@ -44,17 +44,15 @@ jobs:
       - name: Install dependencies
         run: python -m pip install -r requirements.txt
       - name: Prepare NOAA cache directory
-        run: mkdir -p noaa_cache
+        run: mkdir -p noaa_cache_v2
       - name: Restore partial NOAA forecast cache
         id: noaa-cache-restore
         uses: actions/cache/restore@v6
         with:
-          path: noaa_cache
-          key: gfs-noaa-cache-v3-${{ github.run_id }}-${{ github.run_attempt }}
+          path: noaa_cache_v2
+          key: gfs-noaa-cache-v4-${{ github.run_id }}-${{ github.run_attempt }}
           restore-keys: |
-            gfs-noaa-cache-v3-
-            gfs-noaa-cache-v2-
-            gfs-noaa-cache-v1-
+            gfs-noaa-cache-v4-
       - name: Restore GFS run history
         run: |
           git fetch origin gfs-watch-state
@@ -86,7 +84,7 @@ jobs:
           TELEGRAM_TOKEN: ${{ secrets.TELEGRAM_TOKEN }}
           CHAT_ID: ${{ secrets.CHAT_ID }}
           GCP_SA_KEY: ${{ secrets.GCP_SA_KEY }}
-          NOAA_CACHE_DIR: noaa_cache
+          NOAA_CACHE_DIR: noaa_cache_v2
           NOAA_PREFETCH_FILES_PER_CHECK: "141"
           NOAA_PREFETCH_INTERVAL_SECONDS: "300"
           NOAA_RANGE_DOWNLOAD_WORKERS: "8"
@@ -114,12 +112,12 @@ jobs:
             echo "No new completed GFS cycle was generated in this session."
           fi
       - name: Save partial NOAA forecast cache
-        if: always() && steps.check-gfs.outputs.noaa_cache_updated == 'true'
+        if: always() && steps.check-gfs.outputs.noaa_cache_v2_updated == 'true'
         continue-on-error: true
         uses: actions/cache/save@v6
         with:
-          path: noaa_cache
-          key: gfs-noaa-cache-v3-${{ github.run_id }}-${{ github.run_attempt }}
+          path: noaa_cache_v2
+          key: gfs-noaa-cache-v4-${{ github.run_id }}-${{ github.run_attempt }}
       - name: Save GFS run history
         if: always()
         run: |
