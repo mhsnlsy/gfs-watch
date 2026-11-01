@@ -527,7 +527,11 @@ def _fetch_cycle(client, run_dt: datetime) -> dict:
             "spread_v10": read_grib_point(paths["es_sfc"], "v10"),
             "spread_tp": read_grib_point(paths["es_sfc"], "tp"),
         }
-        regional_pressure = read_regional_pressure_extremes(paths["em_sfc"])
+        try:
+            regional_pressure = read_regional_pressure_extremes(paths["em_sfc"])
+        except Exception as exc:
+            print(f"[ECMWF PRESSURE ANALYSIS WARNING] {type(exc).__name__}: {exc}")
+            regional_pressure = None
         document = build_document(run_dt, mean, spread, regional_pressure)
         validate_document(document)
         return document
