@@ -2343,6 +2343,49 @@ def create_pages_comparison_charts(current_run_id, payload, previous_runs):
         print(f"[PAGES GÖRSELLERİ HATA] Ayrı görseller oluşturulamadı: {exc}")
         return {}
 
+async def load_previous_three_runs_for_comparison(current_run_id):
+    """Load the exact three preceding six-hour cycles, using NOAA read-only as fallback."""
+    current_dt = _parse_utc_datetime(current_run_id)
+    previous_runs = []
+
+    for hours_back in (6, 12, 18):
+        previous_dt = current_dt - timedelta(hours=hours_back)
+        previous_run_id = previous_dt.isoformat(timespec="seconds")
+        stored_record = await asyncio.to_thread(
+            get_run_payload, previous_run_id
+        )
+
+        if stored_record:
+            stored_run_id, stored_payload = stored_record
+            print(
+                f"[KIYAS GEÇMİŞİ] {stored_run_id} SQLite geçmişinden salt okunur alındı."
+            )
+            previous_runs.append((
+                stored_run_id,
+                json.dumps(stored_payload, ensure_ascii=False),
+            ))
+            continue
+
+        print(
+            f"[KIYAS GEÇMİŞİ] {previous_run_id} DB'de bulunamadı; "
+            "NOAA/NCEP'den salt okunur tamamlanıyor."
+        )
+        fetched_payload = await asyncio.to_thread(
+            fetch_full_weather_data, previous_run_id
+        )
+        if not fetched_payload or "_pending_noaa_gfs" in fetched_payload:
+            raise RuntimeError(
+                f"{previous_run_id} karşılaştırma tahmini NOAA'dan alınamadı: "
+                f"{(fetched_payload or {}).get('_reason', 'veri bulunamadı')}"
+            )
+        previous_runs.append((
+            previous_run_id,
+            json.dumps(fetched_payload, ensure_ascii=False),
+        ))
+
+    return previous_runs
+
+
 async def send_telegram_photo(photo, caption, max_attempts=3):
     if not TELEGRAM_TOKEN or not CHAT_ID:
         raise RuntimeError("TELEGRAM_TOKEN veya CHAT_ID eksik.")
