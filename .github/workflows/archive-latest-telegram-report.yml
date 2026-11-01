@@ -60,22 +60,31 @@ jobs:
 
       - name: Commit refreshed forecast and Pages media
         working-directory: state
+        env:
+          DB_PATH: ${{ github.workspace }}/state/gfs_watch.db
+          PUBLIC_DATA_DIR: ${{ github.workspace }}/state/public
+          NOAA_CACHE_DIR: ${{ github.workspace }}/source/noaa_cache_v2
+          NOAA_RANGE_DOWNLOAD_WORKERS: '8'
         run: |
           git config user.name 'github-actions[bot]'
           git config user.email '41898282+github-actions[bot]@users.noreply.github.com'
-          git add public
-          if git diff --cached --quiet; then
-            echo 'Public forecast and notification media are already current.'
-            exit 0
-          fi
-          git commit -m 'Backfill latest Pages charts with 850 hPa wind'
           for attempt in 1 2 3; do
+            git add public
+            if git diff --cached --quiet; then
+              echo 'Public forecast and notification media are already current.'
+              exit 0
+            fi
+            git commit -m 'Backfill latest Pages charts with 850 hPa wind'
             if git push origin HEAD:gfs-watch-state; then
               echo 'Four Pages charts and refreshed forecast published.'
               exit 0
             fi
-            git fetch origin gfs-watch-state
-            git rebase origin/gfs-watch-state
+            if [ "$attempt" -lt 3 ]; then
+              echo "State branch changed during publish; refreshing and rebuilding (attempt $((attempt + 1)))."
+              git fetch origin gfs-watch-state
+              git reset --hard origin/gfs-watch-state
+              (cd ../source && python scripts/archive_latest_telegram_report.py)
+            fi
           done
           echo 'Could not publish refreshed Pages charts after three attempts.'
           exit 1
