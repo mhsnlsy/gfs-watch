@@ -238,15 +238,15 @@
 
 
     /* Dashboard-first layout: observation left, ENKA history trends right. */
-    .dashboard-top{display:grid;grid-template-columns:minmax(310px,.82fr) minmax(0,1.18fr);gap:16px;align-items:stretch;padding:30px 0 22px}
-    .dashboard-top .station-card{width:100%;max-width:none;justify-self:stretch;align-self:stretch;min-height:0;padding:21px 22px}
+    .dashboard-top{display:grid;grid-template-columns:minmax(330px,.78fr) minmax(0,1.22fr);gap:14px;align-items:stretch;padding:22px 0 18px}
+    .dashboard-top .station-card{width:100%;max-width:none;justify-self:stretch;align-self:stretch;min-height:0;padding:19px 20px}
     .dashboard-top .station-overview{display:block;margin-top:22px}
     .dashboard-top .station-current{width:100%}
     .dashboard-top .station-card .temperature{font-size:clamp(54px,5vw,72px)}
     .dashboard-top .station-card .temp-caption{font-size:11px}
     .dashboard-top .station-card .weather-stats{grid-template-columns:repeat(2,minmax(0,1fr));row-gap:12px;margin-top:23px}
     .dashboard-top .station-card .stat{padding:9px 10px;border-right:1px solid rgba(213,237,240,.08)}
-    .history-panel{min-width:0;padding:19px;background:linear-gradient(145deg,rgba(18,43,61,.92),rgba(12,31,46,.94));border:1px solid var(--line);border-radius:19px}
+    .history-panel{min-width:0;padding:17px;background:linear-gradient(145deg,rgba(18,43,61,.92),rgba(12,31,46,.94));border:1px solid var(--line);border-radius:19px}
     .history-panel-head{display:flex;justify-content:space-between;align-items:center;gap:12px;margin-bottom:14px}
     .history-panel-head h2{font-size:21px;margin-top:5px}
     .history-window{font-size:9px;letter-spacing:.1em;color:#b8d7df;border:1px solid var(--line);padding:6px 8px;border-radius:8px}
@@ -256,7 +256,7 @@
     .history-chart-head h3{font:700 14px Manrope,sans-serif;margin:0}
     .history-chart-head p{font-size:9px;color:var(--muted);margin:4px 0 0}
     .history-chart-icon{font:700 18px Manrope,sans-serif;color:var(--cyan);opacity:.8}
-    .history-chart{height:155px;width:100%;margin-top:10px;min-width:0}
+    .history-chart{height:170px;width:100%;margin-top:8px;min-width:0}
     .history-chart svg{width:100%;height:100%;display:block;overflow:visible}
     .history-chart-meta{font-size:9px;color:#91aab5;line-height:1.5;margin-top:4px;min-height:14px}
     @media(max-width:900px){.dashboard-top{grid-template-columns:minmax(0,1fr);}.history-charts{grid-template-columns:repeat(2,minmax(0,1fr))}}
@@ -716,12 +716,27 @@
       const holder=$("station-rain-trend"),meta=$("station-rain-meta");
       if(!holder)return;
       const now=Date.now(),start=now-24*60*60*1000;
-      const valid=(Array.isArray(samples)?samples:[]).map(sample=>({
+      const readings=(Array.isArray(samples)?samples:[]).map(sample=>({
         time:Date.parse(sample.observed_at_utc||sample.logged_at_utc||""),
-        rain:Number(sample.precipitation_daily_mm)
-      })).filter(x=>Number.isFinite(x.time)&&x.time>=start&&x.time<=now&&Number.isFinite(x.rain)&&x.rain>=0).sort((a,b)=>a.time-b.time);
-      if(!valid.length){holder.innerHTML='<div class="station-trend-empty">Yağış geçmişi henüz birikmedi. ENKA kayıtları geldikçe grafik oluşacak.</div>';if(meta)meta.textContent="Günlük birikim verisi bekleniyor";return;}
-      const width=560,height=150,left=38,right=12,top=12,bottom=25,plotW=width-left-right,plotH=height-top-bottom;
+        daily:Number(sample.precipitation_daily_mm)
+      })).filter(x=>Number.isFinite(x.time)&&x.time>=start&&x.time<=now&&Number.isFinite(x.daily)&&x.daily>=0).sort((a,b)=>a.time-b.time);
+      if(readings.length<2){
+        holder.innerHTML='<div class="station-trend-empty">24 saatlik yağış eğilimi için ENKA arşivinde en az iki ölçüm gerekli.</div>';
+        if(meta)meta.textContent="Yazılı ENKA ölçümleri biriktikçe oluşur";
+        return;
+      }
+      // ENKA supplies a daily accumulation counter, not an hourly-rain GIF.
+      // Convert successive counter differences into a rolling 24-hour accumulation,
+      // treating a midnight counter reset as the new day's measured amount.
+      let accumulated=0;
+      const valid=[{time:readings[0].time,rain:0}];
+      for(let i=1;i<readings.length;i++){
+        const previous=readings[i-1].daily,current=readings[i].daily;
+        const increment=current>=previous?current-previous:current;
+        accumulated+=Math.max(0,increment);
+        valid.push({time:readings[i].time,rain:accumulated});
+      }
+      const width=560,height=150,left=42,right=12,top=12,bottom=25,plotW=width-left-right,plotH=height-top-bottom;
       const max=Math.max(1,...valid.map(x=>x.rain))*1.12;
       const x=t=>left+(t-start)/(now-start)*plotW,y=v=>top+plotH-(v/max)*plotH;
       const points=valid.map(v=>x(v.time).toFixed(1)+","+y(v.rain).toFixed(1)).join(" ");
@@ -729,8 +744,9 @@
       const grid=ticks.map(v=>'<line x1="'+left+'" y1="'+y(v).toFixed(1)+'" x2="'+(width-right)+'" y2="'+y(v).toFixed(1)+'" stroke="rgba(190,215,225,.13)" stroke-dasharray="3 4"/><text x="'+(left-7)+'" y="'+(y(v)+3).toFixed(1)+'" fill="#9fb5c1" font-size="10" text-anchor="end">'+v.toFixed(v<2?1:0).replace(".",",")+'</text>').join("");
       const labels=[0,6,12,18,24].map(hr=>'<text x="'+(left+plotW*hr/24).toFixed(1)+'" y="'+(height-6)+'" fill="#9fb5c1" font-size="10" text-anchor="middle">'+(hr===24?"Şimdi":hr+"s")+'</text>').join("");
       const area="M "+points.replace(/ /g," L ")+" L "+x(valid[valid.length-1].time).toFixed(1)+","+(top+plotH)+" L "+x(valid[0].time).toFixed(1)+","+(top+plotH)+" Z";
-      holder.innerHTML='<svg viewBox="0 0 '+width+' '+height+'" role="img" aria-label="ENKA günlük yağış birikimi geçmişi"><defs><linearGradient id="enka-rain-fill" x1="0" x2="0" y1="0" y2="1"><stop offset="0%" stop-color="#83c9eb" stop-opacity=".3"/><stop offset="100%" stop-color="#83c9eb" stop-opacity=".02"/></linearGradient></defs>'+grid+'<path d="'+area+'" fill="url(#enka-rain-fill)"/><polyline points="'+points+'" fill="none" stroke="#83c9eb" stroke-width="2.8" stroke-linecap="round" stroke-linejoin="round"/>'+labels+'</svg>';
-      if(meta)meta.textContent="Son kayıt: "+valid[valid.length-1].rain.toLocaleString("tr-TR",{maximumFractionDigits:1})+" mm · günlük birikim";
+      const total=valid[valid.length-1].rain;
+      holder.innerHTML='<svg viewBox="0 0 '+width+' '+height+'" role="img" aria-label="ENKA yazılı ölçümlerinden türetilen son 24 saatlik yağış birikimi"><defs><linearGradient id="enka-rain-fill" x1="0" x2="0" y1="0" y2="1"><stop offset="0%" stop-color="#83c9eb" stop-opacity=".3"/><stop offset="100%" stop-color="#83c9eb" stop-opacity=".02"/></linearGradient></defs>'+grid+'<path d="'+area+'" fill="url(#enka-rain-fill)"/><polyline points="'+points+'" fill="none" stroke="#83c9eb" stroke-width="2.8" stroke-linecap="round" stroke-linejoin="round"/>'+labels+'</svg>';
+      if(meta)meta.textContent="24 saatte türetilen birikim: "+total.toLocaleString("tr-TR",{maximumFractionDigits:1})+" mm · ENKA arşiv ölçümleri";
     }
     function render(data){
       forecastData=data;
