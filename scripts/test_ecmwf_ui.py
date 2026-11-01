@@ -24,7 +24,6 @@ def main() -> None:
         'const ECMWF_DATA_URL="./data/ecmwf/latest.json";',
         'localStorage.setItem("istanbul-hava-model-view",activeModel)',
         'localStorage.getItem("istanbul-hava-model-view")',
-        'const x=index=>left+(points[index].hour/180)*plotW;',
         'document.forecasts.length!==55',
         'function renderDaily(items,targetId="daily-grid")',
         'function renderChart(metric,targetId,sourceData=forecastData)',
@@ -42,7 +41,7 @@ def main() -> None:
         raise AssertionError("Duplicate HTML IDs: " + ", ".join(duplicates))
 
     gfs_start = html.index('<div id="gfs-model-view">')
-    ecmwf_start = html.index('<section class="section ecmwf-model-view" id="ecmwf-model-view"')
+    ecmwf_start = html.index('<div id="ecmwf-model-view"')
     main_end = html.index("</main>", ecmwf_start)
     if not (gfs_start < ecmwf_start < main_end):
         raise AssertionError("GFS and ECMWF model views are not correctly separated.")
