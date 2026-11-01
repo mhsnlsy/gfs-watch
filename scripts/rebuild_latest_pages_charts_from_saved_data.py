@@ -1,7 +1,7 @@
-"""Re-render the latest Pages comparison charts from the saved SQLite forecasts only.
+"""Complete missing 850 hPa fields and re-render the latest Pages comparison charts.
 
-This is a presentation-only operation: it never contacts NOAA, changes forecast JSON,
-or touches Telegram text/audio. It updates only the four chart PNGs and their manifest.
+Only the selected historical GFS cycles are refreshed. Telegram text/audio and unrelated
+forecast runs are not touched.
 """
 from __future__ import annotations
 
@@ -42,21 +42,41 @@ def main() -> None:
         ).isoformat(timespec="seconds")
         record = archive.get_run_payload(previous_id)
         if not record:
-            raise RuntimeError(
-                f"Saved SQLite forecast missing for {previous_id}; refusing to fetch NOAA."
-            )
+            raise RuntimeError(f"Saved SQLite forecast missing for {previous_id}.")
         stored_id, payload = record
         if not archive._has_complete_850_wind_daily_series(payload):
-            print(f"[STYLE-ONLY RENDER] {stored_id}: eksik 850 hPa değerleri boş bırakılacak.")
+            print(f"[850 HPA BACKFILL] {stored_id}: NOAA/NCEP verisi yeniden alınıyor.")
+            refreshed = archive.fetch_full_weather_data(stored_id)
+            if not refreshed or refreshed.get("_pending_noaa_gfs"):
+                reason = (refreshed or {}).get("_reason", "veri alınamadı")
+                raise RuntimeError(f"{stored_id} NOAA backfill başarısız: {reason}")
+            if not archive._has_complete_850_wind_daily_series(refreshed):
+                raise RuntimeError(f"{stored_id} NOAA verisinde 850 hPa günlük seri hâlâ eksik.")
+            archive.save_run(stored_id, refreshed)
+            payload = refreshed
+            print(f"[850 HPA BACKFILL] {stored_id}: eksiksiz seri SQLite arşivine yazıldı.")
         previous_runs.append((stored_id, json.dumps(payload, ensure_ascii=False)))
 
     if not archive._has_complete_850_wind_daily_series(current_payload):
-        print("[STYLE-ONLY RENDER] Güncel döngüde eksik 850 hPa değerleri boş bırakılacak.")
+        print(f"[850 HPA BACKFILL] Güncel döngü {current_run_id}: NOAA/NCEP verisi yeniden alınıyor.")
+        refreshed = archive.fetch_full_weather_data(current_run_id)
+        if not refreshed or refreshed.get("_pending_noaa_gfs"):
+            reason = (refreshed or {}).get("_reason", "veri alınamadı")
+            raise RuntimeError(f"{current_run_id} NOAA backfill başarısız: {reason}")
+        if not archive._has_complete_850_wind_daily_series(refreshed):
+            raise RuntimeError(f"{current_run_id} NOAA verisinde 850 hPa günlük seri hâlâ eksik.")
+        archive.save_run(current_run_id, refreshed)
+        current_payload = refreshed
+        print(f"[850 HPA BACKFILL] {current_run_id}: eksiksiz seri SQLite arşivine yazıldı.")
 
     print(
-        f"[STYLE-ONLY RENDER] Using saved SQLite data for {current_run_id}; "
-        "NOAA network access is not used."
+        f"[850 HPA BACKFILL] {current_run_id}: dört döngünün 850 hPa serileri doğrulanıyor."
     )
+    if not archive._has_complete_850_wind_daily_series(current_payload) or any(
+        not archive._has_complete_850_wind_daily_series(json.loads(item[1]))
+        for item in previous_runs
+    ):
+        raise RuntimeError("En az bir GFS döngüsünde 850 hPa günlük seri eksik; görseller yayınlanmayacak.")
     charts = archive.create_pages_comparison_charts(
         current_run_id, current_payload, previous_runs
     )
@@ -80,7 +100,7 @@ def main() -> None:
     archive._write_json_atomically(str(manifest_path), manifest)
     print(
         "[STYLE-ONLY RENDER COMPLETE] Four Pages PNGs regenerated from saved forecasts. "
-        "Forecast data, latest.json, Telegram text/audio, and NOAA cache untouched."
+        "Only missing 850 hPa forecast fields were refreshed; Telegram text/audio untouched."
     )
 
 
