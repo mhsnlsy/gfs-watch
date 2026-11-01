@@ -1,6 +1,6 @@
 {
   "schema": "gfs-watch.notifications.v1",
-  "updated_at_utc": "2026-11-01T19:42:33+00:00",
+  "updated_at_utc": "2026-11-01T19:53:47+00:00",
   "items": [
     {
       "id": "20261101T12Z",
@@ -18,16 +18,16 @@
           "path": "media/gfs-20261101T12Z-temperature.png"
         },
         {
+          "label": "Sıcaklık · 850 hPa",
+          "path": "media/gfs-20261101T12Z-temperature_850.png"
+        },
+        {
           "label": "Yağış",
           "path": "media/gfs-20261101T12Z-precipitation.png"
         },
         {
-          "label": "Yüzey rüzgârı · 10 m",
+          "label": "Rüzgâr hızı + yönü · 10 m",
           "path": "media/gfs-20261101T12Z-wind_10m.png"
-        },
-        {
-          "label": "Rüzgâr · 850 hPa",
-          "path": "media/gfs-20261101T12Z-wind_850.png"
         }
       ],
       "audio_path": "media/gfs-20261101T12Z-voice.mp3"
