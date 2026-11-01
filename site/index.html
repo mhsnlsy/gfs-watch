@@ -237,6 +237,7 @@
     }
     let notificationRegistration=null;
     let pushApiUrl="";
+    let pushConfigError="";
     let latestNotificationItems=[];
     function formatNotificationTime(value){
       const date=new Date(value);
@@ -282,6 +283,7 @@
         pushApiUrl=candidate;
       }catch(error){
         pushApiUrl="";
+        pushConfigError=String(error&&error.message||error);
         console.error("GFS Push config load failed:",configUrl.href,error);
       }
       return pushApiUrl;
@@ -348,7 +350,7 @@
         const permission=Notification.permission==="granted"?"granted":await Notification.requestPermission();
         if(permission!=="granted")throw new Error("Bildirim izni verilmedi.");
         if(!pushApiUrl)await loadPushConfig();
-        if(!pushApiUrl)throw new Error("Tarayıcı bildirimi açık; ancak GFS bildirim sunucusu adresi Pages ayarına ulaşmamış. PUSH_API_URL değişkenini kontrol edip siteyi yeniden dağıtmak gerekiyor.");
+        if(!pushApiUrl)throw new Error("Bildirim yapılandırması yüklenemedi: "+(pushConfigError||"apiBaseUrl boş.")+" (İstenen dosya: "+new URL("/gfs-watch/push-config.json",window.location.origin).href+")");
         const registration=notificationRegistration||await navigator.serviceWorker.ready;
         if(!registration.pushManager)throw new Error("Bu tarayıcı arka plan bildirimlerini desteklemiyor.");
         const keyResponse=await fetch(pushApiUrl+"/vapid-public-key",{cache:"no-store"});
