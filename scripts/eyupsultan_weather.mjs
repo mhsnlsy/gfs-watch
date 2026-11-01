@@ -105,6 +105,24 @@ async function main() {
       viewport: { width: 1440, height: 1000 },
       userAgent: "Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/130.0.0.0 Safari/537.36"
     });
+    const stationRequests = new Set();
+    const stationResponses = [];
+    page.on("request", request => {
+      if (/wstatmap\\.com/i.test(request.url())) stationRequests.add(request.url());
+    });
+    page.on("response", async response => {
+      if (!/wstatmap\\.com/i.test(response.url())) return;
+      const contentType = response.headers()["content-type"] || "";
+      stationResponses.push({url:response.url(),status:response.status(),contentType});
+      if (/json|javascript|text/i.test(contentType)) {
+        try {
+          const body = await response.text();
+          if (/api|station|history|observ|weather|data|graph/i.test(response.url()) || /pressure|basınç|history|historical|temperature|sıcaklık/i.test(body)) {
+            console.log("[WSTAT RESOURCE]", JSON.stringify({url:response.url(),status:response.status(),contentType,body:body.slice(0,5000)}));
+          }
+        } catch {}
+      }
+    });
     await page.setExtraHTTPHeaders({
       "Accept-Language": "tr-TR,tr;q=0.9,en;q=0.7",
       "Cache-Control": "no-cache",
@@ -117,6 +135,14 @@ async function main() {
     await page.waitForFunction(() => document.body && document.body.innerText.includes("18101"), { timeout: 20000 });
     await page.waitForTimeout(1500);
     const bodyText = await page.locator("body").innerText();
+    console.log("[WSTAT PAGE TEXT]", bodyText.slice(0,18000));
+    for (const label of ["Deniz Seviyesi Basıncı","Basınç","Rüzgar Hızı","Nem","Geçmiş","Son 24","1sa"]) {
+      const position = bodyText.toLocaleLowerCase("tr").indexOf(label.toLocaleLowerCase("tr"));
+      if (position >= 0) console.log("[WSTAT FIELD]", label, JSON.stringify(bodyText.slice(Math.max(0,position-120),position+350)));
+    }
+    console.log("[WSTAT REQUESTS]", JSON.stringify([...stationRequests]));
+    console.log("[WSTAT RESPONSES]", JSON.stringify(stationResponses));
+    console.log("[WSTAT RESOURCES]", JSON.stringify(await page.evaluate(() => performance.getEntriesByType("resource").map(entry => entry.name).filter(name => /wstatmap/i.test(name))));
     if (/Just a moment|Checking your browser|Access denied/i.test(bodyText)) {
       throw new Error("WStatMap sayfası otomatik erişim doğrulaması gösterdi; veri alınmadı.");
     }
