@@ -1,4 +1,4 @@
-import { chromium } from "playwright";
+import { chromium, request } from "playwright";
 import fs from "node:fs";
 import path from "node:path";
 
@@ -143,6 +143,26 @@ async function main() {
     console.log("[WSTAT REQUESTS]", JSON.stringify([...stationRequests]));
     console.log("[WSTAT RESPONSES]", JSON.stringify(stationResponses));
     console.log("[WSTAT RESOURCES]", JSON.stringify(await page.evaluate(() => performance.getEntriesByType("resource").map(entry => entry.name).filter(name => /wstatmap/i.test(name)))));
+    const directApiContext = await request.newContext({
+      extraHTTPHeaders: {
+        "User-Agent": "Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 Chrome/156.0.0.0 Safari/537.36",
+        "Accept": "application/json, text/plain, */*",
+        "Origin": "https://wstatmap.com",
+        "Referer": STATION_URL
+      }
+    });
+    for (const url of [
+      "https://api.wstatmap.com/v1/forecast/point/?lat=41.1028&lon=28.9242&past_hours=24&station_id=1963",
+      "https://api.wstatmap.com/v1/historical/station/data?station_id=1963&hours=24"
+    ]) {
+      try {
+        const response = await directApiContext.get(url, { timeout: 20000 });
+        console.log("[WSTAT DIRECT API]", JSON.stringify({url,status:response.status(),headers:await response.allHeaders(),body:(await response.text()).slice(0,12000)}));
+      } catch (error) {
+        console.log("[WSTAT DIRECT API ERROR]", url, String(error));
+      }
+    }
+    await directApiContext.dispose();
     const apiDiagnostics = await page.evaluate(async () => {
       const urls = [
         "https://api.wstatmap.com/v1/forecast/point/?lat=41.1028&lon=28.9242&past_hours=24&station_id=1963",
@@ -165,7 +185,7 @@ async function main() {
         try {
           const response = await fetch(url);
           const source = await response.text();
-          for (const term of ["historical/station/data","forecast/point","Deniz Seviyesi Basıncı","station_pressure","X-API-KEY","apiKey"]) {
+          for (const term of ["API_BASE_URL","historical/station/data","forecast/point","Deniz Seviyesi Basıncı","station_pressure","X-API-KEY","apiKey","function o("]) {
             const at = source.indexOf(term);
             if (at >= 0) code.push({url,term,excerpt:source.slice(Math.max(0,at-500),at+1200)});
           }
