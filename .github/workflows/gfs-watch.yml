@@ -101,7 +101,15 @@ jobs:
           git config user.name "github-actions[bot]"
           git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
           git commit -m "Update GFS run history"
-          git push origin gfs-watch-state
+          for attempt in 1 2 3 4 5; do
+            git pull --rebase origin gfs-watch-state
+            if git push origin gfs-watch-state; then
+              exit 0
+            fi
+            sleep $((attempt * 2))
+          done
+          echo "Could not publish GFS run history after five attempts."
+          exit 1
 
   deploy-pages:
     name: Publish latest report to GitHub Pages
