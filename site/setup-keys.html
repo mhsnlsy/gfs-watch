@@ -3,44 +3,58 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width,initial-scale=1">
+<meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate">
 <title>GFS Watch – Güvenli anahtar oluşturucu</title>
 <style>
-:root{color-scheme:dark}body{font:16px/1.5 system-ui,sans-serif;max-width:760px;margin:40px auto;padding:0 18px;background:#101827;color:#edf2f7}h1{font-size:1.6rem}p{color:#cbd5e1}.panel{background:#1e293b;border:1px solid #475569;border-radius:12px;padding:18px;margin:18px 0}button{background:#38bdf8;color:#082f49;border:0;border-radius:8px;padding:12px 18px;font-weight:700;cursor:pointer}label{display:block;font-weight:700;margin:14px 0 6px}textarea{box-sizing:border-box;width:100%;min-height:72px;background:#0f172a;color:#e2e8f0;border:1px solid #64748b;border-radius:8px;padding:10px;font:13px ui-monospace,monospace}small{color:#94a3b8}.warn{color:#fbbf24}
+:root{color-scheme:dark}body{font:16px/1.5 system-ui,sans-serif;max-width:760px;margin:40px auto;padding:0 18px;background:#101827;color:#edf2f7}h1{font-size:1.6rem}p{color:#cbd5e1}.panel{background:#1e293b;border:1px solid #475569;border-radius:12px;padding:18px;margin:18px 0}button{background:#38bdf8;color:#082f49;border:0;border-radius:8px;padding:12px 18px;font-weight:700;cursor:pointer}label{display:block;font-weight:700;margin:14px 0 6px}textarea{box-sizing:border-box;width:100%;min-height:72px;background:#0f172a;color:#e2e8f0;border:1px solid #64748b;border-radius:8px;padding:10px;font:13px ui-monospace,monospace}.warn{color:#fbbf24}#status{white-space:pre-wrap;overflow-wrap:anywhere}
 </style>
 </head>
 <body>
 <h1>GFS Watch – Güvenli anahtar oluşturucu</h1>
-<p>Bu sayfa anahtarları yalnızca bu tarayıcıda üretir. Hiçbir sunucuya göndermez veya kaydetmez. Sayfayı HTTPS üzerinden aç.</p>
+<p>Anahtarlar bu tarayıcıda üretilir; hiçbir sunucuya gönderilmez. HTTPS üzerinden açılmalıdır.</p>
 <div class="panel">
-<button id="generate">Anahtarları oluştur</button>
-<p id="status" role="status">Henüz anahtar oluşturulmadı.</p>
+<button id="generate" type="button">Anahtarları oluştur</button>
+<p id="status" role="status">Sayfa JavaScript'i başlattı. Henüz anahtar oluşturulmadı.</p>
 <label for="admin">PUSH_ADMIN_TOKEN</label><textarea id="admin" readonly></textarea>
 <label for="public">VAPID_PUBLIC_KEY</label><textarea id="public" readonly></textarea>
 <label for="private">VAPID_PRIVATE_KEY</label><textarea id="private" readonly></textarea>
-<p class="warn"><strong>Önemli:</strong> Bu değerleri GitHub Actions Secrets olarak ekle. Özellikle private key ve admin token'ı kimseyle paylaşma. Bu sayfayı kapatınca değerler kaybolur; önce kopyala.</p>
+<p class="warn"><strong>Önemli:</strong> Üç değeri GitHub Actions Secrets'a ayrı ayrı ekle. Private key ve admin token'ı kimseyle paylaşma.</p>
 </div>
 <script>
-const b64url = bytes => {
-  let s = ""; for (const x of bytes) s += String.fromCharCode(x);
-  return btoa(s).replace(/\+/g,"-").replace(/\//g,"_").replace(/=+$/,"");
-};
-document.getElementById("generate").addEventListener("click", async () => {
-  const status = document.getElementById("status");
-  try {
-    status.textContent = "Üretiliyor…";
-    const pair = await crypto.subtle.generateKey({name:"ECDH",namedCurve:"P-256"}, true, ["deriveBits"]);
-    const rawPublic = new Uint8Array(await crypto.subtle.exportKey("raw", pair.publicKey));
-    const jwk = await crypto.subtle.exportKey("jwk", pair.privateKey);
-    const privateKey = jwk.d;
-    const random = crypto.getRandomValues(new Uint8Array(32));
-    document.getElementById("admin").value = Array.from(random, x => x.toString(16).padStart(2,"0")).join("");
-    document.getElementById("public").value = b64url(rawPublic);
-    document.getElementById("private").value = privateKey;
-    status.textContent = "Üç değer oluşturuldu. GitHub Secrets'a ayrı ayrı kopyala.";
-  } catch (e) {
-    status.textContent = "Oluşturulamadı: " + (e && e.message ? e.message : String(e));
-  }
-});
+(() => {
+ const byId = id => document.getElementById(id);
+ const status = byId("status");
+ const toBase64Url = bytes => {
+   let binary = "";
+   for (const byte of bytes) binary += String.fromCharCode(byte);
+   return btoa(binary).replace(/\\+/g,"-").replace(/\\//g,"_").replace(/=+$/,"");
+ };
+ byId("generate").addEventListener("click", async () => {
+   byId("admin").value = "";
+   byId("public").value = "";
+   byId("private").value = "";
+   try {
+     status.textContent = "Kontrol ediliyor…";
+     if (!window.isSecureContext) throw new Error("Güvenli HTTPS bağlantısı yok. Adres https:// ile başlamalı.");
+     if (!window.crypto || !window.crypto.subtle) throw new Error("Bu tarayıcı Web Crypto API'yi sunmuyor. Güncel Chrome veya Safari ile deneyin.");
+     status.textContent = "P-256 anahtar çifti üretiliyor…";
+     const pair = await window.crypto.subtle.generateKey(
+       { name: "ECDH", namedCurve: "P-256" }, true, ["deriveBits"]
+     );
+     status.textContent = "Anahtarlar dışa aktarılıyor…";
+     const publicRaw = new Uint8Array(await window.crypto.subtle.exportKey("raw", pair.publicKey));
+     const privateJwk = await window.crypto.subtle.exportKey("jwk", pair.privateKey);
+     if (publicRaw.length !== 65 || !privateJwk.d) throw new Error("Üretilen anahtar beklenen P-256 biçiminde değil.");
+     const random = window.crypto.getRandomValues(new Uint8Array(32));
+     byId("admin").value = Array.from(random, b => b.toString(16).padStart(2,"0")).join("");
+     byId("public").value = toBase64Url(publicRaw);
+     byId("private").value = privateJwk.d;
+     status.textContent = "Başarılı. Üç alan da oluşturuldu.\nPublic key uzunluğu: " + byId("public").value.length + " karakter.\nPrivate key uzunluğu: " + byId("private").value.length + " karakter.";
+   } catch (error) {
+     status.textContent = "ANAHTAR ÜRETİM HATASI\n" + (error && error.name ? error.name + ": " : "") + (error && error.message ? error.message : String(error));
+   }
+ });
+})();
 </script>
 </body>
 </html>
