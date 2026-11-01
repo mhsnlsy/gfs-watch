@@ -2127,8 +2127,8 @@ def _prepare_comparison_chart_data(current_run_id, payload, previous_runs):
         if any(item["daily"][day].get("wind_850") is None for day in dates)
     ]
     if missing_850:
-        raise ValueError(
-            "850 hPa dört döngü karşılaştırması eksik veri içeriyor: "
+        print(
+            "[850 HPA KIYAS UYARISI] Eksik seri bulunan döngüler grafikte boş bırakılacak: "
             + ", ".join(missing_850)
         )
 
