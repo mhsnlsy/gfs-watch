@@ -39,10 +39,12 @@ def main() -> None:
         daily = payload.get("daily", {})
         values = daily.get("wind_850_max", [])
         dates = daily.get("time", [])
-        if not dates or len(values) != len(dates) or any(v is None for v in values):
+        if not archive._has_complete_850_wind_daily_series(payload):
             raise RuntimeError(f"850 hPa daily series is incomplete for {run_id}.")
         archive.save_run(run_id, payload)
-        archive.export_public_forecast_json(run_id, payload)
+        # Historical exports are immutable run snapshots; never let an old
+        # backfill cycle roll the website's latest.json backwards in time.
+        archive.export_public_forecast_json(run_id, payload, update_latest=False)
         print(
             f"[850 HPA BACKFILL OK] {run_id}: {len(values)} daily maxima saved; "
             f"range={min(values):.1f}-{max(values):.1f} km/h"
@@ -60,6 +62,13 @@ def main() -> None:
     current_record = archive.get_run_payload(current_id)
     if not current_record:
         raise RuntimeError(f"Latest SQLite run missing: {current_id}")
+    if not archive._has_complete_850_wind_daily_series(current_record[1]):
+        raise RuntimeError(f"Latest SQLite run has incomplete 850 hPa data: {current_id}")
+
+    # Restore latest.json to the actual current report after writing the
+    # historical run snapshots above; the latest endpoint must never point
+    # at the last (older) backfill target.
+    archive.export_public_forecast_json(current_id, current_record[1], update_latest=True)
 
     previous_runs = []
     for hours_back in (6, 12, 18):
@@ -69,6 +78,8 @@ def main() -> None:
         record = archive.get_run_payload(previous_id)
         if not record:
             raise RuntimeError(f"Comparison SQLite run missing: {previous_id}")
+        if not archive._has_complete_850_wind_daily_series(record[1]):
+            raise RuntimeError(f"Comparison run has incomplete 850 hPa data: {previous_id}")
         previous_runs.append((record[0], json.dumps(record[1], ensure_ascii=False)))
 
     charts = archive.create_pages_comparison_charts(
@@ -97,7 +108,8 @@ def main() -> None:
         for raw_file in cache_root.rglob("*.grib2"):
             raw_file.unlink(missing_ok=True)
 
-    print("[850 HPA BACKFILL COMPLETE] Four cycles updated; comparison PNGs rebuilt.")
+    print("[850 HPA BACKFILL COMPLETE] Four historical/current cycles persisted; all four comparison PNGs rebuilt.")
+    print("[LATEST PRESERVED] public/latest.json still points to the report cycle; older exports live under public/runs/.")
     print("[CACHE] Decoded Istanbul fields retained; raw GRIB downloads removed.")
 
 
