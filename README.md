@@ -4,8 +4,8 @@
 
 ## Nasıl çalışır?
 
-- Veri kaynağı NOAA'nın herkese açık S3 arşividir. Hava tahmini API'si veya NOMADS filtre servisi kullanılmaz.
-- Gerekli meteorolojik alanlar, GRIB2 dosyalarının `.idx` envanterinden seçilir ve yalnızca ilgili byte aralıkları indirilir. Böylece yaklaşık 500 MB'lık küresel dosyanın tamamı indirilmez.
+- GFS GRIB2 dosyaları her tahmin saati için doğrudan NOAA NOMADS `gfs/prod/gfs.YYYYMMDD/HH/atmos/` dizininden alınır; NOMADS yanıt vermezse aynı dosyanın AWS S3 aynası denenir. İndirme kaynağı dosya bazında loglanır.
+- Gerekli meteorolojik alanlar, Her dosyanın `.idx` envanterinden seçilir ve yalnızca raporun kullandığı sıcaklık, rüzgâr, yağış ve başlangıç basınç mesajlarının byte aralıkları indirilir. Yaklaşık 500 MB'lık küresel dosyanın tamamı indirilmez.
 - Her yeni tahmin dosyası indirildiğinde ecCodes ile çözülür; İstanbul için sıcaklık, 10 m rüzgârı ve yağış değerleri önceden hazırlanıp önbelleğe yazılır.
 - Ön veriler f000–f120 arasında saatlik, f123–f177 arasında üç saatlik adımlardan oluşur: toplam 140 lead. f180 son dosyadır. f180 yayımlandığında sistem önce 140 ön verinin hazır olduğunu doğrular, ardından f180'i alıp 141 zaman noktalı tahmini birleştirir.
 - GFS döngüsü izlenirken NOAA S3 f180 envanteri ve ön GRIB2 alanları beş dakikalık sabit aralıklarla kontrol edilir. f000–f177 arasındaki 140 girdi her kontrol sırasında artımlı indirilip ecCodes ile çözülerek diskte saklanır; sonraki kontroller aynı önbellekten devam eder. f180 görünür olduğunda 140 girdinin tamamı doğrulanır, f180 birleştirilir ve rapor üretilir. Bir izleme oturumu 330 dakika sonunda tamamlanmazsa kısmi önbellek Actions Cache'e kaydedilir ve yeni oturum otomatik başlatılır.
