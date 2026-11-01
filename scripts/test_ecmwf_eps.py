@@ -13,6 +13,7 @@ from fetch_ecmwf_eps import (  # noqa: E402
     build_document,
     forecast_steps,
     validate_document,
+    same_published_cycle,
 )
 
 
@@ -25,6 +26,9 @@ def run_offline_tests() -> None:
     assert len(steps) == 55, len(steps)
     assert steps[:4] == [0, 3, 6, 9]
     assert steps[48:] == [144, 150, 156, 162, 168, 174, 180]
+    assert same_published_cycle("2026-11-01T00:00:00Z", "2026-11-01T00:00:00+00:00")
+    assert not same_published_cycle("2026-10-31T12:00:00+00:00", "2026-11-01T00:00:00+00:00")
+    assert not same_published_cycle(None, "2026-11-01T00:00:00+00:00")
 
     mean = {
         "mean_t850": synthetic_series(steps, 274.15),
