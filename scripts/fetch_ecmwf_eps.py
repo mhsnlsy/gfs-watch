@@ -1,9 +1,9 @@
-"""Build an Istanbul ECMWF IFS ENS (EPS) view from official ECMWF Open Data.
+"""Build an Istanbul ECMWF IFS view from official Open Data.
 
-Only the compact forecast values at the nearest 0.25-degree Istanbul grid point
-are published. Raw global GRIB2 files are temporary and are deleted afterwards.
-The product is the ensemble mean (em) plus ensemble standard deviation (es),
-not a single deterministic member.
+Surface weather fields come from deterministic IFS HRES (oper/fc). The
+850 hPa fields and mean-sea-level pressure come from IFS ENS (enfo/em/es).
+Only compact values at the nearest 0.25-degree Istanbul grid point are
+published; raw global GRIB2 files are temporary and deleted afterwards.
 """
 from __future__ import annotations
 
@@ -151,12 +151,13 @@ def read_grib_point(path: Path, expected_kind: str) -> dict[int, tuple[float, fl
     return output
 
 
-def _retrieve(client, *, run_dt: datetime, product_type: str, step_values: list[int],
-              params: list[str], levelist: int | None, target: Path) -> None:
+def _retrieve(client, *, run_dt: datetime, stream: str, product_type: str,
+              step_values: list[int], params: list[str], levelist: int | None,
+              target: Path) -> None:
     request = {
         "date": run_dt.strftime("%Y%m%d"),
         "time": run_dt.hour,
-        "stream": "enfo",
+        "stream": stream,
         "type": product_type,
         "step": step_values,
         "param": params,
@@ -328,22 +329,21 @@ def build_document(run_dt: datetime, mean: dict, spread: dict, regional_pressure
         "mean_t850": "t850", "spread_t850": "t850",
         "mean_ws850": "ws850", "spread_ws850": "ws850",
         "mean_msl": "msl", "spread_msl": "msl",
+        "mean_t2m": "t2m", "mean_u10": "u10",
+        "mean_v10": "v10", "mean_tp": "tp",
     }
     for key, label in required.items():
         if not isinstance((mean if key.startswith("mean_") else spread).get(key), dict):
             raise RuntimeError(f"Internal ECMWF field collection missing: {key} ({label}).")
 
-    # Accumulated precipitation is commonly absent at f000 in GRIB archives.
-    # f000 is the zero baseline, not a missing forecast value.
+    # HRES total precipitation is accumulated from the cycle start. f000 is
+    # the zero baseline and is not guaranteed to be present in the GRIB file.
     mean_tp = dict(mean["mean_tp"])
-    spread_tp = dict(spread["spread_tp"])
     mean_tp.setdefault(0, (0.0, LATITUDE, LONGITUDE))
-    spread_tp.setdefault(0, (0.0, LATITUDE, LONGITUDE))
 
     forecasts = []
     grid_lat = grid_lon = None
     previous_tp_mean = 0.0
-    previous_tp_spread = 0.0
     for step in steps:
         t_mean, lat, lon = _value_at(mean["mean_t850"], step, "850 hPa temperature mean")
         t_sd, _, _ = _value_at(spread["spread_t850"], step, "850 hPa temperature spread")
@@ -351,19 +351,13 @@ def build_document(run_dt: datetime, mean: dict, spread: dict, regional_pressure
         w_sd, _, _ = _value_at(spread["spread_ws850"], step, "850 hPa wind spread")
         p_mean, _, _ = _value_at(mean["mean_msl"], step, "MSLP mean")
         p_sd, _, _ = _value_at(spread["spread_msl"], step, "MSLP spread")
-        t2_mean, _, _ = _value_at(mean["mean_t2m"], step, "2m temperature mean")
-        t2_sd, _, _ = _value_at(spread["spread_t2m"], step, "2m temperature spread")
-        u10_mean, _, _ = _value_at(mean["mean_u10"], step, "10m u wind mean")
-        v10_mean, _, _ = _value_at(mean["mean_v10"], step, "10m v wind mean")
-        u10_sd, _, _ = _value_at(spread["spread_u10"], step, "10m u wind spread")
-        v10_sd, _, _ = _value_at(spread["spread_v10"], step, "10m v wind spread")
-        tp_mean, _, _ = _value_at(mean_tp, step, "total precipitation mean")
-        tp_sd, _, _ = _value_at(spread_tp, step, "total precipitation spread")
+        t2_mean, _, _ = _value_at(mean["mean_t2m"], step, "2m HRES temperature")
+        u10_mean, _, _ = _value_at(mean["mean_u10"], step, "10m HRES u wind")
+        v10_mean, _, _ = _value_at(mean["mean_v10"], step, "10m HRES v wind")
+        tp_mean, _, _ = _value_at(mean_tp, step, "HRES total precipitation")
         wind10 = math.hypot(u10_mean, v10_mean) * 3.6
-        wind10_sd = math.hypot(u10_sd, v10_sd) * 3.6
         precip_interval_mm = max(0.0, (tp_mean - previous_tp_mean) * 1000.0)
-        precip_spread_mm = max(0.0, (tp_sd - previous_tp_spread) * 1000.0)
-        previous_tp_mean, previous_tp_spread = tp_mean, tp_sd
+        previous_tp_mean = tp_mean
         if grid_lat is None:
             grid_lat, grid_lon = lat, lon
         valid_utc = run_dt + timedelta(hours=step)
@@ -384,16 +378,16 @@ def build_document(run_dt: datetime, mean: dict, spread: dict, regional_pressure
                 "stddev_hpa": round(max(0.0, p_sd) / 100.0, 2),
             },
             "temperature_2m_c": round(t2_mean - 273.15, 2),
-            "temperature_2m_stddev_c": round(max(0.0, t2_sd), 2),
+            "temperature_2m_stddev_c": None,
             "wind_speed_10m_kmh": round(wind10, 2),
-            "wind_speed_10m_stddev_kmh": round(wind10_sd, 2),
+            "wind_speed_10m_stddev_kmh": None,
             "precipitation_interval_mm": round(precip_interval_mm, 3),
-            "precipitation_interval_stddev_mm": round(precip_spread_mm, 3),
+            "precipitation_interval_stddev_mm": None,
             "precipitation_accumulated_mm": round(max(0.0, tp_mean) * 1000.0, 3),
         })
 
     if len(forecasts) != len(steps) or forecasts[-1]["forecast_hour"] != MAX_FORECAST_HOUR:
-        raise RuntimeError("ECMWF EPS forecast timeline is incomplete.")
+        raise RuntimeError("ECMWF IFS forecast timeline is incomplete.")
     daily_by_date: dict[str, dict] = {}
     for item in forecasts:
         local_date = item["valid_time_istanbul"][:10]
@@ -426,8 +420,11 @@ def build_document(run_dt: datetime, mean: dict, spread: dict, regional_pressure
     return {
         "schema": SCHEMA,
         "status": "ready",
-        "model": "ECMWF IFS ENS (EPS)",
-        "product": "enfo / ensemble mean (em) and standard deviation (es)",
+        "model": "ECMWF IFS HRES + ENS",
+        "product": "HRES surface forecast (oper/fc) + ENS mean/spread (enfo em/es)",
+        "surface_forecast_source": "IFS HRES deterministic (stream=oper, type=fc)",
+        "ensemble_forecast_source": "IFS ENS mean and standard deviation (stream=enfo, type=em/es)",
+        "surface_ensemble_spread_available": False,
         "resolution": "0.25° × 0.25°",
         "forecast_horizon_hours": MAX_FORECAST_HOUR,
         "run_id_utc": run_dt.isoformat(timespec="seconds"),
@@ -444,16 +441,18 @@ def build_document(run_dt: datetime, mean: dict, spread: dict, regional_pressure
             "temperature_850hpa": "°C",
             "wind_850hpa": "km/sa",
             "mslp": "hPa",
-            "spread": "ensemble standard deviation (1σ)",
+            "spread": "ensemble standard deviation (1σ), only for ENS fields",
         },
         "attribution": ATTRIBUTION,
         "license": "CC BY 4.0",
         "license_url": LICENSE_URL,
         "source_url": SOURCE_URL,
         "notes": [
-            "Gösterilen çizgi ensemble ortalamasıdır.",
-            "Gölgelendirme ±1 standart sapma aralığıdır; mutlak minimum/maksimum değildir.",
-            "ECMWF ENS açık verisi 00Z ve 12Z döngülerinde 0.25° çözünürlükte kullanılmıştır.",
+            "2 m sıcaklık, 10 m rüzgâr ve toplam yağış IFS HRES deterministic yüzey tahminidir (oper/fc).",
+            "850 hPa sıcaklık/rüzgâr ve deniz seviyesi basıncı IFS ENS ensemble ortalaması (enfo/em) ürünüdür.",
+            "±1 standart sapma yalnızca IFS ENS tarafından yayımlanan 850 hPa ve MSLP alanları için verilir.",
+            "IFS Open Data em/es ürününde 2 m sıcaklık, 10 m rüzgâr bileşenleri ve toplam yağış standart sapması yayımlanmaz; bu alanlar sıfır gibi gösterilmez, null bırakılır.",
+            "Yağış aralıkları HRES toplam birikimli yağış alanının ardışık adımları arasındaki farktan türetilmiştir.",
         ],
         "forecasts": forecasts,
         "daily_summary": daily_summary,
@@ -473,10 +472,15 @@ def build_document(run_dt: datetime, mean: dict, spread: dict, regional_pressure
         },
     }
 
-
 def validate_document(document: dict) -> None:
     if document.get("schema") != SCHEMA or document.get("status") != "ready":
-        raise ValueError("ECMWF EPS document schema/status is invalid.")
+        raise ValueError("ECMWF IFS document schema/status is invalid.")
+    if document.get("surface_forecast_source") != "IFS HRES deterministic (stream=oper, type=fc)":
+        raise ValueError("ECMWF HRES surface source metadata is missing.")
+    if document.get("ensemble_forecast_source") != "IFS ENS mean and standard deviation (stream=enfo, type=em/es)":
+        raise ValueError("ECMWF ENS source metadata is missing.")
+    if document.get("surface_ensemble_spread_available") is not False:
+        raise ValueError("Unavailable surface ensemble spread must be explicitly marked false.")
     forecasts = document.get("forecasts")
     steps = forecast_steps()
     if not isinstance(forecasts, list) or len(forecasts) != len(steps):
@@ -525,44 +529,49 @@ def validate_document(document: dict) -> None:
 
 def _fetch_cycle(client, run_dt: datetime) -> dict:
     steps = forecast_steps()
-    with tempfile.TemporaryDirectory(prefix="ecmwf-eps-") as temp_dir:
+    with tempfile.TemporaryDirectory(prefix="ecmwf-ifs-") as temp_dir:
         root = Path(temp_dir)
         paths = {
             "em_pl": root / "em-pl850.grib2",
             "es_pl": root / "es-pl850.grib2",
             "em_sfc": root / "em-sfc.grib2",
             "es_sfc": root / "es-sfc.grib2",
+            "hres_sfc": root / "hres-sfc.grib2",
         }
+        # IFS ENS em/es Open Data contains 850 hPa temperature/wind and MSLP,
+        # but not the near-surface 2t/10u/10v/tp fields.
         for product_type, key in (("em", "em_pl"), ("es", "es_pl")):
             _retrieve(
-                client, run_dt=run_dt, product_type=product_type,
+                client, run_dt=run_dt, stream="enfo", product_type=product_type,
                 step_values=steps, params=["t", "ws"], levelist=850, target=paths[key],
             )
-        # Fetch all required surface fields in one request per ensemble statistic.
         for product_type, key in (("em", "em_sfc"), ("es", "es_sfc")):
             _retrieve(
-                client, run_dt=run_dt, product_type=product_type,
-                step_values=steps, params=["msl", "2t", "10u", "10v", "tp"],
-                levelist=None, target=paths[key],
+                client, run_dt=run_dt, stream="enfo", product_type=product_type,
+                step_values=steps, params=["msl"], levelist=None, target=paths[key],
             )
+
+        # Use the same IFS cycle's deterministic HRES surface forecast for
+        # temperature, 10 m wind components and accumulated precipitation.
+        _retrieve(
+            client, run_dt=run_dt, stream="oper", product_type="fc",
+            step_values=steps, params=["2t", "10u", "10v", "tp"],
+            levelist=None, target=paths["hres_sfc"],
+        )
 
         mean = {
             "mean_t850": read_grib_point(paths["em_pl"], "t850"),
             "mean_ws850": read_grib_point(paths["em_pl"], "ws850"),
             "mean_msl": read_grib_point(paths["em_sfc"], "msl"),
-            "mean_t2m": read_grib_point(paths["em_sfc"], "t2m"),
-            "mean_u10": read_grib_point(paths["em_sfc"], "u10"),
-            "mean_v10": read_grib_point(paths["em_sfc"], "v10"),
-            "mean_tp": read_grib_point(paths["em_sfc"], "tp"),
+            "mean_t2m": read_grib_point(paths["hres_sfc"], "t2m"),
+            "mean_u10": read_grib_point(paths["hres_sfc"], "u10"),
+            "mean_v10": read_grib_point(paths["hres_sfc"], "v10"),
+            "mean_tp": read_grib_point(paths["hres_sfc"], "tp"),
         }
         spread = {
             "spread_t850": read_grib_point(paths["es_pl"], "t850"),
             "spread_ws850": read_grib_point(paths["es_pl"], "ws850"),
             "spread_msl": read_grib_point(paths["es_sfc"], "msl"),
-            "spread_t2m": read_grib_point(paths["es_sfc"], "t2m"),
-            "spread_u10": read_grib_point(paths["es_sfc"], "u10"),
-            "spread_v10": read_grib_point(paths["es_sfc"], "v10"),
-            "spread_tp": read_grib_point(paths["es_sfc"], "tp"),
         }
         try:
             regional_pressure = read_regional_pressure_extremes(paths["em_sfc"])
@@ -572,7 +581,6 @@ def _fetch_cycle(client, run_dt: datetime) -> dict:
         document = build_document(run_dt, mean, spread, regional_pressure)
         validate_document(document)
         return document
-
 
 def fetch_latest_document(skip_if_run_id: str | None = None) -> dict | None:
     from ecmwf.opendata import Client
