@@ -2335,16 +2335,13 @@ def create_pages_comparison_charts(current_run_id, payload, previous_runs):
                 # Stronger typography and contrast for readable numeric values on desktop and mobile.
                 axis.set_facecolor("#fbfdff")
                 fig.patch.set_facecolor("#ffffff")
-                if metric == "precipitation":
-                    # Place the rainfall heading in its own figure-level band,
-                    # below the 12Z/18Z legend so the two can never collide.
-                    axis.set_title("")
-                    fig.text(
-                        0.085, 0.795, title, ha="left", va="bottom",
-                        fontsize=18, fontweight="bold", color="#142b42",
-                    )
-                else:
-                    axis.set_title(title, loc="left", fontsize=18, fontweight="bold", color="#142b42", pad=10)
+                # Put every metric heading in a dedicated figure-level band.
+                # The title never shares the plotting axes with the 12Z/18Z legend.
+                axis.set_title("")
+                fig.text(
+                    0.085, 0.755, title, ha="left", va="bottom",
+                    fontsize=18, fontweight="bold", color="#142b42",
+                )
                 axis.set_ylabel(ylabel, fontsize=16, fontweight="bold", color="#142b42", labelpad=7)
                 axis.tick_params(
                     axis="y", which="major", labelsize=15, labelcolor="#102a43",
@@ -2389,7 +2386,7 @@ def create_pages_comparison_charts(current_run_id, payload, previous_runs):
                     fontsize=10.5, color="#40566a",
                 )
                 # Reserve a fixed band for the title and two-row legend on all four charts.
-                fig.subplots_adjust(left=0.085, right=0.985, bottom=0.19, top=0.74)
+                fig.subplots_adjust(left=0.085, right=0.985, bottom=0.19, top=0.68)
                 buffer = io.BytesIO()
                 fig.savefig(buffer, format="png", dpi=150)
                 buffer.seek(0)
