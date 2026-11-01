@@ -265,7 +265,8 @@
       const width=420,height=160,left=38,right=12,top=12,bottom=30;
       const plotWidth=width-left-right,plotHeight=height-top-bottom;
       const xForTime=time=>left+((time-start)/windowMs)*plotWidth;
-      const yFor=value=>top+((high-value)/(high-low))*plotHeight;\n      const xForBin=bin=>Math.max(left+3,Math.min(width-right-3,xForTime(Math.min(bin.start+bucketMs/2,now))));
+      const yFor=value=>top+((high-value)/(high-low))*plotHeight;
+      const xForBin=bin=>Math.max(left+3,Math.min(width-right-3,xForTime(Math.min(bin.start+bucketMs/2,now))));
       const tickValues=[low,(low+high)/2,high];
       const horizontalGrid=tickValues.map(value=>{
         const y=yFor(value);
