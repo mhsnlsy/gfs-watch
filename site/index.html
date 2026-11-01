@@ -404,15 +404,22 @@
       </div>
       <div class="chart-stack">
         <article class="chart-card">
-          <div class="chart-card-head"><div><div class="chart-title">Sıcaklık</div><div class="chart-subtitle">3 saatlik tahmin adımı · 2 metre sıcaklığı · °C</div></div><span class="chart-count" id="ecmwf-temperature-count">3 saatlik tahmin</span></div>
-          <div class="chart-wrap" id="ecmwf-temperature-chart"><div class="chart-empty">Sıcaklık grafiği yükleniyor…</div></div>
+          <div class="chart-card-head"><div><div class="chart-title">Sıcaklık · 2 m</div><div class="chart-subtitle">Son dört ECMWF çıktısı · aynı geçerlilik saatleri · °C</div></div><span class="chart-count" id="ecmwf-comparison-temperature-count">4 çıktı</span></div>
+          <div class="chart-wrap" id="ecmwf-comparison-temperature-chart"><div class="chart-empty">Dört çevrim karşılaştırması yükleniyor…</div></div>
         </article>
         <article class="chart-card">
-          <div class="chart-card-head"><div><div class="chart-title">Yağış</div><div class="chart-subtitle">3 / 6 saatlik aralık birikimi · mm</div></div><span class="chart-count" id="ecmwf-precipitation-count">3 saatlik tahmin</span></div>
-          <div class="chart-wrap" id="ecmwf-precipitation-chart"><div class="chart-empty">Yağış grafiği yükleniyor…</div></div>
+          <div class="chart-card-head"><div><div class="chart-title">Yağış · 6 saatlik toplam</div><div class="chart-subtitle">Aynı altı saatlik geçerlilik aralığı · mm</div></div><span class="chart-count" id="ecmwf-comparison-precipitation-count">4 çıktı</span></div>
+          <div class="chart-wrap" id="ecmwf-comparison-precipitation-chart"><div class="chart-empty">Dört çevrim karşılaştırması yükleniyor…</div></div>
+        </article>
+        <article class="chart-card">
+          <div class="chart-card-head"><div><div class="chart-title">Rüzgâr · 10 m</div><div class="chart-subtitle">Yüzey rüzgâr hızı · km/sa</div></div><span class="chart-count" id="ecmwf-comparison-wind10-count">4 çıktı</span></div>
+          <div class="chart-wrap" id="ecmwf-comparison-wind10-chart"><div class="chart-empty">Dört çevrim karşılaştırması yükleniyor…</div></div>
+        </article>
+        <article class="chart-card">
+          <div class="chart-card-head"><div><div class="chart-title">Rüzgâr · 850 hPa</div><div class="chart-subtitle">Üst seviye rüzgâr hızı · km/sa</div></div><span class="chart-count" id="ecmwf-comparison-wind850-count">4 çıktı</span></div>
+          <div class="chart-wrap" id="ecmwf-comparison-wind850-chart"><div class="chart-empty">Dört çevrim karşılaştırması yükleniyor…</div></div>
         </article>
       </div>
-    </section>
 <section class="section" id="ecmwf-basinc"><div class="section-head"><div><div class="section-kicker">ECMWF IFS ENS · MODEL ANALİZİ</div><h2>Basınç düzeni ve kaynak</h2></div><div class="section-note">İstanbul merkezli 0.25° grid<br>ensemble basınç analizi</div></div><div class="lower-grid"><article class="pressure-card"><div class="label">Bölgesel basınç merkezleri ve İstanbul'a etkisi</div><ul class="pressure-list" id="ecmwf-pressure-findings"><li class="loading">Analiz yükleniyor…</li></ul></article><article class="info-card"><div class="label">Veri hakkında</div><p>Anlık sıcaklık, rüzgâr, nem ve günlük yağış verileri yerel meteoroloji istasyonundan alınır. İstasyon gözlemleri model seçiminden bağımsız olarak üst bölümde ortak gösterilir.</p><p>180 saatlik yüzey tahmini IFS HRES oper/fc; 850 hPa ve basınç analizi IFS ENS em/es ürününden alınır. İstasyon ölçümü ile model tahmini ayrı kaynaklardır.</p><div class="source-row"><span>Model: <strong>ECMWF IFS HRES + ENS 0.25°</strong></span><span id="ecmwf-valid-until">Geçerlilik: —</span></div></article></div></section>
       <section class="section" aria-label="ECMWF veri kaynağı ve lisans"><p class="ecmwf-source-note">Kaynak: <a href="https://www.ecmwf.int/en/forecasts/datasets/open-data" target="_blank" rel="noopener">ECMWF Open Data</a> · IFS HRES oper/fc + IFS ENS em/es · <strong>© ECMWF, CC BY 4.0</strong>. 2 m sıcaklık, 10 m rüzgâr ve yağış HRES yüzey tahminidir; 850 hPa ve MSLP ensemble ortalaması/standart sapmasıdır. Yüzey alanları için ENS standart sapması Open Data ürününde bulunmadığından gösterilmez.</p></section>
     </div>
@@ -1187,6 +1194,85 @@
 
     let ecmwfForecast=null,ecmwfLoading=false,ecmwfLastFetch=0;
     let activeModel="gfs";
+    function renderEcmwfComparisonChart(metric,targetId,history){
+      const container=$(targetId);
+      const count=$(targetId.replace("-chart","-count"));
+      const runs=(Array.isArray(history)?history:[]).slice(-4);
+      const definitions={
+        temperature:{field:"temperature_2m_c",label:"2 m sıcaklık",unit:"°C"},
+        wind10:{field:"wind_speed_10m_kmh",label:"10 m rüzgâr",unit:"km/sa"},
+        wind850:{field:"wind_speed_850hpa_kmh",label:"850 hPa rüzgâr",unit:"km/sa"},
+        precipitation:{field:"precipitation_6h_mm",label:"6 saatlik yağış",unit:"mm"}
+      };
+      const definition=definitions[metric];
+      if(!definition){container.innerHTML='<div class="chart-empty">Bilinmeyen karşılaştırma değişkeni.</div>';return;}
+      const palette=["#7dd3d7","#8abce8","#f1c98b","#8fd7ba"];
+      const series=runs.map((run,index)=>{
+        const points=Array.isArray(run.forecast_6_hourly)?run.forecast_6_hourly:[];
+        const values=new Map();
+        if(metric==="precipitation"){
+          const endpoints=points.map(point=>({...point,endMs:Date.parse(point.valid_time_utc)}))
+            .filter(point=>Number.isFinite(point.endMs)).sort((a,b)=>a.endMs-b.endMs);
+          for(const endpoint of endpoints){
+            const end=endpoint.endMs,start=end-6*3600000;
+            let cursor=start,total=0,valid=true;
+            const intervals=endpoints.filter(point=>point.endMs>start&&point.endMs<=end);
+            for(const point of intervals){
+              const hours=Number(point.precipitation_interval_hours);
+              if(!Number.isFinite(hours)||hours<=0){valid=false;break;}
+              const intervalStart=point.endMs-hours*3600000;
+              if(intervalStart!==cursor||point.endMs>end){valid=false;break;}
+              const amount=Number(point.precipitation_6h_mm);
+              if(!Number.isFinite(amount)){valid=false;break;}
+              total+=amount;cursor=point.endMs;
+            }
+            if(valid&&cursor===end)values.set(new Date(end).toISOString(),total);
+          }
+        }else{
+          for(const point of points){
+            const value=Number(point[definition.field]);
+            const timestamp=Date.parse(point.valid_time_utc);
+            if(Number.isFinite(value)&&Number.isFinite(timestamp))values.set(new Date(timestamp).toISOString(),value);
+          }
+        }
+        return {runId:run.run_id_utc,values,color:palette[index]};
+      });
+      const common=series.length?Array.from(series[0].values.keys()).filter(key=>series.every(item=>item.values.has(key))).sort():[];
+      if(count)count.textContent=series.length+" çıktı · "+common.length+" ortak zaman";
+      if(series.length<2||common.length<2){
+        container.innerHTML='<div class="chart-empty">Karşılaştırma için henüz yeterli yayımlanmış çevrim yok. Yeni ECMWF çıktıları geldikçe grafik otomatik tamamlanacak.</div>';
+        return;
+      }
+      const width=900,height=280,left=58,right=18,top=20,bottom=58;
+      const allValues=series.flatMap(item=>common.map(key=>item.values.get(key)));
+      const min=metric==="precipitation"?0:Math.min(...allValues);
+      const max=Math.max(...allValues);
+      const span=(max-min)||1;
+      const low=metric==="precipitation"?0:min-span*.12;
+      const high=max+(metric==="precipitation"?Math.max(.2,span*.12):span*.12);
+      const xFor=index=>left+(index/Math.max(1,common.length-1))*(width-left-right);
+      const yFor=value=>top+((high-value)/(high-low))*(height-top-bottom);
+      const ticks=[0,1,2,3].map(index=>low+(high-low)*index/3);
+      const grid=ticks.map(value=>{
+        const y=yFor(value);
+        return '<line x1="'+left+'" y1="'+y+'" x2="'+(width-right)+'" y2="'+y+'" stroke="rgba(194,220,232,.12)" stroke-dasharray="4 6"/><text x="'+(left-10)+'" y="'+(y+4)+'" fill="#91a9b8" font-size="11" text-anchor="end">'+fmt(value,metric==="precipitation"?1:0)+'</text>';
+      }).join("");
+      const lines=series.map(item=>{
+        const coords=common.map((key,index)=>({x:xFor(index),y:yFor(item.values.get(key))}));
+        const path=coords.map((point,index)=>(index?"L":"M")+point.x.toFixed(1)+" "+point.y.toFixed(1)).join(" ");
+        const dots=coords.filter((point,index)=>index===0||index===coords.length-1||index%8===0)
+          .map(point=>'<circle cx="'+point.x+'" cy="'+point.y+'" r="2.8" fill="'+item.color+'"/>').join("");
+        return '<path d="'+path+'" fill="none" stroke="'+item.color+'" stroke-width="2.8" stroke-linecap="round" stroke-linejoin="round"/>'+dots;
+      }).join("");
+      const labelIndices=[0,Math.floor((common.length-1)/2),common.length-1];
+      const labels=Array.from(new Set(labelIndices)).map(index=>{
+        const date=new Date(common[index]);
+        const label=new Intl.DateTimeFormat("tr-TR",{timeZone:"Europe/Istanbul",day:"2-digit",month:"2-digit",hour:"2-digit"}).format(date);
+        return '<text x="'+xFor(index)+'" y="'+(height-14)+'" fill="#91a9b8" font-size="11" text-anchor="middle">'+esc(label)+'</text>';
+      }).join("");
+      const legend=series.map(item=>'<span style="display:inline-flex;align-items:center;gap:6px;margin:0 12px 6px 0;font-size:11px;color:#b9cbd4"><i style="display:inline-block;width:17px;height:3px;border-radius:2px;background:'+item.color+'"></i>'+esc(timeTR(item.runId))+' TSİ</span>').join("");
+      container.innerHTML='<svg viewBox="0 0 '+width+' '+height+'" role="img" aria-label="'+definition.label+' için son dört ECMWF çıktısı karşılaştırması">'+grid+lines+labels+'</svg><div style="padding:5px 8px 0;display:flex;flex-wrap:wrap;gap:2px 4px">'+legend+'</div><div style="padding:2px 8px 8px;color:#91a9b8;font-size:10px">X ekseni: ortak geçerlilik zamanı · Y ekseni: '+definition.unit+'</div>';
+    }
     function renderEcmwfForecast(document){
       const forecasts=document.forecasts||[];
       const first=forecasts[0],last=forecasts[forecasts.length-1];
@@ -1202,10 +1288,13 @@
       $("ecmwf-updated-chip").textContent="Yayınlandı · "+timeTR(document.updated_at_utc);
       $("ecmwf-valid-until").textContent="Son geçerlilik: "+new Intl.DateTimeFormat("tr-TR",{timeZone:"Europe/Istanbul",day:"2-digit",month:"2-digit"}).format(new Date(document.forecast_valid_until_utc));
       renderDaily(viewData.daily_summary,"ecmwf-daily-grid");
-      renderChart("temperature","ecmwf-temperature-chart",viewData);
-      renderChart("precipitation","ecmwf-precipitation-chart",viewData);
+      const comparisonRuns=Array.isArray(document.comparison_runs)?document.comparison_runs:[];
+      renderEcmwfComparisonChart("temperature","ecmwf-comparison-temperature-chart",comparisonRuns);
+      renderEcmwfComparisonChart("precipitation","ecmwf-comparison-precipitation-chart",comparisonRuns);
+      renderEcmwfComparisonChart("wind10","ecmwf-comparison-wind10-chart",comparisonRuns);
+      renderEcmwfComparisonChart("wind850","ecmwf-comparison-wind850-chart",comparisonRuns);
       renderFindings(viewData.regional_pressure_analysis&&viewData.regional_pressure_analysis.findings,first.mslp&&first.mslp.mean_hpa,"ecmwf-pressure-findings");
-      $("ecmwf-data-status").textContent="Veri hazır · "+document.model+" · "+document.resolution+" · "+forecasts.length+" tahmin adımı · Son veri hazırlama: "+timeTR(document.updated_at_utc)+" TSİ";
+      $("ecmwf-data-status").textContent="Veri hazır · "+document.model+" · "+document.resolution+" · "+forecasts.length+" tahmin adımı · "+comparisonRuns.length+" geçmiş çevrim · Son veri hazırlama: "+timeTR(document.updated_at_utc)+" TSİ";
     }
     async function loadEcmwf(force=false){
       if(ecmwfLoading)return;

@@ -612,6 +612,24 @@ def fetch_latest_document(skip_if_run_id: str | None = None) -> dict | None:
     raise RuntimeError("No ECMWF Open Data source succeeded: " + " | ".join(source_errors))
 
 
+
+def load_comparison_runs(archive_dir: Path, limit: int = 4) -> list[dict]:
+    """Return the newest complete ECMWF cycles with common comparison fields."""
+    candidates = []
+    for path in sorted(Path(archive_dir).glob("*.json")):
+        try:
+            item = json.loads(path.read_text(encoding="utf-8"))
+            validate_document(item)
+            run_id = _normalise_datetime(item["run_id_utc"]).isoformat(timespec="seconds")
+            timeline = item.get("forecast_6_hourly")
+            if not isinstance(timeline, list) or not timeline:
+                continue
+            candidates.append({"run_id_utc": run_id, "forecast_6_hourly": timeline})
+        except (OSError, ValueError, TypeError, KeyError) as exc:
+            print(f"[ECMWF HISTORY] Skipping invalid archive {path.name}: {exc}")
+    unique = {item["run_id_utc"]: item for item in candidates}
+    return sorted(unique.values(), key=lambda item: item["run_id_utc"])[-limit:]
+
 def main() -> None:
     parser = argparse.ArgumentParser()
     parser.add_argument("--output-dir", default=os.getenv("ECMWF_PUBLIC_DIR", "public/ecmwf"))
@@ -638,13 +656,16 @@ def main() -> None:
     archive_dir.mkdir(parents=True, exist_ok=True)
     archive_path = archive_dir / f"{run_key}.json"
     archive_path.write_text(json.dumps(document, ensure_ascii=False, indent=2) + "\n", encoding="utf-8")
-    latest_path.write_text(json.dumps(document, ensure_ascii=False, indent=2) + "\n", encoding="utf-8")
-
-    # Keep only the latest eight forecast cycles in the public archive.
+    # Keep immutable runs and publish the newest four as comparison history.
     archives = sorted(archive_dir.glob("*.json"))
     for old in archives[:-8]:
         old.unlink(missing_ok=True)
-    print(f"[ECMWF PUBLISHED LOCALLY] {latest_path} · {len(document['forecasts'])} forecast steps")
+    document["comparison_runs"] = load_comparison_runs(archive_dir, limit=4)
+    latest_path.write_text(json.dumps(document, ensure_ascii=False, indent=2) + "\n", encoding="utf-8")
+    print(
+        f"[ECMWF PUBLISHED LOCALLY] {latest_path} · {len(document['forecasts'])} forecast steps · "
+        f"{len(document['comparison_runs'])} comparison cycles"
+    )
 
 
 if __name__ == "__main__":
