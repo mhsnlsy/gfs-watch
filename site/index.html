@@ -250,17 +250,17 @@
     .history-panel-head{display:flex;justify-content:space-between;align-items:center;gap:12px;margin-bottom:14px}
     .history-panel-head h2{font-size:21px;margin-top:5px}
     .history-window{font-size:9px;letter-spacing:.1em;color:#b8d7df;border:1px solid var(--line);padding:6px 8px;border-radius:8px}
-    .history-charts{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:12px}
-    .history-chart-card{min-width:0;padding:13px 12px 10px;border:1px solid rgba(204,225,239,.09);border-radius:13px;background:rgba(4,19,29,.2)}
+    .history-charts{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:9px}
+    .history-chart-card{min-width:0;padding:10px 9px 7px;border:1px solid rgba(204,225,239,.07);border-radius:11px;background:rgba(4,19,29,.12)}
     .history-chart-head{display:flex;justify-content:space-between;align-items:flex-start;gap:8px}
     .history-chart-head h3{font:700 14px Manrope,sans-serif;margin:0}
-    .history-chart-head p{font-size:9px;color:var(--muted);margin:4px 0 0}
+    .history-chart-head p{font-size:9px;color:var(--muted);margin:3px 0 0}
     .history-chart-icon{font:700 18px Manrope,sans-serif;color:var(--cyan);opacity:.8}
-    .history-chart{height:170px;width:100%;margin-top:8px;min-width:0}
+    .history-chart{height:170px;width:100%;margin-top:5px;min-width:0}
     .history-chart svg{width:100%;height:100%;display:block;overflow:visible}
-    .history-chart-meta{font-size:9px;color:#91aab5;line-height:1.5;margin-top:4px;min-height:14px}
+    .history-chart-meta{font-size:9px;color:#91aab5;line-height:1.4;margin-top:2px;min-height:0}
     @media(max-width:900px){.dashboard-top{grid-template-columns:minmax(0,1fr);}.history-charts{grid-template-columns:repeat(2,minmax(0,1fr))}}
-    @media(max-width:560px){.dashboard-top{padding:20px 0 15px;gap:11px}.dashboard-top .station-card{padding:17px}.dashboard-top .station-card .weather-stats{grid-template-columns:repeat(2,minmax(0,1fr));margin-top:17px}.history-panel{padding:14px}.history-charts{grid-template-columns:minmax(0,1fr);gap:9px}.history-chart-card{padding:12px}.history-chart{height:140px}}
+    @media(max-width:560px){.dashboard-top{padding:20px 0 15px;gap:11px}.dashboard-top .station-card{padding:17px}.dashboard-top .station-card .weather-stats{grid-template-columns:repeat(2,minmax(0,1fr));margin-top:17px}.history-panel{padding:12px}.history-panel-head{margin-bottom:9px}.history-charts{grid-template-columns:minmax(0,1fr);gap:7px}.history-chart-card{padding:9px 9px 6px}.history-chart{height:140px;margin-top:4px}.history-chart-meta{margin-top:1px}}
 \n  </style>
 </head>
 <body>
@@ -650,7 +650,7 @@
       let low=Math.floor(Math.min(...allValues)-0.5);
       let high=Math.ceil(Math.max(...allValues)+0.5);
       if(high-low<2){low-=0.5;high+=0.5;}
-      const width=244,height=200,left=36,right=10,top=15,bottom=29;
+      const width=560,height=200,left=44,right=14,top=15,bottom=29;
       const plotWidth=width-left-right,plotHeight=height-top-bottom;
       const xForTime=time=>left+((time-start)/windowMs)*plotWidth;
       const yFor=value=>top+((high-value)/(high-low))*plotHeight;
