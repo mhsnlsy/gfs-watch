@@ -381,7 +381,7 @@
         const observed=station.observed_at_utc?new Date(station.observed_at_utc):null;
         const observedValid=observed&&!Number.isNaN(observed.getTime());
         const ageMinutes=observedValid?Math.max(0,(Date.now()-observed.getTime())/60000):null;
-        const stale=!!station.is_stale||!observedValid||ageMinutes>90;
+        const stale=!!station.is_stale||!observedValid||ageMinutes>15;
         const observedText=observedValid?new Intl.DateTimeFormat("tr-TR",{timeZone:"Europe/Istanbul",dateStyle:"short",timeStyle:"short"}).format(observed):"zaman bilinmiyor";
         const ageText=ageMinutes===null?"":ageMinutes<60?Math.round(ageMinutes)+" dk önce":(ageMinutes/60).toFixed(1).replace(".",",")+" saat önce";
         $("station-observation-meta").textContent=(stale?"Gecikmeli ölçüm":"Son ölçüm")+" · "+observedText+" TSİ · "+ageText+" ·  Vantage PRO";
