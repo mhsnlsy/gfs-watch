@@ -162,5 +162,91 @@ jobs:
           echo "Pages did not serve the expected forecast: $expected_run_id"
           exit 1
 
+      - name: Verify latest GFS report and every referenced Pages asset
+        env:
+          PAGE_URL: ${{ steps.deployment.outputs.page_url }}
+        run: |
+          expected_run_id="$(python - <<'PY'
+          import json
+          with open("forecast-data/public/latest.json", encoding="utf-8") as source:
+              print(json.load(source)["run_id_utc"])
+          PY
+          )"
+          manifest="forecast-data/public/notifications/latest.json"
+          test -s "$manifest"
+          expected_notification_run_id="$(python - "$manifest" <<'PY'
+          import json, sys
+          with open(sys.argv[1], encoding="utf-8") as source:
+              document = json.load(source)
+          assert document.get("schema") == "gfs-watch.notifications.v1"
+          items = document.get("items")
+          assert isinstance(items, list) and items, "Notification feed is empty."
+          item = items[0]
+          assert item.get("run_id_utc"), "Latest notification has no run ID."
+          assert item.get("summary", "").strip(), "Latest notification summary is empty."
+          assert item.get("report_text", "").strip(), "Latest notification text is empty."
+          print(item["run_id_utc"])
+          PY
+          )"
+          if [ "$expected_notification_run_id" != "$expected_run_id" ]; then
+            echo "Notification feed is stale: $expected_notification_run_id != $expected_run_id"
+            exit 1
+          fi
+
+          base_url="${PAGE_URL%/}/data/notifications"
+          feed_url="$base_url/latest.json?verify=$GITHUB_RUN_ID"
+          verified=false
+          for attempt in $(seq 1 18); do
+            if curl --fail --silent --show-error "$feed_url" -o "$RUNNER_TEMP/live-notifications.json"; then
+              if python - "$RUNNER_TEMP/live-notifications.json" "$expected_notification_run_id" "$RUNNER_TEMP/notification-assets.txt" <<'PY'
+          import json, pathlib, sys
+          with open(sys.argv[1], encoding="utf-8") as source:
+              document = json.load(source)
+          assert document.get("schema") == "gfs-watch.notifications.v1"
+          items = document.get("items", [])
+          assert items, "Live Pages notification feed is empty."
+          item = items[0]
+          assert item.get("run_id_utc") == sys.argv[2], (
+              f"Live Pages serves {item.get('run_id_utc')}, expected {sys.argv[2]}"
+          )
+          assert item.get("summary", "").strip()
+          assert item.get("report_text", "").strip()
+          assets = []
+          for value in [item.get("image_path"), item.get("audio_path")]:
+              if value:
+                  assets.append(value)
+          for image in item.get("images", []):
+              if isinstance(image, dict) and image.get("path"):
+                  assets.append(image["path"])
+          for asset in assets:
+              path = pathlib.PurePosixPath(asset)
+              assert not path.is_absolute() and ".." not in path.parts
+              assert path.parts and path.parts[0] == "media", f"Unexpected media path: {asset}"
+          pathlib.Path(sys.argv[3]).write_text("\\n".join(assets), encoding="utf-8")
+          print(f"Live Pages report verified: {item['run_id_utc']} · {len(assets)} assets")
+          PY
+              then
+                verified=true
+                break
+              fi
+            fi
+            echo "Pages notification feed not current yet; retry $attempt."
+            sleep 10
+          done
+          if [ "$verified" != true ]; then
+            echo "Pages did not serve the expected latest GFS notification: $expected_notification_run_id"
+            exit 1
+          fi
+
+          while IFS= read -r asset; do
+            [ -n "$asset" ] || continue
+            asset_url="$base_url/$asset?verify=$GITHUB_RUN_ID"
+            if ! curl --fail --silent --show-error "$asset_url" -o /dev/null; then
+              echo "Pages notification media is missing: $asset"
+              exit 1
+            fi
+          done < "$RUNNER_TEMP/notification-assets.txt"
+          echo "Latest GFS report and its text/image/audio references are live on Pages."
+
 # Re-deploy when the public notification archive is refreshed.
 # Ensure the published archive (including regenerated 850 hPa charts) is bundled in Pages.
