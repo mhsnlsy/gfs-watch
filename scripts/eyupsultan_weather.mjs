@@ -204,12 +204,39 @@ async function main() {
       userAgent: "Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 Chrome/156.0.0.0 Safari/537.36"
     });
     try {
+      const mgmResponses = [];
+      mgmPage.on("response", async response => {
+        if (!response.url().includes("servis.mgm.gov.tr")) return;
+        try {
+          mgmResponses.push({url:response.url(),status:response.status(),body:(await response.text()).slice(0,8000)});
+        } catch {}
+      });
       const mgmResponse = await mgmPage.goto("https://istanbul.mgm.gov.tr/sondurum/turkiye.aspx", { waitUntil: "domcontentloaded", timeout: 45000 });
       await mgmPage.waitForTimeout(5000);
       const mgmText = await mgmPage.locator("body").innerText();
       const lines = mgmText.split("\\n");
       const matchingLines = lines.map((line,index) => ({line,index})).filter(item => /eyüp|eyupsultan|18101/i.test(item.line));
-      console.log("[MGM PRESSURE PAGE]", JSON.stringify({status:mgmResponse?.status(),title:await mgmPage.title(),matchingLines,body:mgmText.slice(0,10000),resources:await mgmPage.evaluate(() => performance.getEntriesByType("resource").map(entry => entry.name).filter(name => /mgm|meteoroloji/i.test(name)))}));
+      const jsDetails = await mgmPage.evaluate(async () => {
+        const scripts = performance.getEntriesByType("resource").filter(entry => entry.name.includes("/sondurum/js/sondurumlar.js")).map(entry => entry.name);
+        const output = [];
+        for (const url of scripts) {
+          const source = await (await fetch(url)).text();
+          for (const term of ["merkezid","sondurumlar","merkezler","servis.mgm.gov.tr"]) {
+            const at = source.indexOf(term);
+            if (at >= 0) output.push({term,excerpt:source.slice(Math.max(0,at-700),at+1800)});
+          }
+        }
+        return output;
+      });
+      console.log("[MGM PRESSURE PAGE]", JSON.stringify({status:mgmResponse?.status(),title:await mgmPage.title(),matchingLines,body:mgmText.slice(0,10000),responses:mgmResponses,jsDetails,resources:await mgmPage.evaluate(() => performance.getEntriesByType("resource").map(entry => entry.name).filter(name => /mgm|meteoroloji/i.test(name)))}));
+      const mgmRequest = await request.newContext({extraHTTPHeaders:{"User-Agent":"Mozilla/5.0","Accept":"application/json, text/plain, */*","Origin":"https://istanbul.mgm.gov.tr","Referer":"https://istanbul.mgm.gov.tr/sondurum/turkiye.aspx"}});
+      for (const url of ["https://servis.mgm.gov.tr/web/merkezler/iller","https://servis.mgm.gov.tr/web/sondurumlar/?merkezid=90101"]) {
+        try {
+          const result = await mgmRequest.get(url,{timeout:20000});
+          console.log("[MGM DIRECT API]",JSON.stringify({url,status:result.status(),body:(await result.text()).slice(0,8000)}));
+        } catch(error) { console.log("[MGM DIRECT API ERROR]",url,String(error)); }
+      }
+      await mgmRequest.dispose();
     } catch (error) {
       console.log("[MGM PRESSURE PAGE ERROR]", String(error));
     } finally {
