@@ -280,7 +280,7 @@ async function main() {
     station_id: STATION_ID,
     station_name: "Eyüpsultan",
     sampling_interval_minutes: 5,
-    aggregation_interval_minutes: 60,
+    aggregation_interval_minutes: 30,
     retention_days: 7,
     sample_semantics: "one_point_per_distinct_source_observation",
     updated_at_utc: now.toISOString(),

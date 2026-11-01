@@ -110,6 +110,8 @@ assert.match(node("station-rain-meta").textContent, /Eyüpsultan/);
 assert.match(node("station-temperature-trend").innerHTML, /Eyüpsultan son 24 saat sıcaklık geçmişi/);
 assert.match(node("station-rain-trend").innerHTML, /Eyüpsultan ölçümlerinden türetilen/);
 assert.match(node("station-rain-meta").textContent, /1,7 mm ölçülen artış/);
+assert.match(node("station-trend-meta").textContent, /30 dk ortalama/);
+assert.match(node("station-rain-meta").textContent, /30 dk örnek/);
 assert.doesNotMatch(node("station-trend-meta").textContent, /ENKA/);
 assert.doesNotMatch(node("station-rain-meta").textContent, /ENKA/);
 
@@ -124,9 +126,14 @@ assert.match(node("station-rain-meta").textContent, /ENKA Balmumcu/);
 assert.match(node("station-temperature-trend").innerHTML, /ENKA Balmumcu son 24 saat sıcaklık geçmişi/);
 assert.match(node("station-rain-trend").innerHTML, /ENKA Balmumcu ölçümlerinden türetilen/);
 assert.match(node("station-rain-meta").textContent, /0,6 mm ölçülen artış/);
+assert.match(node("station-trend-meta").textContent, /30 dk ortalama/);
+assert.match(node("station-rain-meta").textContent, /30 dk örnek/);
 assert.doesNotMatch(node("station-trend-meta").textContent, /Eyüpsultan/);
 assert.doesNotMatch(node("station-rain-meta").textContent, /Eyüpsultan/);
 
+assert.match(html, /function attachStationHistoryTooltip/);
+assert.match(html, /station-history-tooltip-value/);
+assert.match(html, /bucketMs=1800000/);
 assert.match(html, /EYUPSULTAN_STATION_HISTORY_URL/);
 assert.match(html, /fetch\(EYUPSULTAN_STATION_HISTORY_URL/);
 assert.match(html, /String\(historyDocument\.station_id\)==="18101"/);
