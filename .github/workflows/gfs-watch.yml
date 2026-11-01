@@ -6,7 +6,7 @@ on:
   workflow_dispatch:
 
 concurrency:
-  group: gfs-watch-run-v3
+  group: gfs-watch-run-v4
   cancel-in-progress: false
 
 permissions:
