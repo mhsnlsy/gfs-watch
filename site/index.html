@@ -244,15 +244,15 @@
     <section class="section" id="seyir">
       <div class="section-head">
         <div><div class="section-kicker">NOAA / NCEP GFS · MODEL TAHMİNİ</div><h2>180 saatlik tahmin seyri</h2></div>
-        <div class="section-note">Sıcaklık ve yağış aynı anda görünür<br>Her iki grafik de aynı model döngüsünü kullanır</div>
+        <div class="section-note">Sıcaklık ve yağış aynı anda görünür<br>Her iki grafik 3 saatlik adımlarla gösterilir</div>
       </div>
       <div class="chart-stack">
         <article class="chart-card">
-          <div class="chart-card-head"><div><div class="chart-title">Sıcaklık</div><div class="chart-subtitle">2 metre sıcaklığı · °C</div></div><span class="chart-count" id="temperature-count">Saatlik tahmin</span></div>
+          <div class="chart-card-head"><div><div class="chart-title">Sıcaklık</div><div class="chart-subtitle">3 saatlik tahmin adımı · 2 metre sıcaklığı · °C</div></div><span class="chart-count" id="temperature-count">3 saatlik tahmin</span></div>
           <div class="chart-wrap" id="temperature-chart"><div class="chart-empty">Sıcaklık grafiği yükleniyor…</div></div>
         </article>
         <article class="chart-card">
-          <div class="chart-card-head"><div><div class="chart-title">Yağış</div><div class="chart-subtitle">Tahmin aralığında biriken yağış · mm</div></div><span class="chart-count" id="precipitation-count">Saatlik tahmin</span></div>
+          <div class="chart-card-head"><div><div class="chart-title">Yağış</div><div class="chart-subtitle">3 saatlik toplam yağış · mm</div></div><span class="chart-count" id="precipitation-count">3 saatlik tahmin</span></div>
           <div class="chart-wrap" id="precipitation-chart"><div class="chart-empty">Yağış grafiği yükleniyor…</div></div>
         </article>
       </div>
@@ -456,33 +456,84 @@
       const points=forecastData&&forecastData.forecast_6_hourly;
       const temperature=metric==="temperature";
       const field=temperature?"temperature_2m_c":"precipitation_6h_mm";
-      const title=temperature?"2 m sıcaklık · °C":"Tahmin aralığında yağış · mm";
+      const title=temperature?"2 m sıcaklık · °C":"3 saatlik toplam yağış · mm";
       const counter=$(temperature?"temperature-count":"precipitation-count");
       if(!Array.isArray(points)){container.innerHTML='<div class="chart-empty">Tahmin verisi bulunamadı.</div>';return;}
-      const valid=points.map((p,i)=>({i,value:p[field],date:p.valid_time_istanbul,forecastHour:p.forecast_hour})).filter(p=>numeric(p.value));
-      counter.textContent=valid.length+" ölçüm noktası";
+
+      // GFS provides hourly data through +120h and then three-hourly data.
+      // Display both charts on a uniform three-hour timeline.
+      const byLead=points
+        .map(point=>({...point,lead:Number(point.forecast_hour)}))
+        .filter(point=>Number.isFinite(point.lead))
+        .sort((a,b)=>a.lead-b.lead);
+
+      let valid=[];
+      if(temperature){
+        valid=byLead
+          .filter(point=>point.lead%3===0&&numeric(point[field]))
+          .map(point=>({
+            value:point[field],
+            date:point.valid_time_istanbul,
+            forecastHour:point.lead
+          }));
+      }else{
+        const threeHourEndpoints=byLead.filter(point=>point.lead>0&&point.lead%3===0);
+        valid=threeHourEndpoints.map(endpoint=>{
+          const startLead=endpoint.lead-3;
+          const intervalPoints=byLead.filter(point=>point.lead>startLead&&point.lead<=endpoint.lead);
+          // Before and including +120h, add three hourly accumulations.
+          // Beyond +120h, GFS already supplies one three-hour accumulation.
+          const expectedCount=endpoint.lead<=120?3:1;
+          const measured=intervalPoints.filter(point=>numeric(point[field]));
+          const startPoint=byLead.find(point=>point.lead===startLead);
+          if(measured.length!==expectedCount||!startPoint)return null;
+          return {
+            value:measured.reduce((total,point)=>total+point[field],0),
+            date:endpoint.valid_time_istanbul,
+            forecastHour:endpoint.lead,
+            intervalStart:startPoint.valid_time_istanbul,
+            intervalHours:3
+          };
+        }).filter(Boolean);
+      }
+
+      counter.textContent=temperature
+        ? valid.length+" nokta · 3 saatlik"
+        : valid.length+" aralık · 3 saatlik";
       if(valid.length<2){container.innerHTML='<div class="chart-empty">Bu değişken için yeterli grafik verisi bulunmuyor.</div>';return;}
+
       const width=900,height=250,left=48,right=18,top=18,bottom=40;
-      const min=Math.min(...valid.map(p=>p.value)),max=Math.max(...valid.map(p=>p.value));
-      const span=(max-min)||1,low=temperature?min-span*.16:Math.max(0,min-span*.12),high=max+span*.16;
-      const xFor=i=>left+(i/(points.length-1))*(width-left-right),yFor=v=>top+((high-v)/(high-low))*(height-top-bottom);
-      const coords=valid.map(p=>{
-        const previous=points[p.i-1];
-        const intervalStart=!temperature&&previous?previous.valid_time_istanbul:null;
-        const intervalHours=intervalStart
-          ? Math.max(0,Math.round((new Date(p.date)-new Date(intervalStart))/3600000))
-          : 0;
-        return {
-          x:xFor(p.i),y:yFor(p.value),value:p.value,date:p.date,
-          forecastHour:p.forecastHour,intervalStart,intervalHours
-        };
-      });
-      const line=coords.map((p,i)=>(i?"L":"M")+p.x.toFixed(1)+" "+p.y.toFixed(1)).join(" ");
-      const last=coords[coords.length-1],first=coords[0],area=line+" L "+last.x.toFixed(1)+" "+(height-bottom)+" L "+first.x.toFixed(1)+" "+(height-bottom)+" Z";
-      const ticks=[0,1,2,3].map(i=>low+(high-low)*i/3);
-      const grid=ticks.map(v=>{const y=yFor(v);return '<line x1="'+left+'" y1="'+y+'" x2="'+(width-right)+'" y2="'+y+'" stroke="rgba(194,220,232,.12)" stroke-dasharray="4 6"/><text x="'+(left-10)+'" y="'+(y+4)+'" fill="#91a9b8" font-size="11" text-anchor="end">'+fmt(v,temperature?0:1)+'</text>';}).join("");
-      const markers=coords.filter((p,i)=>i===0||i===coords.length-1||i%8===0).map(p=>'<circle cx="'+p.x+'" cy="'+p.y+'" r="3.2" fill="#c8f2ec" stroke="#133548" stroke-width="2"/>').join("");
-      const labels=[coords[0],coords[Math.floor(coords.length/2)],coords[coords.length-1]].map(p=>'<text x="'+p.x+'" y="'+(height-12)+'" fill="#91a9b8" font-size="7" text-anchor="middle">'+esc(new Intl.DateTimeFormat("tr-TR",{timeZone:"Europe/Istanbul",day:"2-digit",month:"2-digit",hour:"2-digit"}).format(new Date(p.date)))+'</text>').join("");
+      const min=Math.min(...valid.map(point=>point.value));
+      const max=Math.max(...valid.map(point=>point.value));
+      const span=(max-min)||1;
+      const low=temperature?min-span*.16:Math.max(0,min-span*.12);
+      const high=max+span*.16;
+      const maxForecastHour=numeric(forecastData.forecast_horizon_hours)
+        ? forecastData.forecast_horizon_hours
+        : Math.max(...valid.map(point=>point.forecastHour));
+      const xFor=hour=>left+(hour/maxForecastHour)*(width-left-right);
+      const yFor=value=>top+((high-value)/(high-low))*(height-top-bottom);
+      const coords=valid.map(point=>({
+        x:xFor(point.forecastHour),
+        y:yFor(point.value),
+        value:point.value,
+        date:point.date,
+        forecastHour:point.forecastHour,
+        intervalStart:point.intervalStart||null,
+        intervalHours:point.intervalHours||0
+      }));
+      const line=coords.map((point,index)=>(index?"L":"M")+point.x.toFixed(1)+" "+point.y.toFixed(1)).join(" ");
+      const last=coords[coords.length-1],first=coords[0];
+      const area=line+" L "+last.x.toFixed(1)+" "+(height-bottom)+" L "+first.x.toFixed(1)+" "+(height-bottom)+" Z";
+      const ticks=[0,1,2,3].map(index=>low+(high-low)*index/3);
+      const grid=ticks.map(value=>{
+        const y=yFor(value);
+        return '<line x1="'+left+'" y1="'+y+'" x2="'+(width-right)+'" y2="'+y+'" stroke="rgba(194,220,232,.12)" stroke-dasharray="4 6"/><text x="'+(left-10)+'" y="'+(y+4)+'" fill="#91a9b8" font-size="11" text-anchor="end">'+fmt(value,temperature?0:1)+'</text>';
+      }).join("");
+      const markers=coords.filter((point,index)=>index===0||index===coords.length-1||index%8===0)
+        .map(point=>'<circle cx="'+point.x+'" cy="'+point.y+'" r="3.2" fill="#c8f2ec" stroke="#133548" stroke-width="2"/>').join("");
+      const labels=[coords[0],coords[Math.floor(coords.length/2)],coords[coords.length-1]]
+        .map(point=>'<text x="'+point.x+'" y="'+(height-12)+'" fill="#91a9b8" font-size="7" text-anchor="middle">'+esc(new Intl.DateTimeFormat("tr-TR",{timeZone:"Europe/Istanbul",day:"2-digit",month:"2-digit",hour:"2-digit"}).format(new Date(point.date)))+'</text>').join("");
       const gradientId=targetId+"-fill";
       const stroke=temperature?"#7dd3d7":"#8abce8";
       container.innerHTML='<svg viewBox="0 0 '+width+' '+height+'" role="img" aria-label="'+title+' grafiği"><defs><linearGradient id="'+gradientId+'" x1="0" x2="0" y1="0" y2="1"><stop offset="0%" stop-color="'+stroke+'" stop-opacity=".28"/><stop offset="100%" stop-color="'+stroke+'" stop-opacity="0"/></linearGradient></defs>'+grid+'<path d="'+area+'" fill="url(#'+gradientId+')"/><path d="'+line+'" fill="none" stroke="'+stroke+'" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"/>'+markers+labels+'</svg>';
