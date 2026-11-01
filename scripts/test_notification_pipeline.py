@@ -30,6 +30,8 @@ def main() -> None:
     restore_section = gfs_workflow[restore_start:report_start]
     assert "git archive origin/gfs-watch-state public/notifications | tar -x -C ." in restore_section
     assert gfs_workflow.index("rm -rf public/notifications") < gfs_workflow.index('cp -a "$RUNNER_TEMP/public/." public/')
+    assert 'if [ "${{ steps.check-gfs.outcome }}" = "success" ] && [ -d public ]; then' in gfs_workflow
+    assert "Report step failed; keeping the previously published Pages forecast and notification archive." in gfs_workflow
 
     pages_workflow = (ROOT / ".github/workflows/pages.yml").read_text(encoding="utf-8")
     assert "Verify latest GFS report and every referenced Pages asset" in pages_workflow
