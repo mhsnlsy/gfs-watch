@@ -63,7 +63,7 @@ jobs:
             python -m json.tool forecast-data/public/station-temperature-history.json > /dev/null
             cp forecast-data/public/station-temperature-history.json _site/data/station-temperature-history.json
           else
-            printf '{"schema":"gfs-watch.station-temperature-history.v1","sampling_interval_minutes":5,"aggregation_interval_minutes":90,"samples":[]}\\n' > _site/data/station-temperature-history.json
+            printf '{"schema":"gfs-watch.station-temperature-history.v1","sampling_interval_minutes":5,"aggregation_interval_minutes":90,"samples":[]}\n' > _site/data/station-temperature-history.json
           fi
           if [ -d forecast-data/public/notifications ]; then
             if [ -s forecast-data/public/notifications/latest.json ]; then
