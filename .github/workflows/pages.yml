@@ -89,4 +89,36 @@ jobs:
         id: deployment
         uses: actions/deploy-pages@v4
 
+      - name: Verify the deployed forecast is the expected GFS cycle
+        env:
+          PAGE_URL: \${{ steps.deployment.outputs.page_url }}
+        run: |
+          expected_run_id="$(python - <<'PY'
+          import json
+          with open("forecast-data/public/latest.json", encoding="utf-8") as source:
+              print(json.load(source)["run_id_utc"])
+          PY
+          )"
+          url="\${PAGE_URL%/}/data/latest.json"
+          for attempt in $(seq 1 18); do
+            if curl --fail --silent --show-error "$url" -o "$RUNNER_TEMP/live-latest.json"; then
+              actual_run_id="$(python - <<'PY'
+          import json, os
+          with open(os.path.join(os.environ["RUNNER_TEMP"], "live-latest.json"), encoding="utf-8") as source:
+              print(json.load(source)["run_id_utc"])
+          PY
+          )"
+              if [ "$actual_run_id" = "$expected_run_id" ]; then
+                echo "Pages verified: $actual_run_id"
+                exit 0
+              fi
+              echo "Pages currently serves $actual_run_id; waiting for $expected_run_id."
+            else
+              echo "Pages payload is not reachable yet; retry $attempt."
+            fi
+            sleep 10
+          done
+          echo "Pages did not serve the expected forecast: $expected_run_id"
+          exit 1
+
 # Re-deploy when the public notification archive is refreshed.
