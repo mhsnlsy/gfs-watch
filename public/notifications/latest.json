@@ -1,6 +1,6 @@
 {
   "schema": "gfs-watch.notifications.v1",
-  "updated_at_utc": "2026-11-01T10:37:28.117Z",
+  "updated_at_utc": "2026-11-01T11:54:45+00:00",
   "items": [
     {
       "id": "20261101T06Z",
@@ -11,8 +11,26 @@
       "cycle_label": "06Z · 01.11.2026 09:00 TSİ",
       "summary": "Balmumcu istasyonunda, Pazar 1 Kasım 2026 13:30 itibarıyla sıcaklık 18.2 derece. Günlük toplam yağış 0.0 milimetre. Rüzgâr, yönü N, 20.9 kilometre saat. GFS başlangıç analizine göre İstanbul'da sıcaklık 14.6 derece. Başlangıç analizinde rüzgâr hızı yüksek. Önümüzdeki üç günün özeti: Pazartesi 2 Kasım: En düşük 15.0, en yüksek 18.8 derece. Toplam yağış 11.1 milimetre. Salı 3 Kasım: En düşük 15.7, en yüksek 18.8 derece. Toplam yağış 4.7 milimetre. Çarşamba 4 Kasım: En düşük 14.7, en yüksek 16.6 derece. Toplam yağış 2.8 milimetre. Rüzgâr hızı yüksek.",
       "report_text": "🌦 İSTANBUL'UN HAVASI | v2.1.0\nİSTANBUL GFS TAHMİN RAPORU\n📄 Çıktı: Yazılı tahmin raporu\n🛰 Model döngüsü: Pazar 1 Kasım 2026 09:00 TSİ (06Z UTC)\n🗓 Tahmin aralığı: Pazar 1 Kasım 2026 09:00 – Pazar 8 Kasım 2026 21:00 TSİ (+180 saat)\n🕒 Rapor zamanı: Pazar 1 Kasım 2026 13:34 TSİ\n📍 Konum: İstanbul, Türkiye\n\n🌡 GFS başlangıç sıcaklığı: 14.6°C\n💨 GFS başlangıç rüzgârı: 21.1 km/sa\n\n📡 YEREL İSTASYON GERÇEK İSTASYON GÖZLEMİ | VANTAGE PRO · SON İSTASYON ÖLÇÜMÜ\n🕒 Ölçüm zamanı: Pazar 1 Kasım 2026 13:30 TSİ\n🌡 İstasyon sıcaklığı: 18.2°C\n🌧 Günlük toplam yağış: 0.0 mm\n💨 İstasyon rüzgârı: 20.9 km/sa · yön: N\nKaynak: Yerel istasyon · Davis Vantage PRO istasyonu · canlı tablo ölçümü\n\n📅 ÖNÜMÜZDEKİ 3 GÜN\n• Pazartesi 2 Kasım: 15.0–18.8°C | Yağış: 11.1 mm | Maks. rüzgâr: 9.6 km/sa\n• Salı 3 Kasım: 15.7–18.8°C | Yağış: 4.7 mm | Maks. rüzgâr: 11.6 km/sa\n• Çarşamba 4 Kasım: 14.7–16.6°C | Yağış: 2.8 mm | Maks. rüzgâr: 24.9 km/sa | Rüzgârlı\n\n🌀 BASINÇ DURUMU | İstanbul merkezli 2.500 km çaplı alan\nGeçerlilik zamanı: Pazar 1 Kasım 2026 09:00 TSİ (model başlangıç saati)\n• Yüksek basınç alanındaki en yüksek değer: 1029.9 hPa.\n• Alçak basınç alanındaki en düşük değer: 1012.7 hPa.\n• İstanbul başlangıç basıncı: 1019.8 hPa; bölgesel en yüksek-en düşük basınç farkı: 17.2 hPa.\n\n🎙 Seslendirme metni:\n“Balmumcu istasyonunda, Pazar 1 Kasım 2026 13:30 itibarıyla sıcaklık 18.2 derece. Günlük toplam yağış 0.0 milimetre. Rüzgâr, yönü N, 20.9 kilometre saat. GFS başlangıç analizine göre İstanbul'da sıcaklık 14.6 derece. Başlangıç analizinde rüzgâr hızı yüksek. Önümüzdeki üç günün özeti: Pazartesi 2 Kasım: En düşük 15.0, en yüksek 18.8 derece. Toplam yağış 11.1 milimetre. Salı 3 Kasım: En düşük 15.7, en yüksek 18.8 derece. Toplam yağış 4.7 milimetre. Çarşamba 4 Kasım: En düşük 14.7, en yüksek 16.6 derece. Toplam yağış 2.8 milimetre. Rüzgâr hızı yüksek.”",
-      "image_path": "media/gfs-20261101T06Z-comparison.png",
-      "audio_path": "media/gfs-20261101T06Z-voice.mp3"
+      "image_path": null,
+      "audio_path": "media/gfs-20261101T06Z-voice.mp3",
+      "images": [
+        {
+          "label": "Sıcaklık",
+          "path": "media/gfs-20261101T06Z-temperature.png"
+        },
+        {
+          "label": "Yağış",
+          "path": "media/gfs-20261101T06Z-precipitation.png"
+        },
+        {
+          "label": "Yüzey rüzgârı · 10 m",
+          "path": "media/gfs-20261101T06Z-wind_10m.png"
+        },
+        {
+          "label": "Rüzgâr · 850 hPa",
+          "path": "media/gfs-20261101T06Z-wind_850.png"
+        }
+      ]
     }
   ]
 }
