@@ -112,7 +112,7 @@ jobs:
             echo "No new completed GFS cycle was generated in this session."
           fi
       - name: Save partial NOAA forecast cache
-        if: always() && steps.check-gfs.outputs.noaa_cache_v2_updated == 'true'
+        if: always() && steps.check-gfs.outputs.noaa_cache_updated == 'true'
         continue-on-error: true
         uses: actions/cache/save@v6
         with:
