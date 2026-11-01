@@ -2,8 +2,8 @@ name: ENKA Weather
 
 on:
   schedule:
-    # GitHub Actions cron is UTC; every five minutes, around the clock.
-    - cron: "*/5 * * * *"
+    # Run at minute 01, 06, 11, ... 56 every hour (GitHub cron is UTC).
+    - cron: "1-59/5 * * * *"
   workflow_dispatch:
 
 permissions:
