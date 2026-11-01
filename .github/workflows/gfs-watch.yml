@@ -53,7 +53,7 @@ jobs:
           if git cat-file -e origin/gfs-watch-state:gfs_watch.db 2>/dev/null; then
             git show origin/gfs-watch-state:gfs_watch.db > gfs_watch.db
           fi
-      - name: Watch NOAA until GFS cycle is ready
+      - name: Check NOAA for a newly published GFS cycle
         id: check-gfs
         env:
           GFS_WATCH_ONCE: "1"
