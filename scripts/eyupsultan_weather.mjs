@@ -230,10 +230,10 @@ async function main() {
       });
       console.log("[MGM PRESSURE PAGE]", JSON.stringify({status:mgmResponse?.status(),title:await mgmPage.title(),matchingLines,body:mgmText.slice(0,10000),responses:mgmResponses,jsDetails,resources:await mgmPage.evaluate(() => performance.getEntriesByType("resource").map(entry => entry.name).filter(name => /mgm|meteoroloji/i.test(name)))}));
       const mgmRequest = await request.newContext({extraHTTPHeaders:{"User-Agent":"Mozilla/5.0","Accept":"application/json, text/plain, */*","Origin":"https://istanbul.mgm.gov.tr","Referer":"https://istanbul.mgm.gov.tr/sondurum/turkiye.aspx"}});
-      for (const url of ["https://servis.mgm.gov.tr/web/merkezler/iller","https://servis.mgm.gov.tr/web/sondurumlar/?merkezid=90101"]) {
+      for (const url of ["https://servis.mgm.gov.tr/web/merkezler/iller","https://servis.mgm.gov.tr/web/sondurumlar/?merkezid=90101","https://servis.mgm.gov.tr/web/istasyonlar/il?plaka=34","https://servis.mgm.gov.tr/web/sondurumlar/ilTumSondurum?ilPlaka=34"]) {
         try {
           const result = await mgmRequest.get(url,{timeout:20000});
-          console.log("[MGM DIRECT API]",JSON.stringify({url,status:result.status(),body:(await result.text()).slice(0,8000)}));
+          const body = await result.text(); let parsed = null; try { parsed = JSON.parse(body); } catch {} const matching = Array.isArray(parsed) ? parsed.filter(item => /eyüp/i.test(JSON.stringify(item)) || String(item.istNo) === "18101") : null; console.log("[MGM DIRECT API]",JSON.stringify({url,status:result.status(),matching,body:body.slice(0,2500)}));
         } catch(error) { console.log("[MGM DIRECT API ERROR]",url,String(error)); }
       }
       await mgmRequest.dispose();
