@@ -658,7 +658,7 @@ def pressure_point_relative_to_istanbul(latitude, longitude):
 
 
 def analyse_regional_pressure_grid(pressure_grid):
-    """Summarise regional pressure magnitudes without per-centre location or impact narration."""
+    """Report the geographic positions of the regional high/low pressure extremes."""
     try:
         if not pressure_grid:
             raise ValueError("f000 GRIB2 içinde deniz seviyesi basınç alanı yok.")
@@ -667,65 +667,51 @@ def analyse_regional_pressure_grid(pressure_grid):
             np.asarray(array, dtype=float).reshape(-1)
             for array in pressure_grid
         )
-        if not (
-            pressure_values.size
-            == pressure_latitudes.size
-            == pressure_longitudes.size
-        ):
+        if not (pressure_values.size == pressure_latitudes.size == pressure_longitudes.size):
             raise ValueError("Basınç GRIB2 koordinat ve değer dizileri uyuşmuyor.")
 
         lat1 = math.radians(LAT)
         lat2 = np.radians(pressure_latitudes)
         delta_lat = lat2 - lat1
-        delta_lon = np.radians(
-            ((pressure_longitudes - LON + 180.0) % 360.0) - 180.0
-        )
+        delta_lon = np.radians(((pressure_longitudes - LON + 180.0) % 360.0) - 180.0)
         haversine = (
             np.sin(delta_lat / 2.0) ** 2
             + math.cos(lat1) * np.cos(lat2) * np.sin(delta_lon / 2.0) ** 2
         )
-        distance_km = 6371.0 * 2.0 * np.arcsin(
-            np.sqrt(np.clip(haversine, 0.0, 1.0))
-        )
-        inside = (
-            (distance_km <= REGIONAL_PRESSURE_RADIUS_KM)
-            & np.isfinite(pressure_values)
-        )
+        distance_km = 6371.0 * 2.0 * np.arcsin(np.sqrt(np.clip(haversine, 0.0, 1.0)))
+        inside = (distance_km <= REGIONAL_PRESSURE_RADIUS_KM) & np.isfinite(pressure_values)
         if not np.any(inside):
             raise ValueError("2.500 km çaplı alanın içinde geçerli basınç noktası bulunamadı.")
 
         regional_hpa = pressure_values[inside] / 100.0
+        regional_latitudes = pressure_latitudes[inside]
+        regional_longitudes = pressure_longitudes[inside]
         max_index = int(np.argmax(regional_hpa))
         min_index = int(np.argmin(regional_hpa))
         maximum = float(regional_hpa[max_index])
         minimum = float(regional_hpa[min_index])
+        high_place = pressure_region_name(regional_latitudes[max_index], regional_longitudes[max_index])
+        low_place = pressure_region_name(regional_latitudes[min_index], regional_longitudes[min_index])
+        high_relative = pressure_point_relative_to_istanbul(regional_latitudes[max_index], regional_longitudes[max_index])
+        low_relative = pressure_point_relative_to_istanbul(regional_latitudes[min_index], regional_longitudes[min_index])
 
-        findings = []
-        if maximum >= HIGH_PRESSURE_THRESHOLD_HPA:
-            findings.append(f'Yüksek basınç alanındaki en yüksek değer: {maximum:.1f} hPa.')
-        else:
-            findings.append(f'İncelenen alanın en yüksek basıncı: {maximum:.1f} hPa.')
-
-        if minimum <= LOW_PRESSURE_THRESHOLD_HPA:
-            findings.append(f'Alçak basınç alanındaki en düşük değer: {minimum:.1f} hPa.')
-        else:
-            findings.append(f'İncelenen alanın en düşük basıncı: {minimum:.1f} hPa.')
-
-        nearest_index = int(
-            (
-                (pressure_latitudes - LAT) ** 2
-                + (((pressure_longitudes - LON + 180.0) % 360.0) - 180.0) ** 2
-            ).argmin()
-        )
+        findings = [
+            f"Bölgesel yüksek basınç odağı: {maximum:.1f} hPa — {high_place}; {high_relative}.",
+            f"Bölgesel alçak basınç odağı: {minimum:.1f} hPa — {low_place}; {low_relative}.",
+        ]
+        nearest_index = int((
+            (pressure_latitudes - LAT) ** 2
+            + (((pressure_longitudes - LON + 180.0) % 360.0) - 180.0) ** 2
+        ).argmin())
         centre_pressure_hpa = float(pressure_values[nearest_index]) / 100.0
         findings.append(
-            f'İstanbul başlangıç basıncı: {centre_pressure_hpa:.1f} hPa; '
-            f'bölgesel en yüksek-en düşük basınç farkı: {maximum - minimum:.1f} hPa.'
+            f"İstanbul başlangıç basıncı: {centre_pressure_hpa:.1f} hPa; "
+            f"bölgesel basınç farkı: {maximum - minimum:.1f} hPa."
         )
-
         print(
-            f'[BASINÇ GRIB2] 2.500 km çaplı alanda {int(np.count_nonzero(inside))} grid noktası; '
-            f'min {minimum:.1f}, max {maximum:.1f} hPa; İstanbul {centre_pressure_hpa:.1f} hPa.'
+            f"[BASINÇ GRIB2] 2.500 km çaplı alanda {int(np.count_nonzero(inside))} grid noktası; "
+            f"yüksek {maximum:.1f} hPa ({high_place}); alçak {minimum:.1f} hPa ({low_place}); "
+            f"İstanbul {centre_pressure_hpa:.1f} hPa."
         )
         return findings, round(centre_pressure_hpa, 1)
     except Exception as exc:
