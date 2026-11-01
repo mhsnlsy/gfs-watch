@@ -17,8 +17,12 @@ def main() -> None:
         'id="gfs-model-view"',
         'id="ecmwf-model-view"',
         'id="ecmwf-daily-grid"',
-        'id="ecmwf-temperature-chart"',
-        'id="ecmwf-precipitation-chart"',
+        'id="ecmwf-comparison-temperature-chart"',
+        'id="ecmwf-comparison-precipitation-chart"',
+        'id="ecmwf-comparison-wind10-chart"',
+        'id="ecmwf-comparison-wind850-chart"',
+        'function renderEcmwfComparisonChart(metric,targetId,history)',
+        'document.comparison_runs',
         'id="ecmwf-pressure-findings"',
         'id="ecmwf-valid-until"',
         'const ECMWF_DATA_URL="./data/ecmwf/latest.json";',
@@ -31,7 +35,7 @@ def main() -> None:
         'function renderDaily(items,targetId="daily-grid")',
         'function renderChart(metric,targetId,sourceData=forecastData)',
         'renderDaily(viewData.daily_summary,"ecmwf-daily-grid")',
-        'renderChart("precipitation","ecmwf-precipitation-chart",viewData)',
+        'renderEcmwfComparisonChart("precipitation","ecmwf-comparison-precipitation-chart",comparisonRuns)',
         'renderFindings(viewData.regional_pressure_analysis&&viewData.regional_pressure_analysis.findings,first.mslp&&first.mslp.mean_hpa,"ecmwf-pressure-findings")',
         'http-equiv="refresh" content="300"',
     )
@@ -55,6 +59,9 @@ def main() -> None:
     for section_id in ("ecmwf-tahmin", "ecmwf-seyir", "ecmwf-basinc"):
         if f'id="{section_id}"' not in ecmwf:
             raise AssertionError(f"Missing ECMWF section: {section_id}")
+
+    if "ecmwf-comparison-wind10-chart" not in ecmwf or "ecmwf-comparison-wind850-chart" not in ecmwf:
+        raise AssertionError("Missing separate 10m/850hPa ECMWF comparison cards.")
 
     if "ecmwf-wind-chart" in html or "ecmwf-forecast-table" in html:
         raise AssertionError("Legacy ECMWF-only layout remains in the website.")
