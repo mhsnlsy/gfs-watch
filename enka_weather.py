@@ -39,14 +39,14 @@ WIND_PATTERN = r"NNE|ENE|ESE|SSE|SSW|WSW|WNW|NNW|N|NE|E|SE|S|SW|W|NW"
 
 
 def _clean_html(fragment):
-    fragment = re.sub(r"<script\\b[^>]*>.*?</script>", " ", fragment, flags=re.I | re.S)
-    fragment = re.sub(r"<style\\b[^>]*>.*?</style>", " ", fragment, flags=re.I | re.S)
+    fragment = re.sub(r"<script\b[^>]*>.*?</script>", " ", fragment, flags=re.I | re.S)
+    fragment = re.sub(r"<style\b[^>]*>.*?</style>", " ", fragment, flags=re.I | re.S)
     fragment = re.sub(r"<[^>]+>", " ", fragment)
-    return re.sub(r"\\s+", " ", unescape(fragment)).strip()
+    return re.sub(r"\s+", " ", unescape(fragment)).strip()
 
 
 def _number(value):
-    match = re.search(r"[-+]?\\d+(?:[.,]\\d+)?", value or "")
+    match = re.search(r"[-+]?\d+(?:[.,]\d+)?", value or "")
     if not match:
         return None
     try:
@@ -99,7 +99,7 @@ def fetch_enka_station_observation():
     page_text = _clean_html(page)
 
     timestamp_match = re.search(
-        r"As\\s+of\\s*:?\\s*(\\d{1,2}/\\d{1,2}/\\d{2,4})\\s+(\\d{1,2}:\\d{2})",
+        r"As\s+of\s*:?\s*(\d{1,2}/\d{1,2}/\d{2,4})\s+(\d{1,2}:\d{2})",
         page_text,
         flags=re.I,
     )
@@ -121,8 +121,8 @@ def fetch_enka_station_observation():
     # First parse the traditional HTML table. ENKA has used more than one
     # table layout, so text-pattern fallbacks below cover the rendered layout.
     rows = []
-    for row_html in re.findall(r"<tr\\b[^>]*>(.*?)</tr>", page, flags=re.I | re.S):
-        cells = re.findall(r"<t[dh]\\b[^>]*>(.*?)</t[dh]>", row_html, flags=re.I | re.S)
+    for row_html in re.findall(r"<tr\b[^>]*>(.*?)</tr>", page, flags=re.I | re.S):
+        cells = re.findall(r"<t[dh]\b[^>]*>(.*?)</t[dh]>", row_html, flags=re.I | re.S)
         cleaned = [_clean_html(cell) for cell in cells]
         if len(cleaned) >= 2:
             rows.append(cleaned)
@@ -138,7 +138,7 @@ def fetch_enka_station_observation():
         elif "wind - 10 min avg" in label or "wind – 10 min avg" in label:
             wind_knots = _number(value)
         elif label == "wind":
-            direction = re.match(rf"\\s*({WIND_PATTERN})\\b", value, flags=re.I)
+            direction = re.match(rf"\s*({WIND_PATTERN})\b", value, flags=re.I)
             if direction:
                 wind_direction = direction.group(1).upper()
             if wind_knots is None:
@@ -153,21 +153,21 @@ def fetch_enka_station_observation():
     if temperature is None:
         temperature = _text_number(
             page_text,
-            r"\\bDay\\s+Temperature\\s*: ?([-+]?\\d+(?:[.,]\\d+)?)\\s*°?\\s*C\\b",
+            r"\bDay\s+Temperature\s*: ?([-+]?\d+(?:[.,]\d+)?)\s*°?\s*C\b",
         )
     if humidity is None:
         humidity = _text_number(
             page_text,
-            r"\\bHumidity\\s*: ?([-+]?\\d+(?:[.,]\\d+)?)\\s*%",
+            r"\bHumidity\s*: ?([-+]?\d+(?:[.,]\d+)?)\s*%",
         )
     if wind_knots is None:
         wind_knots = _text_number(
             page_text,
-            r"\\bWind\\s*[-–—]\\s*10\\s*Min(?:ute)?s?\\s*Avg\\.?\\s*: ?([-+]?\\d+(?:[.,]\\d+)?)\\s*kt\\b",
+            r"\bWind\s*[-–—]\s*10\s*Min(?:ute)?s?\s*Avg\.?\s*: ?([-+]?\d+(?:[.,]\d+)?)\s*kt\b",
         )
     if wind_direction is None:
         direction_match = re.search(
-            rf"\\bWind\\s+({WIND_PATTERN})\\s+[-+]?\\d+(?:[.,]\\d+)?\\s*kt\\b",
+            rf"\bWind\s+({WIND_PATTERN})\s+[-+]?\d+(?:[.,]\d+)?\s*kt\b",
             page_text,
             flags=re.I,
         )
@@ -176,12 +176,12 @@ def fetch_enka_station_observation():
     if daily_rain is None:
         daily_rain = _text_number(
             page_text,
-            r"\\bDaily\\s+Rain\\s*: ?([-+]?\\d+(?:[.,]\\d+)?)\\s*mm\\b",
+            r"\bDaily\s+Rain\s*: ?([-+]?\d+(?:[.,]\d+)?)\s*mm\b",
         )
     if pressure is None:
         pressure = _text_number(
             page_text,
-            r"\\bBarometer\\s*\\(hPa\\)\\s*: ?([-+]?\\d+(?:[.,]\\d+)?)",
+            r"\bBarometer\s*\(hPa\)\s*: ?([-+]?\d+(?:[.,]\d+)?)",
         )
 
     missing = [
@@ -318,7 +318,7 @@ def update_temperature_history(observation):
     }
     temporary_path = history_path.with_suffix(history_path.suffix + ".tmp")
     temporary_path.write_text(
-        json.dumps(document, ensure_ascii=False, indent=2, allow_nan=False) + "\\n",
+        json.dumps(document, ensure_ascii=False, indent=2, allow_nan=False) + "\n",
         encoding="utf-8",
     )
     temporary_path.replace(history_path)
@@ -337,7 +337,7 @@ def main():
     }
     Path("public").mkdir(exist_ok=True)
     Path("public/station-observation.json").write_text(
-        json.dumps(document, ensure_ascii=False, indent=2) + "\\n",
+        json.dumps(document, ensure_ascii=False, indent=2) + "\n",
         encoding="utf-8",
     )
     update_temperature_history(observation)
