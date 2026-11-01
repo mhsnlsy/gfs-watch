@@ -1,6 +1,10 @@
 name: GFS Watch
 
 on:
+  push:
+    branches: [main]
+    paths:
+      - ".github/workflows/gfs-watch.yml"
   # Check NOAA every 15 minutes. Each run is a short retry; an unpublished f180
   # file is checked again automatically instead of exhausting one 90-minute window.
   schedule:
