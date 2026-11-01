@@ -394,6 +394,7 @@ def export_public_forecast_json(run_id, payload):
             "valid_time_istanbul": local_dt.isoformat(timespec="minutes"),
             "temperature_2m_c": values.get("temp"),
             "wind_speed_10m_kmh": values.get("wind"),
+            "wind_speed_850hpa_kmh": values.get("wind_850"),
             "precipitation_6h_mm": values.get("precip"),
         })
 
@@ -406,6 +407,7 @@ def export_public_forecast_json(run_id, payload):
             "temperature_max_c": daily.get("temp_max", [])[index],
             "precipitation_total_mm": daily.get("precip_sum", [])[index],
             "wind_speed_max_10m_kmh": daily.get("wind_max", [])[index],
+            "wind_speed_max_850hpa_kmh": daily.get("wind_850_max", [None] * len(dates))[index],
         })
 
     model_metadata = payload.get("model_metadata", {})
