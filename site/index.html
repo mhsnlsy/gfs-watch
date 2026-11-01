@@ -355,12 +355,12 @@
 .next-72h-head h2{font-size:20px;margin-top:5px}
 .next-72h-head p{font-size:9px;color:var(--muted);margin:5px 0 0}
 .next-72h-badge{font-size:9px;color:#b8d7df;border:1px solid var(--line);padding:6px 8px;border-radius:8px;white-space:nowrap}
-.next-72h-grid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:9px}
-.next-72h-card{position:relative;min-width:0;padding:9px 9px 7px;border:1px solid rgba(204,225,239,.08);border-radius:12px;background:rgba(4,19,29,.17)}
+.next-72h-grid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:16px 20px}
+.next-72h-card{position:relative;min-width:0;padding:12px 10px 9px;border:1px solid rgba(204,225,239,.08);border-radius:14px;background:rgba(4,19,29,.17)}
 .next-72h-card-head{display:flex;align-items:center;justify-content:space-between;gap:8px}
-.next-72h-card-head h3{font:700 12px Manrope,sans-serif;margin:0}
+.next-72h-card-head h3{font:700 14px Manrope,sans-serif;margin:0}
 .next-72h-card-head span{font-size:8px;color:var(--muted)}
-.next-72h-chart{height:138px;width:100%;margin-top:4px;min-width:0}
+.next-72h-chart{height:190px;width:100%;margin-top:8px;min-width:0}
 .next-72h-chart svg{display:block;width:100%;height:100%;overflow:visible}
 @media(max-width:900px){.dashboard-top{grid-template-columns:minmax(0,1fr)}.dashboard-left{display:contents}.dashboard-left .station-card{order:0}.next-72h-panel{order:1}.dashboard-left .history-panel{order:2}}
 @media(max-width:560px){.dashboard-top{gap:10px;padding:16px 0 12px}.dashboard-left .history-chart{height:88px}.next-72h-panel{padding:11px;border-radius:16px}.next-72h-head h2{font-size:18px}.next-72h-grid{gap:7px}.next-72h-card{padding:8px 6px 6px}.next-72h-card-head h3{font-size:11px}.next-72h-chart{height:120px}}
@@ -442,10 +442,10 @@
       }
       .next-72h-head h2{font-size:19px;white-space:normal}
       .next-72h-badge{white-space:normal;line-height:1.35}
-      .next-72h-grid{gap:12px 14px}
+      .next-72h-grid{grid-template-columns:minmax(0,1fr);gap:18px}
       .next-72h-card{padding:2px 1px 0!important}
-      .next-72h-chart{height:108px;margin-top:2px}
-      .next-72h-card-head h3{font-size:12px}
+      .next-72h-chart{height:172px;margin-top:6px}
+      .next-72h-card-head h3{font-size:14px}
       .chart-tooltip{min-width:146px;max-width:min(190px,calc(100vw - 44px));padding:7px 8px}
       .station-history-tooltip{min-width:132px;max-width:min(182px,calc(100vw - 44px));padding:8px 9px;font-size:10px}
       .station-history-tooltip-value{font-size:13px}
@@ -523,8 +523,7 @@
         <div class="next-72h-grid">
           <article class="next-72h-card"><div class="next-72h-card-head"><h3>Sıcaklık</h3><span>°C</span></div><div class="next-72h-chart" id="next72-temperature"><div class="chart-empty">Tahmin bekleniyor…</div></div></article>
           <article class="next-72h-card"><div class="next-72h-card-head"><h3>Yağış</h3><span>mm / 3 saat</span></div><div class="next-72h-chart" id="next72-precipitation"><div class="chart-empty">Tahmin bekleniyor…</div></div></article>
-          <article class="next-72h-card"><div class="next-72h-card-head"><h3>Rüzgâr hızı</h3><span>km/sa</span></div><div class="next-72h-chart" id="next72-wind-speed"><div class="chart-empty">Tahmin bekleniyor…</div></div></article>
-          <article class="next-72h-card"><div class="next-72h-card-head"><h3>Rüzgâr yönü</h3><span>pusula yönü</span></div><div class="next-72h-chart" id="next72-wind-direction"><div class="chart-empty">Yön verisi bekleniyor…</div></div></article>
+
         </div>
       </section>
     </section>
@@ -916,13 +915,11 @@
     function renderNext72Hours(){
       const meta=$("next-72h-meta"),points=forecastData&&Array.isArray(forecastData.forecast_6_hourly)?forecastData.forecast_6_hourly:[];
       const hourly=points.map(p=>({...p,lead:Number(p.forecast_hour)})).filter(p=>Number.isFinite(p.lead)&&p.lead>=0&&p.lead<=72).sort((a,b)=>a.lead-b.lead),endpoints=hourly.filter(p=>p.lead%3===0);
-      if(endpoints.length<2){["next72-temperature","next72-precipitation","next72-wind-speed","next72-wind-direction"].forEach(id=>$(id).innerHTML='<div class="chart-empty">72 saatlik tahmin verisi bekleniyor…</div>');if(meta)meta.textContent="Tahmin verisi eksik";return;}
+      if(endpoints.length<2){["next72-temperature","next72-precipitation"].forEach(id=>$(id).innerHTML='<div class="chart-empty">72 saatlik tahmin verisi bekleniyor…</div>');if(meta)meta.textContent="Tahmin verisi eksik";return;}
       const temperature=endpoints.filter(p=>numeric(p.temperature_2m_c)).map(p=>({lead:p.lead,time:p.valid_time_utc,value:p.temperature_2m_c,label:fmt(p.temperature_2m_c,1)+" °C"}));
-      const wind=endpoints.filter(p=>numeric(p.wind_speed_10m_kmh)).map(p=>({lead:p.lead,time:p.valid_time_utc,value:p.wind_speed_10m_kmh,label:fmt(p.wind_speed_10m_kmh,1)+" km/sa"}));
       const rain=[];endpoints.filter(p=>p.lead>0).forEach(p=>{const interval=hourly.filter(q=>q.lead>p.lead-3&&q.lead<=p.lead);if(interval.length!==3||interval.some(q=>!numeric(q.precipitation_6h_mm)))return;const amount=interval.reduce((sum,q)=>sum+q.precipitation_6h_mm,0);rain.push({lead:p.lead,time:p.valid_time_utc,value:amount,label:fmt(amount,2)+" mm / 3 saat"});});
-      const direction=endpoints.filter(p=>numeric(p.wind_direction_10m_deg)).map(p=>({lead:p.lead,time:p.valid_time_utc,value:p.wind_direction_10m_deg,label:windCompassLabel(p.wind_direction_10m_deg),detail:fmt(p.wind_direction_10m_deg,0)+"°"}));
       if(meta)meta.textContent="GFS döngüsü · "+timeTR(forecastData.run_id_utc)+" TSİ · 3 saatlik adımlar";
-      drawNext72Line("next72-temperature",temperature,"#7dd3d7","Sıcaklık °C");drawNext72Line("next72-precipitation",rain,"#83c9eb","Yağış mm");drawNext72Line("next72-wind-speed",wind,"#e6bd83","Rüzgâr km/sa");drawNext72Direction("next72-wind-direction",direction);
+      drawNext72Line("next72-temperature",temperature,"#7dd3d7","Sıcaklık °C");drawNext72Line("next72-precipitation",rain,"#83c9eb","Yağış mm");
     }
     function drawNext72Line(targetId,data,color,label){
       const holder=$(targetId);if(data.length<2){holder.innerHTML='<div class="chart-empty">Bu değişken için yeterli tahmin noktası yok.</div>';return;}
