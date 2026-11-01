@@ -30,7 +30,7 @@ jobs:
         with:
           python-version: "3.12"
       - name: Validate Python syntax
-        run: python -m py_compile main.py scripts/update_station_observation.py
+        run: python -m py_compile main.py scripts/update_station_observation.py scripts/archive_latest_telegram_report.py
       - name: Validate website JavaScript syntax
         run: |
           python - <<'PY'
