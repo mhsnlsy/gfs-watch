@@ -293,33 +293,21 @@
       return distance<50?"İstanbul'un yakın çevresinde":"İstanbul'un yaklaşık "+Math.round(distance)+" km "+directions[Math.floor((bearing+22.5)/45)%8]+" yönünde";
     }
     function readablePressureFinding(value){
-      const match=String(value).match(/\(\s*(-?\d+(?:\.\d+)?)°N\s*,\s*(-?\d+(?:\.\d+)?)°E\s*\)/i);
-      if(!match)return {text:String(value),legacy:false};
-      const latitude=Number(match[1]),longitude=Number(match[2]);
-      const location=pressureRegionName(latitude,longitude);
-      const relative=pressureRelativeToIstanbul(latitude,longitude);
-      let text=String(value).replace(match[0],"— "+location+"; "+relative+".");
-      if(/^Yüksek basınç/i.test(text))text+=" Yüksek basınç çoğunlukla daha kararlı ve daha az bulutlu koşulları destekler.";
-      else if(/^Alçak basınç/i.test(text))text+=" Alçak basınç yükselici hava hareketini, bulutlanmayı ve yağış ihtimalini artırabilir.";
-      return {text,legacy:true};
+      const text=String(value);
+      const amount=text.match(/(\d+(?:\.\d+)?)\s*hPa/i);
+      if(!amount)return {text,legacy:false};
+      if(/yüksek basınç|en yüksek basınç/i.test(text)){
+        return {text:"Yüksek basınç: "+amount[1]+" hPa",legacy:true};
+      }
+      if(/alçak basınç|en düşük basınç/i.test(text)){
+        return {text:"Alçak basınç: "+amount[1]+" hPa",legacy:true};
+      }
+      return {text,legacy:false};
     }
     function renderFindings(findings,istanbulPressure){
       const list=$("pressure-findings");
       if(!Array.isArray(findings)||!findings.length){list.innerHTML='<li class="pressure-empty">Bu tahmin döngüsü için bölgesel basınç yorumu bulunmuyor.</li>';return;}
-      const readable=findings.map(readablePressureFinding);
-      const items=readable.map(item=>item.text);
-      if(readable.some(item=>item.legacy)){
-        const pressureValues=items.map(text=>{const match=text.match(/(?:merkezi|değeri):\s*(\d+(?:\.\d+)?)\s*hPa/i);return match?Number(match[1]):null;}).filter(value=>Number.isFinite(value));
-        let summary="";
-        if(typeof istanbulPressure==="number"&&Number.isFinite(istanbulPressure)){
-          summary="İstanbul'daki GFS başlangıç basıncı "+istanbulPressure.toFixed(1)+" hPa.";
-        }
-        if(pressureValues.length>=2){
-          summary+=(summary?" ":"")+"İncelenen bölgedeki en yüksek ve en düşük basınç arasındaki fark "+(Math.max(...pressureValues)-Math.min(...pressureValues)).toFixed(1)+" hPa.";
-        }
-        if(summary)items.push(summary);
-        items.push("Yüksek ve alçak basınç merkezleri bölgesel eğilimi gösterir; İstanbul'da yağış veya açık hava garantisi değildir. Etki, rüzgâr yönü ve cephelerin konumuyla belirlenir.");
-      }
+      const items=findings.map(readablePressureFinding).map(item=>item.text);
       list.innerHTML=items.map(text=>'<li><span class="pressure-icon">◈</span><span>'+esc(text)+'</span></li>').join("");
     }
     function renderChart(metric,targetId){
