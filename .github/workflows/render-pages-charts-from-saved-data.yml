@@ -1,4 +1,5 @@
 name: Re-render latest Pages charts from saved data
+# Rebuild after full chart-layout reset; preserve the existing typography.
 
 on:
   push:
