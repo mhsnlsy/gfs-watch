@@ -5,7 +5,7 @@
   "sampling_interval_minutes": 5,
   "aggregation_interval_minutes": 60,
   "retention_days": 7,
-  "updated_at_utc": "2026-11-01T11:30:14+00:00",
+  "updated_at_utc": "2026-11-01T11:35:13+00:00",
   "samples": [
     {
       "logged_at_utc": "2026-11-01T02:42:33+00:00",
@@ -376,6 +376,11 @@
       "logged_at_utc": "2026-11-01T11:30:14+00:00",
       "observed_at_utc": "2026-11-01T11:25:00+00:00",
       "temperature_2m_c": 18.4
+    },
+    {
+      "logged_at_utc": "2026-11-01T11:35:13+00:00",
+      "observed_at_utc": "2026-11-01T11:30:00+00:00",
+      "temperature_2m_c": 18.6
     }
   ]
 }
