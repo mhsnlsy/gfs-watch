@@ -39,9 +39,7 @@ function parseObservation(text, fetchedAt) {
   const windIndex = windDegrees === null ? null : Math.floor((windDegrees + 11.25) / 22.5) % 16;
   const dailyRain = parseNumber(text.match(/Bugün\s*([-+]?\d+(?:[,.]\d+)?)\s*mm\s*yağdı/i), "günlük yağış");
   const oneHourRain = parseNumber(text.match(/1sa\s*([-+]?\d+(?:[,.]\d+)?)/i), "1 saatlik yağış", false);
-  const pressureContext = text.match(/Deniz Seviyesi Basıncı[\\s\\S]{0,100}/i)?.[0] || "label not found";
-  console.log("[WSTAT PRESSURE CONTEXT]", JSON.stringify(pressureContext));
-  const pressure = parseNumber(text.match(/Deniz Seviyesi Basıncı[\\s\\S]{0,100}?(\\d{3,4}(?:[,.]\\d+)?)/i), "deniz seviyesi basıncı", false);
+  const pressure = parseNumber(text.match(/Deniz Seviyesi Basıncı[\s\S]{0,100}?(\d{3,4}(?:[,.]\d+)?)/i), "deniz seviyesi basıncı", false);
 
   const ageMatch = text.match(/Canlı\s*[·•]\s*(\d+)\s*dk\.?\s*önce\s*[·•]\s*18101/i)
     || text.match(/Canlı\s*[·•]\s*(\d+)\s*dk\.?\s*önce/i);
