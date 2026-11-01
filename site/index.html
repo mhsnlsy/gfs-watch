@@ -203,7 +203,7 @@
   <main class="shell">
     <section class="hero">
       <div><div class="eyebrow"><span class="dot"></span> Canlı yerel istasyon gözlemi</div><h1>Şehrin havasını<br><span>önceden görün.</span></h1><p class="intro">Balmumcu'daki ENKA meteoroloji istasyonundan alınan gerçek ölçümler. Bu kart yalnızca istasyon gözlemlerini gösterir; model tahminleri aşağıdaki ayrı bölümlerde sunulur.</p><div class="hero-meta"><span class="meta-chip">Gerçek ölçüm</span><span class="meta-chip">ENKA Balmumcu · İstanbul</span></div></div>
-      <article class="weather-card station-card" role="region" aria-labelledby="station-card-title"><div class="weather-top"><div><div class="label">GERÇEK İSTASYON GÖZLEMİ</div><div class="place" id="station-card-title">ENKA Balmumcu · İstanbul</div></div><span class="model-state" id="freshness">Veri bekleniyor</span></div><div class="station-overview"><div class="station-current"><div class="temp-row"><div class="temperature" id="temperature">—°</div><div class="weather-symbol" id="weather-symbol" aria-hidden="true">☁️</div></div><div class="temp-caption" id="station-observation-meta">Son istasyon ölçümü bekleniyor</div></div><div class="station-trend"><div class="station-trend-head"><span class="station-trend-title">24 SAATLİK SICAKLIK</span><span class="station-trend-unit">90 DK</span></div><div class="station-trend-chart-wrap"><div id="station-temperature-trend" class="station-trend-graph" role="img" aria-label="ENKA Balmumcu son 24 saat sıcaklık trendi, 90 dakikalık dilimler halinde"><div class="station-trend-empty">İlk sıcaklık kayıtları bekleniyor…</div></div></div><div class="station-trend-source" id="station-trend-meta">Ortalama · min / maks</div></div></div><div class="weather-stats"><div class="stat"><div class="name">Rüzgâr</div><div class="value" id="wind">—<span class="unit">km/sa</span></div><div class="detail" id="wind-direction">—</div></div><div class="stat"><div class="name">Nem</div><div class="value" id="humidity">—<span class="unit">%</span></div></div><div class="stat"><div class="name">Yağış</div><div class="value" id="rain">—<span class="unit">mm</span></div><div class="detail">Bugün</div></div><div class="stat"><div class="name">Basınç</div><div class="value" id="pressure">—<span class="unit">hPa</span></div></div></div><div class="station-alert" id="station-alert" role="status" aria-live="polite" hidden></div></article>
+      <article class="weather-card station-card" role="region" aria-labelledby="station-card-title"><div class="weather-top"><div><div class="label">GERÇEK İSTASYON GÖZLEMİ</div><div class="place" id="station-card-title">ENKA Balmumcu · İstanbul</div></div><span class="model-state" id="freshness">Veri bekleniyor</span></div><div class="station-overview"><div class="station-current"><div class="temp-row"><div class="temperature" id="temperature">—°</div><div class="weather-symbol" id="weather-symbol" aria-hidden="true">☁️</div></div><div class="temp-caption" id="station-observation-meta">Son istasyon ölçümü bekleniyor</div></div><div class="station-trend"><div class="station-trend-head"><span class="station-trend-title">24 SAATLİK SICAKLIK</span><span class="station-trend-unit">60 DK</span></div><div class="station-trend-chart-wrap"><div id="station-temperature-trend" class="station-trend-graph" role="img" aria-label="ENKA Balmumcu son 24 saat sıcaklık trendi, 60 dakikalık dilimler halinde"><div class="station-trend-empty">İlk sıcaklık kayıtları bekleniyor…</div></div></div><div class="station-trend-source" id="station-trend-meta">Ortalama · min / maks</div></div></div><div class="weather-stats"><div class="stat"><div class="name">Rüzgâr</div><div class="value" id="wind">—<span class="unit">km/sa</span></div><div class="detail" id="wind-direction">—</div></div><div class="stat"><div class="name">Nem</div><div class="value" id="humidity">—<span class="unit">%</span></div></div><div class="stat"><div class="name">Yağış</div><div class="value" id="rain">—<span class="unit">mm</span></div><div class="detail">Bugün</div></div><div class="stat"><div class="name">Basınç</div><div class="value" id="pressure">—<span class="unit">hPa</span></div></div></div><div class="station-alert" id="station-alert" role="status" aria-live="polite" hidden></div></article>
     </section>
     <section class="section" id="tahmin"><div class="section-head"><div><div class="section-kicker">NOAA / NCEP GFS · MODEL TAHMİNİ</div><h2>8 günlük tahmin</h2></div><div class="section-note"><span id="cycle-chip">Model döngüsü yükleniyor</span><br><span id="updated-chip">Yayın zamanı bekleniyor</span><br>Günlük en düşük / en yüksek sıcaklık</div></div><div class="daily-grid" id="daily-grid"><div class="loading">Tahmin verisi yükleniyor…</div></div></section>
     <section class="section" id="bildirimler">
@@ -304,7 +304,7 @@
       if(!holder)return;
       const now=Date.now();
       const windowMs=24*60*60*1000;
-      const bucketMs=90*60*1000;
+      const bucketMs=60*60*1000;
       const start=now-windowMs;
       const valid=(Array.isArray(samples)?samples:[])
         .map(sample=>({
@@ -333,7 +333,7 @@
         mean:bin.values.length?bin.values.reduce((sum,value)=>sum+value,0)/bin.values.length:null
       })).filter(bin=>bin.count);
 
-      if(meta)meta.textContent=valid.length+" kayıt · 90 dk dilimler · ortalama ve min–maks";
+      if(meta)meta.textContent=valid.length+" kayıt · 60 dk dilimler · ortalama ve min–maks";
       if(!populated.length){
         holder.innerHTML='<div class="station-trend-empty">İlk sıcaklık kaydı bekleniyor. ENKA ölçümü geldikçe grafik dolacak.</div>';
         return;
@@ -402,7 +402,7 @@
       const lastValue=fmt(last.temperature,1);
       const latestMarker='<circle cx="'+lastX.toFixed(1)+'" cy="'+lastY.toFixed(1)+'" r="7" fill="rgba(164,231,213,.16)" stroke="#a4e7d5" stroke-width="1.2"/><circle cx="'+lastX.toFixed(1)+'" cy="'+lastY.toFixed(1)+'" r="3.2" fill="#f1fff9"/>';
       holder.innerHTML='<svg viewBox="0 0 '+width+' '+height+'" role="img" aria-label="Son 24 saat sıcaklık geçmişi; 90 dakikalık dilimlerde ortalama, minimum ve maksimum değerler"><defs><linearGradient id="station-trend-line" x1="0" x2="1" y1="0" y2="0"><stop offset="0%" stop-color="#6caeb7"/><stop offset="100%" stop-color="#b8f0dd"/></linearGradient><linearGradient id="station-trend-area" x1="0" x2="0" y1="0" y2="1"><stop offset="0%" stop-color="#8edbd2" stop-opacity=".22"/><stop offset="100%" stop-color="#8edbd2" stop-opacity=".015"/></linearGradient></defs>'+verticalGrid+horizontalGrid+'<path d="'+areaPaths+'" fill="url(#station-trend-area)"/>'+ranges+'<path d="'+meanPaths+'" fill="none" stroke="url(#station-trend-line)" stroke-width="3.2" stroke-linecap="round" stroke-linejoin="round"/>'+meanPoints+latestMarker+timeLabels+'</svg>';
-      if(meta)meta.textContent=valid.length+" kayıt · son ölçüm "+lastValue+" °C ("+lastTime+") · 90 dk ortalama / min–maks";
+      if(meta)meta.textContent=valid.length+" kayıt · son ölçüm "+lastValue+" °C ("+lastTime+") · 60 dk ortalama / min–maks";
     }
     function render(data){
       forecastData=data;
