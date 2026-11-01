@@ -302,7 +302,13 @@
         button.disabled=true;
         return;
       }
-      if(pushApiUrl&&Notification.permission==="granted"){
+      if(Notification.permission==="granted"){
+        if(!pushApiUrl){
+          $("notification-status").textContent="Tarayıcı bildirimi açık; GFS bildirim sunucusuna bağlantı yapılandırılmamış.";
+          button.textContent="Sunucu bağlantısını kontrol et";
+          button.disabled=false;
+          return;
+        }
         try{
           const subscription=await notificationRegistration.pushManager.getSubscription();
           if(subscription){
@@ -311,7 +317,16 @@
             button.disabled=true;
             return;
           }
-        }catch(_){}
+          $("notification-status").textContent="Tarayıcı bildirimi açık; GFS cihaz aboneliği henüz tamamlanmamış.";
+          button.textContent="GFS bildirimlerini etkinleştir";
+          button.disabled=false;
+          return;
+        }catch(_){
+          $("notification-status").textContent="Tarayıcı izni açık; cihaz aboneliği okunamadı. Yeniden deneyebilirsin.";
+          button.textContent="GFS bildirimlerini yeniden dene";
+          button.disabled=false;
+          return;
+        }
       }
       $("notification-status").textContent="Yalnızca yeni GFS raporları için bildirim";
       button.textContent="Cihaz bildirimlerini aç";
@@ -325,13 +340,13 @@
         const permission=Notification.permission==="granted"?"granted":await Notification.requestPermission();
         if(permission!=="granted")throw new Error("Bildirim izni verilmedi.");
         if(!pushApiUrl)await loadPushConfig();
-        if(!pushApiUrl)throw new Error("Bildirim kurulumu şu anda tamamlanamıyor. Biraz sonra yeniden dene.");
+        if(!pushApiUrl)throw new Error("Tarayıcı bildirimi açık; ancak GFS bildirim sunucusu adresi Pages ayarına ulaşmamış. PUSH_API_URL değişkenini kontrol edip siteyi yeniden dağıtmak gerekiyor.");
         const registration=notificationRegistration||await navigator.serviceWorker.ready;
         if(!registration.pushManager)throw new Error("Bu tarayıcı arka plan bildirimlerini desteklemiyor.");
         const keyResponse=await fetch(pushApiUrl+"/vapid-public-key",{cache:"no-store"});
-        if(!keyResponse.ok)throw new Error("Bildirim kurulumu şu anda tamamlanamıyor.");
+        if(!keyResponse.ok)throw new Error("GFS sunucusu VAPID anahtarını vermedi (HTTP "+keyResponse.status+"). Sunucu yapılandırmasını kontrol etmek gerekiyor.");
         const keyData=await keyResponse.json();
-        if(!keyData.publicKey)throw new Error("Bildirim kurulumu şu anda tamamlanamıyor.");
+        if(!keyData.publicKey)throw new Error("GFS sunucusundan VAPID public key gelmedi. Sunucu anahtarlarını kontrol etmek gerekiyor.");
         let subscription=await registration.pushManager.getSubscription();
         if(!subscription){
           subscription=await registration.pushManager.subscribe({
@@ -344,7 +359,7 @@
           headers:{"Content-Type":"application/json"},
           body:JSON.stringify(subscription)
         });
-        if(!saved.ok)throw new Error("Cihaz aboneliği kaydedilemedi. Yeniden deneyebilirsin.");
+        if(!saved.ok)throw new Error("Cihaz aboneliği sunucuya kaydedilemedi (HTTP "+saved.status+"). Bağlantı veya sunucu ayarlarını kontrol etmek gerekiyor.");
         $("notification-status").textContent="GFS bildirimleri etkin · Sayfa kapalıyken de gönderilebilir.";
         button.textContent="GFS bildirimleri açık";
         button.disabled=true;
