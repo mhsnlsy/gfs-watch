@@ -40,13 +40,14 @@ jobs:
           python -u enka_weather.py
         env:
           PYTHONPATH: .
+          STATION_TEMPERATURE_HISTORY_PATH: forecast-data/public/station-temperature-history.json
       - name: Publish fresh station observation
         run: |
           cp public/station-observation.json forecast-data/public/station-observation.json
           cd forecast-data
           git config user.name "github-actions[bot]"
           git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
-          git add public/station-observation.json
+          git add public/station-observation.json public/station-temperature-history.json
           if git diff --cached --quiet; then
             echo "ENKA observation has not changed."
             exit 0
