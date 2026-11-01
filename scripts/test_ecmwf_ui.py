@@ -32,12 +32,19 @@ def main() -> None:
         'id="next72-wind-direction"',
         'function renderNext72Hours()',
         'wind_direction_10m_deg',
-        'id="ecmwf-comparison-temperature-chart"',
-        'id="ecmwf-comparison-precipitation-chart"',
         'id="ecmwf-comparison-wind10-chart"',
         'id="ecmwf-comparison-wind850-chart"',
         'function renderEcmwfComparisonChart(metric,targetId,history)',
         'document.comparison_runs',
+        'renderEcmwfComparisonChart("wind10","ecmwf-comparison-wind10-chart",comparisonRuns)',
+        'renderEcmwfComparisonChart("wind850","ecmwf-comparison-wind850-chart",comparisonRuns)',
+        'function scheduleTouchChartTooltipDismiss(hideFn)',
+        'window.setTimeout(dismissActiveTouchChartTooltip,2800)',
+        'station-chart-hit-area',
+        'id="tahmin"',
+        'id="basinc"',
+        'id="ecmwf-tahmin"',
+        'id="ecmwf-basinc"',
         'id="ecmwf-pressure-findings"',
         'id="ecmwf-valid-until"',
         'const ECMWF_DATA_URL="./data/ecmwf/latest.json";',
@@ -50,7 +57,6 @@ def main() -> None:
         'function renderDaily(items,targetId="daily-grid")',
         'function renderChart(metric,targetId,sourceData=forecastData)',
         'renderDaily(viewData.daily_summary,"ecmwf-daily-grid")',
-        'renderEcmwfComparisonChart("precipitation","ecmwf-comparison-precipitation-chart",comparisonRuns)',
         'renderFindings(viewData.regional_pressure_analysis&&viewData.regional_pressure_analysis.findings,first.mslp&&first.mslp.mean_hpa,"ecmwf-pressure-findings")',
         'http-equiv="refresh" content="300"',
     )
@@ -76,11 +82,37 @@ def main() -> None:
 
     gfs = html[html.index('<div id="gfs-model-view">'):html.index('<div id="ecmwf-model-view"')]
     ecmwf = html[html.index('<div id="ecmwf-model-view"'):html.index("</main>")]
-    for shared_class in ('class="section"', 'class="section-head"', 'class="chart-stack"',
-                         'class="chart-card"', 'class="lower-grid"', 'class="pressure-card"',
-                         'class="info-card"', 'class="daily-grid"'):
+    for shared_class in ('class="section"', 'class="section-head"', 'class="lower-grid"',
+                         'class="pressure-card"', 'class="info-card"', 'class="daily-grid"'):
         if shared_class not in gfs or shared_class not in ecmwf:
             raise AssertionError(f"GFS/ECMWF layout mismatch: {shared_class}")
+
+    # The old 180-hour surface temperature/precipitation charts were intentionally removed.
+    removed_charts = (
+        'id="seyir"',
+        'id="temperature-chart"',
+        'id="precipitation-chart"',
+        'id="ecmwf-comparison-temperature-chart"',
+        'id="ecmwf-comparison-precipitation-chart"',
+        'renderEcmwfComparisonChart("temperature"',
+        'renderEcmwfComparisonChart("precipitation"',
+    )
+    remaining = [item for item in removed_charts if item in html]
+    if remaining:
+        raise AssertionError("Removed 180-hour charts still present: " + ", ".join(remaining))
+
+    if 'id="tahmin"' not in gfs or gfs.index('id="tahmin"') < gfs.index('id="basinc"'):
+        raise AssertionError("GFS eight-day forecast must be the final model section.")
+    if 'id="ecmwf-tahmin"' not in ecmwf or ecmwf.index('id="ecmwf-tahmin"') < ecmwf.index('id="ecmwf-basinc"'):
+        raise AssertionError("ECMWF eight-day forecast must be the final model section.")
+    if 'class="chart-stack"' in gfs or 'class="chart-card"' in gfs:
+        raise AssertionError("GFS legacy 180-hour graph card container remains.")
+    if 'class="chart-stack"' not in ecmwf or 'class="chart-card"' not in ecmwf:
+        raise AssertionError("The remaining ECMWF wind comparison charts are missing.")
+    if '.next-72h-card{\n      border:0!important' not in html or '.chart-stack>.chart-card{\n      border:0!important' not in html:
+        raise AssertionError("Mobile chart cards must be frameless.")
+    if html.count('document.addEventListener("pointerdown"') != 1 or html.count('window.addEventListener("scroll"') != 1:
+        raise AssertionError("Touch tooltip dismissal must use singleton global listeners.")
 
     for section_id in ("ecmwf-tahmin", "ecmwf-seyir", "ecmwf-basinc"):
         if f'id="{section_id}"' not in ecmwf:
@@ -108,8 +140,9 @@ def main() -> None:
     assert abs(direction_from_uv(0.0, 1.0) - 180.0) < 1e-9
     assert abs(direction_from_uv(1.0, 0.0) - 270.0) < 1e-9
 
-    print("[ECMWF UI SMOKE] GFS/ECMWF shared card and section layout, model selector, "
-          "persistent choice, 5-minute refresh, 55-step contract and unique IDs passed.")
+    print("[ECMWF UI SMOKE] model selector, daily forecast ordering, 72-hour charts, "
+          "frameless mobile layout, touch tooltip dismissal, ECMWF wind comparison, "
+          "55-step contract and unique IDs passed.")
 
 
 if __name__ == "__main__":
