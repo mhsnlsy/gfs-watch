@@ -263,6 +263,7 @@
     .history-chart{height:170px;width:100%;margin-top:5px;min-width:0}
     .history-chart svg{width:100%;height:100%;display:block;overflow:visible}
     .history-chart-meta{font-size:9px;color:#91aab5;line-height:1.4;margin-top:2px;min-height:0}
+    .history-source-note{font-size:9px;color:#8ea8b5;line-height:1.45;margin-top:8px}
     /* Align the ENKA trend panel's top edge and heading with the live station card. */
     .dashboard-top .history-panel{
       align-self:start;
@@ -358,6 +359,7 @@
           <article class="history-chart-card"><div class="history-chart-head"><div><h3>Sıcaklık</h3><p>°C · saatlik ortalama, min–maks</p></div><span class="history-chart-icon">℃</span></div><div class="history-chart" id="station-temperature-trend"><div class="station-trend-empty">Sıcaklık kayıtları bekleniyor…</div></div><div class="history-chart-meta" id="station-trend-meta">Seçili istasyonun ölçüm geçmişi</div></article>
           <article class="history-chart-card"><div class="history-chart-head"><div><h3>Yağış</h3><p>mm · gün içindeki birikim</p></div><span class="history-chart-icon">☂</span></div><div class="history-chart" id="station-rain-trend"><div class="station-trend-empty">Yağış geçmişi oluşturuluyor…</div></div><div class="history-chart-meta" id="station-rain-meta">Günlük sayaçtan türetilen birikim; saatlik yağış değildir</div></article>
         </div>
+        <div class="history-source-note" id="history-source-note">Grafikler seçili istasyonun kendi gözlem arşivini kullanır.</div>
       </section>
     </section>
     <div id="gfs-model-view">
@@ -874,6 +876,9 @@
       const samples=activeStation==="eyupsultan"?eyupsultanStationHistorySamples:enkaStationHistorySamples;
       $("history-station-source").textContent=stationName.toLocaleUpperCase("tr-TR")+" · GERÇEK ÖLÇÜMLER";
       $("station-history-panel").setAttribute("aria-label",stationName+" son 24 saat geçmişi");
+      $("history-source-note").textContent=activeStation==="eyupsultan"
+        ?"Eyüpsultan 18101 için hazır geçmiş seri bulunmadığından grafik yeni kaynak ölçümleri geldikçe dolar; ilk 24 saatte arşiv kapsamı kademeli artar."
+        :"Grafikler ENKA Balmumcu istasyonunun kendi ölçüm arşivini kullanır.";
       renderStationTemperatureTrend(samples,stationName);
       renderStationRainTrend(samples,stationName);
     }
