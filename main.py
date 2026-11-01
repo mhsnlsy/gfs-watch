@@ -2322,7 +2322,7 @@ def create_pages_comparison_charts(current_run_id, payload, previous_runs):
             try:
                 fig.suptitle(
                     f"İSTANBUL GFS | {label.upper()} · SON {len(series)} DÖNGÜ",
-                    fontsize=27, fontweight="bold", y=0.98,
+                    fontsize=20, fontweight="bold", y=0.97,
                 )
                 if metric == "temperature":
                     _draw_comparison_temperature_axis(axis, chart_data)
@@ -2335,15 +2335,15 @@ def create_pages_comparison_charts(current_run_id, payload, previous_runs):
                 # Stronger typography and contrast for readable numeric values on desktop and mobile.
                 axis.set_facecolor("#fbfdff")
                 fig.patch.set_facecolor("#ffffff")
-                axis.set_title(title, loc="left", fontsize=25, fontweight="bold", color="#142b42", pad=15)
-                axis.set_ylabel(ylabel, fontsize=21, fontweight="bold", color="#142b42", labelpad=11)
+                axis.set_title(title, loc="left", fontsize=18, fontweight="bold", color="#142b42", pad=10)
+                axis.set_ylabel(ylabel, fontsize=16, fontweight="bold", color="#142b42", labelpad=7)
                 axis.tick_params(
-                    axis="y", which="major", labelsize=22, labelcolor="#102a43",
-                    width=1.1, length=5, colors="#526779", pad=7,
+                    axis="y", which="major", labelsize=15, labelcolor="#102a43",
+                    width=1.0, length=4, colors="#526779", pad=5,
                 )
                 axis.tick_params(
-                    axis="x", which="major", labelsize=20, labelcolor="#18364f",
-                    width=1.0, length=4, colors="#526779", pad=8,
+                    axis="x", which="major", labelsize=14, labelcolor="#18364f",
+                    width=0.9, length=3, colors="#526779", pad=5,
                     labelbottom=True,
                 )
                 for tick_label in axis.get_yticklabels():
@@ -2354,18 +2354,18 @@ def create_pages_comparison_charts(current_run_id, payload, previous_runs):
                 axis.set_axisbelow(True)
                 axis.legend(
                     handles=legend, loc="upper left", ncol=min(4, len(series)),
-                    fontsize=18.5, frameon=True, facecolor="#ffffff",
+                    fontsize=13, frameon=True, facecolor="#ffffff",
                     edgecolor="#d5e0e8", framealpha=0.94,
                     labelcolor="#17324a", borderpad=0.65, handlelength=2.4,
                 )
                 fig.text(
                     0.01, 0.012,
                     "Renkler her panelde aynı GFS döngüsünü gösterir | Kaynak: NOAA/NCEP GFS 0.25°",
-                    fontsize=15.5, color="#40566a",
+                    fontsize=10.5, color="#40566a",
                 )
-                fig.tight_layout(rect=(0, 0.06, 1, 0.90))
+                fig.subplots_adjust(left=0.085, right=0.985, bottom=0.14, top=0.87)
                 buffer = io.BytesIO()
-                fig.savefig(buffer, format="png", dpi=150, bbox_inches="tight")
+                fig.savefig(buffer, format="png", dpi=150)
                 buffer.seek(0)
                 charts[metric] = buffer
             finally:
