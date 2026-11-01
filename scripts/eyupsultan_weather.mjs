@@ -197,6 +197,24 @@ async function main() {
     if (/Just a moment|Checking your browser|Access denied/i.test(bodyText)) {
       throw new Error("WStatMap sayfası otomatik erişim doğrulaması gösterdi; veri alınmadı.");
     }
+    const mgmPage = await browser.newPage({
+      locale: "tr-TR",
+      timezoneId: "Europe/Istanbul",
+      viewport: { width: 1440, height: 1200 },
+      userAgent: "Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 Chrome/156.0.0.0 Safari/537.36"
+    });
+    try {
+      const mgmResponse = await mgmPage.goto("https://istanbul.mgm.gov.tr/sondurum/turkiye.aspx", { waitUntil: "domcontentloaded", timeout: 45000 });
+      await mgmPage.waitForTimeout(5000);
+      const mgmText = await mgmPage.locator("body").innerText();
+      const lines = mgmText.split("\\n");
+      const matchingLines = lines.map((line,index) => ({line,index})).filter(item => /eyüp|eyupsultan|18101/i.test(item.line));
+      console.log("[MGM PRESSURE PAGE]", JSON.stringify({status:mgmResponse?.status(),title:await mgmPage.title(),matchingLines,body:mgmText.slice(0,10000),resources:await mgmPage.evaluate(() => performance.getEntriesByType("resource").map(entry => entry.name).filter(name => /mgm|meteoroloji/i.test(name)))}));
+    } catch (error) {
+      console.log("[MGM PRESSURE PAGE ERROR]", String(error));
+    } finally {
+      await mgmPage.close();
+    }
     observation = parseObservation(bodyText, new Date());
   } finally {
     await browser.close();
