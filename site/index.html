@@ -731,7 +731,7 @@
       const start=now-windowMs;
       const valid=(Array.isArray(samples)?samples:[])
         .map(sample=>({
-          time:Date.parse(sample.logged_at_utc||sample.observed_at_utc||""),
+          time:Date.parse(sample.observed_at_utc||sample.logged_at_utc||""),
           temperature:Number(sample.temperature_2m_c)
         }))
         .filter(sample=>Number.isFinite(sample.time)&&Number.isFinite(sample.temperature)&&sample.time>=start&&sample.time<=now)
@@ -836,7 +836,7 @@
       if(!holder)return;
       const now=Date.now(),start=now-24*60*60*1000;
       const readings=(Array.isArray(samples)?samples:[]).map(sample=>({
-        time:Date.parse(sample.logged_at_utc||sample.observed_at_utc||""),
+        time:Date.parse(sample.observed_at_utc||sample.logged_at_utc||""),
         daily:Number(sample.precipitation_daily_mm)
       })).filter(x=>Number.isFinite(x.time)&&x.time>=start&&x.time<=now&&Number.isFinite(x.daily)&&x.daily>=0).sort((a,b)=>a.time-b.time);
       if(readings.length<2){
