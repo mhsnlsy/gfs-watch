@@ -658,7 +658,7 @@ def pressure_point_relative_to_istanbul(latitude, longitude):
 
 
 def analyse_regional_pressure_grid(pressure_grid):
-    """Analyse native NOAA GRIB2 MSLP and describe centres by geographic names."""
+    """Summarise regional pressure magnitudes without per-centre location or impact narration."""
     try:
         if not pressure_grid:
             raise ValueError("f000 GRIB2 içinde deniz seviyesi basınç alanı yok.")
@@ -674,7 +674,6 @@ def analyse_regional_pressure_grid(pressure_grid):
         ):
             raise ValueError("Basınç GRIB2 koordinat ve değer dizileri uyuşmuyor.")
 
-        # Great-circle distance from Istanbul.
         lat1 = math.radians(LAT)
         lat2 = np.radians(pressure_latitudes)
         delta_lat = lat2 - lat1
@@ -693,55 +692,24 @@ def analyse_regional_pressure_grid(pressure_grid):
             & np.isfinite(pressure_values)
         )
         if not np.any(inside):
-            raise ValueError("2.500 km çaplı dairenin içinde geçerli basınç noktası bulunamadı.")
+            raise ValueError("2.500 km çaplı alanın içinde geçerli basınç noktası bulunamadı.")
 
         regional_hpa = pressure_values[inside] / 100.0
-        regional_lats = pressure_latitudes[inside]
-        regional_lons = pressure_longitudes[inside]
         max_index = int(np.argmax(regional_hpa))
         min_index = int(np.argmin(regional_hpa))
-
         maximum = float(regional_hpa[max_index])
         minimum = float(regional_hpa[min_index])
-        max_region = pressure_region_name(
-            regional_lats[max_index], regional_lons[max_index]
-        )
-        min_region = pressure_region_name(
-            regional_lats[min_index], regional_lons[min_index]
-        )
-        max_relative = pressure_point_relative_to_istanbul(
-            regional_lats[max_index], regional_lons[max_index]
-        )
-        min_relative = pressure_point_relative_to_istanbul(
-            regional_lats[min_index], regional_lons[min_index]
-        )
 
         findings = []
         if maximum >= HIGH_PRESSURE_THRESHOLD_HPA:
-            findings.append(
-                f"Yüksek basınç merkezi: {maximum:.1f} hPa — {max_region}. "
-                f"{max_relative}. Yüksek basınçta hava alçalıcıdır; genellikle "
-                "daha kararlı, daha az bulutlu koşulları destekler."
-            )
+            findings.append(f'Yüksek basınç alanındaki en yüksek değer: {maximum:.1f} hPa.')
         else:
-            findings.append(
-                f"İncelenen alanın en yüksek basıncı: {maximum:.1f} hPa — "
-                f"{max_region}. {max_relative}. Bu değer belirgin yüksek basınç "
-                "eşiğine ulaşmıyor."
-            )
+            findings.append(f'İncelenen alanın en yüksek basıncı: {maximum:.1f} hPa.')
 
         if minimum <= LOW_PRESSURE_THRESHOLD_HPA:
-            findings.append(
-                f"Alçak basınç merkezi: {minimum:.1f} hPa — {min_region}. "
-                f"{min_relative}. Alçak basınçta hava yükselici hareket eğilimindedir; "
-                "bulutlanma ve yağış ihtimalini artırabilir."
-            )
+            findings.append(f'Alçak basınç alanındaki en düşük değer: {minimum:.1f} hPa.')
         else:
-            findings.append(
-                f"İncelenen alanın en düşük basıncı: {minimum:.1f} hPa — "
-                f"{min_region}. {min_relative}. Bu değer belirgin alçak basınç "
-                "eşiğine ulaşmıyor."
-            )
+            findings.append(f'İncelenen alanın en düşük basıncı: {minimum:.1f} hPa.')
 
         nearest_index = int(
             (
@@ -749,26 +717,15 @@ def analyse_regional_pressure_grid(pressure_grid):
                 + (((pressure_longitudes - LON + 180.0) % 360.0) - 180.0) ** 2
             ).argmin()
         )
-        centre_pressure_hpa = (
-            float(np.asarray(pressure_values[nearest_index]).item()) / 100.0
-        )
+        centre_pressure_hpa = float(pressure_values[nearest_index]) / 100.0
         findings.append(
-            f"İstanbul'daki GFS başlangıç basıncı {centre_pressure_hpa:.1f} hPa. "
-            f"İncelenen 2.500 km alandaki en yüksek ve en düşük değer arasındaki "
-            f"fark {maximum - minimum:.1f} hPa."
-        )
-        findings.append(
-            "Yüksek ve alçak basınç merkezleri bölgesel eğilimi gösterir; "
-            "İstanbul'da yağış veya açık hava garantisi değildir. Etki, "
-            "rüzgârın yönü, basınç dağılımı ve cephelerin konumuyla belirlenir."
+            f'İstanbul başlangıç basıncı: {centre_pressure_hpa:.1f} hPa; '
+            f'bölgesel en yüksek-en düşük basınç farkı: {maximum - minimum:.1f} hPa.'
         )
 
         print(
-            f"[BASINÇ GRIB2] 2.500 km çaplı alanda "
-            f"{int(np.count_nonzero(inside))} grid noktası; "
-            f"min {minimum:.1f}, max {maximum:.1f} hPa; "
-            f"İstanbul {centre_pressure_hpa:.1f} hPa; "
-            f"yüksek merkez {max_region}; düşük merkez {min_region}."
+            f'[BASINÇ GRIB2] 2.500 km çaplı alanda {int(np.count_nonzero(inside))} grid noktası; '
+            f'min {minimum:.1f}, max {maximum:.1f} hPa; İstanbul {centre_pressure_hpa:.1f} hPa.'
         )
         return findings, round(centre_pressure_hpa, 1)
     except Exception as exc:
