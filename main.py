@@ -45,6 +45,7 @@ MODEL_NAME = "ncep_gfs_global"
 # Selected GRIB2 messages are fetched from the same S3 objects via .idx ranges,
 # avoiding the hundreds-of-megabytes full global file and all weather APIs.
 NOAA_GFS_S3_BASE = "https://noaa-gfs-bdp-pds.s3.amazonaws.com"
+NOAA_NOMADS_GFS_BASE = "https://nomads.ncep.noaa.gov/pub/data/nccf/com/gfs/prod"
 NOAA_RANGE_DOWNLOAD_WORKERS = max(2, int(os.getenv("NOAA_RANGE_DOWNLOAD_WORKERS", "8")))
 NOAA_CYCLE_LOOKBACK = 6
 MIN_FORECAST_HOURS = 180
@@ -704,7 +705,7 @@ def fetch_enka_station_observation():
 
 
 def fetch_noaa_available_runs():
-    """Find recent GFS cycles by checking NOAA's public f180 GRIB2 S3 objects."""
+    """Find recent completed GFS cycles by checking NOAA NOMADS then AWS S3 f180 objects."""
     now = datetime.now(timezone.utc)
     latest_cycle_hour = (now.hour // 6) * 6
     latest_cycle = now.replace(
@@ -715,68 +716,86 @@ def fetch_noaa_available_runs():
     session = requests.Session()
     session.headers.update({"User-Agent": "GFS-Watch/1.0"})
 
-    for offset in range(NOAA_CYCLE_LOOKBACK):
-        run_dt = latest_cycle - timedelta(hours=6 * offset)
-        date_token = run_dt.strftime("%Y%m%d")
-        cycle = run_dt.strftime("%H")
-        filename = f"gfs.t{cycle}z.pgrb2.0p25.f{MIN_FORECAST_HOURS:03d}"
-        object_url = (
-            f"{NOAA_GFS_S3_BASE}/gfs.{date_token}/{cycle}/atmos/{filename}"
-        )
-        run_id = run_dt.isoformat(timespec="seconds")
+    try:
+        for offset in range(NOAA_CYCLE_LOOKBACK):
+            run_dt = latest_cycle - timedelta(hours=6 * offset)
+            run_id = run_dt.isoformat(timespec="seconds")
+            filename = f"gfs.t{run_dt:%H}z.pgrb2.0p25.f{MIN_FORECAST_HOURS:03d}"
+            ready_metadata = None
 
-        try:
-            response = session.head(
-                object_url,
-                headers={"Cache-Control": "no-cache"},
-                timeout=15,
-                allow_redirects=True,
-            )
-            if response.status_code == 200:
-                content_length = int(response.headers.get("Content-Length", "0") or 0)
-                if content_length <= 0:
-                    print(
-                        f"[NOAA S3 UYARI] {run_id} f180 başlığı boş içerik uzunluğu döndürdü."
+            for source_name, object_url, _ in _noaa_grib_source_urls(
+                run_dt, MIN_FORECAST_HOURS
+            ):
+                try:
+                    response = session.head(
+                        object_url,
+                        headers={"Cache-Control": "no-cache"},
+                        timeout=15,
+                        allow_redirects=True,
                     )
-                    continue
+                    if response.status_code != 200:
+                        print(
+                            f"[NOAA PENDING] {run_id} f180 {source_name}: "
+                            f"HTTP {response.status_code}; sonraki kaynak deneniyor."
+                        )
+                        continue
 
-                modified_at = _normalise_model_timestamp(
-                    response.headers.get("Last-Modified")
-                )
-                candidates.append({
-                    "model": MODEL_NAME,
-                    "metadata_source": "NOAA/NCEP public S3 f180 GRIB2 object",
-                    "run_id": run_id,
-                    "last_run_initialisation_time": run_id,
-                    "last_run_availability_time": modified_at,
-                    "last_modified_time": modified_at,
-                    "last_valid_time": (
-                        run_dt + timedelta(hours=MIN_FORECAST_HOURS)
-                    ).isoformat(timespec="minutes"),
-                    "forecast_horizon_hours": MIN_FORECAST_HOURS,
-                    "completed": True,
-                    "noaa_f180_available": True,
-                    "source_object_size_bytes": content_length,
-                })
-                print(
-                    f"[NOAA READY] {run_id} +180 GRIB2 dosyası yayımlanmış; "
-                    f"S3 nesne boyutu {content_length:,} byte."
-                )
-            elif response.status_code in (403, 404, 405):
-                print(
-                    f"[NOAA PENDING] {run_id} +180 GRIB2 dosyası henüz S3'te yok "
-                    f"(HTTP {response.status_code})."
-                )
+                    content_length = int(
+                        response.headers.get("Content-Length", "0") or 0
+                    )
+                    if content_length <= 0:
+                        errors.append(
+                            f"{run_id} {source_name}: boş/ geçersiz Content-Length"
+                        )
+                        continue
+
+                    modified_at = _normalise_model_timestamp(
+                        response.headers.get("Last-Modified")
+                    )
+                    ready_metadata = {
+                        "model": MODEL_NAME,
+                        "metadata_source": f"NOAA/NCEP {source_name} f180 GRIB2 object",
+                        "run_id": run_id,
+                        "last_run_initialisation_time": run_id,
+                        "last_run_availability_time": modified_at,
+                        "last_modified_time": modified_at,
+                        "last_valid_time": (
+                            run_dt + timedelta(hours=MIN_FORECAST_HOURS)
+                        ).isoformat(timespec="minutes"),
+                        "forecast_horizon_hours": MIN_FORECAST_HOURS,
+                        "completed": True,
+                        "noaa_f180_available": True,
+                        "source_object_size_bytes": content_length,
+                        "source_name": source_name,
+                        "source_url": object_url,
+                    }
+                    print(
+                        f"[NOAA READY] {run_id} f180 {source_name}: "
+                        f"{content_length:,} byte; hedef dosya doğrulandı."
+                    )
+                    break
+                except requests.RequestException as exc:
+                    errors.append(
+                        f"{run_id} {source_name}: {type(exc).__name__}: {exc}"
+                    )
+                    print(
+                        f"[NOAA SOURCE ERROR] {run_id} {source_name}: {exc}; "
+                        "sonraki kaynak deneniyor."
+                    )
+
+            if ready_metadata:
+                candidates.append(ready_metadata)
             else:
-                errors.append(
-                    f"{run_id}: NOAA S3 HTTP {response.status_code}"
+                print(
+                    f"[NOAA PENDING] {run_id} f180 henüz NOMADS veya AWS S3 "
+                    "üzerinden doğrulanamadı."
                 )
-        except requests.RequestException as exc:
-            errors.append(f"{run_id}: {type(exc).__name__}: {exc}")
+    finally:
+        session.close()
 
     if not candidates:
         suffix = " | ".join(errors) if errors else "Henüz yayımlanmış +180 dosyası yok."
-        print("[NOAA S3 PENDING] " + suffix)
+        print("[NOAA GFS PENDING] " + suffix)
         return []
 
     return sorted(candidates, key=lambda item: item["run_id"])
@@ -903,14 +922,29 @@ def _write_noaa_decoded_cache_file(run_id, lead, step_data):
     _mark_noaa_cache_updated()
 
 
-def _noaa_s3_object_url(run_dt, lead):
+def _noaa_grib_source_urls(run_dt, lead):
+    """Return exact GRIB2 object URLs in preferred order: NOMADS, then AWS S3."""
     date_token = run_dt.strftime("%Y%m%d")
     cycle = run_dt.strftime("%H")
     filename = f"gfs.t{cycle}z.pgrb2.0p25.f{int(lead):03d}"
-    return (
-        f"{NOAA_GFS_S3_BASE}/gfs.{date_token}/{cycle}/atmos/{filename}",
-        filename,
+    nomads_url = (
+        f"{NOAA_NOMADS_GFS_BASE}/gfs.{date_token}/{cycle}/atmos/{filename}"
     )
+    s3_url = (
+        f"{NOAA_GFS_S3_BASE}/gfs.{date_token}/{cycle}/atmos/{filename}"
+    )
+    return [
+        ("NOMADS", nomads_url, filename),
+        ("AWS S3", s3_url, filename),
+    ]
+
+
+def _noaa_s3_object_url(run_dt, lead):
+    """Compatibility helper for the canonical AWS S3 object URL."""
+    for source_name, object_url, filename in _noaa_grib_source_urls(run_dt, lead):
+        if source_name == "AWS S3":
+            return object_url, filename
+    raise RuntimeError("AWS S3 GFS source URL is not configured.")
 
 
 def _noaa_index_record_matches(parts, lead):
@@ -930,119 +964,189 @@ def _noaa_index_record_matches(parts, lead):
 
 
 def _download_noaa_grib_file(session, run_dt, lead, headers):
-    """Download only required native GRIB2 messages from NOAA S3 using .idx byte ranges."""
-    object_url, filename = _noaa_s3_object_url(run_dt, lead)
-    try:
-        index_response = session.get(
-            object_url + ".idx",
-            headers=headers,
-            timeout=30,
-        )
-        if index_response.status_code != 200:
-            return None, f"IDX HTTP {index_response.status_code}", filename
+    """Fetch required GRIB2 messages from the exact lead file, trying NOMADS then AWS S3."""
+    source_errors = []
+    filename = f"gfs.t{_parse_utc_datetime(run_dt):%H}z.pgrb2.0p25.f{int(lead):03d}"
 
-        head_response = session.head(
-            object_url,
-            headers={"Cache-Control": "no-cache", **headers},
-            timeout=30,
-            allow_redirects=True,
-        )
-        if head_response.status_code != 200:
-            return None, f"GRIB2 HEAD HTTP {head_response.status_code}", filename
+    for source_name, object_url, filename in _noaa_grib_source_urls(run_dt, lead):
+        print(f"[NOAA SOURCE TRY] f{int(lead):03d} için {source_name}: {object_url}")
         try:
-            object_size = int(head_response.headers.get("Content-Length", "0") or 0)
-        except (TypeError, ValueError):
-            object_size = 0
-        if object_size <= 0:
-            return None, "GRIB2 Content-Length geçersiz", filename
-
-        records = []
-        all_offsets = set()
-        for line in index_response.text.splitlines():
-            parts = line.strip().split(":")
-            if len(parts) < 6:
-                continue
-            try:
-                offset = int(parts[1])
-            except (TypeError, ValueError):
-                continue
-            all_offsets.add(offset)
-            if _noaa_index_record_matches(parts, int(lead)):
-                records.append((offset, parts[3].strip().upper(), parts[4].strip()))
-
-        if not records:
-            return None, "IDX içinde gerekli TMP/UGRD/VGRD/APCP alanları bulunamadı", filename
-
-        # A GRIB message may be represented by multiple .idx submessages at
-        # the same byte offset. Fetch its byte range only once.
-        selected_offsets = sorted({item[0] for item in records})
-        sorted_offsets = sorted(all_offsets)
-        next_offset = {
-            offset: (
-                sorted_offsets[position + 1]
-                if position + 1 < len(sorted_offsets)
-                else object_size
+            index_response = session.get(
+                object_url + ".idx",
+                headers=headers,
+                timeout=30,
             )
-            for position, offset in enumerate(sorted_offsets)
-        }
-        ranges = []
-        for offset in selected_offsets:
-            end = next_offset[offset] - 1
-            if end < offset or end >= object_size:
-                return None, f"IDX byte aralığı geçersiz: {offset}-{end}", filename
-            ranges.append((offset, end))
-
-        def fetch_range(byte_range):
-            start, end = byte_range
-            response = requests.get(
-                object_url,
-                headers={
-                    **headers,
-                    "Range": f"bytes={start}-{end}",
-                },
-                timeout=75,
-            )
-            if response.status_code != 206:
-                return None, f"Range HTTP {response.status_code} ({start}-{end})"
-            content = response.content
-            expected_size = end - start + 1
-            if len(content) != expected_size:
-                return None, (
-                    f"Range boyutu uyuşmuyor ({start}-{end}): "
-                    f"{len(content)} / {expected_size} byte"
+            if index_response.status_code != 200:
+                source_errors.append(
+                    f"{source_name} IDX HTTP {index_response.status_code}"
                 )
-            if not content.startswith(b"GRIB"):
-                return None, f"Range GRIB2 başlangıcı taşımıyor ({start}-{end})"
-            return (start, content), None
+                print(
+                    f"[NOAA SOURCE MISS] {source_name} {filename}.idx "
+                    f"HTTP {index_response.status_code}; diğer kaynak deneniyor."
+                )
+                continue
 
-        downloaded_ranges = []
-        errors = []
-        workers = min(NOAA_RANGE_DOWNLOAD_WORKERS, len(ranges))
-        with ThreadPoolExecutor(max_workers=max(1, workers)) as executor:
-            futures = [executor.submit(fetch_range, byte_range) for byte_range in ranges]
-            for future in as_completed(futures):
-                item, error = future.result()
-                if error:
-                    errors.append(error)
-                else:
-                    downloaded_ranges.append(item)
+            head_response = session.head(
+                object_url,
+                headers={"Cache-Control": "no-cache", **headers},
+                timeout=30,
+                allow_redirects=True,
+            )
+            if head_response.status_code != 200:
+                source_errors.append(
+                    f"{source_name} GRIB2 HEAD HTTP {head_response.status_code}"
+                )
+                print(
+                    f"[NOAA SOURCE MISS] {source_name} {filename} "
+                    f"HTTP {head_response.status_code}; diğer kaynak deneniyor."
+                )
+                continue
 
-        if errors:
-            return None, "; ".join(errors[:3]), filename
-        downloaded_ranges.sort(key=lambda item: item[0])
-        grib_bytes = b"".join(content for _, content in downloaded_ranges)
-        if not grib_bytes.startswith(b"GRIB"):
-            return None, "İndirilen aralıklar geçerli GRIB2 oluşturmadı", filename
+            try:
+                object_size = int(
+                    head_response.headers.get("Content-Length", "0") or 0
+                )
+            except (TypeError, ValueError):
+                object_size = 0
+            if object_size <= 0:
+                source_errors.append(
+                    f"{source_name} geçersiz Content-Length"
+                )
+                continue
 
-        print(
-            f"[NOAA S3 RANGE] {filename}: {len(downloaded_ranges)} GRIB2 mesajı, "
-            f"{len(grib_bytes):,} byte / {object_size:,} byte."
-        )
-        return grib_bytes, None, filename
-    except requests.RequestException as exc:
-        return None, f"{type(exc).__name__}: {exc}", filename
-    except Exception as exc:
-        return None, f"{type(exc).__name__}: {exc}", filename
+            records = []
+            all_offsets = set()
+            for line in index_response.text.splitlines():
+                parts = line.strip().split(":")
+                if len(parts) < 6:
+                    continue
+                try:
+                    offset = int(parts[1])
+                except (TypeError, ValueError):
+                    continue
+                all_offsets.add(offset)
+                if _noaa_index_record_matches(parts, int(lead)):
+                    records.append((offset, parts[3].strip().upper(), parts[4].strip()))
+
+            if not records:
+                source_errors.append(
+                    f"{source_name} IDX içinde gerekli TMP/UGRD/VGRD/APCP alanları yok"
+                )
+                continue
+
+            # Fetch each required GRIB message only once, even when IDX has
+            # multiple submessage entries pointing to the same byte offset.
+            selected_offsets = sorted({item[0] for item in records})
+            sorted_offsets = sorted(all_offsets)
+            next_offset = {
+                offset: (
+                    sorted_offsets[position + 1]
+                    if position + 1 < len(sorted_offsets)
+                    else object_size
+                )
+                for position, offset in enumerate(sorted_offsets)
+            }
+            ranges = []
+            invalid_range = False
+            for offset in selected_offsets:
+                end = next_offset[offset] - 1
+                if end < offset or end >= object_size:
+                    source_errors.append(
+                        f"{source_name} geçersiz IDX aralığı {offset}-{end}"
+                    )
+                    invalid_range = True
+                    break
+                ranges.append((offset, end))
+            if invalid_range:
+                continue
+
+            def fetch_range(byte_range):
+                start, end = byte_range
+                response = requests.get(
+                    object_url,
+                    headers={
+                        **headers,
+                        "Range": f"bytes={start}-{end}",
+                    },
+                    timeout=75,
+                )
+                if response.status_code != 206:
+                    return None, f"Range HTTP {response.status_code} ({start}-{end})"
+                content = response.content
+                expected_size = end - start + 1
+                if len(content) != expected_size:
+                    return None, (
+                        f"Range boyutu uyuşmuyor ({start}-{end}): "
+                        f"{len(content)} / {expected_size} byte"
+                    )
+                if not content.startswith(b"GRIB"):
+                    return None, f"Range GRIB2 başlangıcı taşımıyor ({start}-{end})"
+                return (start, content), None
+
+            downloaded_ranges = []
+            range_errors = []
+            workers = min(NOAA_RANGE_DOWNLOAD_WORKERS, len(ranges))
+            with ThreadPoolExecutor(max_workers=max(1, workers)) as executor:
+                futures = [
+                    executor.submit(fetch_range, byte_range)
+                    for byte_range in ranges
+                ]
+                for future in as_completed(futures):
+                    item, error = future.result()
+                    if error:
+                        range_errors.append(error)
+                    else:
+                        downloaded_ranges.append(item)
+
+            if range_errors:
+                source_errors.append(
+                    f"{source_name}: " + "; ".join(range_errors[:3])
+                )
+                print(
+                    f"[NOAA SOURCE MISS] {source_name} byte-range indirmesi "
+                    "eksik; diğer kaynak deneniyor."
+                )
+                continue
+
+            downloaded_ranges.sort(key=lambda item: item[0])
+            grib_bytes = b"".join(
+                item_content for _, item_content in downloaded_ranges
+            )
+            if not grib_bytes.startswith(b"GRIB"):
+                source_errors.append(
+                    f"{source_name} indirilen mesajlar geçerli GRIB2 oluşturmadı"
+                )
+                continue
+
+            print(
+                f"[NOAA SOURCE OK] {filename} kaynağı={source_name}; "
+                f"{len(downloaded_ranges)} GRIB2 mesajı, "
+                f"{len(grib_bytes):,} byte / {object_size:,} byte."
+            )
+            return grib_bytes, None, filename
+
+        except requests.RequestException as exc:
+            source_errors.append(
+                f"{source_name}: {type(exc).__name__}: {exc}"
+            )
+            print(
+                f"[NOAA SOURCE ERROR] {source_name} {filename}: {exc}; "
+                "diğer kaynak deneniyor."
+            )
+        except Exception as exc:
+            source_errors.append(
+                f"{source_name}: {type(exc).__name__}: {exc}"
+            )
+            print(
+                f"[NOAA SOURCE ERROR] {source_name} {filename}: {exc}; "
+                "diğer kaynak deneniyor."
+            )
+
+    return (
+        None,
+        " | ".join(source_errors) if source_errors else "NOAA kaynakları yanıt vermedi",
+        filename,
+    )
 
 
 def _decode_noaa_grib_step(run_id, lead, grib_bytes):
@@ -1238,8 +1342,8 @@ def prefetch_latest_noaa_cycle(skip_run_ids=None, target_run_id=None):
     )
     try:
         for lead in batch:
-            _, filename = _noaa_s3_object_url(run_dt, lead)
-            print(f"[NOAA PREFETCH] {filename} GRIB2 mesajları S3 byte-range ile indiriliyor...")
+            _, _, filename = _noaa_grib_source_urls(run_dt, lead)[0]
+            print(f"[NOAA PREFETCH] {filename} gerekli alanları NOMADS/AWS S3 hedefinden byte-range ile alınıyor...")
             grib_bytes = _read_noaa_cache_file(run_id, lead)
             if grib_bytes is None:
                 grib_bytes, error, _ = _download_noaa_grib_file(
@@ -1319,10 +1423,10 @@ def fetch_full_weather_data(run_id):
                         f"{len(grib_bytes)} byte ham GRIB2 önbellekten alındı."
                     )
                 else:
-                    _, filename = _noaa_s3_object_url(run_dt, lead)
+                    _, _, filename = _noaa_grib_source_urls(run_dt, lead)[0]
                     print(
-                        f"[NOAA S3] {filename} doğrudan GRIB2 byte-range ile alınıyor "
-                        f"({position + 1}/{len(download_order)})..."
+                        f"[NOAA FILE] {filename} NOMADS/AWS S3 hedefinden gerekli "
+                        f"GRIB2 alanlarıyla alınıyor ({position + 1}/{len(download_order)})..."
                     )
                     grib_bytes, error, _ = _download_noaa_grib_file(
                         session, run_dt, lead, headers
@@ -1496,7 +1600,7 @@ def fetch_full_weather_data(run_id):
             "forecast_horizon_hours": MIN_FORECAST_HOURS,
             "synoptic_alerts": synoptic_alerts,
             "data_source": (
-                "NOAA/NCEP GFS 0.25° native GRIB2 (public S3 byte-range); "
+                "NOAA/NCEP GFS 0.25° native GRIB2 (NOMADS/AWS S3 indexed byte-range); "
                 f"hedef {LAT:.3f}N, {LON:.3f}E; en yakın grid {GRID_LAT:.3f}N, {GRID_LON:.3f}E"
             ),
         }
