@@ -404,15 +404,25 @@
         const svgRect=svg.getBoundingClientRect();
         const localX=(point.x/width)*svgRect.width+(svgRect.left-layerRect.left);
         const localY=(point.y/height)*svgRect.height+(svgRect.top-layerRect.top);
-        const half=tooltip.offsetWidth/2;
-        const clampedX=Math.max(half+8,Math.min(layerRect.width-half-8,localX));
+        const tooltipWidth=tooltip.offsetWidth;
         const tooltipHeight=tooltip.offsetHeight;
+        const edgePadding=8;
         const gap=10;
+        let desiredLeft=localX-tooltipWidth/2;
+        // Keep the full popup visible: open left of points near the right edge,
+        // and right of points near the left edge.
+        if(localX+tooltipWidth/2>layerRect.width-edgePadding){
+          desiredLeft=localX-tooltipWidth-gap;
+        }else if(localX-tooltipWidth/2<edgePadding){
+          desiredLeft=localX+gap;
+        }
+        const maxLeft=Math.max(edgePadding,layerRect.width-tooltipWidth-edgePadding);
+        const clampedLeft=Math.min(maxLeft,Math.max(edgePadding,desiredLeft));
         const spaceAbove=localY-tooltipHeight-gap;
         const showBelow=spaceAbove<8;
         const desiredTop=showBelow?localY+gap:spaceAbove;
         const maxTop=Math.max(8,layerRect.height-tooltipHeight-8);
-        tooltip.style.left=clampedX+"px";
+        tooltip.style.left=clampedLeft+"px";
         tooltip.style.top=Math.min(maxTop,Math.max(8,desiredTop))+"px";
         tooltip.classList.toggle("below",showBelow);
       };
