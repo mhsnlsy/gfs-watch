@@ -1727,7 +1727,8 @@ def fetch_full_weather_data(run_id):
                 if u_value is not None and v_value is not None:
                     wind_kmh[name] = math.hypot(float(u_value), float(v_value)) * 3.6
                     # Meteorological direction: compass direction the wind comes FROM.
-                    wind_direction_deg[name] = (math.degrees(math.atan2(-float(u_value), -float(v_value))) + 360.0) % 360.0
+                    if math.hypot(float(u_value), float(v_value)) >= 0.2:
+                        wind_direction_deg[name] = (math.degrees(math.atan2(-float(u_value), -float(v_value))) + 360.0) % 360.0
                 u850_value = wind_850_u.get(name)
                 v850_value = wind_850_v.get(name)
                 if u850_value is not None and v850_value is not None:

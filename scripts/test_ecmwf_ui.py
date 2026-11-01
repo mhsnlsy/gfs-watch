@@ -2,15 +2,18 @@
 from __future__ import annotations
 
 import re
+import math
 from collections import Counter
 from pathlib import Path
 
 ROOT = Path(__file__).resolve().parents[1]
 HTML = ROOT / "site" / "index.html"
+MAIN = ROOT / "main.py"
 
 
 def main() -> None:
     html = HTML.read_text(encoding="utf-8")
+    main = MAIN.read_text(encoding="utf-8")
     required = (
         'id="model-gfs-button"',
         'id="model-ecmwf-button"',
@@ -78,6 +81,16 @@ def main() -> None:
 
     if 'id="ecmwf-daily-cycle-chip"' not in html or 'id="ecmwf-daily-updated-chip"' not in html:
         raise AssertionError("ECMWF daily metadata targets are missing.")
+
+    if '"wind_direction_10m_deg": values.get("wind_direction_deg")' not in main:
+        raise AssertionError("GFS 10 m wind direction is not exported to the forecast timeline.")
+    if 'math.atan2(-float(u_value), -float(v_value))' not in main:
+        raise AssertionError("Meteorological wind-from direction is not calculated from GFS U/V fields.")
+    direction_from_uv = lambda u, v: (math.degrees(math.atan2(-u, -v)) + 360.0) % 360.0
+    assert abs(direction_from_uv(0.0, -1.0) - 0.0) < 1e-9
+    assert abs(direction_from_uv(-1.0, 0.0) - 90.0) < 1e-9
+    assert abs(direction_from_uv(0.0, 1.0) - 180.0) < 1e-9
+    assert abs(direction_from_uv(1.0, 0.0) - 270.0) < 1e-9
 
     print("[ECMWF UI SMOKE] GFS/ECMWF shared card and section layout, model selector, "
           "persistent choice, 5-minute refresh, 55-step contract and unique IDs passed.")
