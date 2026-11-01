@@ -451,6 +451,10 @@
       .station-history-tooltip-value{font-size:13px}
     }
 
+
+    /* Anchor touch-detail popups to their own mini-chart. */
+    .next-72h-chart{position:relative}
+
 </style>
 </head>
 <body>
@@ -601,6 +605,38 @@
       const items=findings.map(value=>String(value)).filter(value=>!value.includes("Yüksek ve alçak basınç merkezleri bölgesel eğilimi gösterir"));
       list.innerHTML=items.map(text=>'<li><span class="pressure-icon">◈</span><span>'+esc(text)+'</span></li>').join("");
     }
+    let activeTouchChartTooltip=null;
+    let activeTouchChartTooltipTimer=null;
+    function clearScheduledTouchChartTooltip(hideFn){
+      if(activeTouchChartTooltip!==hideFn)return;
+      if(activeTouchChartTooltipTimer!==null)window.clearTimeout(activeTouchChartTooltipTimer);
+      activeTouchChartTooltipTimer=null;
+      activeTouchChartTooltip=null;
+    }
+    function dismissActiveTouchChartTooltip(){
+      const hide=activeTouchChartTooltip;
+      if(activeTouchChartTooltipTimer!==null)window.clearTimeout(activeTouchChartTooltipTimer);
+      activeTouchChartTooltipTimer=null;
+      activeTouchChartTooltip=null;
+      if(hide)hide();
+    }
+    function scheduleTouchChartTooltipDismiss(hideFn){
+      if(activeTouchChartTooltip&&activeTouchChartTooltip!==hideFn){
+        const previous=activeTouchChartTooltip;
+        if(activeTouchChartTooltipTimer!==null)window.clearTimeout(activeTouchChartTooltipTimer);
+        activeTouchChartTooltipTimer=null;
+        activeTouchChartTooltip=null;
+        previous();
+      }
+      if(activeTouchChartTooltipTimer!==null)window.clearTimeout(activeTouchChartTooltipTimer);
+      activeTouchChartTooltip=hideFn;
+      activeTouchChartTooltipTimer=window.setTimeout(dismissActiveTouchChartTooltip,2800);
+    }
+    document.addEventListener("pointerdown",event=>{
+      if(event.pointerType==="touch"&&!event.target.closest(".chart-hit-area,.station-chart-hit-area"))dismissActiveTouchChartTooltip();
+    },{passive:true});
+    window.addEventListener("scroll",dismissActiveTouchChartTooltip,{passive:true});
+
     const chartDateTimeTR=value=>{
       const date=new Date(value);
       const dayMonth=new Intl.DateTimeFormat("tr-TR",{timeZone:"Europe/Istanbul",day:"numeric",month:"long"}).format(date);
@@ -615,7 +651,6 @@
       tooltip.setAttribute("role","tooltip");
       const tooltipLayer=container.closest(".chart-card")||container;
       tooltipLayer.appendChild(tooltip);
-      let dismissTimer=null;
 
       const cursorLine=document.createElementNS(ns,"line");
       cursorLine.setAttribute("class","chart-crosshair");
@@ -648,7 +683,7 @@
       svg.appendChild(hitArea);
 
       const hideTooltip=()=>{
-        if(dismissTimer!==null){window.clearTimeout(dismissTimer);dismissTimer=null;}
+        clearScheduledTouchChartTooltip(hideTooltip);
         tooltip.hidden=true;
         cursorLine.setAttribute("visibility","hidden");
         cursorDot.setAttribute("visibility","hidden");
@@ -725,18 +760,12 @@
       });
       hitArea.addEventListener("pointerdown",event=>{
         selectNearestPoint(event);
-        if(event.pointerType==="touch"){
-          if(dismissTimer!==null)window.clearTimeout(dismissTimer);
-          dismissTimer=window.setTimeout(hideTooltip,2500);
-        }
+        if(event.pointerType==="touch")scheduleTouchChartTooltipDismiss(hideTooltip);
       });
       hitArea.addEventListener("pointerleave",event=>{
         if(event.pointerType!=="touch")hideTooltip();
       });
-      document.addEventListener("pointerdown",event=>{
-        if(event.pointerType==="touch"&&!hitArea.contains(event.target))hideTooltip();
-      },{passive:true});
-      window.addEventListener("scroll",hideTooltip,{passive:true});
+      hitArea.addEventListener("pointercancel",hideTooltip);
       hitArea.addEventListener("keydown",event=>{
         if(event.key!=="ArrowLeft"&&event.key!=="ArrowRight")return;
         event.preventDefault();
@@ -885,14 +914,13 @@
       if(!coords.length||typeof document==="undefined")return;
       const card=holder.closest(".history-chart-card")||holder,tip=document.createElement("div");
       tip.className="station-history-tooltip";tip.hidden=true;tip.setAttribute("role","tooltip");card.appendChild(tip);
-      let dismissTimer=null;
       const ns="http://www.w3.org/2000/svg",line=document.createElementNS(ns,"line"),dot=document.createElementNS(ns,"circle"),hit=document.createElementNS(ns,"rect");
       line.setAttribute("y1",String(top));line.setAttribute("y2",String(height-bottom));line.setAttribute("stroke","#e8fbf7");line.setAttribute("stroke-width","1");line.setAttribute("stroke-dasharray","3 4");line.setAttribute("visibility","hidden");
       dot.setAttribute("r","5");dot.setAttribute("fill",color);dot.setAttribute("stroke","#f4ffff");dot.setAttribute("stroke-width","2");dot.setAttribute("visibility","hidden");
-      hit.setAttribute("x","42");hit.setAttribute("y",String(top));hit.setAttribute("width",String(width-54));hit.setAttribute("height",String(height-top-bottom));hit.setAttribute("fill","transparent");hit.setAttribute("tabindex","0");hit.setAttribute("aria-label","Grafikte zaman seçerek ölçüm ayrıntılarını görüntüleyin");hit.style.cursor="crosshair";hit.style.touchAction="pan-y";hit.style.webkitTapHighlightColor="transparent";
+      hit.setAttribute("class","station-chart-hit-area");hit.setAttribute("x","42");hit.setAttribute("y",String(top));hit.setAttribute("width",String(width-54));hit.setAttribute("height",String(height-top-bottom));hit.setAttribute("fill","transparent");hit.setAttribute("tabindex","0");hit.setAttribute("aria-label","Grafikte zaman seçerek ölçüm ayrıntılarını görüntüleyin");hit.style.cursor="crosshair";hit.style.touchAction="pan-y";hit.style.webkitTapHighlightColor="transparent";
       svg.append(line,dot,hit);
       const hide=()=>{
-        if(dismissTimer!==null){window.clearTimeout(dismissTimer);dismissTimer=null;}
+        clearScheduledTouchChartTooltip(hide);
         tip.hidden=true;line.setAttribute("visibility","hidden");dot.setAttribute("visibility","hidden");
       };
       const show=p=>{
@@ -906,14 +934,10 @@
       hit.addEventListener("pointermove",e=>{if(e.pointerType!=="touch")nearest(e);});
       hit.addEventListener("pointerdown",e=>{
         nearest(e);
-        if(e.pointerType==="touch"){
-          if(dismissTimer!==null)window.clearTimeout(dismissTimer);
-          dismissTimer=window.setTimeout(hide,2500);
-        }
+        if(e.pointerType==="touch")scheduleTouchChartTooltipDismiss(hide);
       });
       hit.addEventListener("pointerleave",e=>{if(e.pointerType!=="touch")hide();});
-      document.addEventListener("pointerdown",e=>{if(e.pointerType==="touch"&&!hit.contains(e.target))hide();},{passive:true});
-      window.addEventListener("scroll",hide,{passive:true});
+      hit.addEventListener("pointercancel",hide);
       hit.addEventListener("keydown",e=>{if(!["ArrowLeft","ArrowRight"].includes(e.key))return;e.preventDefault();let i=coords.findIndex(p=>p.x===Number(dot.getAttribute("cx")));if(i<0)i=0;i=Math.max(0,Math.min(coords.length-1,i+(e.key==="ArrowRight"?1:-1)));show(coords[i]);});
     }
     function renderStationTemperatureTrend(samples,stationName){
