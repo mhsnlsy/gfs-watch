@@ -33,7 +33,7 @@ def main() -> None:
     restore_start = gfs_workflow.index("Restore GFS run and Pages notification history")
     report_start = gfs_workflow.index("Discover NOAA cycles, prefetch and process one reportable cycle")
     restore_section = gfs_workflow[restore_start:report_start]
-    assert "git archive origin/gfs-watch-state public/notifications | tar -x -C ." in restore_section
+    assert "git archive origin/gfs-watch-state public | tar -x -C ." in restore_section
     assert gfs_workflow.index("rm -rf public/notifications") < gfs_workflow.index('cp -a "$RUNNER_TEMP/public/." public/')
     assert 'if [ "${{ steps.check-gfs.outcome }}" = "success" ] && [ -d public ]; then' in gfs_workflow
     assert "Report step failed; keeping the previously published Pages forecast and notification archive." in gfs_workflow
