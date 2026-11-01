@@ -3,8 +3,6 @@ name: GFS Watch
 on:
   push:
     branches: [main]
-    paths:
-      - ".github/workflows/gfs-watch.yml"
   workflow_dispatch:
 
 concurrency:
@@ -18,35 +16,8 @@ permissions:
   id-token: write
 
 jobs:
-  start-gfs-watch:
-    name: Start the 12Z GFS watch at the configured time
-    if: github.event_name == 'push'
-    runs-on: ubuntu-latest
-    timeout-minutes: 360
-    steps:
-      - name: Wait until the requested prefetch start
-        env:
-          GFS_PREFETCH_START_AT_UTC: "2026-11-01T12:36:02Z"
-        run: |
-          target_epoch=$(date -u -d "$GFS_PREFETCH_START_AT_UTC" +%s)
-          now_epoch=$(date -u +%s)
-          wait_seconds=$((target_epoch - now_epoch))
-          if [ "$wait_seconds" -gt 0 ]; then
-            echo "GFS prefetch starts at $GFS_PREFETCH_START_AT_UTC; waiting ${wait_seconds}s."
-            sleep "$wait_seconds"
-          else
-            echo "Configured GFS start time has passed; starting immediately."
-          fi
-      - name: Launch the five-minute GFS watch
-        env:
-          GH_TOKEN: ${{ github.token }}
-        run: |
-          gh workflow run gfs-watch.yml --ref main --repo "$GITHUB_REPOSITORY"
-          echo "GFS five-minute watch dispatched."
-
   check-gfs:
-    name: Poll NOAA and prefetch until the target f180 report is ready
-    if: github.event_name == 'workflow_dispatch'
+    name: Discover, prefetch and report every completed GFS cycle
     outputs:
       gfs_updated: ${{ steps.report.outputs.gfs_updated }}
     runs-on: ubuntu-latest
@@ -75,8 +46,9 @@ jobs:
         uses: actions/cache/restore@v6
         with:
           path: noaa_cache
-          key: gfs-noaa-cache-v2-${{ github.run_id }}-${{ github.run_attempt }}
+          key: gfs-noaa-cache-v3-${{ github.run_id }}-${{ github.run_attempt }}
           restore-keys: |
+            gfs-noaa-cache-v3-
             gfs-noaa-cache-v2-
             gfs-noaa-cache-v1-
       - name: Restore GFS run history
@@ -100,7 +72,7 @@ jobs:
               output.write(run_id)
           print(f"Previously processed latest GFS cycle: {run_id}")
           PY
-      - name: Check NOAA every five minutes and report when f180 is ready
+      - name: Discover NOAA cycles and watch every five minutes
         id: check-gfs
         continue-on-error: true
         env:
@@ -108,7 +80,6 @@ jobs:
           GFS_WATCH_CONTINUOUS: "1"
           GFS_WATCH_WINDOW_MINUTES: "330"
           GFS_WATCH_POLL_SECONDS: "300"
-          GFS_WATCH_TARGET_RUN_ID: "2026-11-01T12:00:00+00:00"
           DB_PATH: gfs_watch.db
           PUBLIC_DATA_DIR: public
           TELEGRAM_TOKEN: ${{ secrets.TELEGRAM_TOKEN }}
@@ -122,8 +93,6 @@ jobs:
       - name: Detect newly generated GFS report
         id: report
         if: always() && steps.check-gfs.outcome == 'success'
-        env:
-          GFS_WATCH_TARGET_RUN_ID: "2026-11-01T12:00:00+00:00"
         run: |
           before="$(cat "$RUNNER_TEMP/gfs-before-run.txt")"
           after="$(python - <<'PY'
@@ -136,12 +105,12 @@ jobs:
               print("none")
           PY
           )"
-          if [ "$after" != "none" ] && [ "$after" != "$before" ] && [ "$after" = "$GFS_WATCH_TARGET_RUN_ID" ]; then
+          if [ "$after" != "none" ] && [ "$after" != "$before" ]; then
             echo "gfs_updated=true" >> "$GITHUB_OUTPUT"
-            echo "Target GFS cycle processed and report sent: $after"
+            echo "New GFS cycle processed: $after"
           else
             echo "gfs_updated=false" >> "$GITHUB_OUTPUT"
-            echo "Target f180 report has not been generated in this session."
+            echo "No new completed GFS cycle was generated in this session."
           fi
       - name: Save partial NOAA forecast cache
         if: always() && steps.check-gfs.outputs.noaa_cache_updated == 'true'
@@ -149,9 +118,14 @@ jobs:
         uses: actions/cache/save@v6
         with:
           path: noaa_cache
-          key: gfs-noaa-cache-v2-${{ github.run_id }}-${{ github.run_attempt }}
+          key: gfs-noaa-cache-v3-${{ github.run_id }}-${{ github.run_attempt }}
       - name: Save GFS run history
+        if: always()
         run: |
+          if [ ! -f gfs_watch.db ]; then
+            echo "GFS database missing; nothing to save."
+            exit 0
+          fi
           cp gfs_watch.db "$RUNNER_TEMP/gfs_watch.db"
           mkdir -p "$RUNNER_TEMP/public"
           if [ -d public ]; then
@@ -180,41 +154,18 @@ jobs:
           done
           echo "Could not publish GFS run history after five attempts."
           exit 1
-      - name: Check whether the target GFS cycle is in run history
-        id: target-status
-        if: always()
-        env:
-          GFS_WATCH_TARGET_RUN_ID: "2026-11-01T12:00:00+00:00"
-        run: |
-          processed="$(python - <<'PY'
-          import os
-          import sqlite3
-          target = os.environ["GFS_WATCH_TARGET_RUN_ID"]
-          try:
-              with sqlite3.connect("file:gfs_watch.db?mode=ro", uri=True) as db:
-                  row = db.execute(
-                      "SELECT 1 FROM gfs_runs_v3 WHERE run_name = ? LIMIT 1",
-                      (target,),
-                  ).fetchone()
-              print("true" if row else "false")
-          except sqlite3.Error:
-              print("false")
-          PY
-          )"
-          echo "target_processed=$processed" >> "$GITHUB_OUTPUT"
-          echo "Target GFS cycle processed: $processed"
-      - name: Queue another watch session if f180 is still pending
-        if: always() && !cancelled() && steps.target-status.outputs.target_processed != 'true'
+      - name: Queue the next five-and-a-half-hour watch session
+        if: always() && !cancelled()
         env:
           GH_TOKEN: ${{ github.token }}
         run: |
           now=$(date -u +%s)
           next=$(( (now / 300 + 1) * 300 ))
           delay=$(( next - now ))
-          echo "Target f180 is still pending; next watch session starts at $(date -u -d "@$next" +'%Y-%m-%dT%H:%M:%SZ')."
+          echo "Next all-cycle watch starts at $(date -u -d "@$next" +'%Y-%m-%dT%H:%M:%SZ')."
           sleep "$delay"
           gh workflow run gfs-watch.yml --ref main --repo "$GITHUB_REPOSITORY"
-          echo "Next GFS watch session queued."
+          echo "Next automatic GFS watch session queued."
 
   deploy-pages:
     name: Publish latest report to GitHub Pages
