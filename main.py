@@ -453,8 +453,204 @@ def _parse_utc_datetime(value):
     return parsed.astimezone(timezone.utc)
 
 
+def _point_in_pressure_region(latitude, longitude, polygon):
+    """Return whether a lat/lon point is inside a coarse geographic region polygon."""
+    x = float(longitude)
+    y = float(latitude)
+    inside = False
+    previous = len(polygon) - 1
+    for current in range(len(polygon)):
+        yi, xi = polygon[current]
+        yj, xj = polygon[previous]
+        if ((yi > y) != (yj > y)) and (
+            x < (xj - xi) * (y - yi) / (yj - yi) + xi
+        ):
+            inside = not inside
+        previous = current
+    return inside
+
+
+def pressure_region_name(latitude, longitude):
+    """Translate a GFS pressure-extreme grid point into a readable Turkish place name."""
+    latitude = float(latitude)
+    longitude = ((float(longitude) + 180.0) % 360.0) - 180.0
+
+    # Approximate regional polygons are intentionally broad: the report names
+    # the geographic area/country, not a city or a false-precision address.
+    regions = [
+        (
+            "Kırım Yarımadası, Ukrayna",
+            [(44.0, 32.2), (45.0, 32.0), (46.2, 33.2), (46.3, 35.6),
+             (45.8, 36.8), (45.0, 36.7), (44.4, 36.0), (44.0, 34.8)],
+        ),
+        (
+            "Romanya",
+            [(43.6, 20.2), (45.2, 20.2), (47.0, 22.0), (48.2, 23.0),
+             (48.2, 26.8), (47.8, 28.5), (45.4, 29.7), (44.0, 29.7),
+             (43.7, 27.8), (43.6, 24.0)],
+        ),
+        (
+            "Bulgaristan, Balkanlar",
+            [(41.2, 22.3), (44.2, 22.3), (44.2, 28.2), (41.2, 28.1)],
+        ),
+        (
+            "Moldova",
+            [(46.4, 26.5), (48.5, 26.5), (48.5, 30.2), (46.4, 30.2)],
+        ),
+        (
+            "Güney Rusya (Rostov ve Krasnodar çevresi)",
+            [(43.0, 37.0), (45.0, 36.5), (47.8, 37.8), (49.1, 41.0),
+             (48.7, 48.5), (43.0, 48.5), (43.0, 44.0)],
+        ),
+        (
+            "Güney Ukrayna",
+            [(46.2, 29.5), (47.0, 29.5), (49.8, 32.0), (52.4, 34.0),
+             (52.4, 40.3), (46.2, 40.3)],
+        ),
+        (
+            "Gürcistan, Güney Kafkasya",
+            [(41.0, 40.0), (43.7, 40.0), (43.7, 46.8), (41.0, 46.8)],
+        ),
+        (
+            "Ermenistan, Güney Kafkasya",
+            [(38.8, 43.4), (41.3, 43.4), (41.3, 46.7), (38.8, 46.7)],
+        ),
+        (
+            "Azerbaycan, Güney Kafkasya",
+            [(38.4, 44.5), (41.9, 44.5), (41.9, 50.5), (38.4, 50.5)],
+        ),
+        (
+            "Sırbistan, Batı Balkanlar",
+            [(42.2, 18.8), (46.2, 18.8), (46.2, 23.0), (42.2, 23.0)],
+        ),
+        (
+            "Bosna-Hersek, Batı Balkanlar",
+            [(42.5, 15.7), (45.3, 15.7), (45.3, 19.7), (42.5, 19.7)],
+        ),
+        (
+            "Hırvatistan, Batı Balkanlar",
+            [(42.3, 13.4), (46.6, 13.4), (46.6, 19.5), (42.3, 19.5)],
+        ),
+        (
+            "Karadağ, Batı Balkanlar",
+            [(41.8, 18.4), (43.6, 18.4), (43.6, 20.4), (41.8, 20.4)],
+        ),
+        (
+            "Arnavutluk, Batı Balkanlar",
+            [(39.6, 19.2), (42.7, 19.2), (42.7, 21.2), (39.6, 21.2)],
+        ),
+        (
+            "Kosova, Batı Balkanlar",
+            [(41.9, 20.0), (43.3, 20.0), (43.3, 21.8), (41.9, 21.8)],
+        ),
+        (
+            "Kuzey Makedonya, Balkanlar",
+            [(40.8, 20.4), (42.4, 20.4), (42.4, 23.0), (40.8, 23.0)],
+        ),
+        (
+            "Kuzeydoğu Yunanistan (Trakya ve Makedonya)",
+            [(39.0, 20.0), (41.8, 20.0), (41.8, 26.6), (39.0, 26.6)],
+        ),
+        (
+            "Doğu Yunanistan ve Kuzey Ege",
+            [(35.0, 23.0), (39.0, 23.0), (39.0, 28.5), (35.0, 28.5)],
+        ),
+        (
+            "Marmara ve Trakya, Türkiye",
+            [(40.0, 26.0), (42.3, 26.0), (42.3, 30.5), (40.0, 30.5)],
+        ),
+        (
+            "Ege Bölgesi, Türkiye",
+            [(36.5, 26.0), (40.0, 26.0), (40.0, 30.0), (36.5, 30.0)],
+        ),
+        (
+            "İç Anadolu, Türkiye",
+            [(37.0, 30.0), (40.8, 30.0), (40.8, 36.5), (37.0, 36.5)],
+        ),
+        (
+            "Karadeniz Bölgesi, Türkiye",
+            [(40.0, 30.0), (42.5, 30.0), (42.5, 42.0), (40.0, 42.0)],
+        ),
+        (
+            "Akdeniz Bölgesi, Türkiye",
+            [(35.0, 26.0), (37.5, 26.0), (37.5, 36.5), (35.0, 36.5)],
+        ),
+        (
+            "Doğu Anadolu, Türkiye",
+            [(37.0, 36.5), (40.5, 36.5), (40.5, 44.5), (37.0, 44.5)],
+        ),
+        (
+            "Kuzey Suriye",
+            [(35.0, 35.5), (37.5, 35.5), (37.5, 42.0), (35.0, 42.0)],
+        ),
+        (
+            "Kuzey Irak",
+            [(34.0, 40.0), (37.5, 40.0), (37.5, 46.0), (34.0, 46.0)],
+        ),
+        (
+            "Kıbrıs Adası, Doğu Akdeniz",
+            [(34.4, 32.0), (35.8, 32.0), (35.8, 34.8), (34.4, 34.8)],
+        ),
+    ]
+    for label, polygon in regions:
+        if _point_in_pressure_region(latitude, longitude, polygon):
+            return label
+
+    # Sea areas are checked after nearby land regions so coastal countries keep
+    # their country names when the point is on land.
+    if 40.5 <= latitude <= 47.5 and 27.0 <= longitude <= 42.5:
+        if longitude < 33.0:
+            return "Batı Karadeniz"
+        if longitude < 37.0:
+            return "Orta Karadeniz"
+        return "Doğu Karadeniz"
+    if 35.0 <= latitude <= 41.5 and 23.0 <= longitude <= 30.0:
+        return "Ege Denizi (Doğu Yunanistan ile Batı Türkiye arasında)"
+    if 30.0 <= latitude < 36.5 and 27.0 <= longitude <= 37.5:
+        return "Doğu Akdeniz"
+    if 39.0 <= latitude <= 46.0 and 13.0 <= longitude <= 20.0:
+        return "Adriyatik Denizi ve Batı Balkan kıyıları"
+    if latitude >= 45.0 and longitude < 32.0:
+        return "Doğu Avrupa (Romanya-Ukrayna çevresi)"
+    if latitude >= 42.0 and longitude >= 37.0:
+        return "Güney Rusya ve Kafkasya çevresi"
+    return "İstanbul çevresindeki bölgesel analiz alanı"
+
+
+def pressure_point_relative_to_istanbul(latitude, longitude):
+    """Return an approximate distance and compass direction without coordinates."""
+    lat1 = math.radians(LAT)
+    lat2 = math.radians(float(latitude))
+    delta_lon = math.radians(
+        ((float(longitude) - LON + 180.0) % 360.0) - 180.0
+    )
+    delta_lat = lat2 - lat1
+    haversine = (
+        math.sin(delta_lat / 2.0) ** 2
+        + math.cos(lat1) * math.cos(lat2) * math.sin(delta_lon / 2.0) ** 2
+    )
+    distance_km = 6371.0 * 2.0 * math.asin(
+        math.sqrt(max(0.0, min(1.0, haversine)))
+    )
+    bearing = math.degrees(
+        math.atan2(
+            math.sin(delta_lon) * math.cos(lat2),
+            math.cos(lat1) * math.sin(lat2)
+            - math.sin(lat1) * math.cos(lat2) * math.cos(delta_lon),
+        )
+    ) % 360.0
+    directions = (
+        "kuzey", "kuzeydoğu", "doğu", "güneydoğu",
+        "güney", "güneybatı", "batı", "kuzeybatı",
+    )
+    direction = directions[int((bearing + 22.5) // 45.0) % 8]
+    if distance_km < 50.0:
+        return "İstanbul'un yakın çevresinde"
+    return f"İstanbul'un yaklaşık {distance_km:.0f} km {direction} yönünde"
+
+
 def analyse_regional_pressure_grid(pressure_grid):
-    """Analyse the native NOAA GRIB2 MSLP field around Istanbul."""
+    """Analyse native NOAA GRIB2 MSLP and describe centres by geographic names."""
     try:
         if not pressure_grid:
             raise ValueError("f000 GRIB2 içinde deniz seviyesi basınç alanı yok.")
@@ -470,7 +666,7 @@ def analyse_regional_pressure_grid(pressure_grid):
         ):
             raise ValueError("Basınç GRIB2 koordinat ve değer dizileri uyuşmuyor.")
 
-        # Great-circle distance from the requested Istanbul coordinate.
+        # Great-circle distance from Istanbul.
         lat1 = math.radians(LAT)
         lat2 = np.radians(pressure_latitudes)
         delta_lat = lat2 - lat1
@@ -497,33 +693,46 @@ def analyse_regional_pressure_grid(pressure_grid):
         max_index = int(np.argmax(regional_hpa))
         min_index = int(np.argmin(regional_hpa))
 
-        def coordinate_label(index):
-            latitude = float(regional_lats[index])
-            longitude = float(regional_lons[index])
-            lat_hemi = "N" if latitude >= 0 else "S"
-            lon_hemi = "E" if longitude >= 0 else "W"
-            return (
-                f"{abs(latitude):.1f}°{lat_hemi}, "
-                f"{abs(longitude):.1f}°{lon_hemi}"
-            )
-
         maximum = float(regional_hpa[max_index])
         minimum = float(regional_hpa[min_index])
+        max_region = pressure_region_name(
+            regional_lats[max_index], regional_lons[max_index]
+        )
+        min_region = pressure_region_name(
+            regional_lats[min_index], regional_lons[min_index]
+        )
+        max_relative = pressure_point_relative_to_istanbul(
+            regional_lats[max_index], regional_lons[max_index]
+        )
+        min_relative = pressure_point_relative_to_istanbul(
+            regional_lats[min_index], regional_lons[min_index]
+        )
+
         findings = []
         if maximum >= HIGH_PRESSURE_THRESHOLD_HPA:
             findings.append(
-                f"Yüksek basınç merkezi: {maximum:.1f} hPa "
-                f"({coordinate_label(max_index)})"
+                f"Yüksek basınç merkezi: {maximum:.1f} hPa — {max_region}. "
+                f"{max_relative}. Yüksek basınçta hava alçalıcıdır; genellikle "
+                "daha kararlı, daha az bulutlu koşulları destekler."
             )
+        else:
+            findings.append(
+                f"İncelenen alanın en yüksek basıncı: {maximum:.1f} hPa — "
+                f"{max_region}. {max_relative}. Bu değer belirgin yüksek basınç "
+                "eşiğine ulaşmıyor."
+            )
+
         if minimum <= LOW_PRESSURE_THRESHOLD_HPA:
             findings.append(
-                f"Alçak basınç merkezi: {minimum:.1f} hPa "
-                f"({coordinate_label(min_index)})"
+                f"Alçak basınç merkezi: {minimum:.1f} hPa — {min_region}. "
+                f"{min_relative}. Alçak basınçta hava yükselici hareket eğilimindedir; "
+                "bulutlanma ve yağış ihtimalini artırabilir."
             )
-        if not findings:
+        else:
             findings.append(
-                "Belirgin yüksek veya alçak basınç merkezi saptanmadı "
-                f"(alan içindeki basınç aralığı {minimum:.1f}–{maximum:.1f} hPa)."
+                f"İncelenen alanın en düşük basıncı: {minimum:.1f} hPa — "
+                f"{min_region}. {min_relative}. Bu değer belirgin alçak basınç "
+                "eşiğine ulaşmıyor."
             )
 
         nearest_index = int(
@@ -532,19 +741,32 @@ def analyse_regional_pressure_grid(pressure_grid):
                 + (((pressure_longitudes - LON + 180.0) % 360.0) - 180.0) ** 2
             ).argmin()
         )
-        centre_pressure_hpa = float(np.asarray(pressure_values[nearest_index]).item()) / 100.0
+        centre_pressure_hpa = (
+            float(np.asarray(pressure_values[nearest_index]).item()) / 100.0
+        )
+        findings.append(
+            f"İstanbul'daki GFS başlangıç basıncı {centre_pressure_hpa:.1f} hPa. "
+            f"İncelenen 2.500 km alandaki en yüksek ve en düşük değer arasındaki "
+            f"fark {maximum - minimum:.1f} hPa."
+        )
+        findings.append(
+            "Yüksek ve alçak basınç merkezleri bölgesel eğilimi gösterir; "
+            "İstanbul'da yağış veya açık hava garantisi değildir. Etki, "
+            "rüzgârın yönü, basınç dağılımı ve cephelerin konumuyla belirlenir."
+        )
+
         print(
-            f"[BASINÇ GRIB2] 2.500 km çaplı dairede "
+            f"[BASINÇ GRIB2] 2.500 km çaplı alanda "
             f"{int(np.count_nonzero(inside))} grid noktası; "
             f"min {minimum:.1f}, max {maximum:.1f} hPa; "
-            f"İstanbul {centre_pressure_hpa:.1f} hPa."
+            f"İstanbul {centre_pressure_hpa:.1f} hPa; "
+            f"yüksek merkez {max_region}; düşük merkez {min_region}."
         )
         return findings, round(centre_pressure_hpa, 1)
     except Exception as exc:
         print(f"[BASINÇ UYARI] GRIB2 bölgesel basınç analizi yapılamadı: {type(exc).__name__}: {exc}")
         traceback.print_exc()
         raise
-
 
 def _enka_clean_html(fragment):
     fragment = re.sub(
@@ -1703,7 +1925,7 @@ def analyze_and_build_output(current_run_name, payload, previous_runs):
             f"(+{payload.get('forecast_horizon_hours', MIN_FORECAST_HOURS)} saat)"
         ),
         f"🕒 Rapor zamanı: {_format_tr_datetime(now_local)} TSİ",
-        f"📍 Koordinat: {LAT:.3f}°N, {LON:.3f}°E",
+        "📍 Konum: İstanbul, Türkiye",
         "",
         f"🌡 GFS başlangıç sıcaklığı: {curr_t}°C",
         f"💨 GFS başlangıç rüzgârı: {curr_w} km/sa",
