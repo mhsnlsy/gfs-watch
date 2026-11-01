@@ -13,6 +13,25 @@ TR_TZ = ZoneInfo("Europe/Istanbul")
 CURRENT_URL = "https://w.enka.com/weather/currentvalues.html"
 HOME_URL = "https://w.enka.com/weather/index.html"
 
+WIND_DIRECTIONS_TR = {
+    "N": "Kuzey",
+    "NNE": "Kuzey-kuzeydoğu",
+    "NE": "Kuzeydoğu",
+    "ENE": "Doğu-kuzeydoğu",
+    "E": "Doğu",
+    "ESE": "Doğu-güneydoğu",
+    "SE": "Güneydoğu",
+    "SSE": "Güney-güneydoğu",
+    "S": "Güney",
+    "SSW": "Güney-güneybatı",
+    "SW": "Güneybatı",
+    "WSW": "Batı-güneybatı",
+    "W": "Batı",
+    "WNW": "Batı-kuzeybatı",
+    "NW": "Kuzeybatı",
+    "NNW": "Kuzey-kuzeybatı",
+}
+
 
 def _clean_html(fragment):
     fragment = re.sub(r"<script\b[^>]*>.*?</script>", " ", fragment, flags=re.I | re.S)
@@ -114,6 +133,7 @@ def fetch_enka_station_observation():
         "wind_speed_10m_kmh": round(wind_knots * 1.852, 1),
         "wind_speed_10m_knots": wind_knots,
         "wind_direction_cardinal": wind_direction,
+        "wind_direction_tr": WIND_DIRECTIONS_TR.get(wind_direction),
         "precipitation_1h_mm": None,
         "precipitation_daily_mm": daily_rain,
         "humidity_percent": humidity,
