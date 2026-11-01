@@ -404,6 +404,53 @@
       .daily-grid .day{padding:10px 6px}
     }
 
+
+    /* Mobile interaction and frameless chart finish. */
+    .next-72h-card{
+      border:0!important;
+      border-radius:0!important;
+      background:transparent!important;
+      box-shadow:none!important;
+      padding:3px 2px 0!important;
+    }
+    .next-72h-grid{column-gap:18px;row-gap:15px}
+    .chart-stack>.chart-card{
+      border:0!important;
+      border-radius:0!important;
+      background:transparent!important;
+      box-shadow:none!important;
+      padding:0!important;
+    }
+    .history-chart-card{
+      border:0!important;
+      border-radius:0!important;
+      background:transparent!important;
+      box-shadow:none!important;
+    }
+    .chart-tooltip,.station-history-tooltip{
+      max-width:min(205px,calc(100vw - 52px));
+      box-shadow:0 8px 22px rgba(0,0,0,.30);
+    }
+    @media(max-width:560px){
+      .next-72h-panel{padding:13px 12px}
+      .next-72h-head{
+        display:flex;
+        flex-direction:column;
+        align-items:flex-start;
+        gap:7px;
+        margin-bottom:9px;
+      }
+      .next-72h-head h2{font-size:19px;white-space:normal}
+      .next-72h-badge{white-space:normal;line-height:1.35}
+      .next-72h-grid{gap:12px 14px}
+      .next-72h-card{padding:2px 1px 0!important}
+      .next-72h-chart{height:108px;margin-top:2px}
+      .next-72h-card-head h3{font-size:12px}
+      .chart-tooltip{min-width:146px;max-width:min(190px,calc(100vw - 44px));padding:7px 8px}
+      .station-history-tooltip{min-width:132px;max-width:min(182px,calc(100vw - 44px));padding:8px 9px;font-size:10px}
+      .station-history-tooltip-value{font-size:13px}
+    }
+
 </style>
 </head>
 <body>
@@ -568,6 +615,7 @@
       tooltip.setAttribute("role","tooltip");
       const tooltipLayer=container.closest(".chart-card")||container;
       tooltipLayer.appendChild(tooltip);
+      let dismissTimer=null;
 
       const cursorLine=document.createElementNS(ns,"line");
       cursorLine.setAttribute("class","chart-crosshair");
@@ -600,6 +648,7 @@
       svg.appendChild(hitArea);
 
       const hideTooltip=()=>{
+        if(dismissTimer!==null){window.clearTimeout(dismissTimer);dismissTimer=null;}
         tooltip.hidden=true;
         cursorLine.setAttribute("visibility","hidden");
         cursorDot.setAttribute("visibility","hidden");
@@ -674,10 +723,20 @@
       hitArea.addEventListener("pointermove",event=>{
         if(event.pointerType!=="touch")selectNearestPoint(event);
       });
-      hitArea.addEventListener("pointerdown",event=>selectNearestPoint(event));
+      hitArea.addEventListener("pointerdown",event=>{
+        selectNearestPoint(event);
+        if(event.pointerType==="touch"){
+          if(dismissTimer!==null)window.clearTimeout(dismissTimer);
+          dismissTimer=window.setTimeout(hideTooltip,2500);
+        }
+      });
       hitArea.addEventListener("pointerleave",event=>{
         if(event.pointerType!=="touch")hideTooltip();
       });
+      document.addEventListener("pointerdown",event=>{
+        if(event.pointerType==="touch"&&!hitArea.contains(event.target))hideTooltip();
+      },{passive:true});
+      window.addEventListener("scroll",hideTooltip,{passive:true});
       hitArea.addEventListener("keydown",event=>{
         if(event.key!=="ArrowLeft"&&event.key!=="ArrowRight")return;
         event.preventDefault();
@@ -826,12 +885,16 @@
       if(!coords.length||typeof document==="undefined")return;
       const card=holder.closest(".history-chart-card")||holder,tip=document.createElement("div");
       tip.className="station-history-tooltip";tip.hidden=true;tip.setAttribute("role","tooltip");card.appendChild(tip);
+      let dismissTimer=null;
       const ns="http://www.w3.org/2000/svg",line=document.createElementNS(ns,"line"),dot=document.createElementNS(ns,"circle"),hit=document.createElementNS(ns,"rect");
       line.setAttribute("y1",String(top));line.setAttribute("y2",String(height-bottom));line.setAttribute("stroke","#e8fbf7");line.setAttribute("stroke-width","1");line.setAttribute("stroke-dasharray","3 4");line.setAttribute("visibility","hidden");
       dot.setAttribute("r","5");dot.setAttribute("fill",color);dot.setAttribute("stroke","#f4ffff");dot.setAttribute("stroke-width","2");dot.setAttribute("visibility","hidden");
-      hit.setAttribute("x","42");hit.setAttribute("y",String(top));hit.setAttribute("width",String(width-54));hit.setAttribute("height",String(height-top-bottom));hit.setAttribute("fill","transparent");hit.setAttribute("tabindex","0");hit.setAttribute("aria-label","Grafikte zaman seçerek ölçüm ayrıntılarını görüntüleyin");hit.style.cursor="crosshair";
+      hit.setAttribute("x","42");hit.setAttribute("y",String(top));hit.setAttribute("width",String(width-54));hit.setAttribute("height",String(height-top-bottom));hit.setAttribute("fill","transparent");hit.setAttribute("tabindex","0");hit.setAttribute("aria-label","Grafikte zaman seçerek ölçüm ayrıntılarını görüntüleyin");hit.style.cursor="crosshair";hit.style.touchAction="pan-y";hit.style.webkitTapHighlightColor="transparent";
       svg.append(line,dot,hit);
-      const hide=()=>{tip.hidden=true;line.setAttribute("visibility","hidden");dot.setAttribute("visibility","hidden");};
+      const hide=()=>{
+        if(dismissTimer!==null){window.clearTimeout(dismissTimer);dismissTimer=null;}
+        tip.hidden=true;line.setAttribute("visibility","hidden");dot.setAttribute("visibility","hidden");
+      };
       const show=p=>{
         line.setAttribute("x1",String(p.x));line.setAttribute("x2",String(p.x));dot.setAttribute("cx",String(p.x));dot.setAttribute("cy",String(p.y));line.setAttribute("visibility","visible");dot.setAttribute("visibility","visible");
         tip.innerHTML='<div class="station-history-tooltip-time">'+esc(chartDateTimeTR(p.time))+' TSİ</div><div class="station-history-tooltip-value">'+esc(p.valueLabel)+'</div>'+(p.detail?'<div class="station-history-tooltip-detail">'+esc(p.detail)+'</div>':"");tip.hidden=false;
@@ -840,7 +903,17 @@
         tip.style.left=Math.max(8,Math.min(cr.width-tw-8,left))+"px";tip.style.top=Math.max(8,Math.min(cr.height-th-8,py-th-10))+"px";
       };
       const nearest=e=>{const r=svg.getBoundingClientRect();if(!r.width)return;const x=(e.clientX-r.left)*width/r.width;let p=coords[0];for(const q of coords)if(Math.abs(q.x-x)<Math.abs(p.x-x))p=q;show(p);};
-      hit.addEventListener("pointermove",nearest);hit.addEventListener("pointerdown",nearest);hit.addEventListener("pointerleave",e=>{if(e.pointerType!=="touch")hide();});
+      hit.addEventListener("pointermove",e=>{if(e.pointerType!=="touch")nearest(e);});
+      hit.addEventListener("pointerdown",e=>{
+        nearest(e);
+        if(e.pointerType==="touch"){
+          if(dismissTimer!==null)window.clearTimeout(dismissTimer);
+          dismissTimer=window.setTimeout(hide,2500);
+        }
+      });
+      hit.addEventListener("pointerleave",e=>{if(e.pointerType!=="touch")hide();});
+      document.addEventListener("pointerdown",e=>{if(e.pointerType==="touch"&&!hit.contains(e.target))hide();},{passive:true});
+      window.addEventListener("scroll",hide,{passive:true});
       hit.addEventListener("keydown",e=>{if(!["ArrowLeft","ArrowRight"].includes(e.key))return;e.preventDefault();let i=coords.findIndex(p=>p.x===Number(dot.getAttribute("cx")));if(i<0)i=0;i=Math.max(0,Math.min(coords.length-1,i+(e.key==="ArrowRight"?1:-1)));show(coords[i]);});
     }
     function renderStationTemperatureTrend(samples,stationName){
