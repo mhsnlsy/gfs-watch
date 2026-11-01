@@ -384,7 +384,7 @@
     <div id="ecmwf-model-view" hidden aria-label="ECMWF tahmin görünümü">
       <div class="section-head" style="padding-top:30px"><div><div class="section-kicker">ECMWF IFS · ENSEMBLE PREDICTION SYSTEM</div><h2>ECMWF EPS · İstanbul</h2><p class="section-description">GFS ile aynı kart ölçüleri, grafik düzeni, günlük tahmin ve basınç analizi formatı. Sayısal değerler ECMWF ensemble ortalamasıdır.</p></div><div class="section-note"><span id="ecmwf-run-meta">ECMWF döngüsü bekleniyor</span><br><span id="ecmwf-daily-updated-chip">Yayın zamanı</span><br>Günlük en düşük / en yüksek sıcaklık</div></div>
       <div id="ecmwf-data-status" class="ecmwf-model-status" role="status" aria-live="polite">ECMWF EPS verisi yükleniyor…</div>
-<section class="section" id="ecmwf-tahmin"><div class="section-head"><div><div class="section-kicker">ECMWF IFS ENS · MODEL TAHMİNİ</div><h2>8 günlük tahmin</h2></div><div class="section-note"><span id="ecmwf-run-meta">ECMWF döngüsü yükleniyor</span><br><span id="ecmwf-updated-chip">Yayın zamanı bekleniyor</span><br>Günlük en düşük / en yüksek sıcaklık · ensemble ortalaması</div></div><div class="daily-grid" id="ecmwf-daily-grid"><div class="loading">ECMWF tahmini yükleniyor…</div></div></section>
+<section class="section" id="ecmwf-tahmin"><div class="section-head"><div><div class="section-kicker">ECMWF IFS ENS · MODEL TAHMİNİ</div><h2>8 günlük tahmin</h2></div><div class="section-note"><span id="ecmwf-daily-cycle-chip">ECMWF döngüsü yükleniyor</span><br><span id="ecmwf-daily-updated-chip">Yayın zamanı bekleniyor</span><br>Günlük en düşük / en yüksek sıcaklık · ensemble ortalaması</div></div><div class="daily-grid" id="ecmwf-daily-grid"><div class="loading">ECMWF tahmini yükleniyor…</div></div></section>
 <section class="section" id="ecmwf-seyir">
       <div class="section-head">
         <div><div class="section-kicker">ECMWF IFS ENS · MODEL TAHMİNİ</div><h2>180 saatlik tahmin seyri</h2></div>
@@ -1112,6 +1112,8 @@
       if(!Array.isArray(viewData.forecast_6_hourly)||viewData.forecast_6_hourly.length!==forecasts.length)throw new Error("ECMWF ortak tahmin zaman çizelgesi eksik.");
       if(!Array.isArray(viewData.daily_summary)||!viewData.daily_summary.length)throw new Error("ECMWF günlük özet verisi eksik.");
       $("ecmwf-run-meta").textContent="Döngü: "+timeTR(document.run_id_utc)+" TSİ · Geçerlilik: +"+last.forecast_hour+" saat";
+      if($("ecmwf-daily-cycle-chip"))$("ecmwf-daily-cycle-chip").textContent="Döngü: "+timeTR(document.run_id_utc)+" TSİ";
+      if($("ecmwf-daily-updated-chip"))$("ecmwf-daily-updated-chip").textContent="Yayınlandı: "+timeTR(document.updated_at_utc)+" TSİ";
       if($("ecmwf-daily-cycle-chip"))$("ecmwf-daily-cycle-chip").textContent="Döngü: "+timeTR(document.run_id_utc)+" TSİ";
       if($("ecmwf-daily-updated-chip"))$("ecmwf-daily-updated-chip").textContent="Yayınlandı: "+timeTR(document.updated_at_utc)+" TSİ";
       $("ecmwf-updated-chip").textContent="Yayınlandı · "+timeTR(document.updated_at_utc);
