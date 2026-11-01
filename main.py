@@ -264,11 +264,11 @@ def save_public_notification_images(run_id, chart_buffers):
     labels = {
         "temperature": "Sıcaklık",
         "precipitation": "Yağış",
-        "wind_10m": "Yüzey rüzgârı · 10 m",
-        "wind_850": "Rüzgâr · 850 hPa",
+        "temperature_850": "Sıcaklık · 850 hPa",
+        "wind_10m": "Rüzgâr hızı + yönü · 10 m",
     }
     images = []
-    for metric in ("temperature", "precipitation", "wind_10m", "wind_850"):
+    for metric in ("temperature", "temperature_850", "precipitation", "wind_10m"):
         buffer = chart_buffers.get(metric)
         if not buffer:
             continue
@@ -1172,7 +1172,7 @@ def _noaa_index_record_matches(parts, lead):
         return False
     variable = parts[3].strip().upper()
     level = parts[4].strip().lower()
-    if variable == "TMP" and level == "2 m above ground":
+    if variable == "TMP" and level in ("2 m above ground", "850 mb"):
         return True
     if variable in ("UGRD", "VGRD") and level in ("10 m above ground", "850 mb"):
         return True
@@ -1375,6 +1375,7 @@ def _decode_noaa_grib_step(run_id, lead, grib_bytes):
     points = {"Istanbul": (LAT, LON)}
     step_data = {
         "temperature": None,
+        "temperature_850": None,
         "wind_u": None,
         "wind_v": None,
         "wind_850_u": None,
@@ -1405,6 +1406,7 @@ def _decode_noaa_grib_step(run_id, lead, grib_bytes):
 
                         is_target = (
                             (short_name == "2t" and level_type == "heightAboveGround" and level == 2)
+                            or (short_name == "t" and level_type == "isobaricInhPa" and level == 850)
                             or (short_name in ("10u", "10v") and level_type == "heightAboveGround" and level == 10)
                             or (short_name in ("u", "v") and level_type == "isobaricInhPa" and level == 850)
                             or (short_name == "tp" and level_type == "surface")
@@ -1434,6 +1436,8 @@ def _decode_noaa_grib_step(run_id, lead, grib_bytes):
 
                         if short_name == "2t":
                             step_data["temperature"] = samples
+                        elif short_name == "t" and level_type == "isobaricInhPa" and level == 850:
+                            step_data["temperature_850"] = samples
                         elif short_name == "10u":
                             step_data["wind_u"] = samples
                         elif short_name == "10v":
@@ -1718,6 +1722,8 @@ def fetch_full_weather_data(run_id):
                 name: float(value) - 273.15
                 for name, value in temperature.items()
             }
+            temperature_850 = step_data.get("temperature_850") or {}
+            temp_850_c = {name: float(value) - 273.15 for name, value in temperature_850.items()}
             wind_kmh = {}
             wind_850_kmh = {}
             wind_direction_deg = {}
@@ -1777,6 +1783,7 @@ def fetch_full_weather_data(run_id):
             forecast_timeline[time_key] = {
                 "step_hour": lead,
                 "temp": istanbul_temp,
+                "temp_850": round(temp_850_c["Istanbul"], 1) if "Istanbul" in temp_850_c else None,
                 "wind": istanbul_wind,
                 "wind_850": istanbul_wind_850,
                 "wind_direction_deg": round(wind_direction_deg["Istanbul"], 1) if "Istanbul" in wind_direction_deg else None,
@@ -1787,9 +1794,11 @@ def fetch_full_weather_data(run_id):
 
             day_key = valid_local.date().isoformat()
             bucket = daily_buckets.setdefault(
-                day_key, {"temps": [], "precips": [], "winds": [], "winds_850": []}
+                day_key, {"temps": [], "temps_850": [], "precips": [], "winds": [], "winds_850": []}
             )
             bucket["temps"].append(istanbul_temp)
+            if "Istanbul" in temp_850_c:
+                bucket["temps_850"].append(round(temp_850_c["Istanbul"], 1))
             if lead > 0:
                 bucket["precips"].append(istanbul_precip)
             bucket["winds"].append(istanbul_wind)
@@ -1806,6 +1815,8 @@ def fetch_full_weather_data(run_id):
                 round(min(daily_buckets[day]["temps"]), 1)
                 for day in daily_dates
             ],
+            "temp_850_max": [round(max(daily_buckets[day]["temps_850"]), 1) if daily_buckets[day]["temps_850"] else None for day in daily_dates],
+            "temp_850_min": [round(min(daily_buckets[day]["temps_850"]), 1) if daily_buckets[day]["temps_850"] else None for day in daily_dates],
             "precip_sum": [
                 round(sum(daily_buckets[day]["precips"]), 1)
                 for day in daily_dates
@@ -2099,6 +2110,10 @@ def _prepare_comparison_chart_data(current_run_id, payload, previous_runs):
         required = ("temp_min", "temp_max", "precip_sum", "wind_max")
         if any(len(daily.get(key, [])) != len(dates) for key in required):
             raise ValueError("Günlük özet dizilerinin uzunlukları uyuşmuyor.")
+        temp_850_max = daily.get("temp_850_max", [])
+        temp_850_min = daily.get("temp_850_min", [])
+        if (temp_850_max and len(temp_850_max) != len(dates)) or (temp_850_min and len(temp_850_min) != len(dates)):
+            raise ValueError("850 hPa sıcaklık dizilerinin uzunluğu uyuşmuyor.")
         wind_850_values = daily.get("wind_850_max", [])
         if wind_850_values and len(wind_850_values) != len(dates):
             raise ValueError("850 hPa günlük rüzgâr dizisinin uzunluğu uyuşmuyor.")
@@ -2110,6 +2125,8 @@ def _prepare_comparison_chart_data(current_run_id, payload, previous_runs):
                 "temp_max": float(daily["temp_max"][index]),
                 "precip": float(daily["precip_sum"][index]),
                 "wind": float(daily["wind_max"][index]),
+                "temp_850_min": float(temp_850_min[index]) if temp_850_min and temp_850_min[index] is not None else None,
+                "temp_850_max": float(temp_850_max[index]) if temp_850_max and temp_850_max[index] is not None else None,
                 "wind_850": float(raw_850) if raw_850 is not None else None,
             }
         if not daily_map:
@@ -2239,6 +2256,41 @@ def _draw_comparison_temperature_axis(axis, chart_data):
     axis.grid(axis="y", alpha=0.25)
 
 
+def _draw_comparison_850_temperature_axis(axis, chart_data):
+    """Daily min/max range for 850 hPa temperature, using the same cycle colors."""
+    for series_index, item in enumerate(chart_data["series"]):
+        color = chart_data["colors"][series_index % len(chart_data["colors"])]
+        for index, day in enumerate(chart_data["dates"]):
+            values = item["daily"][day]
+            low, high = values.get("temp_850_min"), values.get("temp_850_max")
+            if low is None or high is None:
+                continue
+            x = index + chart_data["offsets"][series_index]
+            axis.vlines(x, low, high, color=color, linewidth=2.4, alpha=0.95)
+            axis.scatter([x, x], [low, high], color=color, s=24, zorder=3)
+    axis.set_title("850 hPa sıcaklığı | Günlük min–maks aralığı", loc="left", fontsize=11)
+    axis.set_ylabel("°C", fontsize=10)
+
+
+def _daily_wind_direction(item, day):
+    """Circular mean of 10 m meteorological FROM bearings, weighted by speed."""
+    angles = []
+    for key, values in item.get("timeline", {}).items():
+        if key[:10] != day:
+            continue
+        direction, speed = values.get("wind_direction_deg"), values.get("wind")
+        if direction is None or speed is None or float(speed) < 1.0:
+            continue
+        angles.append((math.radians(float(direction)), max(1.0, float(speed))))
+    if not angles:
+        return None
+    sine = sum(math.sin(angle) * weight for angle, weight in angles)
+    cosine = sum(math.cos(angle) * weight for angle, weight in angles)
+    if abs(sine) + abs(cosine) < 1e-8:
+        return None
+    return math.degrees(math.atan2(sine, cosine)) % 360.0
+
+
 def _draw_comparison_bar_axis(axis, chart_data, metric, title, ylabel):
     series = chart_data["series"]
     dates = chart_data["dates"]
@@ -2258,6 +2310,22 @@ def _draw_comparison_bar_axis(axis, chart_data, metric, title, ylabel):
             bar_values.append(float(value))
         if bar_positions:
             axis.bar(bar_positions, bar_values, width=bar_width, color=color)
+    if metric == "wind":
+        direction_axis = axis.twinx()
+        direction_axis.set_ylim(0, 360)
+        direction_axis.set_yticks([0, 90, 180, 270, 360])
+        direction_axis.set_yticklabels(["K", "D", "G", "B", "K"])
+        direction_axis.tick_params(axis="y", colors=GFS_REPORT_MUTED, labelsize=8)
+        direction_axis.spines["right"].set_color(GFS_REPORT_SPINE)
+        for series_index, item in enumerate(series):
+            for index, day in enumerate(dates):
+                direction = _daily_wind_direction(item, day)
+                if direction is not None:
+                    x = x_positions[index] + offsets[series_index]
+                    direction_axis.scatter([x], [direction], marker="v", s=42,
+                        color=colors[series_index % len(colors)], edgecolors=GFS_REPORT_TEXT,
+                        linewidths=0.6, zorder=5)
+        direction_axis.set_ylabel("Yön · geldiği yön", fontsize=9, color=GFS_REPORT_MUTED)
     axis.set_title(title, loc="left", fontsize=11)
     axis.set_ylabel(ylabel, fontsize=10)
     axis.grid(axis="y", alpha=0.25)
@@ -2318,9 +2386,9 @@ def create_comparison_chart(current_run_id, payload, previous_runs):
             facecolor=GFS_REPORT_PANEL_BG, edgecolor=GFS_REPORT_LEGEND_EDGE,
             framealpha=0.98, labelcolor=GFS_REPORT_TEXT,
         )
-        _draw_comparison_bar_axis(axes[1], chart_data, "precip", "Günlük toplam yağış", "mm")
-        _draw_comparison_bar_axis(axes[2], chart_data, "wind", "Yüzey rüzgârı | 10 m günlük en yüksek hız", "km/sa")
-        _draw_comparison_bar_axis(axes[3], chart_data, "wind_850", "850 hPa rüzgârı | Günlük en yüksek hız", "km/sa")
+        _draw_comparison_850_temperature_axis(axes[1], chart_data)
+        _draw_comparison_bar_axis(axes[2], chart_data, "precip", "Günlük toplam yağış", "mm")
+        _draw_comparison_bar_axis(axes[3], chart_data, "wind", "Yüzey rüzgârı | 10 m hız + yön", "km/sa")
         fig.patch.set_facecolor(GFS_REPORT_FIGURE_BG)
         for axis in axes:
             _style_dark_comparison_axis(axis)
@@ -2338,7 +2406,7 @@ def create_comparison_chart(current_run_id, payload, previous_runs):
         image_buffer.seek(0)
         print(
             f"[TELEGRAM KIYAS GÖRSELİ] {count} GFS döngüsü, {len(dates)} ortak gün; "
-            "sıcaklık, yağış, 10 m ve 850 hPa rüzgâr panelleri hazır.",
+            "2 m ve 850 hPa sıcaklık, yağış, hız+yön panelleri hazır.",
         )
         return image_buffer
     except Exception as exc:
@@ -2356,10 +2424,10 @@ def create_pages_comparison_charts(current_run_id, payload, previous_runs):
         return {}
     charts = {}
     specifications = (
-        ("temperature", "Sıcaklık", "Sıcaklık | Günlük mum: ilk–son örnek, fitil: min–maks", "°C"),
+        ("temperature", "2 m Sıcaklık", "2 m sıcaklık | Günlük mum: ilk–son, fitil: min–maks", "°C"),
+        ("temperature_850", "850 hPa Sıcaklık", "850 hPa sıcaklığı | Günlük min–maks aralığı", "°C"),
         ("precipitation", "Yağış", "Günlük toplam yağış", "mm"),
-        ("wind_10m", "Yüzey rüzgârı", "Yüzey rüzgârı | 10 m günlük en yüksek hız", "km/sa"),
-        ("wind_850", "850 hPa rüzgârı", "850 hPa rüzgârı | Günlük en yüksek hız", "km/sa"),
+        ("wind_10m", "Rüzgâr hız + yön", "10 m rüzgâr hızı ve yönü | günlük", "km/sa"),
     )
     try:
         chart_data = _prepare_comparison_chart_data(current_run_id, payload, previous_runs)
@@ -2376,12 +2444,12 @@ def create_pages_comparison_charts(current_run_id, payload, previous_runs):
                 )
                 if metric == "temperature":
                     _draw_comparison_temperature_axis(axis, chart_data)
+                elif metric == "temperature_850":
+                    _draw_comparison_850_temperature_axis(axis, chart_data)
                 elif metric == "precipitation":
                     _draw_comparison_bar_axis(axis, chart_data, "precip", title, ylabel)
                 elif metric == "wind_10m":
                     _draw_comparison_bar_axis(axis, chart_data, "wind", title, ylabel)
-                else:
-                    _draw_comparison_bar_axis(axis, chart_data, "wind_850", title, ylabel)
                 # Stronger typography and contrast for readable numeric values on desktop and mobile.
                 axis.set_facecolor(GFS_REPORT_AXIS_BG)
                 fig.patch.set_facecolor(GFS_REPORT_FIGURE_BG)
