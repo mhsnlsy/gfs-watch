@@ -1,0 +1,86 @@
+"""Offline smoke tests for the ECMWF EPS publication contract."""
+from __future__ import annotations
+
+import sys
+from datetime import datetime, timezone
+from pathlib import Path
+
+ROOT = Path(__file__).resolve().parents[1]
+sys.path.insert(0, str(ROOT))
+
+from fetch_ecmwf_eps import (  # noqa: E402
+    SCHEMA,
+    build_document,
+    forecast_steps,
+    validate_document,
+)
+
+
+def synthetic_series(steps, value, latitude=41.0, longitude=29.0):
+    return {step: (value, latitude, longitude) for step in steps}
+
+
+def run_offline_tests() -> None:
+    steps = forecast_steps()
+    assert len(steps) == 55, len(steps)
+    assert steps[:4] == [0, 3, 6, 9]
+    assert steps[48:] == [144, 150, 156, 162, 168, 174, 180]
+
+    mean = {
+        "mean_t850": synthetic_series(steps, 274.15),
+        "mean_ws850": synthetic_series(steps, 10.0),
+        "mean_msl": synthetic_series(steps, 101325.0),
+    }
+    spread = {
+        "spread_t850": synthetic_series(steps, 1.0),
+        "spread_ws850": synthetic_series(steps, 2.0),
+        "spread_msl": synthetic_series(steps, 250.0),
+    }
+    document = build_document(datetime(2026, 11, 1, 0, tzinfo=timezone.utc), mean, spread)
+    validate_document(document)
+    assert document["schema"] == SCHEMA
+    assert document["forecasts"][0]["temperature_850hpa"]["mean_c"] == 1.0
+    assert document["forecasts"][0]["wind_850hpa"]["mean_kmh"] == 36.0
+    assert document["forecasts"][0]["mslp"]["mean_hpa"] == 1013.25
+    assert document["forecasts"][-1]["forecast_hour"] == 180
+
+    # Negative tests: missing step and physically impossible wind must fail closed.
+    broken = dict(document)
+    broken["forecasts"] = document["forecasts"][:-1]
+    try:
+        validate_document(broken)
+    except ValueError:
+        pass
+    else:
+        raise AssertionError("A shortened forecast series was accepted.")
+
+    broken = {
+        **document,
+        "forecasts": [dict(item) for item in document["forecasts"]],
+    }
+    broken["forecasts"][0] = {
+        **broken["forecasts"][0],
+        "wind_850hpa": {"mean_kmh": 999.0, "stddev_kmh": 1.0},
+    }
+    try:
+        validate_document(broken)
+    except ValueError:
+        pass
+    else:
+        raise AssertionError("An impossible wind value was accepted.")
+
+    print("[ECMWF OFFLINE SMOKE] 55 steps, units, spread, metadata and fail-closed checks passed.")
+
+
+def main() -> None:
+    run_offline_tests()
+    if len(sys.argv) > 1:
+        import json
+        path = Path(sys.argv[1])
+        document = json.loads(path.read_text(encoding="utf-8"))
+        validate_document(document)
+        print(f"[ECMWF LIVE SMOKE] {path}: {len(document['forecasts'])} valid steps.")
+
+
+if __name__ == "__main__":
+    main()
