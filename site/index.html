@@ -661,7 +661,7 @@
 
       counter.textContent=temperature
         ? valid.length+" nokta · 3 saatlik"
-        : valid.length+" aralık · 3 saatlik";
+        : valid.length+(isEcmwf?" aralık · 3 / 6 saatlik":" aralık · 3 saatlik");
       if(valid.length<2){container.innerHTML='<div class="chart-empty">Bu değişken için yeterli grafik verisi bulunmuyor.</div>';return;}
 
       const width=900,height=250,left=48,right=18,top=18,bottom=40;

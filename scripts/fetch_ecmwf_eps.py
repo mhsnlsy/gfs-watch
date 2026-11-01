@@ -160,7 +160,139 @@ def _value_at(series, step: int, label: str) -> tuple[float, float, float]:
     return series[step]
 
 
-def build_document(run_dt: datetime, mean: dict, spread: dict) -> dict:
+
+def _pressure_region_name(latitude: float, longitude: float) -> str:
+    """Name a synoptic pressure centre in plain Turkish regional geography."""
+    lat = float(latitude)
+    lon = ((float(longitude) + 180.0) % 360.0) - 180.0
+    if 50 <= lat <= 53 and 22 <= lon <= 29:
+        return "Kuzeybatı Ukrayna (Volın bölgesi)"
+    if 44 <= lat <= 46.5 and 32.2 <= lon <= 37:
+        return "Kırım Yarımadası, Ukrayna"
+    if 43.6 <= lat <= 48.3 and 20.2 <= lon <= 29.7:
+        return "Romanya"
+    if 41.2 <= lat <= 44.2 and 22.3 <= lon <= 28.2:
+        return "Bulgaristan, Balkanlar"
+    if 43 <= lat <= 49.2 and 37 <= lon <= 48.5:
+        return "Güney Rusya (Rostov ve Krasnodar çevresi)"
+    if 39 <= lat <= 41.8 and 20 <= lon <= 26.6:
+        return "Kuzeydoğu Yunanistan ve Trakya"
+    if 35 <= lat <= 41 and 19 <= lon < 23:
+        return "Batı Yunanistan ve İyon Denizi açıkları"
+    if 39 <= lat <= 46 and 13 <= lon <= 20:
+        return "Adriyatik Denizi ve Batı Balkan kıyıları"
+    if 40.5 <= lat <= 47.5 and 27 <= lon <= 42.5:
+        return "Karadeniz havzası"
+    if 40 <= lat <= 42.3 and 26 <= lon <= 30.5:
+        return "Marmara ve Trakya, Türkiye"
+    if 36.5 <= lat <= 40 and 26 <= lon <= 30:
+        return "Ege Bölgesi, Türkiye"
+    if 37 <= lat <= 40.8 and 30 <= lon <= 36.5:
+        return "İç Anadolu, Türkiye"
+    if 30 <= lat < 36.5 and 27 <= lon <= 37.5:
+        return "Doğu Akdeniz"
+    return "Doğu Avrupa ve Karadeniz çevresi"
+
+
+def _distance_direction_from_istanbul(latitude: float, longitude: float) -> str:
+    import math
+
+    lat1, lon1 = math.radians(41.014), math.radians(28.950)
+    lat2 = math.radians(float(latitude))
+    lon2 = math.radians(float(longitude))
+    delta_lon = (lon2 - lon1 + math.pi) % (2 * math.pi) - math.pi
+    delta_lat = lat2 - lat1
+    a = (math.sin(delta_lat / 2) ** 2
+         + math.cos(lat1) * math.cos(lat2) * math.sin(delta_lon / 2) ** 2)
+    distance = 6371.0 * 2 * math.asin(math.sqrt(max(0.0, min(1.0, a))))
+    bearing = (math.degrees(math.atan2(
+        math.sin(delta_lon) * math.cos(lat2),
+        math.cos(lat1) * math.sin(lat2)
+        - math.sin(lat1) * math.cos(lat2) * math.cos(delta_lon),
+    )) + 360.0) % 360.0
+    directions = ("kuzey", "kuzeydoğu", "doğu", "güneydoğu",
+                  "güney", "güneybatı", "batı", "kuzeybatı")
+    direction = directions[int((bearing + 22.5) // 45) % 8]
+    return f"İstanbul'un yaklaşık {round(distance)} km {direction} yönünde"
+
+
+def read_regional_pressure_extremes(path: Path, radius_km: float = 1250.0) -> dict:
+    """Find MSLP extrema in a 2,500 km diameter around Istanbul from the em GRIB."""
+    import numpy as np
+    from eccodes import (
+        codes_get, codes_get_array, codes_get_values,
+        codes_grib_new_from_file, codes_release,
+    )
+
+    with path.open("rb") as source:
+        while True:
+            gid = codes_grib_new_from_file(source)
+            if gid is None:
+                break
+            try:
+                if str(codes_get(gid, "shortName")).lower() != "msl":
+                    continue
+                if int(codes_get(gid, "endStep")) != 0:
+                    continue
+                values = np.asarray(codes_get_values(gid), dtype=float)
+                lats = np.asarray(codes_get_array(gid, "latitudes"), dtype=float)
+                lons = np.asarray(codes_get_array(gid, "longitudes"), dtype=float)
+                if not (len(values) == len(lats) == len(lons)) or not len(values):
+                    raise ValueError("ECMWF regional MSLP grid arrays are inconsistent.")
+                lat1 = math.radians(LATITUDE)
+                lat2 = np.radians(lats)
+                delta_lat = lat2 - lat1
+                delta_lon_deg = ((lons - LONGITUDE + 180.0) % 360.0) - 180.0
+                delta_lon = np.radians(delta_lon_deg)
+                a = (np.sin(delta_lat / 2.0) ** 2
+                     + math.cos(lat1) * np.cos(lat2) * np.sin(delta_lon / 2.0) ** 2)
+                distances = 6371.0 * 2.0 * np.arcsin(np.sqrt(np.clip(a, 0.0, 1.0)))
+                valid = np.isfinite(values) & (distances <= radius_km)
+                indices = np.flatnonzero(valid)
+                if len(indices) < 10:
+                    raise RuntimeError("Too few valid ECMWF MSLP points inside the regional analysis area.")
+
+                high_index = int(indices[np.argmax(values[indices])])
+                low_index = int(indices[np.argmin(values[indices])])
+                istanbul_index = int(np.argmin(distances))
+                def point(index):
+                    return {
+                        "pressure_hpa": round(float(values[index]) / 100.0, 1),
+                        "latitude": round(float(lats[index]), 2),
+                        "longitude": round(float(((lons[index] + 180.0) % 360.0) - 180.0), 2),
+                        "distance_km": round(float(distances[index])),
+                    }
+                return {
+                    "diameter_km": round(radius_km * 2),
+                    "high": point(high_index),
+                    "low": point(low_index),
+                    "local_pressure_hpa": round(float(values[istanbul_index]) / 100.0, 1),
+                }
+            finally:
+                codes_release(gid)
+    raise RuntimeError("ECMWF ensemble-mean MSLP field at forecast step 0 was not found.")
+
+
+def format_regional_pressure_findings(regional: dict | None, local_pressure_hpa: float) -> list[str]:
+    if not isinstance(regional, dict) or not isinstance(regional.get("high"), dict) or not isinstance(regional.get("low"), dict):
+        return [
+            "ECMWF ensemble ortalaması için bölgesel MSLP grid'i bu döngüde alınamadı; basınç merkezi konumu üretilmedi."
+        ]
+    high, low = regional["high"], regional["low"]
+    high_name = _pressure_region_name(high["latitude"], high["longitude"])
+    low_name = _pressure_region_name(low["latitude"], low["longitude"])
+    high_distance = _distance_direction_from_istanbul(high["latitude"], high["longitude"])
+    low_distance = _distance_direction_from_istanbul(low["latitude"], low["longitude"])
+    local = float(regional.get("local_pressure_hpa", local_pressure_hpa))
+    spread = float(high["pressure_hpa"]) - float(low["pressure_hpa"])
+    return [
+        f"Yüksek basınç merkezi: {high['pressure_hpa']:.1f} hPa — {high_name}. {high_distance}. Yüksek basınçta hava alçalıcıdır; genellikle daha kararlı koşulları destekler.",
+        f"Alçak basınç merkezi: {low['pressure_hpa']:.1f} hPa — {low_name}. {low_distance}. Alçak basınçta hava yükselici hareket eğilimindedir; bulutlanma ve yağış ihtimalini artırabilir.",
+        f"İstanbul'daki ECMWF ensemble başlangıç basıncı {local:.1f} hPa. İncelenen {regional.get('diameter_km', 2500):,} km alandaki en yüksek ve en düşük değer arasındaki fark {spread:.1f} hPa.",
+        "Basınç merkezleri bölgesel eğilimi gösterir; İstanbul'da yağış veya açık hava garantisi değildir. Etki, rüzgâr yönü, basınç dağılımı ve cephelerin konumuyla belirlenir.",
+    ]
+
+def build_document(run_dt: datetime, mean: dict, spread: dict, regional_pressure: dict | None = None) -> dict:
     steps = forecast_steps()
     required = {
         "mean_t850": "t850", "spread_t850": "t850",
@@ -297,8 +429,10 @@ def build_document(run_dt: datetime, mean: dict, spread: dict) -> dict:
         },
         "regional_pressure_analysis": {
             "valid_time_utc": run_dt.isoformat(timespec="seconds"),
-            "diameter_km": None,
-            "findings": ["ECMWF EPS bu yayında İstanbul grid hücresini sağlar. Bölgesel basınç merkezlerini isimlendirmek için geniş alan MSLP grid verisi henüz bu pakette bulunmadığından merkez konumu üretilmez."],
+            "diameter_km": (regional_pressure or {}).get("diameter_km", 2500),
+            "findings": format_regional_pressure_findings(
+                regional_pressure, forecasts[0]["mslp"]["mean_hpa"]
+            ),
         },
     }
 
@@ -393,7 +527,12 @@ def _fetch_cycle(client, run_dt: datetime) -> dict:
             "spread_v10": read_grib_point(paths["es_sfc"], "v10"),
             "spread_tp": read_grib_point(paths["es_sfc"], "tp"),
         }
-        document = build_document(run_dt, mean, spread)
+        try:
+            regional_pressure = read_regional_pressure_extremes(paths["em_sfc"])
+        except Exception as exc:
+            print(f"[ECMWF PRESSURE ANALYSIS WARNING] {type(exc).__name__}: {exc}")
+            regional_pressure = None
+        document = build_document(run_dt, mean, spread, regional_pressure)
         validate_document(document)
         return document
 
