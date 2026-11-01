@@ -2318,7 +2318,7 @@ def create_pages_comparison_charts(current_run_id, payload, previous_runs):
         dates = chart_data["dates"]
         legend = _comparison_legend_handles(series, chart_data["colors"])
         for metric, label, title, ylabel in specifications:
-            fig, axis = plt.subplots(1, 1, figsize=(19, 5.6))
+            fig, axis = plt.subplots(1, 1, figsize=(19, 6.2))
             try:
                 fig.suptitle(
                     f"İSTANBUL GFS | {label.upper()} · SON {len(series)} DÖNGÜ",
