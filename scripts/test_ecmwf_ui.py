@@ -36,7 +36,7 @@ def main() -> None:
     if missing:
         raise AssertionError("Missing ECMWF website contract: " + ", ".join(missing))
 
-    ids = re.findall(r'\\bid="([^"]+)"', html)
+    ids = re.findall('id="([^"]+)"', html)
     duplicates = sorted(name for name, count in Counter(ids).items() if count > 1)
     if duplicates:
         raise AssertionError("Duplicate HTML IDs: " + ", ".join(duplicates))
