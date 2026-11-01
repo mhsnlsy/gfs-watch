@@ -2122,6 +2122,16 @@ def _prepare_comparison_chart_data(current_run_id, payload, previous_runs):
     if not dates:
         raise ValueError("Dört döngünün ortak tahmin günü bulunamadı.")
 
+    missing_850 = [
+        item["label"] for item in series
+        if any(item["daily"][day].get("wind_850") is None for day in dates)
+    ]
+    if missing_850:
+        raise ValueError(
+            "850 hPa dört döngü karşılaştırması eksik veri içeriyor: "
+            + ", ".join(missing_850)
+        )
+
     colors = ["#3977A8", "#2A9D8F", "#8E6CBE", "#E58A32"]
     count = len(series)
     offsets = [
@@ -2345,8 +2355,27 @@ def create_pages_comparison_charts(current_run_id, payload, previous_runs):
         print(f"[PAGES GÖRSELLERİ HATA] Ayrı görseller oluşturulamadı: {exc}")
         return {}
 
+def _has_complete_850_wind_daily_series(payload):
+    """Return true only when every daily bucket has a finite 850 hPa wind value."""
+    if not isinstance(payload, dict):
+        return False
+    daily = payload.get("daily", {})
+    if not isinstance(daily, dict):
+        return False
+    dates = daily.get("time", [])
+    values = daily.get("wind_850_max", [])
+    if not isinstance(dates, list) or not dates or not isinstance(values, list):
+        return False
+    if len(values) != len(dates):
+        return False
+    try:
+        return all(value is not None and math.isfinite(float(value)) for value in values)
+    except (TypeError, ValueError, OverflowError):
+        return False
+
+
 async def load_previous_three_runs_for_comparison(current_run_id):
-    """Load the exact three preceding six-hour cycles, using NOAA read-only as fallback."""
+    """Load the exact three preceding cycles; refresh legacy records without 850 hPa wind from NOAA."""
     current_dt = _parse_utc_datetime(current_run_id)
     previous_runs = []
 
@@ -2356,22 +2385,29 @@ async def load_previous_three_runs_for_comparison(current_run_id):
         stored_record = await asyncio.to_thread(
             get_run_payload, previous_run_id
         )
-
+        stored_payload = None
         if stored_record:
             stored_run_id, stored_payload = stored_record
+            if _has_complete_850_wind_daily_series(stored_payload):
+                print(
+                    f"[KIYAS GEÇMİŞİ] {stored_run_id} SQLite kaydı kullanılıyor; "
+                    "850 hPa günlük serisi eksiksiz."
+                )
+                previous_runs.append((
+                    stored_run_id,
+                    json.dumps(stored_payload, ensure_ascii=False),
+                ))
+                continue
             print(
-                f"[KIYAS GEÇMİŞİ] {stored_run_id} SQLite geçmişinden salt okunur alındı."
+                f"[KIYAS GEÇMİŞİ] {stored_run_id} SQLite kaydında 850 hPa "
+                "serisi eksik; NOAA/NCEP'den yeniden alınıyor."
             )
-            previous_runs.append((
-                stored_run_id,
-                json.dumps(stored_payload, ensure_ascii=False),
-            ))
-            continue
+        else:
+            print(
+                f"[KIYAS GEÇMİŞİ] {previous_run_id} DB'de bulunamadı; "
+                "NOAA/NCEP'den salt okunur alınıyor."
+            )
 
-        print(
-            f"[KIYAS GEÇMİŞİ] {previous_run_id} DB'de bulunamadı; "
-            "NOAA/NCEP'den salt okunur tamamlanıyor."
-        )
         fetched_payload = await asyncio.to_thread(
             fetch_full_weather_data, previous_run_id
         )
@@ -2379,6 +2415,11 @@ async def load_previous_three_runs_for_comparison(current_run_id):
             raise RuntimeError(
                 f"{previous_run_id} karşılaştırma tahmini NOAA'dan alınamadı: "
                 f"{(fetched_payload or {}).get('_reason', 'veri bulunamadı')}"
+            )
+        if not _has_complete_850_wind_daily_series(fetched_payload):
+            raise RuntimeError(
+                f"{previous_run_id} NOAA verisinde 850 hPa günlük rüzgâr "
+                "serisi eksik veya geçersiz; eksik karşılaştırma görseli üretilmeyecek."
             )
         previous_runs.append((
             previous_run_id,
