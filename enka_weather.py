@@ -163,20 +163,20 @@ def update_temperature_history(observation):
     else:
         samples = []
 
-    # Do not create a new point from an old/stale reading.
+    logged_at = datetime.now(timezone.utc)
+    # Do not create a new point from an old/stale reading, but always ensure
+    # the history document exists so the publishing workflow can continue.
     if observation.get("is_stale") or observation.get("temperature_2m_c") is None:
         print(
             "[TEMPERATURE LOG] ENKA ölçümü eski veya geçersiz; "
             "bu kontrol için yeni sıcaklık kaydı eklenmedi."
         )
-        return len(samples)
-
-    logged_at = datetime.now(timezone.utc)
-    samples.append({
-        "logged_at_utc": logged_at.isoformat(timespec="seconds"),
-        "observed_at_utc": observation["observed_at_utc"],
-        "temperature_2m_c": float(observation["temperature_2m_c"]),
-    })
+    else:
+        samples.append({
+            "logged_at_utc": logged_at.isoformat(timespec="seconds"),
+            "observed_at_utc": observation["observed_at_utc"],
+            "temperature_2m_c": float(observation["temperature_2m_c"]),
+        })
 
     # Keep seven days: 2,016 samples at the intended five-minute cadence.
     cutoff = logged_at.timestamp() - 7 * 24 * 60 * 60
