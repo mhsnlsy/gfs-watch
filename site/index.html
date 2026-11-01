@@ -364,6 +364,46 @@
 .next-72h-chart svg{display:block;width:100%;height:100%;overflow:visible}
 @media(max-width:900px){.dashboard-top{grid-template-columns:minmax(0,1fr)}.dashboard-left{display:contents}.dashboard-left .station-card{order:0}.next-72h-panel{order:1}.dashboard-left .history-panel{order:2}}
 @media(max-width:560px){.dashboard-top{gap:10px;padding:16px 0 12px}.dashboard-left .history-chart{height:88px}.next-72h-panel{padding:11px;border-radius:16px}.next-72h-head h2{font-size:18px}.next-72h-grid{gap:7px}.next-72h-card{padding:8px 6px 6px}.next-72h-card-head h3{font-size:11px}.next-72h-chart{height:120px}}
+
+    /* Integrated observation card: station history is part of the live card. */
+    .dashboard-top{grid-template-columns:minmax(310px,.82fr) minmax(0,1.18fr);gap:13px;align-items:stretch;padding:18px 0 16px}
+    .dashboard-left{min-width:0;display:block}
+    .dashboard-top .station-card{width:100%;max-width:none;padding:16px 17px 13px;align-self:stretch}
+    .dashboard-top .station-overview{display:block;margin-top:12px}
+    .dashboard-top .station-card .temperature{font-size:clamp(44px,4.8vw,62px)}
+    .dashboard-top .station-card .weather-stats{grid-template-columns:repeat(4,minmax(0,1fr));gap:0;margin-top:13px;padding-top:9px}
+    .dashboard-top .station-card .stat{padding:2px 7px 0;border-right:1px solid rgba(213,237,240,.10)}
+    .dashboard-top .station-card .stat:last-child{border-right:0}
+    .station-history-inline{margin-top:12px;padding:10px 0 0!important;border:0!important;border-top:1px solid rgba(213,237,240,.13)!important;border-radius:0!important;background:transparent!important;box-shadow:none!important}
+    .station-history-inline .history-panel-head{margin:0 0 7px;align-items:center}
+    .station-history-inline .history-panel-head h2{font-size:15px;margin-top:2px}
+    .station-history-inline .section-kicker{font-size:8px;letter-spacing:.11em}
+    .station-history-inline .history-window{font-size:8px;padding:4px 7px}
+    .station-history-inline .history-charts{grid-template-columns:repeat(2,minmax(0,1fr));gap:9px}
+    .station-history-inline .history-chart-card{min-width:0;padding:0;border:0;border-radius:0;background:transparent}
+    .station-history-inline .history-chart-head{margin-bottom:3px;gap:4px}
+    .station-history-inline .history-chart-head h3{font-size:10px}
+    .station-history-inline .history-chart-head p{font-size:7px;line-height:1.3}
+    .station-history-inline .history-chart{height:76px;margin-top:0}
+    .station-history-inline .history-chart-meta{font-size:7px;line-height:1.25;margin-top:2px}
+    .station-history-inline .history-source-note{font-size:7px;line-height:1.3;margin-top:5px}
+    .daily-grid{grid-template-columns:repeat(8,minmax(0,1fr));gap:7px}
+    .daily-grid .day{padding:10px 4px 9px;border-radius:12px;background:linear-gradient(160deg,rgba(18,44,62,.64),rgba(13,33,48,.72));border:1px solid rgba(204,225,239,.10);box-shadow:none}
+    .daily-grid .day-name{font-size:10px}
+    .daily-grid .day-icon{font-size:19px;margin:7px 0}
+    .daily-grid .day-range{font-size:12px}
+    .daily-grid .day-rain,.daily-grid .day-wind{font-size:8px;margin-top:5px}
+    @media(max-width:980px){.dashboard-top{grid-template-columns:minmax(0,1fr)}.dashboard-left{display:block}}
+    @media(max-width:760px){.daily-grid{grid-template-columns:repeat(4,minmax(0,1fr))}}
+    @media(max-width:560px){
+      .dashboard-top{gap:10px;padding:14px 0 12px}
+      .dashboard-top .station-card{padding:14px 13px 12px}
+      .station-history-inline .history-chart{height:70px}
+      .station-history-inline .history-chart-meta{font-size:6.5px}
+      .daily-grid{grid-template-columns:repeat(2,minmax(0,1fr));gap:7px}
+      .daily-grid .day{padding:10px 6px}
+    }
+
 </style>
 </head>
 <body>
@@ -384,8 +424,7 @@
         <div class="station-overview"><div class="station-current"><div class="temp-row"><div class="temperature" id="temperature">—°</div><div class="weather-symbol" id="weather-symbol" aria-hidden="true">☁️</div></div><div class="temp-caption" id="station-observation-meta">Son istasyon ölçümü bekleniyor</div></div></div>
         <div class="weather-stats"><div class="stat"><div class="name">Rüzgâr</div><div class="value" id="wind">—<span class="unit">km/sa</span></div><div class="detail" id="wind-direction">—</div></div><div class="stat"><div class="name">Nem</div><div class="value" id="humidity">—<span class="unit">%</span></div></div><div class="stat"><div class="name">Yağış</div><div class="value" id="rain">—<span class="unit">mm</span></div><div class="detail">Bugün</div></div><div class="stat"><div class="name">Basınç</div><div class="value" id="pressure">—<span class="unit">hPa</span></div><div class="detail" id="pressure-detail"></div></div></div>
         <div class="station-alert" id="station-alert" role="status" aria-live="polite" hidden></div>
-      </article>
-      <section class="history-panel" id="station-history-panel" aria-label="Seçili istasyonun son 24 saat geçmişi">
+      <section class="history-panel station-history-inline" id="station-history-panel" aria-label="Seçili istasyonun son 24 saat geçmişi">
         <div class="history-panel-head"><div><div class="section-kicker" id="history-station-source">ENKA BALMUMCU · GERÇEK ÖLÇÜMLER</div><h2>Son 24 saat</h2></div><span class="history-window">24 SAAT</span></div>
         <div class="history-charts">
           <article class="history-chart-card"><div class="history-chart-head"><div><h3>Sıcaklık</h3><p>°C · 30 dk ortalama, min–maks</p></div><span class="history-chart-icon">℃</span></div><div class="history-chart" id="station-temperature-trend"><div class="station-trend-empty">Sıcaklık kayıtları bekleniyor…</div></div><div class="history-chart-meta" id="station-trend-meta">Seçili istasyonun ölçüm geçmişi</div></article>
@@ -393,6 +432,7 @@
         </div>
         <div class="history-source-note" id="history-source-note">Grafikler seçili istasyonun kendi gözlem arşivini kullanır.</div>
       </section>
+      </article>
       </div>
       <section class="next-72h-panel" id="next-72h-panel" aria-label="Önümüzdeki 72 saatlik hava tahmini">
         <div class="next-72h-head"><div><div class="section-kicker">GFS · İSTANBUL</div><h2>Önümüzdeki 72 saat</h2><p>3 saatlik tahmin adımları · aynı zaman ekseni</p></div><span class="next-72h-badge" id="next-72h-meta">Model verisi bekleniyor</span></div>

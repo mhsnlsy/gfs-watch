@@ -21,6 +21,11 @@ def main() -> None:
         'id="ecmwf-model-view"',
         'id="ecmwf-daily-grid"',
         'id="next-72h-panel"',
+        'class="station-history-inline"',
+        'id="station-history-panel"',
+        'id="station-temperature-trend"',
+        'id="station-rain-trend"',
+
         'id="next72-temperature"',
         'id="next72-precipitation"',
         'id="next72-wind-speed"',
@@ -52,6 +57,17 @@ def main() -> None:
     missing = [item for item in required if item not in html]
     if missing:
         raise AssertionError("Missing ECMWF website contract: " + ", ".join(missing))
+
+    station_card_start = html.index('<article class="weather-card station-card"')
+    history_start = html.index('<section class="history-panel station-history-inline"')
+    history_end = html.index('</section>', history_start)
+    station_card_end = html.index('</article>', history_end)
+    if not (station_card_start < history_start < history_end < station_card_end):
+        raise AssertionError("The 24-hour station trends must be embedded inside the live observation card.")
+    if '.station-history-inline .history-charts{grid-template-columns:repeat(2,minmax(0,1fr))' not in html:
+        raise AssertionError("The embedded station history must use a compact two-chart layout.")
+    if '.daily-grid .day{padding:10px 4px 9px' not in html:
+        raise AssertionError("The eight-day forecast cards are missing their compact visual treatment.")
 
     ids = re.findall('id="([^"]+)"', html)
     duplicates = sorted(name for name, count in Counter(ids).items() if count > 1)
