@@ -13,7 +13,7 @@ permissions:
   contents: write
 
 concurrency:
-  group: archive-latest-telegram-report
+  group: archive-latest-pages-images
   cancel-in-progress: false
 
 jobs:
