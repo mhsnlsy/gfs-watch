@@ -1182,6 +1182,34 @@
       if(data.forecast_valid_until_utc)$("valid-until").textContent="Son geçerlilik: "+new Intl.DateTimeFormat("tr-TR",{timeZone:"Europe/Istanbul",day:"2-digit",month:"2-digit"}).format(new Date(data.forecast_valid_until_utc));
       renderDaily(data.daily_summary);renderFindings(data.regional_pressure_analysis&&data.regional_pressure_analysis.findings,data.current_conditions&&data.current_conditions.mean_sea_level_pressure_hpa);renderCharts();
     }
+    // Station observations refresh independently from forecast/model data.
+    // A delayed GFS/ECMWF payload must never block live station readings.
+    async function refreshStationObservations(){
+      const cacheKey=Date.now();
+      const requests=[
+        fetch(STATION_URL+"?t="+cacheKey,{cache:"no-store"}).catch(()=>null),
+        fetch(EYUPSULTAN_STATION_URL+"?t="+cacheKey,{cache:"no-store"}).catch(()=>null)
+      ];
+      const [enkaResponse,eyupsultanResponse]=await Promise.all(requests);
+      if(enkaResponse&&enkaResponse.ok){
+        try{
+          const document=await enkaResponse.json();
+          if(document?.schema==="gfs-watch.station-observation.v1"&&document.station_observation?.station_id==="ENKA-BALMUMCU-VANTAGE-PRO"){
+            enkaStationObservation=document.station_observation;
+          }
+        }catch(_){}
+      }
+      if(eyupsultanResponse&&eyupsultanResponse.ok){
+        try{
+          const document=await eyupsultanResponse.json();
+          const candidate=document?.station_observation;
+          if(document?.schema==="gfs-watch.station-observation.v1"&&candidate&&String(candidate.station_id)==="18101"){
+            eyupsultanStationObservation=candidate;
+          }
+        }catch(_){}
+      }
+      renderStationCard(activeStation==="enka"?enkaStationObservation:eyupsultanStationObservation);
+    }
     async function loadForecast(){
       try{
         const cacheKey=Date.now();
@@ -1411,8 +1439,9 @@
       await registerAppWorker();
       await loadPushConfig();
       await refreshPushStatus();
-      await Promise.all([loadForecast(),loadNotifications()]);
+      await Promise.all([loadForecast(),loadNotifications(),refreshStationObservations()]);
       window.setInterval(()=>{loadForecast();loadNotifications();},300000);
+      window.setInterval(refreshStationObservations,60000);
     }
 
     let ecmwfForecast=null,ecmwfLoading=false,ecmwfLastFetch=0;
