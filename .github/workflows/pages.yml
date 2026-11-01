@@ -216,6 +216,45 @@ jobs:
             exit 1
           fi
 
+          history_url="${PAGE_URL%/}/data/eyupsultan-station-temperature-history.json?verify=$GITHUB_RUN_ID"
+          history_verified=false
+          for attempt in $(seq 1 18); do
+            if curl --fail --silent --show-error "$history_url" -o "$RUNNER_TEMP/live-eyupsultan-history.json"; then
+              if python - "$RUNNER_TEMP/live-eyupsultan-history.json" <<'PY'
+          import json, sys
+          with open(sys.argv[1], encoding="utf-8") as source:
+              document = json.load(source)
+          assert document.get("schema") == "gfs-watch.station-temperature-history.v1"
+          assert str(document.get("station_id")) == "18101"
+          samples = document.get("samples")
+          assert isinstance(samples, list)
+          valid = [
+              sample for sample in samples
+              if isinstance(sample, dict)
+              and sample.get("logged_at_utc")
+              and isinstance(sample.get("temperature_2m_c"), (int, float))
+              and isinstance(sample.get("precipitation_daily_mm"), (int, float))
+          ]
+          assert valid, "Eyüpsultan history contains no valid temperature/rain samples."
+          print(
+              "Live Eyüpsultan history verified: "
+              f"{len(valid)} samples · "
+              f"{document.get('retention_days', '?')} day retention"
+          )
+          PY
+              then
+                history_verified=true
+                break
+              fi
+            fi
+            echo "Eyüpsultan history not ready yet; retry $attempt."
+            sleep 10
+          done
+          if [ "$history_verified" != true ]; then
+            echo "Pages did not serve valid Eyüpsultan station history."
+            exit 1
+          fi
+
       - name: Verify latest GFS report and every referenced Pages asset
         env:
           PAGE_URL: ${{ steps.deployment.outputs.page_url }}

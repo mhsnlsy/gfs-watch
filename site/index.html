@@ -352,11 +352,11 @@
         <div class="weather-stats"><div class="stat"><div class="name">Rüzgâr</div><div class="value" id="wind">—<span class="unit">km/sa</span></div><div class="detail" id="wind-direction">—</div></div><div class="stat"><div class="name">Nem</div><div class="value" id="humidity">—<span class="unit">%</span></div></div><div class="stat"><div class="name">Yağış</div><div class="value" id="rain">—<span class="unit">mm</span></div><div class="detail">Bugün</div></div><div class="stat"><div class="name">Basınç</div><div class="value" id="pressure">—<span class="unit">hPa</span></div><div class="detail" id="pressure-detail"></div></div></div>
         <div class="station-alert" id="station-alert" role="status" aria-live="polite" hidden></div>
       </article>
-      <section class="history-panel" aria-label="ENKA son 24 saat geçmişi">
-        <div class="history-panel-head"><div><div class="section-kicker">ENKA BALMUMCU · GERÇEK ÖLÇÜMLER</div><h2>Son 24 saat</h2></div><span class="history-window">24 SAAT</span></div>
+      <section class="history-panel" id="station-history-panel" aria-label="Seçili istasyonun son 24 saat geçmişi">
+        <div class="history-panel-head"><div><div class="section-kicker" id="history-station-source">ENKA BALMUMCU · GERÇEK ÖLÇÜMLER</div><h2>Son 24 saat</h2></div><span class="history-window">24 SAAT</span></div>
         <div class="history-charts">
-          <article class="history-chart-card"><div class="history-chart-head"><div><h3>Sıcaklık</h3><p>°C · saatlik ortalama, min–maks</p></div><span class="history-chart-icon">℃</span></div><div class="history-chart" id="station-temperature-trend"><div class="station-trend-empty">Sıcaklık kayıtları bekleniyor…</div></div><div class="history-chart-meta" id="station-trend-meta">ENKA ölçüm geçmişi</div></article>
-          <article class="history-chart-card"><div class="history-chart-head"><div><h3>Yağış</h3><p>mm · gün içindeki birikim</p></div><span class="history-chart-icon">☂</span></div><div class="history-chart" id="station-rain-trend"><div class="station-trend-empty">Yağış geçmişi oluşturuluyor…</div></div><div class="history-chart-meta" id="station-rain-meta">Günlük birikim; saatlik yağış değildir</div></article>
+          <article class="history-chart-card"><div class="history-chart-head"><div><h3>Sıcaklık</h3><p>°C · saatlik ortalama, min–maks</p></div><span class="history-chart-icon">℃</span></div><div class="history-chart" id="station-temperature-trend"><div class="station-trend-empty">Sıcaklık kayıtları bekleniyor…</div></div><div class="history-chart-meta" id="station-trend-meta">Seçili istasyonun ölçüm geçmişi</div></article>
+          <article class="history-chart-card"><div class="history-chart-head"><div><h3>Yağış</h3><p>mm · gün içindeki birikim</p></div><span class="history-chart-icon">☂</span></div><div class="history-chart" id="station-rain-trend"><div class="station-trend-empty">Yağış geçmişi oluşturuluyor…</div></div><div class="history-chart-meta" id="station-rain-meta">Günlük sayaçtan türetilen birikim; saatlik yağış değildir</div></article>
         </div>
       </section>
     </section>
@@ -422,7 +422,9 @@
     const STATION_URL="./data/station-observation.json";
     const STATION_HISTORY_URL="./data/station-temperature-history.json";
     const EYUPSULTAN_STATION_URL="./data/eyupsultan-station-observation.json";
+    const EYUPSULTAN_STATION_HISTORY_URL="./data/eyupsultan-station-temperature-history.json";
     let enkaStationObservation=null,eyupsultanStationObservation=null,activeStation="enka";
+    let enkaStationHistorySamples=[],eyupsultanStationHistorySamples=[];
     let forecastData=null,activeMetric="temperature";
     const $=id=>document.getElementById(id);
     const numeric=value=>typeof value==="number"&&Number.isFinite(value);
@@ -718,7 +720,8 @@
       renderChart("temperature","temperature-chart");
       renderChart("precipitation","precipitation-chart");
     }
-    function renderStationTemperatureTrend(samples){
+    function renderStationTemperatureTrend(samples,stationName){
+      stationName=stationName||"İstasyon";
       const holder=$("station-temperature-trend");
       const meta=$("station-trend-meta");
       if(!holder)return;
@@ -728,7 +731,7 @@
       const start=now-windowMs;
       const valid=(Array.isArray(samples)?samples:[])
         .map(sample=>({
-          time:Date.parse(sample.logged_at_utc||""),
+          time:Date.parse(sample.logged_at_utc||sample.observed_at_utc||""),
           temperature:Number(sample.temperature_2m_c)
         }))
         .filter(sample=>Number.isFinite(sample.time)&&Number.isFinite(sample.temperature)&&sample.time>=start&&sample.time<=now)
@@ -753,9 +756,11 @@
         mean:bin.values.length?bin.values.reduce((sum,value)=>sum+value,0)/bin.values.length:null
       })).filter(bin=>bin.count);
 
-      if(meta)meta.textContent=valid.length+" kayıt · 60 dk dilimler · ortalama ve min–maks";
+      const coverageHours=valid.length?Math.min(24,Math.max(0,(now-valid[0].time)/3600000)):0;
+      const coverageLabel=coverageHours>=23.9?"24 saat arşiv kapsamı":"arşiv kapsamı "+fmt(coverageHours,1)+" saat";
+      if(meta)meta.textContent=stationName+" · "+valid.length+" kayıt · "+coverageLabel+" · 60 dk ortalama / min–maks";
       if(!populated.length){
-        holder.innerHTML='<div class="station-trend-empty">İlk sıcaklık kaydı bekleniyor. ENKA ölçümü geldikçe grafik dolacak.</div>';
+        holder.innerHTML='<div class="station-trend-empty">İlk sıcaklık kaydı bekleniyor. '+esc(stationName)+' ölçümleri geldikçe grafik dolacak.</div>';
         return;
       }
 
@@ -822,23 +827,24 @@
       const lastTime=new Intl.DateTimeFormat("tr-TR",{timeZone:"Europe/Istanbul",hour:"2-digit",minute:"2-digit"}).format(new Date(last.time));
       const lastValue=fmt(last.temperature,1);
       const latestMarker='<circle cx="'+lastX.toFixed(1)+'" cy="'+lastY.toFixed(1)+'" r="7" fill="rgba(164,231,213,.16)" stroke="#a4e7d5" stroke-width="1.2"/><circle cx="'+lastX.toFixed(1)+'" cy="'+lastY.toFixed(1)+'" r="3.2" fill="#f1fff9"/>';
-      holder.innerHTML='<svg viewBox="0 0 '+width+' '+height+'" role="img" aria-label="Son 24 saat sıcaklık geçmişi; 90 dakikalık dilimlerde ortalama, minimum ve maksimum değerler"><defs><linearGradient id="station-trend-line" x1="0" x2="1" y1="0" y2="0"><stop offset="0%" stop-color="#6caeb7"/><stop offset="100%" stop-color="#b8f0dd"/></linearGradient><linearGradient id="station-trend-area" x1="0" x2="0" y1="0" y2="1"><stop offset="0%" stop-color="#8edbd2" stop-opacity=".22"/><stop offset="100%" stop-color="#8edbd2" stop-opacity=".015"/></linearGradient></defs>'+verticalGrid+horizontalGrid+'<path d="'+areaPaths+'" fill="url(#station-trend-area)"/>'+ranges+'<path d="'+meanPaths+'" fill="none" stroke="url(#station-trend-line)" stroke-width="3.2" stroke-linecap="round" stroke-linejoin="round"/>'+meanPoints+latestMarker+timeLabels+'</svg>';
-      if(meta)meta.textContent=valid.length+" kayıt · son ölçüm "+lastValue+" °C ("+lastTime+") · 60 dk ortalama / min–maks";
+      holder.innerHTML='<svg viewBox="0 0 '+width+' '+height+'" role="img" aria-label="'+esc(stationName)+' son 24 saat sıcaklık geçmişi; 60 dakikalık dilimlerde ortalama, minimum ve maksimum değerler"><defs><linearGradient id="station-trend-line" x1="0" x2="1" y1="0" y2="0"><stop offset="0%" stop-color="#6caeb7"/><stop offset="100%" stop-color="#b8f0dd"/></linearGradient><linearGradient id="station-trend-area" x1="0" x2="0" y1="0" y2="1"><stop offset="0%" stop-color="#8edbd2" stop-opacity=".22"/><stop offset="100%" stop-color="#8edbd2" stop-opacity=".015"/></linearGradient></defs>'+verticalGrid+horizontalGrid+'<path d="'+areaPaths+'" fill="url(#station-trend-area)"/>'+ranges+'<path d="'+meanPaths+'" fill="none" stroke="url(#station-trend-line)" stroke-width="3.2" stroke-linecap="round" stroke-linejoin="round"/>'+meanPoints+latestMarker+timeLabels+'</svg>';
+      if(meta)meta.textContent=stationName+" · "+valid.length+" kayıt · son ölçüm "+lastValue+" °C ("+lastTime+") · 60 dk ortalama / min–maks";
     }
-    function renderStationRainTrend(samples){
+    function renderStationRainTrend(samples,stationName){
+      stationName=stationName||"İstasyon";
       const holder=$("station-rain-trend"),meta=$("station-rain-meta");
       if(!holder)return;
       const now=Date.now(),start=now-24*60*60*1000;
       const readings=(Array.isArray(samples)?samples:[]).map(sample=>({
-        time:Date.parse(sample.observed_at_utc||sample.logged_at_utc||""),
+        time:Date.parse(sample.logged_at_utc||sample.observed_at_utc||""),
         daily:Number(sample.precipitation_daily_mm)
       })).filter(x=>Number.isFinite(x.time)&&x.time>=start&&x.time<=now&&Number.isFinite(x.daily)&&x.daily>=0).sort((a,b)=>a.time-b.time);
       if(readings.length<2){
-        holder.innerHTML='<div class="station-trend-empty">24 saatlik yağış eğilimi için ENKA arşivinde en az iki ölçüm gerekli.</div>';
-        if(meta)meta.textContent="Yazılı ENKA ölçümleri biriktikçe oluşur";
+        holder.innerHTML='<div class="station-trend-empty">24 saatlik yağış eğilimi için '+esc(stationName)+' arşivinde en az iki ölçüm gerekli.</div>';
+        if(meta)meta.textContent=stationName+" · "+readings.length+" kayıt · ikinci ölçüm bekleniyor";
         return;
       }
-      // ENKA supplies a daily accumulation counter, not an hourly-rain GIF.
+      // The selected station supplies a daily accumulation counter, not an hourly-rain series.
       // Convert successive counter differences into a rolling 24-hour accumulation,
       // treating a midnight counter reset as the new day's measured amount.
       let accumulated=0;
@@ -858,8 +864,18 @@
       const labels=[0,6,12,18,24].map(hr=>'<text x="'+(left+plotW*hr/24).toFixed(1)+'" y="'+(height-6)+'" fill="#9fb5c1" font-size="10" text-anchor="middle">'+(hr===24?"Şimdi":hr+"s")+'</text>').join("");
       const area="M "+points.replace(/ /g," L ")+" L "+x(valid[valid.length-1].time).toFixed(1)+","+(top+plotH)+" L "+x(valid[0].time).toFixed(1)+","+(top+plotH)+" Z";
       const total=valid[valid.length-1].rain;
-      holder.innerHTML='<svg viewBox="0 0 '+width+' '+height+'" role="img" aria-label="ENKA yazılı ölçümlerinden türetilen son 24 saatlik yağış birikimi"><defs><linearGradient id="enka-rain-fill" x1="0" x2="0" y1="0" y2="1"><stop offset="0%" stop-color="#83c9eb" stop-opacity=".3"/><stop offset="100%" stop-color="#83c9eb" stop-opacity=".02"/></linearGradient></defs>'+grid+'<path d="'+area+'" fill="url(#enka-rain-fill)"/><polyline points="'+points+'" fill="none" stroke="#83c9eb" stroke-width="2.8" stroke-linecap="round" stroke-linejoin="round"/>'+labels+'</svg>';
-      if(meta)meta.textContent="24 saatte türetilen birikim: "+total.toLocaleString("tr-TR",{maximumFractionDigits:1})+" mm · ENKA arşiv ölçümleri";
+      holder.innerHTML='<svg viewBox="0 0 '+width+' '+height+'" role="img" aria-label="'+esc(stationName)+' ölçümlerinden türetilen son 24 saatlik yağış birikimi"><defs><linearGradient id="station-rain-fill" x1="0" x2="0" y1="0" y2="1"><stop offset="0%" stop-color="#83c9eb" stop-opacity=".3"/><stop offset="100%" stop-color="#83c9eb" stop-opacity=".02"/></linearGradient></defs>'+grid+'<path d="'+area+'" fill="url(#station-rain-fill)"/><polyline points="'+points+'" fill="none" stroke="#83c9eb" stroke-width="2.8" stroke-linecap="round" stroke-linejoin="round"/>'+labels+'</svg>';
+      const coverageHours=Math.min(24,Math.max(0,(now-readings[0].time)/3600000));
+      const coverageLabel=coverageHours>=23.9?"son 24 saat":"arşiv başlangıcından itibaren "+fmt(coverageHours,1)+" saat";
+      if(meta)meta.textContent=stationName+" · "+coverageLabel+" · "+total.toLocaleString("tr-TR",{maximumFractionDigits:1})+" mm ölçülen artış";
+    }
+    function renderStationHistory(){
+      const stationName=activeStation==="eyupsultan"?"Eyüpsultan":"ENKA Balmumcu";
+      const samples=activeStation==="eyupsultan"?eyupsultanStationHistorySamples:enkaStationHistorySamples;
+      $("history-station-source").textContent=stationName.toLocaleUpperCase("tr-TR")+" · GERÇEK ÖLÇÜMLER";
+      $("station-history-panel").setAttribute("aria-label",stationName+" son 24 saat geçmişi");
+      renderStationTemperatureTrend(samples,stationName);
+      renderStationRainTrend(samples,stationName);
     }
     function renderStationCard(station){
       const hasStation=!!station;
@@ -905,6 +921,7 @@
       $("station-enka-button").setAttribute("aria-pressed",stationKey==="enka"?"true":"false");
       $("station-eyupsultan-button").setAttribute("aria-pressed",stationKey==="eyupsultan"?"true":"false");
       renderStationCard(stationKey==="enka"?enkaStationObservation:eyupsultanStationObservation);
+      renderStationHistory();
     }
     $("station-enka-button").addEventListener("click",()=>selectStation("enka"));
     $("station-eyupsultan-button").addEventListener("click",()=>selectStation("eyupsultan"));
@@ -923,11 +940,12 @@
     async function loadForecast(){
       try{
         const cacheKey=Date.now();
-        const [response,stationResponse,historyResponse,eyupsultanResponse]=await Promise.all([
+        const [response,stationResponse,historyResponse,eyupsultanResponse,eyupsultanHistoryResponse]=await Promise.all([
           fetch(DATA_URL+"?t="+cacheKey,{cache:"no-store"}),
           fetch(STATION_URL+"?t="+cacheKey,{cache:"no-store"}).catch(()=>null),
           fetch(STATION_HISTORY_URL+"?t="+cacheKey,{cache:"no-store"}).catch(()=>null),
-          fetch(EYUPSULTAN_STATION_URL+"?t="+cacheKey,{cache:"no-store"}).catch(()=>null)
+          fetch(EYUPSULTAN_STATION_URL+"?t="+cacheKey,{cache:"no-store"}).catch(()=>null),
+          fetch(EYUPSULTAN_STATION_HISTORY_URL+"?t="+cacheKey,{cache:"no-store"}).catch(()=>null)
         ]);
         if(!response.ok)throw new Error("Tahmin verisi şu anda alınamıyor.");
         const data=await response.json();
@@ -950,17 +968,25 @@
           }catch(_){eyupsultanStationObservation=null;}
         }
         render(data);
-        let temperatureSamples=[];
+        enkaStationHistorySamples=[];
+        eyupsultanStationHistorySamples=[];
         if(historyResponse&&historyResponse.ok){
           try{
             const historyDocument=await historyResponse.json();
             if(historyDocument&&historyDocument.schema==="gfs-watch.station-temperature-history.v1"&&Array.isArray(historyDocument.samples)){
-              temperatureSamples=historyDocument.samples;
+              enkaStationHistorySamples=historyDocument.samples;
             }
-          }catch(_){temperatureSamples=[];}
+          }catch(_){enkaStationHistorySamples=[];}
         }
-        renderStationTemperatureTrend(temperatureSamples);
-        renderStationRainTrend(temperatureSamples);
+        if(eyupsultanHistoryResponse&&eyupsultanHistoryResponse.ok){
+          try{
+            const historyDocument=await eyupsultanHistoryResponse.json();
+            if(historyDocument&&historyDocument.schema==="gfs-watch.station-temperature-history.v1"&&String(historyDocument.station_id)==="18101"&&Array.isArray(historyDocument.samples)){
+              eyupsultanStationHistorySamples=historyDocument.samples;
+            }
+          }catch(_){eyupsultanStationHistorySamples=[];}
+        }
+        renderStationHistory();
       }catch(error){
         $("freshness").textContent="Veriye ulaşılamadı";$("temperature").textContent="—°";
         $("daily-grid").innerHTML='<div class="error">'+esc(error.message)+'</div>';
