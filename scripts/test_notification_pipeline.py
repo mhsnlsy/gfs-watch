@@ -1,4 +1,4 @@
-"""Regression tests for the shared Telegram/Pages GFS report pipeline."""
+"""Regression tests for independent Telegram/Pages delivery and retained GFS history."""
 from __future__ import annotations
 
 from pathlib import Path
@@ -12,17 +12,22 @@ def main() -> None:
     process_end = main_source.index("\nasync def run_manual_multi_comparison", process_start)
     process = main_source[process_start:process_end]
 
-    publish_at = process.index("publish_public_notification,")
-    save_at = process.index("save_run(run_id, payload)", publish_at)
-    telegram_at = process.index("send_telegram_text(full_text_report)")
-    assert publish_at < save_at < telegram_at, (
-        "Pages archive must succeed before a GFS run is marked processed or Telegram is sent."
+    commit_at = process.index("await asyncio.to_thread(save_run, run_id, payload)")
+    pages_task_at = process.index("pages_task = asyncio.create_task")
+    telegram_task_at = process.index("telegram_task = asyncio.create_task")
+    gather_at = process.index("await asyncio.gather(", telegram_task_at)
+    assert commit_at < pages_task_at < telegram_task_at < gather_at
+    dispatch = process[pages_task_at:]
+    assert "return_exceptions=True" in dispatch, (
+        "A failure in either channel must not cancel or suppress the other channel."
     )
-    publish_section = process[publish_at:telegram_at]
-    assert "except Exception:" in publish_section and "raise" in publish_section, (
-        "Pages publication failure must propagate and trigger a retry."
+    assert "PAGES NOTIFICATION ERROR" in dispatch
+    assert "TELEGRAM REPORT ERROR" in dispatch
+    assert "send_telegram_voice(audio_file, cleanup=False)" in dispatch, (
+        "Pages must be able to archive the voice asset while Telegram sends it."
     )
-    assert "[WEB NOTIFICATION REQUIRED]" in process
+    assert "if audio_file and os.path.exists(audio_file):" in dispatch
+    assert "[GFS CYCLE COMMITTED]" in process
 
     gfs_workflow = (ROOT / ".github/workflows/gfs-watch.yml").read_text(encoding="utf-8")
     restore_start = gfs_workflow.index("Restore GFS run and Pages notification history")
@@ -32,6 +37,9 @@ def main() -> None:
     assert gfs_workflow.index("rm -rf public/notifications") < gfs_workflow.index('cp -a "$RUNNER_TEMP/public/." public/')
     assert 'if [ "${{ steps.check-gfs.outcome }}" = "success" ] && [ -d public ]; then' in gfs_workflow
     assert "Report step failed; keeping the previously published Pages forecast and notification archive." in gfs_workflow
+    deploy_section = gfs_workflow.split("  deploy-pages:", 1)[1].split("  send-web-push:", 1)[0]
+    assert "if: needs.check-gfs.result == 'success' && needs.check-gfs.outputs.gfs_updated == 'true'" in deploy_section
+    assert "needs.telegram" not in deploy_section.lower()
 
     pages_workflow = (ROOT / ".github/workflows/pages.yml").read_text(encoding="utf-8")
     assert "Verify latest GFS report and every referenced Pages asset" in pages_workflow
@@ -51,8 +59,8 @@ def main() -> None:
             f"{workflow_name} must redeploy Pages after publishing notification files."
         )
 
-    print("[NOTIFICATION PIPELINE SMOKE] Pages-first publication, retry-on-failure, "
-          "four-report archive restore and live JSON/media verification passed.")
+    print("[NOTIFICATION PIPELINE SMOKE] Shared GFS trigger, independent parallel channel attempts, "
+          "non-blocking failure handling and live Pages media verification passed.")
 
 
 if __name__ == "__main__":
