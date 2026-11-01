@@ -2335,14 +2335,14 @@ def create_pages_comparison_charts(current_run_id, payload, previous_runs):
                 # Stronger typography and contrast for readable numeric values on desktop and mobile.
                 axis.set_facecolor("#fbfdff")
                 fig.patch.set_facecolor("#ffffff")
-                axis.set_title(title, loc="left", fontsize=15, fontweight="bold", color="#142b42", pad=13)
-                axis.set_ylabel(ylabel, fontsize=13, fontweight="bold", color="#142b42", labelpad=9)
+                axis.set_title(title, loc="left", fontsize=18, fontweight="bold", color="#142b42", pad=13)
+                axis.set_ylabel(ylabel, fontsize=15.6, fontweight="bold", color="#142b42", labelpad=9)
                 axis.tick_params(
-                    axis="y", which="major", labelsize=13, labelcolor="#102a43",
+                    axis="y", which="major", labelsize=15.6, labelcolor="#102a43",
                     width=1.1, length=5, colors="#526779", pad=7,
                 )
                 axis.tick_params(
-                    axis="x", which="major", labelsize=11.5, labelcolor="#18364f",
+                    axis="x", which="major", labelsize=13.8, labelcolor="#18364f",
                     width=1.0, length=4, colors="#526779", pad=8,
                     labelbottom=True,
                 )
@@ -2354,14 +2354,14 @@ def create_pages_comparison_charts(current_run_id, payload, previous_runs):
                 axis.set_axisbelow(True)
                 axis.legend(
                     handles=legend, loc="upper left", ncol=min(4, len(series)),
-                    fontsize=11, frameon=True, facecolor="#ffffff",
+                    fontsize=13.2, frameon=True, facecolor="#ffffff",
                     edgecolor="#d5e0e8", framealpha=0.94,
                     labelcolor="#17324a", borderpad=0.65, handlelength=2.4,
                 )
                 fig.text(
                     0.01, 0.012,
                     "Renkler her panelde aynı GFS döngüsünü gösterir | Kaynak: NOAA/NCEP GFS 0.25°",
-                    fontsize=9.5, color="#40566a",
+                    fontsize=11.4, color="#40566a",
                 )
                 fig.tight_layout(rect=(0, 0.06, 1, 0.90))
                 buffer = io.BytesIO()
