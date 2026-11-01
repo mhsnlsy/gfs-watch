@@ -887,8 +887,16 @@
       $("wind-direction").textContent=direction?direction:"Yön —";
       $("rain").innerHTML=hasStation&&numeric(station.precipitation_daily_mm)?fmt(station.precipitation_daily_mm,1)+'<span class="unit">mm</span>':'—<span class="unit">mm</span>';
       $("humidity").innerHTML=hasStation&&numeric(station.humidity_percent)?fmt(station.humidity_percent,0)+'<span class="unit">%</span>':'—<span class="unit">%</span>';
-      $("pressure").innerHTML=hasStation&&numeric(station.station_pressure_hpa)?fmt(station.station_pressure_hpa,0)+'<span class="unit">hPa</span>':'—<span class="unit">hPa</span>';
-      $("pressure-detail").textContent=hasStation&&station.pressure_type==="mean_sea_level"?"Deniz seviyesi": "";
+      $("pressure").innerHTML=hasStation&&numeric(station.station_pressure_hpa)?fmt(station.station_pressure_hpa,1)+'<span class="unit">hPa</span>':'—<span class="unit">hPa</span>';
+      if(hasStation&&numeric(station.station_pressure_hpa)){
+        const pressureKind=station.pressure_type==="mean_sea_level"?"Deniz seviyesi":station.pressure_type==="station"?"İstasyon basıncı":"";
+        const pressureSource=station.pressure_source||"";
+        const actualPressure=numeric(station.actual_station_pressure_hpa)?" · istasyon "+fmt(station.actual_station_pressure_hpa,1)+" hPa":"";
+        const pressureAge=Number.isFinite(station.pressure_age_minutes)?" · "+Math.round(station.pressure_age_minutes)+" dk":"";
+        $("pressure-detail").textContent=[pressureKind,pressureSource].filter(Boolean).join(" · ")+actualPressure+pressureAge;
+      }else{
+        $("pressure-detail").textContent="";
+      }
       $("weather-symbol").textContent=symbolFor(hasStation?station.precipitation_1h_mm||0:0);
       if(hasStation){
         const observed=station.observed_at_utc?new Date(station.observed_at_utc):null;
