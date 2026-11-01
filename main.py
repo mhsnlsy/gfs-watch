@@ -2365,19 +2365,23 @@ def create_pages_comparison_charts(current_run_id, payload, previous_runs):
                 axis.set_xticklabels(date_labels, fontsize=14, fontweight="semibold")
                 axis.tick_params(axis="x", labelsize=14, labelbottom=True, pad=7)
                 axis.margins(x=0.015)
+                # 850 hPa labels are longer; use a two-column legend so entries
+                # never collide horizontally on the dedicated comparison image.
+                legend_columns = 2 if metric == "wind_850" else min(4, len(series))
+                legend_fontsize = 12 if metric == "wind_850" else 13
                 axis.legend(
-                    handles=legend, loc="lower left", bbox_to_anchor=(0, 1.02, 1, 0.12),
-                    mode="expand", ncol=min(4, len(series)), fontsize=13,
+                    handles=legend, loc="lower left", bbox_to_anchor=(0, 1.02, 1, 0.16 if metric == "wind_850" else 0.12),
+                    mode="expand", ncol=legend_columns, fontsize=legend_fontsize,
                     frameon=True, facecolor="#ffffff", edgecolor="#d5e0e8",
-                    framealpha=0.94, labelcolor="#17324a", borderpad=0.55,
-                    handlelength=2.0, columnspacing=0.8,
+                    framealpha=0.94, labelcolor="#17324a", borderpad=0.65,
+                    handlelength=1.8, columnspacing=1.2, labelspacing=0.75,
                 )
                 fig.text(
                     0.01, 0.012,
                     "Renkler her panelde aynı GFS döngüsünü gösterir | Kaynak: NOAA/NCEP GFS 0.25°",
                     fontsize=10.5, color="#40566a",
                 )
-                fig.subplots_adjust(left=0.085, right=0.985, bottom=0.18, top=0.79)
+                fig.subplots_adjust(left=0.085, right=0.985, bottom=0.18, top=0.75 if metric == "wind_850" else 0.79)
                 buffer = io.BytesIO()
                 fig.savefig(buffer, format="png", dpi=150)
                 buffer.seek(0)
