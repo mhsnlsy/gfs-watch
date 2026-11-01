@@ -29,6 +29,8 @@ def main() -> None:
         'id="next72-temperature"',
         'id="next72-precipitation"',
         'function renderNext72Hours()',
+        'async function refreshStationObservations()',
+        'window.setInterval(refreshStationObservations,60000)',
         'id="ecmwf-comparison-wind10-chart"',
         'id="ecmwf-comparison-wind850-chart"',
         'function renderEcmwfComparisonChart(metric,targetId,history)',
