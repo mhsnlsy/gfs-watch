@@ -13,6 +13,7 @@ on:
       - "public/latest.json"
       - "public/station-observation.json"
       - "public/notifications/**"
+      - "public/ecmwf/**"
   workflow_dispatch:
 
 permissions:
@@ -71,6 +72,14 @@ jobs:
             fi
             mkdir -p _site/data/notifications
             cp -a forecast-data/public/notifications/. _site/data/notifications/
+          fi
+          if [ -s forecast-data/public/ecmwf/latest.json ]; then
+            python -m json.tool forecast-data/public/ecmwf/latest.json > /dev/null
+            mkdir -p _site/data/ecmwf
+            cp -a forecast-data/public/ecmwf/. _site/data/ecmwf/
+          else
+            mkdir -p _site/data/ecmwf
+            printf '{"schema":"gfs-watch.ecmwf-eps.v1","status":"pending","model":"ECMWF IFS ENS (EPS)","forecasts":[]}' > _site/data/ecmwf/latest.json
           fi
           touch _site/.nojekyll
           echo "Website bundle prepared with the latest GFS forecast."
