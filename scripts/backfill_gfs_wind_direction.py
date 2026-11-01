@@ -14,22 +14,6 @@ from concurrent.futures import ThreadPoolExecutor, as_completed
 from datetime import datetime, timezone
 from pathlib import Path
 
-import requests
-
-from main import (
-    NOAA_RANGE_DOWNLOAD_WORKERS,
-    PUBLIC_DATA_DIR,
-    _decode_noaa_grib_step,
-    _download_noaa_grib_file,
-    _parse_utc_datetime,
-    _read_noaa_cache_file,
-    _read_noaa_decoded_cache_file,
-    _write_json_atomically,
-    _write_noaa_cache_file,
-    _write_noaa_decoded_cache_file,
-    gfs_forecast_hours,
-)
-
 MAX_DIRECTION_HOUR = 72
 MIN_WIND_SPEED_KMH = 0.72
 FETCH_WORKERS = max(2, min(6, int(os.getenv("WIND_DIRECTION_FETCH_WORKERS", "4"))))
@@ -61,15 +45,18 @@ def apply_direction_values(document: dict, directions: dict[int, float | None]) 
 
 
 def _load_step(run_id: str, lead: int) -> dict:
-    decoded = _read_noaa_decoded_cache_file(run_id, lead)
+    import main as archive
+    import requests
+
+    decoded = archive._read_noaa_decoded_cache_file(run_id, lead)
     if decoded and decoded.get("wind_u") and decoded.get("wind_v"):
         return decoded
 
-    grib_bytes = _read_noaa_cache_file(run_id, lead)
+    grib_bytes = archive._read_noaa_cache_file(run_id, lead)
     if grib_bytes is None:
-        run_dt = _parse_utc_datetime(run_id)
+        run_dt = archive._parse_utc_datetime(run_id)
         with requests.Session() as session:
-            grib_bytes, error, filename = _download_noaa_grib_file(
+            grib_bytes, error, filename = archive._download_noaa_grib_file(
                 session,
                 run_dt,
                 lead,
@@ -77,19 +64,20 @@ def _load_step(run_id: str, lead: int) -> dict:
             )
         if error:
             raise RuntimeError(f"f{lead:03d}: {error}")
-        _write_noaa_cache_file(run_id, lead, grib_bytes)
+        archive._write_noaa_cache_file(run_id, lead, grib_bytes)
 
-    decoded, error = _decode_noaa_grib_step(run_id, lead, grib_bytes)
+    decoded, error = archive._decode_noaa_grib_step(run_id, lead, grib_bytes)
     if error:
         raise RuntimeError(f"f{lead:03d}: {error}")
-    _write_noaa_decoded_cache_file(run_id, lead, decoded)
+    archive._write_noaa_decoded_cache_file(run_id, lead, decoded)
     if not decoded.get("wind_u") or not decoded.get("wind_v"):
         raise RuntimeError(f"f{lead:03d}: 10 m U/V bileşenleri GRIB2 içinde bulunamadı.")
     return decoded
 
 
 def _read_latest_forecast():
-    path = Path(PUBLIC_DATA_DIR) / "latest.json"
+    import main as archive
+    path = Path(archive.PUBLIC_DATA_DIR) / "latest.json"
     if not path.is_file():
         return None, path
     try:
@@ -109,6 +97,7 @@ def _write_github_output(updated: bool):
 
 
 def backfill_latest_wind_direction() -> bool:
+    import main as archive
     document, latest_path = _read_latest_forecast()
     if document is None:
         print("[WIND DIRECTION] public/latest.json henüz yok; onarım atlandı.")
@@ -128,7 +117,7 @@ def backfill_latest_wind_direction() -> bool:
         if 0 <= lead <= MAX_DIRECTION_HOUR:
             points_by_hour[lead] = point
 
-    required_hours = gfs_forecast_hours(MAX_DIRECTION_HOUR)
+    required_hours = archive.gfs_forecast_hours(MAX_DIRECTION_HOUR)
     absent = [lead for lead in required_hours if lead not in points_by_hour]
     if absent:
         raise RuntimeError(
@@ -218,7 +207,7 @@ def backfill_latest_wind_direction() -> bool:
         "forecast_hours_covered": MAX_DIRECTION_HOUR,
         "updated_at_utc": datetime.now(timezone.utc).isoformat(timespec="seconds"),
     }
-    _write_json_atomically(str(latest_path), document)
+    archive._write_json_atomically(str(latest_path), document)
 
     run_dt = _parse_utc_datetime(run_id)
     archive_path = (
