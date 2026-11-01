@@ -32,13 +32,13 @@
     @media(max-width:560px){.topbar{flex-wrap:wrap;justify-content:flex-start}.topbar nav{display:flex;order:3;width:100%;overflow-x:auto;gap:16px;padding:6px 0 2px;white-space:nowrap;scrollbar-width:none}.topbar nav::-webkit-scrollbar{display:none}.topbar nav a{font-size:11px;flex:none}}
     @media(prefers-reduced-motion:reduce){html{scroll-behavior:auto}*{animation-duration:.01ms!important;transition-duration:.01ms!important}}
   
-    /* Latest weather reports: presentation only, existing PNGs are reused. */
-    .notification-images{grid-template-columns:minmax(0,1fr)}
-    .notification-images .notification-image-link{width:33.333%;margin-inline:auto;aspect-ratio:13/5;display:flex;align-items:center;justify-content:center}
-    .notification-images .notification-image{width:100%;height:100%;max-height:none;object-fit:contain}
-    @media(max-width:700px),(pointer:coarse){
-      .notification-images .notification-image-link{display:block;aspect-ratio:auto;overflow-x:auto;overscroll-behavior-x:contain}
-      .notification-images .notification-image{display:block;width:420px !important;max-width:none !important;height:auto !important;min-width:420px;object-fit:contain}
+    /* Latest reports: responsive two-column desktop, readable full-width mobile. */
+    .notification-images{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:16px;margin-top:14px}
+    .notification-image-item{min-width:0}
+    .notification-images .notification-image-link{display:block;width:100%;max-width:100%;margin:0;overflow:hidden}
+    .notification-images .notification-image{display:block;width:100%;max-width:100%;height:auto;max-height:none;object-fit:contain}
+    @media(max-width:700px){
+      .notification-images{grid-template-columns:minmax(0,1fr);gap:14px}
     }
     /* Mobile overflow and responsive media correction. */
     html,body{max-width:100%;overflow-x:hidden}
@@ -84,6 +84,15 @@
       .topbar nav { display:flex; order:3; width:100%; max-width:100%; overflow-x:auto; }
     }
 
+
+    /* Final responsive rules for latest report images; override legacy touch styles above. */
+    .notification-images{display:grid !important;grid-template-columns:repeat(2,minmax(0,1fr)) !important;gap:16px}
+    .notification-images .notification-image-item{width:100%;min-width:0}
+    .notification-images .notification-image-link{display:block !important;width:100% !important;max-width:100% !important;aspect-ratio:auto !important;overflow:hidden}
+    .notification-images .notification-image{display:block;width:100% !important;min-width:0 !important;max-width:100% !important;height:auto !important;max-height:none !important;object-fit:contain}
+    @media(max-width:700px),(pointer:coarse){
+      .notification-images{grid-template-columns:minmax(0,1fr) !important;gap:14px}
+    }
 
     /* Compact station dashboard: a square trend plot, dense metrics, minimal framing. */
     .hero{align-items:start}
