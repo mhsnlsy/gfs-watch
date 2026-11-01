@@ -23,9 +23,11 @@ jobs:
       - uses: actions/setup-node@v4
         with:
           node-version: "22"
-      - name: Install Playwright and Chromium
+      - name: Check runner Chrome
         run: |
-          npm install --no-save playwright
-          npx playwright install --with-deps chromium
+          command -v google-chrome
+          google-chrome --version
+      - name: Install Playwright
+        run: npm install --no-save playwright
       - name: Scrape and validate live Eyüpsultan observations
         run: node scripts/eyupsultan_weather.mjs
