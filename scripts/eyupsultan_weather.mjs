@@ -39,7 +39,9 @@ function parseObservation(text, fetchedAt) {
   const windIndex = windDegrees === null ? null : Math.floor((windDegrees + 11.25) / 22.5) % 16;
   const dailyRain = parseNumber(text.match(/Bugün\s*([-+]?\d+(?:[,.]\d+)?)\s*mm\s*yağdı/i), "günlük yağış");
   const oneHourRain = parseNumber(text.match(/1sa\s*([-+]?\d+(?:[,.]\d+)?)/i), "1 saatlik yağış", false);
-  const pressure = parseNumber(text.match(/Deniz Seviyesi Basıncı\s+hPa\s*([-+]?\d+(?:[,.]\d+)?)/i), "deniz seviyesi basıncı");
+  const pressureContext = text.match(/Deniz Seviyesi Basıncı[\\s\\S]{0,100}/i)?.[0] || "label not found";
+  console.log("[WSTAT PRESSURE CONTEXT]", JSON.stringify(pressureContext));
+  const pressure = parseNumber(text.match(/Deniz Seviyesi Basıncı[\\s\\S]{0,100}?(\\d{3,4}(?:[,.]\\d+)?)/i), "deniz seviyesi basıncı", false);
 
   const ageMatch = text.match(/Canlı\s*[·•]\s*(\d+)\s*dk\.?\s*önce\s*[·•]\s*18101/i)
     || text.match(/Canlı\s*[·•]\s*(\d+)\s*dk\.?\s*önce/i);
@@ -53,7 +55,7 @@ function parseObservation(text, fetchedAt) {
   if (temperature < -35 || temperature > 55) throw new Error(`Sıcaklık makul aralık dışında: ${temperature}°C`);
   if (humidity < 0 || humidity > 100) throw new Error(`Nem makul aralık dışında: ${humidity}%`);
   if (windSpeed < 0 || windSpeed > 250) throw new Error(`Rüzgâr makul aralık dışında: ${windSpeed} km/h`);
-  if (pressure < 850 || pressure > 1100) throw new Error(`Basınç makul aralık dışında: ${pressure} hPa`);
+  if (pressure !== null && (pressure < 850 || pressure > 1100)) throw new Error(`Basınç makul aralık dışında: ${pressure} hPa`);
   if (dailyRain < 0 || (oneHourRain !== null && oneHourRain < 0)) throw new Error("Yağış değeri negatif olamaz.");
 
   return {
@@ -79,7 +81,7 @@ function parseObservation(text, fetchedAt) {
     precipitation_daily_mm: dailyRain,
     humidity_percent: humidity,
     station_pressure_hpa: pressure,
-    pressure_type: "mean_sea_level"
+    pressure_type: pressure === null ? null : "mean_sea_level"
   };
 }
 
