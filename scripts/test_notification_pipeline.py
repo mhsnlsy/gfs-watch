@@ -33,7 +33,8 @@ def main() -> None:
 
     pages_workflow = (ROOT / ".github/workflows/pages.yml").read_text(encoding="utf-8")
     assert "Verify latest GFS report and every referenced Pages asset" in pages_workflow
-    assert "data/notifications/latest.json?verify=$GITHUB_RUN_ID" in pages_workflow
+    assert 'base_url="${PAGE_URL%/}/data/notifications"' in pages_workflow
+    assert "latest.json?verify=$GITHUB_RUN_ID" in pages_workflow
     assert "Live Pages serves" in pages_workflow
     assert "Pages notification media is missing" in pages_workflow
 
