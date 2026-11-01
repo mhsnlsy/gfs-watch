@@ -6,7 +6,7 @@
   "aggregation_interval_minutes": 30,
   "retention_days": 7,
   "sample_semantics": "one_point_per_distinct_source_observation",
-  "updated_at_utc": "2026-11-01T19:45:17.158Z",
+  "updated_at_utc": "2026-11-01T19:50:21.335Z",
   "samples": [
     {
       "logged_at_utc": "2026-11-01T17:53:42.423Z",
@@ -166,6 +166,15 @@
       "precipitation_daily_mm": 1.4,
       "station_pressure_hpa": 1019.7,
       "actual_station_pressure_hpa": 1013.3
+    },
+    {
+      "logged_at_utc": "2026-11-01T19:50:21.335Z",
+      "observed_at_utc": "2026-11-01T19:39:19.720Z",
+      "pressure_observed_at_utc": "2026-11-01T19:44:00.000Z",
+      "temperature_2m_c": 16.6,
+      "precipitation_daily_mm": 1.4,
+      "station_pressure_hpa": 1019.6,
+      "actual_station_pressure_hpa": 1013.2
     }
   ]
 }
