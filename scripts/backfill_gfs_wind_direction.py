@@ -14,6 +14,10 @@ from concurrent.futures import ThreadPoolExecutor, as_completed
 from datetime import datetime, timezone
 from pathlib import Path
 
+ROOT = Path(__file__).resolve().parents[1]
+if str(ROOT) not in sys.path:
+    sys.path.insert(0, str(ROOT))
+
 MAX_DIRECTION_HOUR = 72
 MIN_WIND_SPEED_KMH = 0.72
 FETCH_WORKERS = max(2, min(6, int(os.getenv("WIND_DIRECTION_FETCH_WORKERS", "4"))))
