@@ -630,6 +630,65 @@ def load_comparison_runs(archive_dir: Path, limit: int = 4) -> list[dict]:
     unique = {item["run_id_utc"]: item for item in candidates}
     return sorted(unique.values(), key=lambda item: item["run_id_utc"])[-limit:]
 
+
+def backfill_recent_cycles(latest_document: dict, archive_dir: Path, target_count: int = 4) -> None:
+    """Backfill previous published 00/12Z ENS cycles on first installation."""
+    archive_dir = Path(archive_dir)
+    archive_dir.mkdir(parents=True, exist_ok=True)
+    existing = load_comparison_runs(archive_dir, limit=target_count)
+    known = {item["run_id_utc"] for item in existing}
+    if len(known) >= target_count:
+        return
+
+    latest_dt = _normalise_datetime(latest_document["run_id_utc"])
+    from ecmwf.opendata import Client
+
+    for offset in range(1, 9):
+        if len(known) >= target_count:
+            break
+        candidate = latest_dt - timedelta(hours=12 * offset)
+        candidate_id = candidate.isoformat(timespec="seconds")
+        if candidate_id in known:
+            continue
+
+        retrieved = False
+        for source in ("aws", "ecmwf"):
+            try:
+                client = Client(source=source, model="ifs", resol="0p25")
+                available = client.latest(
+                    date=candidate.strftime("%Y%m%d"),
+                    time=candidate.hour,
+                    stream="enfo",
+                    type="em",
+                    step=MAX_FORECAST_HOUR,
+                    param="ws",
+                    levelist=850,
+                )
+                if available is None or _normalise_datetime(available) != candidate:
+                    continue
+                print(f"[ECMWF BACKFILL] Retrieving historical cycle {candidate_id} from {source}.")
+                historical = _fetch_cycle(client, candidate)
+                historical["retrieval_source"] = source
+                validate_document(historical)
+                run_key = candidate.strftime("%Y%m%dT%HZ")
+                archive_path = archive_dir / f"{run_key}.json"
+                archive_path.write_text(
+                    json.dumps(historical, ensure_ascii=False, indent=2) + "\n",
+                    encoding="utf-8",
+                )
+                known.add(candidate_id)
+                retrieved = True
+                print(f"[ECMWF BACKFILL OK] {candidate_id} archived.")
+                break
+            except Exception as exc:
+                print(
+                    f"[ECMWF BACKFILL SOURCE ERROR] {candidate_id} {source}: "
+                    f"{type(exc).__name__}: {exc}"
+                )
+        if not retrieved:
+            print(f"[ECMWF BACKFILL SKIP] {candidate_id} is not available from Open Data.")
+
+
 def main() -> None:
     parser = argparse.ArgumentParser()
     parser.add_argument("--output-dir", default=os.getenv("ECMWF_PUBLIC_DIR", "public/ecmwf"))
@@ -656,6 +715,7 @@ def main() -> None:
     archive_dir.mkdir(parents=True, exist_ok=True)
     archive_path = archive_dir / f"{run_key}.json"
     archive_path.write_text(json.dumps(document, ensure_ascii=False, indent=2) + "\n", encoding="utf-8")
+    backfill_recent_cycles(document, archive_dir, target_count=4)
     # Keep immutable runs and publish the newest four as comparison history.
     archives = sorted(archive_dir.glob("*.json"))
     for old in archives[:-8]:
