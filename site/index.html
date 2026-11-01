@@ -313,12 +313,6 @@
       const station=data.station_observation||{};
       const hasStation=!!data.station_observation;
       $("temperature").textContent=hasStation&&numeric(station.temperature_2m_c)?fmt(station.temperature_2m_c,1)+"°":"—°";
-      const trendImage=$("station-temperature-trend");
-      if(trendImage){
-        trendImage.onload=()=>{trendImage.hidden=false;$("station-trend-empty").hidden=true;};
-        trendImage.onerror=()=>{trendImage.hidden=true;$("station-trend-empty").hidden=false;};
-        trendImage.src="https://w.enka.com/weather/OutsideTempHistory.gif?t="+Math.floor(Date.now()/300000);
-      }
       $("wind").innerHTML=hasStation&&numeric(station.wind_speed_10m_kmh)?((station.wind_direction_tr||windDirectionTr[station.wind_direction_cardinal]||station.wind_direction_cardinal)?esc(station.wind_direction_tr||windDirectionTr[station.wind_direction_cardinal]||station.wind_direction_cardinal)+" · ":"")+fmt(station.wind_speed_10m_kmh,1)+'<span class="unit">km/sa</span>':'—<span class="unit">km/sa</span>';
       $("rain").innerHTML=hasStation&&numeric(station.precipitation_daily_mm)?fmt(station.precipitation_daily_mm,1)+'<span class="unit">mm bugün</span>':'—<span class="unit">mm bugün</span>';
       $("humidity").innerHTML=hasStation&&numeric(station.humidity_percent)?fmt(station.humidity_percent,0)+'<span class="unit">%</span>':'—<span class="unit">%</span>';
