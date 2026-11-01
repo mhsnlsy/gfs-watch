@@ -348,7 +348,8 @@
       const xForTime=time=>left+((time-start)/windowMs)*plotWidth;
       const yFor=value=>top+((high-value)/(high-low))*plotHeight;
       const xForBin=bin=>xForTime(bin.start+bucketMs/2);
-      const tickValues=[low,(low+high)/2,high];
+      const tickValues=[];
+      for(let value=Math.ceil(low);value<=Math.floor(high);value+=1)tickValues.push(value);
       const horizontalGrid=tickValues.map(value=>{
         const y=yFor(value);
         return '<line x1="'+left+'" y1="'+y.toFixed(1)+'" x2="'+(width-right)+'" y2="'+y.toFixed(1)+'" stroke="rgba(190,218,228,.17)" stroke-dasharray="3 5"/><text x="'+(left-9)+'" y="'+(y+3.5).toFixed(1)+'" fill="#a8bfca" font-size="10" text-anchor="end">'+esc(fmt(value,1))+'</text>';
