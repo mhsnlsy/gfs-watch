@@ -2725,17 +2725,6 @@ async def process_gfs_update(strict=False, target_run_id=None):
         run_id, payload, previous_runs
     )
     audio_task = asyncio.create_task(generate_speech_with_retry(speech_text))
-    try:
-        await send_telegram_text(full_text_report)
-    except Exception as telegram_exc:
-        # Telegram is an optional delivery channel; the public Pages archive
-        # must still receive each scheduled report if Telegram is unavailable.
-        print(
-            f"[TELEGRAM TEXT UYARI] Metin Telegram'a gönderilemedi: {telegram_exc}. "
-            "Web raporu ve medya arşivi yine de hazırlanacak."
-        )
-
-    save_run(run_id, payload)
 
     # Compare the current cycle with the exact three prior six-hour cycles.
     # Missing history is fetched from NOAA in read-only mode; DB/JSON state is untouched.
@@ -2761,6 +2750,7 @@ async def process_gfs_update(strict=False, target_run_id=None):
         for image_buffer in pages_chart_buffers.values():
             image_buffer.close()
 
+    telegram_caption = None
     try:
         chart_buffer = create_comparison_chart(run_id, payload, comparison_runs)
         if chart_buffer:
@@ -2775,17 +2765,17 @@ async def process_gfs_update(strict=False, target_run_id=None):
                 cycle_labels.append(
                     f"{comparison_utc:%H}Z ({comparison_local:%d.%m} TSİ)"
                 )
-            caption = (
+            telegram_caption = (
                 "📊 İstanbul GFS | Dört döngü karşılaştırması\n"
                 "Eski → yeni: " + " → ".join(cycle_labels)
             )
-            await send_telegram_photo(chart_buffer, caption)
     except Exception as exc:
-        print(f"[KIYAS GÖRSELİ GÖNDERİM HATASI] {exc}")
-    finally:
-        if chart_buffer:
-            chart_buffer.close()
+        print(f"[KIYAS GÖRSELİ HAZIRLAMA HATASI] {exc}")
+
     audio_file = await audio_task
+    # Pages publication is the report's commit gate. A failed web archive write
+    # must stop this run before Telegram delivery and before the cycle is saved
+    # as processed, so the next five-minute check retries the same cycle.
     try:
         await asyncio.to_thread(
             publish_public_notification,
@@ -2796,8 +2786,31 @@ async def process_gfs_update(strict=False, target_run_id=None):
             audio_file,
             notification_images,
         )
-    except Exception as media_exc:
-        print(f"[WEB NOTIFICATION HATA] Rapor Pages akışına yazılamadı: {media_exc}")
+    except Exception:
+        if chart_buffer:
+            chart_buffer.close()
+        raise
+
+    save_run(run_id, payload)
+    print(f"[WEB NOTIFICATION REQUIRED] {run_id} manifest and report media archived.")
+
+    # Both channels now deliver the same generated report. Telegram is sent
+    # only after the Pages-ready archive has been written successfully.
+    try:
+        await send_telegram_text(full_text_report)
+    except Exception as telegram_exc:
+        print(f"[TELEGRAM TEXT UYARI] Metin Telegram'a gönderilemedi: {telegram_exc}")
+
+    if chart_buffer:
+        try:
+            await send_telegram_photo(
+                chart_buffer,
+                telegram_caption or "📊 İstanbul GFS | Dört döngü karşılaştırması",
+            )
+        except Exception as exc:
+            print(f"[KIYAS GÖRSELİ GÖNDERİM HATASI] {exc}")
+        finally:
+            chart_buffer.close()
 
     if audio_file:
         try:
