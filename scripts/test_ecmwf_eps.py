@@ -142,10 +142,10 @@ def run_offline_tests() -> None:
         history = load_comparison_runs(archive_dir, limit=4)
         assert len(history) == 4, len(history)
         assert [item["run_id_utc"] for item in history] == [
+            "2026-10-30T12:00:00+00:00",
             "2026-10-31T00:00:00+00:00",
             "2026-10-31T12:00:00+00:00",
             "2026-11-01T00:00:00+00:00",
-            "2026-11-01T12:00:00+00:00",
         ]
         assert all(len(item["forecast_6_hourly"]) == 55 for item in history)
 
