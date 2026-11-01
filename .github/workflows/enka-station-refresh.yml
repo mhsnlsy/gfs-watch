@@ -44,6 +44,15 @@ jobs:
       - name: Install lightweight dependency
         run: python -m pip install --disable-pip-version-check requests
 
+      - name: Re-register and verify the ENKA schedule
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          gh workflow disable enka-station-refresh.yml --repo "$GITHUB_REPOSITORY"
+          gh workflow enable enka-station-refresh.yml --repo "$GITHUB_REPOSITORY"
+          gh workflow list --all --repo "$GITHUB_REPOSITORY" --json name,path,state \
+            | jq '.[] | select(.path == ".github/workflows/enka-station-refresh.yml")'
+
       - name: Fetch latest ENKA Balmumcu observation
         run: |
           mkdir -p public
