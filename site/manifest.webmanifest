@@ -1,6 +1,7 @@
 {
   "name": "İstanbul'un Havası",
   "short_name": "İstanbul Hava",
+  "id": "./",
   "description": "İstanbul için GFS hava tahmini ve istasyon gözlemleri",
   "lang": "tr",
   "start_url": "./",
@@ -9,6 +10,18 @@
   "background_color": "#071521",
   "theme_color": "#081827",
   "icons": [
+    {
+      "src": "./icon.svg",
+      "sizes": "192x192",
+      "type": "image/svg+xml",
+      "purpose": "any"
+    },
+    {
+      "src": "./icon.svg",
+      "sizes": "512x512",
+      "type": "image/svg+xml",
+      "purpose": "any"
+    },
     {
       "src": "./icon.svg",
       "sizes": "any",
