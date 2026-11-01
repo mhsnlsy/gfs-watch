@@ -2043,26 +2043,52 @@ async def send_telegram_voice(audio_path, max_attempts=3):
             os.remove(audio_path)
 
 # --- ANA ÇALIŞTIRICI ---
-async def process_gfs_update(strict=False):
+async def process_gfs_update(strict=False, target_run_id=None):
+    if target_run_id is None:
+        target_run_id = os.getenv("GFS_WATCH_TARGET_RUN_ID", "").strip() or None
+    if target_run_id:
+        target_run_id = _parse_utc_datetime(target_run_id).isoformat(timespec="seconds")
+        print(f"[TARGET LOCK] Yalnızca {target_run_id} GFS döngüsü izlenecek.")
+
     await asyncio.to_thread(prune_old_runs)
     await asyncio.to_thread(prune_noaa_cache)
+    processed_run_ids = await asyncio.to_thread(get_processed_run_ids)
+    if target_run_id and target_run_id in processed_run_ids:
+        print(f"[TARGET COMPLETE] {target_run_id} daha önce işlendi; yeni rapor gönderilmeyecek.")
+        return
+
     candidates = await asyncio.to_thread(fetch_noaa_available_runs)
+    if target_run_id:
+        candidates = [
+            item for item in candidates
+            if _parse_utc_datetime(item["run_id"]).isoformat(timespec="seconds") == target_run_id
+        ]
+
     if not candidates:
-        await asyncio.to_thread(prefetch_noaa_cycle_if_due)
-        message = "NOAA S3 üzerinde henüz +180 GFS GRIB2 dosyası yayımlanmadı."
+        await asyncio.to_thread(
+            prefetch_noaa_cycle_if_due,
+            processed_run_ids if target_run_id else None,
+            target_run_id,
+        )
+        message = (
+            f"NOAA S3 üzerinde {target_run_id} için +180 GFS GRIB2 dosyası "
+            "henüz yayımlanmadı."
+            if target_run_id
+            else "NOAA S3 üzerinde henüz +180 GFS GRIB2 dosyası yayımlanmadı."
+        )
         print(f"[SKIP] {message}")
         if strict:
             raise RuntimeError(message)
         return
 
     previous_runs = get_previous_runs()
-    processed_run_ids = await asyncio.to_thread(get_processed_run_ids)
     latest_processed_run = max(processed_run_ids) if processed_run_ids else None
     pending_runs = [
         item for item in candidates
         if item["run_id"] not in processed_run_ids
         and (
-            latest_processed_run is None
+            target_run_id is not None
+            or latest_processed_run is None
             or item["run_id"] > latest_processed_run
         )
     ]
@@ -2169,7 +2195,7 @@ async def process_gfs_update(strict=False):
                 f"[FINAL CACHE WAIT] {run_id}: önbellekte hâlâ "
                 f"{len(missing_cache_leads)} dosya eksik; "
                 f"ilk eksik f{missing_cache_leads[0]:03d}. "
-                "Sonraki 15 saniyelik f180 kontrolünde tekrar denenecek."
+                "Sonraki beş dakikalık kontrolde tekrar denenecek."
             )
             return
 
@@ -2187,7 +2213,7 @@ async def process_gfs_update(strict=False):
         )
         # The f180 inventory may be published while one or more preceding
         # lead files are still unavailable. Keep completing the same GRIB2
-        # cache; the next 15-second check retries the final assembly.
+        # cache; the next five-minute check retries the final assembly.
         await asyncio.to_thread(
             prefetch_latest_noaa_cycle, None, run_id
         )
@@ -2505,19 +2531,24 @@ async def main():
 
 
 async def run_scheduled_watch():
-    """Prefetch early GRIB2 fields, then poll NOAA S3 frequently for exact f180 readiness."""
+    """Prefetch a fixed GFS cycle on a five-minute cadence until its f180 report is sent."""
     init_db()
-    window_minutes = max(10, int(os.getenv("GFS_WATCH_WINDOW_MINUTES", "90")))
-    poll_seconds = max(15, int(os.getenv("GFS_WATCH_POLL_SECONDS", "15")))
-    now = datetime.now(timezone.utc)
-    target_hour = (now.hour // 6) * 6
-    target_dt = now.replace(hour=target_hour, minute=0, second=0, microsecond=0)
+    window_minutes = max(10, int(os.getenv("GFS_WATCH_WINDOW_MINUTES", "330")))
+    poll_seconds = max(60, int(os.getenv("GFS_WATCH_POLL_SECONDS", "300")))
+    configured_target = os.getenv("GFS_WATCH_TARGET_RUN_ID", "").strip()
+    if configured_target:
+        target_dt = _parse_utc_datetime(configured_target)
+    else:
+        now = datetime.now(timezone.utc)
+        target_hour = (now.hour // 6) * 6
+        target_dt = now.replace(hour=target_hour, minute=0, second=0, microsecond=0)
     target_run_id = target_dt.isoformat(timespec="seconds")
     deadline = time.monotonic() + window_minutes * 60
+    next_poll_at = time.monotonic()
 
     print(
-        f"[WATCH START] Hedef GFS döngüsü: {target_run_id}; "
-        f"izleme {window_minutes} dakika, S3 kontrol aralığı {poll_seconds} saniye."
+        f"[WATCH START] Sabit hedef GFS döngüsü: {target_run_id}; "
+        f"izleme {window_minutes} dakika, kontrol ve önbellek aralığı {poll_seconds} saniye."
     )
     existing_runs = await asyncio.to_thread(get_processed_run_ids)
     if target_run_id in existing_runs:
@@ -2526,7 +2557,7 @@ async def run_scheduled_watch():
 
     while time.monotonic() < deadline:
         try:
-            await process_gfs_update(strict=False)
+            await process_gfs_update(strict=False, target_run_id=target_run_id)
         except Exception as exc:
             print(
                 f"[WATCH RETRY] Kontrol sırasında hata oluştu: "
@@ -2543,15 +2574,23 @@ async def run_scheduled_watch():
             )
             return
 
-        remaining = deadline - time.monotonic()
-        if remaining <= 0:
+        next_poll_at += poll_seconds
+        current_monotonic = time.monotonic()
+        if next_poll_at <= current_monotonic:
+            missed_intervals = (
+                int((current_monotonic - next_poll_at) // poll_seconds) + 1
+            )
+            next_poll_at += missed_intervals * poll_seconds
+
+        remaining_window = deadline - current_monotonic
+        if remaining_window <= 0:
             break
-        await asyncio.sleep(min(poll_seconds, remaining))
+        await asyncio.sleep(min(next_poll_at - current_monotonic, remaining_window))
 
     raise RuntimeError(
         f"[WATCH TIMEOUT] {target_run_id} için {window_minutes} dakikalık "
-        "izleme penceresi sona erdi; NOAA f180 işlenemedi. "
-        "GitHub Actions bu çalışmayı başarısız işaretlemeli."
+        "izleme penceresi sona erdi; NOAA f180 henüz işlenemedi. "
+        "GitHub Actions önbelleği kaydedip yeni izleme oturumu başlatmalı."
     )
 
 
