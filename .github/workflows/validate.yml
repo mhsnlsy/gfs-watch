@@ -37,6 +37,8 @@ jobs:
           python scripts/test_ecmwf_ui.py
           python scripts/test_notification_pipeline.py
           python scripts/test_850hpa_history.py
+      - name: Test ENKA and Eyüpsultan history graph switching
+        run: node scripts/test_station_history_switch.mjs
       - name: Validate website JavaScript syntax
         run: |
           python - <<'PY'
