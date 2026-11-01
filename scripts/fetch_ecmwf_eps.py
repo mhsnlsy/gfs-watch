@@ -33,6 +33,16 @@ def forecast_steps(max_hour: int = MAX_FORECAST_HOUR) -> list[int]:
     )
 
 
+def same_published_cycle(existing_run_id: str | None, candidate_run_id: str) -> bool:
+    """Compare ECMWF cycle identifiers independently of timezone spelling."""
+    if not existing_run_id:
+        return False
+    try:
+        return _normalise_datetime(existing_run_id) == _normalise_datetime(candidate_run_id)
+    except (TypeError, ValueError, OverflowError):
+        return False
+
+
 def _normalise_datetime(value) -> datetime:
     if isinstance(value, datetime):
         parsed = value
@@ -304,7 +314,7 @@ def fetch_latest_document(skip_if_run_id: str | None = None) -> dict | None:
             print(f"[ECMWF] Latest complete EPS 180h cycle: {run_id} source={source}")
             # Querying cycle metadata is cheap. Do not download the same 55-step
             # ensemble GRIB package again when the already-published run is current.
-            if skip_if_run_id and run_id == skip_if_run_id:
+            if same_published_cycle(skip_if_run_id, run_id):
                 print(f"[ECMWF CACHE HIT] {run_id} already published; skipping GRIB retrieval.")
                 return None
             document = _fetch_cycle(client, run_dt)
