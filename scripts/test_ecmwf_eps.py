@@ -71,6 +71,11 @@ def run_offline_tests() -> None:
     assert len(document["regional_pressure_analysis"]["findings"]) == 4
     assert "Kuzeybatı Ukrayna" in document["regional_pressure_analysis"]["findings"][0]
     assert "Batı Yunanistan" in document["regional_pressure_analysis"]["findings"][1]
+    fallback_document = build_document(
+        datetime(2026, 11, 1, 0, tzinfo=timezone.utc), mean, spread
+    )
+    assert fallback_document["regional_pressure_analysis"]["findings"]
+    assert "konumu üretilmedi" in fallback_document["regional_pressure_analysis"]["findings"][0]
 
     # Negative tests: missing step and physically impossible wind must fail closed.
     broken = dict(document)
