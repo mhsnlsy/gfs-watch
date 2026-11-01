@@ -17,6 +17,11 @@ on:
         description: "Optional notification ID; blank sends the latest feed item"
         required: false
         type: string
+      test_mode:
+        description: "Send a one-off test notification without marking a GFS report as sent"
+        required: false
+        type: boolean
+        default: false
 
 permissions:
   contents: read
@@ -59,6 +64,7 @@ jobs:
           VAPID_PUBLIC_KEY: ${{ secrets.VAPID_PUBLIC_KEY }}
           VAPID_PRIVATE_KEY: ${{ secrets.VAPID_PRIVATE_KEY }}
           NOTIFICATION_ID: ${{ inputs.notification_id }}
+          PUSH_TEST_MODE: ${{ inputs.test_mode }}
           NOTIFICATION_FEED_PATH: ../../forecast-data/public/notifications/latest.json
           VAPID_SUBJECT: "https://mhsnlsy.github.io/gfs-watch/"
         run: node send-notification.mjs
