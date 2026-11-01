@@ -195,20 +195,22 @@
 
     /* Interactive forecast chart tooltips: hover on desktop, tap on touch screens. */
     .chart-wrap{position:relative}
+    .chart-card{position:relative;overflow:visible}
     .chart-tooltip{
-      position:absolute;z-index:12;min-width:176px;max-width:min(238px,calc(100% - 12px));
+      position:absolute;z-index:30;min-width:176px;max-width:min(238px,calc(100% - 12px));
       padding:9px 11px;border:1px solid rgba(125,211,215,.42);border-radius:10px;
-      background:rgba(4,18,29,.97);box-shadow:0 9px 28px rgba(0,0,0,.38);
+      background:rgba(4,18,29,.98);box-shadow:0 9px 28px rgba(0,0,0,.42);
       color:#eaf5f8;font-size:10px;line-height:1.45;pointer-events:none;
-      transform:translate(-50%,calc(-100% - 10px));backdrop-filter:blur(8px)
+      transform:none;backdrop-filter:blur(8px)
     }
     .chart-tooltip[hidden]{display:none}
-    .chart-tooltip.below{transform:translate(-50%,9px)}
+    .chart-tooltip.below{transform:none}
     .chart-tooltip-time{font-weight:700;color:#c9f3ed;font-size:10px;margin-bottom:4px}
     .chart-tooltip-value{font:700 13px Manrope,sans-serif;color:#fff}
     .chart-tooltip-meta{color:#9fb6c2;font-size:9px;margin-top:4px}
     .chart-crosshair{pointer-events:none}
-    .chart-hit-area{fill:transparent;pointer-events:all;cursor:crosshair;touch-action:pan-y}
+    .chart-hit-area{fill:transparent;pointer-events:all;cursor:crosshair;touch-action:pan-y;-webkit-tap-highlight-color:transparent}
+    .chart-hit-area:focus,.chart-hit-area:focus-visible{outline:none;stroke:transparent;stroke-width:0}
     @media(max-width:560px){
       .chart-tooltip{min-width:158px;max-width:min(216px,calc(100% - 8px));padding:8px 9px;font-size:9px}
       .chart-tooltip-time{font-size:9px}
@@ -334,7 +336,8 @@
       tooltip.className="chart-tooltip";
       tooltip.hidden=true;
       tooltip.setAttribute("role","tooltip");
-      container.appendChild(tooltip);
+      const tooltipLayer=container.closest(".chart-card")||container;
+      tooltipLayer.appendChild(tooltip);
 
       const cursorLine=document.createElementNS(ns,"line");
       cursorLine.setAttribute("class","chart-crosshair");
@@ -397,15 +400,21 @@
           intervalDuration;
         tooltip.hidden=false;
 
-        const wrapRect=container.getBoundingClientRect();
+        const layerRect=tooltipLayer.getBoundingClientRect();
         const svgRect=svg.getBoundingClientRect();
-        const localX=(point.x/width)*svgRect.width+(svgRect.left-wrapRect.left);
-        const localY=(point.y/height)*svgRect.height+(svgRect.top-wrapRect.top);
+        const localX=(point.x/width)*svgRect.width+(svgRect.left-layerRect.left);
+        const localY=(point.y/height)*svgRect.height+(svgRect.top-layerRect.top);
         const half=tooltip.offsetWidth/2;
-        const clampedX=Math.max(half+5,Math.min(wrapRect.width-half-5,localX));
+        const clampedX=Math.max(half+8,Math.min(layerRect.width-half-8,localX));
+        const tooltipHeight=tooltip.offsetHeight;
+        const gap=10;
+        const spaceAbove=localY-tooltipHeight-gap;
+        const showBelow=spaceAbove<8;
+        const desiredTop=showBelow?localY+gap:spaceAbove;
+        const maxTop=Math.max(8,layerRect.height-tooltipHeight-8);
         tooltip.style.left=clampedX+"px";
-        tooltip.style.top=Math.max(7,localY)+"px";
-        tooltip.classList.toggle("below",localY<105);
+        tooltip.style.top=Math.min(maxTop,Math.max(8,desiredTop))+"px";
+        tooltip.classList.toggle("below",showBelow);
       };
       const selectNearestPoint=event=>{
         const rect=svg.getBoundingClientRect();
