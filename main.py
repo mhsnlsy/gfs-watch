@@ -2335,7 +2335,7 @@ def create_pages_comparison_charts(current_run_id, payload, previous_runs):
                 # Stronger typography and contrast for readable numeric values on desktop and mobile.
                 axis.set_facecolor("#fbfdff")
                 fig.patch.set_facecolor("#ffffff")
-                axis.set_title(title, loc="left", fontsize=18, fontweight="bold", color="#142b42", pad=10)
+                axis.set_title(title, loc="left", fontsize=18, fontweight="bold", color="#142b42", pad=(28 if metric == "precipitation" else 10))
                 axis.set_ylabel(ylabel, fontsize=16, fontweight="bold", color="#142b42", labelpad=7)
                 axis.tick_params(
                     axis="y", which="major", labelsize=15, labelcolor="#102a43",
