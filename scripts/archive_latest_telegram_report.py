@@ -30,7 +30,7 @@ def main() -> None:
     if published_run_id != target_run_id:
         raise RuntimeError(
             "Safety check: target must match public/latest.json. "
-            f"Expected {published_run_id}, received {target_run_id}.
+            f"Expected {published_run_id}, received {target_run_id}."
         )
 
     run_dt = archive._parse_utc_datetime(target_run_id)
