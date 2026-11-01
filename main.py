@@ -2636,7 +2636,7 @@ async def process_gfs_update(strict=False, target_run_id=None):
                     f"{comparison_utc:%H}Z ({comparison_local:%d.%m} TSİ)"
                 )
             caption = (
-                "📊 İstanbul GFS | Dört döngü karşılaştırması\\n"
+                "📊 İstanbul GFS | Dört döngü karşılaştırması\n"
                 "Eski → yeni: " + " → ".join(cycle_labels)
             )
             await send_telegram_photo(chart_buffer, caption)
