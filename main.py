@@ -2337,9 +2337,12 @@ def create_pages_comparison_charts(current_run_id, payload, previous_runs):
                 fig.patch.set_facecolor("#ffffff")
                 # Put every metric heading in a dedicated figure-level band.
                 # The title never shares the plotting axes with the 12Z/18Z legend.
-                axis.set_title("")
+                # Pages chart: clear the axis-level title added by shared
+                # drawing helpers; it otherwise duplicates and collides with
+                # the dedicated metric heading above the plot.
+                axis.title.set_text("")
                 fig.text(
-                    0.085, 0.755, title, ha="left", va="bottom",
+                    0.085, 0.675, title, ha="left", va="bottom",
                     fontsize=18, fontweight="bold", color="#142b42",
                 )
                 axis.set_ylabel(ylabel, fontsize=16, fontweight="bold", color="#142b42", labelpad=7)
@@ -2374,7 +2377,7 @@ def create_pages_comparison_charts(current_run_id, payload, previous_runs):
                 # Put the four run labels in a dedicated, figure-level 2x2 legend.
                 # This prevents long cycle names from colliding in a four-column row.
                 fig.legend(
-                    handles=legend, loc="upper center", bbox_to_anchor=(0.5, 0.91),
+                    handles=legend, loc="upper center", bbox_to_anchor=(0.5, 0.925),
                     ncol=2, fontsize=12, frameon=True, facecolor="#ffffff",
                     edgecolor="#d5e0e8", framealpha=0.96, labelcolor="#17324a",
                     borderpad=0.75, handlelength=2.0, columnspacing=3.0,
@@ -2385,8 +2388,9 @@ def create_pages_comparison_charts(current_run_id, payload, previous_runs):
                     "Renkler her panelde aynı GFS döngüsünü gösterir | Kaynak: NOAA/NCEP GFS 0.25°",
                     fontsize=10.5, color="#40566a",
                 )
-                # Reserve a fixed band for the title and two-row legend on all four charts.
-                fig.subplots_adjust(left=0.085, right=0.985, bottom=0.19, top=0.68)
+                # Keep three non-overlapping vertical bands: report title,
+                # two-row cycle legend, metric heading, then plotting area.
+                fig.subplots_adjust(left=0.085, right=0.985, bottom=0.19, top=0.59)
                 buffer = io.BytesIO()
                 fig.savefig(buffer, format="png", dpi=150)
                 buffer.seek(0)
