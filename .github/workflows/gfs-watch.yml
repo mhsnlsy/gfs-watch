@@ -9,9 +9,13 @@ on:
       - ".github/workflows/gfs-watch.yml"
       - "scripts/backfill_gfs_wind_direction.py"
   workflow_dispatch:
+  schedule:
+    # Run one lightweight NOAA availability/prefetch check every five minutes.
+    # Unlike an in-workflow sleep, the cron releases concurrency as soon as work ends.
+    - cron: "*/5 * * * *"
 
 concurrency:
-  group: gfs-watch-run-v5
+  group: gfs-watch-run-v6
   cancel-in-progress: false
 
 permissions:
@@ -180,25 +184,6 @@ jobs:
           done
           echo "Could not publish GFS run history after five attempts."
           exit 1
-  queue-next-check:
-    name: Queue the next automatic NOAA check
-    needs: check-gfs
-    if: always() && !cancelled()
-    runs-on: ubuntu-latest
-    timeout-minutes: 10
-    permissions:
-      actions: write
-      contents: read
-    steps:
-      - name: Wait five minutes and dispatch the next check
-        env:
-          GH_TOKEN: ${{ github.token }}
-        run: |
-          echo "Next NOMADS/S3 discovery check in five minutes."
-          sleep 300
-          gh workflow run gfs-watch.yml --ref main --repo "$GITHUB_REPOSITORY"
-          echo "Next automatic GFS check queued."
-
   deploy-pages:
     name: Publish latest report to GitHub Pages
     needs: check-gfs
