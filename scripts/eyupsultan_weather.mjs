@@ -117,9 +117,7 @@ async function main() {
       throw new Error(`WStatMap istasyon sayfası HTTP ${response?.status() ?? "yanıt yok"} döndürdü.`);
     }
     await page.waitForFunction(() => document.body && document.body.innerText.includes("18101"), { timeout: 20000 });
-    await page.waitForTimeout(10000);
-    await page.evaluate(() => window.scrollTo(0, document.body.scrollHeight));
-    await page.waitForTimeout(2500);
+    await page.waitForTimeout(1500);
     const bodyText = await page.locator("body").innerText();
     if (/Just a moment|Checking your browser|Access denied/i.test(bodyText)) {
       throw new Error("WStatMap sayfası otomatik erişim doğrulaması gösterdi; veri alınmadı.");
