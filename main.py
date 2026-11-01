@@ -2193,8 +2193,8 @@ def _draw_comparison_temperature_axis(axis, chart_data):
                 candle_width, body_height,
                 facecolor=color, edgecolor=color, alpha=0.82,
             ))
-    axis.set_title("Sıcaklık | Günlük mum: ilk–son örnek, fitil: min–maks", loc="left")
-    axis.set_ylabel("°C")
+    axis.set_title("Sıcaklık | Günlük mum: ilk–son örnek, fitil: min–maks", loc="left", fontsize=11)
+    axis.set_ylabel("°C", fontsize=10)
     axis.grid(axis="y", alpha=0.25)
 
 
@@ -2217,8 +2217,8 @@ def _draw_comparison_bar_axis(axis, chart_data, metric, title, ylabel):
             bar_values.append(float(value))
         if bar_positions:
             axis.bar(bar_positions, bar_values, width=bar_width, color=color)
-    axis.set_title(title, loc="left")
-    axis.set_ylabel(ylabel)
+    axis.set_title(title, loc="left", fontsize=11)
+    axis.set_ylabel(ylabel, fontsize=10)
     axis.grid(axis="y", alpha=0.25)
     if metric == "wind_850":
         available = sum(
@@ -2243,8 +2243,8 @@ def _format_comparison_date_axis(axis, dates):
         local_date = datetime.strptime(day, "%Y-%m-%d")
         labels.append(f"{local_date:%d.%m}\\n{turkish_weekdays[local_date.weekday()]}")
     axis.set_xticks(list(range(len(dates))))
-    axis.set_xticklabels(labels, fontsize=9)
-    axis.set_xlabel("İstanbul yerel tarihi")
+    axis.set_xticklabels(labels, fontsize=9.5)
+    axis.set_xlabel("İstanbul yerel tarihi", fontsize=9.5)
 
 
 def create_comparison_chart(current_run_id, payload, previous_runs):
@@ -2259,17 +2259,17 @@ def create_comparison_chart(current_run_id, payload, previous_runs):
         dates = chart_data["dates"]
         count = len(series)
         fig, axes = plt.subplots(
-            4, 1, figsize=(17, 15), sharex=True,
+            4, 1, figsize=(18, 15), sharex=True,
             gridspec_kw={"height_ratios": [1.5, 1, 1, 1]},
         )
         fig.suptitle(
             f"İSTANBUL GFS | SON {count} DÖNGÜ KARŞILAŞTIRMASI",
-            fontsize=18, fontweight="bold", y=0.99,
+            fontsize=19, fontweight="bold", y=0.99,
         )
         _draw_comparison_temperature_axis(axes[0], chart_data)
         axes[0].legend(
             handles=_comparison_legend_handles(series, chart_data["colors"]),
-            loc="upper left", ncol=min(4, count), fontsize=8, frameon=False,
+            loc="upper left", ncol=min(4, count), fontsize=8.5, frameon=False,
         )
         _draw_comparison_bar_axis(axes[1], chart_data, "precip", "Günlük toplam yağış", "mm")
         _draw_comparison_bar_axis(axes[2], chart_data, "wind", "Yüzey rüzgârı | 10 m günlük en yüksek hız", "km/sa")
@@ -2281,7 +2281,7 @@ def create_comparison_chart(current_run_id, payload, previous_runs):
             0.01, 0.012,
             "Renkler her panelde aynı GFS döngüsünü gösterir | "
             "Kaynak: NOAA/NCEP GFS 0.25° | Yalnızca tüm döngülerde ortak günler",
-            fontsize=9, color="#555555",
+            fontsize=9.5, color="#555555",
         )
         fig.tight_layout(rect=(0, 0.035, 1, 0.95))
         image_buffer = io.BytesIO()
@@ -2318,11 +2318,11 @@ def create_pages_comparison_charts(current_run_id, payload, previous_runs):
         dates = chart_data["dates"]
         legend = _comparison_legend_handles(series, chart_data["colors"])
         for metric, label, title, ylabel in specifications:
-            fig, axis = plt.subplots(1, 1, figsize=(17, 5.8))
+            fig, axis = plt.subplots(1, 1, figsize=(18, 5.6))
             try:
                 fig.suptitle(
                     f"İSTANBUL GFS | {label.upper()} · SON {len(series)} DÖNGÜ",
-                    fontsize=17, fontweight="bold", y=0.98,
+                    fontsize=18, fontweight="bold", y=0.98,
                 )
                 if metric == "temperature":
                     _draw_comparison_temperature_axis(axis, chart_data)
@@ -2332,13 +2332,13 @@ def create_pages_comparison_charts(current_run_id, payload, previous_runs):
                     _draw_comparison_bar_axis(axis, chart_data, "wind", title, ylabel)
                 else:
                     _draw_comparison_bar_axis(axis, chart_data, "wind_850", title, ylabel)
-                axis.legend(handles=legend, loc="upper left", ncol=min(4, len(series)), fontsize=8, frameon=False)
+                axis.legend(handles=legend, loc="upper left", ncol=min(4, len(series)), fontsize=8.5, frameon=False)
                 _format_comparison_date_axis(axis, dates)
                 axis.tick_params(axis="x", labelbottom=True)
                 fig.text(
                     0.01, 0.012,
                     "Renkler her panelde aynı GFS döngüsünü gösterir | Kaynak: NOAA/NCEP GFS 0.25°",
-                    fontsize=8, color="#555555",
+                    fontsize=8.5, color="#555555",
                 )
                 fig.tight_layout(rect=(0, 0.06, 1, 0.90))
                 buffer = io.BytesIO()
