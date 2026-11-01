@@ -356,7 +356,7 @@
       <section class="history-panel" id="station-history-panel" aria-label="Seçili istasyonun son 24 saat geçmişi">
         <div class="history-panel-head"><div><div class="section-kicker" id="history-station-source">ENKA BALMUMCU · GERÇEK ÖLÇÜMLER</div><h2>Son 24 saat</h2></div><span class="history-window">24 SAAT</span></div>
         <div class="history-charts">
-          <article class="history-chart-card"><div class="history-chart-head"><div><h3>Sıcaklık</h3><p>°C · saatlik ortalama, min–maks</p></div><span class="history-chart-icon">℃</span></div><div class="history-chart" id="station-temperature-trend"><div class="station-trend-empty">Sıcaklık kayıtları bekleniyor…</div></div><div class="history-chart-meta" id="station-trend-meta">Seçili istasyonun ölçüm geçmişi</div></article>
+          <article class="history-chart-card"><div class="history-chart-head"><div><h3>Sıcaklık</h3><p>°C · 30 dk ortalama, min–maks</p></div><span class="history-chart-icon">℃</span></div><div class="history-chart" id="station-temperature-trend"><div class="station-trend-empty">Sıcaklık kayıtları bekleniyor…</div></div><div class="history-chart-meta" id="station-trend-meta">Seçili istasyonun ölçüm geçmişi</div></article>
           <article class="history-chart-card"><div class="history-chart-head"><div><h3>Yağış</h3><p>mm · gün içindeki birikim</p></div><span class="history-chart-icon">☂</span></div><div class="history-chart" id="station-rain-trend"><div class="station-trend-empty">Yağış geçmişi oluşturuluyor…</div></div><div class="history-chart-meta" id="station-rain-meta">Günlük sayaçtan türetilen birikim; saatlik yağış değildir</div></article>
         </div>
         <div class="history-source-note" id="history-source-note">Grafikler seçili istasyonun kendi gözlem arşivini kullanır.</div>
@@ -729,7 +729,7 @@
       if(!holder)return;
       const now=Date.now();
       const windowMs=24*60*60*1000;
-      const bucketMs=60*60*1000;
+      const bucketMs=30*60*1000;
       const start=now-windowMs;
       const valid=(Array.isArray(samples)?samples:[])
         .map(sample=>({
@@ -760,7 +760,7 @@
 
       const coverageHours=valid.length?Math.min(24,Math.max(0,(now-valid[0].time)/3600000)):0;
       const coverageLabel=coverageHours>=23.9?"24 saat arşiv kapsamı":"arşiv kapsamı "+fmt(coverageHours,1)+" saat";
-      if(meta)meta.textContent=stationName+" · "+valid.length+" kayıt · "+coverageLabel+" · 60 dk ortalama / min–maks";
+      if(meta)meta.textContent=stationName+" · "+valid.length+" kayıt · "+coverageLabel+" · 30 dk ortalama / min–maks";
       if(!populated.length){
         holder.innerHTML='<div class="station-trend-empty">İlk sıcaklık kaydı bekleniyor. '+esc(stationName)+' ölçümleri geldikçe grafik dolacak.</div>';
         return;
@@ -829,7 +829,7 @@
       const lastTime=new Intl.DateTimeFormat("tr-TR",{timeZone:"Europe/Istanbul",hour:"2-digit",minute:"2-digit"}).format(new Date(last.time));
       const lastValue=fmt(last.temperature,1);
       const latestMarker='<circle cx="'+lastX.toFixed(1)+'" cy="'+lastY.toFixed(1)+'" r="7" fill="rgba(164,231,213,.16)" stroke="#a4e7d5" stroke-width="1.2"/><circle cx="'+lastX.toFixed(1)+'" cy="'+lastY.toFixed(1)+'" r="3.2" fill="#f1fff9"/>';
-      holder.innerHTML='<svg viewBox="0 0 '+width+' '+height+'" role="img" aria-label="'+esc(stationName)+' son 24 saat sıcaklık geçmişi; 60 dakikalık dilimlerde ortalama, minimum ve maksimum değerler"><defs><linearGradient id="station-trend-line" x1="0" x2="1" y1="0" y2="0"><stop offset="0%" stop-color="#6caeb7"/><stop offset="100%" stop-color="#b8f0dd"/></linearGradient><linearGradient id="station-trend-area" x1="0" x2="0" y1="0" y2="1"><stop offset="0%" stop-color="#8edbd2" stop-opacity=".22"/><stop offset="100%" stop-color="#8edbd2" stop-opacity=".015"/></linearGradient></defs>'+verticalGrid+horizontalGrid+'<path d="'+areaPaths+'" fill="url(#station-trend-area)"/>'+ranges+'<path d="'+meanPaths+'" fill="none" stroke="url(#station-trend-line)" stroke-width="3.2" stroke-linecap="round" stroke-linejoin="round"/>'+meanPoints+latestMarker+timeLabels+'</svg>';
+      holder.innerHTML='<svg viewBox="0 0 '+width+' '+height+'" role="img" aria-label="'+esc(stationName)+' son 24 saat sıcaklık geçmişi; 30 dakikalık dilimlerde ortalama, minimum ve maksimum değerler"><defs><linearGradient id="station-trend-line" x1="0" x2="1" y1="0" y2="0"><stop offset="0%" stop-color="#6caeb7"/><stop offset="100%" stop-color="#b8f0dd"/></linearGradient><linearGradient id="station-trend-area" x1="0" x2="0" y1="0" y2="1"><stop offset="0%" stop-color="#8edbd2" stop-opacity=".22"/><stop offset="100%" stop-color="#8edbd2" stop-opacity=".015"/></linearGradient></defs>'+verticalGrid+horizontalGrid+'<path d="'+areaPaths+'" fill="url(#station-trend-area)"/>'+ranges+'<path d="'+meanPaths+'" fill="none" stroke="url(#station-trend-line)" stroke-width="3.2" stroke-linecap="round" stroke-linejoin="round"/>'+meanPoints+latestMarker+timeLabels+'</svg>';
       if(meta)meta.textContent=stationName+" · "+valid.length+" kayıt · son ölçüm "+lastValue+" °C ("+lastTime+") · 60 dk ortalama / min–maks";
     }
     function renderStationRainTrend(samples,stationName){
