@@ -251,12 +251,19 @@ async function main() {
     throw new Error("Eyüpsultan sıcaklık geçmişi şeması beklenenden farklı.");
   }
   const samples = Array.isArray(historyDocument?.samples) ? historyDocument.samples : [];
-  const lastSampleTime = samples.length ? Date.parse(samples[samples.length - 1]?.logged_at_utc || "") : NaN;
-  const recentDuplicate = Number.isFinite(lastSampleTime) && now.getTime() - lastSampleTime < 60000;
-  if (!observation.is_stale && !recentDuplicate && Number.isFinite(observation.temperature_2m_c)) {
+  const lastSample = samples.length ? samples[samples.length - 1] : null;
+  const lastObservedTime = Date.parse(lastSample?.observed_at_utc || "");
+  const currentObservedTime = Date.parse(observation.observed_at_utc || "");
+  const sameSourceReading = Number.isFinite(lastObservedTime)
+    && Number.isFinite(currentObservedTime)
+    && Math.abs(currentObservedTime - lastObservedTime) <= 90000
+    && Number(lastSample.temperature_2m_c) === Number(observation.temperature_2m_c)
+    && Number(lastSample.precipitation_daily_mm) === Number(observation.precipitation_daily_mm);
+  if (!observation.is_stale && !sameSourceReading && Number.isFinite(observation.temperature_2m_c)) {
     samples.push({
       logged_at_utc: now.toISOString(),
       observed_at_utc: observation.observed_at_utc,
+      pressure_observed_at_utc: observation.pressure_observed_at_utc,
       temperature_2m_c: observation.temperature_2m_c,
       precipitation_daily_mm: observation.precipitation_daily_mm,
       station_pressure_hpa: observation.station_pressure_hpa,
@@ -275,7 +282,7 @@ async function main() {
     sampling_interval_minutes: 5,
     aggregation_interval_minutes: 60,
     retention_days: 7,
-    sample_semantics: "five_minute_poll_snapshot_of_latest_source_observation",
+    sample_semantics: "one_point_per_distinct_source_observation",
     updated_at_utc: now.toISOString(),
     samples: retained
   });
