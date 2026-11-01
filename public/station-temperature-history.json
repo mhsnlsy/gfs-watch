@@ -3,9 +3,9 @@
   "station_id": "ENKA-BALMUMCU-VANTAGE-PRO",
   "station_name": "ENKA Balmumcu",
   "sampling_interval_minutes": 5,
-  "aggregation_interval_minutes": 60,
+  "aggregation_interval_minutes": 30,
   "retention_days": 7,
-  "updated_at_utc": "2026-11-01T19:00:13+00:00",
+  "updated_at_utc": "2026-11-01T19:05:13+00:00",
   "samples": [
     {
       "logged_at_utc": "2026-11-01T02:42:33+00:00",
@@ -860,6 +860,12 @@
     {
       "logged_at_utc": "2026-11-01T19:00:13+00:00",
       "observed_at_utc": "2026-11-01T18:55:00+00:00",
+      "temperature_2m_c": 16.4,
+      "precipitation_daily_mm": 0.0
+    },
+    {
+      "logged_at_utc": "2026-11-01T19:05:13+00:00",
+      "observed_at_utc": "2026-11-01T19:00:00+00:00",
       "temperature_2m_c": 16.4,
       "precipitation_daily_mm": 0.0
     }
