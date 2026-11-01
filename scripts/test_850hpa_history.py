@@ -32,6 +32,11 @@ def main() -> None:
     assert "archive._has_complete_850_wind_daily_series" in backfill
 
     workflow = (ROOT / ".github/workflows/backfill-850hpa-comparison.yml").read_text(encoding="utf-8")
+    renderer = (ROOT / ".github/workflows/render-pages-charts-from-saved-data.yml").read_text(encoding="utf-8")
+    shared_group = "group: render-pages-charts-from-saved-data"
+    assert shared_group in workflow and shared_group in renderer, (
+        "Backfill and saved-data renderer must serialize writes to the same Pages state branch."
+    )
     assert "git add -f gfs_watch.db public" in workflow
     assert "git pull --rebase origin gfs-watch-state" in workflow
     assert "git status --short" in workflow
