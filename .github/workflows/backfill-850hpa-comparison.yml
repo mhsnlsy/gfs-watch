@@ -12,8 +12,10 @@ permissions:
   actions: write
   contents: write
 
+# Serialize state-branch writes with the saved-data chart renderer. Both
+# workflows update the same notification manifest and chart files.
 concurrency:
-  group: backfill-850hpa-comparison
+  group: render-pages-charts-from-saved-data
   cancel-in-progress: false
 
 jobs:
