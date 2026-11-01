@@ -158,8 +158,8 @@ async function main() {
           results.push({url,error:String(error)});
         }
       }
-      const resources = performance.getEntriesByType("resource").filter(entry => /api\\.wstatmap\\.com/.test(entry.name)).map(entry => ({name:entry.name,responseStatus:entry.responseStatus,transferSize:entry.transferSize}));
-      const chunks = performance.getEntriesByType("resource").filter(entry => /_next\\/static\\/chunks\\/.*\\.js/.test(entry.name)).map(entry => entry.name);
+      const resources = performance.getEntriesByType("resource").filter(entry => entry.name.includes("api.wstatmap.com")).map(entry => ({name:entry.name,responseStatus:entry.responseStatus,transferSize:entry.transferSize}));
+      const chunks = performance.getEntriesByType("resource").filter(entry => entry.name.includes("/_next/static/chunks/") && entry.name.endsWith(".js")).map(entry => entry.name);
       const code = [];
       for (const url of chunks) {
         try {
