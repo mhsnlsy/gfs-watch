@@ -223,8 +223,8 @@
       $("temperature").textContent=hasStation&&numeric(station.temperature_2m_c)?fmt(station.temperature_2m_c,1)+"°":"—°";
       const trendImage=$("station-temperature-trend");
       if(trendImage){
-        trendImage.onload=()=>{$("station-trend-empty").hidden=true;};
-        trendImage.onerror=()=>{$("station-trend-empty").hidden=false;};
+        trendImage.onload=()=>{trendImage.hidden=false;$("station-trend-empty").hidden=true;};
+        trendImage.onerror=()=>{trendImage.hidden=true;$("station-trend-empty").hidden=false;};
         trendImage.src="https://w.enka.com/weather/OutsideTempHistory.gif?t="+Math.floor(Date.now()/300000);
       }
       $("wind").innerHTML=hasStation&&numeric(station.wind_speed_10m_kmh)?((station.wind_direction_tr||windDirectionTr[station.wind_direction_cardinal]||station.wind_direction_cardinal)?esc(station.wind_direction_tr||windDirectionTr[station.wind_direction_cardinal]||station.wind_direction_cardinal)+" · ":"")+fmt(station.wind_speed_10m_kmh,1)+'<span class="unit">km/sa</span>':'—<span class="unit">km/sa</span>';
