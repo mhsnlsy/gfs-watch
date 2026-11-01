@@ -55,13 +55,21 @@ jobs:
           if git cat-file -e origin/gfs-watch-state:gfs_watch.db 2>/dev/null; then
             git show origin/gfs-watch-state:gfs_watch.db > gfs_watch.db
           fi
-      - name: Record current public forecast version
+      - name: Record latest processed GFS cycle
         run: |
-          if [ -s public/latest.json ]; then
-            sha256sum public/latest.json | cut -d ' ' -f1 > "$RUNNER_TEMP/gfs-before.sha"
-          else
-            echo "missing" > "$RUNNER_TEMP/gfs-before.sha"
-          fi
+          python - <<'PY'
+          import os
+          import sqlite3
+          try:
+              with sqlite3.connect("file:gfs_watch.db?mode=ro", uri=True) as db:
+                  row = db.execute("SELECT MAX(run_name) FROM gfs_runs_v3").fetchone()
+                  run_id = row[0] or "none"
+          except sqlite3.Error:
+              run_id = "none"
+          with open(os.path.join(os.environ["RUNNER_TEMP"], "gfs-before-run.txt"), "w") as output:
+              output.write(run_id)
+          print(f"Previously processed latest GFS cycle: {run_id}")
+          PY
       - name: Check NOAA for a newly published GFS cycle
         id: check-gfs
         env:
@@ -81,18 +89,23 @@ jobs:
         id: report
         if: always() && steps.check-gfs.outcome == 'success'
         run: |
-          before="$(cat "$RUNNER_TEMP/gfs-before.sha")"
-          if [ -s public/latest.json ]; then
-            after="$(sha256sum public/latest.json | cut -d ' ' -f1)"
-          else
-            after="missing"
-          fi
-          if [ "$after" != "missing" ] && [ "$after" != "$before" ]; then
+          before="$(cat "$RUNNER_TEMP/gfs-before-run.txt")"
+          after="$(python - <<'PY'
+          import sqlite3
+          try:
+              with sqlite3.connect("file:gfs_watch.db?mode=ro", uri=True) as db:
+                  row = db.execute("SELECT MAX(run_name) FROM gfs_runs_v3").fetchone()
+                  print(row[0] or "none")
+          except sqlite3.Error:
+              print("none")
+          PY
+          )"
+          if [ "$after" != "none" ] && [ "$after" != "$before" ]; then
             echo "gfs_updated=true" >> "$GITHUB_OUTPUT"
-            echo "A new GFS report was generated."
+            echo "New GFS cycle processed: $after"
           else
             echo "gfs_updated=false" >> "$GITHUB_OUTPUT"
-            echo "No new GFS report; deployment and notification are skipped."
+            echo "No new GFS cycle; deployment and notification are skipped."
           fi
       - name: Save partial NOAA forecast cache
         if: always() && steps.check-gfs.outputs.noaa_cache_updated == 'true'
