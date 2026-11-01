@@ -455,6 +455,39 @@
     /* Anchor touch-detail popups to their own mini-chart. */
     .next-72h-chart{position:relative}
 
+
+    /* Remove browser focus/hover rings from transparent SVG chart hit regions. */
+    .chart-hit-area,
+    .station-chart-hit-area{
+      outline:0!important;
+      stroke:transparent!important;
+      stroke-width:0!important;
+      fill:transparent!important;
+      filter:none!important;
+    }
+    .chart-hit-area:hover,
+    .chart-hit-area:active,
+    .chart-hit-area:focus,
+    .chart-hit-area:focus-visible,
+    .station-chart-hit-area:hover,
+    .station-chart-hit-area:active,
+    .station-chart-hit-area:focus,
+    .station-chart-hit-area:focus-visible{
+      outline:0!important;
+      stroke:transparent!important;
+      stroke-width:0!important;
+      fill:transparent!important;
+      filter:none!important;
+      box-shadow:none!important;
+    }
+    .next-72h-chart svg,
+    .history-chart svg,
+    .chart-wrap svg{
+      outline:0!important;
+      border:0!important;
+      box-shadow:none!important;
+    }
+
 </style>
 </head>
 <body>
