@@ -3,6 +3,8 @@ import fs from "node:fs";
 import path from "node:path";
 
 const STATION_URL = "https://wstatmap.com/tr/stations/eyupsultan-18101";
+const MGM_STATIONS_URL = "https://servis.mgm.gov.tr/web/istasyonlar/il?plaka=34";
+const MGM_OBSERVATIONS_URL = "https://servis.mgm.gov.tr/web/sondurumlar/ilTumSondurum?ilPlaka=34";
 const STATION_ID = "18101";
 const STALE_AFTER_MINUTES = 20;
 const HISTORY_SCHEMA = "gfs-watch.station-temperature-history.v1";
@@ -39,7 +41,6 @@ function parseObservation(text, fetchedAt) {
   const windIndex = windDegrees === null ? null : Math.floor((windDegrees + 11.25) / 22.5) % 16;
   const dailyRain = parseNumber(text.match(/Bugün\s*([-+]?\d+(?:[,.]\d+)?)\s*mm\s*yağdı/i), "günlük yağış");
   const oneHourRain = parseNumber(text.match(/1sa\s*([-+]?\d+(?:[,.]\d+)?)/i), "1 saatlik yağış", false);
-  const pressure = parseNumber(text.match(/Deniz Seviyesi Basıncı[\s\S]{0,100}?(\d{3,4}(?:[,.]\d+)?)/i), "deniz seviyesi basıncı", false);
 
   const ageMatch = text.match(/Canlı\s*[·•]\s*(\d+)\s*dk\.?\s*önce\s*[·•]\s*18101/i)
     || text.match(/Canlı\s*[·•]\s*(\d+)\s*dk\.?\s*önce/i);
@@ -53,7 +54,6 @@ function parseObservation(text, fetchedAt) {
   if (temperature < -35 || temperature > 55) throw new Error(`Sıcaklık makul aralık dışında: ${temperature}°C`);
   if (humidity < 0 || humidity > 100) throw new Error(`Nem makul aralık dışında: ${humidity}%`);
   if (windSpeed < 0 || windSpeed > 250) throw new Error(`Rüzgâr makul aralık dışında: ${windSpeed} km/h`);
-  if (pressure !== null && (pressure < 850 || pressure > 1100)) throw new Error(`Basınç makul aralık dışında: ${pressure} hPa`);
   if (dailyRain < 0 || (oneHourRain !== null && oneHourRain < 0)) throw new Error("Yağış değeri negatif olamaz.");
 
   return {
@@ -78,9 +78,74 @@ function parseObservation(text, fetchedAt) {
     precipitation_1h_mm: oneHourRain,
     precipitation_daily_mm: dailyRain,
     humidity_percent: humidity,
-    station_pressure_hpa: pressure,
-    pressure_type: pressure === null ? null : "mean_sea_level"
+    station_pressure_hpa: null,
+    actual_station_pressure_hpa: null,
+    pressure_type: null,
+    pressure_source: null,
+    pressure_observed_at_utc: null,
+    pressure_age_minutes: null
   };
+}
+
+async function fetchMgmPressure() {
+  const client = await request.newContext({
+    extraHTTPHeaders: {
+      "User-Agent": "Mozilla/5.0 (compatible; GFS-Watch/1.0; station observation client)",
+      "Accept": "application/json, text/plain, */*",
+      "Origin": "https://istanbul.mgm.gov.tr",
+      "Referer": "https://istanbul.mgm.gov.tr/sondurum/turkiye.aspx"
+    }
+  });
+  try {
+    const [stationsResponse, observationsResponse] = await Promise.all([
+      client.get(MGM_STATIONS_URL, { timeout: 20000 }),
+      client.get(MGM_OBSERVATIONS_URL, { timeout: 20000 })
+    ]);
+    if (!stationsResponse.ok() || !observationsResponse.ok()) {
+      throw new Error(`MGM servis yanıtı başarısız: istasyonlar ${stationsResponse.status()}, gözlemler ${observationsResponse.status()}`);
+    }
+
+    const [stations, observations] = await Promise.all([
+      stationsResponse.json(),
+      observationsResponse.json()
+    ]);
+    const station = Array.isArray(stations)
+      ? stations.find(item => Number(item.istNo) === Number(STATION_ID))
+      : null;
+    if (!station || String(station.istAd || "").trim().toLocaleUpperCase("tr-TR") !== "EYÜPSULTAN") {
+      throw new Error("MGM istasyon listesinde 18101 / EYÜPSULTAN eşleşmesi doğrulanamadı.");
+    }
+    if (Math.abs(Number(station.enlem) - 41.102778) > 0.01 || Math.abs(Number(station.boylam) - 28.924167) > 0.01) {
+      throw new Error("MGM 18101 koordinatları beklenen Eyüpsultan istasyonuyla eşleşmiyor.");
+    }
+
+    const row = Array.isArray(observations)
+      ? observations.find(item => Number(item.istNo) === Number(STATION_ID))
+      : null;
+    if (!row || !row.veriZamani) throw new Error("MGM 18101 için güncel gözlem satırı bulunamadı.");
+
+    const observedAt = new Date(row.veriZamani);
+    if (Number.isNaN(observedAt.getTime())) throw new Error("MGM basınç ölçüm zamanı geçersiz.");
+    const ageMinutes = Math.max(0, (Date.now() - observedAt.getTime()) / 60000);
+    if (ageMinutes > STALE_AFTER_MINUTES) throw new Error(`MGM 18101 basınç ölçümü eski: ${Math.round(ageMinutes)} dk.`);
+
+    const seaLevelPressure = Number(row.denizeIndirgenmisBasinc);
+    const stationPressure = Number(row.aktuelBasinc);
+    const validSeaLevel = Number.isFinite(seaLevelPressure) && seaLevelPressure >= 850 && seaLevelPressure <= 1100;
+    const validStation = Number.isFinite(stationPressure) && stationPressure >= 850 && stationPressure <= 1100;
+    if (!validSeaLevel && !validStation) throw new Error("MGM 18101 basınç alanları geçerli değil.");
+
+    return {
+      station_pressure_hpa: validSeaLevel ? seaLevelPressure : null,
+      actual_station_pressure_hpa: validStation ? stationPressure : null,
+      pressure_type: validSeaLevel ? "mean_sea_level" : "station",
+      pressure_source: "MGM 18101",
+      pressure_observed_at_utc: observedAt.toISOString(),
+      pressure_age_minutes: Math.round(ageMinutes * 10) / 10
+    };
+  } finally {
+    await client.dispose();
+  }
 }
 
 function readJsonIfExists(filePath) {
@@ -105,24 +170,6 @@ async function main() {
       viewport: { width: 1440, height: 1000 },
       userAgent: "Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/130.0.0.0 Safari/537.36"
     });
-    const stationRequests = new Set();
-    const stationResponses = [];
-    page.on("request", request => {
-      if (/wstatmap\.com/i.test(request.url())) stationRequests.add(request.url());
-    });
-    page.on("response", async response => {
-      if (!/wstatmap\.com/i.test(response.url()) && !/api\.wstatmap\.com/i.test(response.url())) return;
-      const contentType = response.headers()["content-type"] || "";
-      stationResponses.push({url:response.url(),status:response.status(),contentType});
-      if (/api\.wstatmap\.com/i.test(response.url()) && /json|text/i.test(contentType)) {
-        try {
-          const body = await response.text();
-          if (/api|station|history|observ|weather|data|graph/i.test(response.url()) || /pressure|basınç|history|historical|temperature|sıcaklık/i.test(body)) {
-            console.log("[WSTAT RESOURCE]", JSON.stringify({url:response.url(),status:response.status(),contentType,body:body.slice(0,5000)}));
-          }
-        } catch {}
-      }
-    });
     await page.setExtraHTTPHeaders({
       "Accept-Language": "tr-TR,tr;q=0.9,en;q=0.7",
       "Cache-Control": "no-cache",
@@ -135,116 +182,19 @@ async function main() {
     await page.waitForFunction(() => document.body && document.body.innerText.includes("18101"), { timeout: 20000 });
     await page.waitForTimeout(1500);
     const bodyText = await page.locator("body").innerText();
-    console.log("[WSTAT PAGE TEXT]", bodyText.slice(0,18000));
-    for (const label of ["Deniz Seviyesi Basıncı","Basınç","Rüzgar Hızı","Nem","Geçmiş","Son 24","1sa"]) {
-      const position = bodyText.toLocaleLowerCase("tr").indexOf(label.toLocaleLowerCase("tr"));
-      if (position >= 0) console.log("[WSTAT FIELD]", label, JSON.stringify(bodyText.slice(Math.max(0,position-120),position+350)));
-    }
-    console.log("[WSTAT REQUESTS]", JSON.stringify([...stationRequests]));
-    console.log("[WSTAT RESPONSES]", JSON.stringify(stationResponses));
-    console.log("[WSTAT RESOURCES]", JSON.stringify(await page.evaluate(() => performance.getEntriesByType("resource").map(entry => entry.name).filter(name => /wstatmap/i.test(name)))));
-    const directApiContext = await request.newContext({
-      extraHTTPHeaders: {
-        "User-Agent": "Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 Chrome/156.0.0.0 Safari/537.36",
-        "Accept": "application/json, text/plain, */*",
-        "Origin": "https://wstatmap.com",
-        "Referer": STATION_URL
-      }
-    });
-    for (const url of [
-      "https://api.wstatmap.com/v1/forecast/point/?lat=41.1028&lon=28.9242&past_hours=24&station_id=1963",
-      "https://api.wstatmap.com/v1/historical/station/data?station_id=1963&hours=24"
-    ]) {
-      try {
-        const response = await directApiContext.get(url, { timeout: 20000 });
-        console.log("[WSTAT DIRECT API]", JSON.stringify({url,status:response.status(),headers:response.headers(),body:(await response.text()).slice(0,12000)}));
-      } catch (error) {
-        console.log("[WSTAT DIRECT API ERROR]", url, String(error));
-      }
-    }
-    await directApiContext.dispose();
-    const apiDiagnostics = await page.evaluate(async () => {
-      const urls = [
-        "https://api.wstatmap.com/v1/forecast/point/?lat=41.1028&lon=28.9242&past_hours=24&station_id=1963",
-        "https://api.wstatmap.com/v1/historical/station/data?station_id=1963&hours=24"
-      ];
-      const results = [];
-      for (const url of urls) {
-        try {
-          const response = await fetch(url, { credentials: "include", cache: "no-store" });
-          const body = await response.text();
-          results.push({url,status:response.status,headers:Object.fromEntries(response.headers.entries()),body:body.slice(0,12000)});
-        } catch (error) {
-          results.push({url,error:String(error)});
-        }
-      }
-      const resources = performance.getEntriesByType("resource").filter(entry => entry.name.includes("api.wstatmap.com")).map(entry => ({name:entry.name,responseStatus:entry.responseStatus,transferSize:entry.transferSize}));
-      const chunks = performance.getEntriesByType("resource").filter(entry => entry.name.includes("/_next/static/chunks/") && entry.name.endsWith(".js")).map(entry => entry.name);
-      const code = [];
-      for (const url of chunks) {
-        try {
-          const response = await fetch(url);
-          const source = await response.text();
-          for (const term of ["API_BASE_URL","historical/station/data","forecast/point","Deniz Seviyesi Basıncı","station_pressure","X-API-KEY","apiKey","Authorization","credentials:","fetch("]) {
-            const at = source.indexOf(term);
-            if (at >= 0) code.push({url,term,excerpt:source.slice(Math.max(0,at-500),at+1200)});
-          }
-        } catch {}
-      }
-      return {results,resources,code};
-    });
-    console.log("[WSTAT API DIAGNOSTICS]", JSON.stringify(apiDiagnostics));
     if (/Just a moment|Checking your browser|Access denied/i.test(bodyText)) {
       throw new Error("WStatMap sayfası otomatik erişim doğrulaması gösterdi; veri alınmadı.");
-    }
-    const mgmPage = await browser.newPage({
-      locale: "tr-TR",
-      timezoneId: "Europe/Istanbul",
-      viewport: { width: 1440, height: 1200 },
-      userAgent: "Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 Chrome/156.0.0.0 Safari/537.36"
-    });
-    try {
-      const mgmResponses = [];
-      mgmPage.on("response", async response => {
-        if (!response.url().includes("servis.mgm.gov.tr")) return;
-        try {
-          mgmResponses.push({url:response.url(),status:response.status(),body:(await response.text()).slice(0,8000)});
-        } catch {}
-      });
-      const mgmResponse = await mgmPage.goto("https://istanbul.mgm.gov.tr/sondurum/turkiye.aspx", { waitUntil: "domcontentloaded", timeout: 45000 });
-      await mgmPage.waitForTimeout(5000);
-      const mgmText = await mgmPage.locator("body").innerText();
-      const lines = mgmText.split("\\n");
-      const matchingLines = lines.map((line,index) => ({line,index})).filter(item => /eyüp|eyupsultan|18101/i.test(item.line));
-      const jsDetails = await mgmPage.evaluate(async () => {
-        const scripts = performance.getEntriesByType("resource").filter(entry => entry.name.includes("/sondurum/js/sondurumlar.js")).map(entry => entry.name);
-        const output = [];
-        for (const url of scripts) {
-          const source = await (await fetch(url)).text();
-          for (const term of ["merkezid","sondurumlar","merkezler","servis.mgm.gov.tr"]) {
-            const at = source.indexOf(term);
-            if (at >= 0) output.push({term,excerpt:source.slice(Math.max(0,at-700),at+1800)});
-          }
-        }
-        return output;
-      });
-      console.log("[MGM PRESSURE PAGE]", JSON.stringify({status:mgmResponse?.status(),title:await mgmPage.title(),matchingLines,body:mgmText.slice(0,10000),responses:mgmResponses,jsDetails,resources:await mgmPage.evaluate(() => performance.getEntriesByType("resource").map(entry => entry.name).filter(name => /mgm|meteoroloji/i.test(name)))}));
-      const mgmRequest = await request.newContext({extraHTTPHeaders:{"User-Agent":"Mozilla/5.0","Accept":"application/json, text/plain, */*","Origin":"https://istanbul.mgm.gov.tr","Referer":"https://istanbul.mgm.gov.tr/sondurum/turkiye.aspx"}});
-      for (const url of ["https://servis.mgm.gov.tr/web/merkezler/iller","https://servis.mgm.gov.tr/web/sondurumlar/?merkezid=90101","https://servis.mgm.gov.tr/web/istasyonlar/il?plaka=34","https://servis.mgm.gov.tr/web/sondurumlar/ilTumSondurum?ilPlaka=34"]) {
-        try {
-          const result = await mgmRequest.get(url,{timeout:20000});
-          const body = await result.text(); let parsed = null; try { parsed = JSON.parse(body); } catch {} const matching = Array.isArray(parsed) ? parsed.filter(item => /eyüp/i.test(JSON.stringify(item)) || String(item.istNo) === "18101") : null; console.log("[MGM DIRECT API]",JSON.stringify({url,status:result.status(),matching,body:body.slice(0,2500)}));
-        } catch(error) { console.log("[MGM DIRECT API ERROR]",url,String(error)); }
-      }
-      await mgmRequest.dispose();
-    } catch (error) {
-      console.log("[MGM PRESSURE PAGE ERROR]", String(error));
-    } finally {
-      await mgmPage.close();
     }
     observation = parseObservation(bodyText, new Date());
   } finally {
     await browser.close();
+  }
+
+  try {
+    const pressure = await fetchMgmPressure();
+    Object.assign(observation, pressure);
+  } catch (error) {
+    console.warn("[MGM PRESSURE] Basınç alınamadı; değer boş bırakıldı:", error?.message || error);
   }
 
   const previousPath = process.env.EYUPSULTAN_PREVIOUS_OBSERVATION_PATH;
@@ -301,13 +251,16 @@ async function main() {
     throw new Error("Eyüpsultan sıcaklık geçmişi şeması beklenenden farklı.");
   }
   const samples = Array.isArray(historyDocument?.samples) ? historyDocument.samples : [];
-  const duplicate = samples.some(sample => sample?.observed_at_utc === observation.observed_at_utc);
-  if (!observation.is_stale && !duplicate && Number.isFinite(observation.temperature_2m_c)) {
+  const lastSampleTime = samples.length ? Date.parse(samples[samples.length - 1]?.logged_at_utc || "") : NaN;
+  const recentDuplicate = Number.isFinite(lastSampleTime) && now.getTime() - lastSampleTime < 60000;
+  if (!observation.is_stale && !recentDuplicate && Number.isFinite(observation.temperature_2m_c)) {
     samples.push({
       logged_at_utc: now.toISOString(),
       observed_at_utc: observation.observed_at_utc,
       temperature_2m_c: observation.temperature_2m_c,
-      precipitation_daily_mm: observation.precipitation_daily_mm
+      precipitation_daily_mm: observation.precipitation_daily_mm,
+      station_pressure_hpa: observation.station_pressure_hpa,
+      actual_station_pressure_hpa: observation.actual_station_pressure_hpa
     });
   }
   const cutoff = now.getTime() - 7 * 24 * 60 * 60 * 1000;
@@ -322,6 +275,7 @@ async function main() {
     sampling_interval_minutes: 5,
     aggregation_interval_minutes: 60,
     retention_days: 7,
+    sample_semantics: "five_minute_poll_snapshot_of_latest_source_observation",
     updated_at_utc: now.toISOString(),
     samples: retained
   });
