@@ -398,6 +398,7 @@
       const last=valid[valid.length-1];
       const lastBin=populated[populated.length-1];
       const lastX=xForBin(lastBin),lastY=yFor(lastBin.mean);
+      const lastTime=new Intl.DateTimeFormat("tr-TR",{timeZone:"Europe/Istanbul",hour:"2-digit",minute:"2-digit"}).format(new Date(last.time));
       const lastValue=fmt(last.temperature,1);
       const latestMarker='<circle cx="'+lastX.toFixed(1)+'" cy="'+lastY.toFixed(1)+'" r="7" fill="rgba(164,231,213,.16)" stroke="#a4e7d5" stroke-width="1.2"/><circle cx="'+lastX.toFixed(1)+'" cy="'+lastY.toFixed(1)+'" r="3.2" fill="#f1fff9"/>';
       holder.innerHTML='<svg viewBox="0 0 '+width+' '+height+'" role="img" aria-label="Son 24 saat sıcaklık geçmişi; 90 dakikalık dilimlerde ortalama, minimum ve maksimum değerler"><defs><linearGradient id="station-trend-line" x1="0" x2="1" y1="0" y2="0"><stop offset="0%" stop-color="#6caeb7"/><stop offset="100%" stop-color="#b8f0dd"/></linearGradient><linearGradient id="station-trend-area" x1="0" x2="0" y1="0" y2="1"><stop offset="0%" stop-color="#8edbd2" stop-opacity=".22"/><stop offset="100%" stop-color="#8edbd2" stop-opacity=".015"/></linearGradient></defs>'+verticalGrid+horizontalGrid+'<path d="'+areaPaths+'" fill="url(#station-trend-area)"/>'+ranges+'<path d="'+meanPaths+'" fill="none" stroke="url(#station-trend-line)" stroke-width="3.2" stroke-linecap="round" stroke-linejoin="round"/>'+meanPoints+latestMarker+timeLabels+'</svg>';
