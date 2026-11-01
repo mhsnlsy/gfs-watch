@@ -157,7 +157,7 @@ async function main() {
     ]) {
       try {
         const response = await directApiContext.get(url, { timeout: 20000 });
-        console.log("[WSTAT DIRECT API]", JSON.stringify({url,status:response.status(),headers:await response.allHeaders(),body:(await response.text()).slice(0,12000)}));
+        console.log("[WSTAT DIRECT API]", JSON.stringify({url,status:response.status(),headers:response.headers(),body:(await response.text()).slice(0,12000)}));
       } catch (error) {
         console.log("[WSTAT DIRECT API ERROR]", url, String(error));
       }
@@ -185,7 +185,7 @@ async function main() {
         try {
           const response = await fetch(url);
           const source = await response.text();
-          for (const term of ["API_BASE_URL","historical/station/data","forecast/point","Deniz Seviyesi Basıncı","station_pressure","X-API-KEY","apiKey","function o("]) {
+          for (const term of ["API_BASE_URL","historical/station/data","forecast/point","Deniz Seviyesi Basıncı","station_pressure","X-API-KEY","apiKey","Authorization","credentials:","fetch("]) {
             const at = source.indexOf(term);
             if (at >= 0) code.push({url,term,excerpt:source.slice(Math.max(0,at-500),at+1200)});
           }
