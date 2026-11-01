@@ -1,0 +1,46 @@
+<!doctype html>
+<html lang="tr">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>GFS Watch – Güvenli anahtar oluşturucu</title>
+<style>
+:root{color-scheme:dark}body{font:16px/1.5 system-ui,sans-serif;max-width:760px;margin:40px auto;padding:0 18px;background:#101827;color:#edf2f7}h1{font-size:1.6rem}p{color:#cbd5e1}.panel{background:#1e293b;border:1px solid #475569;border-radius:12px;padding:18px;margin:18px 0}button{background:#38bdf8;color:#082f49;border:0;border-radius:8px;padding:12px 18px;font-weight:700;cursor:pointer}label{display:block;font-weight:700;margin:14px 0 6px}textarea{box-sizing:border-box;width:100%;min-height:72px;background:#0f172a;color:#e2e8f0;border:1px solid #64748b;border-radius:8px;padding:10px;font:13px ui-monospace,monospace}small{color:#94a3b8}.warn{color:#fbbf24}
+</style>
+</head>
+<body>
+<h1>GFS Watch – Güvenli anahtar oluşturucu</h1>
+<p>Bu sayfa anahtarları yalnızca bu tarayıcıda üretir. Hiçbir sunucuya göndermez veya kaydetmez. Sayfayı HTTPS üzerinden aç.</p>
+<div class="panel">
+<button id="generate">Anahtarları oluştur</button>
+<p id="status" role="status">Henüz anahtar oluşturulmadı.</p>
+<label for="admin">PUSH_ADMIN_TOKEN</label><textarea id="admin" readonly></textarea>
+<label for="public">VAPID_PUBLIC_KEY</label><textarea id="public" readonly></textarea>
+<label for="private">VAPID_PRIVATE_KEY</label><textarea id="private" readonly></textarea>
+<p class="warn"><strong>Önemli:</strong> Bu değerleri GitHub Actions Secrets olarak ekle. Özellikle private key ve admin token'ı kimseyle paylaşma. Bu sayfayı kapatınca değerler kaybolur; önce kopyala.</p>
+</div>
+<script>
+const b64url = bytes => {
+  let s = ""; for (const x of bytes) s += String.fromCharCode(x);
+  return btoa(s).replace(/\\+/g,"-").replace(/\\//g,"_").replace(/=+$/,"");
+};
+document.getElementById("generate").addEventListener("click", async () => {
+  const status = document.getElementById("status");
+  try {
+    status.textContent = "Üretiliyor…";
+    const pair = await crypto.subtle.generateKey({name:"ECDSA",namedCurve:"P-256"}, true, ["sign","verify"]);
+    const rawPublic = new Uint8Array(await crypto.subtle.exportKey("raw", pair.publicKey));
+    const jwk = await crypto.subtle.exportKey("jwk", pair.privateKey);
+    const privateBytes = Uint8Array.from(atob(jwk.d.replace(/-/g,"+").replace(/_/g,"/") + "==".slice((jwk.d.length+2)%4)), c => c.charCodeAt(0));
+    const random = crypto.getRandomValues(new Uint8Array(32));
+    document.getElementById("admin").value = Array.from(random, x => x.toString(16).padStart(2,"0")).join("");
+    document.getElementById("public").value = b64url(rawPublic);
+    document.getElementById("private").value = b64url(privateBytes);
+    status.textContent = "Üç değer oluşturuldu. GitHub Secrets'a ayrı ayrı kopyala.";
+  } catch (e) {
+    status.textContent = "Oluşturulamadı: " + (e && e.message ? e.message : String(e));
+  }
+});
+</script>
+</body>
+</html>
