@@ -8,17 +8,15 @@
 - Gerekli meteorolojik alanlar, Her dosyanın `.idx` envanterinden seçilir ve yalnızca raporun kullandığı sıcaklık, rüzgâr, yağış ve başlangıç basınç mesajlarının byte aralıkları indirilir. Yaklaşık 500 MB'lık küresel dosyanın tamamı indirilmez.
 - Her yeni tahmin dosyası indirildiğinde ecCodes ile çözülür; İstanbul için sıcaklık, 10 m rüzgârı ve yağış değerleri önceden hazırlanıp önbelleğe yazılır.
 - Ön veriler f000–f120 arasında saatlik, f123–f177 arasında üç saatlik adımlardan oluşur: toplam 140 lead. f180 son dosyadır. f180 yayımlandığında sistem önce 140 ön verinin hazır olduğunu doğrular, ardından f180'i alıp 141 zaman noktalı tahmini birleştirir.
-- GFS döngüsü izlenirken NOAA S3 f180 envanteri ve ön GRIB2 alanları beş dakikalık sabit aralıklarla kontrol edilir. f000–f177 arasındaki 140 girdi her kontrol sırasında artımlı indirilip ecCodes ile çözülerek diskte saklanır; sonraki kontroller aynı önbellekten devam eder. f180 görünür olduğunda 140 girdinin tamamı doğrulanır, f180 birleştirilir ve rapor üretilir. Bir izleme oturumu 330 dakika sonunda tamamlanmazsa kısmi önbellek Actions Cache'e kaydedilir ve yeni oturum otomatik başlatılır.
+- NOAA'daki 00Z, 06Z, 12Z ve 18Z döngülerinin f180 dosyaları her beş dakikada bir taranır. Her yeni döngü için f000–f177 arasındaki 140 girdi kendi tarih/saat dizininden artımlı indirilir, ecCodes ile çözülür ve döngüye özel önbellekte saklanır. f180 görünür olduğunda 140 girdinin tamamı doğrulanır, f180 de aynı kaynak sırasıyla alınır ve 141 zaman noktalı rapor oluşturulur. Birden fazla yeni döngü hazırsa kronolojik sırayla art arda işlenir. İzleme oturumu 330 dakika sonunda kısmi önbelleği Actions Cache'e kaydeder ve yeni oturumu otomatik başlatır.
 - GRIB2 alanları yerel olarak ecCodes ile çözülür. Günlük sıcaklık, yağış ve rüzgâr özetleri modelin mevcut zaman adımlarından hesaplanır.
 - Koordinat: **41.014°N, 28.950°E**. En yakın 0.25° GFS grid noktası **41.000°N, 29.000°E**; değerler tüm İstanbul için enterpolasyon değil, bu grid hücresi içindir.
 
 ## Otomatik çalışma
 
-Aktif tek seferlik izleme hedefi **1 Kasım 2026 12Z** döngüsüdür. İlk başlatıcı workflow, **15:36:02 TSİ** saatine kadar bekler ve ardından izlemeyi başlatır. İzleme, yalnızca bu 12Z döngüsüne kilitlenmiştir; önceki bir döngünün f180 dosyası yanlışlıkla rapor tetiklemez.
+GitHub Actions sabit bir döngü saatine kilitlenmez. NOAA'nın son altı GFS çevrimi NOMADS üzerinden, gerekli dosya yoksa AWS S3 aynasından kontrol edilir. f180 dosyası hazır olan ve henüz raporlanmamış her çevrim kronolojik sırayla işlenir. Böylece 06Z gibi ara çevrimler de atlanmaz; önceki üç çevrimin verisi gerekirse kendi tarih/saat dizinlerinden salt okunur olarak tamamlanır.
 
-İzleme oturumu NOAA'yı ve önbelleği her **300 saniyede (5 dakikada)** bir kontrol eder. Her runner en fazla 330 dakika izler; f180 henüz yayımlanmamışsa kısmi önbelleği saklayıp bir sonraki beş dakikalık sınırda yeni oturum açar. Hedef f180 işlenip rapor gönderildiğinde otomatik döngü durur.
-
-Başka bir döngü için `.github/workflows/gfs-watch.yml` içindeki `GFS_PREFETCH_START_AT_UTC` ve `GFS_WATCH_TARGET_RUN_ID` değerleri birlikte güncellenmelidir.
+İzleme ve ön indirme her **300 saniyede (5 dakikada)** bir çalışır. Her runner en fazla 330 dakika izler; tamamlanmamış GRIB2 önbelleği Actions Cache'e kaydedilir ve yeni izleme oturumu otomatik başlatılır. Yeni bir çevrim için elle UTC hedef saati güncellemek gerekmez.
 
 ## Kurulum
 
