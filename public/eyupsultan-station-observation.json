@@ -1,0 +1,29 @@
+{
+  "schema": "gfs-watch.station-observation.v1",
+  "station_observation": {
+    "station_name": "Eyüpsultan",
+    "station_id": "18101",
+    "wstatmap_station_id": "1963",
+    "source": "WStatMap · MGM 18101",
+    "source_url": "https://wstatmap.com/tr/stations/eyupsultan-18101",
+    "latitude": 41.102778,
+    "longitude": 28.924167,
+    "elevation_m": 54,
+    "observed_at_utc": "2026-11-01T17:43:42.331Z",
+    "fetched_at_utc": "2026-11-01T17:53:42.331Z",
+    "age_minutes": 10,
+    "stale_after_minutes": 20,
+    "is_stale": false,
+    "temperature_2m_c": 16.5,
+    "wind_speed_10m_kmh": 8.6,
+    "wind_direction_degrees": 68,
+    "wind_direction_cardinal": "ENE",
+    "wind_direction_tr": "Doğu-kuzeydoğu",
+    "precipitation_1h_mm": 0,
+    "precipitation_daily_mm": 1.4,
+    "humidity_percent": 89,
+    "station_pressure_hpa": null,
+    "pressure_type": null
+  },
+  "updated_at_utc": "2026-11-01T17:53:42.423Z"
+}
