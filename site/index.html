@@ -76,40 +76,96 @@
     }
 
 
-    /* Compact station card with an embedded ENKA 24-hour temperature history. */
-    .station-card{padding:19px 20px;min-height:0}
-    .station-card .place{font-size:17px}
-    .station-overview{display:grid;grid-template-columns:minmax(112px,.78fr) minmax(0,1.22fr);gap:13px;align-items:center;margin-top:15px;position:relative}
-    .station-card .temp-row{margin:0;gap:7px;min-width:0}
-    .station-card .temperature{font-size:clamp(46px,5.1vw,64px)}
-    .station-card .weather-symbol{font-size:35px}
-    .station-trend{min-width:0;align-self:stretch;padding:9px 10px 7px;border:1px solid rgba(176,221,228,.15);border-radius:13px;background:rgba(4,19,30,.22)}
-    .station-trend-head{display:flex;align-items:center;justify-content:space-between;gap:8px;margin-bottom:6px}
-    .station-trend-title{font-size:9px;letter-spacing:.1em;font-weight:700;color:#c4e4e4}
-    .station-trend-unit{font-size:9px;color:#9bb6c2}
-    .station-trend-chart-wrap{position:relative;min-height:80px;display:flex;align-items:center;overflow:hidden;border-radius:8px;background:rgba(4,18,29,.28)}
-    .station-trend-graph{width:100%;min-width:0}.station-trend-graph svg{display:block;width:100%;height:auto;max-width:100%}
-    .station-trend-empty{padding:13px 8px;color:#9bb6c2;text-align:center;font-size:9px;line-height:1.5}
-    .station-trend-source{font-size:8px;color:#91aab5;margin-top:5px;text-align:right}
-    .station-card .temp-caption{font-size:10px;margin-top:8px;line-height:1.5}
-    .station-card .weather-stats{gap:7px;margin-top:14px}
-    .station-card .stat{padding:9px 10px}
-    .station-card .stat .value{font-size:16px;margin-top:4px}
-    .station-card .stat .name{font-size:9px}
-    .station-card .stat .unit{font-size:9px}
-    .station-card .station-alert{margin-top:9px;padding:9px 11px}
+    /* Compact station dashboard: a square trend plot, dense metrics, minimal framing. */
+    .hero{align-items:start}
+    .station-card{
+      width:min(100%,460px);
+      justify-self:end;
+      min-height:0;
+      padding:17px 19px 15px;
+      border-radius:19px;
+      box-shadow:0 14px 38px rgba(0,0,0,.18),inset 2px 0 0 rgba(125,211,215,.55);
+    }
+    .station-card:before{width:210px;height:210px;right:-105px;top:-125px;opacity:.55}
+    .station-card .label{font-size:9px;letter-spacing:.12em}
+    .station-card .place{font-size:16px;margin-top:4px}
+    .station-card .model-state{padding:5px 8px;font-size:9px}
+    .station-overview{
+      display:grid;
+      grid-template-columns:minmax(0,1fr) minmax(156px,174px);
+      gap:12px;
+      align-items:center;
+      margin-top:10px;
+      position:relative;
+    }
+    .station-current{min-width:0;align-self:center}
+    .station-card .temp-row{margin:0;gap:7px}
+    .station-card .temperature{font-size:clamp(44px,4.8vw,62px);letter-spacing:-.075em}
+    .station-card .weather-symbol{font-size:29px}
+    .station-card .temp-caption{font-size:9px;line-height:1.45;margin-top:7px;color:#a8c0ca}
+    .station-trend{
+      width:100%;
+      min-width:0;
+      padding:0;
+      border:0;
+      border-radius:0;
+      background:transparent;
+      align-self:center;
+    }
+    .station-trend-head{display:flex;align-items:center;justify-content:space-between;gap:6px;margin:0 0 4px}
+    .station-trend-title{font-size:8px;letter-spacing:.08em;color:#c4e4e4;font-weight:700}
+    .station-trend-unit{font-size:8px;color:#91aab5}
+    .station-trend-chart-wrap{
+      width:100%;
+      aspect-ratio:1/1;
+      min-height:0;
+      display:block;
+      overflow:hidden;
+      border-radius:11px;
+      background:linear-gradient(145deg,rgba(5,20,31,.34),rgba(5,20,31,.12));
+    }
+    .station-trend-graph{width:100%;height:100%;min-width:0}
+    .station-trend-graph svg{display:block;width:100%;height:100%;max-width:100%}
+    .station-trend-empty{height:100%;min-height:100%;display:grid;place-items:center;padding:12px;color:#9bb6c2;text-align:center;font-size:9px;line-height:1.45}
+    .station-trend-source{font-size:8px;color:#91aab5;margin-top:4px;text-align:right;white-space:nowrap}
+    .station-card .weather-stats{
+      display:grid;
+      grid-template-columns:repeat(4,minmax(0,1fr));
+      gap:0;
+      margin-top:12px;
+      padding-top:9px;
+      border-top:1px solid rgba(213,237,240,.13);
+      position:relative;
+    }
+    .station-card .stat{
+      min-width:0;
+      background:transparent;
+      border:0;
+      border-radius:0;
+      padding:2px 8px 0;
+    }
+    .station-card .stat:first-child{padding-left:0}
+    .station-card .stat:not(:last-child){border-right:1px solid rgba(213,237,240,.11)}
+    .station-card .stat .name{font-size:8px;color:#91aab5;white-space:nowrap}
+    .station-card .stat .value{font:700 14px/1.2 Manrope,sans-serif;margin-top:4px;white-space:nowrap}
+    .station-card .stat .unit{font:500 8px "DM Sans",sans-serif;margin-left:2px}
+    .station-card .stat .detail{font-size:8px;line-height:1.25;color:#a8bdc8;margin-top:3px;white-space:normal;overflow-wrap:anywhere}
+    .station-card .station-alert{margin-top:8px;padding:8px 10px;font-size:10px}
+    @media(max-width:850px){
+      .station-card{width:min(100%,460px)}
+    }
     @media(max-width:560px){
-      .station-card{padding:16px}
-      .station-overview{grid-template-columns:minmax(100px,.75fr) minmax(0,1.25fr);gap:9px;margin-top:13px}
-      .station-card .temperature{font-size:clamp(43px,13vw,54px)}
-      .station-card .weather-symbol{font-size:30px}
-      .station-trend{padding:8px 8px 6px}
-      .station-trend-title{font-size:8px;letter-spacing:.07em}
-      .station-trend-chart-wrap{min-height:70px}
-      .station-trend-graph svg{width:100%}
-      .station-card .weather-stats{gap:5px;margin-top:12px}
-      .station-card .stat{padding:8px 7px}
-      .station-card .stat .value{font-size:14px}
+      .station-card{width:100%;padding:15px 15px 13px;justify-self:stretch}
+      .station-overview{grid-template-columns:minmax(0,1fr) minmax(132px,40%);gap:9px;margin-top:9px}
+      .station-card .temperature{font-size:clamp(40px,11vw,49px)}
+      .station-card .weather-symbol{font-size:23px}
+      .station-trend-title{font-size:7px;letter-spacing:.06em}
+      .station-trend-chart-wrap{border-radius:9px}
+      .station-trend-source{font-size:7px}
+      .station-card .weather-stats{margin-top:10px;padding-top:8px}
+      .station-card .stat{padding:2px 5px 0}
+      .station-card .stat .value{font-size:12px}
+      .station-card .stat .detail{font-size:7px}
     }
   </style>
 </head>
@@ -122,7 +178,7 @@
   <main class="shell">
     <section class="hero">
       <div><div class="eyebrow"><span class="dot"></span> Canlı yerel istasyon gözlemi</div><h1>Şehrin havasını<br><span>önceden görün.</span></h1><p class="intro">Balmumcu'daki ENKA meteoroloji istasyonundan alınan gerçek ölçümler. Bu kart yalnızca istasyon gözlemlerini gösterir; model tahminleri aşağıdaki ayrı bölümlerde sunulur.</p><div class="hero-meta"><span class="meta-chip">Gerçek ölçüm</span><span class="meta-chip">ENKA Balmumcu · İstanbul</span></div></div>
-      <article class="weather-card station-card" role="region" aria-labelledby="station-card-title"><div class="weather-top"><div><div class="label">GERÇEK İSTASYON GÖZLEMİ</div><div class="place" id="station-card-title">ENKA Balmumcu · İstanbul</div></div><span class="model-state" id="freshness">Veri bekleniyor</span></div><div class="station-overview"><div class="temp-row"><div class="temperature" id="temperature">—°</div><div class="weather-symbol" id="weather-symbol" aria-hidden="true">☁️</div></div><div class="station-trend"><div class="station-trend-head"><span class="station-trend-title">SON 24 SAAT · SICAKLIK</span><span class="station-trend-unit">°C</span></div><div class="station-trend-chart-wrap"><div id="station-temperature-trend" class="station-trend-graph" role="img" aria-label="ENKA Balmumcu son 24 saat sıcaklık trendi, 90 dakikalık dilimler halinde"><div class="station-trend-empty">İlk sıcaklık kayıtları bekleniyor…</div></div></div><div class="station-trend-source" id="station-trend-meta">Her dilim 90 dakika · ortalama ve min–maks</div></div></div><div class="temp-caption" id="station-observation-meta">Son istasyon ölçümü · zaman damgası sayfada gösterilir</div><div class="weather-stats"><div class="stat"><div class="name">Rüzgâr</div><div class="value" id="wind">—<span class="unit">km/sa</span></div></div><div class="stat"><div class="name">Günlük yağış</div><div class="value" id="rain">—<span class="unit">mm</span></div></div><div class="stat"><div class="name">Nem</div><div class="value" id="humidity">—<span class="unit">%</span></div></div></div><div class="station-alert" id="station-alert" role="status" aria-live="polite" hidden></div></article>
+      <article class="weather-card station-card" role="region" aria-labelledby="station-card-title"><div class="weather-top"><div><div class="label">GERÇEK İSTASYON GÖZLEMİ</div><div class="place" id="station-card-title">ENKA Balmumcu · İstanbul</div></div><span class="model-state" id="freshness">Veri bekleniyor</span></div><div class="station-overview"><div class="station-current"><div class="temp-row"><div class="temperature" id="temperature">—°</div><div class="weather-symbol" id="weather-symbol" aria-hidden="true">☁️</div></div><div class="temp-caption" id="station-observation-meta">Son istasyon ölçümü bekleniyor</div></div><div class="station-trend"><div class="station-trend-head"><span class="station-trend-title">24 SAATLİK SICAKLIK</span><span class="station-trend-unit">90 DK</span></div><div class="station-trend-chart-wrap"><div id="station-temperature-trend" class="station-trend-graph" role="img" aria-label="ENKA Balmumcu son 24 saat sıcaklık trendi, 90 dakikalık dilimler halinde"><div class="station-trend-empty">İlk sıcaklık kayıtları bekleniyor…</div></div></div><div class="station-trend-source" id="station-trend-meta">Ortalama · min / maks</div></div></div><div class="weather-stats"><div class="stat"><div class="name">Rüzgâr</div><div class="value" id="wind">—<span class="unit">km/sa</span></div><div class="detail" id="wind-direction">—</div></div><div class="stat"><div class="name">Nem</div><div class="value" id="humidity">—<span class="unit">%</span></div></div><div class="stat"><div class="name">Yağış</div><div class="value" id="rain">—<span class="unit">mm</span></div><div class="detail">Bugün</div></div><div class="stat"><div class="name">Basınç</div><div class="value" id="pressure">—<span class="unit">hPa</span></div></div></div><div class="station-alert" id="station-alert" role="status" aria-live="polite" hidden></div></article>
     </section>
     <section class="section" id="tahmin"><div class="section-head"><div><div class="section-kicker">NOAA / NCEP GFS · MODEL TAHMİNİ</div><h2>8 günlük tahmin</h2></div><div class="section-note"><span id="cycle-chip">Model döngüsü yükleniyor</span><br><span id="updated-chip">Yayın zamanı bekleniyor</span><br>Günlük en düşük / en yüksek sıcaklık</div></div><div class="daily-grid" id="daily-grid"><div class="loading">Tahmin verisi yükleniyor…</div></div></section>
     <section class="section" id="bildirimler">
@@ -314,9 +370,12 @@
       const station=data.station_observation||{};
       const hasStation=!!data.station_observation;
       $("temperature").textContent=hasStation&&numeric(station.temperature_2m_c)?fmt(station.temperature_2m_c,1)+"°":"—°";
-      $("wind").innerHTML=hasStation&&numeric(station.wind_speed_10m_kmh)?((station.wind_direction_tr||windDirectionTr[station.wind_direction_cardinal]||station.wind_direction_cardinal)?esc(station.wind_direction_tr||windDirectionTr[station.wind_direction_cardinal]||station.wind_direction_cardinal)+" · ":"")+fmt(station.wind_speed_10m_kmh,1)+'<span class="unit">km/sa</span>':'—<span class="unit">km/sa</span>';
-      $("rain").innerHTML=hasStation&&numeric(station.precipitation_daily_mm)?fmt(station.precipitation_daily_mm,1)+'<span class="unit">mm bugün</span>':'—<span class="unit">mm bugün</span>';
+      $("wind").innerHTML=hasStation&&numeric(station.wind_speed_10m_kmh)?fmt(station.wind_speed_10m_kmh,1)+'<span class="unit">km/sa</span>':'—<span class="unit">km/sa</span>';
+      const direction=hasStation?(station.wind_direction_tr||windDirectionTr[station.wind_direction_cardinal]||station.wind_direction_cardinal):null;
+      $("wind-direction").textContent=direction?direction:"Yön —";
+      $("rain").innerHTML=hasStation&&numeric(station.precipitation_daily_mm)?fmt(station.precipitation_daily_mm,1)+'<span class="unit">mm</span>':'—<span class="unit">mm</span>';
       $("humidity").innerHTML=hasStation&&numeric(station.humidity_percent)?fmt(station.humidity_percent,0)+'<span class="unit">%</span>':'—<span class="unit">%</span>';
+      $("pressure").innerHTML=hasStation&&numeric(station.station_pressure_hpa)?fmt(station.station_pressure_hpa,0)+'<span class="unit">hPa</span>':'—<span class="unit">hPa</span>';
       $("weather-symbol").textContent=symbolFor(hasStation?station.precipitation_1h_mm||0:0);
       if(hasStation){
         const observed=station.observed_at_utc?new Date(station.observed_at_utc):null;
