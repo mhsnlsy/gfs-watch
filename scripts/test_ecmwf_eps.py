@@ -14,6 +14,7 @@ from fetch_ecmwf_eps import (  # noqa: E402
     forecast_steps,
     validate_document,
     same_published_cycle,
+    _matches_grib_field,
 )
 
 
@@ -29,6 +30,17 @@ def run_offline_tests() -> None:
     assert same_published_cycle("2026-11-01T00:00:00Z", "2026-11-01T00:00:00+00:00")
     assert not same_published_cycle("2026-10-31T12:00:00+00:00", "2026-11-01T00:00:00+00:00")
     assert not same_published_cycle(None, "2026-11-01T00:00:00+00:00")
+
+    # ECMWF Open Data encodes these single-level parameters as surface fields.
+    # Keep compatibility with older/alternate heightAboveGround encodings too.
+    assert _matches_grib_field("t2m", "2t", 167, "surface", 0)
+    assert _matches_grib_field("t2m", "2t", 167, "heightAboveGround", 2)
+    assert not _matches_grib_field("t2m", "2t", 167, "heightAboveGround", 10)
+    assert _matches_grib_field("u10", "10u", 165, "surface", 0)
+    assert _matches_grib_field("u10", "10u", 165, "heightAboveGround", 10)
+    assert _matches_grib_field("v10", "10v", 166, "surface", 0)
+    assert _matches_grib_field("v10", "10v", 166, "heightAboveGround", 10)
+    assert _matches_grib_field("msl", "msl", 151, "meanSea", 0)
 
     mean = {
         "mean_t850": synthetic_series(steps, 274.15),
