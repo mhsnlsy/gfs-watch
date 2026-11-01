@@ -176,6 +176,46 @@ jobs:
           echo "Pages did not serve the expected forecast: $expected_run_id"
           exit 1
 
+      - name: Verify live Eyüpsultan station payload
+        env:
+          PAGE_URL: ${{ steps.deployment.outputs.page_url }}
+        run: |
+          url="${PAGE_URL%/}/data/eyupsultan-station-observation.json?verify=$GITHUB_RUN_ID"
+          verified=false
+          for attempt in $(seq 1 18); do
+            if curl --fail --silent --show-error "$url" -o "$RUNNER_TEMP/live-eyupsultan.json"; then
+              if python - "$RUNNER_TEMP/live-eyupsultan.json" <<'PY'
+          import json, sys
+          with open(sys.argv[1], encoding="utf-8") as source:
+              document = json.load(source)
+          assert document.get("schema") == "gfs-watch.station-observation.v1"
+          observation = document.get("station_observation") or {}
+          assert str(observation.get("station_id")) == "18101"
+          assert isinstance(observation.get("temperature_2m_c"), (int, float))
+          assert isinstance(observation.get("wind_speed_10m_kmh"), (int, float))
+          assert isinstance(observation.get("humidity_percent"), (int, float))
+          assert isinstance(observation.get("precipitation_daily_mm"), (int, float))
+          print(
+              "Live Eyüpsultan observation verified: "
+              f"{observation['temperature_2m_c']}°C · "
+              f"{observation['wind_speed_10m_kmh']} km/h · "
+              f"{observation['humidity_percent']}% RH · "
+              f"age {observation.get('age_minutes')} min"
+          )
+          PY
+              then
+                verified=true
+                break
+              fi
+            fi
+            echo "Eyüpsultan Pages payload not ready yet; retry $attempt."
+            sleep 10
+          done
+          if [ "$verified" != true ]; then
+            echo "Pages did not serve a valid Eyüpsultan 18101 observation."
+            exit 1
+          fi
+
       - name: Verify latest GFS report and every referenced Pages asset
         env:
           PAGE_URL: ${{ steps.deployment.outputs.page_url }}
