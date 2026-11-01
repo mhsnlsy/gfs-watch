@@ -1533,7 +1533,7 @@ def prefetch_noaa_cycle_if_due(skip_run_ids=None, target_run_id=None):
 
 
 def prefetch_latest_noaa_cycle(skip_run_ids=None, target_run_id=None):
-    """Cache every available GFS input file through f177 for the current or target cycle."""
+    """Cache every available GFS input file through f177 for the latest or selected cycle."""
     skip_run_ids = set(skip_run_ids or ())
     now = datetime.now(timezone.utc)
 
@@ -1570,7 +1570,7 @@ def prefetch_latest_noaa_cycle(skip_run_ids=None, target_run_id=None):
 
     print(
         f"[NOAA PREFETCH] {run_id}: {cached_count}/{len(leads)} hazır; "
-        f"bu kontrolde en fazla {len(batch)} dosya indirilecek (doğrudan S3 GRIB2)."
+        f"bu kontrolde en fazla {len(batch)} dosya indirilecek (NOMADS öncelikli, AWS S3 yedekli byte-range)."
     )
     try:
         for lead in batch:
@@ -2472,7 +2472,7 @@ async def process_gfs_update(strict=False, target_run_id=None):
     # No weather API or NOMADS filtering endpoint is involved.
     print(
         f"[NOAA TRIGGER] {run_id} +180 dosyası NOAA S3'te hazır; "
-        "gerekli GRIB2 mesajları NOAA S3'ten doğrudan byte-range ile alınıyor."
+        "gerekli GRIB2 mesajları önce NOMADS, gerekirse AWS S3 üzerinden byte-range ile alınıyor."
     )
 
     missing_cache_leads = await asyncio.to_thread(
@@ -2832,48 +2832,63 @@ async def main():
 
 
 async def run_scheduled_watch():
-    """Prefetch a fixed GFS cycle on a five-minute cadence until its f180 report is sent."""
+    """Watch and process every newly completed six-hour GFS cycle."""
     init_db()
     window_minutes = max(10, int(os.getenv("GFS_WATCH_WINDOW_MINUTES", "330")))
     poll_seconds = max(60, int(os.getenv("GFS_WATCH_POLL_SECONDS", "300")))
     configured_target = os.getenv("GFS_WATCH_TARGET_RUN_ID", "").strip()
-    if configured_target:
-        target_dt = _parse_utc_datetime(configured_target)
-    else:
-        now = datetime.now(timezone.utc)
-        target_hour = (now.hour // 6) * 6
-        target_dt = now.replace(hour=target_hour, minute=0, second=0, microsecond=0)
-    target_run_id = target_dt.isoformat(timespec="seconds")
+    target_run_id = (
+        _parse_utc_datetime(configured_target).isoformat(timespec="seconds")
+        if configured_target
+        else None
+    )
     deadline = time.monotonic() + window_minutes * 60
     next_poll_at = time.monotonic()
 
-    print(
-        f"[WATCH START] Sabit hedef GFS döngüsü: {target_run_id}; "
-        f"izleme {window_minutes} dakika, kontrol ve önbellek aralığı {poll_seconds} saniye."
-    )
+    if target_run_id:
+        print(
+            f"[WATCH START] Açıkça seçilmiş GFS döngüsü: {target_run_id}; "
+            f"izleme {window_minutes} dakika, kontrol aralığı {poll_seconds} saniye."
+        )
+    else:
+        print(
+            "[WATCH START] Sabit döngü kilidi yok. NOAA NOMADS, gerekirse AWS S3 "
+            "üzerinden yayımlanan tüm yeni 00Z/06Z/12Z/18Z döngüleri izlenecek; "
+            f"kontrol aralığı {poll_seconds} saniye, oturum {window_minutes} dakika."
+        )
+
     existing_runs = await asyncio.to_thread(get_processed_run_ids)
-    if target_run_id in existing_runs:
+    if target_run_id and target_run_id in existing_runs:
         print(f"[WATCH SKIP] {target_run_id} daha önce işlendi.")
         return
 
     while time.monotonic() < deadline:
+        processed_before = await asyncio.to_thread(get_processed_run_ids)
         try:
             await process_gfs_update(strict=False, target_run_id=target_run_id)
         except Exception as exc:
             print(
-                f"[WATCH RETRY] Kontrol sırasında hata oluştu: "
+                f"[WATCH RETRY] NOAA kontrolü/rapor işlemi sırasında hata: "
                 f"{type(exc).__name__}: {exc}"
             )
 
-        # Check outside the try block: a Telegram/chart error can happen after
-        # save_run(), and the target cycle must not be processed or sent twice.
-        processed_runs = await asyncio.to_thread(get_processed_run_ids)
-        if target_run_id in processed_runs:
+        # process_gfs_update handles one eligible cycle at a time. If it saved
+        # a new cycle, immediately call it again so multiple ready cycles are
+        # caught up chronologically without waiting another five minutes.
+        processed_after = await asyncio.to_thread(get_processed_run_ids)
+        newly_processed = sorted(processed_after - processed_before)
+        if target_run_id and target_run_id in processed_after:
             print(
-                f"[WATCH COMPLETE] {target_run_id} GRIB2 döngüsü işlendi "
-                "ve bildirim süreci tamamlandı."
+                f"[WATCH COMPLETE] {target_run_id} işlendi ve rapor süreci tamamlandı."
             )
             return
+        if newly_processed:
+            print(
+                "[WATCH CATCH-UP] Yeni işlenen döngü(ler): "
+                + ", ".join(newly_processed)
+                + "; sıradaki hazır döngü hemen kontrol edilecek."
+            )
+            continue
 
         next_poll_at += poll_seconds
         current_monotonic = time.monotonic()
@@ -2888,10 +2903,9 @@ async def run_scheduled_watch():
             break
         await asyncio.sleep(min(next_poll_at - current_monotonic, remaining_window))
 
-    raise RuntimeError(
-        f"[WATCH TIMEOUT] {target_run_id} için {window_minutes} dakikalık "
-        "izleme penceresi sona erdi; NOAA f180 henüz işlenemedi. "
-        "GitHub Actions önbelleği kaydedip yeni izleme oturumu başlatmalı."
+    print(
+        f"[WATCH WINDOW COMPLETE] {window_minutes} dakikalık izleme oturumu tamamlandı. "
+        "Kısmi NOAA önbelleği Actions Cache'e kaydedilecek; workflow yeni oturum açacak."
     )
 
 
