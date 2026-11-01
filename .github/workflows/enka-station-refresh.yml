@@ -7,9 +7,6 @@ on:
     paths:
       - "enka_weather.py"
       - ".github/workflows/enka-station-refresh.yml"
-  schedule:
-    # Every five minutes, shifted away from the top-of-hour queue.
-    - cron: "2-59/5 * * * *"
   workflow_dispatch:
 
 permissions:
@@ -24,7 +21,7 @@ concurrency:
 jobs:
   refresh:
     runs-on: ubuntu-latest
-    timeout-minutes: 4
+    timeout-minutes: 10
     steps:
       - name: Check out application
         uses: actions/checkout@v7
@@ -85,3 +82,18 @@ jobs:
         run: |
           gh workflow run pages.yml --ref main --repo "$GITHUB_REPOSITORY"
           echo "GitHub Pages deployment requested."
+
+      # Queue the next poll on the next five-minute UTC boundary. This uses
+      # workflow_dispatch, which GITHUB_TOKEN is explicitly allowed to trigger.
+      - name: Queue next five-minute ENKA refresh
+        if: always() && !cancelled()
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          now=$(date -u +%s)
+          next=$(( (now / 300 + 1) * 300 ))
+          delay=$(( next - now ))
+          echo "Next ENKA refresh at $(date -u -d "@$next" +'%Y-%m-%dT%H:%M:%SZ') (sleeping ${delay}s)."
+          sleep "$delay"
+          gh workflow run enka-station-refresh.yml --ref main --repo "$GITHUB_REPOSITORY"
+          echo "Next ENKA refresh queued."
