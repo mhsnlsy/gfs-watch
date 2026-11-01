@@ -51,7 +51,7 @@ NOAA_CYCLE_LOOKBACK = 6
 MIN_FORECAST_HOURS = 180
 RETENTION_DAYS = 10
 PUBLIC_DATA_DIR = os.getenv("PUBLIC_DATA_DIR", "public")
-NOAA_CACHE_DIR = os.getenv("NOAA_CACHE_DIR", "noaa_cache")
+NOAA_CACHE_DIR = os.getenv("NOAA_CACHE_DIR", "noaa_cache_v2")
 NOAA_PREFETCH_FILES_PER_CHECK = max(
     1, int(os.getenv("NOAA_PREFETCH_FILES_PER_CHECK", "141"))
 )
@@ -254,8 +254,36 @@ def save_public_notification_image(run_id, chart_buffer):
     return f"media/{filename}"
 
 
+def save_public_notification_images(run_id, chart_buffers):
+    """Archive four independent charts for the public Pages report."""
+    if not isinstance(chart_buffers, dict) or not chart_buffers:
+        return []
+    run_dt = _parse_utc_datetime(run_id)
+    run_key = run_dt.strftime("%Y%m%dT%HZ")
+    media_dir = os.path.join(PUBLIC_DATA_DIR, "notifications", "media")
+    labels = {
+        "temperature": "Sıcaklık",
+        "precipitation": "Yağış",
+        "wind_10m": "Yüzey rüzgârı · 10 m",
+        "wind_850": "Rüzgâr · 850 hPa",
+    }
+    images = []
+    for metric in ("temperature", "precipitation", "wind_10m", "wind_850"):
+        buffer = chart_buffers.get(metric)
+        if not buffer:
+            continue
+        content = buffer.getvalue()
+        if not content:
+            continue
+        filename = f"gfs-{run_key}-{metric}.png"
+        _write_bytes_atomically(os.path.join(media_dir, filename), content)
+        images.append({"label": labels[metric], "path": f"media/{filename}"})
+        print(f"[PAGES GÖRSEL] {labels[metric]} arşivlendi: {filename}")
+    return images
+
+
 def publish_public_notification(
-    run_id, full_text_report, speech_text, image_path=None, audio_file=None
+    run_id, full_text_report, speech_text, image_path=None, audio_file=None, images=None
 ):
     """Publish one GFS report with optional image/audio; retain the latest four."""
     run_dt = _parse_utc_datetime(run_id)
@@ -297,6 +325,7 @@ def publish_public_notification(
         "summary": summary,
         "report_text": web_report,
         "image_path": image_path,
+        "images": images if isinstance(images, list) else [],
         "audio_path": audio_path,
     }
 
@@ -331,6 +360,10 @@ def publish_public_notification(
     for item in retained:
         for field in ("image_path", "audio_path"):
             relative_path = item.get(field)
+            if relative_path:
+                keep_files.add(os.path.basename(relative_path))
+        for image in item.get("images", []):
+            relative_path = image.get("path") if isinstance(image, dict) else image
             if relative_path:
                 keep_files.add(os.path.basename(relative_path))
     for filename in os.listdir(media_dir):
@@ -1056,6 +1089,8 @@ def _read_noaa_decoded_cache_file(run_id, lead):
             "temperature": document["temperature"],
             "wind_u": document.get("wind_u") or {},
             "wind_v": document.get("wind_v") or {},
+            "wind_850_u": document["wind_850_u"],
+            "wind_850_v": document["wind_850_v"],
             "precip_records": precip_records,
             "pressure_analysis": document.get("pressure_analysis"),
         }
@@ -1078,6 +1113,8 @@ def _write_noaa_decoded_cache_file(run_id, lead, step_data):
         "temperature": step_data.get("temperature") or {},
         "wind_u": step_data.get("wind_u") or {},
         "wind_v": step_data.get("wind_v") or {},
+        "wind_850_u": step_data.get("wind_850_u") or {},
+        "wind_850_v": step_data.get("wind_850_v") or {},
         "precip_records": [
             {
                 "start_step": int(interval[0]),
@@ -1129,7 +1166,7 @@ def _noaa_index_record_matches(parts, lead):
     level = parts[4].strip().lower()
     if variable == "TMP" and level == "2 m above ground":
         return True
-    if variable in ("UGRD", "VGRD") and level == "10 m above ground":
+    if variable in ("UGRD", "VGRD") and level in ("10 m above ground", "850 mb"):
         return True
     if variable == "APCP" and level == "surface":
         return True
@@ -1332,6 +1369,8 @@ def _decode_noaa_grib_step(run_id, lead, grib_bytes):
         "temperature": None,
         "wind_u": None,
         "wind_v": None,
+        "wind_850_u": None,
+        "wind_850_v": None,
         "precip_records": {},
         "pressure_analysis": None,
         "pressure_grid": None,
@@ -1359,6 +1398,7 @@ def _decode_noaa_grib_step(run_id, lead, grib_bytes):
                         is_target = (
                             (short_name == "2t" and level_type == "heightAboveGround" and level == 2)
                             or (short_name in ("10u", "10v") and level_type == "heightAboveGround" and level == 10)
+                            or (short_name in ("u", "v") and level_type == "isobaricInhPa" and level == 850)
                             or (short_name == "tp" and level_type == "surface")
                             or (short_name == "prmsl" and level_type == "meanSea")
                         )
@@ -1390,6 +1430,10 @@ def _decode_noaa_grib_step(run_id, lead, grib_bytes):
                             step_data["wind_u"] = samples
                         elif short_name == "10v":
                             step_data["wind_v"] = samples
+                        elif short_name == "u" and level_type == "isobaricInhPa" and level == 850:
+                            step_data["wind_850_u"] = samples
+                        elif short_name == "v" and level_type == "isobaricInhPa" and level == 850:
+                            step_data["wind_850_v"] = samples
                         elif short_name == "tp":
                             step_data["precip_records"][(start_step, end_step)] = samples
                     finally:
@@ -1397,6 +1441,8 @@ def _decode_noaa_grib_step(run_id, lead, grib_bytes):
 
         if not step_data["temperature"]:
             return None, "missing 2m temperature field"
+        if not step_data["wind_850_u"] or not step_data["wind_850_v"]:
+            return None, "missing 850 hPa U/V wind fields"
 
         if int(lead) == 0:
             alerts, centre_pressure_hpa = analyse_regional_pressure_grid(
@@ -1657,18 +1703,24 @@ def fetch_full_weather_data(run_id):
             temperature = step_data["temperature"]
             wind_u = step_data["wind_u"] or {}
             wind_v = step_data["wind_v"] or {}
-            # Pressure is not part of the requested point forecast payload.
+            wind_850_u = step_data["wind_850_u"] or {}
+            wind_850_v = step_data["wind_850_v"] or {}
 
             temp_c = {
                 name: float(value) - 273.15
                 for name, value in temperature.items()
             }
             wind_kmh = {}
+            wind_850_kmh = {}
             for name in points:
                 u_value = wind_u.get(name)
                 v_value = wind_v.get(name)
                 if u_value is not None and v_value is not None:
                     wind_kmh[name] = math.hypot(float(u_value), float(v_value)) * 3.6
+                u850_value = wind_850_u.get(name)
+                v850_value = wind_850_v.get(name)
+                if u850_value is not None and v850_value is not None:
+                    wind_850_kmh[name] = math.hypot(float(u850_value), float(v850_value)) * 3.6
 
             # Select only the precipitation interval ending at this lead.
             # GFS 0.25-degree output is hourly through +120h and 3-hourly after.
@@ -1709,10 +1761,12 @@ def fetch_full_weather_data(run_id):
             istanbul_temp = round(temp_c["Istanbul"], 1)
             istanbul_precip = round(precip_by_point["Istanbul"], 2)
             istanbul_wind = round(wind_kmh.get("Istanbul", 0.0), 1)
+            istanbul_wind_850 = round(wind_850_kmh["Istanbul"], 1)
             forecast_timeline[time_key] = {
                 "step_hour": lead,
                 "temp": istanbul_temp,
                 "wind": istanbul_wind,
+                "wind_850": istanbul_wind_850,
                 # A 06Z/12Z/18Z run has no precipitation interval before its
                 # own initialization; do not compare that lead-0 placeholder.
                 "precip": None if lead == 0 else istanbul_precip,
@@ -1720,12 +1774,13 @@ def fetch_full_weather_data(run_id):
 
             day_key = valid_local.date().isoformat()
             bucket = daily_buckets.setdefault(
-                day_key, {"temps": [], "precips": [], "winds": []}
+                day_key, {"temps": [], "precips": [], "winds": [], "winds_850": []}
             )
             bucket["temps"].append(istanbul_temp)
             if lead > 0:
                 bucket["precips"].append(istanbul_precip)
             bucket["winds"].append(istanbul_wind)
+            bucket["winds_850"].append(istanbul_wind_850)
 
         daily_dates = sorted(daily_buckets)
         daily = {
@@ -1744,6 +1799,10 @@ def fetch_full_weather_data(run_id):
             ],
             "wind_max": [
                 round(max(daily_buckets[day]["winds"]), 1)
+                for day in daily_dates
+            ],
+            "wind_850_max": [
+                round(max(daily_buckets[day]["winds_850"]), 1)
                 for day in daily_dates
             ],
         }
@@ -2008,166 +2067,204 @@ async def send_telegram_text(text):
     print("[TELEGRAM] Metin bildirimi gönderildi.")
 
 
+def _prepare_comparison_chart_data(current_run_id, payload, previous_runs):
+    """Build chronological daily series shared by Telegram and Pages charts."""
+    entries = []
+    for run_id, forecast_json in previous_runs:
+        forecast_payload = (
+            forecast_json if isinstance(forecast_json, dict)
+            else json.loads(forecast_json)
+        )
+        entries.append((run_id, forecast_payload))
+    entries.append((current_run_id, payload))
+    entries.sort(key=lambda item: _parse_utc_datetime(item[0]))
+
+    series = []
+    for run_id, forecast_payload in entries:
+        daily = forecast_payload.get("daily", {})
+        dates = daily.get("time", [])
+        required = ("temp_min", "temp_max", "precip_sum", "wind_max")
+        if any(len(daily.get(key, [])) != len(dates) for key in required):
+            raise ValueError("Günlük özet dizilerinin uzunlukları uyuşmuyor.")
+        wind_850_values = daily.get("wind_850_max", [])
+        if wind_850_values and len(wind_850_values) != len(dates):
+            raise ValueError("850 hPa günlük rüzgâr dizisinin uzunluğu uyuşmuyor.")
+        daily_map = {}
+        for index, day in enumerate(dates):
+            raw_850 = wind_850_values[index] if wind_850_values else None
+            daily_map[day] = {
+                "temp_min": float(daily["temp_min"][index]),
+                "temp_max": float(daily["temp_max"][index]),
+                "precip": float(daily["precip_sum"][index]),
+                "wind": float(daily["wind_max"][index]),
+                "wind_850": float(raw_850) if raw_850 is not None else None,
+            }
+        if not daily_map:
+            raise ValueError(f"{run_id} için günlük tahmin verisi bulunamadı.")
+        run_utc = _parse_utc_datetime(run_id)
+        run_local = run_utc.astimezone(TR_TZ)
+        cycle_label = f"{run_utc:%H}Z | {run_local:%d.%m %H:%M} TSİ"
+        if run_id == current_run_id:
+            cycle_label = "YENİ · " + cycle_label
+        series.append({
+            "run_id": run_id,
+            "label": cycle_label,
+            "daily": daily_map,
+            "timeline": forecast_payload.get("timeline_180h", {}),
+        })
+
+    common_dates = set(series[0]["daily"])
+    for item in series[1:]:
+        common_dates.intersection_update(item["daily"])
+    dates = sorted(common_dates)
+    if not dates:
+        raise ValueError("Dört döngünün ortak tahmin günü bulunamadı.")
+
+    colors = ["#3977A8", "#2A9D8F", "#8E6CBE", "#E58A32"]
+    count = len(series)
+    offsets = [
+        (index - (count - 1) / 2) * min(0.20, 0.80 / count)
+        for index in range(count)
+    ]
+    group_width = min(0.20, 0.80 / count)
+    return {
+        "series": series,
+        "dates": dates,
+        "colors": colors,
+        "offsets": offsets,
+        "candle_width": group_width * 0.72,
+        "bar_width": group_width * 0.90,
+    }
+
+
+def _comparison_temperature_ohlc(forecast, day):
+    samples = [
+        (key, values) for key, values in forecast.items()
+        if key[:10] == day and values.get("temp") is not None
+    ]
+    samples.sort(key=lambda item: item[0])
+    if not samples:
+        return None
+    temperatures = [float(item[1]["temp"]) for item in samples]
+    return temperatures[0], temperatures[-1], max(temperatures), min(temperatures)
+
+
+def _comparison_legend_handles(series, colors):
+    return [
+        Line2D([0], [0], color=colors[index % len(colors)], linewidth=5, label=item["label"])
+        for index, item in enumerate(series)
+    ]
+
+
+def _draw_comparison_temperature_axis(axis, chart_data):
+    series = chart_data["series"]
+    dates = chart_data["dates"]
+    colors = chart_data["colors"]
+    offsets = chart_data["offsets"]
+    candle_width = chart_data["candle_width"]
+    x_positions = list(range(len(dates)))
+    for series_index, item in enumerate(series):
+        color = colors[series_index % len(colors)]
+        values_by_day = [
+            _comparison_temperature_ohlc(item["timeline"], day) for day in dates
+        ]
+        for index, values in enumerate(values_by_day):
+            if values is None:
+                continue
+            open_value, close_value, high_value, low_value = values
+            x = x_positions[index] + offsets[series_index]
+            axis.vlines(x, low_value, high_value, color=color, linewidth=1.6)
+            body_bottom = min(open_value, close_value)
+            body_height = max(abs(close_value - open_value), 0.12)
+            axis.add_patch(Rectangle(
+                (x - candle_width / 2, body_bottom),
+                candle_width, body_height,
+                facecolor=color, edgecolor=color, alpha=0.82,
+            ))
+    axis.set_title("Sıcaklık | Günlük mum: ilk–son örnek, fitil: min–maks", loc="left")
+    axis.set_ylabel("°C")
+    axis.grid(axis="y", alpha=0.25)
+
+
+def _draw_comparison_bar_axis(axis, chart_data, metric, title, ylabel):
+    series = chart_data["series"]
+    dates = chart_data["dates"]
+    colors = chart_data["colors"]
+    offsets = chart_data["offsets"]
+    bar_width = chart_data["bar_width"]
+    x_positions = list(range(len(dates)))
+    for series_index, item in enumerate(series):
+        color = colors[series_index % len(colors)]
+        bar_positions = []
+        bar_values = []
+        for index, day in enumerate(dates):
+            value = item["daily"][day].get(metric)
+            if value is None:
+                continue
+            bar_positions.append(x_positions[index] + offsets[series_index])
+            bar_values.append(float(value))
+        if bar_positions:
+            axis.bar(bar_positions, bar_values, width=bar_width, color=color)
+    axis.set_title(title, loc="left")
+    axis.set_ylabel(ylabel)
+    axis.grid(axis="y", alpha=0.25)
+    if metric == "wind_850":
+        available = sum(
+            any(item["daily"][day].get("wind_850") is not None for day in dates)
+            for item in series
+        )
+        if available < len(series):
+            axis.text(
+                0.99, 0.94,
+                f"850 hPa verisi {available}/{len(series)} döngüde mevcut; önceki arşivlerde bu alan yok.",
+                transform=axis.transAxes, ha="right", va="top", fontsize=8, color="#777777",
+            )
+
+
+def _format_comparison_date_axis(axis, dates):
+    turkish_weekdays = (
+        "Pazartesi", "Salı", "Çarşamba", "Perşembe",
+        "Cuma", "Cumartesi", "Pazar",
+    )
+    labels = []
+    for day in dates:
+        local_date = datetime.strptime(day, "%Y-%m-%d")
+        labels.append(f"{local_date:%d.%m}\\n{turkish_weekdays[local_date.weekday()]}")
+    axis.set_xticks(list(range(len(dates))))
+    axis.set_xticklabels(labels, fontsize=9)
+    axis.set_xlabel("İstanbul yerel tarihi")
+
+
 def create_comparison_chart(current_run_id, payload, previous_runs):
-    """Build a four-cycle, multi-series comparison image for the common forecast dates."""
+    """Build one Telegram image with temperature, precipitation and both wind levels."""
     if not previous_runs:
         print("[KIYAS GÖRSELİ] Önceki GFS kaydı yok; ilk çalışma için görsel atlandı.")
         return None
-
+    fig = None
     try:
-        entries = []
-        for run_id, forecast_json in previous_runs:
-            forecast_payload = (
-                forecast_json if isinstance(forecast_json, dict)
-                else json.loads(forecast_json)
-            )
-            entries.append((run_id, forecast_payload))
-        entries.append((current_run_id, payload))
-        entries.sort(key=lambda item: _parse_utc_datetime(item[0]))
-
-        def daily_values(daily):
-            dates = daily.get("time", [])
-            keys = ("temp_min", "temp_max", "precip_sum", "wind_max")
-            if any(len(daily.get(key, [])) != len(dates) for key in keys):
-                raise ValueError("Günlük özet dizilerinin uzunlukları uyuşmuyor.")
-            return {
-                day: {
-                    "temp_min": float(daily["temp_min"][i]),
-                    "temp_max": float(daily["temp_max"][i]),
-                    "precip": float(daily["precip_sum"][i]),
-                    "wind": float(daily["wind_max"][i]),
-                }
-                for i, day in enumerate(dates)
-            }
-
-        series = []
-        for run_id, forecast_payload in entries:
-            daily = daily_values(forecast_payload.get("daily", {}))
-            if not daily:
-                raise ValueError(f"{run_id} için günlük tahmin verisi bulunamadı.")
-            run_utc = _parse_utc_datetime(run_id)
-            run_local = run_utc.astimezone(TR_TZ)
-            cycle_label = (
-                f"{run_utc:%H}Z | {run_local:%d.%m %H:%M} TSİ"
-            )
-            if run_id == current_run_id:
-                cycle_label = "YENİ · " + cycle_label
-            series.append({
-                "run_id": run_id,
-                "label": cycle_label,
-                "daily": daily,
-                "timeline": forecast_payload.get("timeline_180h", {}),
-            })
-
-        common_dates = set(series[0]["daily"])
-        for item in series[1:]:
-            common_dates.intersection_update(item["daily"])
-        dates = sorted(common_dates)
-        if not dates:
-            print("[KIYAS GÖRSELİ] Dört döngünün ortak tahmin günü bulunamadı; görsel atlandı.")
-            return None
-
-        def temperature_ohlc(forecast, day):
-            samples = [
-                (key, values) for key, values in forecast.items()
-                if key[:10] == day and values.get("temp") is not None
-            ]
-            samples.sort(key=lambda item: item[0])
-            if not samples:
-                return None
-            temps = [float(item[1]["temp"]) for item in samples]
-            return temps[0], temps[-1], max(temps), min(temps)
-
-        colors = ["#3977A8", "#2A9D8F", "#8E6CBE", "#E58A32"]
+        chart_data = _prepare_comparison_chart_data(current_run_id, payload, previous_runs)
+        series = chart_data["series"]
+        dates = chart_data["dates"]
         count = len(series)
-        offsets = [
-            (index - (count - 1) / 2) * min(0.20, 0.80 / count)
-            for index in range(count)
-        ]
-        group_width = min(0.20, 0.80 / count)
-        candle_width = group_width * 0.72
-        bar_width = group_width * 0.90
-
         fig, axes = plt.subplots(
-            3, 1, figsize=(17, 12), sharex=True,
-            gridspec_kw={"height_ratios": [1.5, 1, 1]},
+            4, 1, figsize=(17, 15), sharex=True,
+            gridspec_kw={"height_ratios": [1.5, 1, 1, 1]},
         )
         fig.suptitle(
             f"İSTANBUL GFS | SON {count} DÖNGÜ KARŞILAŞTIRMASI",
-            fontsize=18, fontweight="bold", y=0.985,
+            fontsize=18, fontweight="bold", y=0.99,
         )
-        x_positions = list(range(len(dates)))
-
-        ax = axes[0]
-        legend_handles = []
-        for series_index, item in enumerate(series):
-            color = colors[series_index % len(colors)]
-            legend_handles.append(
-                Line2D([0], [0], color=color, linewidth=5, label=item["label"])
-            )
-            ohlc = [
-                temperature_ohlc(item["timeline"], day) for day in dates
-            ]
-            for index, values in enumerate(ohlc):
-                if values is None:
-                    continue
-                open_value, close_value, high_value, low_value = values
-                x = x_positions[index] + offsets[series_index]
-                ax.vlines(x, low_value, high_value, color=color, linewidth=1.6)
-                body_bottom = min(open_value, close_value)
-                body_height = max(abs(close_value - open_value), 0.12)
-                ax.add_patch(Rectangle(
-                    (x - candle_width / 2, body_bottom),
-                    candle_width, body_height,
-                    facecolor=color, edgecolor=color, alpha=0.82,
-                ))
-        ax.set_title(
-            "Sıcaklık | Günlük mum: ilk–son örnek, fitil: min–maks (°C)",
-            loc="left",
-        )
-        ax.set_ylabel("°C")
-        ax.grid(axis="y", alpha=0.25)
-        ax.legend(
-            handles=legend_handles,
+        _draw_comparison_temperature_axis(axes[0], chart_data)
+        axes[0].legend(
+            handles=_comparison_legend_handles(series, chart_data["colors"]),
             loc="upper left", ncol=min(4, count), fontsize=8, frameon=False,
         )
-
-        for ax, metric, title, ylabel in (
-            (axes[1], "precip", "Günlük toplam yağış", "mm"),
-            (axes[2], "wind", "Günlük en yüksek rüzgâr", "km/sa"),
-        ):
-            for series_index, item in enumerate(series):
-                color = colors[series_index % len(colors)]
-                values = [item["daily"][day][metric] for day in dates]
-                ax.bar(
-                    [x + offsets[series_index] for x in x_positions],
-                    values,
-                    width=bar_width,
-                    color=color,
-                )
-            ax.set_title(title, loc="left")
-            ax.set_ylabel(ylabel)
-            ax.grid(axis="y", alpha=0.25)
-
-        turkish_weekdays = (
-            "Pazartesi", "Salı", "Çarşamba", "Perşembe",
-            "Cuma", "Cumartesi", "Pazar",
-        )
-        date_labels = []
-        for day in dates:
-            local_date = datetime.strptime(day, "%Y-%m-%d")
-            date_labels.append(
-                f"{local_date:%d.%m}\n{turkish_weekdays[local_date.weekday()]}"
-            )
-
-        # Shared x-axes hide labels on upper panels by default. Re-enable them
-        # so every metric can be read with its own date and Turkish weekday.
+        _draw_comparison_bar_axis(axes[1], chart_data, "precip", "Günlük toplam yağış", "mm")
+        _draw_comparison_bar_axis(axes[2], chart_data, "wind", "Yüzey rüzgârı | 10 m günlük en yüksek hız", "km/sa")
+        _draw_comparison_bar_axis(axes[3], chart_data, "wind_850", "850 hPa rüzgârı | Günlük en yüksek hız", "km/sa")
         for axis in axes:
-            axis.set_xticks(x_positions)
-            axis.set_xticklabels(date_labels, fontsize=9)
-        for axis in axes[:-1]:
+            _format_comparison_date_axis(axis, dates)
             axis.tick_params(axis="x", labelbottom=True)
-        axes[-1].set_xlabel("İstanbul yerel tarihi")
         fig.text(
             0.01, 0.012,
             "Renkler her panelde aynı GFS döngüsünü gösterir | "
@@ -2175,66 +2272,76 @@ def create_comparison_chart(current_run_id, payload, previous_runs):
             fontsize=9, color="#555555",
         )
         fig.tight_layout(rect=(0, 0.035, 1, 0.95))
-
         image_buffer = io.BytesIO()
         fig.savefig(image_buffer, format="png", dpi=150, bbox_inches="tight")
         image_buffer.seek(0)
         print(
-            f"[KIYAS GÖRSELİ] {count} GFS döngüsü, {len(dates)} ortak gün "
-            "için grafik hazırlandı: "
-            + " -> ".join(item["run_id"] for item in series)
+            f"[TELEGRAM KIYAS GÖRSELİ] {count} GFS döngüsü, {len(dates)} ortak gün; "
+            "sıcaklık, yağış, 10 m ve 850 hPa rüzgâr panelleri hazır.",
         )
         return image_buffer
     except Exception as exc:
-        print(f"[KIYAS GÖRSELİ HATA] Grafik oluşturulamadı: {exc}")
+        print(f"[KIYAS GÖRSELİ HATA] Telegram birleşik grafik oluşturulamadı: {exc}")
         return None
     finally:
-        if "fig" in locals():
+        if fig is not None:
             plt.close(fig)
 
 
-async def load_previous_three_runs_for_comparison(current_run_id):
-    """Load the exact three preceding six-hour cycles, using NOAA read-only as fallback."""
-    current_dt = _parse_utc_datetime(current_run_id)
-    previous_runs = []
-
-    for hours_back in (6, 12, 18):
-        previous_dt = current_dt - timedelta(hours=hours_back)
-        previous_run_id = previous_dt.isoformat(timespec="seconds")
-        stored_record = await asyncio.to_thread(
-            get_run_payload, previous_run_id
-        )
-
-        if stored_record:
-            stored_run_id, stored_payload = stored_record
-            print(
-                f"[KIYAS GEÇMİŞİ] {stored_run_id} SQLite geçmişinden salt okunur alındı."
-            )
-            previous_runs.append((
-                stored_run_id,
-                json.dumps(stored_payload, ensure_ascii=False),
-            ))
-            continue
-
-        print(
-            f"[KIYAS GEÇMİŞİ] {previous_run_id} DB'de bulunamadı; "
-            "NOAA/NCEP'den salt okunur tamamlanıyor."
-        )
-        fetched_payload = await asyncio.to_thread(
-            fetch_full_weather_data, previous_run_id
-        )
-        if not fetched_payload or "_pending_noaa_gfs" in fetched_payload:
-            raise RuntimeError(
-                f"{previous_run_id} karşılaştırma tahmini NOAA'dan alınamadı: "
-                f"{(fetched_payload or {}).get('_reason', 'veri bulunamadı')}"
-            )
-        previous_runs.append((
-            previous_run_id,
-            json.dumps(fetched_payload, ensure_ascii=False),
-        ))
-
-    return previous_runs
-
+def create_pages_comparison_charts(current_run_id, payload, previous_runs):
+    """Build four separate comparison images for the Pages report card only."""
+    if not previous_runs:
+        print("[PAGES GÖRSELLERİ] Önceki GFS kaydı yok; ilk çalışma için görseller atlandı.")
+        return {}
+    charts = {}
+    specifications = (
+        ("temperature", "Sıcaklık", "Sıcaklık | Günlük mum: ilk–son örnek, fitil: min–maks", "°C"),
+        ("precipitation", "Yağış", "Günlük toplam yağış", "mm"),
+        ("wind_10m", "Yüzey rüzgârı", "Yüzey rüzgârı | 10 m günlük en yüksek hız", "km/sa"),
+        ("wind_850", "850 hPa rüzgârı", "850 hPa rüzgârı | Günlük en yüksek hız", "km/sa"),
+    )
+    try:
+        chart_data = _prepare_comparison_chart_data(current_run_id, payload, previous_runs)
+        series = chart_data["series"]
+        dates = chart_data["dates"]
+        legend = _comparison_legend_handles(series, chart_data["colors"])
+        for metric, label, title, ylabel in specifications:
+            fig, axis = plt.subplots(1, 1, figsize=(17, 5.8))
+            try:
+                fig.suptitle(
+                    f"İSTANBUL GFS | {label.upper()} · SON {len(series)} DÖNGÜ",
+                    fontsize=17, fontweight="bold", y=0.98,
+                )
+                if metric == "temperature":
+                    _draw_comparison_temperature_axis(axis, chart_data)
+                elif metric == "precipitation":
+                    _draw_comparison_bar_axis(axis, chart_data, "precip", title, ylabel)
+                elif metric == "wind_10m":
+                    _draw_comparison_bar_axis(axis, chart_data, "wind", title, ylabel)
+                else:
+                    _draw_comparison_bar_axis(axis, chart_data, "wind_850", title, ylabel)
+                axis.legend(handles=legend, loc="upper left", ncol=min(4, len(series)), fontsize=8, frameon=False)
+                _format_comparison_date_axis(axis, dates)
+                axis.tick_params(axis="x", labelbottom=True)
+                fig.text(
+                    0.01, 0.012,
+                    "Renkler her panelde aynı GFS döngüsünü gösterir | Kaynak: NOAA/NCEP GFS 0.25°",
+                    fontsize=8, color="#555555",
+                )
+                fig.tight_layout(rect=(0, 0.06, 1, 0.90))
+                buffer = io.BytesIO()
+                fig.savefig(buffer, format="png", dpi=150, bbox_inches="tight")
+                buffer.seek(0)
+                charts[metric] = buffer
+            finally:
+                plt.close(fig)
+        print("[PAGES GÖRSELLERİ] Dört ayrı karşılaştırma görseli hazırlandı: " + ", ".join(charts))
+        return charts
+    except Exception as exc:
+        for buffer in charts.values():
+            buffer.close()
+        print(f"[PAGES GÖRSELLERİ HATA] Ayrı görseller oluşturulamadı: {exc}")
+        return {}
 
 async def send_telegram_photo(photo, caption, max_attempts=3):
     if not TELEGRAM_TOKEN or not CHAT_ID:
@@ -2493,9 +2600,28 @@ async def process_gfs_update(strict=False, target_run_id=None):
     # Compare the current cycle with the exact three prior six-hour cycles.
     # Missing history is fetched from NOAA in read-only mode; DB/JSON state is untouched.
     chart_buffer = None
-    notification_image_path = None
+    pages_chart_buffers = {}
+    notification_images = []
     try:
         comparison_runs = await load_previous_three_runs_for_comparison(run_id)
+    except Exception as exc:
+        comparison_runs = []
+        print(f"[KIYAS VERİSİ HATA] Önceki döngüler yüklenemedi: {exc}")
+
+    # Pages receives four independent images; Telegram keeps one composite image.
+    try:
+        pages_chart_buffers = create_pages_comparison_charts(run_id, payload, comparison_runs)
+        if pages_chart_buffers:
+            notification_images = await asyncio.to_thread(
+                save_public_notification_images, run_id, pages_chart_buffers
+            )
+    except Exception as media_exc:
+        print(f"[PAGES GÖRSEL ARŞİV HATASI] {media_exc}")
+    finally:
+        for image_buffer in pages_chart_buffers.values():
+            image_buffer.close()
+
+    try:
         chart_buffer = create_comparison_chart(run_id, payload, comparison_runs)
         if chart_buffer:
             ordered_run_ids = sorted(
@@ -2510,22 +2636,15 @@ async def process_gfs_update(strict=False, target_run_id=None):
                     f"{comparison_utc:%H}Z ({comparison_local:%d.%m} TSİ)"
                 )
             caption = (
-                "📊 İstanbul GFS | Dört döngü karşılaştırması\n"
+                "📊 İstanbul GFS | Dört döngü karşılaştırması\\n"
                 "Eski → yeni: " + " → ".join(cycle_labels)
             )
-            try:
-                notification_image_path = await asyncio.to_thread(
-                    save_public_notification_image, run_id, chart_buffer
-                )
-            except Exception as media_exc:
-                print(f"[WEB GÖRSEL ARŞİV HATASI] {media_exc}")
             await send_telegram_photo(chart_buffer, caption)
     except Exception as exc:
         print(f"[KIYAS GÖRSELİ GÖNDERİM HATASI] {exc}")
     finally:
         if chart_buffer:
             chart_buffer.close()
-
     audio_file = await audio_task
     try:
         await asyncio.to_thread(
@@ -2533,8 +2652,9 @@ async def process_gfs_update(strict=False, target_run_id=None):
             run_id,
             full_text_report,
             speech_text,
-            notification_image_path,
+            None,
             audio_file,
+            notification_images,
         )
     except Exception as media_exc:
         print(f"[WEB NOTIFICATION HATA] Rapor Pages akışına yazılamadı: {media_exc}")
