@@ -149,6 +149,31 @@ def run_offline_tests() -> None:
         ]
         assert all(len(item["forecast_6_hourly"]) == 55 for item in history)
 
+    # The public comparison feed must contain the latest four complete runs.
+    import json
+    import tempfile
+    from datetime import timedelta
+    with tempfile.TemporaryDirectory() as temp_dir:
+        archive_dir = Path(temp_dir)
+        base = datetime(2026, 10, 30, tzinfo=timezone.utc)
+        for offset in (0, 12, 24, 36, 48):
+            run_dt = base + timedelta(hours=offset)
+            archived = dict(document)
+            archived["run_id_utc"] = run_dt.isoformat(timespec="seconds")
+            (archive_dir / (run_dt.strftime("%Y%m%dT%HZ") + ".json")).write_text(
+                json.dumps(archived), encoding="utf-8"
+            )
+        (archive_dir / "20261031T18Z.json").write_text("{broken", encoding="utf-8")
+        history = load_comparison_runs(archive_dir, limit=4)
+        assert len(history) == 4, len(history)
+        assert [item["run_id_utc"] for item in history] == [
+            "2026-10-31T00:00:00+00:00",
+            "2026-10-31T12:00:00+00:00",
+            "2026-11-01T00:00:00+00:00",
+            "2026-11-01T12:00:00+00:00",
+        ]
+        assert all(len(item["forecast_6_hourly"]) == 55 for item in history)
+
     print("[ECMWF OFFLINE SMOKE] 55 steps, HRES/ENS source split, surface spread null semantics, units and fail-closed checks passed.")
 
 

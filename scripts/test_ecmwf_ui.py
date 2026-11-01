@@ -63,6 +63,9 @@ def main() -> None:
     if "ecmwf-comparison-wind10-chart" not in ecmwf or "ecmwf-comparison-wind850-chart" not in ecmwf:
         raise AssertionError("Missing separate 10m/850hPa ECMWF comparison cards.")
 
+    if "ecmwf-comparison-wind10-chart" not in ecmwf or "ecmwf-comparison-wind850-chart" not in ecmwf:
+        raise AssertionError("Missing separate 10m/850hPa ECMWF comparison cards.")
+
     if "ecmwf-wind-chart" in html or "ecmwf-forecast-table" in html:
         raise AssertionError("Legacy ECMWF-only layout remains in the website.")
 
