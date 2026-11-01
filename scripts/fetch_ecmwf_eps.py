@@ -292,7 +292,7 @@ def _fetch_cycle(client, run_dt: datetime) -> dict:
         return document
 
 
-def fetch_latest_document() -> dict:
+def fetch_latest_document(skip_if_run_id: str | None = None) -> dict | None:
     from ecmwf.opendata import Client
 
     source_errors = []
@@ -300,7 +300,13 @@ def fetch_latest_document() -> dict:
         try:
             client = Client(source=source, model="ifs", resol="0p25")
             run_dt = _latest_available_run(client)
-            print(f"[ECMWF] Latest complete EPS 180h cycle: {run_dt.isoformat()} source={source}")
+            run_id = run_dt.isoformat(timespec="seconds")
+            print(f"[ECMWF] Latest complete EPS 180h cycle: {run_id} source={source}")
+            # Querying cycle metadata is cheap. Do not download the same 55-step
+            # ensemble GRIB package again when the already-published run is current.
+            if skip_if_run_id and run_id == skip_if_run_id:
+                print(f"[ECMWF CACHE HIT] {run_id} already published; skipping GRIB retrieval.")
+                return None
             document = _fetch_cycle(client, run_dt)
             document["retrieval_source"] = source
             print(
@@ -325,16 +331,17 @@ def main() -> None:
     output_dir = Path(args.output_dir)
     output_dir.mkdir(parents=True, exist_ok=True)
     latest_path = output_dir / "latest.json"
-
-    document = fetch_latest_document()
+    previous = {}
     if latest_path.is_file() and not args.force:
         try:
             previous = json.loads(latest_path.read_text(encoding="utf-8"))
         except (OSError, ValueError):
             previous = {}
-        if previous.get("run_id_utc") == document["run_id_utc"]:
-            print(f"[ECMWF UNCHANGED] {document['run_id_utc']} already published; no rewrite.")
-            return
+    skip_if_run_id = None if args.force else previous.get("run_id_utc")
+
+    document = fetch_latest_document(skip_if_run_id=skip_if_run_id)
+    if document is None:
+        return
 
     run_key = datetime.fromisoformat(document["run_id_utc"]).strftime("%Y%m%dT%HZ")
     archive_dir = output_dir / "runs"
