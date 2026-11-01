@@ -43,10 +43,7 @@ def main() -> None:
     panel_bg = constant("GFS_REPORT_PANEL_BG")
     text = constant("GFS_REPORT_TEXT")
     muted = constant("GFS_REPORT_MUTED")
-    palette_match = re.search(
-        r'colors\s*=\s*\[(#[0-9A-Fa-f]{6}(?:\s*,\s*#[0-9A-Fa-f]{6}){3})\]',
-        SOURCE,
-    )
+    palette_match = re.search(r'colors\s*=\s*\[([^\]]+)\]', SOURCE)
     if not palette_match:
         raise AssertionError("Four distinct GFS cycle accent colors are missing.")
     palette = re.findall(r"#[0-9A-Fa-f]{6}", palette_match.group(1))
