@@ -263,10 +263,64 @@
         return '<article class="day"><div class="day-name">'+esc(day)+'</div><div class="day-icon">'+symbolFor(rain)+'</div><div class="day-range">'+fmt(item.temperature_max_c,0)+'° <span>'+fmt(item.temperature_min_c,0)+'°</span></div><div class="day-rain">☂ '+fmt(rain,1)+' mm</div><div class="day-wind">↗ '+fmt(item.wind_speed_max_10m_kmh,0)+' km/sa</div></article>';
       }).join("");
     }
-    function renderFindings(findings){
+    function pressureRegionName(latitude,longitude){
+      const lat=Number(latitude),lon=Number(longitude);
+      if(lat>=50&&lat<=53&&lon>=22&&lon<=29)return "Kuzeybatı Ukrayna (Volın bölgesi)";
+      if(lat>=44&&lat<=46.5&&lon>=32.2&&lon<=37)return "Kırım Yarımadası, Ukrayna";
+      if(lat>=43.6&&lat<=48.3&&lon>=20.2&&lon<=29.7)return "Romanya";
+      if(lat>=41.2&&lat<=44.2&&lon>=22.3&&lon<=28.2)return "Bulgaristan, Balkanlar";
+      if(lat>=43&&lat<=49.2&&lon>=37&&lon<=48.5)return "Güney Rusya (Rostov ve Krasnodar çevresi)";
+      if(lat>=35&&lat<=41&&lon>=19&&lon<23)return "Batı Yunanistan ve İyon Denizi açıkları";
+      if(lat>=39&&lat<=41.8&&lon>=20&&lon<=26.6)return "Kuzeydoğu Yunanistan (Trakya ve Makedonya)";
+      if(lat>=35&&lat<39&&lon>=23&&lon<=28.5)return "Doğu Yunanistan ve Kuzey Ege";
+      if(lat>=40.5&&lat<=47.5&&lon>=27&&lon<=42.5)return lon<33?"Batı Karadeniz":lon<37?"Orta Karadeniz":"Doğu Karadeniz";
+      if(lat>=40&&lat<=42.3&&lon>=26&&lon<=30.5)return "Marmara ve Trakya, Türkiye";
+      if(lat>=36.5&&lat<=40&&lon>=26&&lon<=30)return "Ege Bölgesi, Türkiye";
+      if(lat>=37&&lat<=40.8&&lon>=30&&lon<=36.5)return "İç Anadolu, Türkiye";
+      if(lat>=30&&lat<36.5&&lon>=27&&lon<=37.5)return "Doğu Akdeniz";
+      if(lat>=39&&lat<=46&&lon>=13&&lon<=20)return "Adriyatik Denizi ve Batı Balkan kıyıları";
+      if(lat>=45&&lon<32)return "Doğu Avrupa (Romanya-Ukrayna çevresi)";
+      return "İstanbul çevresindeki bölgesel analiz alanı";
+    }
+    function pressureRelativeToIstanbul(latitude,longitude){
+      const rad=value=>value*Math.PI/180;
+      const lat1=rad(41.014),lat2=rad(Number(latitude));
+      const dLat=lat2-lat1,dLon=rad(((Number(longitude)-28.95+180)%360+360)%360-180);
+      const h=Math.sin(dLat/2)**2+Math.cos(lat1)*Math.cos(lat2)*Math.sin(dLon/2)**2;
+      const distance=6371*2*Math.asin(Math.sqrt(Math.max(0,Math.min(1,h))));
+      const bearing=(Math.atan2(Math.sin(dLon)*Math.cos(lat2),Math.cos(lat1)*Math.sin(lat2)-Math.sin(lat1)*Math.cos(lat2)*Math.cos(dLon))*180/Math.PI+360)%360;
+      const directions=["kuzey","kuzeydoğu","doğu","güneydoğu","güney","güneybatı","batı","kuzeybatı"];
+      return distance<50?"İstanbul'un yakın çevresinde":"İstanbul'un yaklaşık "+Math.round(distance)+" km "+directions[Math.floor((bearing+22.5)/45)%8]+" yönünde";
+    }
+    function readablePressureFinding(value){
+      const match=String(value).match(/\\(\\s*(-?\\d+(?:\\.\\d+)?)°N\\s*,\\s*(-?\\d+(?:\\.\\d+)?)°E\\s*\\)/i);
+      if(!match)return {text:String(value),legacy:false};
+      const latitude=Number(match[1]),longitude=Number(match[2]);
+      const location=pressureRegionName(latitude,longitude);
+      const relative=pressureRelativeToIstanbul(latitude,longitude);
+      let text=String(value).replace(match[0],"— "+location+"; "+relative+".");
+      if(/^Yüksek basınç/i.test(text))text+=" Yüksek basınç çoğunlukla daha kararlı ve daha az bulutlu koşulları destekler.";
+      else if(/^Alçak basınç/i.test(text))text+=" Alçak basınç yükselici hava hareketini, bulutlanmayı ve yağış ihtimalini artırabilir.";
+      return {text,legacy:true};
+    }
+    function renderFindings(findings,istanbulPressure){
       const list=$("pressure-findings");
       if(!Array.isArray(findings)||!findings.length){list.innerHTML='<li class="pressure-empty">Bu tahmin döngüsü için bölgesel basınç yorumu bulunmuyor.</li>';return;}
-      list.innerHTML=findings.map(text=>'<li><span class="pressure-icon">◈</span><span>'+esc(text)+'</span></li>').join("");
+      const readable=findings.map(readablePressureFinding);
+      const items=readable.map(item=>item.text);
+      if(readable.some(item=>item.legacy)){
+        const pressureValues=items.map(text=>{const match=text.match(/(?:merkezi|değeri):\\s*(\\d+(?:\\.\\d+)?)\\s*hPa/i);return match?Number(match[1]):null;}).filter(value=>Number.isFinite(value));
+        let summary="";
+        if(typeof istanbulPressure==="number"&&Number.isFinite(istanbulPressure)){
+          summary="İstanbul'daki GFS başlangıç basıncı "+istanbulPressure.toFixed(1)+" hPa.";
+        }
+        if(pressureValues.length>=2){
+          summary+=(summary?" ":"")+"İncelenen bölgedeki en yüksek ve en düşük basınç arasındaki fark "+(Math.max(...pressureValues)-Math.min(...pressureValues)).toFixed(1)+" hPa.";
+        }
+        if(summary)items.push(summary);
+        items.push("Yüksek ve alçak basınç merkezleri bölgesel eğilimi gösterir; İstanbul'da yağış veya açık hava garantisi değildir. Etki, rüzgâr yönü ve cephelerin konumuyla belirlenir.");
+      }
+      list.innerHTML=items.map(text=>'<li><span class="pressure-icon">◈</span><span>'+esc(text)+'</span></li>').join("");
     }
     function renderChart(metric,targetId){
       const container=$(targetId);
@@ -443,7 +497,7 @@
         const age=(Date.now()-new Date(data.published_at_utc).getTime())/3600000;
       }
       if(data.forecast_valid_until_utc)$("valid-until").textContent="Son geçerlilik: "+new Intl.DateTimeFormat("tr-TR",{timeZone:"Europe/Istanbul",day:"2-digit",month:"2-digit"}).format(new Date(data.forecast_valid_until_utc));
-      renderDaily(data.daily_summary);renderFindings(data.regional_pressure_analysis&&data.regional_pressure_analysis.findings);renderCharts();
+      renderDaily(data.daily_summary);renderFindings(data.regional_pressure_analysis&&data.regional_pressure_analysis.findings,data.current_conditions&&data.current_conditions.mean_sea_level_pressure_hpa);renderCharts();
     }
     async function loadForecast(){
       try{
