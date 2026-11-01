@@ -394,6 +394,7 @@ def export_public_forecast_json(run_id, payload, update_latest=True):
             "valid_time_istanbul": local_dt.isoformat(timespec="minutes"),
             "temperature_2m_c": values.get("temp"),
             "wind_speed_10m_kmh": values.get("wind"),
+            "wind_direction_10m_deg": values.get("wind_direction_deg"),
             "wind_speed_850hpa_kmh": values.get("wind_850"),
             "precipitation_6h_mm": values.get("precip"),
         })
@@ -1719,11 +1720,14 @@ def fetch_full_weather_data(run_id):
             }
             wind_kmh = {}
             wind_850_kmh = {}
+            wind_direction_deg = {}
             for name in points:
                 u_value = wind_u.get(name)
                 v_value = wind_v.get(name)
                 if u_value is not None and v_value is not None:
                     wind_kmh[name] = math.hypot(float(u_value), float(v_value)) * 3.6
+                    # Meteorological direction: compass direction the wind comes FROM.
+                    wind_direction_deg[name] = (math.degrees(math.atan2(-float(u_value), -float(v_value))) + 360.0) % 360.0
                 u850_value = wind_850_u.get(name)
                 v850_value = wind_850_v.get(name)
                 if u850_value is not None and v850_value is not None:
@@ -1774,6 +1778,7 @@ def fetch_full_weather_data(run_id):
                 "temp": istanbul_temp,
                 "wind": istanbul_wind,
                 "wind_850": istanbul_wind_850,
+                "wind_direction_deg": round(wind_direction_deg["Istanbul"], 1) if "Istanbul" in wind_direction_deg else None,
                 # A 06Z/12Z/18Z run has no precipitation interval before its
                 # own initialization; do not compare that lead-0 placeholder.
                 "precip": None if lead == 0 else istanbul_precip,

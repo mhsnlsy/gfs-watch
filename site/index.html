@@ -339,6 +339,31 @@
     .station-switch button.active{background:rgba(125,211,215,.15);border-color:rgba(125,211,215,.32);color:#d8fbf3}
     .station-switch button:focus-visible{outline:2px solid var(--cyan);outline-offset:2px}
     @media(max-width:560px){.station-switch{margin-top:9px}.station-switch button{padding:6px 9px;font-size:9px}}
+.dashboard-top{display:grid;grid-template-columns:minmax(320px,.78fr) minmax(0,1.22fr);gap:14px;align-items:start;padding:20px 0 18px}
+.dashboard-left{display:grid;gap:10px;min-width:0;align-content:start}
+.dashboard-left .station-card{width:100%;max-width:none;justify-self:stretch;min-height:0}
+.dashboard-left .history-panel{margin:0;padding:12px}
+.dashboard-left .history-panel-head{margin-bottom:8px}
+.dashboard-left .history-panel-head h2{font-size:17px}
+.dashboard-left .history-charts{grid-template-columns:minmax(0,1fr);gap:7px}
+.dashboard-left .history-chart-card{padding:8px 9px 6px}
+.dashboard-left .history-chart{height:92px;margin-top:2px}
+.dashboard-left .history-chart-head h3{font-size:12px}
+.dashboard-left .history-chart-head p,.dashboard-left .history-chart-meta,.dashboard-left .history-source-note{font-size:8px}
+.next-72h-panel{min-width:0;padding:15px;background:linear-gradient(145deg,rgba(18,43,61,.94),rgba(12,31,46,.96));border:1px solid var(--line);border-radius:20px}
+.next-72h-head{display:flex;justify-content:space-between;align-items:flex-start;gap:10px;margin-bottom:12px}
+.next-72h-head h2{font-size:20px;margin-top:5px}
+.next-72h-head p{font-size:9px;color:var(--muted);margin:5px 0 0}
+.next-72h-badge{font-size:9px;color:#b8d7df;border:1px solid var(--line);padding:6px 8px;border-radius:8px;white-space:nowrap}
+.next-72h-grid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:9px}
+.next-72h-card{position:relative;min-width:0;padding:9px 9px 7px;border:1px solid rgba(204,225,239,.08);border-radius:12px;background:rgba(4,19,29,.17)}
+.next-72h-card-head{display:flex;align-items:center;justify-content:space-between;gap:8px}
+.next-72h-card-head h3{font:700 12px Manrope,sans-serif;margin:0}
+.next-72h-card-head span{font-size:8px;color:var(--muted)}
+.next-72h-chart{height:138px;width:100%;margin-top:4px;min-width:0}
+.next-72h-chart svg{display:block;width:100%;height:100%;overflow:visible}
+@media(max-width:900px){.dashboard-top{grid-template-columns:minmax(0,1fr)}.dashboard-left{display:contents}.dashboard-left .station-card{order:0}.next-72h-panel{order:1}.dashboard-left .history-panel{order:2}}
+@media(max-width:560px){.dashboard-top{gap:10px;padding:16px 0 12px}.dashboard-left .history-chart{height:88px}.next-72h-panel{padding:11px;border-radius:16px}.next-72h-head h2{font-size:18px}.next-72h-grid{gap:7px}.next-72h-card{padding:8px 6px 6px}.next-72h-card-head h3{font-size:11px}.next-72h-chart{height:120px}}
 </style>
 </head>
 <body>
@@ -348,7 +373,8 @@
     <div class="top-right"><div class="model-picker" role="group" aria-label="Tahmin modeli"><button type="button" id="model-gfs-button" class="active" aria-pressed="true">GFS</button><button type="button" id="model-ecmwf-button" aria-pressed="false">ECMWF IFS</button></div><span class="version">GFS Watch · v3.0.0</span></div>
   </header>
   <main class="shell">
-    <section class="dashboard-top" aria-label="Gerçek istasyon gözlemleri ve son 24 saatlik trendler">
+    <section class="dashboard-top" aria-label="İstanbul anlık gözlem, geçmiş ve 72 saatlik tahmin">
+      <div class="dashboard-left">
       <article class="weather-card station-card" role="region" aria-labelledby="station-card-title">
         <div class="weather-top"><div><div class="label">GERÇEK İSTASYON GÖZLEMİ</div><div class="place" id="station-card-title">ENKA Balmumcu · İstanbul</div></div><span class="model-state" id="freshness">Veri bekleniyor</span></div>
         <div class="station-switch" role="group" aria-label="İstasyon seçimi">
@@ -366,6 +392,16 @@
           <article class="history-chart-card"><div class="history-chart-head"><div><h3>Yağış</h3><p>mm · 30 dk örneklerle birikim</p></div><span class="history-chart-icon">☂</span></div><div class="history-chart" id="station-rain-trend"><div class="station-trend-empty">Yağış geçmişi oluşturuluyor…</div></div><div class="history-chart-meta" id="station-rain-meta">Günlük sayaçtan türetilen birikim; saatlik yağış değildir</div></article>
         </div>
         <div class="history-source-note" id="history-source-note">Grafikler seçili istasyonun kendi gözlem arşivini kullanır.</div>
+      </section>
+      </div>
+      <section class="next-72h-panel" id="next-72h-panel" aria-label="Önümüzdeki 72 saatlik hava tahmini">
+        <div class="next-72h-head"><div><div class="section-kicker">GFS · İSTANBUL</div><h2>Önümüzdeki 72 saat</h2><p>3 saatlik tahmin adımları · aynı zaman ekseni</p></div><span class="next-72h-badge" id="next-72h-meta">Model verisi bekleniyor</span></div>
+        <div class="next-72h-grid">
+          <article class="next-72h-card"><div class="next-72h-card-head"><h3>Sıcaklık</h3><span>°C</span></div><div class="next-72h-chart" id="next72-temperature"><div class="chart-empty">Tahmin bekleniyor…</div></div></article>
+          <article class="next-72h-card"><div class="next-72h-card-head"><h3>Yağış</h3><span>mm / 3 saat</span></div><div class="next-72h-chart" id="next72-precipitation"><div class="chart-empty">Tahmin bekleniyor…</div></div></article>
+          <article class="next-72h-card"><div class="next-72h-card-head"><h3>Rüzgâr hızı</h3><span>km/sa</span></div><div class="next-72h-chart" id="next72-wind-speed"><div class="chart-empty">Tahmin bekleniyor…</div></div></article>
+          <article class="next-72h-card"><div class="next-72h-card-head"><h3>Rüzgâr yönü</h3><span>pusula yönü</span></div><div class="next-72h-chart" id="next72-wind-direction"><div class="chart-empty">Yön verisi bekleniyor…</div></div></article>
+        </div>
       </section>
     </section>
     <div id="gfs-model-view">
@@ -732,6 +768,39 @@
       const svg=container.querySelector("svg");
       attachForecastChartTooltip(container,svg,coords,temperature,width,height,top,bottom);
     }
+    function windCompassLabel(degrees){
+      if(!numeric(degrees))return "Yön verisi yok";
+      const names=["K","K-KD","KD","D-KD","D","D-GD","GD","G-GD","G","G-GB","GB","B-GB","B","B-KB","KB","K-KB"];
+      return names[Math.round((((degrees%360)+360)%360)/22.5)%16];
+    }
+    function renderNext72Hours(){
+      const meta=$("next-72h-meta"),points=forecastData&&Array.isArray(forecastData.forecast_6_hourly)?forecastData.forecast_6_hourly:[];
+      const hourly=points.map(p=>({...p,lead:Number(p.forecast_hour)})).filter(p=>Number.isFinite(p.lead)&&p.lead>=0&&p.lead<=72).sort((a,b)=>a.lead-b.lead),endpoints=hourly.filter(p=>p.lead%3===0);
+      if(endpoints.length<2){["next72-temperature","next72-precipitation","next72-wind-speed","next72-wind-direction"].forEach(id=>$(id).innerHTML='<div class="chart-empty">72 saatlik tahmin verisi bekleniyor…</div>');if(meta)meta.textContent="Tahmin verisi eksik";return;}
+      const temperature=endpoints.filter(p=>numeric(p.temperature_2m_c)).map(p=>({lead:p.lead,time:p.valid_time_utc,value:p.temperature_2m_c,label:fmt(p.temperature_2m_c,1)+" °C"}));
+      const wind=endpoints.filter(p=>numeric(p.wind_speed_10m_kmh)).map(p=>({lead:p.lead,time:p.valid_time_utc,value:p.wind_speed_10m_kmh,label:fmt(p.wind_speed_10m_kmh,1)+" km/sa"}));
+      const rain=[];endpoints.filter(p=>p.lead>0).forEach(p=>{const interval=hourly.filter(q=>q.lead>p.lead-3&&q.lead<=p.lead);if(interval.length!==3||interval.some(q=>!numeric(q.precipitation_6h_mm)))return;const amount=interval.reduce((sum,q)=>sum+q.precipitation_6h_mm,0);rain.push({lead:p.lead,time:p.valid_time_utc,value:amount,label:fmt(amount,2)+" mm / 3 saat"});});
+      const direction=endpoints.filter(p=>numeric(p.wind_direction_10m_deg)).map(p=>({lead:p.lead,time:p.valid_time_utc,value:p.wind_direction_10m_deg,label:windCompassLabel(p.wind_direction_10m_deg),detail:fmt(p.wind_direction_10m_deg,0)+"°"}));
+      if(meta)meta.textContent="GFS döngüsü · "+timeTR(forecastData.run_id_utc)+" TSİ · 3 saatlik adımlar";
+      drawNext72Line("next72-temperature",temperature,"#7dd3d7","Sıcaklık °C");drawNext72Line("next72-precipitation",rain,"#83c9eb","Yağış mm");drawNext72Line("next72-wind-speed",wind,"#e6bd83","Rüzgâr km/sa");drawNext72Direction("next72-wind-direction",direction);
+    }
+    function drawNext72Line(targetId,data,color,label){
+      const holder=$(targetId);if(data.length<2){holder.innerHTML='<div class="chart-empty">Bu değişken için yeterli tahmin noktası yok.</div>';return;}
+      const width=520,height=150,left=34,right=10,top=12,bottom=26,pw=width-left-right,ph=height-top-bottom,values=data.map(p=>p.value),minimum=Math.min(0,...values),maximum=Math.max(...values),span=(maximum-minimum)||1,low=label.startsWith("Yağış")?0:minimum-span*.13,high=maximum+span*.13;
+      const x=lead=>left+lead/72*pw,y=value=>top+(high-value)/(high-low)*ph,coords=data.map(p=>({x:x(p.lead),y:y(p.value),time:p.time,valueLabel:p.label,detail:"Tahmin adımı: +"+p.lead+" saat"})),path=coords.map((p,i)=>(i?"L":"M")+p.x.toFixed(1)+" "+p.y.toFixed(1)).join(" ");
+      const grid=[0,1,2].map(i=>{const value=low+(high-low)*i/2,yy=y(value);return '<line x1="'+left+'" y1="'+yy+'" x2="'+(width-right)+'" y2="'+yy+'" stroke="rgba(190,218,228,.14)" stroke-dasharray="3 5"/><text x="'+(left-6)+'" y="'+(yy+3)+'" fill="#91a9b8" font-size="9" text-anchor="end">'+fmt(value,label.startsWith("Yağış")?1:0)+'</text>';}).join("");
+      const ticks=[0,12,24,36,48,60,72].map(hour=>'<text x="'+x(hour)+'" y="'+(height-7)+'" fill="#91a9b8" font-size="9" text-anchor="middle">'+(hour===0?"Şimdi":"+"+hour+"s")+'</text>').join(""),dots=coords.map(p=>'<circle cx="'+p.x+'" cy="'+p.y+'" r="2.5" fill="'+color+'"/>').join("");
+      holder.innerHTML='<svg viewBox="0 0 '+width+' '+height+'" role="img" aria-label="Önümüzdeki 72 saat '+esc(label)+' tahmini">'+grid+'<path d="'+path+'" fill="none" stroke="'+color+'" stroke-width="2.7" stroke-linecap="round" stroke-linejoin="round"/>'+dots+ticks+'</svg>';
+      if(typeof document!=="undefined")attachStationHistoryTooltip(holder,holder.querySelector("svg"),coords,width,height,top,bottom,color);
+    }
+    function drawNext72Direction(targetId,data){
+      const holder=$(targetId);if(data.length<2){holder.innerHTML='<div class="chart-empty">Rüzgâr yönü için GFS U/V bileşenleri bekleniyor.</div>';return;}
+      const width=520,height=150,left=34,right=10,top=22,bottom=26,pw=width-left-right,x=lead=>left+lead/72*pw,center=75,coords=data.map(p=>({x:x(p.lead),y:center,time:p.time,valueLabel:p.label+" rüzgârı",detail:p.detail+" · Tahmin adımı +"+p.lead+" saat"}));
+      const grid=[0,12,24,36,48,60,72].map(hour=>'<line x1="'+x(hour)+'" y1="'+top+'" x2="'+x(hour)+'" y2="'+(height-bottom)+'" stroke="rgba(190,218,228,.12)" stroke-dasharray="3 5"/><text x="'+x(hour)+'" y="'+(height-7)+'" fill="#91a9b8" font-size="9" text-anchor="middle">'+(hour===0?"Şimdi":"+"+hour+"s")+'</text>').join("");
+      const arrows=data.map(p=>'<g transform="translate('+x(p.lead).toFixed(1)+' '+center+') rotate('+p.value+')"><path d="M0 12 L0 -12 M0 -12 L-4 -5 M0 -12 L4 -5" stroke="#c4d9e6" stroke-width="2" stroke-linecap="round" fill="none"/></g>').join(""),labels=data.filter((p,i)=>i%2===0).map(p=>'<text x="'+x(p.lead)+'" y="17" fill="#a9c4d0" font-size="9" text-anchor="middle">'+windCompassLabel(p.value)+'</text>').join("");
+      holder.innerHTML='<svg viewBox="0 0 '+width+' '+height+'" role="img" aria-label="Önümüzdeki 72 saat rüzgâr yönü tahmini">'+grid+labels+arrows+'</svg>';
+      if(typeof document!=="undefined")attachStationHistoryTooltip(holder,holder.querySelector("svg"),coords,width,height,top,bottom,"#c4d9e6");
+    }
     function renderCharts(){
       renderChart("temperature","temperature-chart");
       renderChart("precipitation","precipitation-chart");
@@ -877,6 +946,7 @@
 
     function render(data){
       forecastData=data;
+      renderNext72Hours();
       renderStationCard(activeStation==="enka"?enkaStationObservation:eyupsultanStationObservation);
       if(data.run_id_utc)$("cycle-chip").textContent="GFS döngüsü · "+timeTR(data.run_id_utc);
       if(data.published_at_utc){
