@@ -1,0 +1,26 @@
+name: Inspect WStatMap station page
+
+on:
+  pull_request:
+    paths:
+      - "scripts/inspect_wstatmap_station.mjs"
+      - ".github/workflows/wstatmap-inspect.yml"
+
+permissions:
+  contents: read
+
+jobs:
+  inspect:
+    runs-on: ubuntu-latest
+    timeout-minutes: 8
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "22"
+      - name: Install Playwright
+        run: |
+          npm install --no-save playwright
+          npx playwright install --with-deps chromium
+      - name: Inspect rendered station page and its public requests
+        run: node scripts/inspect_wstatmap_station.mjs
