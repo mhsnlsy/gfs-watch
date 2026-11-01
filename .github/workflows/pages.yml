@@ -255,6 +255,14 @@ jobs:
             exit 1
           fi
 
+      - name: Test station switching against the deployed live dashboard
+        env:
+          PAGES_URL: ${{ steps.deployment.outputs.page_url }}
+        run: |
+          google-chrome --version
+          npm install --no-save playwright
+          node scripts/test_live_station_history.mjs
+
       - name: Verify latest GFS report and every referenced Pages asset
         env:
           PAGE_URL: ${{ steps.deployment.outputs.page_url }}
