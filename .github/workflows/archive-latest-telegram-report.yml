@@ -1,11 +1,6 @@
 name: Backfill latest Pages charts with 850 hPa wind
 
 on:
-  push:
-    branches: [main]
-    paths:
-      - "scripts/archive_latest_telegram_report.py"
-      - ".github/workflows/archive-latest-telegram-report.yml"
   workflow_dispatch:
 
 permissions:
