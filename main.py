@@ -1622,7 +1622,7 @@ def fetch_full_weather_data(run_id):
         run_dt = _parse_utc_datetime(run_id)
         date_token = run_dt.strftime("%Y%m%d")
         cycle = run_dt.strftime("%H")
-        # Required native GRIB2 messages are fetched directly from NOAA's public S3 bucket.
+        # Required native GRIB2 messages are fetched from NOMADS, then the AWS S3 mirror.
         # Only retrieve the model grid cell nearest to the requested coordinate.
         # For 41.014N, 28.950E this is the GFS 0.25-degree node at 41.000N, 29.000E.
         points = {"Istanbul": (LAT, LON)}
@@ -2471,7 +2471,7 @@ async def process_gfs_update(strict=False, target_run_id=None):
     # succeeds, fetch the selected native GRIB2 messages by .idx byte ranges.
     # No weather API or NOMADS filtering endpoint is involved.
     print(
-        f"[NOAA TRIGGER] {run_id} +180 dosyası NOAA S3'te hazır; "
+        f"[NOAA TRIGGER] {run_id} +180 dosyası NOAA {metadata.get('source_name', 'kaynağında')} üzerinde hazır; "
         "gerekli GRIB2 mesajları önce NOMADS, gerekirse AWS S3 üzerinden byte-range ile alınıyor."
     )
 
