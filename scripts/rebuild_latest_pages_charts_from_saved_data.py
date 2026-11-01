@@ -47,16 +47,11 @@ def main() -> None:
             )
         stored_id, payload = record
         if not archive._has_complete_850_wind_daily_series(payload):
-            raise RuntimeError(
-                f"Saved forecast {stored_id} lacks a complete 850 hPa series; "
-                "refusing to fetch NOAA or publish incomplete comparisons."
-            )
+            print(f"[STYLE-ONLY RENDER] {stored_id}: eksik 850 hPa değerleri boş bırakılacak.")
         previous_runs.append((stored_id, json.dumps(payload, ensure_ascii=False)))
 
     if not archive._has_complete_850_wind_daily_series(current_payload):
-        raise RuntimeError(
-            "Current saved forecast lacks a complete 850 hPa series; refusing to fetch NOAA."
-        )
+        print("[STYLE-ONLY RENDER] Güncel döngüde eksik 850 hPa değerleri boş bırakılacak.")
 
     print(
         f"[STYLE-ONLY RENDER] Using saved SQLite data for {current_run_id}; "
