@@ -167,6 +167,31 @@
       .station-card .stat .value{font-size:12px}
       .station-card .stat .detail{font-size:7px}
     }
+
+    /* Station card: subtly wider proportions, clearer 24-hour trend, larger live metrics. */
+    .station-card{width:min(100%,470px)}
+    .station-overview{grid-template-columns:minmax(0,1fr) minmax(178px,188px);gap:14px}
+    .station-trend-title{font-size:9px;letter-spacing:.09em}
+    .station-trend-unit{font-size:9px;padding:3px 6px;border:1px solid rgba(125,211,215,.18);border-radius:999px}
+    .station-trend-chart-wrap{aspect-ratio:1.22/1;border-radius:12px;background:linear-gradient(145deg,rgba(5,20,31,.42),rgba(5,20,31,.16))}
+    .station-trend-graph svg{width:100%;height:100%;display:block}
+    .station-trend-source{font-size:9px;margin-top:5px}
+    .station-card .stat .name{font-size:9px}
+    .station-card .stat .value{font-size:16px}
+    .station-card .stat .unit{font-size:9px}
+    .station-card .stat .detail{font-size:9px}
+    @media(max-width:850px){.station-card{width:min(100%,480px)}}
+    @media(max-width:560px){
+      .station-overview{grid-template-columns:minmax(0,1fr) minmax(136px,42%);gap:9px;margin-top:9px}
+      .station-trend-chart-wrap{aspect-ratio:1.22/1;border-radius:9px}
+      .station-trend-title{font-size:8px}
+      .station-trend-unit{font-size:8px;padding:2px 5px}
+      .station-trend-source{font-size:8px}
+      .station-card .stat .name{font-size:9px}
+      .station-card .stat .value{font-size:14px}
+      .station-card .stat .unit{font-size:8px}
+      .station-card .stat .detail{font-size:8px}
+    }
   </style>
 </head>
 <body>
@@ -318,7 +343,7 @@
       let low=Math.floor(Math.min(...allValues)-0.5);
       let high=Math.ceil(Math.max(...allValues)+0.5);
       if(high-low<2){low-=0.5;high+=0.5;}
-      const width=196,height=196,left=29,right=8,top=11,bottom=25;
+      const width=244,height=200,left=36,right=10,top=15,bottom=29;
       const plotWidth=width-left-right,plotHeight=height-top-bottom;
       const xForTime=time=>left+((time-start)/windowMs)*plotWidth;
       const yFor=value=>top+((high-value)/(high-low))*plotHeight;
@@ -326,43 +351,56 @@
       const tickValues=[low,(low+high)/2,high];
       const horizontalGrid=tickValues.map(value=>{
         const y=yFor(value);
-        return '<line x1="'+left+'" y1="'+y.toFixed(1)+'" x2="'+(width-right)+'" y2="'+y.toFixed(1)+'" stroke="rgba(190,218,228,.13)" stroke-dasharray="3 5"/><text x="'+(left-8)+'" y="'+(y+3).toFixed(1)+'" fill="#91a9b8" font-size="8" text-anchor="end">'+esc(fmt(value,1))+'</text>';
+        return '<line x1="'+left+'" y1="'+y.toFixed(1)+'" x2="'+(width-right)+'" y2="'+y.toFixed(1)+'" stroke="rgba(190,218,228,.17)" stroke-dasharray="3 5"/><text x="'+(left-9)+'" y="'+(y+3.5).toFixed(1)+'" fill="#a8bfca" font-size="10" text-anchor="end">'+esc(fmt(value,1))+'</text>';
       }).join("");
 
       const verticalGrid=bins.map((bin,index)=>{
         if(index%4!==0)return "";
         const x=xForTime(bin.start);
-        return '<line x1="'+x.toFixed(1)+'" y1="'+top+'" x2="'+x.toFixed(1)+'" y2="'+(height-bottom)+'" stroke="rgba(190,218,228,.12)" stroke-dasharray="2 5"/>';
+        return '<line x1="'+x.toFixed(1)+'" y1="'+top+'" x2="'+x.toFixed(1)+'" y2="'+(height-bottom)+'" stroke="rgba(190,218,228,.13)" stroke-dasharray="2 5"/>';
       }).join("");
 
-      let meanPath="";
-      let previousIndex=-2;
+      const groups=[];
       populated.forEach(bin=>{
-        const x=xForBin(bin);
-        const y=yFor(bin.mean);
-        meanPath+=(bin.index===previousIndex+1?" L ":" M ")+x.toFixed(1)+" "+y.toFixed(1);
-        previousIndex=bin.index;
+        const group=groups[groups.length-1];
+        if(!group||bin.index!==group[group.length-1].index+1)groups.push([bin]);
+        else group.push(bin);
       });
+      const meanPaths=groups.map(group=>group.map((bin,index)=>{
+        const x=xForBin(bin),y=yFor(bin.mean);
+        return (index?"L":"M")+x.toFixed(1)+" "+y.toFixed(1);
+      }).join(" ")).join(" ");
+      const areaPaths=groups.filter(group=>group.length>1).map(group=>{
+        const first=group[0],last=group[group.length-1];
+        const line=group.map((bin,index)=>{
+          const x=xForBin(bin),y=yFor(bin.mean);
+          return (index?"L":"M")+x.toFixed(1)+" "+y.toFixed(1);
+        }).join(" ");
+        return line+" L "+xForBin(last).toFixed(1)+" "+(height-bottom)+" L "+xForBin(first).toFixed(1)+" "+(height-bottom)+" Z";
+      }).join(" ");
+
       const ranges=populated.map(bin=>{
         const x=xForBin(bin);
         const yMin=yFor(bin.max),yMax=yFor(bin.min);
-        const cap=5;
-        return '<line x1="'+x.toFixed(1)+'" y1="'+yMin.toFixed(1)+'" x2="'+x.toFixed(1)+'" y2="'+yMax.toFixed(1)+'" stroke="rgba(125,211,215,.62)" stroke-width="3" stroke-linecap="round"/><line x1="'+(x-cap).toFixed(1)+'" y1="'+yMin.toFixed(1)+'" x2="'+(x+cap).toFixed(1)+'" y2="'+yMin.toFixed(1)+'" stroke="#b9e7df" stroke-width="1.5"/><line x1="'+(x-cap).toFixed(1)+'" y1="'+yMax.toFixed(1)+'" x2="'+(x+cap).toFixed(1)+'" y2="'+yMax.toFixed(1)+'" stroke="#b9e7df" stroke-width="1.5"/>';
+        const cap=4.5;
+        return '<line x1="'+x.toFixed(1)+'" y1="'+yMin.toFixed(1)+'" x2="'+x.toFixed(1)+'" y2="'+yMax.toFixed(1)+'" stroke="rgba(125,211,215,.68)" stroke-width="2.2" stroke-linecap="round"/><line x1="'+(x-cap).toFixed(1)+'" y1="'+yMin.toFixed(1)+'" x2="'+(x+cap).toFixed(1)+'" y2="'+yMin.toFixed(1)+'" stroke="#b9e7df" stroke-width="1.5" stroke-linecap="round"/><line x1="'+(x-cap).toFixed(1)+'" y1="'+yMax.toFixed(1)+'" x2="'+(x+cap).toFixed(1)+'" y2="'+yMax.toFixed(1)+'" stroke="#b9e7df" stroke-width="1.5" stroke-linecap="round"/>';
       }).join("");
       const meanPoints=populated.map(bin=>{
         const x=xForBin(bin),y=yFor(bin.mean);
-        return '<circle cx="'+x.toFixed(1)+'" cy="'+y.toFixed(1)+'" r="2.6" fill="#d9fff4" stroke="#1c5260" stroke-width="1.8"><title>'+esc(fmt(bin.mean,1))+' °C ortalama · '+bin.count+' kayıt · min '+esc(fmt(bin.min,1))+' °C · maks '+esc(fmt(bin.max,1))+' °C</title></circle>';
+        return '<circle cx="'+x.toFixed(1)+'" cy="'+y.toFixed(1)+'" r="3.1" fill="#e3fff7" stroke="#1c5260" stroke-width="1.7"><title>'+esc(fmt(bin.mean,1))+' °C ortalama · '+bin.count+' kayıt · min '+esc(fmt(bin.min,1))+' °C · maks '+esc(fmt(bin.max,1))+' °C</title></circle>';
       }).join("");
       const timeLabels=bins.map((bin,index)=>{
         if(index%4!==0&&index!==bins.length-1)return "";
         const x=xForTime(bin.start);
         const label=new Intl.DateTimeFormat("tr-TR",{timeZone:"Europe/Istanbul",hour:"2-digit",minute:"2-digit"}).format(new Date(bin.start));
-        return '<text x="'+x.toFixed(1)+'" y="'+(height-8)+'" fill="#91a9b8" font-size="11" text-anchor="middle">'+label+'</text>';
+        return '<text x="'+x.toFixed(1)+'" y="'+(height-8)+'" fill="#a8bfca" font-size="10" text-anchor="middle">'+label+'</text>';
       }).join("");
       const last=valid[valid.length-1];
-      const lastTime=new Intl.DateTimeFormat("tr-TR",{timeZone:"Europe/Istanbul",hour:"2-digit",minute:"2-digit"}).format(new Date(last.time));
+      const lastBin=populated[populated.length-1];
+      const lastX=xForBin(lastBin),lastY=yFor(lastBin.mean);
       const lastValue=fmt(last.temperature,1);
-      holder.innerHTML='<svg viewBox="0 0 '+width+' '+height+'" role="img" aria-label="Son 24 saat sıcaklık geçmişi; 90 dakikalık dilimlerde ortalama, minimum ve maksimum değerler"><defs><linearGradient id="station-trend-line" x1="0" x2="1" y1="0" y2="0"><stop offset="0%" stop-color="#6caeb7"/><stop offset="100%" stop-color="#a4e7d5"/></linearGradient></defs>'+verticalGrid+horizontalGrid+'<path d="'+meanPath+'" fill="none" stroke="url(#station-trend-line)" stroke-width="2.6" stroke-linecap="round" stroke-linejoin="round"/>'+ranges+meanPoints+timeLabels+'</svg>';
+      const latestMarker='<circle cx="'+lastX.toFixed(1)+'" cy="'+lastY.toFixed(1)+'" r="7" fill="rgba(164,231,213,.16)" stroke="#a4e7d5" stroke-width="1.2"/><circle cx="'+lastX.toFixed(1)+'" cy="'+lastY.toFixed(1)+'" r="3.2" fill="#f1fff9"/>';
+      holder.innerHTML='<svg viewBox="0 0 '+width+' '+height+'" role="img" aria-label="Son 24 saat sıcaklık geçmişi; 90 dakikalık dilimlerde ortalama, minimum ve maksimum değerler"><defs><linearGradient id="station-trend-line" x1="0" x2="1" y1="0" y2="0"><stop offset="0%" stop-color="#6caeb7"/><stop offset="100%" stop-color="#b8f0dd"/></linearGradient><linearGradient id="station-trend-area" x1="0" x2="0" y1="0" y2="1"><stop offset="0%" stop-color="#8edbd2" stop-opacity=".22"/><stop offset="100%" stop-color="#8edbd2" stop-opacity=".015"/></linearGradient></defs>'+verticalGrid+horizontalGrid+'<path d="'+areaPaths+'" fill="url(#station-trend-area)"/>'+ranges+'<path d="'+meanPaths+'" fill="none" stroke="url(#station-trend-line)" stroke-width="3.2" stroke-linecap="round" stroke-linejoin="round"/>'+meanPoints+latestMarker+timeLabels+'</svg>';
       if(meta)meta.textContent=valid.length+" kayıt · son ölçüm "+lastValue+" °C ("+lastTime+") · 90 dk ortalama / min–maks";
     }
     function render(data){
