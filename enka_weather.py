@@ -290,6 +290,11 @@ def update_temperature_history(observation):
             "logged_at_utc": logged_at.isoformat(timespec="seconds"),
             "observed_at_utc": observed_at,
             "temperature_2m_c": float(observation["temperature_2m_c"]),
+            "precipitation_daily_mm": (
+                float(observation["precipitation_daily_mm"])
+                if observation.get("precipitation_daily_mm") is not None
+                else None
+            ),
         })
 
     cutoff = logged_at.timestamp() - 7 * 24 * 60 * 60
@@ -301,6 +306,9 @@ def update_temperature_history(observation):
             ).timestamp()
             temperature = float(sample["temperature_2m_c"])
             if math.isfinite(temperature) and timestamp >= cutoff:
+                rain = sample.get("precipitation_daily_mm")
+                if rain is not None and not math.isfinite(float(rain)):
+                    sample["precipitation_daily_mm"] = None
                 retained.append(sample)
         except (KeyError, TypeError, ValueError, OverflowError):
             continue
