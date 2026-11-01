@@ -53,11 +53,20 @@ jobs:
           key: gfs-noaa-cache-v4-${{ github.run_id }}-${{ github.run_attempt }}
           restore-keys: |
             gfs-noaa-cache-v4-
-      - name: Restore GFS run history
+      - name: Restore GFS run and Pages notification history
         run: |
           git fetch origin gfs-watch-state
           if git cat-file -e origin/gfs-watch-state:gfs_watch.db 2>/dev/null; then
             git show origin/gfs-watch-state:gfs_watch.db > gfs_watch.db
+          fi
+          # Restore the existing manifest and its media before report generation.
+          # This lets each new run retain the previous four reports instead of
+          # replacing the website feed with a one-item manifest.
+          if git cat-file -e origin/gfs-watch-state:public/notifications/latest.json 2>/dev/null; then
+            git archive origin/gfs-watch-state public/notifications | tar -x -C .
+            echo "Previous Pages notification archive restored."
+          else
+            echo "No previous Pages notification archive exists; first report will create it."
           fi
       - name: Record latest processed GFS cycle
         run: |
@@ -127,12 +136,17 @@ jobs:
           fi
           cp gfs_watch.db "$RUNNER_TEMP/gfs_watch.db"
           mkdir -p "$RUNNER_TEMP/public"
-          if [ -d public ]; then
+          if [ "${{ steps.check-gfs.outcome }}" = "success" ] && [ -d public ]; then
             cp -a public/. "$RUNNER_TEMP/public/"
+          else
+            echo "Report step failed; keeping the previously published Pages forecast and notification archive."
           fi
           rm -rf public
           git checkout -B gfs-watch-state origin/gfs-watch-state
           mkdir -p public/runs
+          # Sync the report feed as a unit so retired media does not linger
+          # and the manifest/media set always describes the same four reports.
+          rm -rf public/notifications
           cp -a "$RUNNER_TEMP/public/." public/
           find public/runs -type f -name '*.json' -mtime +10 -delete
           cp "$RUNNER_TEMP/gfs_watch.db" gfs_watch.db
