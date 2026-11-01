@@ -68,8 +68,15 @@ def main() -> None:
     }
 
     wind_850 = payload.get("daily", {}).get("wind_850_max", [])
-    if not wind_850 or len(wind_850) != len(payload.get("daily", {}).get("time", [])):
-        raise RuntimeError("850 hPa daily wind series is missing or incomplete.")
+    if not archive._has_complete_850_wind_daily_series(payload):
+        raise RuntimeError(
+            "Current NOAA run has an incomplete 850 hPa daily wind series; "
+            "the Pages comparison will not publish a partial chart."
+        )
+    print(
+        f"[PAGES BACKFILL] Current cycle has {len(wind_850)} complete daily "
+        "850 hPa wind values."
+    )
 
     archive.export_public_forecast_json(target_run_id, payload)
     previous_runs = asyncio.run(
