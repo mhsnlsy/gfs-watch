@@ -743,20 +743,22 @@
       if(Number.isNaN(date.getTime()))return "Zaman bilgisi yok";
       return new Intl.DateTimeFormat("tr-TR",{timeZone:"Europe/Istanbul",dateStyle:"medium",timeStyle:"short"}).format(date);
     }
-    function notificationAsset(path){
+    function notificationAsset(path,cacheVersion){
       if(!path)return null;
-      return new URL("./data/notifications/"+path,window.location.href).href;
+      const url=new URL("./data/notifications/"+path,window.location.href);
+      if(cacheVersion)url.searchParams.set("v",String(cacheVersion));
+      return url.href;
     }
-    function renderNotifications(items){
+    function renderNotifications(items,cacheVersion){
       const list=$("notifications-list");
       if(!Array.isArray(items)||!items.length){
         list.innerHTML='<div class="chart-empty">Henüz yayınlanmış bir rapor bulunmuyor. Yeni model döngüsü tamamlandığında rapor burada görünecek.</div>';
         return;
       }
       list.innerHTML=items.map(item=>{
-        const legacyImage=notificationAsset(item.image_path);
+        const legacyImage=notificationAsset(item.image_path,cacheVersion);
         const imageItems=Array.isArray(item.images)&&item.images.length
-          ? item.images.filter(image=>image&&image.path).map(image=>({label:image.label||"GFS grafiği",url:notificationAsset(image.path)}))
+          ? item.images.filter(image=>image&&image.path).map(image=>({label:image.label||"GFS grafiği",url:notificationAsset(image.path,cacheVersion)}))
           : legacyImage?[{label:"Dört döngü karşılaştırması",url:legacyImage}]:[];
         const imagesHtml=imageItems.length
           ? '<div class="notification-images">'+imageItems.map(image=>
@@ -894,7 +896,7 @@
         const document=await response.json();
         if(document.schema!=="gfs-watch.notifications.v1"||!Array.isArray(document.items))throw new Error("Rapor arşivi biçimi geçersiz.");
         latestNotificationItems=document.items.slice(0,4);
-        renderNotifications(latestNotificationItems);
+        renderNotifications(latestNotificationItems,document.updated_at_utc||document.items[0]?.published_at_utc||Date.now());
         $("notification-status").textContent="Otomatik yenileme aktif · Son kontrol: "+new Intl.DateTimeFormat("tr-TR",{timeZone:"Europe/Istanbul",hour:"2-digit",minute:"2-digit"}).format(new Date());
       }catch(error){
         $("notifications-list").innerHTML='<div class="chart-empty">Rapor arşivi şu anda alınamıyor. Sayfa açıkken otomatik olarak yeniden denenecek.</div>';
