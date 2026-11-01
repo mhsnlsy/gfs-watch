@@ -399,6 +399,8 @@ def export_public_forecast_json(run_id, payload):
         "noaa_source_file": {
             "f180_available": model_metadata.get("noaa_f180_available", True),
             "f180_last_modified_utc": model_metadata.get("last_modified_time"),
+            "f180_source_name": model_metadata.get("source_name"),
+            "f180_source_url": model_metadata.get("source_url"),
             "global_grib2_size_bytes": model_metadata.get("source_object_size_bytes"),
         },
         "current_conditions": {
