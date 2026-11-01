@@ -4,6 +4,7 @@ on:
   workflow_dispatch:
 
 permissions:
+  actions: write
   contents: write
 
 concurrency:
@@ -82,3 +83,11 @@ jobs:
           done
           echo 'Could not publish refreshed Pages charts after three attempts.'
           exit 1
+
+      - name: Deploy refreshed notification archive to Pages
+        if: success()
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          gh workflow run pages.yml --ref main --repo "$GITHUB_REPOSITORY"
+          echo "Pages deployment queued for the refreshed notification archive."

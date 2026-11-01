@@ -10,6 +10,7 @@ on:
       - ".github/workflows/render-pages-charts-from-saved-data.yml"
 
 permissions:
+  actions: write
   contents: write
 
 concurrency:
@@ -86,3 +87,11 @@ jobs:
           git stash drop --quiet || true
           echo 'Could not publish chart images after three attempts.'
           exit 1
+
+      - name: Deploy refreshed notification archive to Pages
+        if: success()
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          gh workflow run pages.yml --ref main --repo "$GITHUB_REPOSITORY"
+          echo "Pages deployment queued for the refreshed notification archive."

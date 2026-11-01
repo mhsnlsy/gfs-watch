@@ -40,6 +40,17 @@ def main() -> None:
     assert "Live Pages serves" in pages_workflow
     assert "Pages notification media is missing" in pages_workflow
 
+    for workflow_name in (
+        "archive-latest-telegram-report.yml",
+        "render-pages-charts-from-saved-data.yml",
+        "backfill-850hpa-comparison.yml",
+    ):
+        workflow = (ROOT / ".github/workflows" / workflow_name).read_text(encoding="utf-8")
+        assert "actions: write" in workflow, f"{workflow_name} cannot dispatch Pages."
+        assert 'gh workflow run pages.yml --ref main --repo "$GITHUB_REPOSITORY"' in workflow, (
+            f"{workflow_name} must redeploy Pages after publishing notification files."
+        )
+
     print("[NOTIFICATION PIPELINE SMOKE] Pages-first publication, retry-on-failure, "
           "four-report archive restore and live JSON/media verification passed.")
 
