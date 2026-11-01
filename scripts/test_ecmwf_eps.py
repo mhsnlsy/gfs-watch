@@ -48,7 +48,16 @@ def run_offline_tests() -> None:
         "spread_v10": synthetic_series(steps, 1.0),
         "spread_tp": synthetic_series(steps, 0.0001),
     }
-    document = build_document(datetime(2026, 11, 1, 0, tzinfo=timezone.utc), mean, spread)
+    regional_pressure = {
+        "diameter_km": 2500,
+        "high": {"pressure_hpa": 1030.0, "latitude": 50.5, "longitude": 25.5},
+        "low": {"pressure_hpa": 1008.0, "latitude": 39.0, "longitude": 19.5},
+        "local_pressure_hpa": 1013.3,
+    }
+    document = build_document(
+        datetime(2026, 11, 1, 0, tzinfo=timezone.utc),
+        mean, spread, regional_pressure,
+    )
     validate_document(document)
     assert document["schema"] == SCHEMA
     assert document["forecasts"][0]["temperature_850hpa"]["mean_c"] == 1.0
@@ -59,6 +68,9 @@ def run_offline_tests() -> None:
     assert document["forecasts"][0]["wind_speed_10m_kmh"] == 18.0
     assert len(document["forecast_6_hourly"]) == 55
     assert document["daily_summary"]
+    assert len(document["regional_pressure_analysis"]["findings"]) == 4
+    assert "Kuzeybatı Ukrayna" in document["regional_pressure_analysis"]["findings"][0]
+    assert "Batı Yunanistan" in document["regional_pressure_analysis"]["findings"][1]
 
     # Negative tests: missing step and physically impossible wind must fail closed.
     broken = dict(document)
