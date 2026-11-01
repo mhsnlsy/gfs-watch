@@ -18,6 +18,8 @@ permissions:
 
 jobs:
   check-gfs:
+    outputs:
+      gfs_updated: ${{ steps.report.outputs.gfs_updated }}
     runs-on: ubuntu-latest
     timeout-minutes: 60
     steps:
@@ -53,6 +55,13 @@ jobs:
           if git cat-file -e origin/gfs-watch-state:gfs_watch.db 2>/dev/null; then
             git show origin/gfs-watch-state:gfs_watch.db > gfs_watch.db
           fi
+      - name: Record current public forecast version
+        run: |
+          if [ -s public/latest.json ]; then
+            sha256sum public/latest.json | cut -d ' ' -f1 > "$RUNNER_TEMP/gfs-before.sha"
+          else
+            echo "missing" > "$RUNNER_TEMP/gfs-before.sha"
+          fi
       - name: Check NOAA for a newly published GFS cycle
         id: check-gfs
         env:
@@ -68,6 +77,23 @@ jobs:
           NOAA_PREFETCH_INTERVAL_SECONDS: "60"
           NOAA_RANGE_DOWNLOAD_WORKERS: "8"
         run: python -u main.py
+      - name: Detect newly generated GFS report
+        id: report
+        if: always() && steps.check-gfs.outcome == 'success'
+        run: |
+          before="$(cat "$RUNNER_TEMP/gfs-before.sha")"
+          if [ -s public/latest.json ]; then
+            after="$(sha256sum public/latest.json | cut -d ' ' -f1)"
+          else
+            after="missing"
+          fi
+          if [ "$after" != "missing" ] && [ "$after" != "$before" ]; then
+            echo "gfs_updated=true" >> "$GITHUB_OUTPUT"
+            echo "A new GFS report was generated."
+          else
+            echo "gfs_updated=false" >> "$GITHUB_OUTPUT"
+            echo "No new GFS report; deployment and notification are skipped."
+          fi
       - name: Save partial NOAA forecast cache
         if: always() && steps.check-gfs.outputs.noaa_cache_updated == 'true'
         continue-on-error: true
@@ -109,7 +135,7 @@ jobs:
   deploy-pages:
     name: Publish latest report to GitHub Pages
     needs: check-gfs
-    if: needs.check-gfs.result == 'success'
+    if: needs.check-gfs.result == 'success' && needs.check-gfs.outputs.gfs_updated == 'true'
     permissions:
       contents: read
       pages: write
