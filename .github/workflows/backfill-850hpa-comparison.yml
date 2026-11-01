@@ -73,8 +73,21 @@ jobs:
         run: |
           git config user.name 'github-actions[bot]'
           git config user.email '41898282+github-actions[bot]@users.noreply.github.com'
-          git add -f gfs_watch.db public/runs public/notifications/media public/notifications/latest.json
+          # Stage the full public snapshot, including latest.json which the
+          # backfill restores to the actual current GFS cycle after writing old runs.
+          # Leaving it unstaged makes the following pull --rebase fail with a dirty tree.
+          git add -f gfs_watch.db public
+          git status --short
+          if git diff --cached --quiet; then
+            echo 'No historical 850 hPa changes to publish.'
+            exit 0
+          fi
           git commit -m 'Backfill historical 850 hPa wind comparison data'
+          if ! git diff --quiet; then
+            echo 'Unexpected tracked changes remain after commit; staging and amending them.'
+            git add -f gfs_watch.db public
+            git commit --amend --no-edit
+          fi
           for attempt in 1 2 3 4 5; do
             git pull --rebase origin gfs-watch-state
             if git push origin HEAD:gfs-watch-state; then

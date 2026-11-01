@@ -379,8 +379,8 @@ def publish_public_notification(
     )
 
 
-def export_public_forecast_json(run_id, payload):
-    """Export a stable latest.json plus an immutable file for this GFS run."""
+def export_public_forecast_json(run_id, payload, update_latest=True):
+    """Export an immutable run file and optionally refresh the public latest.json."""
     run_dt = _parse_utc_datetime(run_id)
     current = payload.get("current", {})
     daily = payload.get("daily", {})
@@ -455,14 +455,19 @@ def export_public_forecast_json(run_id, payload):
     }
 
     run_filename = run_dt.strftime("%Y%m%dT%HZ") + ".json"
-    _write_json_atomically(
-        os.path.join(PUBLIC_DATA_DIR, "runs", run_filename), document
-    )
-    _write_json_atomically(os.path.join(PUBLIC_DATA_DIR, "latest.json"), document)
-    print(
-        f"[JSON EXPORT] public/latest.json ve public/runs/{run_filename} "
-        f"yazıldı ({len(forecast)} tahmin noktası)."
-    )
+    run_path = os.path.join(PUBLIC_DATA_DIR, "runs", run_filename)
+    _write_json_atomically(run_path, document)
+    if update_latest:
+        _write_json_atomically(os.path.join(PUBLIC_DATA_DIR, "latest.json"), document)
+        print(
+            f"[JSON EXPORT] public/latest.json ve public/runs/{run_filename} "
+            f"yazıldı ({len(forecast)} tahmin noktası)."
+        )
+    else:
+        print(
+            f"[JSON ARCHIVE] Yalnızca public/runs/{run_filename} yazıldı; "
+            f"public/latest.json değiştirilmedi ({len(forecast)} tahmin noktası)."
+        )
 
 
 # --- NOAA GFS +180 DOSYA VARLIĞI ---
@@ -2475,6 +2480,17 @@ async def load_previous_three_runs_for_comparison(current_run_id):
                 f"{previous_run_id} NOAA verisinde 850 hPa günlük rüzgâr "
                 "serisi eksik veya geçersiz; eksik karşılaştırma görseli üretilmeyecek."
             )
+        # Persist the one-time historical fetch. save_run() updates by run ID,
+        # so subsequent processing reuses this record instead of downloading it
+        # again; only the rolling forecast set changes as new cycles arrive.
+        await asyncio.to_thread(save_run, previous_run_id, fetched_payload)
+        await asyncio.to_thread(
+            export_public_forecast_json, previous_run_id, fetched_payload, False
+        )
+        print(
+            f"[KIYAS ARŞİV] {previous_run_id} SQLite ve public/runs arşivine "
+            "kaydedildi; sonraki kıyaslarda yeniden indirilmeyecek."
+        )
         previous_runs.append((
             previous_run_id,
             json.dumps(fetched_payload, ensure_ascii=False),
@@ -2506,7 +2522,7 @@ async def send_telegram_photo(photo, caption, max_attempts=3):
             await asyncio.sleep(delay)
 
 
-async def send_telegram_voice(audio_path, max_attempts=3):
+async def send_telegram_voice(audio_path, max_attempts=3, cleanup=True):
     if not TELEGRAM_TOKEN or not CHAT_ID:
         raise RuntimeError("TELEGRAM_TOKEN veya CHAT_ID eksik.")
     if not audio_path or not os.path.exists(audio_path):
@@ -2530,7 +2546,7 @@ async def send_telegram_voice(audio_path, max_attempts=3):
                 )
                 await asyncio.sleep(delay)
     finally:
-        if os.path.exists(audio_path):
+        if cleanup and os.path.exists(audio_path):
             os.remove(audio_path)
 
 # --- ANA ÇALIŞTIRICI ---
@@ -2773,53 +2789,69 @@ async def process_gfs_update(strict=False, target_run_id=None):
         print(f"[KIYAS GÖRSELİ HAZIRLAMA HATASI] {exc}")
 
     audio_file = await audio_task
-    # Pages publication is the report's commit gate. A failed web archive write
-    # must stop this run before Telegram delivery and before the cycle is saved
-    # as processed, so the next five-minute check retries the same cycle.
+
+    # Commit the forecast cycle once the report payload is complete. This is
+    # the shared trigger for both delivery channels; a channel outage must not
+    # make the other channel wait or cause the GFS cycle to be processed twice.
+    await asyncio.to_thread(save_run, run_id, payload)
+    print(f"[GFS CYCLE COMMITTED] {run_id}; Telegram and Pages deliveries start independently.")
+
+    async def deliver_telegram_report():
+        try:
+            await send_telegram_text(full_text_report)
+        except Exception as telegram_exc:
+            print(f"[TELEGRAM TEXT UYARI] Metin gönderilemedi: {telegram_exc}")
+
+        if chart_buffer:
+            try:
+                await send_telegram_photo(
+                    chart_buffer,
+                    telegram_caption or "📊 İstanbul GFS | Dört döngü karşılaştırması",
+                )
+            except Exception as exc:
+                print(f"[TELEGRAM IMAGE ERROR] Karşılaştırma görseli gönderilemedi: {exc}")
+
+        if audio_file:
+            try:
+                # Pages archives the same file concurrently. Keep it until both
+                # channel tasks finish; the owner below removes it exactly once.
+                await send_telegram_voice(audio_file, cleanup=False)
+            except Exception as exc:
+                print(f"[TELEGRAM VOICE ERROR] Ses gönderilemedi: {exc}")
+        else:
+            print("[TELEGRAM VOICE] Ses üretilemedi; metin/görsel gönderimi ayrıca denendi.")
+
+    pages_task = asyncio.create_task(asyncio.to_thread(
+        publish_public_notification,
+        run_id,
+        full_text_report,
+        speech_text,
+        None,
+        audio_file,
+        notification_images,
+    ))
+    telegram_task = asyncio.create_task(deliver_telegram_report())
+
     try:
-        await asyncio.to_thread(
-            publish_public_notification,
-            run_id,
-            full_text_report,
-            speech_text,
-            None,
-            audio_file,
-            notification_images,
+        pages_result, telegram_result = await asyncio.gather(
+            pages_task, telegram_task, return_exceptions=True
         )
-    except Exception:
+        if isinstance(pages_result, BaseException):
+            print(f"[PAGES NOTIFICATION ERROR] {type(pages_result).__name__}: {pages_result}")
+        else:
+            print(f"[PAGES NOTIFICATION OK] {run_id} arşivi bağımsız olarak yazıldı.")
+
+        if isinstance(telegram_result, BaseException):
+            print(f"[TELEGRAM REPORT ERROR] {type(telegram_result).__name__}: {telegram_result}")
+        else:
+            print(f"[TELEGRAM REPORT ATTEMPTED] {run_id} gönderim adımları tamamlandı.")
+    finally:
         if chart_buffer:
             chart_buffer.close()
-        raise
+        if audio_file and os.path.exists(audio_file):
+            os.remove(audio_file)
 
-    save_run(run_id, payload)
-    print(f"[WEB NOTIFICATION REQUIRED] {run_id} manifest and report media archived.")
-
-    # Both channels now deliver the same generated report. Telegram is sent
-    # only after the Pages-ready archive has been written successfully.
-    try:
-        await send_telegram_text(full_text_report)
-    except Exception as telegram_exc:
-        print(f"[TELEGRAM TEXT UYARI] Metin Telegram'a gönderilemedi: {telegram_exc}")
-
-    if chart_buffer:
-        try:
-            await send_telegram_photo(
-                chart_buffer,
-                telegram_caption or "📊 İstanbul GFS | Dört döngü karşılaştırması",
-            )
-        except Exception as exc:
-            print(f"[KIYAS GÖRSELİ GÖNDERİM HATASI] {exc}")
-        finally:
-            chart_buffer.close()
-
-    if audio_file:
-        try:
-            await send_telegram_voice(audio_file)
-        except Exception as e:
-            print(f"[VOICE HATA] Ses gönderilemedi: {e}")
-    else:
-        print("[VOICE] Ses üretilemedi; metin bildirimi gönderilmiş durumda.")
-    print(f"[COMPLETE] GFS run işlendi ve +180 saat bildirimi gönderildi: {run_id}")
+    print(f"[COMPLETE] GFS run işlendi; Telegram ve Pages ayrı ayrı denendi: {run_id}")
     await asyncio.to_thread(clear_noaa_run_cache, run_id)
 
 
