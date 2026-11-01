@@ -16,7 +16,7 @@
 
 GitHub Actions sabit bir döngü saatine kilitlenmez. NOAA'nın son altı GFS çevrimi NOMADS üzerinden, gerekli dosya yoksa AWS S3 aynasından kontrol edilir. f180 dosyası hazır olan ve henüz raporlanmamış her çevrim kronolojik sırayla işlenir. Böylece 06Z gibi ara çevrimler de atlanmaz; önceki üç çevrimin verisi gerekirse kendi tarih/saat dizinlerinden salt okunur olarak tamamlanır.
 
-İzleme ve ön indirme her **300 saniyede (5 dakikada)** bir çalışır. Her runner en fazla 330 dakika izler; tamamlanmamış GRIB2 önbelleği Actions Cache'e kaydedilir ve yeni izleme oturumu otomatik başlatılır. Yeni bir çevrim için elle UTC hedef saati güncellemek gerekmez.
+GitHub Actions her çalıştırmada tek bir NOAA keşif/ön indirme/rapor kontrolü yapar. Kısmi GRIB2 önbelleği ve GFS geçmişi aynı çalıştırmanın sonunda hemen kaydedilir. Yeni rapor üretildiyse `gfs-watch-state` dalına gönderildikten hemen sonra GitHub Pages dağıtımı başlar. Bağımsız bir kuyruk işi beş dakika bekleyerek sonraki kontrolü otomatik başlatır; dosyalar henüz yayımlanmamışsa sonraki kontrolde aynı çevrime ait önbellekten devam edilir. Böylece runner 330 dakika açık tutulmaz ve Pages yayını uzun izleme oturumunun bitmesini beklemez. Yeni bir çevrim için elle UTC hedef saati güncellemek gerekmez.
 
 ## Kurulum
 
