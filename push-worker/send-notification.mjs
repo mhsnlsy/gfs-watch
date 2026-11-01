@@ -1,7 +1,7 @@
 import { readFile } from "node:fs/promises";
 import webPush from "web-push";
 
-const apiBase = String(process.env.PUSH_API_URL || "").replace(/\\/+$/, "");
+const apiBase = String(process.env.PUSH_API_URL || "").replace(/\/+$/, "");
 const adminToken = process.env.PUSH_ADMIN_TOKEN || "";
 const publicKey = process.env.VAPID_PUBLIC_KEY || "";
 const privateKey = process.env.VAPID_PRIVATE_KEY || "";
