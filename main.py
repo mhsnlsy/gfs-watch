@@ -57,9 +57,6 @@ NOAA_PREFETCH_FILES_PER_CHECK = max(
 NOAA_PREFETCH_INTERVAL_SECONDS = max(
     60, int(os.getenv("NOAA_PREFETCH_INTERVAL_SECONDS", "300"))
 )
-NOAA_PREFETCH_MIN_AGE_HOURS = max(
-    0.0, float(os.getenv("NOAA_PREFETCH_MIN_AGE_HOURS", "2"))
-)
 _LAST_NOAA_PREFETCH_RUN_ID = None
 _LAST_NOAA_PREFETCH_AT = 0.0
 NOAA_CACHE_RETENTION_HOURS = max(
@@ -1243,8 +1240,6 @@ def prefetch_latest_noaa_cycle(skip_run_ids=None, target_run_id=None):
         )
 
     run_id = run_dt.isoformat(timespec="seconds")
-    age_hours = (now - run_dt).total_seconds() / 3600.0
-
     if run_id in skip_run_ids:
         print(f"[NOAA PREFETCH SKIP] {run_id} zaten NOAA +180 envanterinde.")
         return 0
