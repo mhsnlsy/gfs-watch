@@ -321,7 +321,7 @@
     function renderFindings(findings,istanbulPressure){
       const list=$("pressure-findings");
       if(!Array.isArray(findings)||!findings.length){list.innerHTML='<li class="pressure-empty">Bu tahmin döngüsü için bölgesel basınç yorumu bulunmuyor.</li>';return;}
-      const items=findings.map(value=>String(value));
+      const items=findings.map(value=>String(value)).filter(value=>!value.includes("Yüksek ve alçak basınç merkezleri bölgesel eğilimi gösterir"));
       list.innerHTML=items.map(text=>'<li><span class="pressure-icon">◈</span><span>'+esc(text)+'</span></li>').join("");
     }
     const chartDateTimeTR=value=>{
