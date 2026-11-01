@@ -98,7 +98,7 @@ function writeJsonAtomic(filePath, document) {
 }
 
 async function main() {
-  const browser = await chromium.launch({ headless: true });
+  const browser = await chromium.launch({ channel: "chrome", headless: true });
   let observation;
   try {
     const page = await browser.newPage({
