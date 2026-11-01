@@ -2352,18 +2352,26 @@ def create_pages_comparison_charts(current_run_id, payload, previous_runs):
                     tick_label.set_fontweight("semibold")
                 axis.grid(axis="y", color="#9aafbf", alpha=0.38, linewidth=0.9)
                 axis.set_axisbelow(True)
+                # Use the full chart width and a fixed daily domain; prevent autoscaling
+                # or an empty 850 hPa series from collapsing the plotting area.
+                axis.set_aspect("auto")
+                axis.set_xlim(-0.5, len(dates) - 0.5)
+                _format_comparison_date_axis(axis, dates)
+                axis.tick_params(axis="x", labelsize=14, labelbottom=True)
                 axis.legend(
-                    handles=legend, loc="upper left", ncol=min(4, len(series)),
-                    fontsize=13, frameon=True, facecolor="#ffffff",
-                    edgecolor="#d5e0e8", framealpha=0.94,
-                    labelcolor="#17324a", borderpad=0.65, handlelength=2.4,
+                    handles=legend, loc="lower left", bbox_to_anchor=(0, 1.015, 1, 0.12),
+                    mode="expand", ncol=min(4, len(series)), fontsize=13,
+                    frameon=True, facecolor="#ffffff", edgecolor="#d5e0e8",
+                    framealpha=0.94, labelcolor="#17324a", borderpad=0.55,
+                    handlelength=2.0, columnspacing=0.8,
                 )
                 fig.text(
                     0.01, 0.012,
                     "Renkler her panelde aynı GFS döngüsünü gösterir | Kaynak: NOAA/NCEP GFS 0.25°",
                     fontsize=10.5, color="#40566a",
                 )
-                fig.subplots_adjust(left=0.085, right=0.985, bottom=0.14, top=0.87)
+                fig.subplots_adjust(left=0.085, right=0.985, bottom=0.16, top=0.78)
+                axis.set_position([0.085, 0.16, 0.90, 0.62])
                 buffer = io.BytesIO()
                 fig.savefig(buffer, format="png", dpi=150)
                 buffer.seek(0)
