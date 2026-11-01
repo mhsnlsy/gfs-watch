@@ -55,7 +55,6 @@ jobs:
         id: publish
         run: |
           cp public/eyupsultan-station-observation.json forecast-data/public/eyupsultan-station-observation.json
-          cp public/eyupsultan-station-temperature-history.json forecast-data/public/eyupsultan-station-temperature-history.json
           cd forecast-data
           git config user.name "github-actions[bot]"
           git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
