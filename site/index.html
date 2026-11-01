@@ -816,7 +816,8 @@
             }
           }catch(_){temperatureSamples=[];}
         }
-        renderStationTemperatureTrend(temperatureSamples);\n        renderStationRainTrend(temperatureSamples);
+        renderStationTemperatureTrend(temperatureSamples);
+        renderStationRainTrend(temperatureSamples);
       }catch(error){
         $("freshness").textContent="Veriye ulaşılamadı";$("temperature").textContent="—°";
         $("daily-grid").innerHTML='<div class="error">'+esc(error.message)+'</div>';
