@@ -128,8 +128,40 @@ async function main() {
   const previousPath = process.env.EYUPSULTAN_PREVIOUS_OBSERVATION_PATH;
   const previousDocument = readJsonIfExists(previousPath);
   const previous = previousDocument?.station_observation;
-  if (previous?.observed_at_utc && new Date(observation.observed_at_utc) < new Date(previous.observed_at_utc)) {
-    throw new Error("WStatMap önceki yayımlanmış ölçümden daha eski veri döndürdü; eski ölçüm yayımlanmadı.");
+  if (previous?.observed_at_utc && String(previous.station_id) === STATION_ID) {
+    const previousTime = Date.parse(previous.observed_at_utc);
+    const currentTime = Date.parse(observation.observed_at_utc);
+    if (Number.isFinite(previousTime) && Number.isFinite(currentTime)) {
+      const backwardSkewMs = previousTime - currentTime;
+      const comparisonFields = [
+        "temperature_2m_c",
+        "wind_speed_10m_kmh",
+        "wind_direction_degrees",
+        "precipitation_1h_mm",
+        "precipitation_daily_mm",
+        "humidity_percent",
+        "station_pressure_hpa"
+      ];
+      const sameMeasurement = comparisonFields.every(
+        field => (previous[field] ?? null) === (observation[field] ?? null)
+      );
+
+      // WStatMap displays observation age in whole minutes. While the same
+      // reading remains on the page, that rounding can make a later poll's
+      // calculated timestamp appear up to 2.5 minutes older. Preserve the
+      // previous timestamp for an identical reading instead of rejecting it.
+      if (backwardSkewMs > 150000) {
+        throw new Error("WStatMap önceki yayımlanmış ölçümden belirgin biçimde daha eski veri döndürdü; eski ölçüm yayımlanmadı.");
+      }
+      if (backwardSkewMs > 0 && sameMeasurement) {
+        observation.observed_at_utc = previous.observed_at_utc;
+        observation.age_minutes = Math.max(
+          0,
+          Math.floor((Date.parse(observation.fetched_at_utc) - previousTime) / 60000)
+        );
+        observation.is_stale = observation.age_minutes > STALE_AFTER_MINUTES;
+      }
+    }
   }
 
   const now = new Date();
