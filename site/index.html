@@ -786,7 +786,7 @@
     }
     function drawNext72Line(targetId,data,color,label){
       const holder=$(targetId);if(data.length<2){holder.innerHTML='<div class="chart-empty">Bu değişken için yeterli tahmin noktası yok.</div>';return;}
-      const width=520,height=150,left=34,right=10,top=12,bottom=26,pw=width-left-right,ph=height-top-bottom,values=data.map(p=>p.value),minimum=Math.min(0,...values),maximum=Math.max(...values),span=(maximum-minimum)||1,low=label.startsWith("Yağış")?0:minimum-span*.13,high=maximum+span*.13;
+      const width=520,height=150,left=34,right=10,top=12,bottom=26,pw=width-left-right,ph=height-top-bottom,values=data.map(p=>p.value),minimum=Math.min(...values),maximum=Math.max(...values),span=(maximum-minimum)||1,low=label.startsWith("Yağış")?0:minimum-span*.13,high=maximum+span*.13;
       const x=lead=>left+lead/72*pw,y=value=>top+(high-value)/(high-low)*ph,coords=data.map(p=>({x:x(p.lead),y:y(p.value),time:p.time,valueLabel:p.label,detail:"Tahmin adımı: +"+p.lead+" saat"})),path=coords.map((p,i)=>(i?"L":"M")+p.x.toFixed(1)+" "+p.y.toFixed(1)).join(" ");
       const grid=[0,1,2].map(i=>{const value=low+(high-low)*i/2,yy=y(value);return '<line x1="'+left+'" y1="'+yy+'" x2="'+(width-right)+'" y2="'+yy+'" stroke="rgba(190,218,228,.14)" stroke-dasharray="3 5"/><text x="'+(left-6)+'" y="'+(yy+3)+'" fill="#91a9b8" font-size="9" text-anchor="end">'+fmt(value,label.startsWith("Yağış")?1:0)+'</text>';}).join("");
       const ticks=[0,12,24,36,48,60,72].map(hour=>'<text x="'+x(hour)+'" y="'+(height-7)+'" fill="#91a9b8" font-size="9" text-anchor="middle">'+(hour===0?"Şimdi":"+"+hour+"s")+'</text>').join(""),dots=coords.map(p=>'<circle cx="'+p.x+'" cy="'+p.y+'" r="2.5" fill="'+color+'"/>').join("");
