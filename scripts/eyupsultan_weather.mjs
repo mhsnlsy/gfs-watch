@@ -142,7 +142,7 @@ async function main() {
     }
     console.log("[WSTAT REQUESTS]", JSON.stringify([...stationRequests]));
     console.log("[WSTAT RESPONSES]", JSON.stringify(stationResponses));
-    console.log("[WSTAT RESOURCES]", JSON.stringify(await page.evaluate(() => performance.getEntriesByType("resource").map(entry => entry.name).filter(name => /wstatmap/i.test(name))));
+    console.log("[WSTAT RESOURCES]", JSON.stringify(await page.evaluate(() => performance.getEntriesByType("resource").map(entry => entry.name).filter(name => /wstatmap/i.test(name)))));
     if (/Just a moment|Checking your browser|Access denied/i.test(bodyText)) {
       throw new Error("WStatMap sayfası otomatik erişim doğrulaması gösterdi; veri alınmadı.");
     }
