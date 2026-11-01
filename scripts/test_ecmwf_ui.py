@@ -21,7 +21,7 @@ def main() -> None:
         'id="ecmwf-model-view"',
         'id="ecmwf-daily-grid"',
         'id="next-72h-panel"',
-        'class="station-history-inline"',
+        'station-history-inline',
         'id="station-history-panel"',
         'id="station-temperature-trend"',
         'id="station-rain-trend"',
