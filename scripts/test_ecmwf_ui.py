@@ -28,10 +28,7 @@ def main() -> None:
 
         'id="next72-temperature"',
         'id="next72-precipitation"',
-        'id="next72-wind-speed"',
-        'id="next72-wind-direction"',
         'function renderNext72Hours()',
-        'wind_direction_10m_deg',
         'id="ecmwf-comparison-wind10-chart"',
         'id="ecmwf-comparison-wind850-chart"',
         'function renderEcmwfComparisonChart(metric,targetId,history)',
@@ -140,8 +137,14 @@ def main() -> None:
     assert abs(direction_from_uv(0.0, 1.0) - 180.0) < 1e-9
     assert abs(direction_from_uv(1.0, 0.0) - 270.0) < 1e-9
 
-    print("[ECMWF UI SMOKE] model selector, daily forecast ordering, 72-hour charts, "
-          "frameless mobile layout, touch tooltip dismissal, ECMWF wind comparison, "
+    if 'id="next72-wind-speed"' in html or 'id="next72-wind-direction"' in html:
+        raise AssertionError("The 72-hour panel must show only temperature and precipitation.")
+    if "viewport-fit=cover" not in html or "env(safe-area-inset-top)" not in html:
+        raise AssertionError("Modern iPhone safe-area viewport support is missing.")
+    if "orientation:landscape" not in html or "max-height:600px" not in html:
+        raise AssertionError("Compact landscape phone layout is missing.")
+    print("[ECMWF UI SMOKE] model selector, daily forecast ordering, temperature/rain-only "
+          "72-hour panel, responsive safe areas, touch tooltip dismissal, ECMWF wind comparison, "
           "55-step contract and unique IDs passed.")
 
 
