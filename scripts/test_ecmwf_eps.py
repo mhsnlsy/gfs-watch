@@ -34,11 +34,19 @@ def run_offline_tests() -> None:
         "mean_t850": synthetic_series(steps, 274.15),
         "mean_ws850": synthetic_series(steps, 10.0),
         "mean_msl": synthetic_series(steps, 101325.0),
+        "mean_t2m": synthetic_series(steps, 280.15),
+        "mean_u10": synthetic_series(steps, 3.0),
+        "mean_v10": synthetic_series(steps, 4.0),
+        "mean_tp": synthetic_series(steps, 0.001),
     }
     spread = {
         "spread_t850": synthetic_series(steps, 1.0),
         "spread_ws850": synthetic_series(steps, 2.0),
         "spread_msl": synthetic_series(steps, 250.0),
+        "spread_t2m": synthetic_series(steps, 1.0),
+        "spread_u10": synthetic_series(steps, 1.0),
+        "spread_v10": synthetic_series(steps, 1.0),
+        "spread_tp": synthetic_series(steps, 0.0001),
     }
     document = build_document(datetime(2026, 11, 1, 0, tzinfo=timezone.utc), mean, spread)
     validate_document(document)
@@ -47,6 +55,10 @@ def run_offline_tests() -> None:
     assert document["forecasts"][0]["wind_850hpa"]["mean_kmh"] == 36.0
     assert document["forecasts"][0]["mslp"]["mean_hpa"] == 1013.25
     assert document["forecasts"][-1]["forecast_hour"] == 180
+    assert document["forecasts"][0]["temperature_2m_c"] == 7.0
+    assert document["forecasts"][0]["wind_speed_10m_kmh"] == 18.0
+    assert len(document["forecast_6_hourly"]) == 55
+    assert document["daily_summary"]
 
     # Negative tests: missing step and physically impossible wind must fail closed.
     broken = dict(document)

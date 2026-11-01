@@ -17,15 +17,19 @@ def main() -> None:
         'id="model-ecmwf-button"',
         'id="gfs-model-view"',
         'id="ecmwf-model-view"',
+        'id="ecmwf-daily-grid"',
         'id="ecmwf-temperature-chart"',
-        'id="ecmwf-wind-chart"',
-        'id="ecmwf-pressure-chart"',
-        'id="ecmwf-forecast-table"',
+        'id="ecmwf-precipitation-chart"',
+        'id="ecmwf-pressure-findings"',
         'const ECMWF_DATA_URL="./data/ecmwf/latest.json";',
         'localStorage.setItem("istanbul-hava-model-view",activeModel)',
         'localStorage.getItem("istanbul-hava-model-view")',
         'const x=index=>left+(points[index].hour/180)*plotW;',
         'document.forecasts.length!==55',
+        'function renderDaily(items,targetId="daily-grid")',
+        'function renderChart(metric,targetId,sourceData=forecastData)',
+        'renderDaily(viewData.daily_summary,"ecmwf-daily-grid")',
+        'renderChart("precipitation","ecmwf-precipitation-chart",viewData)',
         'http-equiv="refresh" content="300"',
     )
     missing = [item for item in required if item not in html]
@@ -43,8 +47,11 @@ def main() -> None:
     if not (gfs_start < ecmwf_start < main_end):
         raise AssertionError("GFS and ECMWF model views are not correctly separated.")
 
-    print("[ECMWF UI SMOKE] One-click selector, persistent choice, 5-minute refresh, "
-          "55-step contract, chart targets and unique IDs passed.")
+    if "ecmwf-wind-chart" in html or "ecmwf-forecast-table" in html:
+        raise AssertionError("Legacy ECMWF-only layout remains in the website.")
+
+    print("[ECMWF UI SMOKE] Shared GFS/ECMWF layout, model selector, persistence, "
+          "5-minute refresh, 55-step contract and unique IDs passed.")
 
 
 if __name__ == "__main__":

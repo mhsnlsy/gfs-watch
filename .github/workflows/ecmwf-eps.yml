@@ -6,6 +6,8 @@ on:
     paths:
       - "scripts/fetch_ecmwf_eps.py"
       - "scripts/test_ecmwf_eps.py"
+      - "scripts/test_ecmwf_ui.py"
+      - "site/index.html"
       - ".github/workflows/ecmwf-eps.yml"
   schedule:
     # ECMWF Open Data products typically appear 7–9 hours after cycle time.
@@ -51,12 +53,19 @@ jobs:
         run: python -m pip install --upgrade eccodes numpy ecmwf-opendata
       - name: Offline contract and conversion smoke test
         working-directory: source
-        run: python scripts/test_ecmwf_eps.py
+        run: |
+          python scripts/test_ecmwf_eps.py
+          python scripts/test_ecmwf_ui.py
       - name: Fetch latest complete ECMWF ENS cycle and publish compact Istanbul point
         working-directory: source
         env:
           ECMWF_PUBLIC_DIR: ${{ github.workspace }}/state/public/ecmwf
-        run: python -u scripts/fetch_ecmwf_eps.py
+        run: |
+          if [[ "$GITHUB_EVENT_NAME" == "push" || "$GITHUB_EVENT_NAME" == "workflow_dispatch" ]]; then
+            python -u scripts/fetch_ecmwf_eps.py --force
+          else
+            python -u scripts/fetch_ecmwf_eps.py
+          fi
       - name: Validate the downloaded ECMWF forecast payload
         working-directory: source
         run: python scripts/test_ecmwf_eps.py ../state/public/ecmwf/latest.json

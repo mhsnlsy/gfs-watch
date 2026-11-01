@@ -300,7 +300,7 @@
     .model-picker button:hover{color:#fff;background:rgba(255,255,255,.06)}
     .model-picker button.active{background:rgba(125,211,215,.16);border-color:rgba(125,211,215,.34);color:#d8fbf3}
     .model-picker button:focus-visible{outline:2px solid var(--cyan);outline-offset:2px}
-    .ecmwf-model-view{padding-top:34px}
+    .ecmwf-model-view{padding-top:0}
     .ecmwf-model-heading{display:flex;align-items:flex-end;justify-content:space-between;gap:18px;flex-wrap:wrap;margin-bottom:16px}
     .ecmwf-model-heading h2{margin-top:6px}
     .ecmwf-model-status{border:1px solid rgba(125,211,215,.22);background:rgba(125,211,215,.07);color:#b8e6df;border-radius:11px;padding:10px 13px;font-size:11px;line-height:1.55}
@@ -332,7 +332,7 @@
   <header class="shell topbar">
     <a class="brand" href="#" aria-label="İstanbul'un Havası ana sayfa"><span class="brand-mark">☀</span><span>İstanbul'un Havası<small>Şehir için hava tahmini</small></span></a>
     <nav aria-label="Ana gezinme"><a href="#bildirimler">Raporlar</a><a href="#tahmin">8 günlük tahmin</a><a href="#seyir">180 saatlik seyir</a><a href="#basinc">Basınç analizi</a></nav>
-    <div class="top-right"><div class="model-picker" role="group" aria-label="Tahmin modeli"><button type="button" id="model-gfs-button" class="active" aria-pressed="true">GFS</button><button type="button" id="model-ecmwf-button" aria-pressed="false">ECMWF EPS</button></div><span class="version">GFS Watch · v2.1.0</span></div>
+    <div class="top-right"><div class="model-picker" role="group" aria-label="Tahmin modeli"><button type="button" id="model-gfs-button" class="active" aria-pressed="true">GFS</button><button type="button" id="model-ecmwf-button" aria-pressed="false">ECMWF EPS</button></div><span class="version">GFS Watch · v3.0.0</span></div>
   </header>
   <main class="shell">
     <section class="dashboard-top" aria-label="Gerçek istasyon gözlemleri ve son 24 saatlik trendler">
@@ -381,28 +381,18 @@
     </section>
     <section class="section" id="basinc"><div class="section-head"><div><div class="section-kicker">NOAA / NCEP GFS · MODEL ANALİZİ</div><h2>Basınç düzeni ve kaynak</h2></div><div class="section-note">İstanbul merkezli 2.500 km çaplı<br>bölgesel analiz</div></div><div class="lower-grid"><article class="pressure-card"><div class="label">Bölgesel basınç merkezleri ve İstanbul'a etkisi</div><ul class="pressure-list" id="pressure-findings"><li class="loading">Analiz yükleniyor…</li></ul></article><article class="info-card"><div class="label">Veri hakkında</div><p>Anlık sıcaklık, rüzgâr, nem ve günlük yağış verileri yerel meteoroloji istasyonundan alınır. İstasyon kaynağı: ENKA ENKA Balmumcu Vantage PRO. Konum: İstanbul, Balmumcu çevresi; rakım 107 m.</p><p>180 saatlik tahmin: NOAA / NCEP GFS 0.25° küresel modelinin İstanbul'a en yakın grid hücresi kullanılır. İstasyon ölçümü ile model tahmini ayrı kaynaklardır.</p><div class="source-row"><span>Model: <strong>GFS 0.25°</strong></span><span id="valid-until">Geçerlilik: —</span></div></article></div></section>
     </div>
-    <section class="section ecmwf-model-view" id="ecmwf-model-view" hidden aria-label="ECMWF ensemble tahmini">
-      <div class="ecmwf-model-heading">
-        <div><div class="section-kicker">ECMWF IFS · ENSEMBLE PREDICTION SYSTEM</div><h2>ECMWF EPS · İstanbul</h2><p class="section-description">Ensemble ortalaması ve ±1 standart sapma. GFS tahmininden bağımsız ECMWF açık veri ürünü.</p></div>
-        <div class="section-note" id="ecmwf-run-meta">ECMWF döngüsü bekleniyor</div>
-      </div>
+    <div id="ecmwf-model-view" hidden aria-label="ECMWF tahmin görünümü">
+      <div class="section-head" style="padding-top:30px"><div><div class="section-kicker">ECMWF IFS · ENSEMBLE PREDICTION SYSTEM</div><h2>ECMWF EPS · İstanbul</h2><p class="section-description">GFS ile aynı kartlar, grafikler ve tahmin çıktıları. Ensemble ortalaması; belirsizlik veri paketinde korunur.</p></div><div class="section-note"><span id="ecmwf-run-meta">ECMWF döngüsü bekleniyor</span><br><span id="ecmwf-updated-chip">Yayın zamanı bekleniyor</span><br>Günlük en düşük / en yüksek sıcaklık</div></div>
       <div id="ecmwf-data-status" class="ecmwf-model-status" role="status" aria-live="polite">ECMWF EPS verisi yükleniyor…</div>
-      <div class="ecmwf-summary-grid" id="ecmwf-summary">
-        <article class="ecmwf-summary-card"><div class="ecmwf-summary-label">850 hPa sıcaklık</div><div class="ecmwf-summary-value">— °C</div><div class="ecmwf-summary-spread">Ensemble ortalaması ±1σ</div></article>
-        <article class="ecmwf-summary-card"><div class="ecmwf-summary-label">850 hPa rüzgâr</div><div class="ecmwf-summary-value">— km/sa</div><div class="ecmwf-summary-spread">Ensemble ortalaması ±1σ</div></article>
-        <article class="ecmwf-summary-card"><div class="ecmwf-summary-label">Deniz seviyesi basıncı</div><div class="ecmwf-summary-value">— hPa</div><div class="ecmwf-summary-spread">Ensemble ortalaması ±1σ</div></article>
-      </div>
-      <div class="ecmwf-chart-grid">
-        <article class="chart-card"><div class="chart-card-head"><div><div class="chart-title">850 hPa sıcaklık</div><div class="chart-subtitle">°C · ensemble ortalaması ve ±1σ bandı</div></div><span class="chart-count">180 saat</span></div><div class="ecmwf-chart" id="ecmwf-temperature-chart"><div class="chart-empty">ECMWF sıcaklık serisi bekleniyor…</div></div></article>
-        <article class="chart-card"><div class="chart-card-head"><div><div class="chart-title">850 hPa rüzgâr hızı</div><div class="chart-subtitle">km/sa · ensemble ortalaması ve ±1σ bandı</div></div><span class="chart-count">180 saat</span></div><div class="ecmwf-chart" id="ecmwf-wind-chart"><div class="chart-empty">ECMWF rüzgâr serisi bekleniyor…</div></div></article>
-        <article class="chart-card"><div class="chart-card-head"><div><div class="chart-title">Deniz seviyesi basıncı</div><div class="chart-subtitle">hPa · ensemble ortalaması ve ±1σ bandı</div></div><span class="chart-count">180 saat</span></div><div class="ecmwf-chart" id="ecmwf-pressure-chart"><div class="chart-empty">ECMWF basınç serisi bekleniyor…</div></div></article>
-      </div>
-      <div class="section-head" style="margin:24px 0 12px"><div><div class="section-kicker">SAYISAL TAHMİN</div><h2>12 saatlik örnekleme tablosu</h2></div><div class="section-note">Her değer: ensemble ortalaması ±1σ</div></div>
-      <div class="ecmwf-table-wrap"><table class="ecmwf-table" id="ecmwf-forecast-table"><thead><tr><th>Adım</th><th>Geçerlilik · TSİ</th><th>850 hPa T</th><th>850 hPa rüzgâr</th><th>MSLP</th></tr></thead><tbody><tr><td colspan="5">ECMWF verisi bekleniyor…</td></tr></tbody></table></div>
-      <p class="ecmwf-source-note">Kaynak: <a href="https://www.ecmwf.int/en/forecasts/datasets/open-data" target="_blank" rel="noopener">ECMWF Open Data</a> · IFS ENS 0.25° · <strong>© ECMWF, CC BY 4.0</strong>. Gölgelendirme ±1 standart sapmadır; mutlak min–maks aralığı veya tek bir ensemble üyesi değildir.</p>
-    </section>
+      <section class="section" id="ecmwf-tahmin"><div class="section-head"><div><div class="section-kicker">ECMWF IFS ENS · MODEL TAHMİNİ</div><h2>8 günlük tahmin</h2></div><div class="section-note">Günlük en düşük / en yüksek sıcaklık<br>Ensemble ortalaması</div></div><div class="daily-grid" id="ecmwf-daily-grid"><div class="loading">ECMWF günlük tahmini yükleniyor…</div></div></section>
+      <section class="section" id="ecmwf-seyir"><div class="section-head"><div><div class="section-kicker">ECMWF IFS ENS · MODEL TAHMİNİ</div><h2>180 saatlik tahmin seyri</h2></div><div class="section-note">Sıcaklık ve yağış aynı anda görünür<br>ECMWF yayın adımları korunur</div></div><div class="chart-stack">
+        <article class="chart-card"><div class="chart-card-head"><div><div class="chart-title">Sıcaklık</div><div class="chart-subtitle">2 metre sıcaklığı · °C · ensemble ortalaması</div></div><span class="chart-count" id="ecmwf-temperature-count">Tahmin adımları</span></div><div class="chart-wrap" id="ecmwf-temperature-chart"><div class="chart-empty">ECMWF sıcaklık grafiği yükleniyor…</div></div></article>
+        <article class="chart-card"><div class="chart-card-head"><div><div class="chart-title">Yağış</div><div class="chart-subtitle">3 / 6 saatlik aralık birikimi · mm</div></div><span class="chart-count" id="ecmwf-precipitation-count">Tahmin adımları</span></div><div class="chart-wrap" id="ecmwf-precipitation-chart"><div class="chart-empty">ECMWF yağış grafiği yükleniyor…</div></div></article>
+      </div></section>
+      <section class="section" id="ecmwf-basinc"><div class="section-head"><div><div class="section-kicker">ECMWF IFS ENS · MODEL ANALİZİ</div><h2>Basınç düzeni ve kaynak</h2></div><div class="section-note">İstanbul merkezli tahmin<br>Ensemble basınç belirsizliği</div></div><div class="lower-grid"><article class="pressure-card"><div class="label">Bölgesel basınç merkezleri ve İstanbul'a etkisi</div><ul class="pressure-list" id="ecmwf-pressure-findings"><li class="loading">ECMWF basınç analizi yükleniyor…</li></ul></article><article class="info-card"><div class="label">Veri hakkında</div><p>180 saatlik tahmin: ECMWF IFS Ensemble Prediction System (ENS), 0.25° küresel modelinin İstanbul'a en yakın grid hücresi kullanılır.</p><p>2 metre sıcaklık, 10 metre rüzgâr, yağış ve deniz seviyesi basıncı ensemble ortalamasından türetilir. 850 hPa alanları ve standart sapma değerleri de veri paketinde korunur.</p><div class="source-row"><span>Model: <strong>ECMWF IFS ENS 0.25°</strong></span><span id="ecmwf-valid-until">Geçerlilik: —</span></div><p class="ecmwf-source-note">Kaynak: <a href="https://www.ecmwf.int/en/forecasts/datasets/open-data" target="_blank" rel="noopener">ECMWF Open Data</a> · © ECMWF · CC BY 4.0.</p></article></div></section>
+    </div>
   </main>
-  <footer class="shell footer"><span><strong>İstanbul'un Havası</strong> · GFS Watch v2.1.0</span><span>Veri kaynakları:  ENKA Balmumcu Vantage PRO · NOAA / NCEP GFS · Otomatik yenileme: 5 dakika</span></footer>
+  <footer class="shell footer"><span><strong>İstanbul'un Havası</strong> · GFS Watch v3.0.0</span><span>Veri kaynakları:  ENKA Balmumcu Vantage PRO · NOAA / NCEP GFS · Otomatik yenileme: 5 dakika</span></footer>
   <script>
     const DATA_URL="./data/latest.json";
     const ECMWF_DATA_URL="./data/ecmwf/latest.json";
@@ -421,8 +411,8 @@
     const esc=value=>String(value??"").replace(/[&<>"']/g,char=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[char]));
     const timeTR=value=>new Intl.DateTimeFormat("tr-TR",{timeZone:"Europe/Istanbul",day:"2-digit",month:"2-digit",hour:"2-digit",minute:"2-digit"}).format(new Date(value));
     const symbolFor=rain=>rain>=5?"🌧️":rain>=1?"🌦️":"⛅";
-    function renderDaily(items){
-      const grid=$("daily-grid");
+    function renderDaily(items,targetId="daily-grid"){
+      const grid=$(targetId);
       if(!Array.isArray(items)||!items.length){grid.innerHTML='<div class="chart-empty">Günlük tahmin verisi bulunamadı.</div>';return;}
       grid.innerHTML=items.map(item=>{
         const date=new Date(item.date_istanbul+"T12:00:00+03:00");
@@ -460,8 +450,8 @@
       const directions=["kuzey","kuzeydoğu","doğu","güneydoğu","güney","güneybatı","batı","kuzeybatı"];
       return distance<50?"İstanbul'un yakın çevresinde":"İstanbul'un yaklaşık "+Math.round(distance)+" km "+directions[Math.floor((bearing+22.5)/45)%8]+" yönünde";
     }
-    function renderFindings(findings,istanbulPressure){
-      const list=$("pressure-findings");
+    function renderFindings(findings,istanbulPressure,targetId="pressure-findings"){
+      const list=$(targetId);
       if(!Array.isArray(findings)||!findings.length){list.innerHTML='<li class="pressure-empty">Bu tahmin döngüsü için bölgesel basınç yorumu bulunmuyor.</li>';return;}
       const items=findings.map(value=>String(value)).filter(value=>!value.includes("Yüksek ve alçak basınç merkezleri bölgesel eğilimi gösterir"));
       list.innerHTML=items.map(text=>'<li><span class="pressure-icon">◈</span><span>'+esc(text)+'</span></li>').join("");
@@ -600,13 +590,14 @@
         showPoint(coords[currentIndex]);
       });
     }
-    function renderChart(metric,targetId){
+    function renderChart(metric,targetId,sourceData=forecastData){
       const container=$(targetId);
-      const points=forecastData&&forecastData.forecast_6_hourly;
+      const points=sourceData&&sourceData.forecast_6_hourly;
       const temperature=metric==="temperature";
+      const isEcmwf=sourceData&&sourceData.schema==="gfs-watch.ecmwf-eps.v1";
       const field=temperature?"temperature_2m_c":"precipitation_6h_mm";
-      const title=temperature?"2 m sıcaklık · °C":"3 saatlik toplam yağış · mm";
-      const counter=$(temperature?"temperature-count":"precipitation-count");
+      const title=temperature?"2 m sıcaklık · °C":(isEcmwf?"Tahmin adımı yağış birikimi · mm":"3 saatlik toplam yağış · mm");
+      const counter=$(isEcmwf?(temperature?"ecmwf-temperature-count":"ecmwf-precipitation-count"):(temperature?"temperature-count":"precipitation-count"));
       if(!Array.isArray(points)){container.innerHTML='<div class="chart-empty">Tahmin verisi bulunamadı.</div>';return;}
 
       // GFS provides hourly data through +120h and then three-hourly data.
@@ -625,13 +616,22 @@
             date:point.valid_time_istanbul,
             forecastHour:point.lead
           }));
+      }else if(isEcmwf){
+        valid=byLead.slice(1).map((endpoint,index)=>{
+          const startPoint=byLead[index];
+          return {
+            value:endpoint.precipitation_6h_mm,
+            date:endpoint.valid_time_istanbul,
+            forecastHour:endpoint.lead,
+            intervalStart:startPoint.valid_time_istanbul,
+            intervalHours:Number(endpoint.precipitation_interval_hours)||endpoint.lead-startPoint.lead
+          };
+        }).filter(point=>numeric(point.value));
       }else{
         const threeHourEndpoints=byLead.filter(point=>point.lead>0&&point.lead%3===0);
         valid=threeHourEndpoints.map(endpoint=>{
           const startLead=endpoint.lead-3;
           const intervalPoints=byLead.filter(point=>point.lead>startLead&&point.lead<=endpoint.lead);
-          // Before and including +120h, add three hourly accumulations.
-          // Beyond +120h, GFS already supplies one three-hour accumulation.
           const expectedCount=endpoint.lead<=120?3:1;
           const measured=intervalPoints.filter(point=>numeric(point[field]));
           const startPoint=byLead.find(point=>point.lead===startLead);
@@ -657,8 +657,8 @@
       const span=(max-min)||1;
       const low=temperature?min-span*.16:Math.max(0,min-span*.12);
       const high=max+span*.16;
-      const maxForecastHour=numeric(forecastData.forecast_horizon_hours)
-        ? forecastData.forecast_horizon_hours
+      const maxForecastHour=numeric(sourceData.forecast_horizon_hours)
+        ? sourceData.forecast_horizon_hours
         : Math.max(...valid.map(point=>point.forecastHour));
       const xFor=hour=>left+(hour/maxForecastHour)*(width-left-right);
       const yFor=value=>top+((high-value)/(high-low))*(height-top-bottom);
@@ -1091,73 +1091,21 @@
 
     let ecmwfForecast=null,ecmwfLoading=false,ecmwfLastFetch=0;
     let activeModel="gfs";
-    function formatModelMean(mean,spread,digits=1){
-      return fmt(mean,digits)+" ± "+fmt(spread,digits);
-    }
-    function renderEcmwfChart(holderId,forecast,group,meanKey,spreadKey,unit,stroke){
-      const holder=$(holderId);
-      if(!holder)return;
-      const points=forecast.map(item=>({
-        hour:Number(item.forecast_hour),
-        mean:Number(item[group]&&item[group][meanKey]),
-        spread:Number(item[group]&&item[group][spreadKey])
-      })).filter(item=>Number.isFinite(item.hour)&&Number.isFinite(item.mean)&&Number.isFinite(item.spread)&&item.spread>=0);
-      if(points.length<2){
-        holder.innerHTML='<div class="chart-empty">Bu ECMWF serisi için yeterli veri yok.</div>';
-        return;
-      }
-      const width=960,height=290,left=62,right=22,top=20,bottom=42;
-      const plotW=width-left-right,plotH=height-top-bottom;
-      const rawLow=Math.min(...points.map(point=>point.mean-point.spread));
-      const rawHigh=Math.max(...points.map(point=>point.mean+point.spread));
-      const padding=Math.max((rawHigh-rawLow)*.12,.8);
-      const low=Math.floor((rawLow-padding)*2)/2;
-      const high=Math.ceil((rawHigh+padding)*2)/2;
-      const span=Math.max(.5,high-low);
-      const x=index=>left+(points[index].hour/180)*plotW;
-      const y=value=>top+((high-value)/span)*plotH;
-      const grid=Array.from({length:5},(_,index)=>{
-        const value=low+span*index/4,py=y(value);
-        return '<line x1="'+left+'" y1="'+py.toFixed(1)+'" x2="'+(width-right)+'" y2="'+py.toFixed(1)+'" stroke="rgba(190,218,228,.15)" stroke-dasharray="3 5"/><text x="'+(left-9)+'" y="'+(py+4).toFixed(1)+'" fill="#a8bfca" font-size="11" text-anchor="end">'+esc(fmt(value,1))+'</text>';
-      }).join("");
-      const upper=points.map((point,index)=>(index?"L":"M")+x(index).toFixed(1)+" "+y(point.mean+point.spread).toFixed(1)).join(" ");
-      const lower=points.slice().reverse().map((point,reverseIndex)=>{
-        const index=points.length-1-reverseIndex;
-        return "L"+x(index).toFixed(1)+" "+y(point.mean-point.spread).toFixed(1);
-      }).join(" ");
-      const band='<path d="'+upper+" "+lower+' Z" fill="'+stroke+'" opacity=".16"/>';
-      const meanPath=points.map((point,index)=>(index?"L":"M")+x(index).toFixed(1)+" "+y(point.mean).toFixed(1)).join(" ");
-      const line='<path d="'+meanPath+'" fill="none" stroke="'+stroke+'" stroke-width="3.2" stroke-linecap="round" stroke-linejoin="round"/>';
-      const markers=points.map((point,index)=>{
-        const title="+"+point.hour+" saat · ortalama "+fmt(point.mean,1)+" "+unit+" · standart sapma "+fmt(point.spread,1)+" "+unit;
-        return '<circle cx="'+x(index).toFixed(1)+'" cy="'+y(point.mean).toFixed(1)+'" r="2.7" fill="#f2fffd" stroke="'+stroke+'" stroke-width="1.6"><title>'+esc(title)+'</title></circle>';
-      }).join("");
-      const timeLabels=points.map((point,index)=>{
-        if(point.hour%24!==0&&index!==points.length-1)return "";
-        return '<text x="'+x(index).toFixed(1)+'" y="'+(height-12)+'" fill="#a8bfca" font-size="11" text-anchor="middle">+'+point.hour+'s</text>';
-      }).join("");
-      holder.innerHTML='<svg viewBox="0 0 '+width+' '+height+'" role="img" aria-label="'+esc(group+" "+unit+" ECMWF ensemble ortalaması ve standart sapma grafiği")+'">'+grid+band+line+markers+timeLabels+'</svg>';
-    }
     function renderEcmwfForecast(document){
       const forecasts=document.forecasts||[];
       const first=forecasts[0],last=forecasts[forecasts.length-1];
       if(!first||!last)throw new Error("ECMWF tahmin zaman serisi boş.");
+      const viewData={schema:"gfs-watch.ecmwf-eps.v1",model:document.model,forecast_horizon_hours:document.forecast_horizon_hours,forecast_6_hourly:document.forecast_6_hourly,daily_summary:document.daily_summary,regional_pressure_analysis:document.regional_pressure_analysis};
+      if(!Array.isArray(viewData.forecast_6_hourly)||viewData.forecast_6_hourly.length!==forecasts.length)throw new Error("ECMWF ortak tahmin zaman çizelgesi eksik.");
+      if(!Array.isArray(viewData.daily_summary)||!viewData.daily_summary.length)throw new Error("ECMWF günlük özet verisi eksik.");
       $("ecmwf-run-meta").textContent="Döngü: "+timeTR(document.run_id_utc)+" TSİ · Geçerlilik: +"+last.forecast_hour+" saat";
-      const t=first.temperature_850hpa,w=first.wind_850hpa,p=first.mslp;
-      $("ecmwf-summary").innerHTML=
-        '<article class="ecmwf-summary-card"><div class="ecmwf-summary-label">850 hPa sıcaklık · başlangıç</div><div class="ecmwf-summary-value">'+fmt(t.mean_c,1)+' °C</div><div class="ecmwf-summary-spread">±'+fmt(t.stddev_c,1)+' °C · 1σ</div></article>'+
-        '<article class="ecmwf-summary-card"><div class="ecmwf-summary-label">850 hPa rüzgâr · başlangıç</div><div class="ecmwf-summary-value">'+fmt(w.mean_kmh,1)+' km/sa</div><div class="ecmwf-summary-spread">±'+fmt(w.stddev_kmh,1)+' km/sa · 1σ</div></article>'+
-        '<article class="ecmwf-summary-card"><div class="ecmwf-summary-label">Deniz seviyesi basıncı · başlangıç</div><div class="ecmwf-summary-value">'+fmt(p.mean_hpa,1)+' hPa</div><div class="ecmwf-summary-spread">±'+fmt(p.stddev_hpa,1)+' hPa · 1σ</div></article>';
-      renderEcmwfChart("ecmwf-temperature-chart",forecasts,"temperature_850hpa","mean_c","stddev_c","°C","#7dd3d7");
-      renderEcmwfChart("ecmwf-wind-chart",forecasts,"wind_850hpa","mean_kmh","stddev_kmh","km/sa","#8abce8");
-      renderEcmwfChart("ecmwf-pressure-chart",forecasts,"mslp","mean_hpa","stddev_hpa","hPa","#f1c98b");
-      const selected=forecasts.filter(item=>item.forecast_hour%12===0);
-      $("ecmwf-forecast-table").querySelector("tbody").innerHTML=selected.map(item=>{
-        const local=new Intl.DateTimeFormat("tr-TR",{timeZone:"Europe/Istanbul",day:"2-digit",month:"2-digit",hour:"2-digit",minute:"2-digit"}).format(new Date(item.valid_time_utc));
-        return '<tr><td>+'+item.forecast_hour+' saat</td><td>'+esc(local)+' TSİ</td><td>'+formatModelMean(item.temperature_850hpa.mean_c,item.temperature_850hpa.stddev_c,1)+' °C</td><td>'+formatModelMean(item.wind_850hpa.mean_kmh,item.wind_850hpa.stddev_kmh,1)+' km/sa</td><td>'+formatModelMean(item.mslp.mean_hpa,item.mslp.stddev_hpa,1)+' hPa</td></tr>';
-      }).join("");
-      const updated=document.updated_at_utc?timeTR(document.updated_at_utc):"zaman bilgisi yok";
-      $("ecmwf-data-status").textContent="Veri hazır · "+document.model+" · "+document.resolution+" · "+forecasts.length+" tahmin adımı · Son veri hazırlama: "+updated+" TSİ";
+      $("ecmwf-updated-chip").textContent="Yayınlandı · "+timeTR(document.updated_at_utc);
+      $("ecmwf-valid-until").textContent="Son geçerlilik: "+new Intl.DateTimeFormat("tr-TR",{timeZone:"Europe/Istanbul",day:"2-digit",month:"2-digit"}).format(new Date(document.forecast_valid_until_utc));
+      renderDaily(viewData.daily_summary,"ecmwf-daily-grid");
+      renderChart("temperature","ecmwf-temperature-chart",viewData);
+      renderChart("precipitation","ecmwf-precipitation-chart",viewData);
+      renderFindings(viewData.regional_pressure_analysis&&viewData.regional_pressure_analysis.findings,first.mslp&&first.mslp.mean_hpa,"ecmwf-pressure-findings");
+      $("ecmwf-data-status").textContent="Veri hazır · "+document.model+" · "+document.resolution+" · "+forecasts.length+" tahmin adımı · Son veri hazırlama: "+timeTR(document.updated_at_utc)+" TSİ";
     }
     async function loadEcmwf(force=false){
       if(ecmwfLoading)return;

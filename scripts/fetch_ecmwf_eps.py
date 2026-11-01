@@ -80,7 +80,7 @@ def read_grib_point(path: Path, expected_kind: str) -> dict[int, tuple[float, fl
         codes_release,
     )
 
-    if expected_kind not in {"t850", "ws850", "msl"}:
+    if expected_kind not in {"t850", "ws850", "msl", "t2m", "u10", "v10", "tp"}:
         raise ValueError(f"Unsupported GRIB kind: {expected_kind}")
 
     output: dict[int, tuple[float, float, float]] = {}
@@ -98,6 +98,14 @@ def read_grib_point(path: Path, expected_kind: str) -> dict[int, tuple[float, fl
                     matches = short_name == "t" and level_type == "isobaricInhPa" and level == 850
                 elif expected_kind == "ws850":
                     matches = short_name in {"ws", "si"} and level_type == "isobaricInhPa" and level == 850
+                elif expected_kind == "t2m":
+                    matches = short_name == "2t" and level_type == "heightAboveGround" and level == 2
+                elif expected_kind == "u10":
+                    matches = short_name == "10u" and level_type == "heightAboveGround" and level == 10
+                elif expected_kind == "v10":
+                    matches = short_name == "10v" and level_type == "heightAboveGround" and level == 10
+                elif expected_kind == "tp":
+                    matches = short_name == "tp" and level_type in {"surface", "meanSea"}
                 else:
                     matches = short_name == "msl" and level_type in {"meanSea", "surface"}
                 if not matches:
@@ -165,6 +173,8 @@ def build_document(run_dt: datetime, mean: dict, spread: dict) -> dict:
 
     forecasts = []
     grid_lat = grid_lon = None
+    previous_tp_mean = 0.0
+    previous_tp_spread = 0.0
     for step in steps:
         t_mean, lat, lon = _value_at(mean["mean_t850"], step, "850 hPa temperature mean")
         t_sd, _, _ = _value_at(spread["spread_t850"], step, "850 hPa temperature spread")
@@ -172,6 +182,19 @@ def build_document(run_dt: datetime, mean: dict, spread: dict) -> dict:
         w_sd, _, _ = _value_at(spread["spread_ws850"], step, "850 hPa wind spread")
         p_mean, _, _ = _value_at(mean["mean_msl"], step, "MSLP mean")
         p_sd, _, _ = _value_at(spread["spread_msl"], step, "MSLP spread")
+        t2_mean, _, _ = _value_at(mean["mean_t2m"], step, "2m temperature mean")
+        t2_sd, _, _ = _value_at(spread["spread_t2m"], step, "2m temperature spread")
+        u10_mean, _, _ = _value_at(mean["mean_u10"], step, "10m u wind mean")
+        v10_mean, _, _ = _value_at(mean["mean_v10"], step, "10m v wind mean")
+        u10_sd, _, _ = _value_at(spread["spread_u10"], step, "10m u wind spread")
+        v10_sd, _, _ = _value_at(spread["spread_v10"], step, "10m v wind spread")
+        tp_mean, _, _ = _value_at(mean["mean_tp"], step, "total precipitation mean")
+        tp_sd, _, _ = _value_at(spread["spread_tp"], step, "total precipitation spread")
+        wind10 = math.hypot(u10_mean, v10_mean) * 3.6
+        wind10_sd = math.hypot(u10_sd, v10_sd) * 3.6
+        precip_interval_mm = max(0.0, (tp_mean - previous_tp_mean) * 1000.0)
+        precip_spread_mm = max(0.0, (tp_sd - previous_tp_spread) * 1000.0)
+        previous_tp_mean, previous_tp_spread = tp_mean, tp_sd
         if grid_lat is None:
             grid_lat, grid_lon = lat, lon
         valid_utc = run_dt + timedelta(hours=step)
@@ -191,10 +214,46 @@ def build_document(run_dt: datetime, mean: dict, spread: dict) -> dict:
                 "mean_hpa": round(p_mean / 100.0, 2),
                 "stddev_hpa": round(max(0.0, p_sd) / 100.0, 2),
             },
+            "temperature_2m_c": round(t2_mean - 273.15, 2),
+            "temperature_2m_stddev_c": round(max(0.0, t2_sd), 2),
+            "wind_speed_10m_kmh": round(wind10, 2),
+            "wind_speed_10m_stddev_kmh": round(wind10_sd, 2),
+            "precipitation_interval_mm": round(precip_interval_mm, 3),
+            "precipitation_interval_stddev_mm": round(precip_spread_mm, 3),
+            "precipitation_accumulated_mm": round(max(0.0, tp_mean) * 1000.0, 3),
         })
 
     if len(forecasts) != len(steps) or forecasts[-1]["forecast_hour"] != MAX_FORECAST_HOUR:
         raise RuntimeError("ECMWF EPS forecast timeline is incomplete.")
+    daily_by_date: dict[str, dict] = {}
+    for item in forecasts:
+        local_date = item["valid_time_istanbul"][:10]
+        day = daily_by_date.setdefault(local_date, {"temperatures": [], "precipitation": [], "winds": []})
+        day["temperatures"].append(item["temperature_2m_c"])
+        day["precipitation"].append(item["precipitation_interval_mm"])
+        day["winds"].append(item["wind_speed_10m_kmh"])
+    daily_summary = [{
+        "date_istanbul": date,
+        "temperature_min_c": round(min(day["temperatures"]), 1),
+        "temperature_max_c": round(max(day["temperatures"]), 1),
+        "precipitation_total_mm": round(sum(day["precipitation"]), 1),
+        "wind_speed_max_10m_kmh": round(max(day["winds"]), 1),
+        "wind_speed_max_850hpa_kmh": round(max(item["wind_850hpa"]["mean_kmh"] for item in forecasts if item["valid_time_istanbul"][:10] == date), 1),
+    } for date, day in daily_by_date.items()]
+    gfs_compatible_forecast = []
+    previous_step = 0
+    for item in forecasts:
+        gfs_compatible_forecast.append({
+            "forecast_hour": item["forecast_hour"],
+            "valid_time_utc": item["valid_time_utc"],
+            "valid_time_istanbul": item["valid_time_istanbul"],
+            "temperature_2m_c": item["temperature_2m_c"],
+            "wind_speed_10m_kmh": item["wind_speed_10m_kmh"],
+            "wind_speed_850hpa_kmh": item["wind_850hpa"]["mean_kmh"],
+            "precipitation_6h_mm": item["precipitation_interval_mm"],
+            "precipitation_interval_hours": item["forecast_hour"] - previous_step,
+        })
+        previous_step = item["forecast_hour"]
     return {
         "schema": SCHEMA,
         "status": "ready",
@@ -228,6 +287,19 @@ def build_document(run_dt: datetime, mean: dict, spread: dict) -> dict:
             "ECMWF ENS açık verisi 00Z ve 12Z döngülerinde 0.25° çözünürlükte kullanılmıştır.",
         ],
         "forecasts": forecasts,
+        "daily_summary": daily_summary,
+        "forecast_6_hourly": gfs_compatible_forecast,
+        "current_conditions": {
+            "temperature_2m_c": forecasts[0]["temperature_2m_c"],
+            "wind_speed_10m_kmh": forecasts[0]["wind_speed_10m_kmh"],
+            "precipitation_mm": forecasts[0]["precipitation_interval_mm"],
+            "mean_sea_level_pressure_hpa": forecasts[0]["mslp"]["mean_hpa"],
+        },
+        "regional_pressure_analysis": {
+            "valid_time_utc": run_dt.isoformat(timespec="seconds"),
+            "diameter_km": None,
+            "findings": ["ECMWF EPS bu yayında İstanbul grid hücresini sağlar. Bölgesel basınç merkezlerini isimlendirmek için geniş alan MSLP grid verisi henüz bu pakette bulunmadığından merkez konumu üretilmez."],
+        },
     }
 
 
@@ -261,7 +333,21 @@ def validate_document(document: dict) -> None:
             raise ValueError("ECMWF 850 hPa wind speed is outside sanity bounds.")
         if not (800 <= item["mslp"]["mean_hpa"] <= 1100):
             raise ValueError("ECMWF MSLP is outside sanity bounds.")
+        for key in ("temperature_2m_c", "wind_speed_10m_kmh", "precipitation_interval_mm"):
+            value = item.get(key)
+            if not isinstance(value, (int, float)) or not math.isfinite(value):
+                raise ValueError(f"ECMWF GFS-compatible field is invalid: {key}.")
+        if not (-100 <= item["temperature_2m_c"] <= 60):
+            raise ValueError("ECMWF 2m temperature is outside physical sanity bounds.")
+        if not (0 <= item["wind_speed_10m_kmh"] <= 250):
+            raise ValueError("ECMWF 10m wind is outside physical sanity bounds.")
+        if item["precipitation_interval_mm"] < 0:
+            raise ValueError("ECMWF precipitation interval cannot be negative.")
         datetime.fromisoformat(item["valid_time_utc"].replace("Z", "+00:00"))
+    if not isinstance(document.get("daily_summary"), list) or not document["daily_summary"]:
+        raise ValueError("ECMWF daily summary is missing.")
+    if not isinstance(document.get("forecast_6_hourly"), list) or len(document["forecast_6_hourly"]) != len(steps):
+        raise ValueError("ECMWF GFS-compatible forecast timeline is missing.")
     if document.get("license") != "CC BY 4.0" or not document.get("attribution"):
         raise ValueError("ECMWF Open Data attribution/licence metadata is missing.")
 
@@ -281,21 +367,31 @@ def _fetch_cycle(client, run_dt: datetime) -> dict:
                 client, run_dt=run_dt, product_type=product_type,
                 step_values=steps, params=["t", "ws"], levelist=850, target=paths[key],
             )
+        # Fetch all required surface fields in one request per ensemble statistic.
         for product_type, key in (("em", "em_sfc"), ("es", "es_sfc")):
             _retrieve(
                 client, run_dt=run_dt, product_type=product_type,
-                step_values=steps, params=["msl"], levelist=None, target=paths[key],
+                step_values=steps, params=["msl", "2t", "10u", "10v", "tp"],
+                levelist=None, target=paths[key],
             )
 
         mean = {
             "mean_t850": read_grib_point(paths["em_pl"], "t850"),
             "mean_ws850": read_grib_point(paths["em_pl"], "ws850"),
             "mean_msl": read_grib_point(paths["em_sfc"], "msl"),
+            "mean_t2m": read_grib_point(paths["em_sfc"], "t2m"),
+            "mean_u10": read_grib_point(paths["em_sfc"], "u10"),
+            "mean_v10": read_grib_point(paths["em_sfc"], "v10"),
+            "mean_tp": read_grib_point(paths["em_sfc"], "tp"),
         }
         spread = {
             "spread_t850": read_grib_point(paths["es_pl"], "t850"),
             "spread_ws850": read_grib_point(paths["es_pl"], "ws850"),
             "spread_msl": read_grib_point(paths["es_sfc"], "msl"),
+            "spread_t2m": read_grib_point(paths["es_sfc"], "t2m"),
+            "spread_u10": read_grib_point(paths["es_sfc"], "u10"),
+            "spread_v10": read_grib_point(paths["es_sfc"], "v10"),
+            "spread_tp": read_grib_point(paths["es_sfc"], "tp"),
         }
         document = build_document(run_dt, mean, spread)
         validate_document(document)
