@@ -23,7 +23,7 @@ def main() -> None:
     )
     assert "PAGES NOTIFICATION ERROR" in dispatch
     assert "TELEGRAM REPORT ERROR" in dispatch
-    assert "send_telegram_voice(audio_file, cleanup=False)" in dispatch, (
+    assert "send_telegram_voice(audio_file, cleanup=False)" in process, (
         "Pages must be able to archive the voice asset while Telegram sends it."
     )
     assert "if audio_file and os.path.exists(audio_file):" in dispatch
