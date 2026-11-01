@@ -259,6 +259,15 @@
     .history-chart{height:170px;width:100%;margin-top:5px;min-width:0}
     .history-chart svg{width:100%;height:100%;display:block;overflow:visible}
     .history-chart-meta{font-size:9px;color:#91aab5;line-height:1.4;margin-top:2px;min-height:0}
+    /* Align the ENKA trend panel's top edge and heading with the live station card. */
+    .dashboard-top .history-panel{
+      align-self:start;
+      margin-top:0;
+      padding-top:8px;
+    }
+    @media(max-width:560px){
+      .dashboard-top .history-panel{padding-top:8px}
+    }
     /* Keep the live-observation content unchanged; tighten only its frame and spacing. */
     .dashboard-top{align-items:start}
     .dashboard-top .station-card{
