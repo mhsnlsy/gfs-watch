@@ -2,7 +2,8 @@
 
 The historical notification text/audio is preserved. This job does not send
 a Telegram message; it only rebuilds the current Pages forecast and its four
-separate chart images from the corresponding NOAA GFS cycle.
+separate, slightly wider chart images for better mobile axis-label readability
+from the corresponding NOAA GFS cycle.
 """
 from __future__ import annotations
 
