@@ -15,14 +15,14 @@ HOME_URL = "https://w.enka.com/weather/index.html"
 
 
 def _clean_html(fragment):
-    fragment = re.sub(r"<script\\b[^>]*>.*?</script>", " ", fragment, flags=re.I | re.S)
-    fragment = re.sub(r"<style\\b[^>]*>.*?</style>", " ", fragment, flags=re.I | re.S)
+    fragment = re.sub(r"<script\b[^>]*>.*?</script>", " ", fragment, flags=re.I | re.S)
+    fragment = re.sub(r"<style\b[^>]*>.*?</style>", " ", fragment, flags=re.I | re.S)
     fragment = re.sub(r"<[^>]+>", " ", fragment)
-    return re.sub(r"\\s+", " ", unescape(fragment)).strip()
+    return re.sub(r"\s+", " ", unescape(fragment)).strip()
 
 
 def _number(value):
-    match = re.search(r"[-+]?\\d+(?:[.,]\\d+)?", value or "")
+    match = re.search(r"[-+]?\d+(?:[.,]\d+)?", value or "")
     if not match:
         return None
     try:
@@ -45,7 +45,7 @@ def fetch_enka_station_observation():
     page_text = _clean_html(page)
 
     timestamp_match = re.search(
-        r"As\\s+of\\s*:?\\s*(\\d{1,2}/\\d{1,2}/\\d{2,4})\\s+(\\d{1,2}:\\d{2})",
+        r"As\s+of\s*:?\s*(\d{1,2}/\d{1,2}/\d{2,4})\s+(\d{1,2}:\d{2})",
         page_text, flags=re.I,
     )
     if not timestamp_match:
@@ -63,8 +63,8 @@ def fetch_enka_station_observation():
     observed_utc = observed_local.astimezone(timezone.utc)
 
     rows = []
-    for row_html in re.findall(r"<tr\\b[^>]*>(.*?)</tr>", page, flags=re.I | re.S):
-        cells = re.findall(r"<t[dh]\\b[^>]*>(.*?)</t[dh]>", row_html, flags=re.I | re.S)
+    for row_html in re.findall(r"<tr\b[^>]*>(.*?)</tr>", page, flags=re.I | re.S):
+        cells = re.findall(r"<t[dh]\b[^>]*>(.*?)</t[dh]>", row_html, flags=re.I | re.S)
         cleaned = [_clean_html(cell) for cell in cells]
         if len(cleaned) >= 2:
             rows.append(cleaned)
@@ -81,7 +81,7 @@ def fetch_enka_station_observation():
         elif label == "wind":
             wind_text = cells[1]
             direction = re.match(
-                r"\\s*(NNE|ENE|ESE|SSE|SSW|WSW|WNW|NNW|N|NE|E|SE|S|SW|W|NW)\\b",
+                r"\s*(NNE|ENE|ESE|SSE|SSW|WSW|WNW|NNW|N|NE|E|SE|S|SW|W|NW)\b",
                 wind_text, flags=re.I,
             )
             if direction:
@@ -130,7 +130,7 @@ def main():
     }
     Path("public").mkdir(exist_ok=True)
     Path("public/station-observation.json").write_text(
-        json.dumps(document, ensure_ascii=False, indent=2) + "\\n",
+        json.dumps(document, ensure_ascii=False, indent=2) + "\n",
         encoding="utf-8",
     )
     print(
