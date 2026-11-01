@@ -136,8 +136,10 @@ jobs:
           fi
           cp gfs_watch.db "$RUNNER_TEMP/gfs_watch.db"
           mkdir -p "$RUNNER_TEMP/public"
-          if [ -d public ]; then
+          if [ "${{ steps.check-gfs.outcome }}" = "success" ] && [ -d public ]; then
             cp -a public/. "$RUNNER_TEMP/public/"
+          else
+            echo "Report step failed; keeping the previously published Pages forecast and notification archive."
           fi
           rm -rf public
           git checkout -B gfs-watch-state origin/gfs-watch-state
