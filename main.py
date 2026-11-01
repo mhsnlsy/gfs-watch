@@ -2314,7 +2314,9 @@ def create_comparison_chart(current_run_id, payload, previous_runs):
         _draw_comparison_temperature_axis(axes[0], chart_data)
         axes[0].legend(
             handles=_comparison_legend_handles(series, chart_data["colors"]),
-            loc="upper left", ncol=min(4, count), fontsize=8.5, frameon=False,
+            loc="upper left", ncol=min(4, count), fontsize=8.5, frameon=True,
+            facecolor=GFS_REPORT_PANEL_BG, edgecolor=GFS_REPORT_LEGEND_EDGE,
+            framealpha=0.98, labelcolor=GFS_REPORT_TEXT,
         )
         _draw_comparison_bar_axis(axes[1], chart_data, "precip", "Günlük toplam yağış", "mm")
         _draw_comparison_bar_axis(axes[2], chart_data, "wind", "Yüzey rüzgârı | 10 m günlük en yüksek hız", "km/sa")
