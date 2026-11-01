@@ -55,10 +55,6 @@ def run_offline_tests() -> None:
         "spread_t850": synthetic_series(steps, 1.0),
         "spread_ws850": synthetic_series(steps, 2.0),
         "spread_msl": synthetic_series(steps, 250.0),
-        "spread_t2m": synthetic_series(steps, 1.0),
-        "spread_u10": synthetic_series(steps, 1.0),
-        "spread_v10": synthetic_series(steps, 1.0),
-        "spread_tp": synthetic_series(steps, 0.0001),
     }
     regional_pressure = {
         "diameter_km": 2500,
@@ -72,12 +68,10 @@ def run_offline_tests() -> None:
     )
     validate_document(document)
     mean_without_tp_zero = {**mean, "mean_tp": dict(mean["mean_tp"])}
-    spread_without_tp_zero = {**spread, "spread_tp": dict(spread["spread_tp"])}
     del mean_without_tp_zero["mean_tp"][0]
-    del spread_without_tp_zero["spread_tp"][0]
     zero_baseline_document = build_document(
         datetime(2026, 11, 1, 0, tzinfo=timezone.utc),
-        mean_without_tp_zero, spread_without_tp_zero, regional_pressure,
+        mean_without_tp_zero, spread, regional_pressure,
     )
     assert zero_baseline_document["forecasts"][0]["precipitation_interval_mm"] == 0.0
     assert document["schema"] == SCHEMA
@@ -87,6 +81,12 @@ def run_offline_tests() -> None:
     assert document["forecasts"][-1]["forecast_hour"] == 180
     assert document["forecasts"][0]["temperature_2m_c"] == 7.0
     assert document["forecasts"][0]["wind_speed_10m_kmh"] == 18.0
+    assert document["forecasts"][0]["temperature_2m_stddev_c"] is None
+    assert document["forecasts"][0]["wind_speed_10m_stddev_kmh"] is None
+    assert document["forecasts"][0]["precipitation_interval_stddev_mm"] is None
+    assert document["surface_ensemble_spread_available"] is False
+    assert document["surface_forecast_source"] == "IFS HRES deterministic (stream=oper, type=fc)"
+    assert "HRES" in document["model"]
     assert len(document["forecast_6_hourly"]) == 55
     assert document["daily_summary"]
     assert len(document["regional_pressure_analysis"]["findings"]) == 4
@@ -123,7 +123,7 @@ def run_offline_tests() -> None:
     else:
         raise AssertionError("An impossible wind value was accepted.")
 
-    print("[ECMWF OFFLINE SMOKE] 55 steps, units, spread, metadata and fail-closed checks passed.")
+    print("[ECMWF OFFLINE SMOKE] 55 steps, HRES/ENS source split, surface spread null semantics, units and fail-closed checks passed.")
 
 
 def main() -> None:
