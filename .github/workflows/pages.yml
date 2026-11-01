@@ -261,7 +261,7 @@ jobs:
         run: |
           google-chrome --version
           npm install --no-save playwright
-          node scripts/test_live_station_history.mjs
+          node source/scripts/test_live_station_history.mjs
 
       - name: Verify latest GFS report and every referenced Pages asset
         env:
