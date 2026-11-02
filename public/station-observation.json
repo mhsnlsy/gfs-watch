@@ -10,7 +10,7 @@
     "longitude": 28.9,
     "elevation_m": 107,
     "observed_at_utc": "2026-11-02T12:55:00+00:00",
-    "age_minutes": 5.3,
+    "age_minutes": 10.4,
     "is_stale": false,
     "temperature_2m_c": 21.3,
     "wind_speed_10m_kmh": 1.7,
@@ -22,5 +22,5 @@
     "humidity_percent": 69.0,
     "station_pressure_hpa": 1015.0
   },
-  "updated_at_utc": "2026-11-02T13:00:18+00:00"
+  "updated_at_utc": "2026-11-02T13:05:23+00:00"
 }
