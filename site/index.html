@@ -677,6 +677,7 @@
   </div>
 </div>
         <div class="weather-stats">
+  <div class="stat"><div class="name">Hissedilen</div><div class="value" id="feels-like">—<span class="unit">°</span></div></div>
   <div class="stat"><div class="name">Rüzgâr</div><div class="value" id="wind">—<span class="unit">km/sa</span></div><div class="detail" id="wind-direction">—</div></div>
   <div class="stat"><div class="name">Nem</div><div class="value" id="humidity">—<span class="unit">%</span></div></div>
   <div class="stat"><div class="name">Çiğ Noktası</div><div class="value" id="dewpoint-value">—<span class="unit">°</span></div></div>
@@ -1206,6 +1207,18 @@
       renderStationRainTrend(samples,stationName);
     }
 
+    
+    function calculateFeelsLike(tempC, humidity, windKmh) {
+      if (!Number.isFinite(tempC)) return null;
+      const rh = Number.isFinite(humidity) ? Math.max(0, Math.min(100, humidity)) : 50;
+      const windMs = Number.isFinite(windKmh) ? Math.max(0, windKmh / 3.6) : 0;
+      // Australian Apparent Temperature (Steadman, shade, Q=0)
+      // e = vapor pressure (hPa)
+      const e = (rh / 100) * 6.105 * Math.exp((17.27 * tempC) / (237.7 + tempC));
+      const at = tempC + 0.348 * e - 0.7 * windMs - 4.25;
+      return Number.isFinite(at) ? at : null;
+    }
+
     function updateStation24hDiff(station) {
       const el = $("station-24h-diff");
       
@@ -1270,6 +1283,11 @@
       $("wind-direction").textContent=direction?direction:"Yön —";
       $("rain").innerHTML=hasStation&&numeric(station.precipitation_daily_mm)?fmt(station.precipitation_daily_mm,1)+'<span class="unit">mm</span>':'—<span class="unit">mm</span>';
       $("humidity").innerHTML=hasStation&&numeric(station.humidity_percent)?fmt(station.humidity_percent,0)+'<span class="unit">%</span>':'—<span class="unit">%</span>';
+      const feels = hasStation ? calculateFeelsLike(station.temperature_2m_c, station.humidity_percent, station.wind_speed_10m_kmh) : null;
+      const feelsEl = $("feels-like");
+      if (feelsEl) {
+        feelsEl.innerHTML = (feels !== null) ? fmt(feels, 1) + '<span class="unit">°</span>' : '—<span class="unit">°</span>';
+      }
       $("pressure").innerHTML=hasStation&&numeric(station.station_pressure_hpa)?fmt(station.station_pressure_hpa,1)+'<span class="unit">hPa</span>':'—<span class="unit">hPa</span>';
       if(hasStation&&numeric(station.station_pressure_hpa)){
         const pressureKind=station.pressure_type==="mean_sea_level"?"Deniz seviyesi":station.pressure_type==="station"?"İstasyon basıncı":"";
