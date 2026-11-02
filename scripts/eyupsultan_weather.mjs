@@ -182,6 +182,8 @@ async function main() {
     await page.waitForFunction(() => document.body && document.body.innerText.includes("18101"), { timeout: 20000 });
     await page.waitForTimeout(1500);
     const bodyText = await page.locator("body").innerText();
+    const precipitationLines = bodyText.split(/\n+/).filter(line => /yağış|yağmur|mm|bugün|rain/i.test(line));
+    console.log("[WSTAT PRECIPITATION TEXT]", JSON.stringify(precipitationLines));
     if (/Just a moment|Checking your browser|Access denied/i.test(bodyText)) {
       throw new Error("WStatMap sayfası otomatik erişim doğrulaması gösterdi; veri alınmadı.");
     }
