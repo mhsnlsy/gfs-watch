@@ -385,8 +385,10 @@
 .next-72h-card-head{display:flex;align-items:center;justify-content:space-between;gap:8px}
 .next-72h-card-head h3{font:700 14px Manrope,sans-serif;margin:0}
 .next-72h-card-head span{font-size:8px;color:var(--muted)}
+.next-72h-card-head span.bias-tag{font:700 13px/1.25 Manrope,sans-serif;color:#f1c98b;letter-spacing:-.02em;white-space:normal;text-align:right}
+.next72-skill-note{margin:6px 2px 0;font-size:13px;line-height:1.4;color:#d7e6ee}
 .next-72h-chart{height:190px;width:100%;margin-top:8px;min-width:0}
-.next72-skill-note{margin:4px 2px 0;font-size:10px;line-height:1.45;color:#8ea6b3}
+.next72-skill-note{margin:6px 2px 0;font-size:13px;line-height:1.4;color:#d7e6ee}
 .next-72h-chart svg{display:block;width:100%;height:100%;overflow:visible}
 @media(max-width:900px){.dashboard-top{grid-template-columns:minmax(0,1fr)}.dashboard-left{display:contents}.dashboard-left .station-card{order:0}.next-72h-panel{order:1}.dashboard-left .history-panel{order:2}}
 @media(max-width:560px){.dashboard-top{gap:10px;padding:16px 0 12px}.dashboard-left .history-chart{height:88px}.next-72h-panel{padding:11px;border-radius:16px}.next-72h-head h2{font-size:18px}.next-72h-grid{gap:7px}.next-72h-card{padding:8px 6px 6px}.next-72h-card-head h3{font-size:11px}.next-72h-chart{height:120px}}
@@ -1220,29 +1222,37 @@
       const overall=stationDoc&&stationDoc.operational&&numeric(stationDoc.operational.bias_c)?stationDoc.operational.bias_c:null;
       const stationName=activeStation==="eyupsultan"?"Eyüpsultan":"ENKA";
       if(meta)meta.textContent=numeric(overall)?stationName+" · "+signedMiss(overall,"temp"):(known.length?stationName+" kaydına göre bant":"GFS · tutarlılık kaydı bekleniyor");
+      const tempBias=temperature.map(p=>p.bias).filter(numeric);
+      const rainBias=rain.map(p=>p.bias).filter(numeric);
+      const tempPhrase=tempBias.length?signedMiss(tempBias.reduce((a,b)=>a+b,0)/tempBias.length,"temp"):(numeric(overall)?signedMiss(overall,"temp"):"");
+      const rainPhrase=rainBias.length?signedMiss(rainBias.reduce((a,b)=>a+b,0)/rainBias.length,"rain"):"";
+      const tempSpan=document.querySelector("#next72-temperature")?.closest(".next-72h-card")?.querySelector("span");
+      const rainSpan=document.querySelector("#next72-precipitation")?.closest(".next-72h-card")?.querySelector("span");
+      if(tempSpan){tempSpan.textContent=tempPhrase||"°C";tempSpan.classList.toggle("bias-tag",!!tempPhrase);}
+      if(rainSpan){rainSpan.textContent=rainPhrase||"mm / 3 saat";rainSpan.classList.toggle("bias-tag",!!rainPhrase);}
+      temperature.caption=tempPhrase;
+      rain.caption=rainPhrase;
       drawNext72Line("next72-temperature",temperature,"#7dd3d7","Sıcaklık °C");drawNext72Line("next72-precipitation",rain,"#83c9eb","Yağış mm");
       const chart=$("next72-temperature");
       let note=$("next72-skill-note");
       if(chart&&!note){note=document.createElement("p");note.id="next72-skill-note";note.className="next72-skill-note";chart.after(note);}
       if(note){
-        note.textContent=known.length
-          ?"Büyüklük bandın genişliği. Yön ayrı: "+(numeric(overall)?signedMiss(overall,"temp")+". ":"")+"Sıcak kaçırma, modelin istasyondan yukarıda kalmasıdır. Soğuk kaçırma, aşağıda kalmasıdır. Kesik çizgi istasyonun genellikle ölçtüğü yerdir."
-          :"Sıcaklık tutarlılığı henüz bu grafiğe bağlanmadı.";
+        note.textContent=tempPhrase?tempPhrase+". Kesik sarı çizgi, istasyonun genellikle ölçtüğü yer.":"Sıcaklık yönü henüz bu grafiğe bağlanmadı.";
       }
       const rainChart=$("next72-precipitation");
       let rainNote=$("next72-rain-note");
       if(rainChart&&!rainNote){rainNote=document.createElement("p");rainNote.id="next72-rain-note";rainNote.className="next72-skill-note";rainChart.after(rainNote);}
       if(rainNote){
-        const rainKnown=rain.filter(p=>numeric(p.within)).length;
-        rainNote.textContent=rainKnown
-          ?"Yağışta artı, modelin istasyondan fazla yağış vermesidir. Eksi, az vermesidir. Bant büyüklük, kesik çizgi genellikle ölçülen miktar."
-          :"Yağış sapması, istasyonun günlük sayacı 3 saatlik dilimle eşleşince banda işlenir.";
+        rainNote.textContent=rainPhrase?rainPhrase+". Artı fazla yağış, eksi az yağış demektir.":"Yağış yönü, 3 saatlik dilimler eşleşince grafiğe yazılır.";
       }
     }
     function drawNext72Line(targetId,data,color,label){
       const holder=$(targetId);if(data.length<2){holder.innerHTML='<div class="chart-empty">Bu değişken için yeterli tahmin noktası yok.</div>';return;}
       const rainChart=label.startsWith("Yağış");
-      const width=520,height=150,left=34,right=10,top=12,bottom=26,pw=width-left-right,ph=height-top-bottom,values=data.map(p=>p.value);
+      const biases=data.map(p=>p.bias).filter(numeric);
+      const meanBias=biases.length?biases.reduce((sum,value)=>sum+value,0)/biases.length:null;
+      const phrase=data.caption||(numeric(meanBias)?signedMiss(meanBias,rainChart?"rain":"temp"):"");
+      const width=520,height=150,left=34,right=10,top=phrase?30:12,bottom=26,pw=width-left-right,ph=height-top-bottom,values=data.map(p=>p.value);
       const edge=(value,mae,sign)=>{const next=value+sign*(numeric(mae)?mae:0);return rainChart?Math.max(0,next):next;};
       const usual=p=>numeric(p.bias)?(rainChart?Math.max(0,p.value-p.bias):p.value-p.bias):p.value;
       const banded=data.flatMap(p=>numeric(p.mae)?[edge(p.value,p.mae,-1),edge(p.value,p.mae,1),usual(p)]:[usual(p)]);
@@ -1265,7 +1275,8 @@
       const colored=data.some(p=>numeric(p.within));
       const stroke=colored?coords.slice(0,-1).map((p,i)=>'<path d="M'+p.x.toFixed(1)+" "+p.y.toFixed(1)+" L "+coords[i+1].x.toFixed(1)+" "+coords[i+1].y.toFixed(1)+'" fill="none" stroke="'+skillColor(data[i].within)+'" stroke-width="2.8" stroke-linecap="round" stroke-linejoin="round"/>').join(""):'<path d="'+coords.map((p,i)=>(i?"L":"M")+p.x.toFixed(1)+" "+p.y.toFixed(1)).join(" ")+'" fill="none" stroke="'+color+'" stroke-width="2.7" stroke-linecap="round" stroke-linejoin="round"/>';
       const dots=coords.map((p,i)=>'<circle cx="'+p.x+'" cy="'+p.y+'" r="2.6" fill="'+(numeric(data[i].within)?skillColor(data[i].within):color)+'"/>').join("");
-      holder.innerHTML='<svg viewBox="0 0 '+width+' '+height+'" role="img" aria-label="Önümüzdeki 72 saat '+esc(label)+' tahmini. Bant sapma büyüklüğü, kesik çizgi istasyonun genellikle ölçtüğü yer.">'+grid+band+biasLine+stroke+dots+ticks+'</svg>';
+      const banner=phrase?'<rect x="'+left+'" y="1" width="'+(width-left-right)+'" height="18" rx="5" fill="rgba(241,201,139,.18)"/><text x="'+(left+8)+'" y="14" fill="#ffe3a3" font-size="12" font-weight="700" font-family="Manrope,sans-serif">'+esc(phrase)+'</text>':"";
+      holder.innerHTML='<svg viewBox="0 0 '+width+' '+height+'" role="img" aria-label="Önümüzdeki 72 saat '+esc(label)+' tahmini. '+esc(phrase||"Sapma yönü henüz yok")+'.">'+banner+grid+band+biasLine+stroke+dots+ticks+'</svg>';
       if(typeof document!=="undefined")attachStationHistoryTooltip(holder,holder.querySelector("svg"),coords,width,height,top,bottom,color);
     }
     function drawNext72Direction(targetId,data){
