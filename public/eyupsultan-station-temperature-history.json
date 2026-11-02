@@ -2,7 +2,7 @@
   "schema": "gfs-watch.station-temperature-history.v1",
   "station_id": "18101",
   "station_name": "Eyüpsultan",
-  "updated_at_utc": "2026-11-02T20:00:29.358Z",
+  "updated_at_utc": "2026-11-02T20:05:17.809Z",
   "samples": [
     {
       "logged_at_utc": "2026-11-01T17:53:42.423Z",
@@ -1552,12 +1552,12 @@
       "station_pressure_hpa": 1018.4
     },
     {
-      "logged_at_utc": "2026-11-02T20:00:29.358Z",
-      "observed_at_utc": "2026-11-02T19:54:00.000Z",
+      "logged_at_utc": "2026-11-02T20:05:17.809Z",
+      "observed_at_utc": "2026-11-02T19:59:00.000Z",
       "temperature_2m_c": 15.8,
-      "precipitation_daily_mm": 13.9,
-      "precipitation_1h_mm": 5,
-      "precipitation_10m_mm": 1.5,
+      "precipitation_daily_mm": 14.9,
+      "precipitation_1h_mm": 5.5,
+      "precipitation_10m_mm": 2.3,
       "station_pressure_hpa": 1018.6
     }
   ]
