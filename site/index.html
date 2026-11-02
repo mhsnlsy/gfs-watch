@@ -828,7 +828,7 @@
     <div id="gfs-model-view">
     <section class="section" id="bildirimler">
       <div class="section-head report-head">
-        <div><div class="section-kicker">GÜN BOYUNCA 4 MODEL DÖNGÜSÜ</div><h2>Son hava raporları</h2><p class="section-description">Her yeni GFS raporu, görseli ve seslendirmesiyle burada arşivlenir. En son dört rapor gösterilir.</p></div>
+        <div><div class="section-kicker">GÜN BOYUNCA 4 MODEL DÖNGÜSÜ</div><h2>Son hava raporu</h2><p class="section-description">En son GFS raporu, görseli ve seslendirmesiyle burada durur. Bir önceki rapor gösterilmez.</p></div>
         <div class="notification-controls">
           <button class="notification-button" id="enable-notifications" type="button">Cihaz bildirimlerini aç</button>
           <span id="notification-status" class="notification-status" aria-live="polite">Yalnızca yeni GFS raporları için bildirim</span>
@@ -1922,7 +1922,7 @@
         list.innerHTML='<div class="chart-empty">Henüz yayınlanmış bir rapor bulunmuyor. Yeni model döngüsü tamamlandığında rapor burada görünecek.</div>';
         return;
       }
-      list.innerHTML=items.map(item=>{
+      list.innerHTML=items.slice(0,1).map(item=>{
         const legacyImage=notificationAsset(item.image_path,cacheVersion);
         const imageItems=Array.isArray(item.images)&&item.images.length
           ? item.images.filter(image=>image&&image.path).map(image=>({label:image.label||"GFS grafiği",url:notificationAsset(image.path,cacheVersion)}))
