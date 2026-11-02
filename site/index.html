@@ -972,11 +972,7 @@
 
         </div>
         <div class="briefing" id="briefing" aria-live="polite">
-          <div class="briefing-row"><div class="briefing-k">Plan</div><div class="briefing-v" id="brief-plan">Hesaplanıyor…</div></div>
-          <div class="briefing-row"><div class="briefing-k">İstasyon</div><div class="briefing-v" id="brief-station">Hesaplanıyor…</div></div>
           <div class="briefing-row"><div class="briefing-k">Yağış saati</div><div class="briefing-v" id="brief-rain">Hesaplanıyor…</div></div>
-          <div class="briefing-row"><div class="briefing-k">850 hPa</div><div class="briefing-v" id="brief-850">Hesaplanıyor…</div></div>
-          <div class="briefing-row"><div class="briefing-k">4 çıktı</div><div class="briefing-v" id="brief-runs">Hesaplanıyor…</div></div>
           <div class="briefing-row"><div class="briefing-k">Ayrışma</div><div class="briefing-v" id="brief-split">Hesaplanıyor…</div></div>
         </div>
       </section>
@@ -1843,12 +1839,8 @@
         observedAt:station&&station.observed_at_utc?new Date(station.observed_at_utc).getTime():null
       });
       const write=(id,text)=>{const node=$(id);if(node)node.textContent=text;};
-      write("brief-station",lines.station);
       write("brief-rain",lines.rain);
-      write("brief-850",lines.t850);
-      write("brief-runs",lines.runs);
       write("brief-split",lines.split);
-      write("brief-plan",planningLine());
     }
     function trustedLeadHours(kind){
       const now=Date.now();
