@@ -1,10 +1,11 @@
 name: Eyüpsultan Station Refresh
 
+# Do not use schedule:. GitHub cron does not run reliably on this repository,
+# which is why the station repeatedly went stale. This workflow queues its own
+# next run, and the ENKA workflow restarts the chain if it ever stops.
+
 on:
   workflow_dispatch:
-  schedule:
-    - cron: "*/3 * * * *"
-    - cron: "2,5,8,11,14,17,20,23,26,29,32,35,38,41,44,47,50,53,56,59 * * * *"
   push:
     branches: [main]
     paths:
@@ -22,7 +23,7 @@ concurrency:
 jobs:
   refresh:
     runs-on: ubuntu-latest
-    timeout-minutes: 8
+    timeout-minutes: 12
     steps:
       - name: Check out application
         uses: actions/checkout@v4
@@ -49,32 +50,59 @@ jobs:
         run: |
           set -e
           node scripts/eyupsultan_weather.mjs
-          if [ ! -f public/eyupsultan-station-observation.json ]; then
-            echo "ERROR: No observation file"
+          test -s public/eyupsultan-station-observation.json
+          AGE=$(jq -r '.station_observation.age_minutes // 999' public/eyupsultan-station-observation.json)
+          TEMP=$(jq -r '.station_observation.temperature_2m_c' public/eyupsultan-station-observation.json)
+          SOURCE=$(jq -r '.station_observation.source' public/eyupsultan-station-observation.json)
+          echo "Age: $AGE minutes · $TEMP C · $SOURCE"
+          if [ "$AGE" -gt 90 ]; then
+            echo "Observation is older than 90 minutes."
             exit 1
           fi
-          AGE=$(jq -r '.station_observation.age_minutes // 999' public/eyupsultan-station-observation.json)
-          echo "Age: $AGE minutes"
         env:
           EYUPSULTAN_TEMPERATURE_HISTORY_PATH: forecast-data/public/eyupsultan-station-temperature-history.json
 
       - name: Publish data
+        if: steps.scrape.outcome == 'success'
         run: |
           mkdir -p forecast-data/public
-          cp -f public/eyupsultan-station-observation.json forecast-data/public/ 2>/dev/null || true
-          cp -f public/eyupsultan-station-temperature-history.json forecast-data/public/ 2>/dev/null || true
+          cp -f public/eyupsultan-station-observation.json forecast-data/public/
+          cp -f public/eyupsultan-station-temperature-history.json forecast-data/public/ || true
           cd forecast-data
           git config user.name "github-actions[bot]"
           git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
-          git add public/eyupsultan-station-observation.json public/eyupsultan-station-temperature-history.json || true
-          if ! git diff --cached --quiet; then
-            git commit -m "Refresh Eyüpsultan [$(date -u +%H:%M)]"
-            git pull --rebase origin gfs-watch-state || true
-            git push origin gfs-watch-state
+          git add public/eyupsultan-station-observation.json public/eyupsultan-station-temperature-history.json
+          if git diff --cached --quiet; then
+            echo "No Eyüpsultan changes to publish."
+            exit 0
           fi
+          git commit -m "Refresh Eyüpsultan [$(date -u +%H:%M)]"
+          for attempt in 1 2 3 4 5; do
+            git pull --rebase origin gfs-watch-state
+            if git push origin gfs-watch-state; then
+              echo "Eyüpsultan data pushed."
+              exit 0
+            fi
+            sleep $((attempt * 2))
+          done
+          echo "Could not publish Eyüpsultan data."
+          exit 1
 
       - name: Force Pages deploy
-        if: always() && steps.scrape.outcome == 'success'
+        if: steps.scrape.outcome == 'success'
         env:
           GH_TOKEN: ${{ github.token }}
         run: gh workflow run pages.yml --ref main --repo "$GITHUB_REPOSITORY" || true
+
+      - name: Queue next five-minute Eyüpsultan refresh
+        if: always() && !cancelled()
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          now=$(date -u +%s)
+          next=$(( (now / 300 + 1) * 300 ))
+          delay=$(( next - now ))
+          echo "Next Eyüpsultan refresh at $(date -u -d "@$next" +'%Y-%m-%dT%H:%M:%SZ') (sleeping ${delay}s)."
+          sleep "$delay"
+          gh workflow run eyupsultan-station-refresh.yml --ref main --repo "$GITHUB_REPOSITORY"
+          echo "Next Eyüpsultan refresh queued."
