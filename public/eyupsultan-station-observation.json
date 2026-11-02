@@ -8,14 +8,14 @@
     "latitude": 41.102778,
     "longitude": 28.924167,
     "elevation_m": 54,
-    "observed_at_utc": "2026-11-02T13:19:00.000Z",
-    "fetched_at_utc": "2026-11-02T13:25:17.380Z",
+    "observed_at_utc": "2026-11-02T13:24:00.000Z",
+    "fetched_at_utc": "2026-11-02T13:30:15.400Z",
     "age_minutes": 6,
     "stale_after_minutes": 120,
     "is_stale": false,
-    "temperature_2m_c": 21.6,
+    "temperature_2m_c": 21.7,
     "wind_speed_10m_kmh": 4.3,
-    "wind_direction_degrees": 289,
+    "wind_direction_degrees": 292,
     "wind_direction_cardinal": "WNW",
     "wind_direction_tr": "Batı-kuzeybatı",
     "precipitation_1h_mm": null,
@@ -26,8 +26,8 @@
     "actual_station_pressure_hpa": 1010.8,
     "pressure_type": "mean_sea_level",
     "pressure_source": "MGM 18101",
-    "pressure_observed_at_utc": "2026-11-02T13:19:00.000Z",
+    "pressure_observed_at_utc": "2026-11-02T13:24:00.000Z",
     "pressure_age_minutes": 6.3
   },
-  "updated_at_utc": "2026-11-02T13:25:15.244Z"
+  "updated_at_utc": "2026-11-02T13:30:14.194Z"
 }
