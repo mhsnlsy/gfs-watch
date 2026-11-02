@@ -829,6 +829,10 @@
 </section>
     <section class="section" id="basinc"><div class="section-head"><div><div class="section-kicker">NOAA / NCEP GFS · MODEL ANALİZİ</div><h2>Basınç düzeni ve kaynak</h2></div><div class="section-note">İstanbul merkezli 2.500 km çaplı<br>bölgesel analiz</div></div><div class="lower-grid"><article class="pressure-card"><div class="label">Bölgesel basınç merkezleri ve İstanbul'a etkisi</div><ul class="pressure-list" id="pressure-findings"><li class="loading">Analiz yükleniyor…</li></ul></article><article class="info-card"><div class="label">Veri hakkında</div><p>Anlık sıcaklık, rüzgâr, nem ve yağış verileri seçilen istasyondan alınır: ENKA Balmumcu Vantage PRO veya WStatMap üzerinden MGM Eyüpsultan 18101. Karttaki seçimle istasyon değişir. Basınç, kaynak sayfasında ölçüm mevcutsa gösterilir.</p><p>NOAA / NCEP GFS 0.25° küresel modelinin İstanbul'a en yakın grid hücresi kullanılır. İstasyon ölçümü ile model tahmini ayrı kaynaklardır.</p><div class="source-row"><span>Model: <strong>GFS 0.25°</strong></span><span id="valid-until">Geçerlilik: —</span></div></article></div></section>
     <section class="section" id="tahmin"><div class="section-head"><div><div class="section-kicker">NOAA / NCEP GFS · MODEL TAHMİNİ</div><h2>8 günlük tahmin</h2></div><div class="section-note"><span id="cycle-chip">Model döngüsü yükleniyor</span><br><span id="updated-chip">Yayın zamanı bekleniyor</span><br>Günlük en düşük / en yüksek sıcaklık</div></div><div class="daily-grid" id="daily-grid"><div class="loading">Tahmin verisi yükleniyor…</div></div>
+      <article class="chart-card" id="gfs-850-card" style="margin-top:14px">
+        <div class="chart-card-head"><div><div class="chart-title">Sıcaklık · 850 hPa</div><div class="chart-subtitle">Son dört GFS çıktısı · aynı geçerlilik saati · °C</div></div><span class="chart-count" id="gfs-cycle-t850-count">4 çıktı</span></div>
+        <div class="chart-wrap" id="gfs-cycle-t850-chart"><div class="chart-empty">850 hPa sıcaklık yükleniyor…</div></div>
+      </article>
     </div>
     <div id="ecmwf-model-view" hidden aria-label="ECMWF tahmin görünümü">
       <div class="section-head" style="padding-top:30px"><div><div class="section-kicker">ECMWF IFS · HRES + ENS</div><h2>ECMWF IFS HRES + ENS · İstanbul</h2><p class="section-description">GFS ile aynı kart, grafik, günlük tahmin ve basınç analizi düzeni. 2 m sıcaklık, 10 m rüzgâr ve yağış IFS HRES; 850 hPa ve basınç alanları IFS ensemble verisidir.</p></div><div class="section-note"><span id="ecmwf-run-meta">ECMWF döngüsü bekleniyor</span><br><span id="ecmwf-updated-chip">Yayın zamanı</span><br>Günlük en düşük / en yüksek sıcaklık</div></div>
@@ -1586,6 +1590,7 @@
       }
       if(data.forecast_valid_until_utc)$("valid-until").textContent="Son geçerlilik: "+new Intl.DateTimeFormat("tr-TR",{timeZone:"Europe/Istanbul",day:"2-digit",month:"2-digit"}).format(new Date(data.forecast_valid_until_utc));
       renderDaily(data.daily_summary);renderFindings(data.regional_pressure_analysis&&data.regional_pressure_analysis.findings,data.current_conditions&&data.current_conditions.mean_sea_level_pressure_hpa);renderCharts();
+      if(typeof renderEcmwfComparisonChart==="function")renderEcmwfComparisonChart("t850","gfs-cycle-t850-chart",Array.isArray(data.comparison_runs)?data.comparison_runs:[]);
     }
     // Station observations refresh independently from forecast/model data.
     // A delayed GFS/ECMWF payload must never block live station readings.
@@ -1955,8 +1960,9 @@
       });
       const common=series.length?Array.from(series[0].values.keys()).filter(key=>series.every(item=>item.values.has(key))).sort():[];
       if(count)count.textContent=series.length+" çıktı · "+common.length+" ortak zaman";
+      const modelName=String(targetId).startsWith("gfs-")?"GFS":"ECMWF";
       if(series.length<2||common.length<2){
-        container.innerHTML='<div class="chart-empty">Karşılaştırma için henüz yeterli yayımlanmış çevrim yok. Yeni ECMWF çıktıları geldikçe grafik otomatik tamamlanacak.</div>';
+        container.innerHTML='<div class="chart-empty">Karşılaştırma için henüz yeterli yayımlanmış '+modelName+' çevrimi yok. Yeni çıktılar geldikçe grafik otomatik tamamlanacak.</div>';
         return;
       }
       const width=900,height=280,left=58,right=18,top=20,bottom=58;
@@ -1987,7 +1993,7 @@
         return '<text x="'+xFor(index)+'" y="'+(height-14)+'" fill="#91a9b8" font-size="11" text-anchor="middle">'+esc(label)+'</text>';
       }).join("");
       const legend=series.map(item=>'<span style="display:inline-flex;align-items:center;gap:6px;margin:0 12px 6px 0;font-size:11px;color:#b9cbd4"><i style="display:inline-block;width:17px;height:3px;border-radius:2px;background:'+item.color+'"></i>'+esc(timeTR(item.runId))+' TSİ</span>').join("");
-      container.innerHTML='<svg viewBox="0 0 '+width+' '+height+'" role="img" aria-label="'+definition.label+' için son dört ECMWF çıktısı karşılaştırması">'+grid+lines+labels+'</svg><div style="padding:5px 8px 0;display:flex;flex-wrap:wrap;gap:2px 4px">'+legend+'</div><div style="padding:2px 8px 8px;color:#91a9b8;font-size:10px">X ekseni: ortak geçerlilik zamanı · Y ekseni: '+definition.unit+'</div>';
+      container.innerHTML='<svg viewBox="0 0 '+width+' '+height+'" role="img" aria-label="'+definition.label+' için son dört '+modelName+' çıktısı karşılaştırması">'+grid+lines+labels+'</svg><div style="padding:5px 8px 0;display:flex;flex-wrap:wrap;gap:2px 4px">'+legend+'</div><div style="padding:2px 8px 8px;color:#91a9b8;font-size:10px">X ekseni: ortak geçerlilik zamanı · Y ekseni: '+definition.unit+'</div>';
     }
     function renderEcmwfForecast(document){
       const forecasts=document.forecasts||[];
