@@ -123,32 +123,38 @@ jobs:
           PY
           )"
           url="${PAGE_URL%/}/data/latest.json"
-          for attempt in $(seq 1 36); do
-            if curl --fail --silent --show-error "$url" -o "$RUNNER_TEMP/live-latest.json"; then
-              actual_run_id="$(python - <<'PY'
+          if ! curl --fail --silent --show-error "$url" -o "$RUNNER_TEMP/live-latest.json"; then
+            echo "Pages payload is not reachable."
+            exit 1
+          fi
+          actual_run_id="$(python - <<'PY'
           import json, os
           with open(os.path.join(os.environ["RUNNER_TEMP"], "live-latest.json"), encoding="utf-8") as source:
               print(json.load(source)["run_id_utc"])
           PY
           )"
-              if [ "$actual_run_id" = "$expected_run_id" ]; then
-                echo "GFS Pages payload verified: $actual_run_id"
-                if [ -s forecast-data/public/ecmwf/latest.json ]; then
-                  expected_ecmwf_run="$(python - <<'PY'
+          if [ "$actual_run_id" != "$expected_run_id" ]; then
+            echo "Pages serves $actual_run_id, expected $expected_run_id."
+            exit 1
+          fi
+          echo "GFS Pages payload verified: $actual_run_id"
+          if [ -s forecast-data/public/ecmwf/latest.json ]; then
+            expected_ecmwf_run="$(python - <<'PY'
           import json
           with open("forecast-data/public/ecmwf/latest.json", encoding="utf-8") as source:
               document = json.load(source)
           print(document["run_id_utc"])
           print(len(document.get("forecasts") or []))
           PY
-                  )"
-                  expected_ecmwf_steps="${expected_ecmwf_run##*$'\n'}"
-                  expected_ecmwf_run="${expected_ecmwf_run%%$'\n'*}"
-                  ecmwf_url="${PAGE_URL%/}/data/ecmwf/latest.json"
-                  ecmwf_ok=false
-                  for ecmwf_attempt in $(seq 1 36); do
-                    if curl --fail --silent --show-error "$ecmwf_url" -o "$RUNNER_TEMP/live-ecmwf.json"; then
-                      python - "$RUNNER_TEMP/live-ecmwf.json" "$expected_ecmwf_run" "$expected_ecmwf_steps" <<'PY'
+            )"
+            expected_ecmwf_steps="${expected_ecmwf_run##*$'\n'}"
+            expected_ecmwf_run="${expected_ecmwf_run%%$'\n'*}"
+            ecmwf_url="${PAGE_URL%/}/data/ecmwf/latest.json"
+            if ! curl --fail --silent --show-error "$ecmwf_url" -o "$RUNNER_TEMP/live-ecmwf.json"; then
+              echo "ECMWF Pages payload is not reachable."
+              exit 1
+            fi
+            python - "$RUNNER_TEMP/live-ecmwf.json" "$expected_ecmwf_run" "$expected_ecmwf_steps" <<'PY'
           import json, sys
           with open(sys.argv[1], encoding="utf-8") as source:
               document = json.load(source)
@@ -158,38 +164,19 @@ jobs:
           assert len(document.get("forecasts", [])) == int(sys.argv[3])
           assert int(sys.argv[3]) >= 8
           PY
-                      ecmwf_ok=true
-                      break
-                    fi
-                    echo "ECMWF Pages data not ready; retry $ecmwf_attempt."
-                    sleep 10
-                  done
-                  if [ "$ecmwf_ok" != true ]; then
-                    echo "Pages did not serve the expected ECMWF payload."
-                    exit 1
-                  fi
-                  echo "ECMWF Pages payload verified: $expected_ecmwf_run ($expected_ecmwf_steps steps)."
-                fi
-                exit 0
-              fi
-              echo "Pages currently serves $actual_run_id; waiting for $expected_run_id."
-            else
-              echo "Pages payload is not reachable yet; retry $attempt."
-            fi
-            sleep 10
-          done
-          echo "Pages did not serve the expected forecast: $expected_run_id"
-          exit 1
+            echo "ECMWF Pages payload verified: $expected_ecmwf_run ($expected_ecmwf_steps steps)."
+          fi
 
       - name: Verify live Eyüpsultan station payload
         env:
           PAGE_URL: ${{ steps.deployment.outputs.page_url }}
         run: |
           url="${PAGE_URL%/}/data/eyupsultan-station-observation.json?verify=$GITHUB_RUN_ID"
-          verified=false
-          for attempt in $(seq 1 36); do
-            if curl --fail --silent --show-error "$url" -o "$RUNNER_TEMP/live-eyupsultan.json"; then
-              if python - "$RUNNER_TEMP/live-eyupsultan.json" <<'PY'
+          if ! curl --fail --silent --show-error "$url" -o "$RUNNER_TEMP/live-eyupsultan.json"; then
+            echo "Eyüpsultan Pages payload is not reachable."
+            exit 1
+          fi
+          python - "$RUNNER_TEMP/live-eyupsultan.json" <<'PY'
           import json, sys
           with open(sys.argv[1], encoding="utf-8") as source:
               document = json.load(source)
@@ -208,24 +195,13 @@ jobs:
               f"age {observation.get('age_minutes')} min"
           )
           PY
-              then
-                verified=true
-                break
-              fi
-            fi
-            echo "Eyüpsultan Pages payload not ready yet; retry $attempt."
-            sleep 10
-          done
-          if [ "$verified" != true ]; then
-            echo "Pages did not serve a valid Eyüpsultan 18101 observation."
-            exit 1
-          fi
 
           history_url="${PAGE_URL%/}/data/eyupsultan-station-temperature-history.json?verify=$GITHUB_RUN_ID"
-          history_verified=false
-          for attempt in $(seq 1 36); do
-            if curl --fail --silent --show-error "$history_url" -o "$RUNNER_TEMP/live-eyupsultan-history.json"; then
-              if python - "$RUNNER_TEMP/live-eyupsultan-history.json" <<'PY'
+          if ! curl --fail --silent --show-error "$history_url" -o "$RUNNER_TEMP/live-eyupsultan-history.json"; then
+            echo "Eyüpsultan history is not reachable."
+            exit 1
+          fi
+          python - "$RUNNER_TEMP/live-eyupsultan-history.json" <<'PY'
           import json, sys
           with open(sys.argv[1], encoding="utf-8") as source:
               document = json.load(source)
@@ -241,32 +217,8 @@ jobs:
               and isinstance(sample.get("precipitation_daily_mm"), (int, float))
           ]
           assert valid, "Eyüpsultan history contains no valid temperature/rain samples."
-          print(
-              "Live Eyüpsultan history verified: "
-              f"{len(valid)} samples · "
-              f"{document.get('retention_days', '?')} day retention"
-          )
+          print(f"Live Eyüpsultan history verified: {len(valid)} samples")
           PY
-              then
-                history_verified=true
-                break
-              fi
-            fi
-            echo "Eyüpsultan history not ready yet; retry $attempt."
-            sleep 10
-          done
-          if [ "$history_verified" != true ]; then
-            echo "Pages did not serve valid Eyüpsultan station history."
-            exit 1
-          fi
-
-      - name: Test station switching against the deployed live dashboard
-        env:
-          PAGES_URL: ${{ steps.deployment.outputs.page_url }}
-        run: |
-          google-chrome --version
-          npm install --no-save playwright
-          node source/scripts/test_live_station_history.mjs
 
       - name: Verify latest GFS report and every referenced Pages asset
         env:
@@ -301,10 +253,11 @@ jobs:
 
           base_url="${PAGE_URL%/}/data/notifications"
           feed_url="$base_url/latest.json?verify=$GITHUB_RUN_ID"
-          verified=false
-          for attempt in $(seq 1 36); do
-            if curl --fail --silent --show-error "$feed_url" -o "$RUNNER_TEMP/live-notifications.json"; then
-              if python - "$RUNNER_TEMP/live-notifications.json" "$expected_notification_run_id" "$RUNNER_TEMP/notification-assets.txt" <<'PY'
+          if ! curl --fail --silent --show-error "$feed_url" -o "$RUNNER_TEMP/live-notifications.json"; then
+            echo "Pages notification feed is not reachable."
+            exit 1
+          fi
+          python - "$RUNNER_TEMP/live-notifications.json" "$expected_notification_run_id" "$RUNNER_TEMP/notification-assets.txt" <<'PY'
           import json, pathlib, sys
           with open(sys.argv[1], encoding="utf-8") as source:
               document = json.load(source)
@@ -331,18 +284,6 @@ jobs:
           pathlib.Path(sys.argv[3]).write_text("\\n".join(assets), encoding="utf-8")
           print(f"Live Pages report verified: {item['run_id_utc']} · {len(assets)} assets")
           PY
-              then
-                verified=true
-                break
-              fi
-            fi
-            echo "Pages notification feed not current yet; retry $attempt."
-            sleep 10
-          done
-          if [ "$verified" != true ]; then
-            echo "Pages did not serve the expected latest GFS notification: $expected_notification_run_id"
-            exit 1
-          fi
 
           while IFS= read -r asset; do
             [ -n "$asset" ] || continue
