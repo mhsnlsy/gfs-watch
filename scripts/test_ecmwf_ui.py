@@ -79,9 +79,13 @@ def main() -> None:
     gfs = html[html.index('<div id="gfs-model-view">'):html.index('<div id="ecmwf-model-view"')]
     ecmwf = html[html.index('<div id="ecmwf-model-view"'):html.index("</main>")]
     for shared_class in ('class="section"', 'class="section-head"', 'class="lower-grid"',
-                         'class="pressure-card"', 'class="info-card"', 'class="daily-grid"'):
+                         'class="pressure-card"', 'class="daily-grid"'):
         if shared_class not in gfs or shared_class not in ecmwf:
             raise AssertionError(f"GFS/ECMWF layout mismatch: {shared_class}")
+    if 'class="info-card"' not in ecmwf:
+        raise AssertionError("ECMWF source card is missing.")
+    if "Eski NOAA arşivi bu pakete karışmaz." in html:
+        raise AssertionError("The GFS source blurb should be gone.")
 
     # The old 180-hour surface temperature/precipitation charts were intentionally removed.
     removed_charts = (
