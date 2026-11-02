@@ -10,9 +10,9 @@ on:
       - "scripts/backfill_gfs_wind_direction.py"
   workflow_dispatch:
   schedule:
-    # Run one lightweight NOAA availability/prefetch check every five minutes.
-    # Unlike an in-workflow sleep, the cron releases concurrency as soon as work ends.
-    - cron: "*/5 * * * *"
+    # Poll every five minutes, offset from minute zero to avoid the busiest boundary.
+    # Each run resumes the NOAA partial cache.
+    - cron: "2/5 * * * *"
 
 concurrency:
   group: gfs-watch-run-v6
@@ -73,10 +73,12 @@ jobs:
             mkdir -p public
             echo "No previous Pages forecast exists; the next completed GFS cycle will create it."
           fi
-      - name: Record latest processed GFS cycle
+      - name: Record latest processed GFS cycle and public-data fingerprint
         run: |
           python - <<'PY'
+          import hashlib
           import os
+          import pathlib
           import sqlite3
           try:
               with sqlite3.connect("file:gfs_watch.db?mode=ro", uri=True) as db:
@@ -84,9 +86,19 @@ jobs:
                   run_id = row[0] or "none"
           except sqlite3.Error:
               run_id = "none"
+          digest = hashlib.sha256()
+          root = pathlib.Path("public")
+          if root.exists():
+              for path in sorted(p for p in root.rglob("*") if p.is_file()):
+                  digest.update(path.relative_to(root).as_posix().encode())
+                  digest.update(path.read_bytes())
+          fingerprint = digest.hexdigest()
           with open(os.path.join(os.environ["RUNNER_TEMP"], "gfs-before-run.txt"), "w") as output:
               output.write(run_id)
+          with open(os.path.join(os.environ["RUNNER_TEMP"], "gfs-before-public.txt"), "w") as output:
+              output.write(fingerprint)
           print(f"Previously processed latest GFS cycle: {run_id}")
+          print(f"Previously published public-data fingerprint: {fingerprint}")
           PY
       - name: Backfill missing 72-hour wind direction from native GFS U/V cache
         id: wind-direction-backfill
@@ -127,15 +139,31 @@ jobs:
               print("none")
           PY
           )"
+          public_before="$(cat "$RUNNER_TEMP/gfs-before-public.txt")"
+          public_after="$(python - <<'PY'
+          import hashlib
+          import pathlib
+          digest = hashlib.sha256()
+          root = pathlib.Path("public")
+          if root.exists():
+              for path in sorted(p for p in root.rglob("*") if p.is_file()):
+                  digest.update(path.relative_to(root).as_posix().encode())
+                  digest.update(path.read_bytes())
+          print(digest.hexdigest())
+          PY
+          )"
           if [ "$after" != "none" ] && [ "$after" != "$before" ]; then
             echo "gfs_updated=true" >> "$GITHUB_OUTPUT"
             echo "New GFS cycle processed: $after"
+          elif [ "$public_after" != "$public_before" ]; then
+            echo "gfs_updated=true" >> "$GITHUB_OUTPUT"
+            echo "Public forecast/report payload changed; Pages deployment is required."
           elif [ "${{ steps.wind-direction-backfill.outputs.updated }}" = "true" ]; then
             echo "gfs_updated=true" >> "$GITHUB_OUTPUT"
             echo "Existing GFS cycle gained a fresh 72-hour wind-direction payload."
           else
             echo "gfs_updated=false" >> "$GITHUB_OUTPUT"
-            echo "No new GFS cycle or wind-direction backfill was generated in this session."
+            echo "No new GFS cycle or public forecast payload was generated in this session."
           fi
       - name: Save partial NOAA forecast cache
         if: always() && steps.check-gfs.outputs.noaa_cache_updated == 'true'
