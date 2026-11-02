@@ -83,6 +83,22 @@ jobs:
           gh workflow run pages.yml --ref main --repo "$GITHUB_REPOSITORY"
           echo "GitHub Pages deployment requested."
 
+      # Eyüpsultan must not depend on GitHub cron. That schedule does not fire
+      # on this repository. Restart its self-queue if the chain has died.
+      - name: Restart Eyüpsultan refresh if its chain is down
+        if: always() && !cancelled()
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          active=$(gh run list --workflow=eyupsultan-station-refresh.yml --limit 8 --json status,createdAt --jq '[.[] | select(.status=="queued" or .status=="in_progress" or .status=="pending" or .status=="waiting" or .status=="requested")] | length')
+          echo "Eyüpsultan active runs: $active"
+          if [ "$active" = "0" ]; then
+            gh workflow run eyupsultan-station-refresh.yml --ref main --repo "$GITHUB_REPOSITORY"
+            echo "Eyüpsultan chain was down. Restarted."
+          else
+            echo "Eyüpsultan chain is alive."
+          fi
+
       # Queue the next poll on the next five-minute UTC boundary. This uses
       # workflow_dispatch, which GITHUB_TOKEN is explicitly allowed to trigger.
       - name: Queue next five-minute ENKA refresh
