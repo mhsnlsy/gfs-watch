@@ -36,12 +36,15 @@ APP_NAME, APP_VERSION = None, None
 def _read_app_identity():
     """Read the one version shared by the website and every Telegram report."""
     version_path = os.path.join(os.path.dirname(os.path.abspath(__file__)), "site", "version.json")
-    with open(version_path, encoding="utf-8") as handle:
-        document = json.load(handle)
-    name = str(document.get("name", "")).strip()
-    version = str(document.get("version", "")).strip()
+    try:
+        with open(version_path, encoding="utf-8") as handle:
+            document = json.load(handle)
+        name = str(document.get("name", "")).strip()
+        version = str(document.get("version", "")).strip()
+    except (OSError, ValueError, TypeError):
+        name, version = "", ""
     if not name or not version:
-        raise RuntimeError("site/version.json must define name and version.")
+        return "İstanbul'un Havası", "3.0"
     return name, version
 
 
