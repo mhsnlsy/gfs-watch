@@ -2356,6 +2356,7 @@
         verificationDoc=null;
       }
       if(typeof forecastData!=="undefined"&&forecastData&&typeof renderNext72Hours==="function")renderNext72Hours();
+      if(forecastData&&typeof renderBriefing==="function")renderBriefing();
     }
 
     async function startPage(){
