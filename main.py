@@ -2913,6 +2913,58 @@ def _draw_wind_direction_marker(axis, x, speed, direction_deg):
     ])
 
 
+def _comparison_precip_times(chart_data):
+    """Valid times present in every cycle, so the lines share one clock."""
+    maps = []
+    for item in chart_data["series"]:
+        points = {}
+        for key, values in (item.get("timeline") or {}).items():
+            if not isinstance(values, dict) or values.get("precip") is None:
+                continue
+            points[str(key)] = max(0.0, float(values["precip"]))
+        maps.append(points)
+    if not maps:
+        return []
+    common = set(maps[0])
+    for points in maps[1:]:
+        common &= set(points)
+    return sorted(common)
+
+
+def _draw_comparison_precip_line_axis(axis, chart_data):
+    """3-hour precipitation trend. Daily bars hide when the rain actually falls."""
+    times = _comparison_precip_times(chart_data)
+    if len(times) < 2:
+        axis.set_title("3 saatlik yağış | ortak saat yok", loc="left", fontsize=11)
+        axis.set_ylabel("mm", fontsize=10)
+        return
+    xs = list(range(len(times)))
+    for series_index, item in enumerate(chart_data["series"]):
+        color = chart_data["colors"][series_index % len(chart_data["colors"])]
+        timeline = item.get("timeline") or {}
+        ys = [max(0.0, float(timeline[key]["precip"])) for key in times]
+        axis.plot(
+            xs, ys, color=color, linewidth=2.2,
+            marker="o", markersize=3.4, markerfacecolor=color,
+        )
+    axis.set_ylim(bottom=0)
+    axis.set_xlim(-0.5, len(times) - 0.5)
+    step = 8 if len(times) > 24 else 4
+    tick_index = list(range(0, len(times), step))
+    if tick_index[-1] != len(times) - 1:
+        tick_index.append(len(times) - 1)
+    labels = []
+    for index in tick_index:
+        stamp = datetime.strptime(times[index], "%Y-%m-%dT%H:%M")
+        labels.append(f"{stamp:%d.%m}\n{stamp:%H:%M}")
+    axis.set_xticks(tick_index)
+    axis.set_xticklabels(labels, fontsize=9, color=GFS_REPORT_TEXT)
+    axis.set_title("3 saatlik yağış | çizgi trend", loc="left", fontsize=11)
+    axis.set_ylabel("mm / 3 saat", fontsize=10)
+    axis.set_xlabel("İstanbul yerel saati · 3 saat", fontsize=9.5, color=GFS_REPORT_TEXT)
+    axis.grid(axis="y", alpha=0.25)
+
+
 def _draw_comparison_bar_axis(axis, chart_data, metric, title, ylabel):
     series = chart_data["series"]
     dates = chart_data["dates"]
@@ -3010,11 +3062,14 @@ def create_comparison_chart(current_run_id, payload, previous_runs):
             framealpha=0.98, labelcolor=GFS_REPORT_TEXT,
         )
         _draw_comparison_850_temperature_axis(axes[1], chart_data)
-        _draw_comparison_bar_axis(axes[2], chart_data, "precip", "Günlük toplam yağış", "mm")
+        _draw_comparison_precip_line_axis(axes[2], chart_data)
         _draw_comparison_bar_axis(axes[3], chart_data, "wind", "Yüzey rüzgârı | ok gittiği yön, harf GFS geldiği yön", "km/sa")
         fig.patch.set_facecolor(GFS_REPORT_FIGURE_BG)
         for index, axis in enumerate(axes):
             _style_dark_comparison_axis(axis)
+            if index == 2:
+                axis.tick_params(axis="x", labelbottom=True, labelcolor=GFS_REPORT_TEXT, colors=GFS_REPORT_TEXT)
+                continue
             _format_comparison_date_axis(axis, dates)
             if index != len(axes) - 1:
                 axis.set_xlabel("")
@@ -3055,7 +3110,7 @@ def create_pages_comparison_charts(current_run_id, payload, previous_runs):
     specifications = (
         ("temperature", "2 m Sıcaklık", "2 m sıcaklık | Günlük mum: ilk–son, fitil: min–maks", "°C"),
         ("temperature_850", "850 hPa Sıcaklık", "850 hPa sıcaklığı | Günlük min–maks aralığı", "°C"),
-        ("precipitation", "Yağış", "Günlük toplam yağış", "mm"),
+        ("precipitation", "Yağış", "3 saatlik yağış · çizgi trend", "mm"),
         ("wind_10m", "Rüzgâr hız + yön", "10 m rüzgâr | ok gittiği yön, harf GFS geldiği yön", "km/sa"),
     )
     try:
@@ -3077,7 +3132,7 @@ def create_pages_comparison_charts(current_run_id, payload, previous_runs):
                 elif metric == "temperature_850":
                     _draw_comparison_850_temperature_axis(axis, chart_data)
                 elif metric == "precipitation":
-                    _draw_comparison_bar_axis(axis, chart_data, "precip", title, ylabel)
+                    _draw_comparison_precip_line_axis(axis, chart_data)
                 elif metric == "wind_10m":
                     _draw_comparison_bar_axis(axis, chart_data, "wind", title, ylabel)
                 # Stronger typography and contrast for readable numeric values on desktop and mobile.
@@ -3114,14 +3169,19 @@ def create_pages_comparison_charts(current_run_id, payload, previous_runs):
                 # Rebuild a predictable full-width plotting area for every metric.
                 # Do not manually reposition the Axes after Matplotlib lays it out.
                 axis.set_aspect("auto", adjustable="box")
-                axis.set_xlim(-0.5, max(0.5, len(dates) - 0.5))
-                axis.set_xticks(list(range(len(dates))))
-                weekday_names = ("Pzt", "Sal", "Çar", "Per", "Cum", "Cmt", "Paz")
-                date_labels = []
-                for day in dates:
-                    date_value = datetime.strptime(day, "%Y-%m-%d")
-                    date_labels.append(f"{date_value:%d.%m} {weekday_names[date_value.weekday()]}")
-                axis.set_xticklabels(date_labels, fontsize=14, fontweight="semibold", color=GFS_REPORT_TEXT)
+                if metric != "precipitation":
+                    axis.set_xlim(-0.5, max(0.5, len(dates) - 0.5))
+                    axis.set_xticks(list(range(len(dates))))
+                    weekday_names = ("Pzt", "Sal", "Çar", "Per", "Cum", "Cmt", "Paz")
+                    date_labels = []
+                    for day in dates:
+                        date_value = datetime.strptime(day, "%Y-%m-%d")
+                        date_labels.append(f"{date_value:%d.%m} {weekday_names[date_value.weekday()]}")
+                    axis.set_xticklabels(date_labels, fontsize=14, fontweight="semibold", color=GFS_REPORT_TEXT)
+                for tick_label in axis.get_xticklabels():
+                    tick_label.set_fontsize(12 if metric == "precipitation" else 14)
+                    tick_label.set_fontweight("semibold")
+                    tick_label.set_color(GFS_REPORT_TEXT)
                 axis.tick_params(axis="x", labelsize=14, labelbottom=True, pad=7, labelcolor=GFS_REPORT_TEXT, colors=GFS_REPORT_TEXT)
                 axis.margins(x=0.015)
                 # Put the four run labels in a dedicated, figure-level 2x2 legend.
