@@ -2258,15 +2258,16 @@
             ).join("")+'</div>'
           : '<div class="media-pending">Bu rapor için karşılaştırma görseli bulunmuyor.</div>';
         const audio=notificationAsset(item.audio_path);
-        const summary=esc(item.summary||"Rapor özeti bulunmuyor.");
-        const report=esc(item.report_text||"");
+        const spoken=/Önümüzdeki üç günün özeti|Balmumcu istasyonunda/.test(item.summary||"");
+        const summary=item.summary&&!spoken?'<p class="notification-summary">'+esc(item.summary)+'</p>':'';
+        const report=esc(String(item.report_text||"").replace(/\n*🎙 Seslendirme metni:[\s\S]*$/,""));
         const date=esc(item.published_at_istanbul||formatNotificationTime(item.published_at_utc));
         const cycle=esc(item.cycle_label||"GFS model raporu");
         return '<article class="notification-card">'+
           '<div class="notification-card-top"><div><div class="notification-kicker">GFS MODEL BİLDİRİMİ</div><h3>'+esc(item.title||"İstanbul hava raporu")+'</h3><div class="notification-meta">'+cycle+' · '+date+'</div></div><span class="notification-dot" aria-hidden="true"></span></div>'+
-          '<p class="notification-summary">'+summary+'</p>'+
+          summary+
           imagesHtml+
-          (audio?'<div class="audio-block"><span class="audio-label">SES RAPORU · 1,27×</span><audio controls preload="none" src="'+audio+'">Tarayıcın ses oynatmayı desteklemiyor.</audio></div>':'<div class="media-pending">Bu rapor için ses dosyası bulunmuyor.</div>')+
+          (audio&&!spoken?'<div class="audio-block"><span class="audio-label">SES RAPORU · 1,27×</span><audio controls preload="none" src="'+audio+'">Tarayıcın ses oynatmayı desteklemiyor.</audio></div>':'')+
           (report?'<details class="report-text"><summary>Yazılı raporu görüntüle</summary><pre>'+report+'</pre></details>':'')+
           '</article>';
       }).join("");

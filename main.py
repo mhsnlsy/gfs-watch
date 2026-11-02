@@ -2410,59 +2410,10 @@ def analyze_and_build_output(current_run_name, payload, previous_runs):
     curr_t = curr["temp"]
     curr_w = curr["wind"]
 
-    # The station observation is kept distinct from the GFS model initial field.
+    # The station reading and the three-day spoken summary are not part of the report.
     station = payload.get("station_observation")
-    speech_parts = []
-    if station:
-        observed_local = _parse_utc_datetime(
-            station["observed_at_utc"]
-        ).astimezone(TR_TZ)
-        station_age_note = " (gecikmeli ölçüm)" if station.get("is_stale") else ""
-        speech_parts.append(
-            f"Balmumcu istasyonunda{station_age_note}, "
-            f"{_format_tr_datetime(observed_local)} itibarıyla"
-        )
-        if station.get("temperature_2m_c") is not None:
-            speech_parts.append(
-                f"sıcaklık {station['temperature_2m_c']:.1f} derece."
-            )
-        if station.get("precipitation_daily_mm") is not None:
-            speech_parts.append(
-                f"Günlük toplam yağış {station['precipitation_daily_mm']:.1f} milimetre."
-            )
-        if station.get("wind_speed_10m_kmh") is not None:
-            direction = station.get("wind_direction_cardinal")
-            direction_text = f", yönü {direction}" if direction else ""
-            speech_parts.append(
-                f"Rüzgâr{direction_text}, "
-                f"{station['wind_speed_10m_kmh']:.1f} kilometre saat."
-            )
-    if curr_w > 20.0:
-        speech_parts.append("Başlangıç analizinde rüzgâr hızı yüksek.")
-
-    speech_parts.append("Önümüzdeki üç günün özeti:")
+    speech_text = ""
     daily_indices = range(1, min(4, len(daily.get("time", []))))
-    for i in daily_indices:
-        day_label = _format_tr_date(daily["time"][i])
-        t_max = round(daily["temp_max"][i], 1)
-        t_min = round(daily["temp_min"][i], 1)
-        p_sum = round(daily["precip_sum"][i], 1)
-        w_max = round(daily["wind_max"][i], 1)
-
-        day_text = f"{day_label}: En düşük {t_min}, en yüksek {t_max} derece."
-        day_text += (
-            f" Toplam yağış {p_sum} milimetre."
-            if p_sum > 0 else " Yağış beklenmiyor."
-        )
-        if w_max > 20.0:
-            day_text += " Rüzgâr hızı yüksek."
-        speech_parts.append(day_text)
-
-    # Run-to-run changes are shown only in the four-cycle comparison image,
-    # not repeated in the text report or voice script.
-
-    # Pressure findings are written to the text report only, never to speech.
-    speech_text = " ".join(speech_parts)
 
     now_local = datetime.now(TR_TZ)
     run_utc = _parse_utc_datetime(current_run_name)
@@ -2547,7 +2498,6 @@ def analyze_and_build_output(current_run_name, payload, previous_runs):
         for syn_item in synoptic:
             text_report_lines.append(f"• {syn_item}")
 
-    text_report_lines.append(f"\n🎙 Seslendirme metni:\n“{speech_text}”")
     full_text_report = "\n".join(text_report_lines)
 
     print("[STEP 2 BAŞARILI] Rapor ve ses metni hazırlandı.")
@@ -2590,8 +2540,8 @@ def generate_speech_gcp(text, output_file="summary.mp3"):
 
 async def generate_speech_with_retry(text, max_attempts=3):
     """Generate audio in a worker thread, retrying transient TTS failures."""
-    if not GCP_SA_KEY:
-        print("[TTS ATLANDI] GCP_SA_KEY yok; metin bildirimi tek başına gönderilecek.")
+    if not text or not str(text).strip():
+        print("[TTS ATLANDI] Seslendirilecek metin yok.")
         return None
 
     for attempt in range(1, max_attempts + 1):
