@@ -36,10 +36,6 @@ jobs:
         with:
           node-version: "22"
 
-      - name: Install Playwright (fallback only)
-        run: npm install --no-save playwright
-        continue-on-error: true
-
       - name: Fetch Eyüpsultan observation
         id: scrape
         run: |
