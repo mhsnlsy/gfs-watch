@@ -9,18 +9,18 @@
     "latitude": 41.1,
     "longitude": 28.9,
     "elevation_m": 107,
-    "observed_at_utc": "2026-11-02T15:05:00+00:00",
+    "observed_at_utc": "2026-11-02T15:10:00+00:00",
     "age_minutes": 5.3,
     "is_stale": false,
-    "temperature_2m_c": 19.9,
+    "temperature_2m_c": 20.0,
     "wind_speed_10m_kmh": 0.0,
     "wind_speed_10m_knots": 0.0,
-    "wind_direction_cardinal": "NNE",
-    "wind_direction_tr": "Kuzey-kuzeydoğu",
+    "wind_direction_cardinal": "NE",
+    "wind_direction_tr": "Kuzeydoğu",
     "precipitation_1h_mm": null,
     "precipitation_daily_mm": 0.0,
     "humidity_percent": 73.0,
     "station_pressure_hpa": 1015.1
   },
-  "updated_at_utc": "2026-11-02T15:10:15+00:00"
+  "updated_at_utc": "2026-11-02T15:15:18+00:00"
 }
