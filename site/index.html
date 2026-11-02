@@ -1,1 +1,188 @@
-PLACEHOLDER_FOR_FULL_CONTENT
+<!DOCTYPE html>
+<html lang="tr">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>İstanbul'un Havası — İstanbul Hava Tahmini</title>
+<link rel="manifest" href="./manifest.webmanifest">
+<link rel="icon" href="./icon.svg" type="image/svg+xml">
+<style>
+:root { --bg:#071521; --card:#0d1f33; --text:#e8f0f7; --muted:#8aa0b5; --accent:#4da6ff; --rain:#5bc0de; }
+* { box-sizing:border-box; }
+body { margin:0; font-family:system-ui,-apple-system,sans-serif; background:var(--bg); color:var(--text); line-height:1.5; }
+header { padding:1.2rem 1rem; text-align:center; border-bottom:1px solid #1a3348; }
+h1 { margin:0; font-size:1.6rem; }
+.subtitle { color:var(--muted); font-size:0.9rem; }
+.container { max-width:900px; margin:0 auto; padding:1rem; }
+.card { background:var(--card); border-radius:12px; padding:1rem; margin:0.8rem 0; box-shadow:0 2px 8px #0004; }
+.card h2 { margin:0 0 0.5rem; font-size:1.1rem; color:var(--accent); }
+.grid { display:grid; grid-template-columns:repeat(auto-fit,minmax(140px,1fr)); gap:0.6rem; }
+.metric { text-align:center; }
+.metric .val { font-size:1.8rem; font-weight:600; }
+.metric .label { color:var(--muted); font-size:0.8rem; }
+.status { color:var(--muted); font-style:italic; }
+.error { color:#ff6b6b; }
+.tabs { display:flex; gap:0.5rem; margin:0.5rem 0; }
+.tab { background:#1a3348; border:none; color:var(--text); padding:0.4rem 0.8rem; border-radius:6px; cursor:pointer; }
+.tab.active { background:var(--accent); color:#000; }
+#forecast-list, #daily-list { display:flex; flex-direction:column; gap:0.4rem; }
+.row { display:flex; justify-content:space-between; padding:0.4rem 0; border-bottom:1px solid #1a3348; font-size:0.9rem; }
+footer { text-align:center; color:var(--muted); font-size:0.8rem; padding:1rem; }
+</style>
+</head>
+<body>
+<header>
+  <h1>☀️ İstanbul'un Havası</h1>
+  <div class="subtitle">GFS Watch · v3.0.0 · NOAA/NCEP GFS 0.25°</div>
+</header>
+<div class="container">
+  <div class="card">
+    <h2>Gerçek İstasyon Gözlemi</h2>
+    <div class="tabs">
+      <button class="tab active" data-station="enka">ENKA Balmumcu</button>
+      <button class="tab" data-station="eyupsultan">Eyüpsultan</button>
+    </div>
+    <div id="station-data" class="status">Veri yükleniyor…</div>
+  </div>
+
+  <div class="card">
+    <h2>GFS · Önümüzdeki 72 saat</h2>
+    <div id="forecast-72h" class="status">Tahmin yükleniyor…</div>
+  </div>
+
+  <div class="card">
+    <h2>8 Günlük Tahmin</h2>
+    <div id="daily" class="status">Yükleniyor…</div>
+  </div>
+
+  <div class="card">
+    <h2>Basınç Düzeni</h2>
+    <div id="pressure" class="status">Analiz yükleniyor…</div>
+  </div>
+
+  <div class="card">
+    <h2>Son Hava Raporları</h2>
+    <div id="notifications" class="status">Raporlar yükleniyor…</div>
+  </div>
+</div>
+<footer>Veriler NOAA/NCEP GFS modelinden ve yerel istasyonlardan. <a href="https://github.com/mhsnlsy/gfs-watch" style="color:var(--accent)">GitHub</a></footer>
+
+<script>
+const $ = s => document.querySelector(s);
+const $$ = s => document.querySelectorAll(s);
+
+async function loadJSON(path) {
+  try {
+    const r = await fetch(path + '?t=' + Date.now());
+    if (!r.ok) throw new Error(r.status);
+    return await r.json();
+  } catch (e) {
+    console.error(path, e);
+    return null;
+  }
+}
+
+function fmt(v, unit='', digits=1) {
+  if (v == null || isNaN(v)) return '—';
+  return Number(v).toFixed(digits) + unit;
+}
+
+async function renderStation(which) {
+  const el = $('#station-data');
+  el.innerHTML = '<div class="status">Yükleniyor…</div>';
+  const path = which === 'eyupsultan' ? '/data/eyupsultan-station-observation.json' : '/data/station-observation.json';
+  const data = await loadJSON(path);
+  if (!data || !data.station_observation) {
+    el.innerHTML = '<div class="error">İstasyon verisi alınamadı.</div>';
+    return;
+  }
+  const o = data.station_observation;
+  el.innerHTML = `
+    <div class="grid">
+      <div class="metric"><div class="val">${fmt(o.temperature_2m_c,'°')}</div><div class="label">Sıcaklık</div></div>
+      <div class="metric"><div class="val">${fmt(o.wind_speed_10m_kmh,'')}</div><div class="label">Rüzgar km/sa</div></div>
+      <div class="metric"><div class="val">${fmt(o.humidity_percent,'%')}</div><div class="label">Nem</div></div>
+      <div class="metric"><div class="val">${fmt(o.precipitation_daily_mm,' mm')}</div><div class="label">Yağış (gün)</div></div>
+      <div class="metric"><div class="val">${fmt(o.station_pressure_hpa,'')}</div><div class="label">Basınç hPa</div></div>
+    </div>
+    <div class="status" style="margin-top:0.5rem">Son ölçüm: ${o.observed_at_utc || '—'} · ${o.station_name || ''}</div>
+  `;
+}
+
+async function renderForecast() {
+  const el = $('#forecast-72h');
+  const data = await loadJSON('/data/latest.json');
+  if (!data || !data.forecast_6_hourly) {
+    el.innerHTML = '<div class="error">Tahmin verisi alınamadı.</div>';
+    return;
+  }
+  const points = data.forecast_6_hourly.slice(0, 24);
+  let html = '<div id="forecast-list">';
+  points.forEach(p => {
+    html += `<div class="row"><span>${(p.valid_time_istanbul||'').slice(0,16)}</span><span>${fmt(p.temperature_2m_c,'°C')}</span><span>${fmt(p.precipitation_6h_mm,' mm')}</span><span>${fmt(p.wind_speed_10m_kmh,' km/sa')}</span></div>`;
+  });
+  html += '</div>';
+  el.innerHTML = html;
+}
+
+async function renderDaily() {
+  const el = $('#daily');
+  const data = await loadJSON('/data/latest.json');
+  if (!data || !data.daily_summary) {
+    el.innerHTML = '<div class="error">Günlük özet alınamadı.</div>';
+    return;
+  }
+  let html = '<div id="daily-list">';
+  data.daily_summary.forEach(d => {
+    html += `<div class="row"><span>${d.date_istanbul}</span><span>${fmt(d.temperature_min_c,'°')} / ${fmt(d.temperature_max_c,'°')}</span><span>${fmt(d.precipitation_total_mm,' mm')}</span></div>`;
+  });
+  html += '</div>';
+  el.innerHTML = html;
+}
+
+async function renderPressure() {
+  const el = $('#pressure');
+  const data = await loadJSON('/data/latest.json');
+  if (!data || !data.regional_pressure_analysis) {
+    el.innerHTML = '<div class="error">Basınç analizi yok.</div>';
+    return;
+  }
+  const a = data.regional_pressure_analysis;
+  el.innerHTML = `<div>${(a.findings||[]).map(f=>`<div>• ${f}</div>`).join('')}</div>`;
+}
+
+async function renderNotifications() {
+  const el = $('#notifications');
+  const data = await loadJSON('/data/notifications/latest.json');
+  if (!data || !data.items || !data.items.length) {
+    el.innerHTML = '<div class="status">Henüz rapor yok.</div>';
+    return;
+  }
+  const item = data.items[0];
+  el.innerHTML = `<div><strong>${item.summary || 'Son rapor'}</strong><br><pre style="white-space:pre-wrap;font-size:0.85rem">${(item.report_text||'').slice(0,800)}</pre></div>`;
+}
+
+function setupTabs() {
+  $$('.tab').forEach(btn => {
+    btn.onclick = () => {
+      $$('.tab').forEach(b => b.classList.remove('active'));
+      btn.classList.add('active');
+      renderStation(btn.dataset.station);
+    };
+  });
+}
+
+async function init() {
+  setupTabs();
+  await Promise.all([
+    renderStation('enka'),
+    renderForecast(),
+    renderDaily(),
+    renderPressure(),
+    renderNotifications()
+  ]);
+}
+init();
+</script>
+</body>
+</html>
