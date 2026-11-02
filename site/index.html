@@ -1048,7 +1048,7 @@
       </div>
     </section>
 <section class="section" id="ecmwf-basinc"><div class="section-head"><div><div class="section-kicker">ECMWF IFS ENS · MODEL ANALİZİ</div><h2>Basınç düzeni ve kaynak</h2></div><div class="section-note">İstanbul merkezli 0.25° grid<br>ensemble basınç analizi</div></div><div class="lower-grid"><article class="pressure-card"><div class="label">Bölgesel basınç merkezleri ve İstanbul'a etkisi</div><ul class="pressure-list" id="ecmwf-pressure-findings"><li class="loading">Analiz yükleniyor…</li></ul></article><article class="info-card"><div class="label">Veri hakkında</div><p>İstasyon ölçümü ile ECMWF tahmini ayrı kaynaklardır. Yüzey IFS HRES, 850 hPa ve basınç IFS ENS ürünündendir.</p><div class="source-row"><span>Model: <strong>ECMWF IFS HRES + ENS 0.25°</strong></span><span id="ecmwf-valid-until">Geçerlilik: —</span></div></article></div></section>
-      <section class="section" aria-label="ECMWF veri kaynağı ve lisans"><p class="ecmwf-source-note">Kaynak: <a href="https://www.ecmwf.int/en/forecasts/datasets/open-data" target="_blank" rel="noopener">ECMWF Open Data</a> · IFS HRES oper/fc + IFS ENS em/es · <strong>© ECMWF, CC BY 4.0</strong>. 2 m sıcaklık, 10 m rüzgâr ve yağış IFS HRES; 850 hPa ve basınç alanları IFS ensemble verisidir. 850 hPa ve MSLP ensemble ortalaması/standart sapmasıdır. Yüzey alanları için ENS standart sapması Open Data ürününde bulunmadığından gösterilmez.</p></section>
+      <section class="section" aria-label="ECMWF veri kaynağı ve lisans"><p class="ecmwf-source-note">Kaynak: <a href="https://www.meteopt.com/modelos/ecmwf?lat=41.014&lon=28.950" target="_blank" rel="noopener">MeteoPT ECMWF</a> · İstanbul noktası 41.014°N 28.950°E · 3 saatlik sıcaklık, yağış, rüzgâr, 850 hPa ve basınç. Ensemble sapması bu kaynakta yok.</p></section>
 <section class="section" id="ecmwf-tahmin"><div class="section-head"><div><div class="section-kicker">ECMWF IFS · MODEL TAHMİNİ</div><h2>8 günlük tahmin</h2></div><div class="section-note"><span id="ecmwf-daily-cycle-chip">ECMWF döngüsü yükleniyor</span><br><span id="ecmwf-daily-updated-chip">Yayın zamanı bekleniyor</span><br>Günlük en düşük / en yüksek sıcaklık · HRES yüzey tahmini</div></div><div class="daily-grid" id="ecmwf-daily-grid"><div class="loading">ECMWF tahmini yükleniyor…</div></div>
     </div>
   </main>
@@ -2585,12 +2585,12 @@
       if(ecmwfLoading)return;
       if(!force&&ecmwfForecast&&Date.now()-ecmwfLastFetch<240000)return;
       ecmwfLoading=true;
-      $("ecmwf-data-status").textContent="ECMWF Open Data bağlantısı kontrol ediliyor…";
+      $("ecmwf-data-status").textContent="MeteoPT ECMWF bağlantısı kontrol ediliyor…";
       try{
         const response=await fetch(ECMWF_DATA_URL+"?t="+Date.now(),{cache:"no-store"});
         if(!response.ok)throw new Error("ECMWF veri paketi henüz yayımlanmamış (HTTP "+response.status+").");
         const document=await response.json();
-        if(!document||document.schema!=="gfs-watch.ecmwf-eps.v1"||document.status!=="ready"||!Array.isArray(document.forecasts)||document.forecasts.length!==55){
+        if(!document||document.schema!=="gfs-watch.ecmwf-eps.v1"||document.status!=="ready"||!Array.isArray(document.forecasts)||document.forecasts.length<8){
           throw new Error("ECMWF IFS veri paketi eksik veya beklenen biçimde değil.");
         }
         renderEcmwfForecast(document);

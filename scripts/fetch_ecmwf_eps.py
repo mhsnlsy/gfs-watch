@@ -474,6 +474,9 @@ def build_document(run_dt: datetime, mean: dict, spread: dict, regional_pressure
     }
 
 def validate_document(document: dict) -> None:
+    if document.get("forecast_source") == "meteopt":
+        _validate_meteopt_document(document)
+        return
     if document.get("schema") != SCHEMA or document.get("status") != "ready":
         raise ValueError("ECMWF IFS document schema/status is invalid.")
     if document.get("surface_forecast_source") != "IFS HRES deterministic (stream=oper, type=fc)":
@@ -526,6 +529,250 @@ def validate_document(document: dict) -> None:
         raise ValueError("ECMWF GFS-compatible forecast timeline is missing.")
     if document.get("license") != "CC BY 4.0" or not document.get("attribution"):
         raise ValueError("ECMWF Open Data attribution/licence metadata is missing.")
+
+
+def _validate_meteopt_document(document: dict) -> None:
+    """A MeteoPT point series. It has no ensemble spread and no regional grid."""
+    if document.get("schema") != SCHEMA or document.get("status") != "ready":
+        raise ValueError("ECMWF IFS document schema/status is invalid.")
+    forecasts = document.get("forecasts")
+    if not isinstance(forecasts, list) or len(forecasts) < 8:
+        raise ValueError("MeteoPT ECMWF series is too short.")
+    hours = [item.get("forecast_hour") for item in forecasts]
+    if hours != sorted(hours) or len(set(hours)) != len(hours):
+        raise ValueError("MeteoPT ECMWF steps are duplicated or out of order.")
+    if any(not isinstance(hour, int) or hour <= 0 or hour % 3 != 0 for hour in hours):
+        raise ValueError("MeteoPT ECMWF steps must be positive 3-hour marks.")
+    for item in forecasts:
+        for key in ("temperature_2m_c", "wind_speed_10m_kmh", "precipitation_interval_mm"):
+            value = item.get(key)
+            if not isinstance(value, (int, float)) or not math.isfinite(value):
+                raise ValueError(f"MeteoPT ECMWF field is invalid: {key}.")
+        if not (-80 <= item["temperature_2m_c"] <= 60):
+            raise ValueError("MeteoPT ECMWF 2 m temperature is outside sanity bounds.")
+        if item["wind_speed_10m_kmh"] < 0 or item["precipitation_interval_mm"] < 0:
+            raise ValueError("MeteoPT ECMWF wind or precipitation cannot be negative.")
+        temperature = (item.get("temperature_850hpa") or {}).get("mean_c")
+        wind = (item.get("wind_850hpa") or {}).get("mean_kmh")
+        pressure = (item.get("mslp") or {}).get("mean_hpa")
+        if not isinstance(temperature, (int, float)) or not (-80 <= temperature <= 40):
+            raise ValueError("MeteoPT ECMWF 850 hPa temperature is invalid.")
+        if not isinstance(wind, (int, float)) or not (0 <= wind <= 250):
+            raise ValueError("MeteoPT ECMWF 850 hPa wind is invalid.")
+        if not isinstance(pressure, (int, float)) or not (900 <= pressure <= 1080):
+            raise ValueError("MeteoPT ECMWF pressure is invalid.")
+    timeline = document.get("forecast_6_hourly")
+    if not isinstance(timeline, list) or len(timeline) != len(forecasts):
+        raise ValueError("MeteoPT ECMWF timeline does not match the forecast series.")
+    if not isinstance(document.get("daily_summary"), list) or not document["daily_summary"]:
+        raise ValueError("MeteoPT ECMWF daily summary is missing.")
+    if "meteopt.com" not in str(document.get("source_url") or ""):
+        raise ValueError("MeteoPT ECMWF source URL is missing.")
+
+
+def _meteopt_number(value):
+    try:
+        number = float(value)
+    except (TypeError, ValueError):
+        return None
+    if not math.isfinite(number):
+        return None
+    return number
+
+
+def _meteopt_ecmwf_candidates(limit: int = 6) -> list[datetime]:
+    """Recent ECMWF 00Z and 12Z cycles, newest first."""
+    now = datetime.now(timezone.utc).replace(minute=0, second=0, microsecond=0)
+    hour = 12 if now.hour >= 12 else 0
+    cursor = now.replace(hour=hour)
+    return [cursor - timedelta(hours=12 * offset) for offset in range(limit)]
+
+
+def fetch_meteopt_ecmwf_document(run_dt: datetime) -> dict:
+    """Read one ECMWF cycle from the same MeteoPT point the GFS page uses."""
+    import urllib.parse
+    import urllib.request
+
+    run_dt = run_dt.astimezone(timezone.utc).replace(minute=0, second=0, microsecond=0)
+    query = urllib.parse.urlencode({
+        "lat": f"{LATITUDE:.4f}",
+        "lon": f"{LONGITUDE:.4f}",
+        "date": run_dt.strftime("%Y%m%d"),
+        "run": run_dt.strftime("%H"),
+        "lang": "en",
+    })
+    request = urllib.request.Request(
+        "https://api.meteopt.com/ecmwf/json?" + query,
+        headers={"User-Agent": "GFS-Watch/1.0"},
+    )
+    with urllib.request.urlopen(request, timeout=40) as response:
+        payload = json.loads(response.read().decode("utf-8"))
+    expected = run_dt.strftime("%Y%m%d%H")
+    if str(payload.get("run") or "") != expected:
+        raise ValueError(f"MeteoPT ECMWF {payload.get('run') or 'boş'} döndü, istenen {expected}")
+    data = payload.get("data") or {}
+    steps = []
+    for raw in (payload.get("steps") or {}).get("values") or []:
+        try:
+            hour = int(raw)
+        except (TypeError, ValueError):
+            continue
+        if hour > 0 and hour % 3 == 0:
+            steps.append(hour)
+    if len(steps) < 8:
+        raise ValueError(f"MeteoPT ECMWF {expected} henüz kısa: {len(steps)} satır")
+
+    def series(name: str) -> list:
+        values = (data.get(name) or {}).get("values") or []
+        return values if isinstance(values, list) else []
+
+    temperature = series("tmp2m")
+    temperature_850 = series("tmp850mb")
+    wind = series("wind10m")
+    wind_850 = series("wind850")
+    rain = series("apcp")
+    pressure = series("prmsl")
+    forecasts = []
+    previous = 0
+    for index, hour in enumerate(steps):
+        values = {
+            "temp": _meteopt_number(temperature[index]) if index < len(temperature) else None,
+            "temp850": _meteopt_number(temperature_850[index]) if index < len(temperature_850) else None,
+            "wind": _meteopt_number(wind[index]) if index < len(wind) else None,
+            "wind850": _meteopt_number(wind_850[index]) if index < len(wind_850) else None,
+            "rain": _meteopt_number(rain[index]) if index < len(rain) else None,
+            "pressure": _meteopt_number(pressure[index]) if index < len(pressure) else None,
+        }
+        if any(values[key] is None for key in ("temp", "temp850", "wind", "wind850", "rain", "pressure")):
+            continue
+        valid = run_dt + timedelta(hours=hour)
+        local = valid.astimezone(ISTANBUL_TZ)
+        forecasts.append({
+            "forecast_hour": hour,
+            "valid_time_utc": valid.isoformat(timespec="seconds"),
+            "valid_time_istanbul": local.isoformat(timespec="seconds"),
+            "temperature_2m_c": round(values["temp"], 2),
+            "temperature_2m_stddev_c": None,
+            "wind_speed_10m_kmh": round(max(0.0, values["wind"]), 2),
+            "wind_speed_10m_stddev_kmh": None,
+            "precipitation_interval_mm": round(max(0.0, values["rain"]), 3),
+            "precipitation_interval_stddev_mm": None,
+            "precipitation_accumulated_mm": None,
+            "temperature_850hpa": {"mean_c": round(values["temp850"], 2), "stddev_c": None},
+            "wind_850hpa": {"mean_kmh": round(max(0.0, values["wind850"]), 2), "stddev_kmh": None},
+            "mslp": {"mean_hpa": round(values["pressure"], 1), "stddev_hpa": None},
+            "_interval_hours": hour - previous,
+        })
+        previous = hour
+    if len(forecasts) < 8:
+        raise ValueError(f"MeteoPT ECMWF {expected} kullanılabilir satır az: {len(forecasts)}")
+    daily_by_date: dict[str, dict] = {}
+    for item in forecasts:
+        day = daily_by_date.setdefault(item["valid_time_istanbul"][:10], {"temperatures": [], "precipitation": [], "winds": [], "wind850": []})
+        day["temperatures"].append(item["temperature_2m_c"])
+        day["precipitation"].append(item["precipitation_interval_mm"])
+        day["winds"].append(item["wind_speed_10m_kmh"])
+        day["wind850"].append(item["wind_850hpa"]["mean_kmh"])
+    daily_summary = [{
+        "date_istanbul": date,
+        "temperature_min_c": round(min(day["temperatures"]), 1),
+        "temperature_max_c": round(max(day["temperatures"]), 1),
+        "precipitation_total_mm": round(sum(day["precipitation"]), 1),
+        "wind_speed_max_10m_kmh": round(max(day["winds"]), 1),
+        "wind_speed_max_850hpa_kmh": round(max(day["wind850"]), 1),
+    } for date, day in daily_by_date.items()]
+    timeline = []
+    for item in forecasts:
+        timeline.append({
+            "forecast_hour": item["forecast_hour"],
+            "valid_time_utc": item["valid_time_utc"],
+            "valid_time_istanbul": item["valid_time_istanbul"],
+            "temperature_2m_c": item["temperature_2m_c"],
+            "temperature_850hpa_c": item["temperature_850hpa"]["mean_c"],
+            "wind_speed_10m_kmh": item["wind_speed_10m_kmh"],
+            "wind_speed_850hpa_kmh": item["wind_850hpa"]["mean_kmh"],
+            "precipitation_6h_mm": item["precipitation_interval_mm"],
+            "precipitation_interval_hours": item.pop("_interval_hours"),
+        })
+    place = ((payload.get("geodata") or {}).get("place")) or "İstanbul"
+    local_pressure = forecasts[0]["mslp"]["mean_hpa"]
+    document = {
+        "schema": SCHEMA,
+        "status": "ready",
+        "forecast_source": "meteopt",
+        "model": "ECMWF via MeteoPT",
+        "product": "MeteoPT ECMWF 3-hour point",
+        "surface_forecast_source": "MeteoPT ECMWF point",
+        "ensemble_forecast_source": "MeteoPT ECMWF point",
+        "surface_ensemble_spread_available": False,
+        "resolution": "MeteoPT nokta",
+        "forecast_horizon_hours": forecasts[-1]["forecast_hour"],
+        "run_id_utc": run_dt.isoformat(timespec="seconds"),
+        "updated_at_utc": datetime.now(timezone.utc).isoformat(timespec="seconds"),
+        "forecast_valid_until_utc": forecasts[-1]["valid_time_utc"],
+        "location": {
+            "name": place,
+            "latitude": LATITUDE,
+            "longitude": LONGITUDE,
+            "nearest_grid_latitude": LATITUDE,
+            "nearest_grid_longitude": LONGITUDE,
+        },
+        "units": {
+            "temperature_850hpa": "°C",
+            "wind_850hpa": "km/sa",
+            "mslp": "hPa",
+            "spread": "MeteoPT noktasında ensemble sapması yok",
+        },
+        "attribution": "ECMWF nokta serisi MeteoPT üzerinden alınır.",
+        "license": "MeteoPT",
+        "license_url": "https://www.meteopt.com/modelos/ecmwf",
+        "source_url": f"https://www.meteopt.com/modelos/ecmwf?lat={LATITUDE:.3f}&lon={LONGITUDE:.3f}",
+        "notes": [
+            "Sıcaklık, rüzgâr, yağış, 850 hPa ve basınç aynı MeteoPT ECMWF noktasından gelir.",
+            "Seri 3 saatte bir. Ensemble sapması ve bölgesel basınç merkezi bu kaynakta yok.",
+        ],
+        "forecasts": forecasts,
+        "daily_summary": daily_summary,
+        "forecast_6_hourly": timeline,
+        "current_conditions": {
+            "temperature_2m_c": forecasts[0]["temperature_2m_c"],
+            "wind_speed_10m_kmh": forecasts[0]["wind_speed_10m_kmh"],
+            "precipitation_mm": forecasts[0]["precipitation_interval_mm"],
+            "mean_sea_level_pressure_hpa": local_pressure,
+        },
+        "regional_pressure_analysis": {
+            "valid_time_utc": forecasts[0]["valid_time_utc"],
+            "diameter_km": None,
+            "findings": [
+                f"İstanbul deniz seviyesi basıncı {local_pressure:.1f} hPa. MeteoPT ECMWF noktası; bölgesel basınç merkezi bu kaynakta yok.",
+            ],
+        },
+    }
+    _validate_meteopt_document(document)
+    print(
+        f"[ECMWF METEOPT] {expected}: {len(forecasts)} satır, "
+        f"son +{forecasts[-1]['forecast_hour']} saat, {place}"
+    )
+    return document
+
+
+def fetch_latest_document(skip_if_run_id: str | None = None) -> dict | None:
+    """Newest MeteoPT ECMWF cycle. Open Data GRIB is not used."""
+    errors = []
+    for run_dt in _meteopt_ecmwf_candidates():
+        run_id = run_dt.isoformat(timespec="seconds")
+        try:
+            document = fetch_meteopt_ecmwf_document(run_dt)
+        except Exception as exc:
+            message = f"{run_id}: {type(exc).__name__}: {exc}"
+            errors.append(message)
+            print(f"[ECMWF METEOPT MISS] {message}")
+            continue
+        if same_published_cycle(skip_if_run_id, document["run_id_utc"]):
+            print(f"[ECMWF CACHE HIT] {document['run_id_utc']} zaten yayımlı.")
+            return None
+        return document
+    raise RuntimeError("MeteoPT ECMWF döngüsü alınamadı: " + " | ".join(errors))
 
 
 def _fetch_cycle(client, run_dt: datetime) -> dict:
@@ -583,39 +830,6 @@ def _fetch_cycle(client, run_dt: datetime) -> dict:
         validate_document(document)
         return document
 
-def fetch_latest_document(skip_if_run_id: str | None = None) -> dict | None:
-    from ecmwf.opendata import Client
-
-    source_errors = []
-    for source in ("ecmwf", "azure", "google", "aws"):
-        try:
-            client = Client(
-                source=source, model="ifs", resol="0p25",
-                maximum_retries=2, retry_after=5, use_server_retry_after=False,
-            )
-            run_dt = _latest_available_run(client)
-            run_id = run_dt.isoformat(timespec="seconds")
-            print(f"[ECMWF] Latest complete EPS 180h cycle: {run_id} source={source}")
-            # Querying cycle metadata is cheap. Do not download the same 55-step
-            # ensemble GRIB package again when the already-published run is current.
-            if same_published_cycle(skip_if_run_id, run_id):
-                print(f"[ECMWF CACHE HIT] {run_id} already published; skipping GRIB retrieval.")
-                return None
-            document = _fetch_cycle(client, run_dt)
-            document["retrieval_source"] = source
-            print(
-                f"[ECMWF OK] {len(document['forecasts'])} points · "
-                f"T850 {document['forecasts'][0]['temperature_850hpa']['mean_c']:.1f} °C · "
-                f"850 hPa wind {document['forecasts'][0]['wind_850hpa']['mean_kmh']:.1f} km/h"
-            )
-            return document
-        except Exception as exc:
-            message = f"{source}: {type(exc).__name__}: {exc}"
-            source_errors.append(message)
-            print(f"[ECMWF SOURCE ERROR] {message}")
-    raise RuntimeError("No ECMWF Open Data source succeeded: " + " | ".join(source_errors))
-
-
 
 def _timeline_with_850_temperature(item: dict) -> list[dict]:
     """Keep 850 hPa temperature on every comparison point.
@@ -672,64 +886,30 @@ def load_comparison_runs(archive_dir: Path, limit: int = 4) -> list[dict]:
 
 
 def backfill_recent_cycles(latest_document: dict, archive_dir: Path, target_count: int = 4) -> None:
-    """Backfill previous published 00/12Z ENS cycles on first installation."""
+    """Store the previous MeteoPT ECMWF 00Z and 12Z cycles next to the latest one."""
     archive_dir = Path(archive_dir)
     archive_dir.mkdir(parents=True, exist_ok=True)
     existing = load_comparison_runs(archive_dir, limit=target_count)
     known = {item["run_id_utc"] for item in existing}
-    if len(known) >= target_count:
-        return
-
-    latest_dt = _normalise_datetime(latest_document["run_id_utc"])
-    from ecmwf.opendata import Client
-
-    for offset in range(1, 9):
+    for run_dt in _meteopt_ecmwf_candidates(limit=8):
         if len(known) >= target_count:
             break
-        candidate = latest_dt - timedelta(hours=12 * offset)
-        candidate_id = candidate.isoformat(timespec="seconds")
+        candidate_id = run_dt.isoformat(timespec="seconds")
         if candidate_id in known:
             continue
-
-        retrieved = False
-        for source in ("ecmwf", "azure", "google", "aws"):
-            try:
-                client = Client(
-                source=source, model="ifs", resol="0p25",
-                maximum_retries=2, retry_after=5, use_server_retry_after=False,
-            )
-                available = client.latest(
-                    date=candidate.strftime("%Y%m%d"),
-                    time=candidate.hour,
-                    stream="enfo",
-                    type="em",
-                    step=MAX_FORECAST_HOUR,
-                    param="ws",
-                    levelist=850,
-                )
-                if available is None or _normalise_datetime(available) != candidate:
-                    continue
-                print(f"[ECMWF BACKFILL] Retrieving historical cycle {candidate_id} from {source}.")
-                historical = _fetch_cycle(client, candidate)
-                historical["retrieval_source"] = source
-                validate_document(historical)
-                run_key = candidate.strftime("%Y%m%dT%HZ")
-                archive_path = archive_dir / f"{run_key}.json"
-                archive_path.write_text(
-                    json.dumps(historical, ensure_ascii=False, indent=2) + "\n",
-                    encoding="utf-8",
-                )
-                known.add(candidate_id)
-                retrieved = True
-                print(f"[ECMWF BACKFILL OK] {candidate_id} archived.")
-                break
-            except Exception as exc:
-                print(
-                    f"[ECMWF BACKFILL SOURCE ERROR] {candidate_id} {source}: "
-                    f"{type(exc).__name__}: {exc}"
-                )
-        if not retrieved:
-            print(f"[ECMWF BACKFILL SKIP] {candidate_id} is not available from Open Data.")
+        try:
+            historical = fetch_meteopt_ecmwf_document(run_dt)
+        except Exception as exc:
+            print(f"[ECMWF METEOPT GEÇMİŞ] {candidate_id} yok: {type(exc).__name__}: {exc}")
+            continue
+        historical_id = historical["run_id_utc"]
+        if historical_id in known:
+            continue
+        run_key = datetime.fromisoformat(historical_id).strftime("%Y%m%dT%HZ")
+        archive_path = archive_dir / f"{run_key}.json"
+        archive_path.write_text(json.dumps(historical, ensure_ascii=False, indent=2) + "\n", encoding="utf-8")
+        known.add(historical_id)
+        print(f"[ECMWF METEOPT GEÇMİŞ] {historical_id} arşive yazıldı.")
 
 
 def main() -> None:
