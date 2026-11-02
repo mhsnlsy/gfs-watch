@@ -2415,8 +2415,20 @@ async def generate_speech_with_retry(text, max_attempts=3):
     print("[TTS BAŞARISIZ] Ses üretilemedi; metin bildirimi gönderilmiş durumda.")
     return None
 
+def _telegram_enabled():
+    """Telegram stays off unless GFS_TELEGRAM=1. The page does not wait on it."""
+    return os.getenv("GFS_TELEGRAM", "0").strip().lower() in {"1", "true", "yes"}
+
+
+async def _no_speech():
+    return None
+
+
 # --- TELEGRAM GÖNDERİCİ ---
 async def send_telegram_text(text):
+    if not _telegram_enabled():
+        print("[TELEGRAM KAPALI] Metin gönderilmedi.")
+        return
     if not TELEGRAM_TOKEN or not CHAT_ID:
         raise RuntimeError("TELEGRAM_TOKEN veya CHAT_ID eksik.")
     async with Bot(token=TELEGRAM_TOKEN) as bot:
@@ -3019,6 +3031,9 @@ async def load_previous_three_runs_for_comparison(current_run_id):
 
 
 async def send_telegram_photo(photo, caption, max_attempts=3):
+    if not _telegram_enabled():
+        print("[TELEGRAM KAPALI] Görsel gönderilmedi.")
+        return
     if not TELEGRAM_TOKEN or not CHAT_ID:
         raise RuntimeError("TELEGRAM_TOKEN veya CHAT_ID eksik.")
     if not photo:
@@ -3042,6 +3057,11 @@ async def send_telegram_photo(photo, caption, max_attempts=3):
 
 
 async def send_telegram_voice(audio_path, max_attempts=3, cleanup=True):
+    if not _telegram_enabled():
+        print("[TELEGRAM KAPALI] Ses gönderilmedi.")
+        if cleanup and audio_path and os.path.exists(audio_path):
+            os.remove(audio_path)
+        return
     if not TELEGRAM_TOKEN or not CHAT_ID:
         raise RuntimeError("TELEGRAM_TOKEN veya CHAT_ID eksik.")
     if not audio_path or not os.path.exists(audio_path):
@@ -3295,7 +3315,7 @@ async def process_gfs_update(strict=False, target_run_id=None):
     full_text_report, speech_text = analyze_and_build_output(
         run_id, payload, previous_runs
     )
-    audio_task = asyncio.create_task(generate_speech_with_retry(speech_text))
+    audio_task = asyncio.create_task(generate_speech_with_retry(speech_text) if _telegram_enabled() else _no_speech())
 
     # Compare the current cycle with the exact three prior six-hour cycles.
     # Missing history is fetched from NOAA in read-only mode; DB/JSON state is untouched.
@@ -3600,7 +3620,7 @@ async def run_manual_report(run_id):
         normalized_run_id, payload, previous_runs
     )
 
-    audio_task = asyncio.create_task(generate_speech_with_retry(speech_text))
+    audio_task = asyncio.create_task(generate_speech_with_retry(speech_text) if _telegram_enabled() else _no_speech())
     try:
         await send_telegram_text(full_text_report)
     except Exception:

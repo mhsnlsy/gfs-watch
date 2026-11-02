@@ -280,7 +280,7 @@ jobs:
   notify-failure:
     name: Notify Telegram on workflow failure
     needs: [check-gfs, deploy-pages, send-web-push]
-    if: failure()
+    if: false
     runs-on: ubuntu-latest
     steps:
       - name: Send failure alert to Telegram
