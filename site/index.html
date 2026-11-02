@@ -594,6 +594,29 @@
       *,*::before,*::after { scroll-behavior:auto!important; animation-duration:.01ms!important; transition-duration:.01ms!important; }
     }
 
+
+    /* Force clean side-by-side stats on mobile */
+    @media (max-width: 640px) {
+      .station-card .weather-stats {
+        display: grid !important;
+        grid-template-columns: repeat(2, minmax(0, 1fr)) !important;
+        gap: 8px !important;
+        margin-top: 16px !important;
+      }
+      .station-card .stat {
+        padding: 10px 8px !important;
+        min-width: 0;
+      }
+      .station-card .stat .name { font-size: 9px !important; }
+      .station-card .stat .value { font-size: 15px !important; }
+      .station-card .stat .detail { font-size: 8px !important; margin-top: 1px; }
+    }
+    @media (max-width: 420px) {
+      .station-card .weather-stats {
+        grid-template-columns: repeat(2, minmax(0, 1fr)) !important;
+      }
+    }
+
 </style>
 </head>
 <body>
