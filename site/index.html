@@ -928,6 +928,10 @@
       }
     }
 
+    .wstat-map{padding-top:6px}
+    .wstat-embed{width:100%;height:450px;border-radius:16px;overflow:hidden;border:1px solid rgba(143,184,196,.22);background:#07141c}
+    .wstat-embed iframe{display:block;width:100%;height:100%;border:0}
+    @media(max-width:700px){.wstat-embed{height:320px}}
 </style>
 </head>
 <body>
@@ -1003,6 +1007,20 @@
         <div class="briefing-row"><div class="briefing-k">Ayrışma</div><div class="briefing-v" id="brief-split">Hesaplanıyor…</div></div>
         </div>
       </section>
+    </section>
+    <section class="section wstat-map" id="wstat-map" aria-label="WStatMap Eyüpsultan haritası">
+      <div class="section-head">
+        <div><div class="section-kicker">WSTATMAP · MGM 18101</div><h2>Eyüpsultan çevresi</h2></div>
+        <div class="station-switch" role="group" aria-label="Harita katmanı">
+          <button type="button" data-wstat-layer="temperature" class="active" aria-pressed="true">Sıcaklık</button>
+          <button type="button" data-wstat-layer="precipitation" aria-pressed="false">Yağış</button>
+          <button type="button" data-wstat-layer="wind" aria-pressed="false">Rüzgâr</button>
+          <button type="button" data-wstat-layer="humidity" aria-pressed="false">Nem</button>
+        </div>
+      </div>
+      <div class="wstat-embed">
+        <iframe id="wstat-embed-frame" title="WStatMap Eyüpsultan sıcaklık haritası" src="https://wstatmap.com/tr/embed?station=eyupsultan-18101&radius=30&layer=temperature&user_station=false" width="600" height="450" loading="lazy" referrerpolicy="no-referrer-when-downgrade"></iframe>
+      </div>
     </section>
     <div id="gfs-model-view">
     <section class="section" id="bildirimler">
@@ -2623,6 +2641,20 @@
       if(typeof renderBriefing==="function")renderBriefing();
       if(ecmwf)loadEcmwf();
     }
+    document.querySelectorAll("[data-wstat-layer]").forEach(button=>{
+      button.addEventListener("click",()=>{
+        const layer=button.getAttribute("data-wstat-layer");
+        const frame=$("wstat-embed-frame");
+        if(!frame||!["temperature","precipitation","wind","humidity"].includes(layer))return;
+        frame.src="https://wstatmap.com/tr/embed?station=eyupsultan-18101&radius=30&layer="+layer+"&user_station=false";
+        frame.title="WStatMap Eyüpsultan "+button.textContent+" haritası";
+        document.querySelectorAll("[data-wstat-layer]").forEach(item=>{
+          const on=item===button;
+          item.classList.toggle("active",on);
+          item.setAttribute("aria-pressed",String(on));
+        });
+      });
+    });
     $("model-gfs-button").addEventListener("click",()=>setModelView("gfs"));
     $("model-ecmwf-button").addEventListener("click",()=>setModelView("ecmwf"));
     try{if(localStorage.getItem("istanbul-hava-model-view")==="ecmwf")activeModel="ecmwf";}catch(_){}
