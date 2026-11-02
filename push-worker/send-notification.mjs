@@ -30,8 +30,8 @@ let item;
 if (testMode) {
   item = {
     id: `manual-test-${Date.now()}`,
-    title: "Radar Uyarısı — İstanbul (TEST)",
-    summary: "Bu bir testtir ancak 35 dBZ büyüklüğünde bir yağmur kütlesi geliyor konuma."
+    title: "GFS Watch · Test bildirimi",
+    summary: "Harika! Web Push bağlantısı çalışıyor. Bu, uygulama kapalıyken teslimatı sınamak için gönderilen test mesajıdır."
   };
   console.log("[WEB PUSH] Test mode enabled; GFS duplicate protection will not be touched.");
 } else {
