@@ -2912,7 +2912,19 @@ def _draw_comparison_precip_line_axis(axis, chart_data):
     axis.set_title("3 saatlik yağış | çizgi trend", loc="left", fontsize=11)
     axis.set_ylabel("mm / 3 saat", fontsize=10)
     axis.set_xlabel("İstanbul yerel saati · 3 saat", fontsize=9.5, color=GFS_REPORT_TEXT)
-    axis.grid(axis="y", alpha=0.25)
+    _apply_precip_hour_grid(axis)
+
+
+def _apply_precip_hour_grid(axis):
+    """Vertical line on every 3-hour step. Horizontal line on every mm, odd and even."""
+    import matplotlib.ticker as ticker
+    axis.yaxis.set_major_locator(ticker.MultipleLocator(1))
+    axis.xaxis.set_minor_locator(ticker.MultipleLocator(1))
+    axis.set_axisbelow(True)
+    axis.grid(which="major", axis="y", color=GFS_REPORT_GRID, alpha=0.5, linewidth=0.8)
+    axis.grid(which="minor", axis="x", color=GFS_REPORT_GRID, alpha=0.38, linewidth=0.6)
+    axis.tick_params(axis="x", which="minor", length=0)
+    axis.tick_params(axis="y", which="major", labelcolor=GFS_REPORT_MUTED, colors=GFS_REPORT_MUTED)
 
 
 def _draw_comparison_bar_axis(axis, chart_data, metric, title, ylabel):
@@ -3018,6 +3030,7 @@ def create_comparison_chart(current_run_id, payload, previous_runs):
         for index, axis in enumerate(axes):
             _style_dark_comparison_axis(axis)
             if index == 2:
+                _apply_precip_hour_grid(axis)
                 axis.tick_params(axis="x", labelbottom=True, labelcolor=GFS_REPORT_TEXT, colors=GFS_REPORT_TEXT)
                 continue
             _format_comparison_date_axis(axis, dates)
@@ -3115,6 +3128,8 @@ def create_pages_comparison_charts(current_run_id, payload, previous_runs):
                 for tick_label in axis.get_xticklabels():
                     tick_label.set_fontweight("semibold")
                 axis.grid(axis="y", color=GFS_REPORT_GRID, alpha=0.42, linewidth=0.9)
+                if metric == "precipitation":
+                    _apply_precip_hour_grid(axis)
                 axis.set_axisbelow(True)
                 # Rebuild a predictable full-width plotting area for every metric.
                 # Do not manually reposition the Axes after Matplotlib lays it out.
