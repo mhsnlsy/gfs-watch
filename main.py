@@ -393,6 +393,7 @@ def export_public_forecast_json(run_id, payload, update_latest=True):
             "valid_time_utc": local_dt.astimezone(timezone.utc).isoformat(timespec="minutes"),
             "valid_time_istanbul": local_dt.isoformat(timespec="minutes"),
             "temperature_2m_c": values.get("temp"),
+            "temperature_850hpa_c": values.get("temp_850"),
             "wind_speed_10m_kmh": values.get("wind"),
             "wind_direction_10m_deg": values.get("wind_direction_deg"),
             "wind_speed_850hpa_kmh": values.get("wind_850"),
@@ -406,6 +407,8 @@ def export_public_forecast_json(run_id, payload, update_latest=True):
             "date_istanbul": date_value,
             "temperature_min_c": daily.get("temp_min", [])[index],
             "temperature_max_c": daily.get("temp_max", [])[index],
+            "temperature_850hpa_min_c": daily.get("temp_850_min", [None] * len(dates))[index],
+            "temperature_850hpa_max_c": daily.get("temp_850_max", [None] * len(dates))[index],
             "precipitation_total_mm": daily.get("precip_sum", [])[index],
             "wind_speed_max_10m_kmh": daily.get("wind_max", [])[index],
             "wind_speed_max_850hpa_kmh": daily.get("wind_850_max", [None] * len(dates))[index],
@@ -459,16 +462,54 @@ def export_public_forecast_json(run_id, payload, update_latest=True):
     run_path = os.path.join(PUBLIC_DATA_DIR, "runs", run_filename)
     _write_json_atomically(run_path, document)
     if update_latest:
-        _write_json_atomically(os.path.join(PUBLIC_DATA_DIR, "latest.json"), document)
+        published = dict(document)
+        published["comparison_runs"] = _load_gfs_850_comparison_runs()
+        _write_json_atomically(os.path.join(PUBLIC_DATA_DIR, "latest.json"), published)
         print(
             f"[JSON EXPORT] public/latest.json ve public/runs/{run_filename} "
-            f"yazıldı ({len(forecast)} tahmin noktası)."
+            f"yazıldı ({len(forecast)} tahmin noktası, "
+            f"{len(published['comparison_runs'])} adet 850 hPa karşılaştırması)."
         )
     else:
         print(
             f"[JSON ARCHIVE] Yalnızca public/runs/{run_filename} yazıldı; "
             f"public/latest.json değiştirilmedi ({len(forecast)} tahmin noktası)."
         )
+
+
+def _load_gfs_850_comparison_runs():
+    """Last four published cycles that actually contain 850 hPa temperature."""
+    runs_dir = os.path.join(PUBLIC_DATA_DIR, "runs")
+    entries = []
+    if not os.path.isdir(runs_dir):
+        return entries
+    for name in sorted(os.listdir(runs_dir)):
+        if not name.endswith(".json"):
+            continue
+        path = os.path.join(runs_dir, name)
+        try:
+            with open(path, encoding="utf-8") as handle:
+                stored = json.load(handle)
+        except (OSError, ValueError, TypeError):
+            continue
+        points = []
+        for point in stored.get("forecast_6_hourly") or []:
+            if not isinstance(point, dict):
+                continue
+            value = point.get("temperature_850hpa_c")
+            if not isinstance(value, (int, float)):
+                continue
+            points.append({
+                "forecast_hour": point.get("forecast_hour"),
+                "valid_time_utc": point.get("valid_time_utc"),
+                "temperature_850hpa_c": value,
+            })
+        if points and stored.get("run_id_utc"):
+            entries.append({
+                "run_id_utc": stored["run_id_utc"],
+                "forecast_6_hourly": points,
+            })
+    return entries[-4:]
 
 
 # --- NOAA GFS +180 DOSYA VARLIĞI ---
@@ -1093,8 +1134,11 @@ def _read_noaa_decoded_cache_file(run_id, lead):
         }
         if not isinstance(document.get("temperature"), dict):
             raise ValueError("decoded temperature field is missing")
+        if "temperature_850" not in document:
+            raise ValueError("decoded 850 hPa temperature field is missing")
         return {
             "temperature": document["temperature"],
+            "temperature_850": document.get("temperature_850") or {},
             "wind_u": document.get("wind_u") or {},
             "wind_v": document.get("wind_v") or {},
             "wind_850_u": document["wind_850_u"],
@@ -1119,6 +1163,7 @@ def _write_noaa_decoded_cache_file(run_id, lead, step_data):
     os.makedirs(os.path.dirname(cache_path), exist_ok=True)
     document = {
         "temperature": step_data.get("temperature") or {},
+        "temperature_850": step_data.get("temperature_850") or {},
         "wind_u": step_data.get("wind_u") or {},
         "wind_v": step_data.get("wind_v") or {},
         "wind_850_u": step_data.get("wind_850_u") or {},
