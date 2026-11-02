@@ -22,7 +22,6 @@ import matplotlib.pyplot as plt
 import matplotlib.patheffects as patheffects
 from matplotlib.lines import Line2D
 from matplotlib.patches import Rectangle
-import eccodes
 from google.cloud import texttospeech
 from google.oauth2 import service_account
 from telegram import Bot
@@ -1079,7 +1078,9 @@ def fetch_enka_station_observation():
 
 
 def fetch_noaa_available_runs():
-    """Find recent completed GFS cycles by checking NOAA NOMADS then AWS S3 f180 objects."""
+    """NOAA defteri kapalı. Döngüler yalnız MeteoPT'ten gelir."""
+    print("[NOAA KAPALI] NOAA/NOMADS/S3 taraması yok. Kaynak MeteoPT.")
+    return []
     now = datetime.now(timezone.utc)
     latest_cycle_hour = (now.hour // 6) * 6
     latest_cycle = now.replace(
@@ -1635,6 +1636,8 @@ def _decode_noaa_grib_step(run_id, lead, grib_bytes):
 
 
 def prune_noaa_cache():
+    """NOAA GRIB önbelleği kapatıldı. Eski dosyalar artık yazılmıyor."""
+    return None
     """Remove abandoned cycle caches; active cycles are kept until processed."""
     if not os.path.isdir(NOAA_CACHE_DIR):
         return 0
@@ -1696,6 +1699,9 @@ def prefetch_noaa_cycle_if_due(skip_run_ids=None, target_run_id=None):
 
 
 def prefetch_latest_noaa_cycle(skip_run_ids=None, target_run_id=None):
+    """NOAA GRIB indirmesi kapatıldı."""
+    print("[NOAA KAPALI] GRIB ön indirme yok.")
+    return None
     """Cache every available GFS input file through f177 for the latest or selected cycle."""
     skip_run_ids = set(skip_run_ids or ())
     now = datetime.now(timezone.utc)
@@ -2134,9 +2140,8 @@ def fetch_meteopt_weather_data(run_id):
 
 
 def fetch_full_weather_data(run_id):
-    """Assemble one GFS cycle. MeteoPT's 3-hour point is the default source."""
-    if os.getenv("GFS_SOURCE", "meteopt").strip().lower() != "noaa":
-        return fetch_meteopt_weather_data(run_id)
+    """One GFS cycle, from MeteoPT only. The NOAA GRIB ledger is closed."""
+    return fetch_meteopt_weather_data(run_id)
     print(f"[STEP 1] NOAA/NCEP GRIB2 verisi çekiliyor: {run_id}")
     try:
         run_dt = _parse_utc_datetime(run_id)
@@ -3174,7 +3179,7 @@ async def load_previous_three_runs_for_comparison(current_run_id):
     """Load the three preceding cycles from the same source as the current run."""
     current_dt = _parse_utc_datetime(current_run_id)
     previous_runs = []
-    use_meteopt = os.getenv("GFS_SOURCE", "meteopt").strip().lower() != "noaa"
+    use_meteopt = True
 
     for hours_back in (6, 12, 18):
         previous_dt = current_dt - timedelta(hours=hours_back)
@@ -3289,7 +3294,7 @@ async def process_gfs_update(strict=False, target_run_id=None):
         print(f"[TARGET COMPLETE] {target_run_id} daha önce işlendi; yeni rapor gönderilmeyecek.")
         return
 
-    use_meteopt = os.getenv("GFS_SOURCE", "meteopt").strip().lower() != "noaa"
+    use_meteopt = True
     candidates = await asyncio.to_thread(
         fetch_meteopt_available_runs if use_meteopt else fetch_noaa_available_runs
     )

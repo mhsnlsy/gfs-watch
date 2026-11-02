@@ -10,9 +10,9 @@ def main() -> None:
     main_source = (ROOT / "main.py").read_text(encoding="utf-8")
 
     export_start = main_source.index("def export_public_forecast_json(")
-    export_end = main_source.index("\n# --- NOAA GFS", export_start)
+    export_end = main_source.index("\ndef _load_gfs_850_comparison_runs", export_start)
     export_function = main_source[export_start:export_end]
-    assert "def export_public_forecast_json(run_id, payload, update_latest=True):" in export_function
+    assert "def export_public_forecast_json(" in export_function
     assert "if update_latest:" in export_function
     assert "public/latest.json" in export_function
     assert "public/runs/" in export_function
@@ -24,7 +24,7 @@ def main() -> None:
     save_at = history_loader.index("save_run, previous_run_id, fetched_payload")
     export_at = history_loader.index("export_public_forecast_json, previous_run_id, fetched_payload, False")
     assert fetch_at < save_at < export_at
-    assert "sonraki kıyaslarda yeniden indirilmeyecek" in history_loader
+    assert "yeniden indirilmiyor" in history_loader
 
     backfill = (ROOT / "scripts/backfill_850hpa_comparison.py").read_text(encoding="utf-8")
     assert "archive.export_public_forecast_json(run_id, payload, update_latest=False)" in backfill

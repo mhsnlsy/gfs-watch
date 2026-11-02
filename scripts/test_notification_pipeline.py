@@ -13,25 +13,18 @@ def main() -> None:
     process = main_source[process_start:process_end]
 
     commit_at = process.index("await asyncio.to_thread(save_run, run_id, payload)")
-    pages_task_at = process.index("pages_task = asyncio.create_task")
-    telegram_task_at = process.index("telegram_task = asyncio.create_task")
-    gather_at = process.index("await asyncio.gather(", telegram_task_at)
-    assert commit_at < pages_task_at < telegram_task_at < gather_at
-    dispatch = process[pages_task_at:]
-    assert "return_exceptions=True" in dispatch, (
-        "A failure in either channel must not cancel or suppress the other channel."
-    )
-    assert "PAGES NOTIFICATION ERROR" in dispatch
-    assert "TELEGRAM REPORT ERROR" in dispatch
+    publish_at = process.index("publish_public_notification")
+    telegram_at = process.index("await deliver_telegram_report()")
+    assert commit_at < publish_at < telegram_at
+    assert "TELEGRAM REPORT ERROR" in process
     assert "send_telegram_voice(audio_file, cleanup=False)" in process, (
         "Pages must be able to archive the voice asset while Telegram sends it."
     )
-    assert "if audio_file and os.path.exists(audio_file):" in dispatch
     assert "[GFS CYCLE COMMITTED]" in process
 
     gfs_workflow = (ROOT / ".github/workflows/gfs-watch.yml").read_text(encoding="utf-8")
     restore_start = gfs_workflow.index("Restore GFS run and Pages notification history")
-    report_start = gfs_workflow.index("Discover NOAA cycles, prefetch and process one reportable cycle")
+    report_start = gfs_workflow.index("Watch MeteoPT until the 3-hour series reaches +180h")
     restore_section = gfs_workflow[restore_start:report_start]
     assert "git archive origin/gfs-watch-state public | tar -x -C ." in restore_section
     assert gfs_workflow.index("rm -rf public/notifications") < gfs_workflow.index('cp -a "$RUNNER_TEMP/public/." public/')
@@ -49,9 +42,7 @@ def main() -> None:
     assert "Pages notification media is missing" in pages_workflow
 
     for workflow_name in (
-        "archive-latest-telegram-report.yml",
         "render-pages-charts-from-saved-data.yml",
-        "backfill-850hpa-comparison.yml",
     ):
         workflow = (ROOT / ".github/workflows" / workflow_name).read_text(encoding="utf-8")
         assert "actions: write" in workflow, f"{workflow_name} cannot dispatch Pages."

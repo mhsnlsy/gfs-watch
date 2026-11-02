@@ -47,22 +47,8 @@ jobs:
           python-version: "3.12"
           cache: "pip"
           cache-dependency-path: requirements.txt
-      - name: Install system dependencies
-        run: |
-          sudo apt-get update -qq
-          sudo apt-get install -y -qq libeccodes-dev
       - name: Install dependencies
         run: python -m pip install -r requirements.txt
-      - name: Prepare NOAA cache directory
-        run: mkdir -p noaa_cache_v2
-      - name: Restore partial NOAA forecast cache
-        id: noaa-cache-restore
-        uses: actions/cache/restore@v6
-        with:
-          path: noaa_cache_v2
-          key: gfs-noaa-cache-v4-${{ github.run_id }}-${{ github.run_attempt }}
-          restore-keys: |
-            gfs-noaa-cache-v4-
       - name: Restore GFS run and Pages notification history
         run: |
           git fetch origin gfs-watch-state
@@ -105,16 +91,6 @@ jobs:
           print(f"Previously processed latest GFS cycle: {run_id}")
           print(f"Previously published public-data fingerprint: {fingerprint}")
           PY
-      - name: Backfill missing 72-hour wind direction from native GFS U/V cache
-        id: wind-direction-backfill
-        if: false
-        continue-on-error: true
-        env:
-          PUBLIC_DATA_DIR: public
-          NOAA_CACHE_DIR: noaa_cache_v2
-          NOAA_RANGE_DOWNLOAD_WORKERS: "8"
-          WIND_DIRECTION_FETCH_WORKERS: "4"
-        run: python -u scripts/backfill_gfs_wind_direction.py
       - name: Watch MeteoPT until the 3-hour series reaches +180h
         id: check-gfs
         env:
@@ -199,20 +175,10 @@ jobs:
           elif [ "$public_after" != "$public_before" ]; then
             echo "gfs_updated=true" >> "$GITHUB_OUTPUT"
             echo "Public forecast/report payload changed; Pages deployment is required."
-          elif [ "${{ steps.wind-direction-backfill.outputs.updated }}" = "true" ]; then
-            echo "gfs_updated=true" >> "$GITHUB_OUTPUT"
-            echo "Existing GFS cycle gained a fresh 72-hour wind-direction payload."
           else
             echo "gfs_updated=false" >> "$GITHUB_OUTPUT"
             echo "No new GFS cycle or public forecast payload was generated in this session."
           fi
-      - name: Save partial NOAA forecast cache
-        if: always() && steps.check-gfs.outputs.noaa_cache_updated == 'true'
-        continue-on-error: true
-        uses: actions/cache/save@v6
-        with:
-          path: noaa_cache_v2
-          key: gfs-noaa-cache-v4-${{ github.run_id }}-${{ github.run_attempt }}
       - name: Save GFS run history
         if: always()
         run: |
