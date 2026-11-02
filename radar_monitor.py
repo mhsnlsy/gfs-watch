@@ -141,15 +141,50 @@ def send_telegram(text):
 
 def main():
     print("[RADAR] Checking RainViewer for 41.015, 28.950 ...")
-    # TEMP FORCE TEST ALERT
-    msg = (
-        "🌧️ <b>Radar Uyarısı — İstanbul (TEST)</b>\n"
-        "Bu bir testtir ancak 35 dBZ büyüklüğünde bir yağmur kütlesi geliyor konuma.\n"
-        "Konum: 41.015 N, 28.950 E\n"
-        "https://mhsnlsy.github.io/gfs-watch/"
+    timeline = fetch_timeline()
+    host = timeline.get("host", "https://tilecache.rainviewer.com")
+    past = timeline.get("radar", {}).get("past", [])
+    if not past:
+        print("[RADAR] No past frames")
+        return
+    latest = past[-1]
+    path = latest["path"]
+    ts = latest["time"]
+    print(f"[RADAR] Latest frame: {path} @ {datetime.fromtimestamp(ts, timezone.utc)}")
+
+    curr = analyze_frame(host, path)
+    if curr is None:
+        print("[RADAR] Tile download failed")
+        return
+
+    state = load_state()
+    prev = state.get("last")
+    approaching = is_approaching(prev, curr)
+    on_site = curr.get("centroid_dist", 999) < 5 and curr.get("max_dbz", 0) >= THRESHOLD_DBZ
+
+    alert = approaching or on_site
+    summary = (
+        f"max {curr.get('max_dbz', 0)} dBZ, "
+        f"centroid {curr.get('centroid_dist', '—')} km, "
+        f"{curr.get('count', 0)} high pixels"
     )
-    send_telegram(msg)
-    print("[RADAR] TEST ALERT SENT")
+    print(f"[RADAR] {summary} | approaching={approaching} on_site={on_site}")
+
+    if alert:
+        msg = (
+            f"🌧️ <b>Radar Uyarısı — İstanbul</b>\n"
+            f"Konum: 41.015 N, 28.950 E\n"
+            f"{summary}\n"
+            f"{'Konuma ulaşıyor / üzerinde.' if on_site else 'Yaklaşıyor.'}\n"
+            f"https://mhsnlsy.github.io/gfs-watch/#radar"
+        )
+        send_telegram(msg)
+        print("[RADAR] ALERT SENT")
+
+    state["last"] = curr
+    state["last_ts"] = ts
+    state["checked_at"] = datetime.now(timezone.utc).isoformat()
+    save_state(state)
     print("[RADAR] Done.")
 
 if __name__ == "__main__":
