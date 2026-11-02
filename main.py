@@ -396,15 +396,12 @@ def publish_public_notification(
         f"[WEB NOTIFICATION] {run_key} web akışına eklendi; "
         f"son {len(retained)} rapor tutuluyor."
     )
+    return entry
 
 
-def export_public_forecast_json(run_id, payload, update_latest=True):
-    """Export an immutable run file and optionally refresh the public latest.json."""
-    run_dt = _parse_utc_datetime(run_id)
-    current = payload.get("current", {})
-    daily = payload.get("daily", {})
+def _forecast_points_from_payload(payload):
+    """Turn one model payload into the public 3-hour point list."""
     forecast = []
-
     for local_time, values in sorted(payload.get("timeline_180h", {}).items()):
         local_dt = datetime.strptime(local_time, "%Y-%m-%dT%H:%M").replace(tzinfo=TR_TZ)
         forecast.append({
@@ -418,7 +415,27 @@ def export_public_forecast_json(run_id, payload, update_latest=True):
             "wind_speed_850hpa_kmh": values.get("wind_850"),
             "precipitation_6h_mm": values.get("precip"),
         })
+    return forecast
 
+
+def _comparison_entry_from_payload(run_id, payload):
+    """One cycle inside the single public bundle. Same points the page charts use."""
+    run_dt = _parse_utc_datetime(run_id)
+    return {
+        "run_id_utc": run_dt.isoformat(timespec="seconds"),
+        "forecast_source": "meteopt" if "MeteoPT" in str(payload.get("data_source", "")) else payload.get("forecast_source", "noaa"),
+        "forecast_6_hourly": _forecast_points_from_payload(payload),
+    }
+
+
+def export_public_forecast_json(
+    run_id, payload, update_latest=True, comparison_payloads=None, report=None
+):
+    """Write one run archive. latest.json is the single page bundle when requested."""
+    run_dt = _parse_utc_datetime(run_id)
+    current = payload.get("current", {})
+    daily = payload.get("daily", {})
+    forecast = _forecast_points_from_payload(payload)
     dates = daily.get("time", [])
     daily_summary = []
     for index, date_value in enumerate(dates):
@@ -434,9 +451,13 @@ def export_public_forecast_json(run_id, payload, update_latest=True):
         })
 
     model_metadata = payload.get("model_metadata", {})
+    forecast_source = (
+        "meteopt" if "MeteoPT" in str(payload.get("data_source", "")) else "noaa"
+    )
     document = {
         "schema": "gfs-watch.forecast.v1",
         "model": MODEL_NAME,
+        "forecast_source": forecast_source,
         "run_id_utc": run_dt.isoformat(timespec="seconds"),
         "forecast_valid_until_utc": (
             run_dt + timedelta(hours=MIN_FORECAST_HOURS)
@@ -485,12 +506,23 @@ def export_public_forecast_json(run_id, payload, update_latest=True):
     _write_json_atomically(run_path, document)
     if update_latest:
         published = dict(document)
-        published["comparison_runs"] = _load_gfs_850_comparison_runs()
+        if comparison_payloads:
+            entries = [
+                _comparison_entry_from_payload(cycle_id, cycle_payload)
+                for cycle_id, cycle_payload in comparison_payloads
+                if cycle_payload and "_pending_noaa_gfs" not in cycle_payload
+            ]
+            entries.sort(key=lambda item: item["run_id_utc"])
+            published["comparison_runs"] = entries[-4:]
+        else:
+            published["comparison_runs"] = _load_gfs_850_comparison_runs()
+        if isinstance(report, dict):
+            published["report"] = report
         _write_json_atomically(os.path.join(PUBLIC_DATA_DIR, "latest.json"), published)
         print(
             f"[JSON EXPORT] public/latest.json ve public/runs/{run_filename} "
             f"yazıldı ({len(forecast)} tahmin noktası, "
-            f"{len(published['comparison_runs'])} adet 850 hPa karşılaştırması)."
+            f"{len(published['comparison_runs'])} adet aynı kaynaklı çevrim)."
         )
     else:
         print(
@@ -529,8 +561,14 @@ def _load_gfs_850_comparison_runs():
                 "precipitation_6h_mm": point.get("precipitation_6h_mm"),
             })
         if points and stored.get("run_id_utc"):
+            if (
+                os.getenv("GFS_SOURCE", "meteopt").strip().lower() != "noaa"
+                and stored.get("forecast_source") != "meteopt"
+            ):
+                continue
             entries.append({
                 "run_id_utc": stored["run_id_utc"],
+                "forecast_source": stored.get("forecast_source"),
                 "forecast_6_hourly": points,
             })
     return entries[-4:]
@@ -2938,63 +2976,40 @@ def _has_complete_850_wind_daily_series(payload):
 
 
 async def load_previous_three_runs_for_comparison(current_run_id):
-    """Load the exact three preceding cycles; refresh legacy records without 850 hPa wind from NOAA."""
+    """Load the three preceding cycles from the same source as the current run."""
     current_dt = _parse_utc_datetime(current_run_id)
     previous_runs = []
+    use_meteopt = os.getenv("GFS_SOURCE", "meteopt").strip().lower() != "noaa"
 
     for hours_back in (6, 12, 18):
         previous_dt = current_dt - timedelta(hours=hours_back)
         previous_run_id = previous_dt.isoformat(timespec="seconds")
-        stored_record = await asyncio.to_thread(
-            get_run_payload, previous_run_id
-        )
-        stored_payload = None
-        if stored_record:
-            stored_run_id, stored_payload = stored_record
-            if _has_complete_850_wind_daily_series(stored_payload):
-                print(
-                    f"[KIYAS GEÇMİŞİ] {stored_run_id} SQLite kaydı kullanılıyor; "
-                    "850 hPa günlük serisi eksiksiz."
-                )
+        if not use_meteopt:
+            stored_record = await asyncio.to_thread(get_run_payload, previous_run_id)
+            if stored_record and _has_complete_850_wind_daily_series(stored_record[1]):
+                stored_run_id, stored_payload = stored_record
+                print(f"[KIYAS GEÇMİŞİ] {stored_run_id} SQLite kaydı kullanılıyor.")
                 previous_runs.append((
                     stored_run_id,
                     json.dumps(stored_payload, ensure_ascii=False),
                 ))
                 continue
-            print(
-                f"[KIYAS GEÇMİŞİ] {stored_run_id} SQLite kaydında 850 hPa "
-                "serisi eksik; NOAA/NCEP'den yeniden alınıyor."
-            )
-        else:
-            print(
-                f"[KIYAS GEÇMİŞİ] {previous_run_id} DB'de bulunamadı; "
-                "NOAA/NCEP'den salt okunur alınıyor."
-            )
 
-        fetched_payload = await asyncio.to_thread(
-            fetch_full_weather_data, previous_run_id
-        )
+        fetched_payload = await asyncio.to_thread(fetch_full_weather_data, previous_run_id)
         if not fetched_payload or "_pending_noaa_gfs" in fetched_payload:
             raise RuntimeError(
-                f"{previous_run_id} karşılaştırma tahmini NOAA'dan alınamadı: "
+                f"{previous_run_id} karşılaştırma tahmini alınamadı: "
                 f"{(fetched_payload or {}).get('_reason', 'veri bulunamadı')}"
             )
-        if not _has_complete_850_wind_daily_series(fetched_payload):
+        if not use_meteopt and not _has_complete_850_wind_daily_series(fetched_payload):
             raise RuntimeError(
-                f"{previous_run_id} NOAA verisinde 850 hPa günlük rüzgâr "
-                "serisi eksik veya geçersiz; eksik karşılaştırma görseli üretilmeyecek."
+                f"{previous_run_id} 850 hPa günlük rüzgâr serisi eksik."
             )
-        # Persist the one-time historical fetch. save_run() updates by run ID,
-        # so subsequent processing reuses this record instead of downloading it
-        # again; only the rolling forecast set changes as new cycles arrive.
         await asyncio.to_thread(save_run, previous_run_id, fetched_payload)
         await asyncio.to_thread(
             export_public_forecast_json, previous_run_id, fetched_payload, False
         )
-        print(
-            f"[KIYAS ARŞİV] {previous_run_id} SQLite ve public/runs arşivine "
-            "kaydedildi; sonraki kıyaslarda yeniden indirilmeyecek."
-        )
+        print(f"[KIYAS ARŞİV] {previous_run_id} aynı kaynaktan yazıldı.")
         previous_runs.append((
             previous_run_id,
             json.dumps(fetched_payload, ensure_ascii=False),
@@ -3111,6 +3126,31 @@ async def process_gfs_update(strict=False, target_run_id=None):
             or item["run_id"] > latest_processed_run
         )
     ]
+
+    if use_meteopt and not pending_runs and candidates:
+        newest = candidates[0]
+        published_run = None
+        published_source = None
+        comparison_ok = False
+        try:
+            with open(os.path.join(PUBLIC_DATA_DIR, "latest.json"), encoding="utf-8") as handle:
+                published = json.load(handle)
+            published_run = published.get("run_id_utc")
+            published_source = published.get("forecast_source")
+            comparison = published.get("comparison_runs") or []
+            comparison_ok = (
+                len(comparison) >= 4
+                and all(item.get("forecast_source") == "meteopt" for item in comparison)
+                and isinstance(published.get("report"), dict)
+            )
+        except (OSError, ValueError, TypeError):
+            comparison_ok = False
+        if published_source != "meteopt" or published_run != newest["run_id"] or not comparison_ok:
+            print(
+                "[METEOPT REPUBLISH] Sayfa paketi tek MeteoPT kaynağında değil; "
+                f"{newest['run_id']} yeniden yazılacak."
+            )
+            pending_runs = [newest]
 
     if not pending_runs:
         # Backfill the public JSON once for runs processed before JSON publishing
@@ -3251,7 +3291,7 @@ async def process_gfs_update(strict=False, target_run_id=None):
     payload["station_observation"] = await asyncio.to_thread(
         fetch_enka_station_observation
     )
-    export_public_forecast_json(run_id, payload)
+    export_public_forecast_json(run_id, payload, update_latest=False)
     full_text_report, speech_text = analyze_and_build_output(
         run_id, payload, previous_runs
     )
@@ -3336,7 +3376,7 @@ async def process_gfs_update(strict=False, target_run_id=None):
         else:
             print("[TELEGRAM VOICE] Ses üretilemedi; metin/görsel gönderimi ayrıca denendi.")
 
-    pages_task = asyncio.create_task(asyncio.to_thread(
+    report_entry = await asyncio.to_thread(
         publish_public_notification,
         run_id,
         full_text_report,
@@ -3344,22 +3384,25 @@ async def process_gfs_update(strict=False, target_run_id=None):
         None,
         audio_file,
         notification_images,
-    ))
-    telegram_task = asyncio.create_task(deliver_telegram_report())
-
+    )
+    bundle = [(run_id, payload)]
+    for cycle_id, raw_payload in comparison_runs:
+        try:
+            bundle.append((cycle_id, json.loads(raw_payload)))
+        except (TypeError, ValueError):
+            print(f"[PAKET] {cycle_id} kıyas kaydı okunamadı; pakete alınmadı.")
+    export_public_forecast_json(
+        run_id,
+        payload,
+        update_latest=True,
+        comparison_payloads=bundle,
+        report=report_entry if isinstance(report_entry, dict) else None,
+    )
     try:
-        pages_result, telegram_result = await asyncio.gather(
-            pages_task, telegram_task, return_exceptions=True
-        )
-        if isinstance(pages_result, BaseException):
-            print(f"[PAGES NOTIFICATION ERROR] {type(pages_result).__name__}: {pages_result}")
-        else:
-            print(f"[PAGES NOTIFICATION OK] {run_id} arşivi bağımsız olarak yazıldı.")
-
-        if isinstance(telegram_result, BaseException):
-            print(f"[TELEGRAM REPORT ERROR] {type(telegram_result).__name__}: {telegram_result}")
-        else:
-            print(f"[TELEGRAM REPORT ATTEMPTED] {run_id} gönderim adımları tamamlandı.")
+        await deliver_telegram_report()
+        print(f"[TELEGRAM REPORT ATTEMPTED] {run_id} gönderim adımları tamamlandı.")
+    except Exception as telegram_exc:
+        print(f"[TELEGRAM REPORT ERROR] {type(telegram_exc).__name__}: {telegram_exc}")
     finally:
         if chart_buffer:
             chart_buffer.close()
