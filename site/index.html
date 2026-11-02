@@ -599,27 +599,43 @@
     }
 
 
-    /* Balanced mobile stats */
+    
+    }
+
+
+    /* Single row stats on mobile */
     @media (max-width: 640px) {
       .station-card .weather-stats {
         display: grid !important;
-        grid-template-columns: repeat(3, minmax(0, 1fr)) !important;
-        gap: 6px !important;
-        margin-top: 14px !important;
+        grid-template-columns: repeat(5, minmax(0, 1fr)) !important;
+        gap: 4px !important;
+        margin-top: 12px !important;
       }
       .station-card .stat {
-        padding: 8px 6px !important;
+        padding: 6px 3px !important;
         text-align: center;
+        min-width: 0;
       }
-      .station-card .stat .name { font-size: 8px !important; letter-spacing: .02em; }
-      .station-card .stat .value { font-size: 14px !important; margin-top: 3px; }
-      .station-card .stat .detail { font-size: 7.5px !important; margin-top: 1px; color: #8aa3b0; }
-      .station-card .stat .unit { font-size: 8px !important; }
-    }
-    @media (max-width: 380px) {
-      .station-card .weather-stats {
-        grid-template-columns: repeat(2, minmax(0, 1fr)) !important;
+      .station-card .stat .name { 
+        font-size: 7px !important; 
+        letter-spacing: 0; 
+        white-space: nowrap;
+        overflow: hidden;
+        text-overflow: ellipsis;
       }
+      .station-card .stat .value { 
+        font-size: 12px !important; 
+        margin-top: 2px; 
+        white-space: nowrap;
+      }
+      .station-card .stat .detail { 
+        font-size: 6.5px !important; 
+        margin-top: 1px; 
+        white-space: nowrap;
+        overflow: hidden;
+        text-overflow: ellipsis;
+      }
+      .station-card .stat .unit { font-size: 7px !important; }
     }
 
 </style>
