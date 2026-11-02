@@ -14,7 +14,7 @@ def main() -> None:
 
     commit_at = process.index("await asyncio.to_thread(save_run, run_id, payload)")
     publish_at = process.index("publish_public_notification")
-    telegram_at = process.index("await deliver_telegram_report()")
+    telegram_at = process.index("await asyncio.wait_for(deliver_telegram_report()")
     assert commit_at < publish_at < telegram_at
     assert "TELEGRAM REPORT ERROR" in process
     assert "send_telegram_voice(audio_file, cleanup=False)" in process, (

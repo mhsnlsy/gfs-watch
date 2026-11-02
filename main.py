@@ -1943,7 +1943,7 @@ async def stage_open_meteopt_cycle(processed_run_ids):
         print(f"[PAKET] {label}: MeteoPT henüz satır vermedi.")
         return False
 
-    if max_hour >= 40 and not stage.get("comparison_ready"):
+    if max_hour >= 40 and max_hour < MIN_FORECAST_HOURS and not stage.get("comparison_ready"):
         try:
             await load_previous_three_runs_for_comparison(run_id)
             stage["comparison_ready"] = True
@@ -1962,7 +1962,9 @@ def fetch_meteopt_available_runs():
         hour=(now.hour // 6) * 6, minute=0, second=0, microsecond=0
     )
     candidates = []
-    for offset in range(NOAA_CYCLE_LOOKBACK):
+    # MeteoPT keys a cycle by hour only. Four steps stay on 12/06/00/18 and do not
+    # ask yesterday's 12Z, which the API answers with today's 12Z.
+    for offset in range(4):
         run_dt = latest_cycle - timedelta(hours=6 * offset)
         run_id = run_dt.isoformat(timespec="seconds")
         try:
@@ -2574,7 +2576,8 @@ def generate_speech_gcp(text, output_file="summary.mp3"):
             speaking_rate=1.27,
         )
         response = client.synthesize_speech(
-            input=synthesis_input, voice=voice, audio_config=audio_config
+            input=synthesis_input, voice=voice, audio_config=audio_config,
+            timeout=20,
         )
         with open(output_file, "wb") as output:
             output.write(response.audio_content)
@@ -3554,13 +3557,16 @@ async def process_gfs_update(strict=False, target_run_id=None):
     except Exception as exc:
         print(f"[KIYAS GÖRSELİ HAZIRLAMA HATASI] {exc}")
 
-    audio_file = await audio_task
-
-    # Commit the forecast cycle once the report payload is complete. This is
-    # the shared trigger for both delivery channels; a channel outage must not
-    # make the other channel wait or cause the GFS cycle to be processed twice.
+    # Sayfa sesi ve Telegram'ı beklemez. İkisi takılırsa döngü burada kalıyordu.
     await asyncio.to_thread(save_run, run_id, payload)
-    print(f"[GFS CYCLE COMMITTED] {run_id}; Telegram and Pages deliveries start independently.")
+    print(f"[GFS CYCLE COMMITTED] {run_id}; sayfa paketi yazılıyor, ses beklenmiyor.")
+
+    try:
+        audio_file = await asyncio.wait_for(audio_task, timeout=25)
+    except Exception as exc:
+        audio_file = None
+        print(f"[TTS ATLANDI] Ses {type(exc).__name__} yüzünden sayfayı bekletmedi.")
+        audio_task.cancel()
 
     async def deliver_telegram_report():
         if telegram_already_sent(run_id):
@@ -3618,10 +3624,11 @@ async def process_gfs_update(strict=False, target_run_id=None):
         report=report_entry if isinstance(report_entry, dict) else None,
     )
     try:
-        await deliver_telegram_report()
+        await asyncio.wait_for(deliver_telegram_report(), timeout=45)
         print(f"[TELEGRAM REPORT ATTEMPTED] {run_id} gönderim adımları tamamlandı.")
     except Exception as telegram_exc:
         print(f"[TELEGRAM REPORT ERROR] {type(telegram_exc).__name__}: {telegram_exc}")
+        print("[TELEGRAM] Süre doldu. Sayfa yayını bekletilmiyor.")
     finally:
         if chart_buffer:
             chart_buffer.close()
@@ -3904,6 +3911,12 @@ async def run_scheduled_watch():
                     f"[WATCH RETRY] Rapor işlemi sırasında hata: "
                     f"{type(exc).__name__}: {exc}"
                 )
+            if staged is True:
+                print("[WATCH COMPLETE] +180 hazırdı. Bir kez işlendi, 80 dakika beklenmiyor.")
+                return
+            if staged is None:
+                print("[WATCH COMPLETE] Açık döngü yok. İzleme kapanıyor.")
+                return
 
         # process_gfs_update handles one eligible cycle at a time. If it saved
         # a new cycle, immediately call it again so multiple ready cycles are
