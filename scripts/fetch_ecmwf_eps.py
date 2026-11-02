@@ -587,9 +587,12 @@ def fetch_latest_document(skip_if_run_id: str | None = None) -> dict | None:
     from ecmwf.opendata import Client
 
     source_errors = []
-    for source in ("aws", "ecmwf"):
+    for source in ("ecmwf", "azure", "google", "aws"):
         try:
-            client = Client(source=source, model="ifs", resol="0p25")
+            client = Client(
+                source=source, model="ifs", resol="0p25",
+                maximum_retries=2, retry_after=5, use_server_retry_after=False,
+            )
             run_dt = _latest_available_run(client)
             run_id = run_dt.isoformat(timespec="seconds")
             print(f"[ECMWF] Latest complete EPS 180h cycle: {run_id} source={source}")
@@ -689,9 +692,12 @@ def backfill_recent_cycles(latest_document: dict, archive_dir: Path, target_coun
             continue
 
         retrieved = False
-        for source in ("aws", "ecmwf"):
+        for source in ("ecmwf", "azure", "google", "aws"):
             try:
-                client = Client(source=source, model="ifs", resol="0p25")
+                client = Client(
+                source=source, model="ifs", resol="0p25",
+                maximum_retries=2, retry_after=5, use_server_retry_after=False,
+            )
                 available = client.latest(
                     date=candidate.strftime("%Y%m%d"),
                     time=candidate.hour,
