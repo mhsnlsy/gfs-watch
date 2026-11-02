@@ -1918,7 +1918,8 @@
           }
         }
       }
-      if(!ec.length||!gfs.length)return lines;
+      if(!gfs.length){lines.split="GFS saati yok.";return lines;}
+      if(!ec.length){lines.split=ecmwfForecast?"ECMWF ile ortak saat yok.":"ECMWF paketi yükleniyor.";return lines;}
       let peak={abs:0},rain=null;
       for(const point of ec){
         const stamp=new Date(point.valid_time_utc).getTime();
@@ -2635,7 +2636,7 @@
       if(nav)nav.hidden=ecmwf;
       if(persist){try{localStorage.setItem("istanbul-hava-model-view",activeModel);}catch(_){}}
       if(typeof renderBriefing==="function")renderBriefing();
-      if(ecmwf)loadEcmwf();
+      loadEcmwf();
     }
     $("model-gfs-button").addEventListener("click",()=>setModelView("gfs"));
     $("model-ecmwf-button").addEventListener("click",()=>setModelView("ecmwf"));
