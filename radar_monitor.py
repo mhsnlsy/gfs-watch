@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 """
 Radar monitor for İstanbul (41.015 N, 28.950 E).
-Checks RainViewer tiles for ≥20 dBZ masses within ~25 km radius
+Checks RainViewer tiles for ≥20 dBZ and ≥30 dBZ masses within ~25 km radius
 that are approaching the target location. Sends Telegram alerts.
 """
 import os
@@ -17,6 +17,7 @@ LAT = 41.015
 LON = 28.950
 RADIUS_KM = 25.0
 THRESHOLD_DBZ = 20
+THRESHOLD_DBZ_STRONG = 30
 ZOOM = 7
 TILE_SIZE = 256
 TELEGRAM_TOKEN = os.getenv("TELEGRAM_TOKEN")
@@ -92,23 +93,30 @@ def analyze_frame(host, path):
     radius_px = 45
     samples = sample_area(img, local_x, local_y, radius_px)
     high = []
+    strong = []
     for dx, dy, r, g, b, a in samples:
         dbz = estimate_dbz(r, g, b)
         if dbz >= THRESHOLD_DBZ:
             dist_km = math.hypot(dx, dy) * 0.55
-            high.append({"dx": dx, "dy": dy, "dist_km": dist_km, "dbz": dbz})
+            point = {"dx": dx, "dy": dy, "dist_km": dist_km, "dbz": dbz}
+            high.append(point)
+            if dbz >= THRESHOLD_DBZ_STRONG:
+                strong.append(point)
     if not high:
-        return {"max_dbz": 0, "count": 0, "centroid_dist": None}
+        return {"max_dbz": 0, "count": 0, "centroid_dist": None, "strong_count": 0, "strong_max": 0}
     avg_dx = sum(p["dx"] for p in high) / len(high)
     avg_dy = sum(p["dy"] for p in high) / len(high)
     centroid_dist = math.hypot(avg_dx, avg_dy) * 0.55
     max_dbz = max(p["dbz"] for p in high)
+    strong_max = max((p["dbz"] for p in strong), default=0)
     return {
         "max_dbz": max_dbz,
         "count": len(high),
         "centroid_dist": round(centroid_dist, 1),
         "avg_dx": avg_dx,
         "avg_dy": avg_dy,
+        "strong_count": len(strong),
+        "strong_max": strong_max,
     }
 
 def load_state():
@@ -122,15 +130,17 @@ def save_state(state):
     with open(STATE_PATH, "w") as f:
         json.dump(state, f)
 
-def is_approaching(prev, curr):
+def is_approaching(prev, curr, threshold):
     if not prev or not curr or curr.get("centroid_dist") is None:
         return False
     prev_dist = prev.get("centroid_dist")
+    max_key = "max_dbz" if threshold == THRESHOLD_DBZ else "strong_max"
+    curr_max = curr.get(max_key, 0)
     if prev_dist is None:
-        return curr["centroid_dist"] < 20 and curr["max_dbz"] >= THRESHOLD_DBZ
+        return curr["centroid_dist"] < 20 and curr_max >= threshold
     return (curr["centroid_dist"] < prev_dist - 1.0 and
             curr["centroid_dist"] < RADIUS_KM and
-            curr["max_dbz"] >= THRESHOLD_DBZ)
+            curr_max >= threshold)
 
 def send_telegram(text):
     if not TELEGRAM_TOKEN or not CHAT_ID:
@@ -159,27 +169,43 @@ def main():
 
     state = load_state()
     prev = state.get("last")
-    approaching = is_approaching(prev, curr)
-    on_site = curr.get("centroid_dist", 999) < 5 and curr.get("max_dbz", 0) >= THRESHOLD_DBZ
 
-    alert = approaching or on_site
+    approaching_20 = is_approaching(prev, curr, THRESHOLD_DBZ)
+    approaching_30 = is_approaching(prev, curr, THRESHOLD_DBZ_STRONG)
+    on_site_20 = curr.get("centroid_dist", 999) < 5 and curr.get("max_dbz", 0) >= THRESHOLD_DBZ
+    on_site_30 = curr.get("centroid_dist", 999) < 5 and curr.get("strong_max", 0) >= THRESHOLD_DBZ_STRONG
+
+    alert_20 = approaching_20 or on_site_20
+    alert_30 = approaching_30 or on_site_30
+
     summary = (
         f"max {curr.get('max_dbz', 0)} dBZ, "
         f"centroid {curr.get('centroid_dist', '—')} km, "
         f"{curr.get('count', 0)} high pixels"
     )
-    print(f"[RADAR] {summary} | approaching={approaching} on_site={on_site}")
+    print(f"[RADAR] {summary} | alert20={alert_20} alert30={alert_30}")
 
-    if alert:
+    if alert_30:
         msg = (
-            f"🌧️ <b>Radar Uyarısı — İstanbul</b>\n"
+            f"⚠️ <b>GÜÇLÜ Radar Uyarısı — İstanbul (≥30 dBZ)</b>\n"
             f"Konum: 41.015 N, 28.950 E\n"
             f"{summary}\n"
-            f"{'Konuma ulaşıyor / üzerinde.' if on_site else 'Yaklaşıyor.'}\n"
+            f"Güçlü kütle: max {curr.get('strong_max', 0)} dBZ ({curr.get('strong_count', 0)} piksel)\n"
+            f"{'Konuma ulaşıyor / üzerinde.' if on_site_30 else 'Yaklaşıyor.'}\n"
             f"https://mhsnlsy.github.io/gfs-watch/#radar"
         )
         send_telegram(msg)
-        print("[RADAR] ALERT SENT")
+        print("[RADAR] STRONG ALERT (≥30) SENT")
+    elif alert_20:
+        msg = (
+            f"🌧️ <b>Radar Uyarısı — İstanbul (≥20 dBZ)</b>\n"
+            f"Konum: 41.015 N, 28.950 E\n"
+            f"{summary}\n"
+            f"{'Konuma ulaşıyor / üzerinde.' if on_site_20 else 'Yaklaşıyor.'}\n"
+            f"https://mhsnlsy.github.io/gfs-watch/#radar"
+        )
+        send_telegram(msg)
+        print("[RADAR] ALERT (≥20) SENT")
 
     state["last"] = curr
     state["last_ts"] = ts
