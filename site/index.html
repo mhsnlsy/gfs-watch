@@ -866,10 +866,25 @@
       min-height:0!important;
     }
     .dashboard-top .station-history-inline .history-chart{
-      flex:1 1 auto!important;
-      height:auto!important;
-      min-height:92px!important;
+      flex:none!important;
+      height:140px!important;
+      min-height:0!important;
     }
+    .dashboard-top{align-items:start!important}
+    .dashboard-left,
+    .dashboard-top .station-card,
+    .dashboard-top .next-72h-panel{
+      height:auto!important;
+      min-height:0!important;
+      flex:0 0 auto!important;
+    }
+    .dashboard-top .station-card{grid-template-rows:auto auto auto auto auto auto!important}
+    .dashboard-top .station-card>.station-history-inline,
+    .dashboard-top .station-history-inline .history-charts{
+      height:auto!important;
+      flex:none!important;
+    }
+    .dashboard-top .station-history-inline .history-charts{grid-template-rows:auto!important}
     @media(max-width:900px){
       .dashboard-left{height:auto!important;min-height:0!important}
       .dashboard-top .station-card,
@@ -941,6 +956,7 @@
     <div class="temp-meta">
       <div class="temp-caption" id="station-observation-meta">Son istasyon ölçümü bekleniyor</div>
       <div class="delta-badge" id="station-24h-diff"></div>
+      <div class="delta-badge" id="station-gap" hidden></div>
       
     </div>
   </div>
@@ -972,6 +988,8 @@
 
         </div>
         <div class="briefing" id="briefing" aria-live="polite">
+          <div class="briefing-row"><div class="briefing-k">Yarın</div><div class="briefing-v" id="brief-tomorrow">Hesaplanıyor…</div></div>
+          <div class="briefing-row"><div class="briefing-k">Öbür gün</div><div class="briefing-v" id="brief-after">Hesaplanıyor…</div></div>
           <div class="briefing-row"><div class="briefing-k">Yağış saati</div><div class="briefing-v" id="brief-rain">Hesaplanıyor…</div></div>
           <div class="briefing-row"><div class="briefing-k">Ayrışma</div><div class="briefing-v" id="brief-split">Hesaplanıyor…</div></div>
         </div>
@@ -1666,6 +1684,21 @@
         $("station-alert").textContent="⚠ "+stationName+" istasyon verisi alınamadı. Kartta güncel ölçüm bulunmuyor.";
       }
       fitStationStats();
+      renderStationGap();
+    }
+    function renderStationGap(){
+      const node=$("station-gap");
+      if(!node)return;
+      const balmumcu=enkaStationObservation,eyup=eyupsultanStationObservation;
+      if(!balmumcu||!eyup||!numeric(balmumcu.temperature_2m_c)||!numeric(eyup.temperature_2m_c)){
+        node.hidden=true;
+        node.textContent="";
+        return;
+      }
+      const delta=eyup.temperature_2m_c-balmumcu.temperature_2m_c;
+      const gap=Math.abs(delta);
+      node.hidden=false;
+      node.textContent=gap<0.15?"İki istasyon aynı":(delta>0?"Eyüpsultan ":"Balmumcu ")+fmt(gap,1)+"° daha sıcak";
     }
     function fitStationStats(){
       const row=document.querySelector(".dashboard-top .station-card>.weather-stats");
@@ -1888,8 +1921,57 @@
         observedAt:station&&station.observed_at_utc?new Date(station.observed_at_utc).getTime():null
       });
       const write=(id,text)=>{const node=$(id);if(node)node.textContent=text;};
+      write("brief-tomorrow",dayPlanText(1));
+      write("brief-after",dayPlanText(2));
       write("brief-rain",lines.rain);
       write("brief-split",lines.split);
+      renderStationGap();
+    }
+    function dayWindow(offset){
+      const key=new Intl.DateTimeFormat("en-CA",{timeZone:"Europe/Istanbul",year:"numeric",month:"2-digit",day:"2-digit"}).format(new Date());
+      const start=Date.parse(key+"T00:00:00+03:00")+offset*86400000;
+      return [start,start+86400000];
+    }
+    function dayPlanText(offset){
+      const [start,end]=dayWindow(offset);
+      const points=forecastData&&Array.isArray(forecastData.forecast_6_hourly)?forecastData.forecast_6_hourly:[];
+      const dayPoints=points.filter(point=>{
+        const stamp=new Date(point.valid_time_utc).getTime();
+        return stamp>=start&&stamp<end;
+      });
+      const temps=dayPoints.map(point=>point.temperature_2m_c).filter(numeric);
+      if(temps.length<2)return "Bu gün için çıktı yok.";
+      const clock=ms=>new Intl.DateTimeFormat("tr-TR",{timeZone:"Europe/Istanbul",hour:"2-digit",minute:"2-digit"}).format(new Date(ms));
+      const wet=dayPoints.filter(point=>(point.precipitation_6h_mm||0)>=0.5).map(point=>({stamp:new Date(point.valid_time_utc).getTime(),mm:point.precipitation_6h_mm})).sort((a,b)=>a.stamp-b.stamp);
+      const spells=[];
+      let current=null;
+      for(const item of wet){
+        if(!current||item.stamp-current.end>2*3600000){
+          current={start:item.stamp,end:item.stamp,sum:0};
+          spells.push(current);
+        }
+        current.end=item.stamp;
+        current.sum+=item.mm;
+      }
+      const rain=spells.length?spells.slice(0,2).map(spell=>clock(spell.start)+(spell.start===spell.end?"":"–"+clock(spell.end))+" "+fmt(spell.sum,1)+" mm").join(", ")+(spells.length>2?" +"+(spells.length-2):""):"yağış yok";
+      const trusted=dayPoints.filter(point=>{
+        const skill=skillAtLead(Number(point.forecast_hour));
+        return skill&&skill.pairs>=3&&numeric(skill.within_2c_pct)&&skill.within_2c_pct>=90;
+      }).map(point=>new Date(point.valid_time_utc).getTime()).sort((a,b)=>a-b);
+      let trust="güvenilen saat yok";
+      if(trusted.length){
+        const ranges=[];
+        let from=trusted[0],to=trusted[0];
+        for(const stamp of trusted.slice(1)){
+          if(stamp-to<=3660000){to=stamp;continue;}
+          ranges.push([from,to]);
+          from=to=stamp;
+        }
+        ranges.push([from,to]);
+        trust="güven "+ranges.map(([fromHour,toHour])=>fromHour===toHour?clock(fromHour):clock(fromHour)+"–"+clock(toHour)).join(", ");
+      }
+      const dayName=new Intl.DateTimeFormat("tr-TR",{timeZone:"Europe/Istanbul",weekday:"long"}).format(new Date(start+12*3600000));
+      return dayName.charAt(0).toLocaleUpperCase("tr-TR")+dayName.slice(1)+" · "+fmt(Math.min(...temps),0)+"° / "+fmt(Math.max(...temps),0)+"° · "+rain+" · "+trust;
     }
     function trustedLeadHours(kind){
       const now=Date.now();
