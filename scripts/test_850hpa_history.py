@@ -30,19 +30,10 @@ def main() -> None:
     assert "archive.export_public_forecast_json(run_id, payload, update_latest=False)" in backfill
     assert "archive.export_public_forecast_json(current_id, current_record[1], update_latest=True)" in backfill
     assert "archive._has_complete_850_wind_daily_series" in backfill
+    assert not (ROOT / ".github/workflows/backfill-850hpa-comparison.yml").exists()
+    assert not (ROOT / ".github/workflows/archive-latest-telegram-report.yml").exists()
 
-    workflow = (ROOT / ".github/workflows/backfill-850hpa-comparison.yml").read_text(encoding="utf-8")
-    renderer = (ROOT / ".github/workflows/render-pages-charts-from-saved-data.yml").read_text(encoding="utf-8")
-    shared_group = "group: render-pages-charts-from-saved-data"
-    assert shared_group in workflow and shared_group in renderer, (
-        "Backfill and saved-data renderer must serialize writes to the same Pages state branch."
-    )
-    assert "git add -f gfs_watch.db public" in workflow
-    assert "git pull --rebase origin gfs-watch-state" in workflow
-    assert "git status --short" in workflow
-
-    print("[850 HPA HISTORY SMOKE] One-time fetch persistence, run-ID upsert, immutable historical "
-          "exports, latest.json preservation and clean state-branch publication passed.")
+    print("[850 HPA HISTORY SMOKE] MeteoPT archive remains; NOAA backfill workflows are closed.")
 
 
 if __name__ == "__main__":
