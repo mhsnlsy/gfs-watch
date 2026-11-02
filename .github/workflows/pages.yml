@@ -81,6 +81,16 @@ jobs:
           else
             printf '{"schema":"gfs-watch.station-temperature-history.v1","sampling_interval_minutes":5,"aggregation_interval_minutes":60,"samples":[]}\n' > _site/data/eyupsultan-station-temperature-history.json
           fi
+          if python source/scripts/build_forecast_verification.py \
+              --runs-dir forecast-data/public/runs \
+              --enka-history forecast-data/public/station-temperature-history.json \
+              --eyup-history forecast-data/public/eyupsultan-station-temperature-history.json \
+              --output _site/data/forecast-verification.json; then
+            echo "Forecast verification report built."
+          else
+            printf '{"schema":"gfs-watch.forecast-verification.v1","stations":{}}\n' > _site/data/forecast-verification.json
+            echo "Forecast verification could not be built; empty report published."
+          fi
           if [ -d forecast-data/public/notifications ]; then
             if [ -s forecast-data/public/notifications/latest.json ]; then
               python -m json.tool forecast-data/public/notifications/latest.json > /dev/null
