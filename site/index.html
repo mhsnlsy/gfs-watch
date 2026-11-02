@@ -1692,15 +1692,19 @@
       const node=$("station-gap");
       if(!node)return;
       const balmumcu=enkaStationObservation,eyup=eyupsultanStationObservation;
-      if(!balmumcu||!eyup||!numeric(balmumcu.temperature_2m_c)||!numeric(eyup.temperature_2m_c)){
-        node.hidden=true;
-        node.textContent="";
-        return;
-      }
-      const delta=eyup.temperature_2m_c-balmumcu.temperature_2m_c;
+      const hide=()=>{node.hidden=true;node.textContent="";};
+      if(!balmumcu||!eyup||!numeric(balmumcu.temperature_2m_c)||!numeric(eyup.temperature_2m_c)){hide();return;}
+      const balmumcuAt=Date.parse(balmumcu.observed_at_utc||"");
+      const eyupAt=Date.parse(eyup.observed_at_utc||"");
+      if(!Number.isFinite(balmumcuAt)||!Number.isFinite(eyupAt)||Math.abs(balmumcuAt-eyupAt)>30*60000){hide();return;}
+      const viewingEyup=activeStation==="eyupsultan";
+      const here=viewingEyup?Number(eyup.temperature_2m_c):Number(balmumcu.temperature_2m_c);
+      const there=viewingEyup?Number(balmumcu.temperature_2m_c):Number(eyup.temperature_2m_c);
+      const other=viewingEyup?"Balmumcu":"Eyüpsultan";
+      const delta=here-there;
       const gap=Math.abs(delta);
       node.hidden=false;
-      node.textContent=gap<0.15?"İki istasyon aynı":(delta>0?"Eyüpsultan ":"Balmumcu ")+fmt(gap,1)+"° daha sıcak";
+      node.textContent=gap<0.15?other+" ile aynı":other+"'dan "+fmt(gap,1)+"° daha "+(delta>0?"sıcak":"soğuk");
     }
     function fitStationStats(){
       const row=document.querySelector(".dashboard-top .station-card>.weather-stats");
