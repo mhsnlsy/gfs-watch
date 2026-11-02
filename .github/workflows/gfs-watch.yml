@@ -108,6 +108,7 @@ jobs:
           PY
       - name: Backfill missing 72-hour wind direction from native GFS U/V cache
         id: wind-direction-backfill
+        if: false
         continue-on-error: true
         env:
           PUBLIC_DATA_DIR: public
@@ -115,20 +116,20 @@ jobs:
           NOAA_RANGE_DOWNLOAD_WORKERS: "8"
           WIND_DIRECTION_FETCH_WORKERS: "4"
         run: python -u scripts/backfill_gfs_wind_direction.py
-      - name: Discover NOAA cycles, prefetch and process one reportable cycle
+      - name: Watch MeteoPT until the 3-hour series reaches +180h
         id: check-gfs
         env:
+          GFS_SOURCE: meteopt
           GFS_WATCH_ONCE: "1"
+          GFS_WATCH_CONTINUOUS: "1"
+          GFS_WATCH_WINDOW_MINUTES: "50"
+          GFS_WATCH_POLL_SECONDS: "120"
           GFS_WATCH_RESEND_CHARTS: ${{ github.event_name == 'workflow_dispatch' && inputs.resend_charts && '1' || '0' }}
           DB_PATH: gfs_watch.db
           PUBLIC_DATA_DIR: public
           TELEGRAM_TOKEN: ${{ secrets.TELEGRAM_TOKEN }}
           CHAT_ID: ${{ secrets.CHAT_ID }}
           GCP_SA_KEY: ${{ secrets.GCP_SA_KEY }}
-          NOAA_CACHE_DIR: noaa_cache_v2
-          NOAA_PREFETCH_FILES_PER_CHECK: "141"
-          NOAA_PREFETCH_INTERVAL_SECONDS: "300"
-          NOAA_RANGE_DOWNLOAD_WORKERS: "8"
         run: python -u main.py
       - name: Rebuild missing Pages weather report from the current GFS cycle
         if: steps.check-gfs.outcome == 'success'
