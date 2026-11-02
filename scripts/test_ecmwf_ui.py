@@ -131,8 +131,8 @@ def main() -> None:
 
     if '"wind_direction_10m_deg": values.get("wind_direction_deg")' not in main:
         raise AssertionError("GFS 10 m wind direction is not exported to the forecast timeline.")
-    if 'math.atan2(-float(u_value), -float(v_value))' not in main:
-        raise AssertionError("Meteorological wind-from direction is not calculated from GFS U/V fields.")
+    if 'wind_direction = series("wind10mdir")' not in main or '"wind_direction_deg": round(direction, 1)' not in main:
+        raise AssertionError("GFS wind direction must come from the MeteoPT wind10mdir series.")
     direction_from_uv = lambda u, v: (math.degrees(math.atan2(-u, -v)) + 360.0) % 360.0
     assert abs(direction_from_uv(0.0, -1.0) - 0.0) < 1e-9
     assert abs(direction_from_uv(-1.0, 0.0) - 90.0) < 1e-9
