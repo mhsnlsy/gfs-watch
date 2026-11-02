@@ -1719,30 +1719,79 @@
         lines.station="İstasyon ölçümü yok. GFS bu saatte "+num(gfsNow.temperature_2m_c)+"°.";
       }
       const wet=gfs.filter(point=>(point.precipitation_6h_mm||0)>=0.2);
+      const istHour=ms=>Number(new Intl.DateTimeFormat("en-GB",{timeZone:"Europe/Istanbul",hour:"2-digit",hourCycle:"h23"}).format(new Date(ms)));
+      const istClock=ms=>new Intl.DateTimeFormat("tr-TR",{timeZone:"Europe/Istanbul",hour:"2-digit",minute:"2-digit"}).format(new Date(ms));
+      const istDay=ms=>{
+        const name=new Intl.DateTimeFormat("tr-TR",{timeZone:"Europe/Istanbul",weekday:"long"}).format(new Date(ms));
+        return name.charAt(0).toLocaleUpperCase("tr-TR")+name.slice(1);
+      };
+      const istKey=ms=>new Intl.DateTimeFormat("en-CA",{timeZone:"Europe/Istanbul",year:"numeric",month:"2-digit",day:"2-digit"}).format(new Date(ms));
+      const packHours=items=>{
+        const spells=[];
+        let current=null;
+        for(const item of items){
+          if(!current||item.stamp-current.end>2*3600000){
+            current={start:item.stamp,end:item.stamp,sum:0};
+            spells.push(current);
+          }
+          current.end=item.stamp;
+          current.sum+=item.mm;
+        }
+        return spells;
+      };
+      const coverLabel=spell=>{
+        const start=istHour(spell.start),end=istHour(spell.end);
+        if(start>=0&&end<=5)return "gece";
+        if(start>=6&&end<=11)return "sabah";
+        if(start>=12&&end<=17)return "öğleden sonra";
+        if(start>=18&&end<=23)return "akşam";
+        if(end<12)return "öğleden önce";
+        if(start>=12)return "öğleden sonra";
+        return "";
+      };
+      const spellText=spell=>{
+        const start=istClock(spell.start),end=istClock(spell.end);
+        const label=coverLabel(spell);
+        return (label?label+" ":"")+(start===end?start:start+"–"+end)+", "+num(spell.sum)+" mm";
+      };
       if(!gfs.length)lines.rain="GFS yağış zamanı yok.";
       else if(!wet.length)lines.rain="Önümüzdeki 72 saatte 0,2 mm üstü yağış yok.";
       else{
-        const spells=[];
-        let current=null;
+        const groups=new Map();
         for(const point of wet){
           const stamp=new Date(point.valid_time_utc).getTime();
-          if(!current||stamp-current.end>2*3600000){
-            current={start:stamp,end:stamp,sum:0,peak:point.precipitation_6h_mm,peakAt:stamp};
-            spells.push(current);
-          }
-          current.end=stamp;
-          current.sum+=point.precipitation_6h_mm||0;
-          if(point.precipitation_6h_mm>current.peak){current.peak=point.precipitation_6h_mm;current.peakAt=stamp;}
+          const key=istKey(stamp);
+          if(!groups.has(key))groups.set(key,[]);
+          groups.get(key).push({stamp,mm:point.precipitation_6h_mm||0});
         }
-        const shown=spells.slice(0,3).map(spell=>{
-          const start=when(new Date(spell.start));
-          if(spell.end===spell.start)return start+" ("+num(spell.sum)+" mm)";
-          const endHour=new Intl.DateTimeFormat("tr-TR",{timeZone:"Europe/Istanbul",hour:"2-digit",minute:"2-digit"}).format(new Date(spell.end));
-          return start+"–"+endHour+" ("+num(spell.sum)+" mm)";
-        });
-        const extra=spells.length>3?" +"+(spells.length-3)+" dönem daha.":"";
-        const peak=spells.reduce((best,spell)=>spell.peak>best.peak?spell:best,spells[0]);
-        lines.rain=shown.join("; ")+extra+" En yoğun "+when(new Date(peak.peakAt))+", "+num(peak.peak)+" mm.";
+        const parts=[];
+        for(const items of groups.values()){
+          items.sort((a,b)=>a.stamp-b.stamp);
+          const day=istDay(items[0].stamp);
+          const before=items.filter(item=>istHour(item.stamp)<12);
+          const after=items.filter(item=>istHour(item.stamp)>=12);
+          const beforeSum=before.reduce((sum,item)=>sum+item.mm,0);
+          const afterSum=after.reduce((sum,item)=>sum+item.mm,0);
+          const daySum=beforeSum+afterSum;
+          const describe=list=>packHours(list).filter(spell=>spell.sum>=0.5||daySum<2).map(spellText);
+          const beforeText=describe(before);
+          const afterText=describe(after);
+          if(!beforeText.length&&!afterText.length)continue;
+          if(beforeText.length&&afterText.length){
+            const afterHeavier=afterSum>=beforeSum;
+            const lead=afterHeavier?"öğleden sonra":"öğleden önce";
+            const more=afterHeavier?afterText:beforeText;
+            const less=afterHeavier?beforeText:afterText;
+            const bare=text=>text.replace(/^(öğleden sonra|öğleden önce) /,"");
+            const capital=text=>text.charAt(0).toLocaleUpperCase("tr-TR")+text.slice(1);
+            parts.push(day+" "+lead+" daha fazla: "+more.map(bare).join(" ve ")+". "+less.map(capital).join(". ")+".");
+          }else{
+            parts.push(day+" "+(afterText.length?afterText:beforeText).join(" ve ")+".");
+          }
+        }
+        const peak=wet.reduce((best,point)=>(point.precipitation_6h_mm||0)>(best.precipitation_6h_mm||0)?point:best,wet[0]);
+        const peakAt=new Date(peak.valid_time_utc).getTime();
+        lines.rain=parts.join(" ")+" En yoğun "+istDay(peakAt)+" "+istClock(peakAt)+", "+num(peak.precipitation_6h_mm)+" mm.";
       }
       if(gfsNow&&gfsNow.temperature_850hpa_c!=null){
         const later=nearest(gfs,new Date(gfsNow.valid_time_utc).getTime()+24*3600000,3*3600000);
