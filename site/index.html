@@ -703,64 +703,6 @@
     .station-card .stat .detail { font-size: 6.5px !important; }
     .station-card .stat .unit { font-size: 6.5px !important; }
 
-    .verify-panel{margin:16px 0 4px;background:linear-gradient(160deg,rgba(22,58,78,.96),rgba(10,28,42,.98));border:1px solid rgba(170,218,225,.16);border-radius:22px;padding:18px 16px 14px;box-shadow:0 18px 50px rgba(0,0,0,.18)}
-    .verify-head h2{font:800 22px/1.1 Manrope,sans-serif;letter-spacing:-.045em;margin:6px 0 0}
-    .verify-lead{color:#9bb1bf;font-size:12px;line-height:1.5;margin:8px 0 0;max-width:720px}
-    .verify-kpis{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:8px;margin-top:14px}
-    .verify-kpi{background:rgba(4,16,26,.35);border:1px solid rgba(213,237,240,.08);border-radius:16px;padding:12px 10px 11px;min-width:0}
-    .verify-kpi b{display:block;font:800 26px/1 Manrope,sans-serif;letter-spacing:-.045em;color:#edf7f8}
-    .verify-kpi span{display:block;margin-top:6px;font-size:10px;letter-spacing:.06em;text-transform:uppercase;color:#93aebd;line-height:1.3}
-    .verify-kpi.cool b{color:#8fd7ba}
-    .verify-kpi.warm b{color:#f1c98b}
-    .verify-kpi.accent b{color:#7dd3d7}
-    .verify-sub{display:flex;align-items:baseline;justify-content:space-between;gap:10px;font:700 13px Manrope,sans-serif;margin:18px 0 8px;letter-spacing:-.02em;color:#e7f2f6}
-    .verify-sub em{font-style:normal;font:500 10px "DM Sans",sans-serif;letter-spacing:.04em;text-transform:uppercase;color:#8ea6b3}
-    .verify-callout{margin:0 0 10px;padding:10px 12px;border-radius:14px;background:rgba(125,211,215,.08);border:1px solid rgba(125,211,215,.2);color:#dff6f4;font-size:12px;line-height:1.5}
-    .verify-callout strong{color:#fff}
-    .verify-fhours{display:flex;gap:8px;overflow-x:auto;scroll-snap-type:x mandatory;padding:2px 2px 10px;margin:0 -2px}
-    .verify-fhours::-webkit-scrollbar{height:0}
-    .fh{flex:0 0 104px;scroll-snap-align:start;text-align:center;border:1px solid rgba(213,237,240,.08);border-radius:16px;padding:10px 8px 9px;background:rgba(4,16,26,.32);min-width:0}
-    .fh b{display:block;font:700 12px Manrope,sans-serif;letter-spacing:.04em;color:#d5e4eb}
-    .fh-ring{width:58px;height:58px;border-radius:50%;margin:8px auto 6px;display:grid;place-items:center;background:conic-gradient(var(--c,#8fd7ba) calc(var(--p,0)*1%), rgba(255,255,255,.08) 0)}
-    .fh-ring span{width:44px;height:44px;border-radius:50%;background:#10283a;display:grid;place-items:center;font:800 12px Manrope,sans-serif;color:#edf7f8}
-    .fh.empty{opacity:.72}
-    .fh.empty .fh-ring{background:none;border:1.5px dashed rgba(155,177,191,.35)}
-    .fh.empty .fh-ring span{background:transparent;color:#8ea6b3;font-weight:600}
-    .fh small{display:block;color:#8ea6b3;font-size:10px;line-height:1.35}
-    .fh.best{border-color:rgba(143,215,186,.55);background:rgba(143,215,186,.07)}
-    .verify-legend{display:flex;flex-wrap:wrap;gap:8px 14px;color:#8ea6b3;font-size:10px;margin:-2px 0 2px}
-    .verify-legend i{display:inline-block;width:8px;height:8px;border-radius:50%;margin-right:5px;vertical-align:0}
-    .vbars{display:grid;gap:7px}
-    .vbar{display:grid;grid-template-columns:78px minmax(0,1fr) 46px;gap:8px;align-items:center}
-    .vbar-name{font:700 11px Manrope,sans-serif;color:#d5e4eb}
-    .vbar-track{height:9px;border-radius:99px;background:rgba(255,255,255,.06);overflow:hidden}
-    .vbar-track span{display:block;height:100%;border-radius:99px;background:linear-gradient(90deg,#5eb8c4,var(--c,#8fd7ba))}
-    .vbar-val{font:700 12px Manrope,sans-serif;text-align:right;color:#e7f6f4}
-    .vbar-meta{grid-column:2 / -1;margin-top:-4px;font-size:10px;color:#8ea6b3}
-    .verify-runs{display:flex;gap:8px;overflow-x:auto;padding-bottom:6px;scroll-snap-type:x mandatory}
-    .verify-runs::-webkit-scrollbar{height:0}
-    .verify-run{flex:0 0 168px;scroll-snap-align:start;border:1px solid rgba(213,237,240,.08);border-radius:16px;padding:11px 11px 10px;background:rgba(4,16,26,.32);min-width:0}
-    .verify-run-title{font:700 12px Manrope,sans-serif;color:#d5e4eb}
-    .verify-run-score{margin-top:6px;font-size:11px;color:#b7c9d3}
-    .verify-run-score strong{display:block;color:#7dd3d7;font:800 20px/1.1 Manrope,sans-serif;letter-spacing:-.03em}
-    .verify-run-meta{margin-top:6px;font-size:10px;color:#8ea6b3;line-height:1.4}
-    .vtable{display:grid;gap:3px}
-    .vtable-h,.verify-recent-row{display:grid;grid-template-columns:minmax(0,1.3fr) minmax(0,.7fr) minmax(0,.7fr) minmax(0,.8fr) 52px;gap:6px;align-items:center}
-    .vtable-h{padding:0 8px 4px;font-size:9px;letter-spacing:.08em;text-transform:uppercase;color:#8ea6b3}
-    .verify-recent-row{font-size:12px;color:#d5e4eb;padding:8px;border-radius:12px;background:rgba(4,16,26,.28)}
-    .verify-recent-row strong{font:800 13px Manrope,sans-serif;text-align:right}
-    .verify-recent-row.ok strong{color:#8fd7ba}
-    .verify-recent-row.mid strong{color:#f1c98b}
-    .verify-recent-row.bad strong{color:#f0bd9f}
-    .verify-note{color:#8ea6b3;font-size:11px;line-height:1.55;margin:12px 0 0}
-    @media(max-width:560px){
-      .verify-panel{padding:14px;border-radius:18px}
-      .verify-kpis{grid-template-columns:repeat(2,minmax(0,1fr))}
-      .verify-kpi b{font-size:22px}
-      .verify-recent-row,.vtable-h{grid-template-columns:minmax(0,1.2fr) minmax(0,.8fr) minmax(0,.8fr) 46px;font-size:11px}
-      .verify-recent-row span:nth-child(2),.vtable-h span:nth-child(2){display:none}
-    }
-
 </style>
 </head>
 <body>
@@ -811,7 +753,7 @@
       </article>
       </div>
       <section class="next-72h-panel" id="next-72h-panel" aria-label="Önümüzdeki 72 saatlik hava tahmini">
-        <div class="next-72h-head"><div><div class="section-kicker">GFS · İSTANBUL</div><h2>Önümüzdeki 72 saat</h2><p>Çizgi tahmin. Bant, o f saatinin geçmişte istasyonla ne kadar saptığı.</p></div><span class="next-72h-badge" id="next-72h-meta">Model verisi bekleniyor</span></div>
+        <div class="next-72h-head"><div><div class="section-kicker">GFS · İSTANBUL</div><h2>Önümüzdeki 72 saat</h2><p>Çizgi tahmin. Bant, sıcaklıkta ve 3 saatlik yağışta geçmiş ortalama sapma.</p></div><span class="next-72h-badge" id="next-72h-meta">Model verisi bekleniyor</span></div>
         <div class="next-72h-grid">
           <article class="next-72h-card"><div class="next-72h-card-head"><h3>Sıcaklık</h3><span>°C</span></div><div class="next-72h-chart" id="next72-temperature"><div class="chart-empty">Tahmin bekleniyor…</div></div></article>
           <article class="next-72h-card"><div class="next-72h-card-head"><h3>Yağış</h3><span>mm / 3 saat</span></div><div class="next-72h-chart" id="next72-precipitation"><div class="chart-empty">Tahmin bekleniyor…</div></div></article>
@@ -820,16 +762,6 @@
       </section>
     </section>
     <div id="gfs-model-view">
-
-      <section class="verify-panel" id="verify-panel" aria-label="GFS tahmininin gerçekleşen hava ile uyumu">
-        <div class="verify-head">
-          <div class="section-kicker">GFS · ÖLÇÜMLE KARŞILAŞTIRMA</div>
-          <h2>Model ne kadar tuttu?</h2>
-          <p class="verify-lead" id="verify-lead">Gerçekleşen saatler, yayındaki GFS tahminiyle seçili istasyona göre skorlanır.</p>
-        </div>
-        <div id="verify-body"><div class="chart-empty">Doğrulama kaydı yükleniyor…</div></div>
-      </section>
-</section>
     <section class="section" id="bildirimler">
       <div class="section-head report-head">
         <div><div class="section-kicker">GÜN BOYUNCA 4 MODEL DÖNGÜSÜ</div><h2>Son hava raporları</h2><p class="section-description">Her yeni GFS raporu, görseli ve seslendirmesiyle burada arşivlenir. En son dört rapor gösterilir.</p></div>
@@ -1226,6 +1158,18 @@
       if(bin)return bin;
       return hours.find(row=>row.f===lead&&row.pairs>=1)||null;
     }
+    function skillAtLeadRain(lead){
+      const doc=verificationDoc&&verificationDoc.stations?verificationDoc.stations[activeStation]:null;
+      if(!doc)return null;
+      const hours=Array.isArray(doc.rain_by_hour)?doc.rain_by_hour:[];
+      const exact=hours.find(row=>row.f===lead);
+      if(exact&&exact.pairs>=3)return exact;
+      const bins=Array.isArray(doc.rain_by_bin)?doc.rain_by_bin:[];
+      const bin=bins.find(row=>lead>=row.f_from&&lead<=row.f_to&&row.pairs>=3);
+      if(bin)return bin;
+      if(exact&&exact.pairs>=2)return exact;
+      return null;
+    }
     function skillColor(pct){
       if(!numeric(pct))return "rgba(125,211,215,.55)";
       if(pct>=85)return "#8fd7ba";
@@ -1247,7 +1191,7 @@
           :"f"+String(p.lead).padStart(3,"0")+" · bu vade henüz istasyonla doğrulanmadı";
         return {lead:p.lead,time:p.valid_time_utc,value:p.temperature_2m_c,mae,within,label:fmt(p.temperature_2m_c,1)+" °C",detail};
       });
-      const rain=[];endpoints.filter(p=>p.lead>0).forEach(p=>{const interval=hourly.filter(q=>q.lead>p.lead-3&&q.lead<=p.lead);if(interval.length!==3||interval.some(q=>!numeric(q.precipitation_6h_mm)))return;const amount=interval.reduce((sum,q)=>sum+q.precipitation_6h_mm,0);rain.push({lead:p.lead,time:p.valid_time_utc,value:amount,label:fmt(amount,2)+" mm / 3 saat",detail:"3 saatlik toplam yağış"});});
+      const rain=[];endpoints.filter(p=>p.lead>0).forEach(p=>{const interval=hourly.filter(q=>q.lead>p.lead-3&&q.lead<=p.lead);if(interval.length!==3||interval.some(q=>!numeric(q.precipitation_6h_mm)))return;const amount=interval.reduce((sum,q)=>sum+q.precipitation_6h_mm,0);const skill=skillAtLeadRain(p.lead);const mae=skill&&numeric(skill.mae_mm)?skill.mae_mm:null;const within=skill&&numeric(skill.within_1mm_pct)?skill.within_1mm_pct:null;const samples=skill&&skill.pairs?skill.pairs:0;const detail=within!=null?"f"+String(p.lead).padStart(3,"0")+" · 3 saatlik yağışta geçmiş sapma "+fmt(mae,2)+" mm · ±1 mm içinde %"+Math.round(within)+" · "+samples+" örnek":"f"+String(p.lead).padStart(3,"0")+" · bu yağış vadesi henüz doğrulanmadı";rain.push({lead:p.lead,time:p.valid_time_utc,value:amount,mae,within,label:fmt(amount,2)+" mm / 3 saat",detail});});
       const known=temperature.filter(p=>numeric(p.within));
       const stationName=activeStation==="eyupsultan"?"Eyüpsultan":"ENKA";
       if(meta)meta.textContent=known.length?stationName+" kaydına göre bant":"GFS · tutarlılık kaydı bekleniyor";
@@ -1256,26 +1200,36 @@
       let note=$("next72-skill-note");
       if(chart&&!note){note=document.createElement("p");note.id="next72-skill-note";note.className="next72-skill-note";chart.after(note);}
       if(note){
-        const longest=(verificationDoc&&verificationDoc.stations&&verificationDoc.stations[activeStation]&&verificationDoc.stations[activeStation].by_hour||[]).reduce((max,row)=>row.pairs?Math.max(max,row.f):max,0);
         note.textContent=known.length
-          ?"Yeşil, o f saatinde geçmiş tahminlerin en az %85'i ±1°C içinde kalmış demek. Bant, ortalama sapma kadar genişler. f072 sonrası (f076, f120, f180) sistem kaydında duruyor"+(longest?" · şu an doğrulanan en uzun vade f"+String(longest).padStart(3,"0"):"")+". Saatleri gelince banda işlenir."
-          :"Tutarlılık kaydı henüz bu grafiğe bağlanmadı. Geçmiş GFS çıktıları istasyonla eşleştikçe bant görünür.";
+          ?"Yeşil, o f saatinde geçmiş sıcaklık tahminlerinin en az %85'i ±1°C içinde kalmış demek. Bant, ortalama sapma kadar genişler."
+          :"Sıcaklık tutarlılığı henüz bu grafiğe bağlanmadı.";
+      }
+      const rainChart=$("next72-precipitation");
+      let rainNote=$("next72-rain-note");
+      if(rainChart&&!rainNote){rainNote=document.createElement("p");rainNote.id="next72-rain-note";rainNote.className="next72-skill-note";rainChart.after(rainNote);}
+      if(rainNote){
+        const rainKnown=rain.filter(p=>numeric(p.within)).length;
+        rainNote.textContent=rainKnown
+          ?"Yağış bandı, 3 saatlik toplamın geçmiş ortalama sapması. Yeşil, sapmanın en az %85'inde 1 mm içinde kaldığı vade."
+          :"Yağış sapması, istasyonun günlük sayacı 3 saatlik dilimle eşleşince banda işlenir.";
       }
     }
     function drawNext72Line(targetId,data,color,label){
       const holder=$(targetId);if(data.length<2){holder.innerHTML='<div class="chart-empty">Bu değişken için yeterli tahmin noktası yok.</div>';return;}
+      const rainChart=label.startsWith("Yağış");
       const width=520,height=150,left=34,right=10,top=12,bottom=26,pw=width-left-right,ph=height-top-bottom,values=data.map(p=>p.value);
-      const banded=data.flatMap(p=>numeric(p.mae)?[p.value-p.mae,p.value+p.mae]:[]);
-      const minimum=Math.min(...values,...banded),maximum=Math.max(...values,...banded),span=(maximum-minimum)||1,low=label.startsWith("Yağış")?0:minimum-span*.12,high=maximum+span*.12;
+      const edge=(value,mae,sign)=>{const next=value+sign*(numeric(mae)?mae:0);return rainChart?Math.max(0,next):next;};
+      const banded=data.flatMap(p=>numeric(p.mae)?[edge(p.value,p.mae,-1),edge(p.value,p.mae,1)]:[]);
+      const minimum=Math.min(...values,...banded),maximum=Math.max(...values,...banded),span=(maximum-minimum)||1,low=rainChart?0:minimum-span*.12,high=maximum+span*(rainChart?.16:.12);
       const x=lead=>left+lead/72*pw,y=value=>top+(high-value)/(high-low)*ph,coords=data.map(p=>({x:x(p.lead),y:y(p.value),time:p.time,valueLabel:p.label,detail:p.detail||("Tahmin adımı: +"+p.lead+" saat")}));
       const grid=[0,1,2].map(i=>{const value=low+(high-low)*i/2,yy=y(value);return '<line x1="'+left+'" y1="'+yy+'" x2="'+(width-right)+'" y2="'+yy+'" stroke="rgba(190,218,228,.14)" stroke-dasharray="3 5"/><text x="'+(left-6)+'" y="'+(yy+3)+'" fill="#91a9b8" font-size="9" text-anchor="end">'+fmt(value,label.startsWith("Yağış")?1:0)+'</text>';}).join("");
       const ticks=[0,12,24,36,48,60,72].map(hour=>'<text x="'+x(hour)+'" y="'+(height-7)+'" fill="#91a9b8" font-size="9" text-anchor="middle">'+(hour===0?"Şimdi":"+"+hour+"s")+'</text>').join("");
       let band="";
       if(data.some(p=>numeric(p.mae))){
-        const hi=data.map(p=>({x:x(p.lead),y:y(p.value+(numeric(p.mae)?p.mae:0))}));
-        const lo=[...data].reverse().map(p=>({x:x(p.lead),y:y(p.value-(numeric(p.mae)?p.mae:0))}));
+        const hi=data.map(p=>({x:x(p.lead),y:y(edge(p.value,p.mae,1))}));
+        const lo=[...data].reverse().map(p=>({x:x(p.lead),y:y(edge(p.value,p.mae,-1))}));
         const d=[...hi,...lo].map((p,i)=>(i?"L":"M")+p.x.toFixed(1)+" "+p.y.toFixed(1)).join(" ")+" Z";
-        band='<path d="'+d+'" fill="rgba(125,211,215,.16)"></path>';
+        band='<path d="'+d+'" fill="'+(rainChart?"rgba(131,201,235,.2)":"rgba(125,211,215,.16)")+'"></path>';
       }
       const colored=data.some(p=>numeric(p.within));
       const stroke=colored?coords.slice(0,-1).map((p,i)=>'<path d="M'+p.x.toFixed(1)+" "+p.y.toFixed(1)+" L "+coords[i+1].x.toFixed(1)+" "+coords[i+1].y.toFixed(1)+'" fill="none" stroke="'+skillColor(data[i].within)+'" stroke-width="2.8" stroke-linecap="round" stroke-linejoin="round"/>').join(""):'<path d="'+coords.map((p,i)=>(i?"L":"M")+p.x.toFixed(1)+" "+p.y.toFixed(1)).join(" ")+'" fill="none" stroke="'+color+'" stroke-width="2.7" stroke-linecap="round" stroke-linejoin="round"/>';
@@ -1511,7 +1465,7 @@
       $("station-eyupsultan-button").setAttribute("aria-pressed",stationKey==="eyupsultan"?"true":"false");
       renderStationCard(stationKey==="enka"?enkaStationObservation:eyupsultanStationObservation);
       renderStationHistory();
-      renderVerification();
+      if(forecastData)renderNext72Hours();
     }
     $("station-enka-button").addEventListener("click",()=>selectStation("enka"));
     $("station-eyupsultan-button").addEventListener("click",()=>selectStation("eyupsultan"));
@@ -1795,86 +1749,6 @@
       const formatted=new Intl.DateTimeFormat("tr-TR",{timeZone:"UTC",day:"2-digit",month:"short",hour:"2-digit",minute:"2-digit"}).format(new Date(value));
       return formatted.replace(",","")+"Z";
     }
-    function renderVerification(){
-      const body=$("verify-body");
-      const lead=$("verify-lead");
-      if(!body)return;
-      const stationName=activeStation==="enka"?"ENKA Balmumcu":"Eyüpsultan";
-      if(!verificationDoc||!verificationDoc.stations){
-        body.innerHTML='<div class="chart-empty">Doğrulama kaydı henüz yok. Bir sonraki yayınla birlikte hesaplanacak.</div>';
-        return;
-      }
-      const station=verificationDoc.stations[activeStation];
-      const operational=station&&station.operational;
-      if(!operational||!operational.pairs){
-        body.innerHTML='<div class="chart-empty">'+stationName+' için gerçekleşmiş saat henüz eşleşmedi.</div>';
-        return;
-      }
-      const bias=operational.bias_c;
-      const biasText=!numeric(bias)?"taraflılık hesaplanamadı":bias>0.15?"GFS ortalama "+fmt1(bias)+"° daha sıcak kalmış":bias<-0.15?"GFS ortalama "+fmt1(Math.abs(bias))+"° daha serin kalmış":"belirgin sıcak veya soğuk taraflılık yok";
-      if(lead)lead.textContent=stationName+" · "+istStamp(operational.from_utc)+" – "+istStamp(operational.to_utc)+" · her saat, o saatte yayında olan son GFS ile karşılaştırıldı.";
-      const byHour=station.by_hour||[];
-      const hourAt=f=>byHour.find(row=>row.f===f);
-      const scored=byHour.filter(row=>row.pairs>=4);
-      let verdict="";
-      if(scored.length){
-        const best=[...scored].sort((a,b)=>a.mae_c-b.mae_c||b.within_1c_pct-a.within_1c_pct||a.f-b.f)[0];
-        const worst=[...scored].sort((a,b)=>b.mae_c-a.mae_c||a.within_1c_pct-b.within_1c_pct)[0];
-        const longest=byHour.reduce((max,row)=>row.pairs?Math.max(max,row.f):max,0);
-        const mean=rows=>rows.reduce((sum,row)=>sum+row.mae_c,0)/rows.length;
-        const shortLeads=scored.filter(row=>row.f<=12);
-        const longerLeads=scored.filter(row=>row.f>=24);
-        let trend="Örnek az; vade kısaldıkça düzelir beklentisi bu aralıkta henüz net değil.";
-        if(shortLeads.length&&longerLeads.length){
-          const gap=mean(longerLeads)-mean(shortLeads);
-          if(gap>=0.25)trend="Kısa vade (f000–f012), bir gün ve sonrasından daha az sapıyor.";
-          else if(gap<=-0.25)trend="Bu pencerede uzun vade daha isabetli görünüyor; örnek artınca netleşir.";
-          else trend="Ölçülebilen vadeler birbirine yakın. Kısa vadenin belirgin üstünlüğü henüz yok.";
-        }
-        verdict='<p class="verify-callout">En az 4 örneği olan saatler içinde en tutarlısı <strong>f'+String(best.f).padStart(3,"0")+'</strong> · sapma '+fmt1(best.mae_c)+'° · ±1°C '+pctText(best.within_1c_pct)+'. En zayıfı <strong>f'+String(worst.f).padStart(3,"0")+'</strong> ('+fmt1(worst.mae_c)+'°). En uzun doğrulanan vade f'+String(longest).padStart(3,"0")+'. '+trend+'</p>';
-      }
-      const ringColor=pct=>!numeric(pct)?"#6d8494":pct>=85?"#8fd7ba":pct>=70?"#7dd3d7":pct>=50?"#f1c98b":"#f0bd9f";
-      const focus=[0,6,12,24,36,48,72,76,96,120,144,168,180];
-      const bestF=scored.length?[...scored].sort((a,b)=>a.mae_c-b.mae_c||a.f-b.f)[0].f:null;
-      const focusHtml=focus.map(f=>{
-        const row=hourAt(f);
-        const label="f"+String(f).padStart(3,"0");
-        if(!row||!row.pairs){
-          return '<article class="fh empty"><b>'+label+'</b><div class="fh-ring"><span>—</span></div><small>Henüz gelmedi</small></article>';
-        }
-        return '<article class="fh'+(bestF===f?" best":"")+'"><b>'+label+'</b><div class="fh-ring" style="--p:'+(numeric(row.within_1c_pct)?row.within_1c_pct:0)+';--c:'+ringColor(row.within_1c_pct)+'"><span>'+pctText(row.within_1c_pct)+'</span></div><small>'+fmt1(row.mae_c)+'° sapma · '+row.pairs+' örnek</small></article>';
-      }).join("");
-      const bins=(station.by_bin||[]).filter(row=>row.pairs>0);
-      const emptyTail=(station.by_bin||[]).filter(row=>!row.pairs);
-      const binHtml=bins.map(row=>{
-        const width=numeric(row.within_1c_pct)?row.within_1c_pct:0;
-        return '<div class="vbar"><div class="vbar-name">'+row.label.replace("–","–")+'</div><div class="vbar-track"><span style="width:'+width+'%;--c:'+ringColor(row.within_1c_pct)+'"></span></div><div class="vbar-val">'+pctText(row.within_1c_pct)+'</div></div>';
-      }).join("");
-      const tailNote=emptyTail.length?'<p class="verify-note">'+emptyTail[0].label+' sonrası, f180 dahil, henüz skorlanamadı. O saatler gelince halkalar kendiliğinden dolar.</p>':'';
-      const runs=(station.runs||[]).filter(row=>row.pairs>=3).map(row=>'<article class="verify-run"><div class="verify-run-title">'+runStamp(row.run_id_utc)+'</div><div class="verify-run-score"><strong>'+pctText(row.within_2c_pct)+'</strong>±2°C içinde</div><div class="verify-run-meta">'+row.pairs+' saat · sapma '+fmt1(row.mae_c)+'° · fark '+fmtSigned(row.bias_c)+'°</div></article>').join("");
-      const recent=(station.recent||[]).slice(0,8).map(row=>{
-        const tone=Math.abs(row.error_c)<=1?"ok":Math.abs(row.error_c)<=2?"mid":"bad";
-        return '<div class="verify-recent-row '+tone+'"><span>'+istStamp(row.valid_time_utc)+'</span><span>f'+String(row.lead_hours).padStart(3,"0")+'</span><span>'+fmt1(row.forecast_c)+'°</span><span>'+fmt1(row.observed_c)+'°</span><strong>'+fmtSigned(row.error_c)+'°</strong></div>';
-      }).join("");
-      let rain="";
-      if(station.rain&&station.rain.pairs){
-        const item=station.rain;
-        rain='<p class="verify-note">Yağış: '+item.pairs+' karşılaştırma · artan yağış '+item.wet_events+' saat · boş uyarı '+item.false_alarms+' · ikisi de kuru '+item.correct_dry+'.</p>';
-      }
-      const biasClass=!numeric(bias)?"":bias<-0.15?" cool":bias>0.15?" warm":"";
-      body.innerHTML='<div class="verify-kpis"><article class="verify-kpi accent"><b>'+pctText(operational.within_1c_pct)+'</b><span>±1°C içinde</span></article><article class="verify-kpi"><b>'+pctText(operational.within_2c_pct)+'</b><span>±2°C içinde</span></article><article class="verify-kpi"><b>'+fmt1(operational.mae_c)+'°</b><span>Ortalama sapma</span></article><article class="verify-kpi'+biasClass+'"><b>'+fmtSigned(operational.bias_c)+'°</b><span>'+(bias<-0.15?"Model daha serin":bias>0.15?"Model daha sıcak":"Taraflılık")+'</span></article></div>'
-        +'<h3 class="verify-sub">Hangi f saati daha tutuyor? <em>halka = ±1°C</em></h3>'
-        +verdict
-        +'<div class="verify-legend"><span><i style="background:#8fd7ba"></i>85%+</span><span><i style="background:#7dd3d7"></i>70%+</span><span><i style="background:#f1c98b"></i>50%+</span><span><i style="background:#f0bd9f"></i>altında</span></div>'
-        +'<div class="verify-fhours">'+focusHtml+'</div>'
-        +(binHtml?'<h3 class="verify-sub">6 saatlik dilimler <em>f000–f180</em></h3><div class="vbars">'+binHtml+'</div>':'')
-        +tailNote
-        +(runs?'<h3 class="verify-sub">Her GFS çıktısı <em>kaydır</em></h3><div class="verify-runs">'+runs+'</div>':'')
-        +(recent?'<h3 class="verify-sub">Son doğrulanan saatler</h3><div class="vtable"><div class="vtable-h"><span>Saat</span><span>Vade</span><span>GFS</span><span>Ölçüm</span><span>Fark</span></div>'+recent+'</div>':'')
-        +rain
-        +'<p class="verify-note">'+station.logged_pairs+' tahmin-ölçüm çifti. f000–f120 her saat, sonrası üç saatte bir. '+biasText+'. GFS noktası 41.0°K 29.0°D. Hata = tahmin − ölçüm.</p>';
-      if(forecastData)renderNext72Hours();
-    }
     async function loadVerification(){
       try{
         const response=await fetch(VERIFY_URL+"?t="+Date.now(),{cache:"no-store"});
@@ -1883,7 +1757,7 @@
       }catch(_){
         verificationDoc=null;
       }
-      renderVerification();
+      if(forecastData)renderNext72Hours();
     }
 
     async function startPage(){
