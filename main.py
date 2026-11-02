@@ -19,6 +19,7 @@ import numpy as np
 import matplotlib
 matplotlib.use("Agg")
 import matplotlib.pyplot as plt
+import matplotlib.patheffects as patheffects
 from matplotlib.lines import Line2D
 from matplotlib.patches import Rectangle
 import eccodes
@@ -2367,22 +2368,76 @@ def _draw_comparison_850_temperature_axis(axis, chart_data):
 
 
 def _daily_wind_direction(item, day):
-    """Circular mean of 10 m meteorological FROM bearings, weighted by speed."""
-    angles = []
+    """GFS 10 m direction at the hour of that day's strongest wind.
+
+    The bar is the daily maximum speed, so the arrow uses that same hour's
+    meteorological FROM bearing instead of a day-long average.
+    """
+    best_speed = None
+    best_direction = None
     for key, values in item.get("timeline", {}).items():
         if key[:10] != day:
             continue
         direction, speed = values.get("wind_direction_deg"), values.get("wind")
-        if direction is None or speed is None or float(speed) < 1.0:
+        if direction is None or speed is None:
             continue
-        angles.append((math.radians(float(direction)), max(1.0, float(speed))))
-    if not angles:
-        return None
-    sine = sum(math.sin(angle) * weight for angle, weight in angles)
-    cosine = sum(math.cos(angle) * weight for angle, weight in angles)
-    if abs(sine) + abs(cosine) < 1e-8:
-        return None
-    return math.degrees(math.atan2(sine, cosine)) % 360.0
+        speed = float(speed)
+        if best_speed is None or speed > best_speed:
+            best_speed = speed
+            best_direction = float(direction) % 360.0
+    return best_direction
+
+
+def _wind_cardinal(direction_deg):
+    names = ("K", "KD", "D", "GD", "G", "GB", "B", "KB")
+    return names[int((float(direction_deg) + 22.5) % 360.0 // 45)]
+
+
+def _draw_wind_direction_marker(axis, x, speed, direction_deg):
+    """White arrow above the bar: it points where the wind is going.
+
+    The letter is the GFS FROM bearing (K = rüzgâr kuzeyden geliyor).
+    """
+    radians = math.radians(float(direction_deg))
+    length = 12.0
+    downwind_x = -math.sin(radians) * length
+    downwind_y = -math.cos(radians) * length
+    for color, width, scale, order in (
+        ("#041018", 3.4, 16, 6),
+        ("#FFFFFF", 1.7, 13, 7),
+    ):
+        axis.annotate(
+            "",
+            xy=(x, speed),
+            xytext=(-downwind_x, -downwind_y),
+            textcoords="offset points",
+            arrowprops={
+                "arrowstyle": "-|>",
+                "color": color,
+                "lw": width,
+                "mutation_scale": scale,
+                "shrinkA": 0,
+                "shrinkB": 0,
+            },
+            zorder=order,
+            annotation_clip=False,
+        )
+    label = axis.annotate(
+        _wind_cardinal(direction_deg),
+        xy=(x, speed),
+        xytext=(0, 20),
+        textcoords="offset points",
+        ha="center",
+        va="bottom",
+        fontsize=9,
+        fontweight="bold",
+        color="#FFFFFF",
+        zorder=8,
+        annotation_clip=False,
+    )
+    label.set_path_effects([
+        patheffects.withStroke(linewidth=2.6, foreground="#041018"),
+    ])
 
 
 def _draw_comparison_bar_axis(axis, chart_data, metric, title, ylabel):
@@ -2405,23 +2460,20 @@ def _draw_comparison_bar_axis(axis, chart_data, metric, title, ylabel):
         if bar_positions:
             axis.bar(bar_positions, bar_values, width=bar_width, color=color)
     if metric == "wind":
-        direction_axis = axis.twinx()
-        direction_axis.set_ylim(0, 360)
-        direction_axis.set_yticks([0, 90, 180, 270, 360])
-        direction_axis.set_yticklabels(["K", "D", "G", "B", "K"], color=GFS_REPORT_TEXT)
-        direction_axis.tick_params(
-            axis="y", colors=GFS_REPORT_TEXT, labelcolor=GFS_REPORT_TEXT, labelsize=8,
-        )
-        direction_axis.spines["right"].set_color(GFS_REPORT_SPINE)
-        direction_axis.set_facecolor("none")
+        low, high = axis.get_ylim()
+        axis.set_ylim(0, max(high, 1) * 1.28)
         for series_index, item in enumerate(series):
             for index, day in enumerate(dates):
                 direction = _daily_wind_direction(item, day)
-                if direction is not None:
-                    x = x_positions[index] + offsets[series_index]
-                    direction_axis.scatter([x], [direction], marker="v", s=46,
-                        color="#000000", edgecolors="#000000", linewidths=0.4, zorder=6)
-        direction_axis.set_ylabel("Yön · geldiği yön", fontsize=9, color=GFS_REPORT_TEXT)
+                speed = item["daily"][day].get("wind")
+                if direction is None or speed is None:
+                    continue
+                _draw_wind_direction_marker(
+                    axis,
+                    x_positions[index] + offsets[series_index],
+                    float(speed),
+                    direction,
+                )
     axis.set_title(title, loc="left", fontsize=11)
     axis.set_ylabel(ylabel, fontsize=10)
     axis.grid(axis="y", alpha=0.25)
@@ -2486,7 +2538,7 @@ def create_comparison_chart(current_run_id, payload, previous_runs):
         )
         _draw_comparison_850_temperature_axis(axes[1], chart_data)
         _draw_comparison_bar_axis(axes[2], chart_data, "precip", "Günlük toplam yağış", "mm")
-        _draw_comparison_bar_axis(axes[3], chart_data, "wind", "Yüzey rüzgârı | 10 m hız + yön", "km/sa")
+        _draw_comparison_bar_axis(axes[3], chart_data, "wind", "Yüzey rüzgârı | ok gittiği yön, harf GFS geldiği yön", "km/sa")
         fig.patch.set_facecolor(GFS_REPORT_FIGURE_BG)
         for index, axis in enumerate(axes):
             _style_dark_comparison_axis(axis)
@@ -2531,7 +2583,7 @@ def create_pages_comparison_charts(current_run_id, payload, previous_runs):
         ("temperature", "2 m Sıcaklık", "2 m sıcaklık | Günlük mum: ilk–son, fitil: min–maks", "°C"),
         ("temperature_850", "850 hPa Sıcaklık", "850 hPa sıcaklığı | Günlük min–maks aralığı", "°C"),
         ("precipitation", "Yağış", "Günlük toplam yağış", "mm"),
-        ("wind_10m", "Rüzgâr hız + yön", "10 m rüzgâr hızı ve yönü | günlük", "km/sa"),
+        ("wind_10m", "Rüzgâr hız + yön", "10 m rüzgâr | ok gittiği yön, harf GFS geldiği yön", "km/sa"),
     )
     try:
         _apply_dark_report_theme()
