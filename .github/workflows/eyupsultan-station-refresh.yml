@@ -62,25 +62,23 @@ jobs:
           if git diff --cached --quiet; then
             echo "changed=false" >> "$GITHUB_OUTPUT"
             echo "No Eyüpsultan data changes to publish."
-            exit 0
+          else
+            git commit -m "Refresh WStatMap Eyüpsultan observation"
+            for attempt in 1 2 3 4 5; do
+              git pull --rebase origin gfs-watch-state
+              if git push origin gfs-watch-state; then
+                echo "changed=true" >> "$GITHUB_OUTPUT"
+                echo "Eyüpsultan data pushed to gfs-watch-state."
+                break
+              fi
+              sleep $((attempt * 2))
+            done
           fi
-          git commit -m "Refresh WStatMap Eyüpsultan observation"
-          for attempt in 1 2 3 4 5; do
-            git pull --rebase origin gfs-watch-state
-            if git push origin gfs-watch-state; then
-              echo "changed=true" >> "$GITHUB_OUTPUT"
-              echo "Eyüpsultan data pushed to gfs-watch-state."
-              exit 0
-            fi
-            sleep $((attempt * 2))
-          done
-          echo "Could not publish Eyüpsultan data after five attempts."
-          exit 1
 
       - name: Deploy refreshed station data to GitHub Pages
-        if: steps.publish.outputs.changed == 'true'
+        if: always() && steps.publish.outcome == 'success'
         env:
           GH_TOKEN: ${{ github.token }}
         run: |
           gh workflow run pages.yml --ref main --repo "$GITHUB_REPOSITORY"
-          echo "GitHub Pages deployment requested."
+          echo "GitHub Pages deployment requested (always on success)."
