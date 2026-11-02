@@ -9,18 +9,18 @@
     "latitude": 41.1,
     "longitude": 28.9,
     "elevation_m": 107,
-    "observed_at_utc": "2026-11-02T11:10:00+00:00",
-    "age_minutes": 5.3,
+    "observed_at_utc": "2026-11-02T11:20:00+00:00",
+    "age_minutes": 0.4,
     "is_stale": false,
     "temperature_2m_c": 22.1,
     "wind_speed_10m_kmh": 3.1,
     "wind_speed_10m_knots": 1.7,
-    "wind_direction_cardinal": "SE",
-    "wind_direction_tr": "Güneydoğu",
+    "wind_direction_cardinal": "SW",
+    "wind_direction_tr": "Güneybatı",
     "precipitation_1h_mm": null,
     "precipitation_daily_mm": 0.0,
-    "humidity_percent": 68.0,
-    "station_pressure_hpa": 1015.4
+    "humidity_percent": 66.0,
+    "station_pressure_hpa": 1015.3
   },
-  "updated_at_utc": "2026-11-02T11:15:15+00:00"
+  "updated_at_utc": "2026-11-02T11:20:24+00:00"
 }
