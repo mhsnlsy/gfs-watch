@@ -704,16 +704,23 @@
     .station-card .stat .detail { font-size: 6.5px !important; }
     .station-card .stat .unit { font-size: 6.5px !important; }
 
-    /* Close empty gaps in the live panel. Sizes stay as they were. */
-    .dashboard-top{padding:12px 0 10px;gap:10px}
-    .dashboard-top .station-card{padding:12px 14px 10px}
-    .station-switch{margin-top:6px}
-    .station-switch button{min-height:0;padding:6px 11px}
-    .dashboard-top .station-overview{margin-top:6px}
-    .station-card .temp-row,.dashboard-top .station-card .temp-row{margin-top:4px!important}
-    .station-card .weather-stats,.dashboard-top .station-card .weather-stats{margin-top:6px!important;padding-top:6px}
-    .station-history-inline{margin-top:8px;padding-top:6px!important}
-    .station-history-inline .history-panel-head{margin-bottom:4px}
+    /* Close empty gaps in the live panel. Data sizes stay unchanged. */
+    .dashboard-top{align-items:start!important;padding:8px 0 6px!important;gap:8px!important}
+    .dashboard-top .station-card{align-self:start!important;height:auto!important;min-height:0!important;padding:6px 8px 4px!important}
+    .station-card .place{margin-top:1px}
+    .station-switch{margin-top:4px!important;padding:2px}
+    .station-switch button{min-height:0!important;padding:5px 10px!important}
+    .dashboard-top .station-overview{margin-top:2px!important}
+    .station-card .temp-row,.dashboard-top .station-card .temp-row{margin-top:0!important;margin-bottom:0!important}
+    .station-current .temp-meta{margin-top:0!important}
+    .station-card .temp-caption{margin-top:0}
+    .delta-badge{margin-top:2px!important}
+    .station-card .weather-stats,.dashboard-top .station-card .weather-stats{margin-top:4px!important;padding-top:4px!important}
+    .station-history-inline{margin-top:4px!important;padding-top:4px!important}
+    .station-history-inline .history-panel-head{margin:0 0 2px!important}
+    .station-history-inline .history-charts{gap:6px}
+    .station-history-inline .history-chart-head{margin-bottom:1px}
+    .station-history-inline .history-chart-meta,.station-history-inline .history-source-note{margin-top:1px}
 
 </style>
 </head>
