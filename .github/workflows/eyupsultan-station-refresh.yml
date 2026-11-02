@@ -3,7 +3,8 @@ name: Eyüpsultan Station Refresh
 on:
   workflow_dispatch:
   schedule:
-    - cron: "*/4 * * * *"
+    - cron: "*/3 * * * *"
+    - cron: "2,5,8,11,14,17,20,23,26,29,32,35,38,41,44,47,50,53,56,59 * * * *"
   push:
     branches: [main]
     paths:
@@ -21,7 +22,7 @@ concurrency:
 jobs:
   refresh:
     runs-on: ubuntu-latest
-    timeout-minutes: 10
+    timeout-minutes: 8
     steps:
       - name: Check out application
         uses: actions/checkout@v4
@@ -39,67 +40,41 @@ jobs:
         with:
           node-version: "22"
 
-      - name: Install Playwright and browsers
-        run: |
-          npm install --no-save playwright
-          npx playwright install --with-deps chromium
-          # Verify browser is usable
-          npx playwright install --dry-run chromium || true
+      - name: Install Playwright (fallback only)
+        run: npm install --no-save playwright
+        continue-on-error: true
 
       - name: Fetch Eyüpsultan observation
         id: scrape
         run: |
           set -e
           node scripts/eyupsultan_weather.mjs
-          # Verify output was written and is recent
           if [ ! -f public/eyupsultan-station-observation.json ]; then
-            echo "ERROR: Observation file was not created"
+            echo "ERROR: No observation file"
             exit 1
           fi
           AGE=$(jq -r '.station_observation.age_minutes // 999' public/eyupsultan-station-observation.json)
-          echo "Scraped observation age: $AGE minutes"
-          if [ "$AGE" -gt 90 ]; then
-            echo "WARNING: Data is older than 90 minutes"
-          fi
+          echo "Age: $AGE minutes"
         env:
-          EYUPSULTAN_PREVIOUS_OBSERVATION_PATH: forecast-data/public/eyupsultan-station-observation.json
           EYUPSULTAN_TEMPERATURE_HISTORY_PATH: forecast-data/public/eyupsultan-station-temperature-history.json
 
       - name: Publish data
-        id: publish
         run: |
           mkdir -p forecast-data/public
-          if [ -f public/eyupsultan-station-observation.json ]; then
-            cp -f public/eyupsultan-station-observation.json forecast-data/public/
-            cp -f public/eyupsultan-station-temperature-history.json forecast-data/public/ 2>/dev/null || true
-          else
-            echo "No new observation file to publish"
-            exit 0
-          fi
+          cp -f public/eyupsultan-station-observation.json forecast-data/public/ 2>/dev/null || true
+          cp -f public/eyupsultan-station-temperature-history.json forecast-data/public/ 2>/dev/null || true
           cd forecast-data
           git config user.name "github-actions[bot]"
           git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
           git add public/eyupsultan-station-observation.json public/eyupsultan-station-temperature-history.json || true
           if ! git diff --cached --quiet; then
-            git commit -m "Refresh Eyüpsultan observation [$(date -u +%H:%M)]"
+            git commit -m "Refresh Eyüpsultan [$(date -u +%H:%M)]"
             git pull --rebase origin gfs-watch-state || true
             git push origin gfs-watch-state
-            echo "changed=true" >> "$GITHUB_OUTPUT"
-            echo "Data published successfully"
-          else
-            echo "changed=false" >> "$GITHUB_OUTPUT"
-            echo "No changes to publish"
           fi
 
       - name: Force Pages deploy
         if: always() && steps.scrape.outcome == 'success'
         env:
           GH_TOKEN: ${{ github.token }}
-        run: |
-          gh workflow run pages.yml --ref main --repo "$GITHUB_REPOSITORY" || echo "Pages trigger attempted"
-
-      - name: Fail if scrape failed
-        if: steps.scrape.outcome != 'success'
-        run: |
-          echo "Scrape step failed - data was not updated"
-          exit 1
+        run: gh workflow run pages.yml --ref main --repo "$GITHUB_REPOSITORY" || true
