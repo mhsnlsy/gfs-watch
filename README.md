@@ -52,3 +52,17 @@ f000 alanı canlı gözlem değildir; GFS modelinin başlangıç analizidir. Bas
 ## Web sitesi
 
 İstanbul'un Havası, GitHub Pages üzerinde ücretsiz statik site olarak yayınlanır: https://mhsnlsy.github.io/gfs-watch/ . Site, GFS Watch'ın `gfs-watch-state` dalındaki `public/latest.json` tahmin çıktısını kullanır; başarılı GFS çalışmaları tamamlandığında web yayını otomatik yenilenir. İlk kurulumda **Settings → Pages → Build and deployment → Source** alanı **GitHub Actions** olarak seçilmeli ve `Deploy İstanbul'un Havası` workflow'u bir kez elle çalıştırılmalıdır.
+
+## v3 İyileştirmeler
+
+Aşağıdaki geliştirmeler uygulanmıştır (detaylar için `IMPROVEMENTS.md`):
+
+1. Web sitesi veri yükleme güvenilirliği artırıldı (daha iyi fallback ve durum göstergeleri).
+2. GFS + ECMWF karşılaştırma güçlendirildi (fark grafikleri ve güven aralığı).
+3. UI/UX modernize edildi (responsive, daha net grafikler).
+4. Kod modülerliği başlatıldı (`alerts.py` vb.).
+5. Ek istasyon / gözlem kaynağı desteği eklendi.
+6. Aşırı hava uyarıları (kuvvetli yağış, rüzgâr, sıcaklık) eklendi.
+7. Test kapsamı genişletildi.
+
+Değişiklikler geriye uyumlu ve mevcut workflow'ları bozmaz.
