@@ -389,6 +389,10 @@
 .next-72h-chart{height:190px;width:100%;margin-top:8px;min-width:0}
 .next72-skill-note{margin:6px 2px 0;font-size:13px;line-height:1.4;color:#d7e6ee}
 .next-72h-chart svg{display:block;width:100%;height:100%;overflow:visible}
+.briefing{display:grid;gap:4px;margin-top:8px}
+.briefing-row{display:grid;grid-template-columns:86px minmax(0,1fr);gap:8px;align-items:baseline;padding:5px 8px;border-radius:10px;background:rgba(2,15,24,.28);border:1px solid rgba(143,184,196,.16)}
+.briefing-k{font-size:9px;letter-spacing:.06em;font-weight:700;color:#8fd0c8;text-transform:uppercase}
+.briefing-v{font-size:12.5px;line-height:1.35;color:#e7f2f6}
 @media(max-width:900px){.dashboard-top{grid-template-columns:minmax(0,1fr)}.dashboard-left{display:contents}.dashboard-left .station-card{order:0}.next-72h-panel{order:1}.dashboard-left .history-panel{order:2}}
 @media(max-width:560px){.dashboard-top{gap:10px;padding:16px 0 12px}.dashboard-left .history-chart{height:88px}.next-72h-panel{padding:11px;border-radius:16px}.next-72h-head h2{font-size:18px}.next-72h-grid{gap:7px}.next-72h-card{padding:8px 6px 6px}.next-72h-card-head h3{font-size:11px}.next-72h-chart{height:120px}}
 
@@ -811,6 +815,13 @@
           <article class="next-72h-card"><div class="next-72h-card-head"><h3>Sıcaklık</h3><span>°C</span></div><div class="next-72h-chart" id="next72-temperature"><div class="chart-empty">Tahmin bekleniyor…</div></div></article>
           <article class="next-72h-card"><div class="next-72h-card-head"><h3>Yağış</h3><span>mm / 3 saat</span></div><div class="next-72h-chart" id="next72-precipitation"><div class="chart-empty">Tahmin bekleniyor…</div></div></article>
 
+        </div>
+        <div class="briefing" id="briefing" aria-live="polite">
+          <div class="briefing-row"><div class="briefing-k">İstasyon</div><div class="briefing-v" id="brief-station">Hesaplanıyor…</div></div>
+          <div class="briefing-row"><div class="briefing-k">Yağış saati</div><div class="briefing-v" id="brief-rain">Hesaplanıyor…</div></div>
+          <div class="briefing-row"><div class="briefing-k">850 hPa</div><div class="briefing-v" id="brief-850">Hesaplanıyor…</div></div>
+          <div class="briefing-row"><div class="briefing-k">4 çıktı</div><div class="briefing-v" id="brief-runs">Hesaplanıyor…</div></div>
+          <div class="briefing-row"><div class="briefing-k">Ayrışma</div><div class="briefing-v" id="brief-split">Hesaplanıyor…</div></div>
         </div>
       </section>
     </section>
@@ -1569,6 +1580,176 @@
       }
     }
     window.addEventListener("resize",fitStationStats);
+    function buildBriefing(state){
+      const num=value=>Number(value).toFixed(1).replace(".",",");
+      const when=date=>new Intl.DateTimeFormat("tr-TR",{timeZone:"Europe/Istanbul",weekday:"short",hour:"2-digit",minute:"2-digit"}).format(date);
+      const nearest=(points,timeMs,maxGap)=>{
+        let best=null,gap=maxGap;
+        for(const point of points||[]){
+          const stamp=new Date(point.valid_time_utc||point.valid_time_istanbul).getTime();
+          if(!Number.isFinite(stamp))continue;
+          const delta=Math.abs(stamp-timeMs);
+          if(delta<=gap){gap=delta;best=point;}
+        }
+        return best;
+      };
+      const now=state.now;
+      const horizon=now+72*3600000;
+      const gfs=(state.gfsPoints||[]).filter(point=>{
+        const stamp=new Date(point.valid_time_utc).getTime();
+        return stamp>=now-30*60000&&stamp<=horizon&&point.temperature_2m_c!=null;
+      });
+      const ec=(state.ecPoints||[]).filter(point=>{
+        const stamp=new Date(point.valid_time_utc).getTime();
+        return stamp>=now-90*60000&&stamp<=horizon&&point.temperature_2m_c!=null;
+      });
+      const lines={station:"İstasyon ölçümü bekleniyor.",rain:"Yağış saati hesaplanıyor.",t850:"850 hPa hesaplanıyor.",runs:"Dört çıktı bekleniyor.",split:"ECMWF karşılaştırması bekleniyor."};
+      const anchor=state.observedAt||now;
+      const gfsNow=nearest(state.gfsPoints,anchor,3*3600000);
+      const ecNow=nearest(state.ecPoints,anchor,3*3600000);
+      if(state.stationTemp!=null){
+        let line=state.stationName+" "+num(state.stationTemp)+"°.";
+        if(gfsNow){
+          const delta=gfsNow.temperature_2m_c-state.stationTemp;
+          const way=delta>0.15?"sıcak":delta<-0.15?"soğuk":"denk";
+          line+=" GFS "+num(gfsNow.temperature_2m_c)+"° ("+(delta>0?"+":"")+num(delta)+"° "+way+").";
+        }
+        if(ecNow){
+          const delta=ecNow.temperature_2m_c-state.stationTemp;
+          const way=delta>0.15?"sıcak":delta<-0.15?"soğuk":"denk";
+          line+=" ECMWF "+num(ecNow.temperature_2m_c)+"° ("+(delta>0?"+":"")+num(delta)+"° "+way+").";
+        }else line+=" ECMWF bu saat için henüz yok.";
+        lines.station=line;
+      }else if(gfsNow){
+        lines.station="İstasyon ölçümü yok. GFS bu saatte "+num(gfsNow.temperature_2m_c)+"°.";
+      }
+      const wet=gfs.filter(point=>(point.precipitation_6h_mm||0)>=0.2);
+      if(!gfs.length)lines.rain="GFS yağış zamanı yok.";
+      else if(!wet.length)lines.rain="Önümüzdeki 72 saatte 0,2 mm üstü yağış yok.";
+      else{
+        const spells=[];
+        let current=null;
+        for(const point of wet){
+          const stamp=new Date(point.valid_time_utc).getTime();
+          if(!current||stamp-current.end>2*3600000){
+            current={start:stamp,end:stamp,sum:0,peak:point.precipitation_6h_mm,peakAt:stamp};
+            spells.push(current);
+          }
+          current.end=stamp;
+          current.sum+=point.precipitation_6h_mm||0;
+          if(point.precipitation_6h_mm>current.peak){current.peak=point.precipitation_6h_mm;current.peakAt=stamp;}
+        }
+        const shown=spells.slice(0,3).map(spell=>{
+          const start=when(new Date(spell.start));
+          if(spell.end===spell.start)return start+" ("+num(spell.sum)+" mm)";
+          const endHour=new Intl.DateTimeFormat("tr-TR",{timeZone:"Europe/Istanbul",hour:"2-digit",minute:"2-digit"}).format(new Date(spell.end));
+          return start+"–"+endHour+" ("+num(spell.sum)+" mm)";
+        });
+        const extra=spells.length>3?" +"+(spells.length-3)+" dönem daha.":"";
+        const peak=spells.reduce((best,spell)=>spell.peak>best.peak?spell:best,spells[0]);
+        lines.rain=shown.join("; ")+extra+" En yoğun "+when(new Date(peak.peakAt))+", "+num(peak.peak)+" mm.";
+      }
+      if(gfsNow&&gfsNow.temperature_850hpa_c!=null){
+        const later=nearest(gfs,new Date(gfsNow.valid_time_utc).getTime()+24*3600000,3*3600000);
+        let line="Şimdi "+num(gfsNow.temperature_850hpa_c)+"°.";
+        if(later&&later.temperature_850hpa_c!=null){
+          const delta=later.temperature_850hpa_c-gfsNow.temperature_850hpa_c;
+          const way=delta<=-0.3?"soğuma":delta>=0.3?"ısınma":"";
+          line+=way?(" Yarın aynı saatte "+num(later.temperature_850hpa_c)+"°, "+num(Math.abs(delta))+"° "+way+"."):(" Yarın aynı saatte "+num(later.temperature_850hpa_c)+"°, belirgin değişim yok.");
+        }
+        const ecLater=ecNow?nearest(ec,new Date(ecNow.valid_time_utc).getTime()+24*3600000,3*3600000):null;
+        const ec850=ecLater&&(ecLater.temperature_850hpa_c!=null?ecLater.temperature_850hpa_c:(ecLater.temperature_850hpa&&ecLater.temperature_850hpa.mean_c));
+        if(ec850!=null)line+=" ECMWF yarın "+num(ec850)+"°.";
+        lines.t850=line;
+      }else lines.t850="850 hPa sıcaklığı bu çıktıda yok.";
+      const runs=(state.runs||[]).filter(run=>Array.isArray(run.forecast_6_hourly)&&run.forecast_6_hourly.length);
+      if(runs.length<2)lines.runs="Karşılaştırılacak ikinci çıktı yok.";
+      else{
+        const useSurface=runs.some(run=>(run.forecast_6_hourly||[]).some(point=>typeof point.temperature_2m_c==="number"));
+        const readTemp=point=>useSurface?point.temperature_2m_c:point.temperature_850hpa_c;
+        const subject=useSurface?"2 m sıcaklıkta":"850 hPa sıcaklıkta";
+        const buckets=new Map();
+        for(const run of runs){
+          for(const point of run.forecast_6_hourly){
+            const stamp=new Date(point.valid_time_utc).getTime();
+            const temp=readTemp(point);
+            if(stamp<now-30*60000||stamp>horizon||typeof temp!=="number")continue;
+            if(!buckets.has(stamp))buckets.set(stamp,[]);
+            buckets.get(stamp).push({run:run.run_id_utc,temp});
+          }
+        }
+        const full=Array.from(buckets.entries()).filter(([,values])=>values.length===runs.length);
+        if(!full.length)lines.runs="Dört çıktının ortak saati yok.";
+        else{
+          const spreads=full.map(([,values])=>{
+            const temps=values.map(item=>item.temp);
+            return Math.max(...temps)-Math.min(...temps);
+          });
+          const sorted=spreads.slice().sort((a,b)=>a-b);
+          const mid=Math.floor(sorted.length/2);
+          const typical=sorted.length%2?sorted[mid]:(sorted[mid-1]+sorted[mid])/2;
+          let worst=full[0],worstSpread=spreads[0];
+          spreads.forEach((spread,index)=>{if(spread>worstSpread){worstSpread=spread;worst=full[index];}});
+          const latest=runs.slice().sort((a,b)=>new Date(a.run_id_utc)-new Date(b.run_id_utc)).at(-1).run_id_utc;
+          const jumps=full.map(([,values])=>{
+            const last=values.find(item=>item.run===latest);
+            const older=values.filter(item=>item.run!==latest).map(item=>item.temp);
+            const mean=older.reduce((sum,value)=>sum+value,0)/older.length;
+            return last.temp-mean;
+          });
+          const jump=jumps.reduce((sum,value)=>sum+value,0)/jumps.length;
+          const where=when(new Date(worst[0]));
+          if(Math.abs(jump)>=1.2){
+            lines.runs="Son çıktı, "+subject+", öncekilerden ortalama "+num(Math.abs(jump))+"° daha "+(jump<0?"soğuk":"sıcak")+". En büyük ayrılık "+where+", "+num(worstSpread)+"°. Oynak.";
+          }else{
+            lines.runs="Dört çıktı 72 saatte "+subject+" birbirine yakın. Ortanca fark "+num(typical)+"°. En büyük ayrılık "+where+", "+num(worstSpread)+"°.";
+          }
+        }
+      }
+      if(!ec.length||!gfs.length)return lines;
+      let peak={abs:0},rain=null;
+      for(const point of ec){
+        const stamp=new Date(point.valid_time_utc).getTime();
+        const model=nearest(gfs,stamp,90*60000);
+        if(!model)continue;
+        const delta=model.temperature_2m_c-point.temperature_2m_c;
+        if(Math.abs(delta)>peak.abs)peak={abs:Math.abs(delta),delta,at:stamp,gfs:model.temperature_2m_c,ec:point.temperature_2m_c};
+        const gfsRain=gfs.filter(item=>{
+          const itemStamp=new Date(item.valid_time_utc).getTime();
+          return itemStamp>stamp-3*3600000&&itemStamp<=stamp;
+        }).reduce((sum,item)=>sum+(item.precipitation_6h_mm||0),0);
+        const ecRain=point.precipitation_interval_mm||0;
+        if((gfsRain>=0.5&&ecRain<0.15)||(ecRain>=0.5&&gfsRain<0.15)){
+          if(!rain||Math.abs(gfsRain-ecRain)>Math.abs(rain.gfs-rain.ec))rain={at:stamp,gfs:gfsRain,ec:ecRain};
+        }
+      }
+      if(!peak.at)lines.split="Ortak saat bulunamadı.";
+      else if(peak.abs<1.5&&!rain)lines.split="Önümüzdeki 72 saatte GFS ile ECMWF sıcaklıkta en fazla "+num(peak.abs)+"° ayrılıyor. Yağış saati uyumlu.";
+      else{
+        let line=when(new Date(peak.at))+" GFS "+num(peak.gfs)+"°, ECMWF "+num(peak.ec)+"° ("+num(peak.abs)+"°, GFS daha "+(peak.delta>0?"sıcak":"soğuk")+").";
+        if(rain)line+=" Yağış da ayrışıyor: "+when(new Date(rain.at))+" GFS "+num(rain.gfs)+" mm, ECMWF "+num(rain.ec)+" mm.";
+        lines.split=line;
+      }
+      return lines;
+    }
+    function renderBriefing(){
+      const station=activeStation==="eyupsultan"?eyupsultanStationObservation:enkaStationObservation;
+      const lines=buildBriefing({
+        now:Date.now(),
+        gfsPoints:forecastData&&forecastData.forecast_6_hourly,
+        ecPoints:ecmwfForecast&&ecmwfForecast.forecasts,
+        runs:forecastData&&forecastData.comparison_runs,
+        stationTemp:station&&station.temperature_2m_c,
+        stationName:activeStation==="eyupsultan"?"Eyüpsultan":"Balmumcu",
+        observedAt:station&&station.observed_at_utc?new Date(station.observed_at_utc).getTime():null
+      });
+      const write=(id,text)=>{const node=$(id);if(node)node.textContent=text;};
+      write("brief-station",lines.station);
+      write("brief-rain",lines.rain);
+      write("brief-850",lines.t850);
+      write("brief-runs",lines.runs);
+      write("brief-split",lines.split);
+    }
     function selectStation(stationKey){
       if(stationKey!=="enka"&&stationKey!=="eyupsultan")return;
       activeStation=stationKey;
@@ -1579,6 +1760,7 @@
       $("station-eyupsultan-button").setAttribute("aria-pressed",stationKey==="eyupsultan"?"true":"false");
       renderStationCard(stationKey==="enka"?enkaStationObservation:eyupsultanStationObservation);
       renderStationHistory();
+      if(typeof renderBriefing==="function")renderBriefing();
       if(typeof forecastData!=="undefined"&&forecastData&&typeof renderNext72Hours==="function")renderNext72Hours();
       if(typeof refreshSelectedStation==="function")refreshSelectedStation();
     }
@@ -1588,6 +1770,7 @@
     function render(data){
       forecastData=data;
       renderNext72Hours();
+      renderBriefing();
       renderStationCard(activeStation==="enka"?enkaStationObservation:eyupsultanStationObservation);
       if(data.run_id_utc)$("cycle-chip").textContent="GFS döngüsü · "+timeTR(data.run_id_utc);
       if(data.published_at_utc){
@@ -1625,6 +1808,7 @@
         }catch(_){}
       }
       renderStationCard(activeStation==="enka"?enkaStationObservation:eyupsultanStationObservation);
+      if(typeof renderBriefing==="function")renderBriefing();
     }
     async function refreshSelectedStation(){
       const stationKey=activeStation;
@@ -1657,6 +1841,7 @@
       if(activeStation!==stationKey)return;
       renderStationCard(activeStation==="enka"?enkaStationObservation:eyupsultanStationObservation);
       renderStationHistory();
+      if(typeof renderBriefing==="function")renderBriefing();
       if(typeof forecastData!=="undefined"&&forecastData&&typeof renderNext72Hours==="function")renderNext72Hours();
     }
     async function loadForecast(){
@@ -2076,6 +2261,7 @@
         renderEcmwfForecast(document);
         ecmwfForecast=document;
         ecmwfLastFetch=Date.now();
+        if(typeof renderBriefing==="function")renderBriefing();
       }catch(error){
         $("ecmwf-data-status").textContent=(ecmwfForecast?"Son geçerli ECMWF verisi korunuyor. ":"")+String(error.message||error);
       }finally{
