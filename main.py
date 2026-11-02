@@ -452,7 +452,10 @@ def export_public_forecast_json(run_id, payload, update_latest=True):
         },
         "sources": {
             "forecast": payload.get("data_source", "NOAA/NCEP GFS 0.25° GRIB2"),
-            "model_initial_conditions": "NOAA/NCEP GFS f000 native GRIB2 initial fields",
+            "model_initial_conditions": payload.get(
+                "initial_source",
+                "NOAA/NCEP GFS f000 native GRIB2 initial fields",
+            ),
         },
         "noaa_source_file": {
             "f180_available": model_metadata.get("noaa_f180_available", True),
@@ -1682,8 +1685,237 @@ def prefetch_latest_noaa_cycle(skip_run_ids=None, target_run_id=None):
     return downloaded
 
 
+def _meteopt_number(value):
+    """Return a finite float from a MeteoPT cell, or None."""
+    try:
+        number = float(value)
+    except (TypeError, ValueError):
+        return None
+    if math.isnan(number) or math.isinf(number):
+        return None
+    return number
+
+
+def fetch_meteopt_document(run_dt):
+    """Download one GFS cycle's 3-hour point series from MeteoPT."""
+    response = requests.get(
+        "https://api.meteopt.com/gfs/json",
+        params={
+            "lat": f"{LAT:.4f}",
+            "lon": f"{LON:.4f}",
+            "run": run_dt.strftime("%H"),
+            "lang": "en",
+        },
+        headers={"User-Agent": "GFS-Watch/1.0"},
+        timeout=40,
+    )
+    response.raise_for_status()
+    document = response.json()
+    expected = run_dt.strftime("%Y%m%d%H")
+    token = str(document.get("run") or "")
+    if token != expected:
+        raise ValueError(f"MeteoPT {token or 'boş'} döndü, istenen {expected}")
+    return document
+
+
+def _meteopt_max_step(document):
+    steps = (document.get("steps") or {}).get("values") or []
+    numbers = []
+    for step in steps:
+        try:
+            numbers.append(int(step))
+        except (TypeError, ValueError):
+            continue
+    return max(numbers) if numbers else 0
+
+
+def fetch_meteopt_available_runs():
+    """List recent GFS cycles whose MeteoPT series already reaches +180h."""
+    now = datetime.now(timezone.utc)
+    latest_cycle = now.replace(
+        hour=(now.hour // 6) * 6, minute=0, second=0, microsecond=0
+    )
+    candidates = []
+    for offset in range(NOAA_CYCLE_LOOKBACK):
+        run_dt = latest_cycle - timedelta(hours=6 * offset)
+        run_id = run_dt.isoformat(timespec="seconds")
+        try:
+            document = fetch_meteopt_document(run_dt)
+        except Exception as exc:
+            print(f"[METEOPT MISS] {run_id}: {type(exc).__name__}: {exc}")
+            continue
+        last_step = _meteopt_max_step(document)
+        if last_step < MIN_FORECAST_HOURS:
+            print(
+                f"[METEOPT PENDING] {run_id}: seri +{last_step} saatte; "
+                f"+{MIN_FORECAST_HOURS} tamamlanınca alınacak."
+            )
+            continue
+        steps = (document.get("steps") or {}).get("values") or []
+        candidates.append({
+            "model": MODEL_NAME,
+            "metadata_source": "MeteoPT GFS 3-hourly point",
+            "run_id": run_id,
+            "last_run_initialisation_time": run_id,
+            "last_run_availability_time": datetime.now(timezone.utc).isoformat(timespec="seconds"),
+            "last_modified_time": datetime.now(timezone.utc).isoformat(timespec="seconds"),
+            "last_valid_time": (
+                run_dt + timedelta(hours=last_step)
+            ).isoformat(timespec="minutes"),
+            "forecast_horizon_hours": MIN_FORECAST_HOURS,
+            "completed": True,
+            "noaa_f180_available": False,
+            "source_name": "MeteoPT",
+            "source_url": (
+                "https://api.meteopt.com/gfs/json"
+                f"?lat={LAT:.4f}&lon={LON:.4f}&run={run_dt:%H}"
+            ),
+            "meteopt_steps": len(steps),
+        })
+        print(
+            f"[METEOPT READY] {run_id}: +{last_step} saat, "
+            f"{len(steps)} adımın +{MIN_FORECAST_HOURS} saate kadarı kullanılacak."
+        )
+    return candidates
+
+
+def fetch_meteopt_weather_data(run_id):
+    """Build the forecast payload from MeteoPT's native 3-hour GFS point."""
+    print(f"[STEP 1] MeteoPT GFS 3 saatlik nokta alınıyor: {run_id}")
+    run_dt = _parse_utc_datetime(run_id)
+    try:
+        document = fetch_meteopt_document(run_dt)
+    except Exception as exc:
+        print(f"[STEP 1 HATA] MeteoPT erişilemedi: {type(exc).__name__}: {exc}")
+        return None
+
+    last_step = _meteopt_max_step(document)
+    if last_step < MIN_FORECAST_HOURS:
+        reason = (
+            f"MeteoPT serisi +{last_step} saatte; "
+            f"+{MIN_FORECAST_HOURS} henüz yok"
+        )
+        print(f"[PENDING] {reason}")
+        return {
+            "_pending_noaa_gfs": True,
+            "_run_id": run_id,
+            "_reason": reason,
+        }
+
+    data = document.get("data") or {}
+    steps = []
+    for step in (document.get("steps") or {}).get("values") or []:
+        try:
+            steps.append(int(step))
+        except (TypeError, ValueError):
+            steps.append(None)
+
+    def series(name):
+        return ((data.get(name) or {}).get("values") or [])
+
+    temperature = series("tmp2m")
+    temperature_850 = series("tmp850mb")
+    precipitation = series("apcp")
+    wind = series("wind10m")
+    wind_direction = series("wind10mdir")
+    wind_850 = series("wind850")
+    pressure = series("prmsl")
+    forecast_timeline = {}
+    daily_buckets = {}
+
+    for index, lead in enumerate(steps):
+        if lead is None or lead <= 0 or lead > MIN_FORECAST_HOURS or index >= len(temperature):
+            continue
+        temp = _meteopt_number(temperature[index])
+        if temp is None:
+            continue
+        valid_utc = run_dt + timedelta(hours=lead)
+        valid_local = valid_utc.astimezone(TR_TZ)
+        precip = _meteopt_number(precipitation[index]) if index < len(precipitation) else None
+        wind_value = _meteopt_number(wind[index]) if index < len(wind) else None
+        direction = _meteopt_number(wind_direction[index]) if index < len(wind_direction) else None
+        temp_850 = _meteopt_number(temperature_850[index]) if index < len(temperature_850) else None
+        wind_850_value = _meteopt_number(wind_850[index]) if index < len(wind_850) else None
+        forecast_timeline[valid_local.strftime("%Y-%m-%dT%H:%M")] = {
+            "step_hour": lead,
+            "temp": round(temp, 1),
+            "temp_850": round(temp_850, 1) if temp_850 is not None else None,
+            "wind": round(wind_value, 1) if wind_value is not None else None,
+            "wind_850": round(wind_850_value, 1) if wind_850_value is not None else None,
+            "wind_direction_deg": round(direction, 1) if direction is not None else None,
+            "precip": round(max(0.0, precip), 2) if precip is not None else None,
+        }
+        bucket = daily_buckets.setdefault(
+            valid_local.date().isoformat(),
+            {"temps": [], "temps_850": [], "precips": [], "winds": [], "winds_850": []},
+        )
+        bucket["temps"].append(round(temp, 1))
+        if temp_850 is not None:
+            bucket["temps_850"].append(round(temp_850, 1))
+        if precip is not None:
+            bucket["precips"].append(max(0.0, precip))
+        if wind_value is not None:
+            bucket["winds"].append(wind_value)
+        if wind_850_value is not None:
+            bucket["winds_850"].append(wind_850_value)
+
+    if len(forecast_timeline) < 40:
+        print(f"[STEP 1 HATA] MeteoPT +{MIN_FORECAST_HOURS} saat için yetersiz nokta.")
+        return None
+
+    daily_dates = sorted(daily_buckets)
+    daily = {
+        "time": daily_dates,
+        "temp_max": [round(max(daily_buckets[day]["temps"]), 1) for day in daily_dates],
+        "temp_min": [round(min(daily_buckets[day]["temps"]), 1) for day in daily_dates],
+        "temp_850_max": [
+            round(max(daily_buckets[day]["temps_850"]), 1) if daily_buckets[day]["temps_850"] else None
+            for day in daily_dates
+        ],
+        "temp_850_min": [
+            round(min(daily_buckets[day]["temps_850"]), 1) if daily_buckets[day]["temps_850"] else None
+            for day in daily_dates
+        ],
+        "precip_sum": [round(sum(daily_buckets[day]["precips"]), 1) for day in daily_dates],
+        "wind_max": [
+            round(max(daily_buckets[day]["winds"]), 1) if daily_buckets[day]["winds"] else None
+            for day in daily_dates
+        ],
+        "wind_850_max": [
+            round(max(daily_buckets[day]["winds_850"]), 1) if daily_buckets[day]["winds_850"] else None
+            for day in daily_dates
+        ],
+    }
+    first = next(iter(forecast_timeline.values()))
+    place = (document.get("geodata") or {}).get("place") or "Istanbul"
+    payload = {
+        "current": {
+            "temp": first["temp"],
+            "precip": 0.0,
+            "wind": first["wind"],
+            "pressure": _meteopt_number(pressure[0]) if pressure else None,
+        },
+        "daily": daily,
+        "timeline_180h": forecast_timeline,
+        "forecast_horizon_hours": MIN_FORECAST_HOURS,
+        "synoptic_alerts": [],
+        "initial_source": "MeteoPT GFS noktası +3 saatten başlar; ayrı analiz saati yok",
+        "data_source": (
+            f"MeteoPT GFS 3 saatlik nokta ({place}); "
+            f"hedef {LAT:.3f}N, {LON:.3f}E; adımlar +3…+{MIN_FORECAST_HOURS}"
+        ),
+    }
+    print(
+        f"[STEP 1 BAŞARILI] MeteoPT {document.get('run')} alındı; "
+        f"{len(forecast_timeline)} adet 3 saatlik nokta."
+    )
+    return payload
+
+
 def fetch_full_weather_data(run_id):
-    """Assemble the full GFS cycle from predecoded cache and the final f180 GRIB2."""
+    """Assemble one GFS cycle. MeteoPT's 3-hour point is the default source."""
+    if os.getenv("GFS_SOURCE", "meteopt").strip().lower() != "noaa":
+        return fetch_meteopt_weather_data(run_id)
     print(f"[STEP 1] NOAA/NCEP GRIB2 verisi çekiliyor: {run_id}")
     try:
         run_dt = _parse_utc_datetime(run_id)
@@ -2836,7 +3068,10 @@ async def process_gfs_update(strict=False, target_run_id=None):
         print(f"[TARGET COMPLETE] {target_run_id} daha önce işlendi; yeni rapor gönderilmeyecek.")
         return
 
-    candidates = await asyncio.to_thread(fetch_noaa_available_runs)
+    use_meteopt = os.getenv("GFS_SOURCE", "meteopt").strip().lower() != "noaa"
+    candidates = await asyncio.to_thread(
+        fetch_meteopt_available_runs if use_meteopt else fetch_noaa_available_runs
+    )
     if target_run_id:
         candidates = [
             item for item in candidates
@@ -2844,16 +3079,21 @@ async def process_gfs_update(strict=False, target_run_id=None):
         ]
 
     if not candidates:
-        await asyncio.to_thread(
-            prefetch_noaa_cycle_if_due,
-            processed_run_ids if target_run_id else None,
-            target_run_id,
-        )
+        if not use_meteopt:
+            await asyncio.to_thread(
+                prefetch_noaa_cycle_if_due,
+                processed_run_ids if target_run_id else None,
+                target_run_id,
+            )
         message = (
-            f"NOAA S3 üzerinde {target_run_id} için +180 GFS GRIB2 dosyası "
-            "henüz yayımlanmadı."
-            if target_run_id
-            else "NOAA S3 üzerinde henüz +180 GFS GRIB2 dosyası yayımlanmadı."
+            f"MeteoPT üzerinde {target_run_id or 'son döngü'} için +{MIN_FORECAST_HOURS} saatlik seri henüz yok."
+            if use_meteopt
+            else (
+                f"NOAA S3 üzerinde {target_run_id} için +180 GFS GRIB2 dosyası "
+                "henüz yayımlanmadı."
+                if target_run_id
+                else "NOAA S3 üzerinde henüz +180 GFS GRIB2 dosyası yayımlanmadı."
+            )
         )
         print(f"[SKIP] {message}")
         if strict:
@@ -2910,10 +3150,11 @@ async def process_gfs_update(strict=False, target_run_id=None):
 
         latest_run = candidates[-1]["run_id"]
         print(f"[UNCHANGED] Son GFS çalışmaları zaten işlendi; en güncel run: {latest_run}")
-        await asyncio.to_thread(
-            prefetch_noaa_cycle_if_due,
-            {item["run_id"] for item in candidates},
-        )
+        if not use_meteopt:
+            await asyncio.to_thread(
+                prefetch_noaa_cycle_if_due,
+                {item["run_id"] for item in candidates},
+            )
         return
 
     eligible_runs = [
@@ -2928,10 +3169,11 @@ async def process_gfs_update(strict=False, target_run_id=None):
             f"bildirim için +{MIN_FORECAST_HOURS} saat gerekiyor. "
             "Tamamlanmış ve daha eski başka bir bekleyen run da bulunamadı."
         )
-        await asyncio.to_thread(
-            prefetch_noaa_cycle_if_due,
-            {item["run_id"] for item in candidates},
-        )
+        if not use_meteopt:
+            await asyncio.to_thread(
+                prefetch_noaa_cycle_if_due,
+                {item["run_id"] for item in candidates},
+            )
         return
 
     # Process the oldest eligible unprocessed run first. This ensures that
@@ -2953,37 +3195,38 @@ async def process_gfs_update(strict=False, target_run_id=None):
         "gerekli GRIB2 mesajları önce NOMADS, gerekirse AWS S3 üzerinden byte-range ile alınıyor."
     )
 
-    missing_cache_leads = await asyncio.to_thread(
-        missing_noaa_cache_leads, run_id, MIN_FORECAST_HOURS - 3
-    )
-    if missing_cache_leads:
-        print(
-            f"[FINAL CACHE WAIT] {run_id}: f180 öncesi "
-            f"{len(missing_cache_leads)} GRIB2 dosyası eksik; "
-            f"ilk eksik f{missing_cache_leads[0]:03d}. "
-            "Önce önbellek tamamlanacak, sonra f180 ile birleştirilecek."
-        )
-        # f180 is visible, so catch up immediately rather than waiting for
-        # the regular five-minute prefetch interval.
-        await asyncio.to_thread(prefetch_latest_noaa_cycle, None, run_id)
+    # MeteoPT already returns the finished 3-hour series. The GRIB cache wait
+    # only applies when GFS_SOURCE=noaa.
+    if not use_meteopt:
         missing_cache_leads = await asyncio.to_thread(
             missing_noaa_cache_leads, run_id, MIN_FORECAST_HOURS - 3
         )
         if missing_cache_leads:
             print(
-                f"[FINAL CACHE WAIT] {run_id}: önbellekte hâlâ "
-                f"{len(missing_cache_leads)} dosya eksik; "
+                f"[FINAL CACHE WAIT] {run_id}: f180 öncesi "
+                f"{len(missing_cache_leads)} GRIB2 dosyası eksik; "
                 f"ilk eksik f{missing_cache_leads[0]:03d}. "
-                "Sonraki beş dakikalık kontrolde tekrar denenecek."
+                "Önce önbellek tamamlanacak, sonra f180 ile birleştirilecek."
             )
-            return
+            await asyncio.to_thread(prefetch_latest_noaa_cycle, None, run_id)
+            missing_cache_leads = await asyncio.to_thread(
+                missing_noaa_cache_leads, run_id, MIN_FORECAST_HOURS - 3
+            )
+            if missing_cache_leads:
+                print(
+                    f"[FINAL CACHE WAIT] {run_id}: önbellekte hâlâ "
+                    f"{len(missing_cache_leads)} dosya eksik; "
+                    f"ilk eksik f{missing_cache_leads[0]:03d}. "
+                    "Sonraki beş dakikalık kontrolde tekrar denenecek."
+                )
+                return
 
-    print(
-        f"[FINAL CACHE READY] {run_id}: f000-f177 arasındaki "
-        "140 GRIB2 girdisinin İstanbul değerleri önceden çözüldü; "
-        "yalnızca f180 son dosyası işlenip birleştirilecek."
-    )
-    print(f"[UPDATE] +180 saat eşiğine ulaşan GFS run alınıyor: {run_id}")
+        print(
+            f"[FINAL CACHE READY] {run_id}: f000-f177 arasındaki "
+            "140 GRIB2 girdisinin İstanbul değerleri önceden çözüldü; "
+            "yalnızca f180 son dosyası işlenip birleştirilecek."
+        )
+    print(f"[UPDATE] +{MIN_FORECAST_HOURS} saat eşiğine ulaşan GFS run alınıyor: {run_id}")
     payload = await asyncio.to_thread(fetch_full_weather_data, run_id)
     if payload and "_pending_noaa_gfs" in payload:
         print(

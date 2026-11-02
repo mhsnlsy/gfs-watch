@@ -1449,7 +1449,7 @@
           :"f"+String(p.modelLead).padStart(3,"0")+" · bu saat henüz doğrulanmadı, plana katma";
         return {lead:p.lead,time:p.valid_time_utc,value:p.temperature_2m_c,mae,bias,within,trusted,label:fmt(p.temperature_2m_c,1)+" °C",detail};
       });
-      const rain=[];parsed.filter(p=>p.modelLead>0&&p.modelLead%3===0&&p.stamp>=now-20*60000&&p.stamp<=horizon+20*60000).forEach(p=>{const interval=parsed.filter(q=>q.modelLead>p.modelLead-3&&q.modelLead<=p.modelLead);if(interval.length!==3||interval.some(q=>!numeric(q.precipitation_6h_mm)))return;const amount=interval.reduce((sum,q)=>sum+q.precipitation_6h_mm,0);const skill=skillAtLeadRain(p.modelLead);const mae=skill&&numeric(skill.mae_mm)?skill.mae_mm:null;const bias=skill&&numeric(skill.bias_mm)?skill.bias_mm:null;const within=skill&&numeric(skill.within_1mm_pct)?skill.within_1mm_pct:null;const samples=skill&&skill.pairs?skill.pairs:0;const trusted=numeric(within)&&within>=90;const detail=within!=null?"f"+String(p.modelLead).padStart(3,"0")+" · "+signedMiss(bias,"rain")+" · ±1 mm içinde %"+Math.round(within)+" · "+samples+" örnek · "+(trusted?"%90 üzerinde, dikkate al":"%90 altında, plana katma"):"f"+String(p.modelLead).padStart(3,"0")+" · bu yağış saati henüz doğrulanmadı, plana katma";rain.push({lead:Math.max(0,(p.stamp-now)/3600000),time:p.valid_time_utc,value:amount,mae,bias,within,trusted,label:fmt(amount,2)+" mm / 3 saat",detail});});
+      const rain=[];parsed.filter(p=>p.modelLead>0&&p.modelLead%3===0&&p.stamp>=now-20*60000&&p.stamp<=horizon+20*60000).forEach(p=>{const interval=parsed.filter(q=>q.modelLead>p.modelLead-3&&q.modelLead<=p.modelLead);const native3h=interval.length===1&&numeric(interval[0].precipitation_6h_mm);if(!native3h&&(interval.length!==3||interval.some(q=>!numeric(q.precipitation_6h_mm))))return;const amount=native3h?interval[0].precipitation_6h_mm:interval.reduce((sum,q)=>sum+q.precipitation_6h_mm,0);const skill=skillAtLeadRain(p.modelLead);const mae=skill&&numeric(skill.mae_mm)?skill.mae_mm:null;const bias=skill&&numeric(skill.bias_mm)?skill.bias_mm:null;const within=skill&&numeric(skill.within_1mm_pct)?skill.within_1mm_pct:null;const samples=skill&&skill.pairs?skill.pairs:0;const trusted=numeric(within)&&within>=90;const detail=within!=null?"f"+String(p.modelLead).padStart(3,"0")+" · "+signedMiss(bias,"rain")+" · ±1 mm içinde %"+Math.round(within)+" · "+samples+" örnek · "+(trusted?"%90 üzerinde, dikkate al":"%90 altında, plana katma"):"f"+String(p.modelLead).padStart(3,"0")+" · bu yağış saati henüz doğrulanmadı, plana katma";rain.push({lead:Math.max(0,(p.stamp-now)/3600000),time:p.valid_time_utc,value:amount,mae,bias,within,trusted,label:fmt(amount,2)+" mm / 3 saat",detail});});
       const cycle=forecastData&&forecastData.run_id_utc?timeTR(forecastData.run_id_utc)+" TSİ":"GFS";
       if(meta)meta.textContent=cycle+" · sonraki 72 saat";
       const tempSpan=document.querySelector("#next72-temperature")?.closest(".next-72h-card")?.querySelector("span");
@@ -1983,6 +1983,9 @@
         if(startHour>=12)return "öğleden sonra";
         return "";
       };
+      const hours=points.map(point=>Number(point.forecast_hour)).filter(Number.isFinite).sort((a,b)=>a-b);
+      const gaps=hours.slice(1).map((hour,index)=>hour-hours[index]).filter(gap=>gap>0).sort((a,b)=>a-b);
+      const stepH=gaps.length?gaps[Math.floor(gaps.length/2)]:1;
       holder.replaceChildren();
       let shown=0;
       for(let offset=0;offset<4;offset++){
@@ -1997,8 +2000,9 @@
         const spells=[];
         let current=null;
         for(const item of wet){
-          if(!current||item.stamp-current.end>2*3600000){
-            current={start:item.stamp,end:item.stamp,sum:0};
+          const begin=stepH>=3?item.stamp-stepH*3600000:item.stamp;
+          if(!current||(stepH>=3?begin-current.end>30*60000:item.stamp-current.end>2*3600000)){
+            current={start:begin,end:item.stamp,sum:0};
             spells.push(current);
           }
           current.end=item.stamp;
