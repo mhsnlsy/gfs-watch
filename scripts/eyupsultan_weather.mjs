@@ -51,7 +51,11 @@ async function fetchFromMgm() {
     const windSpeed = Number(row.ruzgarHiz);
     const windDir = Number(row.ruzgarYon);
     const rainToday = Number(row.yagis00Now);
-    const rainHour = Number(row.yagis1saat);
+    const rainHour = Number(row.yagis1Saat);
+    const rain10 = Number(row.yagis10Dk);
+    const rain6 = Number(row.yagis6Saat);
+    const rain12 = Number(row.yagis12Saat);
+    const rain24 = Number(row.yagis24Saat);
     const seaLevel = Number(row.denizeIndirgenmisBasinc);
     const stationP = Number(row.aktuelBasinc);
     const dew = Number(row.yagis00Now); // placeholder, will try to compute or leave null
@@ -77,8 +81,13 @@ async function fetchFromMgm() {
       wind_direction_degrees: Number.isFinite(windDir) ? windDir : null,
       wind_direction_cardinal: wind.cardinal,
       wind_direction_tr: wind.tr,
-      precipitation_1h_mm: Number.isFinite(rainHour) ? rainHour : null,
-      precipitation_daily_mm: Number.isFinite(rainToday) ? rainToday : 0,
+      precipitation_1h_mm: Number.isFinite(rainHour) && rainHour > -900 ? rainHour : null,
+      precipitation_10m_mm: Number.isFinite(rain10) && rain10 > -900 ? rain10 : null,
+      precipitation_6h_mm: Number.isFinite(rain6) && rain6 > -900 ? rain6 : null,
+      precipitation_12h_mm: Number.isFinite(rain12) && rain12 > -900 ? rain12 : null,
+      precipitation_24h_mm: Number.isFinite(rain24) && rain24 > -900 ? rain24 : null,
+      precipitation_daily_mm: Number.isFinite(rainToday) && rainToday > -900 ? rainToday : 0,
+      precipitation_source: "MGM 18101 1sa",
       humidity_percent: Number.isFinite(humidity) ? humidity : null,
       dew_point_c: null,
       station_pressure_hpa: Number.isFinite(seaLevel) && seaLevel > 850 ? seaLevel : (Number.isFinite(stationP) ? stationP : null),
@@ -141,7 +150,7 @@ async function main() {
   // Prefer MGM API (reliable, no browser)
   try {
     observation = await fetchFromMgm();
-    console.log("[MGM] Success:", observation.temperature_2m_c + "°C", "age", observation.age_minutes, "dk");
+    console.log("[MGM] Success:", observation.temperature_2m_c + "°C", "1sa", observation.precipitation_1h_mm, "mm", "age", observation.age_minutes, "dk");
   } catch (err) {
     console.warn("[MGM] Failed:", err.message);
     // Fallback to WStatMap only if MGM fails
