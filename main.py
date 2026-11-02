@@ -521,6 +521,8 @@ def _load_gfs_850_comparison_runs():
                 "forecast_hour": point.get("forecast_hour"),
                 "valid_time_utc": point.get("valid_time_utc"),
                 "temperature_850hpa_c": value,
+                "temperature_2m_c": point.get("temperature_2m_c"),
+                "precipitation_6h_mm": point.get("precipitation_6h_mm"),
             })
         if points and stored.get("run_id_utc"):
             entries.append({
