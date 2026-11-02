@@ -1023,27 +1023,8 @@
         <div><div class="section-kicker">ECMWF IFS · SON DÖRT ÇIKTI</div><h2>Çevrim karşılaştırması</h2><p class="section-description">Son dört yayımlanmış ECMWF döngüsü aynı geçerlilik saatine göre üst üste. Yeni döngü gelince en eskisi düşer.</p></div>
         <div class="section-note">Sıcaklık, yağış ve rüzgâr<br>Kendiliğinden güncellenir</div>
       </div>
-      <div class="chart-stack">
-        <article class="chart-card">
-          <div class="chart-card-head"><div><div class="chart-title">Sıcaklık · 2 m</div><div class="chart-subtitle">Günlük iğneli mum · ilk–son, fitil min–maks · °C</div></div><span class="chart-count" id="ecmwf-cycle-temperature-count">4 çıktı</span></div>
-          <div class="chart-wrap" id="ecmwf-cycle-temperature-chart"><div class="chart-empty">Dört çevrim karşılaştırması yükleniyor…</div></div>
-        </article>
-        <article class="chart-card">
-          <div class="chart-card-head"><div><div class="chart-title">Sıcaklık · 850 hPa</div><div class="chart-subtitle">Günlük iğneli mum · ENS ortalama · °C</div></div><span class="chart-count" id="ecmwf-cycle-t850-count">4 çıktı</span></div>
-          <div class="chart-wrap" id="ecmwf-cycle-t850-chart"><div class="chart-empty">Dört çevrim karşılaştırması yükleniyor…</div></div>
-        </article>
-        <article class="chart-card">
-          <div class="chart-card-head"><div><div class="chart-title">Yağış</div><div class="chart-subtitle">6 saatlik toplam · mm</div></div><span class="chart-count" id="ecmwf-cycle-rain-count">4 çıktı</span></div>
-          <div class="chart-wrap" id="ecmwf-cycle-rain-chart"><div class="chart-empty">Dört çevrim karşılaştırması yükleniyor…</div></div>
-        </article>
-        <article class="chart-card">
-          <div class="chart-card-head"><div><div class="chart-title">Rüzgâr · 10 m</div><div class="chart-subtitle">Yüzey rüzgâr hızı · km/sa</div></div><span class="chart-count" id="ecmwf-comparison-wind10-count">4 çıktı</span></div>
-          <div class="chart-wrap" id="ecmwf-comparison-wind10-chart"><div class="chart-empty">Dört çevrim karşılaştırması yükleniyor…</div></div>
-        </article>
-        <article class="chart-card">
-          <div class="chart-card-head"><div><div class="chart-title">Rüzgâr · 850 hPa</div><div class="chart-subtitle">Üst seviye rüzgâr hızı · km/sa</div></div><span class="chart-count" id="ecmwf-comparison-wind850-count">4 çıktı</span></div>
-          <div class="chart-wrap" id="ecmwf-comparison-wind850-chart"><div class="chart-empty">Dört çevrim karşılaştırması yükleniyor…</div></div>
-        </article>
+      <div class="chart-stack" id="ecmwf-report-images">
+        <article class="chart-card"><div class="chart-empty">Dört çıktının PNG raporu hazırlanıyor…</div></article>
       </div>
     </section>
 <section class="section" id="ecmwf-basinc"><div class="section-head"><div><div class="section-kicker">ECMWF IFS ENS · MODEL ANALİZİ</div><h2>Basınç düzeni ve kaynak</h2></div><div class="section-note">İstanbul merkezli 0.25° grid<br>ensemble basınç analizi</div></div><div class="lower-grid"><article class="pressure-card"><div class="label">Bölgesel basınç merkezleri ve İstanbul'a etkisi</div><ul class="pressure-list" id="ecmwf-pressure-findings"><li class="loading">Analiz yükleniyor…</li></ul></article><article class="info-card"><div class="label">Veri hakkında</div><p>İstasyon ölçümü ile ECMWF tahmini ayrı kaynaklardır. Yüzey IFS HRES, 850 hPa ve basınç IFS ENS ürünündendir.</p><div class="source-row"><span>Model: <strong>ECMWF IFS HRES + ENS 0.25°</strong></span><span id="ecmwf-valid-until">Geçerlilik: —</span></div></article></div></section>
@@ -2573,6 +2554,20 @@
       const legend=series.map(item=>'<span style="display:inline-flex;align-items:center;gap:6px;margin:0 12px 6px 0;font-size:11px;color:#b9cbd4"><i style="display:inline-block;width:17px;height:'+(candleChart?"9":"3")+'px;border-radius:2px;background:'+item.color+'"></i>'+esc(timeTR(item.runId))+' TSİ</span>').join("");
       container.innerHTML='<svg viewBox="0 0 '+width+' '+height+'" role="img" aria-label="'+definition.label+' için son dört '+modelName+' çıktısı karşılaştırması'+(candleChart?", günlük iğneli mum":"")+'">'+grid+marks+labels+'</svg><div style="padding:5px 8px 0;display:flex;flex-wrap:wrap;gap:2px 4px">'+legend+'</div><div style="padding:2px 8px 8px;color:#91a9b8;font-size:10px">'+note+'</div>';
     }
+    function renderEcmwfReportImages(document){
+      const holder=$("ecmwf-report-images");
+      if(!holder)return;
+      const images=Array.isArray(document.report_images)?document.report_images:[];
+      if(images.length<4){
+        holder.innerHTML='<article class="chart-card"><div class="chart-empty">Dört çıktının PNG raporu henüz yok.</div></article>';
+        return;
+      }
+      const version=encodeURIComponent(document.updated_at_utc||"");
+      holder.innerHTML=images.slice(0,4).map(image=>{
+        const url="./data/ecmwf/"+image.path+"?v="+version;
+        return '<article class="chart-card"><div class="chart-card-head"><div class="chart-title">'+esc(image.label)+'</div></div><a class="notification-image-link" href="'+url+'" target="_blank" rel="noopener"><img class="notification-image" src="'+url+'" alt="'+esc(image.label)+' · son dört ECMWF çıktısı"></a></article>';
+      }).join("");
+    }
     function renderEcmwfForecast(document){
       const forecasts=document.forecasts||[];
       const first=forecasts[0],last=forecasts[forecasts.length-1];
@@ -2586,12 +2581,7 @@
       $("ecmwf-updated-chip").textContent="Yayınlandı · "+timeTR(document.updated_at_utc);
       $("ecmwf-valid-until").textContent="Son geçerlilik: "+new Intl.DateTimeFormat("tr-TR",{timeZone:"Europe/Istanbul",day:"2-digit",month:"2-digit"}).format(new Date(document.forecast_valid_until_utc));
       renderDaily(viewData.daily_summary,"ecmwf-daily-grid");
-      const comparisonRuns=Array.isArray(document.comparison_runs)?document.comparison_runs:[];
-      renderEcmwfComparisonChart("temperature","ecmwf-cycle-temperature-chart",comparisonRuns);
-      renderEcmwfComparisonChart("t850","ecmwf-cycle-t850-chart",comparisonRuns);
-      renderEcmwfComparisonChart("precipitation","ecmwf-cycle-rain-chart",comparisonRuns);
-      renderEcmwfComparisonChart("wind10","ecmwf-comparison-wind10-chart",comparisonRuns);
-      renderEcmwfComparisonChart("wind850","ecmwf-comparison-wind850-chart",comparisonRuns);
+      renderEcmwfReportImages(document);
       renderFindings(viewData.regional_pressure_analysis&&viewData.regional_pressure_analysis.findings,first.mslp&&first.mslp.mean_hpa,"ecmwf-pressure-findings");
     }
     async function loadEcmwf(force=false){

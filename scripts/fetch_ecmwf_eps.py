@@ -629,6 +629,7 @@ def fetch_meteopt_ecmwf_document(run_dt: datetime) -> dict:
     temperature = series("tmp2m")
     temperature_850 = series("tmp850mb")
     wind = series("wind10m")
+    wind_direction = series("wind10mdir")
     wind_850 = series("wind850")
     rain = series("apcp")
     pressure = series("prmsl")
@@ -639,6 +640,7 @@ def fetch_meteopt_ecmwf_document(run_dt: datetime) -> dict:
             "temp": _meteopt_number(temperature[index]) if index < len(temperature) else None,
             "temp850": _meteopt_number(temperature_850[index]) if index < len(temperature_850) else None,
             "wind": _meteopt_number(wind[index]) if index < len(wind) else None,
+            "wind_dir": _meteopt_number(wind_direction[index]) if index < len(wind_direction) else None,
             "wind850": _meteopt_number(wind_850[index]) if index < len(wind_850) else None,
             "rain": _meteopt_number(rain[index]) if index < len(rain) else None,
             "pressure": _meteopt_number(pressure[index]) if index < len(pressure) else None,
@@ -654,6 +656,7 @@ def fetch_meteopt_ecmwf_document(run_dt: datetime) -> dict:
             "temperature_2m_c": round(values["temp"], 2),
             "temperature_2m_stddev_c": None,
             "wind_speed_10m_kmh": round(max(0.0, values["wind"]), 2),
+            "wind_direction_10m_deg": None if values["wind_dir"] is None else round(values["wind_dir"] % 360.0, 0),
             "wind_speed_10m_stddev_kmh": None,
             "precipitation_interval_mm": round(max(0.0, values["rain"]), 3),
             "precipitation_interval_stddev_mm": None,
@@ -690,6 +693,7 @@ def fetch_meteopt_ecmwf_document(run_dt: datetime) -> dict:
             "temperature_2m_c": item["temperature_2m_c"],
             "temperature_850hpa_c": item["temperature_850hpa"]["mean_c"],
             "wind_speed_10m_kmh": item["wind_speed_10m_kmh"],
+            "wind_direction_10m_deg": item.get("wind_direction_10m_deg"),
             "wind_speed_850hpa_kmh": item["wind_850hpa"]["mean_kmh"],
             "precipitation_6h_mm": item["precipitation_interval_mm"],
             "precipitation_interval_hours": item.pop("_interval_hours"),
@@ -954,6 +958,8 @@ def main() -> None:
     for old in archives[:-8]:
         old.unlink(missing_ok=True)
     document["comparison_runs"] = load_comparison_runs(archive_dir, limit=4)
+    from render_ecmwf_report_charts import render_ecmwf_report_charts
+    document["report_images"] = render_ecmwf_report_charts(document["comparison_runs"], output_dir)
     latest_path.write_text(json.dumps(document, ensure_ascii=False, indent=2) + "\n", encoding="utf-8")
     print(
         f"[ECMWF PUBLISHED LOCALLY] {latest_path} · {len(document['forecasts'])} forecast steps · "

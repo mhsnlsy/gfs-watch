@@ -32,18 +32,8 @@ def main() -> None:
         'function renderNext72Hours()',
         'async function refreshStationObservations()',
         'window.setInterval(refreshStationObservations,60000)',
-        'id="ecmwf-comparison-wind10-chart"',
-        'id="ecmwf-comparison-wind850-chart"',
-        'function renderEcmwfComparisonChart(metric,targetId,history)',
-        'document.comparison_runs',
-        'id="ecmwf-cycle-temperature-chart"',
-        'id="ecmwf-cycle-t850-chart"',
-        'id="ecmwf-cycle-rain-chart"',
-        'renderEcmwfComparisonChart("temperature","ecmwf-cycle-temperature-chart",comparisonRuns)',
-        'renderEcmwfComparisonChart("t850","ecmwf-cycle-t850-chart",comparisonRuns)',
-        'renderEcmwfComparisonChart("precipitation","ecmwf-cycle-rain-chart",comparisonRuns)',
-        'renderEcmwfComparisonChart("wind10","ecmwf-comparison-wind10-chart",comparisonRuns)',
-        'renderEcmwfComparisonChart("wind850","ecmwf-comparison-wind850-chart",comparisonRuns)',
+        'id="ecmwf-report-images"',
+        'function renderEcmwfReportImages(document)',
         'function scheduleTouchChartTooltipDismiss(hideFn)',
         'window.setTimeout(dismissActiveTouchChartTooltip,2800)',
         'station-chart-hit-area',
@@ -124,11 +114,8 @@ def main() -> None:
         if f'id="{section_id}"' not in ecmwf:
             raise AssertionError(f"Missing ECMWF section: {section_id}")
 
-    if "ecmwf-comparison-wind10-chart" not in ecmwf or "ecmwf-comparison-wind850-chart" not in ecmwf:
-        raise AssertionError("Missing separate 10m/850hPa ECMWF comparison cards.")
-
-    if "ecmwf-comparison-wind10-chart" not in ecmwf or "ecmwf-comparison-wind850-chart" not in ecmwf:
-        raise AssertionError("Missing separate 10m/850hPa ECMWF comparison cards.")
+    if "ecmwf-report-images" not in ecmwf:
+        raise AssertionError("ECMWF PNG report gallery is missing.")
 
     if "ecmwf-wind-chart" in html or "ecmwf-forecast-table" in html:
         raise AssertionError("Legacy ECMWF-only layout remains in the website.")
