@@ -50,7 +50,8 @@ async function fetchFromMgm() {
     const humidity = Number(row.nem);
     const windSpeed = Number(row.ruzgarHiz);
     const windDir = Number(row.ruzgarYon);
-    const rain = Number(row.yagis00Now) || Number(row.yagis1saat) || 0;
+    const rainToday = Number(row.yagis00Now);
+    const rainHour = Number(row.yagis1saat);
     const seaLevel = Number(row.denizeIndirgenmisBasinc);
     const stationP = Number(row.aktuelBasinc);
     const dew = Number(row.yagis00Now); // placeholder, will try to compute or leave null
@@ -76,8 +77,8 @@ async function fetchFromMgm() {
       wind_direction_degrees: Number.isFinite(windDir) ? windDir : null,
       wind_direction_cardinal: wind.cardinal,
       wind_direction_tr: wind.tr,
-      precipitation_1h_mm: Number.isFinite(Number(row.yagis1saat)) ? Number(row.yagis1saat) : null,
-      precipitation_daily_mm: Number.isFinite(rain) ? rain : 0,
+      precipitation_1h_mm: Number.isFinite(rainHour) ? rainHour : null,
+      precipitation_daily_mm: Number.isFinite(rainToday) ? rainToday : 0,
       humidity_percent: Number.isFinite(humidity) ? humidity : null,
       dew_point_c: null,
       station_pressure_hpa: Number.isFinite(seaLevel) && seaLevel > 850 ? seaLevel : (Number.isFinite(stationP) ? stationP : null),
@@ -90,6 +91,35 @@ async function fetchFromMgm() {
   } finally {
     await client.dispose();
   }
+}
+
+async function fetchRainCups() {
+  const response = await fetch(STATION_URL, {
+    headers: { "User-Agent": "Mozilla/5.0", "Accept": "text/html" }
+  });
+  if (!response.ok) throw new Error("WStatMap HTTP " + response.status);
+  const html = await response.text();
+  const pairs = [...html.matchAll(/tabular-nums[^>]*>([^<]+)<\/span><span[^>]*>([^<]+)<\/span>/g)];
+  const cups = {};
+  for (const match of pairs) {
+    const label = match[2].trim();
+    const value = Number(match[1].trim().replace(",", "."));
+    if (!Number.isFinite(value) || cups[label] != null) continue;
+    cups[label] = value;
+  }
+  if (!Number.isFinite(cups["1sa"])) throw new Error("WStatMap 1sa cup missing");
+  return cups;
+}
+
+function applyRainCups(observation, cups) {
+  observation.precipitation_1h_mm = cups["1sa"];
+  observation.precipitation_10m_mm = Number.isFinite(cups["10dk"]) ? cups["10dk"] : null;
+  observation.precipitation_6h_mm = Number.isFinite(cups["6sa"]) ? cups["6sa"] : null;
+  observation.precipitation_12h_mm = Number.isFinite(cups["12sa"]) ? cups["12sa"] : null;
+  observation.precipitation_24h_mm = Number.isFinite(cups["24sa"]) ? cups["24sa"] : null;
+  if (Number.isFinite(cups["Bugün"])) observation.precipitation_daily_mm = cups["Bugün"];
+  observation.precipitation_source = "WStatMap 1sa";
+  return observation;
 }
 
 function writeJsonAtomic(p, data) {
@@ -147,6 +177,14 @@ async function main() {
 
   if (!observation) throw new Error("No observation obtained");
 
+  try {
+    const cups = await fetchRainCups();
+    applyRainCups(observation, cups);
+    console.log("[WSTATMAP] 1sa", cups["1sa"], "mm · bugün", cups["Bugün"], "mm");
+  } catch (err) {
+    console.warn("[WSTATMAP] Saatlik yağış alınamadı:", err.message);
+  }
+
   const outDir = "public";
   fs.mkdirSync(outDir, { recursive: true });
   writeJsonAtomic(path.join(outDir, "eyupsultan-station-observation.json"), {
@@ -167,6 +205,7 @@ async function main() {
       observed_at_utc: observation.observed_at_utc,
       temperature_2m_c: observation.temperature_2m_c,
       precipitation_daily_mm: observation.precipitation_daily_mm,
+      precipitation_1h_mm: observation.precipitation_1h_mm,
       station_pressure_hpa: observation.station_pressure_hpa
     });
   }
