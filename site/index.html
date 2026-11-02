@@ -587,7 +587,7 @@
           <button type="button" id="station-enka-button" class="active" aria-pressed="true">ENKA Balmumcu</button>
           <button type="button" id="station-eyupsultan-button" aria-pressed="false">Eyüpsultan</button>
         </div>
-        <div class="station-overview"><div class="station-current"><div class="temp-row"><div class="temperature" id="temperature">—°</div><div class="weather-symbol" id="weather-symbol" aria-hidden="true">☁️</div></div><div class="temp-caption" id="station-observation-meta">Son istasyon ölçümü bekleniyor</div></div></div>
+        <div class="station-overview"><div class="station-current"><div class="temp-row"><div class="temperature" id="temperature">—°</div><div class="weather-symbol" id="weather-symbol" aria-hidden="true">☁️</div></div><div class="temp-caption" id="station-observation-meta">Son istasyon ölçümü bekleniyor</div><div class="temp-caption" id="station-24h-diff" style="margin-top:4px;font-weight:600;color:var(--cyan);font-size:13px"></div><div class="temp-caption" id="station-dewpoint" style="margin-top:3px;font-size:12px;color:#b7cbd3"></div></div></div>
         <div class="weather-stats"><div class="stat"><div class="name">Rüzgâr</div><div class="value" id="wind">—<span class="unit">km/sa</span></div><div class="detail" id="wind-direction">—</div></div><div class="stat"><div class="name">Nem</div><div class="value" id="humidity">—<span class="unit">%</span></div></div><div class="stat"><div class="name">Yağış</div><div class="value" id="rain">—<span class="unit">mm</span></div><div class="detail">Bugün</div></div><div class="stat"><div class="name">Basınç</div><div class="value" id="pressure">—<span class="unit">hPa</span></div><div class="detail" id="pressure-detail"></div></div></div>
         <div class="station-alert" id="station-alert" role="status" aria-live="polite" hidden></div>
       <section class="station-history-inline history-panel" id="station-history-panel" aria-label="Seçili istasyonun son 24 saat geçmişi">
@@ -1111,6 +1111,52 @@
       renderStationTemperatureTrend(samples,stationName);
       renderStationRainTrend(samples,stationName);
     }
+
+    function updateStation24hDiff(station) {
+      const el = $("station-24h-diff");
+      const dewEl = $("station-dewpoint");
+      if (!el || !dewEl) return;
+      el.textContent = "";
+      dewEl.textContent = "";
+      if (!station || !numeric(station.temperature_2m_c)) return;
+      const current = Number(station.temperature_2m_c);
+      const samples = activeStation === "enka" ? enkaStationHistorySamples : eyupsultanStationHistorySamples;
+      if (Array.isArray(samples) && samples.length) {
+        const now = Date.now();
+        const target = now - 86400000;
+        let best = null;
+        let bestDiff = Infinity;
+        for (const s of samples) {
+          const t = Date.parse(s.observed_at_utc || s.logged_at_utc || "");
+          const temp = Number(s.temperature_2m_c);
+          if (!Number.isFinite(t) || !Number.isFinite(temp)) continue;
+          const diff = Math.abs(t - target);
+          if (diff < bestDiff && diff < 3 * 3600000) {
+            bestDiff = diff;
+            best = temp;
+          }
+        }
+        if (best !== null) {
+          const delta = current - best;
+          const absDelta = Math.abs(delta);
+          if (absDelta < 0.05) {
+            el.textContent = "Son 24 saatle aynı";
+          } else {
+            const dir = delta > 0 ? "daha sıcak" : "daha soğuk";
+            el.textContent = "Son 24 saatten " + fmt(absDelta, 1) + "° " + dir;
+          }
+        }
+      }
+      if (numeric(station.dew_point_c)) {
+        dewEl.textContent = "Çiğ noktası " + fmt(station.dew_point_c, 1) + "°";
+      } else if (numeric(station.humidity_percent) && numeric(station.temperature_2m_c)) {
+        const a = 17.27, b = 237.7;
+        const rh = station.humidity_percent / 100;
+        const alpha = Math.log(rh) + (a * current) / (b + current);
+        const dew = (b * alpha) / (a - alpha);
+        if (Number.isFinite(dew)) dewEl.textContent = "Çiğ noktası ≈ " + fmt(dew, 1) + "°";
+      }
+    }
     function renderStationCard(station){
       const hasStation=!!station;
       const stationName=station&&station.station_name?station.station_name:(activeStation==="enka"?"ENKA Balmumcu":"Eyüpsultan");
@@ -1144,6 +1190,7 @@
         const ageText=ageMinutes===null?"":ageMinutes<60?Math.round(ageMinutes)+" dk önce":(ageMinutes/60).toFixed(1).replace(".",",")+" saat önce";
         const sourceLabel=station.station_id==="18101"?"WStatMap · MGM 18101":"ENKA Vantage PRO";
         $("station-observation-meta").textContent=(stale?"Gecikmeli ölçüm":"Son ölçüm")+" · "+observedText+" TSİ · "+ageText+" · "+sourceLabel;
+        updateStation24hDiff(station);
         $("freshness").textContent=stale?"ÖLÇÜM ESKİ":"CANLI ÖLÇÜM";
         $("freshness").classList.toggle("stale",stale);
         const alert=$("station-alert");
@@ -1151,6 +1198,7 @@
         if(stale)alert.textContent=observedValid?"⚠ İstasyon ölçümü "+Math.round(ageMinutes)+" dakika önce alınmış. Güncellik eşiği "+staleAfter+" dakikayı aştığı için güncel hava koşulu olarak değerlendirmeyin.":"⚠ Ölçüm zaman damgası doğrulanamadı. İstasyon verisi güncel kabul edilmemeli.";
       }else{
         $("station-observation-meta").textContent=stationName+" istasyon verisine şu anda ulaşılamıyor.";
+        updateStation24hDiff(null);
         $("freshness").textContent="İSTASYON VERİSİ YOK";
         $("freshness").classList.add("stale");
         $("station-alert").hidden=false;
@@ -1260,6 +1308,7 @@
           }catch(_){eyupsultanStationHistorySamples=[];}
         }
         renderStationHistory();
+        renderStationCard(activeStation==="enka"?enkaStationObservation:eyupsultanStationObservation);
       }catch(error){
         $("freshness").textContent="Veriye ulaşılamadı";$("temperature").textContent="—°";
         $("daily-grid").innerHTML='<div class="error">'+esc(error.message)+'</div>';
