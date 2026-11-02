@@ -8,16 +8,16 @@
     "latitude": 41.102778,
     "longitude": 28.924167,
     "elevation_m": 54,
-    "observed_at_utc": "2026-11-02T10:34:00.000Z",
-    "fetched_at_utc": "2026-11-02T10:40:24.979Z",
-    "age_minutes": 6,
+    "observed_at_utc": "2026-11-02T10:44:00.000Z",
+    "fetched_at_utc": "2026-11-02T10:45:50.160Z",
+    "age_minutes": 2,
     "stale_after_minutes": 120,
     "is_stale": false,
-    "temperature_2m_c": 20.8,
-    "wind_speed_10m_kmh": 14,
-    "wind_direction_degrees": 233,
-    "wind_direction_cardinal": "SW",
-    "wind_direction_tr": "Güneybatı",
+    "temperature_2m_c": 21.1,
+    "wind_speed_10m_kmh": 13,
+    "wind_direction_degrees": 238,
+    "wind_direction_cardinal": "WSW",
+    "wind_direction_tr": "Batı-güneybatı",
     "precipitation_1h_mm": null,
     "precipitation_daily_mm": 1,
     "humidity_percent": 70,
@@ -26,8 +26,8 @@
     "actual_station_pressure_hpa": 1011.3,
     "pressure_type": "mean_sea_level",
     "pressure_source": "MGM 18101",
-    "pressure_observed_at_utc": "2026-11-02T10:34:00.000Z",
-    "pressure_age_minutes": 6.4
+    "pressure_observed_at_utc": "2026-11-02T10:44:00.000Z",
+    "pressure_age_minutes": 1.8
   },
-  "updated_at_utc": "2026-11-02T10:40:23.408Z"
+  "updated_at_utc": "2026-11-02T10:45:48.560Z"
 }
