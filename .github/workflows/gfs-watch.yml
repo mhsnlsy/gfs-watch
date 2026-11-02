@@ -9,6 +9,11 @@ on:
       - ".github/workflows/gfs-watch.yml"
       - "scripts/backfill_gfs_wind_direction.py"
   workflow_dispatch:
+    inputs:
+      resend_charts:
+        description: Son dört döngünün grafiklerini beyaz yazıyla yeniden gönder
+        type: boolean
+        default: false
   schedule:
     # f180 becomes ready ~4 hours 20 minutes after the cycle time (00Z/06Z/12Z/18Z).
     # Run 5 minutes after expected readiness so Telegram + Pages update as soon as data is available.
@@ -114,6 +119,7 @@ jobs:
         id: check-gfs
         env:
           GFS_WATCH_ONCE: "1"
+          GFS_WATCH_RESEND_CHARTS: ${{ github.event_name == 'workflow_dispatch' && inputs.resend_charts && '1' || '0' }}
           DB_PATH: gfs_watch.db
           PUBLIC_DATA_DIR: public
           TELEGRAM_TOKEN: ${{ secrets.TELEGRAM_TOKEN }}
