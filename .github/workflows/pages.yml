@@ -6,17 +6,6 @@ name: Deploy İstanbul'un Havası
 
 on:
   workflow_call:
-  push:
-    branches: [main, gfs-watch-state]
-    paths:
-      - ".github/workflows/pages.yml"
-      - "site/**"
-      - "public/latest.json"
-      - "public/station-observation.json"
-      - "public/eyupsultan-station-observation.json"
-      - "public/eyupsultan-station-temperature-history.json"
-      - "public/notifications/**"
-      - "public/ecmwf/**"
   workflow_dispatch:
 
 permissions:

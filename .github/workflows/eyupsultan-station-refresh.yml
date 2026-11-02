@@ -6,11 +6,6 @@ name: Eyüpsultan Station Refresh
 
 on:
   workflow_dispatch:
-  push:
-    branches: [main]
-    paths:
-      - "scripts/eyupsultan_weather.mjs"
-      - ".github/workflows/eyupsultan-station-refresh.yml"
 
 permissions:
   contents: write

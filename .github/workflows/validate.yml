@@ -1,22 +1,6 @@
 name: Validate GFS Watch
 
 on:
-  push:
-    branches:
-      - main
-    paths:
-      - "main.py"
-      - "scripts/**"
-      - "requirements.txt"
-      - "site/**"
-      - ".github/workflows/**"
-  pull_request:
-    paths:
-      - "scripts/**"
-      - "main.py"
-      - "requirements.txt"
-      - "site/**"
-      - ".github/workflows/**"
   workflow_dispatch:
 
 jobs:

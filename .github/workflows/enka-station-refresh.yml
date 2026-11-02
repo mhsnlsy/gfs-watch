@@ -2,11 +2,6 @@
 name: ENKA Station Refresh
 
 on:
-  push:
-    branches: [main]
-    paths:
-      - "enka_weather.py"
-      - ".github/workflows/enka-station-refresh.yml"
   workflow_dispatch:
 
 permissions:

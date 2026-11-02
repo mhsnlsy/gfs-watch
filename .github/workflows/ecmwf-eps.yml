@@ -1,13 +1,6 @@
 name: Build and publish ECMWF EPS forecast
 
 on:
-  push:
-    branches: [main]
-    paths:
-      - "scripts/fetch_ecmwf_eps.py"
-      - "scripts/test_ecmwf_eps.py"
-      - "scripts/test_ecmwf_ui.py"
-      - ".github/workflows/ecmwf-eps.yml"
   schedule:
     # ECMWF Open Data products typically appear 7–9 hours after cycle time.
     # Check after the 00Z and 12Z ENS dissemination windows.
