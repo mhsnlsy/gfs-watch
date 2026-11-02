@@ -870,6 +870,40 @@
       height:auto!important;
       min-height:92px!important;
     }
+    @media(max-width:900px){
+      .dashboard-left{height:auto!important;min-height:0!important}
+      .dashboard-top .station-card,
+      .dashboard-top .next-72h-panel{
+        flex:0 0 auto!important;
+        height:auto!important;
+        min-height:0!important;
+      }
+      .dashboard-top .station-card{grid-template-rows:auto auto auto auto auto auto!important}
+      .dashboard-top .station-card>.station-overview{grid-row:3!important}
+      .dashboard-top .station-card>.station-history-inline{
+        grid-row:4!important;
+        height:auto!important;
+      }
+      .dashboard-top .station-card>.weather-stats{
+        grid-row:5!important;
+        grid-column:1!important;
+        align-self:start!important;
+        align-content:start!important;
+        margin-top:8px!important;
+      }
+      .dashboard-top .station-card>.station-alert{grid-row:6!important}
+      .dashboard-top .station-history-inline .history-charts{
+        flex:none!important;
+        height:auto!important;
+        grid-template-rows:none!important;
+        align-content:start!important;
+      }
+      .dashboard-top .station-history-inline .history-chart{
+        flex:none!important;
+        height:128px!important;
+        min-height:0!important;
+      }
+    }
 
 </style>
 </head>
