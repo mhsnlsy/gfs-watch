@@ -170,8 +170,8 @@ async function main() {
       station_pressure_hpa: observation.station_pressure_hpa
     });
   }
-  const cutoff = now.getTime() - 7 * 24 * 60 * 60 * 1000;
-  const retained = samples.filter(s => Date.parse(s.logged_at_utc || s.observed_at_utc) >= cutoff).slice(-2016);
+  const cutoff = now.getTime() - 14 * 24 * 60 * 60 * 1000;
+  const retained = samples.filter(s => Date.parse(s.logged_at_utc || s.observed_at_utc) >= cutoff).slice(-4500);
   writeJsonAtomic(historyPath, {
     schema: HISTORY_SCHEMA,
     station_id: STATION_ID,
