@@ -124,6 +124,39 @@ jobs:
           NOAA_PREFETCH_INTERVAL_SECONDS: "300"
           NOAA_RANGE_DOWNLOAD_WORKERS: "8"
         run: python -u main.py
+      - name: Rebuild missing Pages weather report from the current GFS cycle
+        if: steps.check-gfs.outcome == 'success'
+        env:
+          DB_PATH: gfs_watch.db
+          PUBLIC_DATA_DIR: public
+          NOAA_CACHE_DIR: noaa_cache_v2
+          NOAA_RANGE_DOWNLOAD_WORKERS: "8"
+          GCP_SA_KEY: ${{ secrets.GCP_SA_KEY }}
+        run: |
+          python - <<'PY'
+          import json
+          from pathlib import Path
+          latest = json.loads(Path("public/latest.json").read_text(encoding="utf-8"))
+          manifest_path = Path("public/notifications/latest.json")
+          valid = False
+          try:
+              manifest = json.loads(manifest_path.read_text(encoding="utf-8"))
+              items = manifest.get("items", [])
+              item = items[0] if items else {}
+              valid = (
+                  manifest.get("schema") == "gfs-watch.notifications.v1"
+                  and item.get("run_id_utc") == latest.get("run_id_utc")
+                  and bool(item.get("summary", "").strip())
+                  and bool(item.get("report_text", "").strip())
+              )
+          except (OSError, ValueError, TypeError, AttributeError):
+              valid = False
+          print("Current Pages report is valid." if valid else "Pages report missing/stale; rebuilding.")
+          raise SystemExit(0 if valid else 1)
+          PY
+          if [ "$?" -ne 0 ]; then
+            python -u scripts/rebuild_missing_pages_report.py
+          fi
       - name: Detect newly generated GFS report
         id: report
         if: always() && steps.check-gfs.outcome == 'success'
