@@ -2402,9 +2402,8 @@ def _draw_comparison_bar_axis(axis, chart_data, metric, title, ylabel):
                 direction = _daily_wind_direction(item, day)
                 if direction is not None:
                     x = x_positions[index] + offsets[series_index]
-                    direction_axis.scatter([x], [direction], marker="v", s=42,
-                        color=colors[series_index % len(colors)], edgecolors=GFS_REPORT_TEXT,
-                        linewidths=0.6, zorder=5)
+                    direction_axis.scatter([x], [direction], marker="v", s=46,
+                        color="#000000", edgecolors="#000000", linewidths=0.4, zorder=6)
         direction_axis.set_ylabel("Yön · geldiği yön", fontsize=9, color=GFS_REPORT_TEXT)
     axis.set_title(title, loc="left", fontsize=11)
     axis.set_ylabel(ylabel, fontsize=10)
