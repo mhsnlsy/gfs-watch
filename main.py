@@ -2238,11 +2238,43 @@ def _comparison_temperature_ohlc(forecast, day):
 GFS_REPORT_FIGURE_BG = "#0A1B29"
 GFS_REPORT_AXIS_BG = "#102A3A"
 GFS_REPORT_PANEL_BG = "#153448"
-GFS_REPORT_TEXT = "#EAF4F7"
-GFS_REPORT_MUTED = "#B7CBD5"
+GFS_REPORT_TEXT = "#FFFFFF"
+GFS_REPORT_MUTED = "#E7F2F6"
 GFS_REPORT_GRID = "#456579"
 GFS_REPORT_SPINE = "#416174"
 GFS_REPORT_LEGEND_EDGE = "#36586C"
+
+
+def _apply_dark_report_theme():
+    """Default every new chart label to white before Matplotlib creates it."""
+    plt.rcParams.update({
+        "text.color": GFS_REPORT_TEXT,
+        "axes.labelcolor": GFS_REPORT_TEXT,
+        "axes.titlecolor": GFS_REPORT_TEXT,
+        "xtick.color": GFS_REPORT_MUTED,
+        "ytick.color": GFS_REPORT_MUTED,
+        "xtick.labelcolor": GFS_REPORT_MUTED,
+        "ytick.labelcolor": GFS_REPORT_MUTED,
+        "axes.edgecolor": GFS_REPORT_SPINE,
+        "figure.facecolor": GFS_REPORT_FIGURE_BG,
+        "axes.facecolor": GFS_REPORT_AXIS_BG,
+        "savefig.facecolor": GFS_REPORT_FIGURE_BG,
+        "savefig.edgecolor": GFS_REPORT_FIGURE_BG,
+    })
+
+
+def _whiten_dark_text(fig):
+    """Catch labels created after the theme, which otherwise stay Matplotlib black."""
+    from matplotlib.colors import to_rgb
+    from matplotlib.text import Text
+
+    for text in fig.findobj(match=lambda artist: isinstance(artist, Text)):
+        try:
+            red, green, blue = to_rgb(text.get_color())
+        except (ValueError, TypeError):
+            continue
+        if red < 0.25 and green < 0.25 and blue < 0.25:
+            text.set_color(GFS_REPORT_TEXT)
 
 
 def _style_dark_comparison_axis(axis):
@@ -2359,9 +2391,12 @@ def _draw_comparison_bar_axis(axis, chart_data, metric, title, ylabel):
         direction_axis = axis.twinx()
         direction_axis.set_ylim(0, 360)
         direction_axis.set_yticks([0, 90, 180, 270, 360])
-        direction_axis.set_yticklabels(["K", "D", "G", "B", "K"])
-        direction_axis.tick_params(axis="y", colors=GFS_REPORT_MUTED, labelsize=8)
+        direction_axis.set_yticklabels(["K", "D", "G", "B", "K"], color=GFS_REPORT_TEXT)
+        direction_axis.tick_params(
+            axis="y", colors=GFS_REPORT_TEXT, labelcolor=GFS_REPORT_TEXT, labelsize=8,
+        )
         direction_axis.spines["right"].set_color(GFS_REPORT_SPINE)
+        direction_axis.set_facecolor("none")
         for series_index, item in enumerate(series):
             for index, day in enumerate(dates):
                 direction = _daily_wind_direction(item, day)
@@ -2370,7 +2405,7 @@ def _draw_comparison_bar_axis(axis, chart_data, metric, title, ylabel):
                     direction_axis.scatter([x], [direction], marker="v", s=42,
                         color=colors[series_index % len(colors)], edgecolors=GFS_REPORT_TEXT,
                         linewidths=0.6, zorder=5)
-        direction_axis.set_ylabel("Yön · geldiği yön", fontsize=9, color=GFS_REPORT_MUTED)
+        direction_axis.set_ylabel("Yön · geldiği yön", fontsize=9, color=GFS_REPORT_TEXT)
     axis.set_title(title, loc="left", fontsize=11)
     axis.set_ylabel(ylabel, fontsize=10)
     axis.grid(axis="y", alpha=0.25)
@@ -2398,10 +2433,11 @@ def _format_comparison_date_axis(axis, dates):
     labels = []
     for day in dates:
         local_date = datetime.strptime(day, "%Y-%m-%d")
-        labels.append(f"{local_date:%d.%m}\\n{turkish_weekdays[local_date.weekday()]}")
+        labels.append(f"{local_date:%d.%m}\n{turkish_weekdays[local_date.weekday()]}")
     axis.set_xticks(list(range(len(dates))))
-    axis.set_xticklabels(labels, fontsize=9.5)
-    axis.set_xlabel("İstanbul yerel tarihi", fontsize=9.5)
+    axis.set_xticklabels(labels, fontsize=9.5, color=GFS_REPORT_TEXT)
+    axis.set_xlabel("İstanbul yerel tarihi", fontsize=9.5, color=GFS_REPORT_TEXT)
+    axis.xaxis.label.set_color(GFS_REPORT_TEXT)
 
 
 def create_comparison_chart(current_run_id, payload, previous_runs):
@@ -2411,6 +2447,7 @@ def create_comparison_chart(current_run_id, payload, previous_runs):
         return None
     fig = None
     try:
+        _apply_dark_report_theme()
         chart_data = _prepare_comparison_chart_data(current_run_id, payload, previous_runs)
         series = chart_data["series"]
         dates = chart_data["dates"]
@@ -2435,10 +2472,12 @@ def create_comparison_chart(current_run_id, payload, previous_runs):
         _draw_comparison_bar_axis(axes[2], chart_data, "precip", "Günlük toplam yağış", "mm")
         _draw_comparison_bar_axis(axes[3], chart_data, "wind", "Yüzey rüzgârı | 10 m hız + yön", "km/sa")
         fig.patch.set_facecolor(GFS_REPORT_FIGURE_BG)
-        for axis in axes:
+        for index, axis in enumerate(axes):
             _style_dark_comparison_axis(axis)
             _format_comparison_date_axis(axis, dates)
-            axis.tick_params(axis="x", labelbottom=True, labelcolor=GFS_REPORT_MUTED)
+            if index != len(axes) - 1:
+                axis.set_xlabel("")
+            axis.tick_params(axis="x", labelbottom=True, labelcolor=GFS_REPORT_TEXT, colors=GFS_REPORT_TEXT)
         fig.text(
             0.01, 0.012,
             "Renkler her panelde aynı GFS döngüsünü gösterir | "
@@ -2446,8 +2485,12 @@ def create_comparison_chart(current_run_id, payload, previous_runs):
             fontsize=9.5, color=GFS_REPORT_MUTED,
         )
         fig.tight_layout(rect=(0, 0.035, 1, 0.95))
+        _whiten_dark_text(fig)
         image_buffer = io.BytesIO()
-        fig.savefig(image_buffer, format="png", dpi=150, bbox_inches="tight")
+        fig.savefig(
+            image_buffer, format="png", dpi=150, bbox_inches="tight",
+            facecolor=GFS_REPORT_FIGURE_BG, edgecolor=GFS_REPORT_FIGURE_BG,
+        )
         image_buffer.seek(0)
         print(
             f"[TELEGRAM KIYAS GÖRSELİ] {count} GFS döngüsü, {len(dates)} ortak gün; "
@@ -2475,6 +2518,7 @@ def create_pages_comparison_charts(current_run_id, payload, previous_runs):
         ("wind_10m", "Rüzgâr hız + yön", "10 m rüzgâr hızı ve yönü | günlük", "km/sa"),
     )
     try:
+        _apply_dark_report_theme()
         chart_data = _prepare_comparison_chart_data(current_run_id, payload, previous_runs)
         series = chart_data["series"]
         dates = chart_data["dates"]
@@ -2536,8 +2580,8 @@ def create_pages_comparison_charts(current_run_id, payload, previous_runs):
                 for day in dates:
                     date_value = datetime.strptime(day, "%Y-%m-%d")
                     date_labels.append(f"{date_value:%d.%m} {weekday_names[date_value.weekday()]}")
-                axis.set_xticklabels(date_labels, fontsize=14, fontweight="semibold")
-                axis.tick_params(axis="x", labelsize=14, labelbottom=True, pad=7)
+                axis.set_xticklabels(date_labels, fontsize=14, fontweight="semibold", color=GFS_REPORT_TEXT)
+                axis.tick_params(axis="x", labelsize=14, labelbottom=True, pad=7, labelcolor=GFS_REPORT_TEXT, colors=GFS_REPORT_TEXT)
                 axis.margins(x=0.015)
                 # Put the four run labels in a dedicated, figure-level 2x2 legend.
                 # This prevents long cycle names from colliding in a four-column row.
@@ -2556,8 +2600,12 @@ def create_pages_comparison_charts(current_run_id, payload, previous_runs):
                 # Keep three non-overlapping vertical bands: report title,
                 # two-row cycle legend, metric heading, then plotting area.
                 fig.subplots_adjust(left=0.085, right=0.985, bottom=0.19, top=0.59)
+                _whiten_dark_text(fig)
                 buffer = io.BytesIO()
-                fig.savefig(buffer, format="png", dpi=150)
+                fig.savefig(
+                    buffer, format="png", dpi=150,
+                    facecolor=GFS_REPORT_FIGURE_BG, edgecolor=GFS_REPORT_FIGURE_BG,
+                )
                 buffer.seek(0)
                 charts[metric] = buffer
             finally:
@@ -3325,12 +3373,55 @@ async def run_once():
     # Persist partial prefetch work and resume on the next invocation.
     await process_gfs_update(strict=False)
 
+async def run_resend_latest_charts():
+    """Redraw the latest four-cycle charts with the current theme and send Telegram."""
+    init_db()
+    conn = sqlite3.connect(DB_PATH)
+    try:
+        rows = conn.execute(
+            "SELECT run_name, forecast_json FROM gfs_runs_v3"
+        ).fetchall()
+    finally:
+        conn.close()
+    loaded = sorted(rows, key=lambda row: _parse_utc_datetime(row[0]))[-4:]
+    if len(loaded) < 2:
+        raise RuntimeError("Grafik için en az iki kayıtlı GFS döngüsü gerekli.")
+    previous_runs = [(run_id, forecast_json) for run_id, forecast_json in loaded[:-1]]
+    current_run_id = loaded[-1][0]
+    current_payload = json.loads(loaded[-1][1])
+    chart = create_comparison_chart(current_run_id, current_payload, previous_runs)
+    pages = create_pages_comparison_charts(current_run_id, current_payload, previous_runs)
+    if pages:
+        save_public_notification_images(current_run_id, pages)
+        for image_buffer in pages.values():
+            image_buffer.close()
+    if not chart:
+        raise RuntimeError("Telegram karşılaştırma görseli üretilemedi.")
+    try:
+        labels = []
+        for run_id, _forecast_json in loaded:
+            run_utc = _parse_utc_datetime(run_id)
+            run_local = run_utc.astimezone(TR_TZ)
+            labels.append(f"{run_utc:%H}Z ({run_local:%d.%m} TSİ)")
+        caption = (
+            "📊 İstanbul GFS | Dört döngü karşılaştırması\n"
+            "Eski → yeni: " + " → ".join(labels)
+        )
+        await send_telegram_photo(chart, caption)
+    finally:
+        chart.close()
+    print(f"[CHART RESEND] {current_run_id} grafikleri beyaz yazıyla yeniden gönderildi.")
+
+
 if __name__ == "__main__":
     try:
         compare_run_ids = os.getenv("GFS_WATCH_COMPARE_RUN_IDS", "").strip()
         compare_previous = os.getenv("GFS_WATCH_COMPARE_PREVIOUS_RUN_ID", "").strip()
         compare_current = os.getenv("GFS_WATCH_COMPARE_CURRENT_RUN_ID", "").strip()
-        if compare_run_ids:
+        resend_charts = os.getenv("GFS_WATCH_RESEND_CHARTS", "").strip().lower() in {"1", "true", "yes"}
+        if resend_charts:
+            asyncio.run(run_resend_latest_charts())
+        elif compare_run_ids:
             run_ids = [item.strip() for item in compare_run_ids.split(",") if item.strip()]
             asyncio.run(run_manual_multi_comparison(run_ids))
         elif compare_previous and compare_current:
