@@ -20,8 +20,12 @@ LEAD_BUCKETS = (
     ("6–24 saat", 6, 24),
     ("1–2 gün", 24, 48),
     ("2–3 gün", 48, 72),
-    ("3 gün ve sonrası", 72, 10_000),
+    ("3–5 gün", 72, 120),
+    ("5–7.5 gün", 120, 181),
 )
+# GFS is hourly through f120, then every 3 hours through f180.
+CANONICAL_HOURS = list(range(0, 121)) + list(range(123, 181, 3))
+FOCUS_HOURS = (0, 6, 12, 24, 36, 48, 60, 72, 76, 84, 96, 108, 120, 144, 168, 180)
 
 
 def parse_time(value: str) -> datetime:
@@ -95,6 +99,28 @@ def lead_rows(pairs: list[dict]) -> list[dict]:
         chosen = [pair for pair in pairs if start <= pair["lead_hours"] < end]
         row = {"label": label, **summarize(chosen)}
         rows.append(row)
+    return rows
+
+
+
+def hour_rows(pairs: list[dict]) -> list[dict]:
+    grouped: dict[int, list[dict]] = {}
+    for pair in pairs:
+        grouped.setdefault(int(pair["lead_hours"]), []).append(pair)
+    return [{"f": hour, **summarize(grouped.get(hour, []))} for hour in CANONICAL_HOURS]
+
+
+def bin_rows(pairs: list[dict]) -> list[dict]:
+    rows = []
+    for start in range(0, 181, 6):
+        end = min(start + 6, 181)
+        chosen = [pair for pair in pairs if start <= int(pair["lead_hours"]) < end]
+        rows.append({
+            "f_from": start,
+            "f_to": end - 1,
+            "label": f"f{start:03d}–f{end - 1:03d}",
+            **summarize(chosen),
+        })
     return rows
 
 
@@ -240,6 +266,9 @@ def score_station(runs: list[dict], samples: list[dict], now: datetime) -> dict:
     return {
         "operational": op_summary,
         "by_lead": lead_rows(all_pairs),
+        "by_hour": hour_rows(all_pairs),
+        "by_bin": bin_rows(all_pairs),
+        "focus_hours": list(FOCUS_HOURS),
         "runs": list(reversed(per_run)),
         "recent": recent,
         "rain": rain_skill(all_pairs, samples),
