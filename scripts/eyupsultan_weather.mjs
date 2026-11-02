@@ -41,8 +41,8 @@ function parseObservation(text, fetchedAt) {
   const windIndex = windDegrees === null ? null : Math.floor((windDegrees + 11.25) / 22.5) % 16;
   const dailyRainMatch =
     text.match(/Bugüne\s+kadar\s+([-+]?\d+(?:[,.]\d+)?)\s*mm\s+yağış\s+düştü/i)
-    || text.match(/Bugün[^\\n]{0,180}?([-+]?\\d+(?:[,.]\\d+)?)\\s*mm\\s+yağış/i)
-    || text.match(/Bugün\\s+([-+]?\\d+(?:[,.]\\d+)?)\\s*mm\\s*yağdı/i);
+    || text.match(/Bugün[^\n]{0,180}?([-+]?\d+(?:[,.]\d+)?)\s*mm\s+yağış/i)
+    || text.match(/Bugün\s+([-+]?\d+(?:[,.]\d+)?)\s*mm\s*yağdı/i);
   const dailyRain = parseNumber(dailyRainMatch, "günlük yağış");
   const oneHourRain = parseNumber(text.match(/1sa\s*([-+]?\d+(?:[,.]\d+)?)/i), "1 saatlik yağış", false);
 
