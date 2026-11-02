@@ -45,6 +45,8 @@ function parseObservation(text, fetchedAt) {
     || text.match(/Bugün\s+([-+]?\d+(?:[,.]\d+)?)\s*mm\s*yağdı/i);
   const dailyRain = parseNumber(dailyRainMatch, "günlük yağış");
   const oneHourRain = parseNumber(text.match(/1sa\s*([-+]?\d+(?:[,.]\d+)?)/i), "1 saatlik yağış", false);
+  const dewPointMatch = text.match(/Çiğ Noktası\s*([-+]?\d+(?:[,.]\d+)?)/i);
+  const dewPoint = dewPointMatch ? Number(dewPointMatch[1].replace(",", ".")) : null;
 
   const ageMatch = text.match(/Canlı\s*[·•]\s*(\d+)\s*dk\.?\s*önce\s*[·•]\s*18101/i)
     || text.match(/Canlı\s*[·•]\s*(\d+)\s*dk\.?\s*önce/i);
@@ -82,6 +84,7 @@ function parseObservation(text, fetchedAt) {
     precipitation_1h_mm: oneHourRain,
     precipitation_daily_mm: dailyRain,
     humidity_percent: humidity,
+    dew_point_c: dewPoint,
     station_pressure_hpa: null,
     actual_station_pressure_hpa: null,
     pressure_type: null,
