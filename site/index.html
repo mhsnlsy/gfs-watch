@@ -992,7 +992,10 @@
 
         </div>
         <div class="briefing" id="briefing" aria-live="polite">
-        <div class="brief-days" id="brief-rain" aria-live="polite"></div>
+        <div class="briefing-row" id="brief-rain">
+          <div class="briefing-k">Yağış saatleri</div>
+          <div class="briefing-v" id="brief-rain-lines">Hesaplanıyor…</div>
+        </div>
         <div class="briefing-row"><div class="briefing-k">Ayrışma</div><div class="briefing-v" id="brief-split">Hesaplanıyor…</div></div>
         </div>
       </section>
@@ -1937,7 +1940,7 @@
       return [start,start+86400000];
     }
     function renderRainDays(){
-      const holder=$("brief-rain");
+      const holder=$("brief-rain-lines");
       if(!holder)return;
       const points=forecastData&&Array.isArray(forecastData.forecast_6_hourly)?forecastData.forecast_6_hourly:[];
       const horizon=Date.now()+72*3600000;
@@ -1962,7 +1965,6 @@
           return stamp>=Math.max(start,Date.now()-30*60000)&&stamp<end&&stamp<=horizon+60000;
         });
         if(!dayPoints.length)continue;
-        const temps=dayPoints.map(point=>point.temperature_2m_c).filter(numeric);
         const wet=dayPoints.filter(point=>(point.precipitation_6h_mm||0)>=0.2).map(point=>({stamp:new Date(point.valid_time_utc).getTime(),mm:point.precipitation_6h_mm})).sort((a,b)=>a.stamp-b.stamp);
         const spells=[];
         let current=null;
@@ -1978,59 +1980,26 @@
         const visible=spells.filter(spell=>spell.sum>=0.5||daySum<2);
         const dayName=new Intl.DateTimeFormat("tr-TR",{timeZone:"Europe/Istanbul",weekday:"long"}).format(new Date(start+12*3600000));
         const titled=dayName.charAt(0).toLocaleUpperCase("tr-TR")+dayName.slice(1);
-        const kicker=offset===0?"Bugün":offset===1?"Yarın":offset===2?"Öbür gün":titled;
-        const trusted=dayPoints.filter(point=>{
-          const skill=skillAtLead(Number(point.forecast_hour));
-          return skill&&skill.pairs>=3&&numeric(skill.within_2c_pct)&&skill.within_2c_pct>=90;
-        }).map(point=>new Date(point.valid_time_utc).getTime()).sort((a,b)=>a-b);
-        const ranges=[];
-        if(trusted.length){
-          let from=trusted[0],to=trusted[0];
-          for(const stamp of trusted.slice(1)){
-            if(stamp-to<=3660000){to=stamp;continue;}
-            ranges.push([from,to]);
-            from=to=stamp;
-          }
-          ranges.push([from,to]);
-        }
-        const trust=ranges.length?ranges.map(([fromHour,toHour])=>fromHour===toHour?clock(fromHour):clock(fromHour)+"–"+clock(toHour)).join(", "):"";
-        const row=document.createElement("div");
-        row.className="briefing-row";
-        const label=document.createElement("div");
-        label.className="briefing-k";
-        label.textContent=kicker;
-        const body=document.createElement("div");
         if(!visible.length){
-          const empty=document.createElement("div");
-          empty.className="brief-spell";
-          empty.textContent="Yağış yok";
-          body.appendChild(empty);
+          const line=document.createElement("div");
+          line.className="brief-spell";
+          line.textContent=titled+" · yağış yok";
+          holder.appendChild(line);
+          shown++;
+          continue;
         }
         for(const spell of visible){
           const line=document.createElement("div");
           line.className="brief-spell";
           const whenText=clock(spell.start)+(spell.start===spell.end?"":"–"+clock(spell.end));
           const period=cover(hourOf(spell.start),hourOf(spell.end));
-          line.textContent=whenText+(period?" · "+period:"")+" · "+fmt(spell.sum,1)+" mm";
-          body.appendChild(line);
+          line.textContent=titled+" · "+whenText+(period?" · "+period:"")+" · "+fmt(spell.sum,1)+" mm";
+          holder.appendChild(line);
+          shown++;
         }
-        const meta=document.createElement("div");
-        meta.className="brief-meta";
-        const bits=[offset<=2?titled:""];
-        if(temps.length)bits.push(fmt(Math.min(...temps),0)+"° / "+fmt(Math.max(...temps),0)+"°");
-        bits.push(trust?"güven "+trust:"güvenilen saat yok");
-        meta.textContent=bits.filter(Boolean).join(" · ");
-        body.appendChild(meta);
-        row.appendChild(label);
-        row.appendChild(body);
-        holder.appendChild(row);
-        shown++;
       }
       if(!shown){
-        const row=document.createElement("div");
-        row.className="briefing-row";
-        row.innerHTML='<div class="briefing-k">Yağış</div><div class="briefing-v">Önümüzdeki 72 saat için çıktı yok.</div>';
-        holder.appendChild(row);
+        holder.textContent="Önümüzdeki 72 saat için çıktı yok.";
       }
     }
     function trustedLeadHours(kind){
