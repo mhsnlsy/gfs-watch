@@ -111,8 +111,8 @@ def main() -> None:
         raise AssertionError("ECMWF eight-day forecast must be the final model section.")
     if 'class="chart-stack"' in gfs:
         raise AssertionError("GFS legacy 180-hour graph card container remains.")
-    if gfs.count('class="chart-card"') != 1 or 'id="gfs-850-card"' not in gfs:
-        raise AssertionError("GFS should keep only the 850 hPa comparison card.")
+    if 'id="gfs-850-card"' in gfs or 'id="gfs-cycle-t850-chart"' in gfs or 'class="chart-card"' in gfs:
+        raise AssertionError("The bottom GFS 850 hPa panel should be gone.")
     if 'class="chart-stack"' not in ecmwf or 'class="chart-card"' not in ecmwf:
         raise AssertionError("The remaining ECMWF wind comparison charts are missing.")
     if '.next-72h-card{\n      border:0!important' not in html or '.chart-stack>.chart-card{\n      border:0!important' not in html:
