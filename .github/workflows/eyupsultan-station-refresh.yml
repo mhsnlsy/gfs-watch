@@ -2,6 +2,8 @@ name: Eyüpsultan Station Refresh
 
 on:
   workflow_dispatch:
+  schedule:
+    - cron: "*/5 * * * *"
   push:
     branches: [main]
     paths:
@@ -82,18 +84,3 @@ jobs:
         run: |
           gh workflow run pages.yml --ref main --repo "$GITHUB_REPOSITORY"
           echo "GitHub Pages deployment requested."
-
-      # Continue the poll chain even after a fetch/publication failure. Using
-      # workflow_dispatch keeps one active poller and aligns it to 5-minute UTC boundaries.
-      - name: Queue next five-minute Eyüpsultan refresh
-        if: always() && !cancelled()
-        env:
-          GH_TOKEN: ${{ github.token }}
-        run: |
-          now=$(date -u +%s)
-          next=$(( (now / 300 + 1) * 300 ))
-          delay=$(( next - now ))
-          echo "Next Eyüpsultan refresh at $(date -u -d "@$next" +'%Y-%m-%dT%H:%M:%SZ') (sleeping ${delay}s)."
-          sleep "$delay"
-          gh workflow run eyupsultan-station-refresh.yml --ref main --repo "$GITHUB_REPOSITORY"
-          echo "Next Eyüpsultan refresh queued."
