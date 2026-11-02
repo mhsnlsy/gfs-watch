@@ -137,21 +137,26 @@ jobs:
                   expected_ecmwf_run="$(python - <<'PY'
           import json
           with open("forecast-data/public/ecmwf/latest.json", encoding="utf-8") as source:
-              print(json.load(source)["run_id_utc"])
+              document = json.load(source)
+          print(document["run_id_utc"])
+          print(len(document.get("forecasts") or []))
           PY
                   )"
+                  expected_ecmwf_steps="${expected_ecmwf_run##*$'\n'}"
+                  expected_ecmwf_run="${expected_ecmwf_run%%$'\n'*}"
                   ecmwf_url="${PAGE_URL%/}/data/ecmwf/latest.json"
                   ecmwf_ok=false
                   for ecmwf_attempt in $(seq 1 36); do
                     if curl --fail --silent --show-error "$ecmwf_url" -o "$RUNNER_TEMP/live-ecmwf.json"; then
-                      python - "$RUNNER_TEMP/live-ecmwf.json" "$expected_ecmwf_run" <<'PY'
+                      python - "$RUNNER_TEMP/live-ecmwf.json" "$expected_ecmwf_run" "$expected_ecmwf_steps" <<'PY'
           import json, sys
           with open(sys.argv[1], encoding="utf-8") as source:
               document = json.load(source)
           assert document.get("schema") == "gfs-watch.ecmwf-eps.v1"
           assert document.get("status") == "ready"
           assert document.get("run_id_utc") == sys.argv[2]
-          assert len(document.get("forecasts", [])) == 55
+          assert len(document.get("forecasts", [])) == int(sys.argv[3])
+          assert int(sys.argv[3]) >= 8
           PY
                       ecmwf_ok=true
                       break
@@ -160,10 +165,10 @@ jobs:
                     sleep 10
                   done
                   if [ "$ecmwf_ok" != true ]; then
-                    echo "Pages did not serve the expected 55-step ECMWF EPS payload."
+                    echo "Pages did not serve the expected ECMWF payload."
                     exit 1
                   fi
-                  echo "ECMWF EPS Pages payload verified: $expected_ecmwf_run (55 steps)."
+                  echo "ECMWF Pages payload verified: $expected_ecmwf_run ($expected_ecmwf_steps steps)."
                 fi
                 exit 0
               fi
