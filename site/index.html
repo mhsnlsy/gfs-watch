@@ -783,10 +783,22 @@
 </section>
 <section class="section" id="ecmwf-seyir">
       <div class="section-head">
-        <div><div class="section-kicker">ECMWF IFS ENS · RÜZGÂR ANALİZİ</div><h2>Rüzgâr çevrim karşılaştırması</h2></div>
-        <div class="section-note">Son dört ECMWF çıktısı<br>Yüzey ve 850 hPa rüzgâr hızı</div>
+        <div><div class="section-kicker">ECMWF IFS · SON DÖRT ÇIKTI</div><h2>Çevrim karşılaştırması</h2><p class="section-description">Son dört yayımlanmış ECMWF döngüsü aynı geçerlilik saatine göre üst üste. Yeni döngü gelince en eskisi düşer.</p></div>
+        <div class="section-note">Sıcaklık, yağış ve rüzgâr<br>Kendiliğinden güncellenir</div>
       </div>
       <div class="chart-stack">
+        <article class="chart-card">
+          <div class="chart-card-head"><div><div class="chart-title">Sıcaklık · 2 m</div><div class="chart-subtitle">HRES yüzey · °C</div></div><span class="chart-count" id="ecmwf-cycle-temperature-count">4 çıktı</span></div>
+          <div class="chart-wrap" id="ecmwf-cycle-temperature-chart"><div class="chart-empty">Dört çevrim karşılaştırması yükleniyor…</div></div>
+        </article>
+        <article class="chart-card">
+          <div class="chart-card-head"><div><div class="chart-title">Sıcaklık · 850 hPa</div><div class="chart-subtitle">ENS ortalama · °C</div></div><span class="chart-count" id="ecmwf-cycle-t850-count">4 çıktı</span></div>
+          <div class="chart-wrap" id="ecmwf-cycle-t850-chart"><div class="chart-empty">Dört çevrim karşılaştırması yükleniyor…</div></div>
+        </article>
+        <article class="chart-card">
+          <div class="chart-card-head"><div><div class="chart-title">Yağış</div><div class="chart-subtitle">6 saatlik toplam · mm</div></div><span class="chart-count" id="ecmwf-cycle-rain-count">4 çıktı</span></div>
+          <div class="chart-wrap" id="ecmwf-cycle-rain-chart"><div class="chart-empty">Dört çevrim karşılaştırması yükleniyor…</div></div>
+        </article>
         <article class="chart-card">
           <div class="chart-card-head"><div><div class="chart-title">Rüzgâr · 10 m</div><div class="chart-subtitle">Yüzey rüzgâr hızı · km/sa</div></div><span class="chart-count" id="ecmwf-comparison-wind10-count">4 çıktı</span></div>
           <div class="chart-wrap" id="ecmwf-comparison-wind10-chart"><div class="chart-empty">Dört çevrim karşılaştırması yükleniyor…</div></div>
@@ -1777,6 +1789,7 @@
       const runs=(Array.isArray(history)?history:[]).slice(-4);
       const definitions={
         temperature:{field:"temperature_2m_c",label:"2 m sıcaklık",unit:"°C"},
+        t850:{field:"temperature_850hpa_c",label:"850 hPa sıcaklık",unit:"°C"},
         wind10:{field:"wind_speed_10m_kmh",label:"10 m rüzgâr",unit:"km/sa"},
         wind850:{field:"wind_speed_850hpa_kmh",label:"850 hPa rüzgâr",unit:"km/sa"},
         precipitation:{field:"precipitation_6h_mm",label:"6 saatlik yağış",unit:"mm"}
@@ -1866,6 +1879,9 @@
       $("ecmwf-valid-until").textContent="Son geçerlilik: "+new Intl.DateTimeFormat("tr-TR",{timeZone:"Europe/Istanbul",day:"2-digit",month:"2-digit"}).format(new Date(document.forecast_valid_until_utc));
       renderDaily(viewData.daily_summary,"ecmwf-daily-grid");
       const comparisonRuns=Array.isArray(document.comparison_runs)?document.comparison_runs:[];
+      renderEcmwfComparisonChart("temperature","ecmwf-cycle-temperature-chart",comparisonRuns);
+      renderEcmwfComparisonChart("t850","ecmwf-cycle-t850-chart",comparisonRuns);
+      renderEcmwfComparisonChart("precipitation","ecmwf-cycle-rain-chart",comparisonRuns);
       renderEcmwfComparisonChart("wind10","ecmwf-comparison-wind10-chart",comparisonRuns);
       renderEcmwfComparisonChart("wind850","ecmwf-comparison-wind850-chart",comparisonRuns);
       renderFindings(viewData.regional_pressure_analysis&&viewData.regional_pressure_analysis.findings,first.mslp&&first.mslp.mean_hpa,"ecmwf-pressure-findings");

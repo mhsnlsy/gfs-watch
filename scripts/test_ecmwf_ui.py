@@ -35,6 +35,12 @@ def main() -> None:
         'id="ecmwf-comparison-wind850-chart"',
         'function renderEcmwfComparisonChart(metric,targetId,history)',
         'document.comparison_runs',
+        'id="ecmwf-cycle-temperature-chart"',
+        'id="ecmwf-cycle-t850-chart"',
+        'id="ecmwf-cycle-rain-chart"',
+        'renderEcmwfComparisonChart("temperature","ecmwf-cycle-temperature-chart",comparisonRuns)',
+        'renderEcmwfComparisonChart("t850","ecmwf-cycle-t850-chart",comparisonRuns)',
+        'renderEcmwfComparisonChart("precipitation","ecmwf-cycle-rain-chart",comparisonRuns)',
         'renderEcmwfComparisonChart("wind10","ecmwf-comparison-wind10-chart",comparisonRuns)',
         'renderEcmwfComparisonChart("wind850","ecmwf-comparison-wind850-chart",comparisonRuns)',
         'function scheduleTouchChartTooltipDismiss(hideFn)',
@@ -93,8 +99,6 @@ def main() -> None:
         'id="precipitation-chart"',
         'id="ecmwf-comparison-temperature-chart"',
         'id="ecmwf-comparison-precipitation-chart"',
-        'renderEcmwfComparisonChart("temperature"',
-        'renderEcmwfComparisonChart("precipitation"',
     )
     remaining = [item for item in removed_charts if item in html]
     if remaining:

@@ -99,6 +99,47 @@ jobs:
             echo "Eyüpsultan chain is alive."
           fi
 
+      # GitHub cron does not run here. ECMWF is refreshed from this living chain
+      # only when the published cycle is stale and no fetch is already running.
+      - name: Refresh ECMWF when its published cycle is stale
+        if: always() && !cancelled()
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          active=$(gh run list --workflow=ecmwf-eps.yml --limit 6 --json status --jq '[.[] | select(.status=="queued" or .status=="in_progress" or .status=="pending" or .status=="waiting" or .status=="requested")] | length')
+          if [ "$active" != "0" ]; then
+            echo "ECMWF fetch already running ($active)."
+            exit 0
+          fi
+          state=$(python3 - << 'PY'
+          import json
+          from datetime import datetime, timezone
+          from pathlib import Path
+          path = Path("forecast-data/public/ecmwf/latest.json")
+          stale = True
+          if path.is_file():
+              try:
+                  doc = json.loads(path.read_text())
+                  updated = datetime.fromisoformat(doc["updated_at_utc"])
+                  age_h = (datetime.now(timezone.utc) - updated).total_seconds() / 3600
+                  runs = doc.get("comparison_runs") or []
+                  print(f"ECMWF updated {age_h:.1f}h ago, comparison cycles {len(runs)}", flush=True)
+                  stale = age_h > 3 or len(runs) < 4
+              except Exception as exc:
+                  print(f"ECMWF cache unreadable: {exc}", flush=True)
+          else:
+              print("ECMWF cache missing", flush=True)
+          print("STALE" if stale else "FRESH")
+          PY
+          )
+          echo "$state"
+          if ! printf '%s\n' "$state" | grep -q '^STALE$'; then
+            echo "ECMWF cache is fresh."
+            exit 0
+          fi
+          gh workflow run ecmwf-eps.yml --ref main --repo "$GITHUB_REPOSITORY"
+          echo "ECMWF refresh requested."
+
       # Queue the next poll on the next five-minute UTC boundary. This uses
       # workflow_dispatch, which GITHUB_TOKEN is explicitly allowed to trigger.
       - name: Queue next five-minute ENKA refresh

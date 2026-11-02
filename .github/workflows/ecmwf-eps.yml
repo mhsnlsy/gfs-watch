@@ -14,6 +14,11 @@ on:
     # Check after the 00Z and 12Z ENS dissemination windows.
     - cron: "15 10,22 * * *"
   workflow_dispatch:
+    inputs:
+      force:
+        description: Redownload even when this cycle is already published
+        type: boolean
+        default: false
 
 permissions:
   contents: write
@@ -61,7 +66,7 @@ jobs:
         env:
           ECMWF_PUBLIC_DIR: ${{ github.workspace }}/state/public/ecmwf
         run: |
-          if [[ "$GITHUB_EVENT_NAME" == "push" || "$GITHUB_EVENT_NAME" == "workflow_dispatch" ]]; then
+          if [[ "$GITHUB_EVENT_NAME" == "push" || "${{ inputs.force }}" == "true" ]]; then
             python -u scripts/fetch_ecmwf_eps.py --force
           else
             python -u scripts/fetch_ecmwf_eps.py
