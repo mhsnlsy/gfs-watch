@@ -35,7 +35,7 @@ jobs:
     outputs:
       gfs_updated: ${{ steps.report.outputs.gfs_updated }}
     runs-on: ubuntu-latest
-    timeout-minutes: 75
+    timeout-minutes: 100
     steps:
       - name: Check out application
         uses: actions/checkout@v7
@@ -122,7 +122,7 @@ jobs:
           GFS_TELEGRAM: "1"
           GFS_WATCH_ONCE: "1"
           GFS_WATCH_CONTINUOUS: "1"
-          GFS_WATCH_WINDOW_MINUTES: "55"
+          GFS_WATCH_WINDOW_MINUTES: "80"
           GFS_WATCH_POLL_SECONDS: "120"
           GFS_WATCH_RESEND_CHARTS: ${{ github.event_name == 'workflow_dispatch' && inputs.resend_charts && '1' || '0' }}
           DB_PATH: gfs_watch.db
@@ -221,6 +221,10 @@ jobs:
             exit 0
           fi
           cp gfs_watch.db "$RUNNER_TEMP/gfs_watch.db"
+          if [ -d public/staging ]; then
+            mkdir -p "$RUNNER_TEMP/gfs-staging"
+            cp -a public/staging/. "$RUNNER_TEMP/gfs-staging/"
+          fi
           mkdir -p "$RUNNER_TEMP/public"
           report_ok=0
           if [ "${{ steps.check-gfs.outcome }}" = "success" ] && [ -d public ]; then
@@ -242,6 +246,10 @@ jobs:
           fi
           find public/runs -type f -name '*.json' -mtime +16 -delete
           cp "$RUNNER_TEMP/gfs_watch.db" gfs_watch.db
+          if [ -d "$RUNNER_TEMP/gfs-staging" ]; then
+            mkdir -p public/staging
+            cp -a "$RUNNER_TEMP/gfs-staging/." public/staging/
+          fi
           git add -f gfs_watch.db public
           if git diff --cached --quiet; then
             echo "GFS run history has not changed."

@@ -1840,6 +1840,115 @@ def _meteopt_f180_ready(document):
     return MIN_FORECAST_HOURS in rows and len(rows) >= 60
 
 
+METEOPT_PACKAGE_HOURS = (40, 120, 170, 180)
+
+
+def _staging_file(run_id):
+    key = _parse_utc_datetime(run_id).strftime("%Y%m%dT%HZ")
+    directory = os.path.join(PUBLIC_DATA_DIR, "staging")
+    os.makedirs(directory, exist_ok=True)
+    return os.path.join(directory, key + ".json")
+
+
+def _load_stage(run_id):
+    try:
+        with open(_staging_file(run_id), encoding="utf-8") as handle:
+            data = json.load(handle)
+        if isinstance(data, dict):
+            return data
+    except (OSError, ValueError, TypeError):
+        pass
+    return {
+        "run_id": run_id,
+        "max_hour": 0,
+        "row_count": 0,
+        "milestones": [],
+        "comparison_ready": False,
+    }
+
+
+def _save_stage(run_id, stage):
+    _write_json_atomically(_staging_file(run_id), stage)
+
+
+def _payload_reaches_f180(payload):
+    timeline = payload.get("timeline_180h") if isinstance(payload, dict) else None
+    if not isinstance(timeline, dict):
+        return False
+    for values in timeline.values():
+        if isinstance(values, dict) and int(values.get("step_hour") or 0) >= MIN_FORECAST_HOURS:
+            return True
+    return False
+
+
+async def stage_open_meteopt_cycle(processed_run_ids):
+    """Package a growing cycle at +40, +120 and +170. Publish only after +180.
+
+    Returns False while the open cycle is still short of f180, True when the
+    cached package is ready to become the report, and None when there is nothing
+    to stage.
+    """
+    if os.getenv("GFS_SOURCE", "meteopt").strip().lower() == "noaa":
+        return None
+    now = datetime.now(timezone.utc)
+    run_dt = now.replace(hour=(now.hour // 6) * 6, minute=0, second=0, microsecond=0)
+    run_id = run_dt.isoformat(timespec="seconds")
+    if run_id in processed_run_ids:
+        return None
+    try:
+        document = await asyncio.to_thread(fetch_meteopt_document, run_dt)
+    except Exception as exc:
+        print(f"[PAKET] {run_dt:%H}Z alınamadı: {type(exc).__name__}: {exc}")
+        return False
+    rows = _meteopt_rows_through_f180(document)
+    max_hour = max(rows) if rows else 0
+    stage = _load_stage(run_id)
+    previous = int(stage.get("max_hour") or 0)
+    milestones = [int(hour) for hour in stage.get("milestones") or []]
+    label = f"{run_dt:%H}Z"
+    if max_hour > previous:
+        crossed = [
+            hour for hour in METEOPT_PACKAGE_HOURS
+            if previous < hour <= max_hour and hour not in milestones
+        ]
+        stage.update({
+            "run_id": run_id,
+            "max_hour": max_hour,
+            "row_count": len(rows),
+            "updated_at": now.isoformat(timespec="seconds"),
+        })
+        for hour in crossed:
+            milestones.append(hour)
+            if hour < MIN_FORECAST_HOURS:
+                print(
+                    f"[PAKET] {label}: +{hour} saat yüklendi, {len(rows)} satır paketlendi. "
+                    "Rapor önbelleğine işlendi. +180 bekleniyor; sıfırdan işlenmeyecek."
+                )
+            else:
+                print(
+                    f"[PAKET] {label}: +180 tamam, {len(rows)} satır. "
+                    "Önbellekteki paket toparlanıyor, rapor sunuluyor."
+                )
+        stage["milestones"] = milestones
+        _save_stage(run_id, stage)
+    elif max_hour:
+        print(f"[PAKET] {label}: hâlâ +{max_hour}, {len(rows)} satır. Yeni saat yok.")
+    else:
+        print(f"[PAKET] {label}: MeteoPT henüz satır vermedi.")
+        return False
+
+    if max_hour >= 40 and not stage.get("comparison_ready"):
+        try:
+            await load_previous_three_runs_for_comparison(run_id)
+            stage["comparison_ready"] = True
+            _save_stage(run_id, stage)
+            print(f"[PAKET] {label}: önceki üç çıktı önbelleğe alındı. +180'de yeniden indirilmeyecek.")
+        except Exception as exc:
+            print(f"[PAKET] {label}: önceki çıktılar henüz paketlenemedi: {exc}")
+
+    return _meteopt_f180_ready(document)
+
+
 def fetch_meteopt_available_runs():
     """List recent GFS cycles that already have the 60 rows through f180."""
     now = datetime.now(timezone.utc)
@@ -3070,14 +3179,17 @@ async def load_previous_three_runs_for_comparison(current_run_id):
     for hours_back in (6, 12, 18):
         previous_dt = current_dt - timedelta(hours=hours_back)
         previous_run_id = previous_dt.isoformat(timespec="seconds")
-        if not use_meteopt:
+        if use_meteopt:
             stored_record = await asyncio.to_thread(get_run_payload, previous_run_id)
-            if stored_record and _has_complete_850_wind_daily_series(stored_record[1]):
-                stored_run_id, stored_payload = stored_record
-                print(f"[KIYAS GEÇMİŞİ] {stored_run_id} SQLite kaydı kullanılıyor.")
+            if (
+                stored_record
+                and "MeteoPT" in str(stored_record[1].get("data_source", ""))
+                and _payload_reaches_f180(stored_record[1])
+            ):
+                print(f"[KIYAS ÖNBELLEK] {previous_run_id} daha önce paketlendi, yeniden indirilmiyor.")
                 previous_runs.append((
-                    stored_run_id,
-                    json.dumps(stored_payload, ensure_ascii=False),
+                    stored_record[0],
+                    json.dumps(stored_record[1], ensure_ascii=False),
                 ))
                 continue
 
@@ -3760,9 +3872,9 @@ async def run_scheduled_watch():
         )
     else:
         print(
-            "[WATCH START] Sabit döngü kilidi yok. NOAA NOMADS, gerekirse AWS S3 "
-            "üzerinden yayımlanan tüm yeni 00Z/06Z/12Z/18Z döngüleri izlenecek; "
-            f"kontrol aralığı {poll_seconds} saniye, oturum {window_minutes} dakika."
+            "[WATCH START] MeteoPT açık döngüsü +40, +120 ve +170'te paketlenir. "
+            "+180 satırı düşünce önbellek toparlanır; Telegram ve sayfa aynı paketten gider. "
+            f"Kontrol {poll_seconds} saniye, oturum {window_minutes} dakika."
         )
 
     existing_runs = await asyncio.to_thread(get_processed_run_ids)
@@ -3773,12 +3885,20 @@ async def run_scheduled_watch():
     while time.monotonic() < deadline:
         processed_before = await asyncio.to_thread(get_processed_run_ids)
         try:
-            await process_gfs_update(strict=False, target_run_id=target_run_id)
+            staged = await stage_open_meteopt_cycle(processed_before)
         except Exception as exc:
-            print(
-                f"[WATCH RETRY] NOAA kontrolü/rapor işlemi sırasında hata: "
-                f"{type(exc).__name__}: {exc}"
-            )
+            staged = None
+            print(f"[PAKET HATA] {type(exc).__name__}: {exc}")
+        if staged is False:
+            print("[PAKET] +180 henüz yok. Hazır saatler diskte. Rapor başlatılmadı.")
+        else:
+            try:
+                await process_gfs_update(strict=False, target_run_id=target_run_id)
+            except Exception as exc:
+                print(
+                    f"[WATCH RETRY] Rapor işlemi sırasında hata: "
+                    f"{type(exc).__name__}: {exc}"
+                )
 
         # process_gfs_update handles one eligible cycle at a time. If it saved
         # a new cycle, immediately call it again so multiple ready cycles are
