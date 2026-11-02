@@ -1017,7 +1017,6 @@
     </div>
     <div id="ecmwf-model-view" hidden aria-label="ECMWF tahmin görünümü">
       <div class="section-head" style="padding-top:30px"><div><div class="section-kicker">ECMWF IFS · HRES + ENS</div><h2>ECMWF IFS · İstanbul</h2></div><div class="section-note"><span id="ecmwf-run-meta">ECMWF döngüsü bekleniyor</span><br><span id="ecmwf-updated-chip">Yayın zamanı</span><br>Günlük en düşük / en yüksek sıcaklık</div></div>
-      <div id="ecmwf-data-status" class="ecmwf-model-status" role="status" aria-live="polite">ECMWF IFS verisi yükleniyor…</div>
 </section>
 <section class="section" id="ecmwf-seyir">
       <div class="section-head">
@@ -2594,13 +2593,11 @@
       renderEcmwfComparisonChart("wind10","ecmwf-comparison-wind10-chart",comparisonRuns);
       renderEcmwfComparisonChart("wind850","ecmwf-comparison-wind850-chart",comparisonRuns);
       renderFindings(viewData.regional_pressure_analysis&&viewData.regional_pressure_analysis.findings,first.mslp&&first.mslp.mean_hpa,"ecmwf-pressure-findings");
-      $("ecmwf-data-status").textContent="Veri hazır · "+document.model+" · "+document.resolution+" · "+forecasts.length+" tahmin adımı · "+comparisonRuns.length+" geçmiş çevrim · Son veri hazırlama: "+timeTR(document.updated_at_utc)+" TSİ";
     }
     async function loadEcmwf(force=false){
       if(ecmwfLoading)return;
       if(!force&&ecmwfForecast&&Date.now()-ecmwfLastFetch<240000)return;
       ecmwfLoading=true;
-      $("ecmwf-data-status").textContent="MeteoPT ECMWF bağlantısı kontrol ediliyor…";
       try{
         const response=await fetch(ECMWF_DATA_URL+"?t="+Date.now(),{cache:"no-store"});
         if(!response.ok)throw new Error("ECMWF veri paketi henüz yayımlanmamış (HTTP "+response.status+").");
@@ -2613,7 +2610,6 @@
         ecmwfLastFetch=Date.now();
         if(typeof renderBriefing==="function")renderBriefing();
       }catch(error){
-        $("ecmwf-data-status").textContent=(ecmwfForecast?"Son geçerli ECMWF verisi korunuyor. ":"")+String(error.message||error);
       }finally{
         ecmwfLoading=false;
       }
