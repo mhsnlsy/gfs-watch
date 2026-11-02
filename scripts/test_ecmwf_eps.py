@@ -148,6 +148,25 @@ def run_offline_tests() -> None:
             "2026-11-01T00:00:00+00:00",
         ]
         assert all(len(item["forecast_6_hourly"]) == 55 for item in history)
+        assert all(
+            isinstance(point.get("temperature_850hpa_c"), (int, float))
+            for item in history
+            for point in item["forecast_6_hourly"]
+        )
+
+        stripped_dir = Path(temp_dir) / "stripped"
+        stripped_dir.mkdir()
+        stripped = json.loads(json.dumps(document))
+        stripped["run_id_utc"] = "2026-11-02T00:00:00+00:00"
+        stripped["forecast_6_hourly"] = [
+            {key: value for key, value in point.items() if key != "temperature_850hpa_c"}
+            for point in document["forecast_6_hourly"]
+        ]
+        assert "temperature_850hpa_c" not in stripped["forecast_6_hourly"][0]
+        (stripped_dir / "20261102T00Z.json").write_text(json.dumps(stripped), encoding="utf-8")
+        repaired = load_comparison_runs(stripped_dir, limit=4)
+        assert len(repaired) == 1
+        assert repaired[0]["forecast_6_hourly"][0]["temperature_850hpa_c"] == document["forecasts"][0]["temperature_850hpa"]["mean_c"]
 
     print("[ECMWF OFFLINE SMOKE] 55 steps, HRES/ENS source split, surface spread null semantics, units and fail-closed checks passed.")
 

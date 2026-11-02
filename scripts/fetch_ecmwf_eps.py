@@ -614,6 +614,39 @@ def fetch_latest_document(skip_if_run_id: str | None = None) -> dict | None:
 
 
 
+def _timeline_with_850_temperature(item: dict) -> list[dict]:
+    """Keep 850 hPa temperature on every comparison point.
+
+    Older archives stored it only under forecasts[].temperature_850hpa.
+    The comparison chart reads forecast_6_hourly, so copy it across.
+    """
+    timeline = item.get("forecast_6_hourly")
+    if not isinstance(timeline, list):
+        return []
+    by_hour = {}
+    for forecast in item.get("forecasts") or []:
+        if not isinstance(forecast, dict):
+            continue
+        temperature = forecast.get("temperature_850hpa")
+        hour = forecast.get("forecast_hour")
+        if (
+            isinstance(hour, int)
+            and isinstance(temperature, dict)
+            and isinstance(temperature.get("mean_c"), (int, float))
+        ):
+            by_hour[hour] = temperature["mean_c"]
+    points = []
+    for point in timeline:
+        if not isinstance(point, dict):
+            continue
+        copied = dict(point)
+        hour = copied.get("forecast_hour")
+        if not isinstance(copied.get("temperature_850hpa_c"), (int, float)) and hour in by_hour:
+            copied["temperature_850hpa_c"] = by_hour[hour]
+        points.append(copied)
+    return points
+
+
 def load_comparison_runs(archive_dir: Path, limit: int = 4) -> list[dict]:
     """Return the newest complete ECMWF cycles with common comparison fields."""
     candidates = []
@@ -622,8 +655,11 @@ def load_comparison_runs(archive_dir: Path, limit: int = 4) -> list[dict]:
             item = json.loads(path.read_text(encoding="utf-8"))
             validate_document(item)
             run_id = _normalise_datetime(item["run_id_utc"]).isoformat(timespec="seconds")
-            timeline = item.get("forecast_6_hourly")
-            if not isinstance(timeline, list) or not timeline:
+            timeline = _timeline_with_850_temperature(item)
+            if not timeline or any(
+                not isinstance(point.get("temperature_850hpa_c"), (int, float)) for point in timeline
+            ):
+                print(f"[ECMWF HISTORY] Skipping {path.name}: 850 hPa temperature is incomplete.")
                 continue
             candidates.append({"run_id_utc": run_id, "forecast_6_hourly": timeline})
         except (OSError, ValueError, TypeError, KeyError) as exc:

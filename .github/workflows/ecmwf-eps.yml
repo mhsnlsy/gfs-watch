@@ -7,7 +7,6 @@ on:
       - "scripts/fetch_ecmwf_eps.py"
       - "scripts/test_ecmwf_eps.py"
       - "scripts/test_ecmwf_ui.py"
-      - "site/index.html"
       - ".github/workflows/ecmwf-eps.yml"
   schedule:
     # ECMWF Open Data products typically appear 7–9 hours after cycle time.
@@ -26,7 +25,7 @@ permissions:
 
 concurrency:
   group: ecmwf-eps-forecast
-  cancel-in-progress: true
+  cancel-in-progress: false
 
 jobs:
   fetch-and-publish:
