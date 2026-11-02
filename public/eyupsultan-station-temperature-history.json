@@ -3,10 +3,7 @@
   "station_id": "18101",
   "station_name": "Eyüpsultan",
   "sampling_interval_minutes": 5,
-  "aggregation_interval_minutes": 30,
-  "retention_days": 7,
-  "sample_semantics": "one_point_per_distinct_source_observation",
-  "updated_at_utc": "2026-11-02T05:58:36.607Z",
+  "updated_at_utc": "2026-11-02T07:31:09.416Z",
   "samples": [
     {
       "logged_at_utc": "2026-11-01T17:53:42.423Z",
@@ -670,6 +667,13 @@
       "precipitation_daily_mm": 1,
       "station_pressure_hpa": 1018,
       "actual_station_pressure_hpa": 1011.6
+    },
+    {
+      "logged_at_utc": "2026-11-02T07:31:09.416Z",
+      "observed_at_utc": "2026-11-02T07:24:09.416Z",
+      "temperature_2m_c": 18.4,
+      "precipitation_daily_mm": 1,
+      "station_pressure_hpa": 1018.4
     }
   ]
 }
