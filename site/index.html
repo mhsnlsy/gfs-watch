@@ -702,6 +702,41 @@
     .station-card .stat .detail { font-size: 6.5px !important; }
     .station-card .stat .unit { font-size: 6.5px !important; }
 
+    .verify-panel{margin:16px 0 4px;background:linear-gradient(145deg,rgba(18,43,61,.94),rgba(12,31,46,.96));border:1px solid var(--line);border-radius:21px;padding:18px 18px 14px}
+    .verify-head h2{font:700 22px Manrope,sans-serif;letter-spacing:-.04em;margin:6px 0 0}
+    .verify-lead{color:#9bb1bf;font-size:12px;line-height:1.55;margin:8px 0 0;max-width:680px}
+    .verify-score{display:grid;grid-template-columns:minmax(140px,auto) 1fr;gap:14px 18px;align-items:center;margin-top:14px}
+    .verify-score-num{font:800 40px/1 Manrope,sans-serif;letter-spacing:-.05em;color:var(--cyan)}
+    .verify-score-label{font-size:12px;color:#c5d6de;max-width:160px;margin-top:5px;line-height:1.35}
+    .verify-score-side{display:grid;gap:4px;font-size:13px;color:#d5e4eb}
+    .verify-score-side strong{font-family:Manrope,sans-serif}
+    .verify-sub{font:700 13px Manrope,sans-serif;margin:16px 0 8px;letter-spacing:-.02em;color:#e7f2f6}
+    .verify-lead-row{display:grid;grid-template-columns:96px minmax(0,1fr);gap:2px 10px;align-items:center;margin-bottom:8px}
+    .verify-lead-label{font-size:11px;color:#c5d6de}
+    .verify-bar{height:7px;border-radius:99px;background:rgba(255,255,255,.07);overflow:hidden}
+    .verify-bar span{display:block;height:100%;background:linear-gradient(90deg,#7dd3d7,#8fd7ba);border-radius:99px}
+    .verify-lead-meta{grid-column:2;font-size:10px;color:#8ea6b3}
+    .verify-runs{display:grid;grid-template-columns:repeat(auto-fit,minmax(148px,1fr));gap:8px}
+    .verify-run{border:1px solid var(--line);border-radius:14px;padding:10px;background:rgba(5,20,31,.28);min-width:0}
+    .verify-run-title{font:700 13px Manrope,sans-serif}
+    .verify-run-score{margin-top:4px;font-size:12px;color:#d5e4eb}
+    .verify-run-score strong{color:var(--cyan);font:700 16px Manrope,sans-serif}
+    .verify-run-meta{margin-top:4px;font-size:10px;color:#8ea6b3;line-height:1.45}
+    .verify-recent{display:grid;gap:4px}
+    .verify-recent-row{display:grid;grid-template-columns:minmax(0,1.25fr) minmax(0,.7fr) minmax(0,.75fr) minmax(0,.9fr) 48px;gap:6px;align-items:center;font-size:11px;color:#d5e4eb;padding:7px 8px;border-radius:10px;background:rgba(5,20,31,.28)}
+    .verify-recent-row strong{font:700 12px Manrope,sans-serif;text-align:right}
+    .verify-recent-row.ok strong{color:#8fd7ba}
+    .verify-recent-row.mid strong{color:#f1c98b}
+    .verify-recent-row.bad strong{color:#f0bd9f}
+    .verify-note{color:#8ea6b3;font-size:11px;line-height:1.55;margin:12px 0 0}
+    @media(max-width:560px){
+      .verify-panel{padding:14px;border-radius:18px}
+      .verify-score{grid-template-columns:1fr;gap:8px}
+      .verify-score-num{font-size:34px}
+      .verify-recent-row{grid-template-columns:1fr 1fr auto;font-size:10px}
+      .verify-recent-row span:nth-child(2){display:none}
+    }
+
 </style>
 </head>
 <body>
@@ -761,6 +796,15 @@
       </section>
     </section>
     <div id="gfs-model-view">
+
+      <section class="verify-panel" id="verify-panel" aria-label="GFS tahmininin gerçekleşen hava ile uyumu">
+        <div class="verify-head">
+          <div class="section-kicker">GFS · ÖLÇÜMLE KARŞILAŞTIRMA</div>
+          <h2>Model ne kadar tuttu?</h2>
+          <p class="verify-lead" id="verify-lead">Gerçekleşen saatler, yayındaki GFS tahminiyle seçili istasyona göre skorlanır.</p>
+        </div>
+        <div id="verify-body"><div class="chart-empty">Doğrulama kaydı yükleniyor…</div></div>
+      </section>
 </section>
     <section class="section" id="bildirimler">
       <div class="section-head report-head">
@@ -810,8 +854,10 @@
     const STATION_HISTORY_URL="./data/station-temperature-history.json";
     const EYUPSULTAN_STATION_URL="./data/eyupsultan-station-observation.json";
     const EYUPSULTAN_STATION_HISTORY_URL="./data/eyupsultan-station-temperature-history.json";
+    const VERIFY_URL="./data/forecast-verification.json";
     let enkaStationObservation=null,eyupsultanStationObservation=null,activeStation="enka";
     let enkaStationHistorySamples=[],eyupsultanStationHistorySamples=[];
+    let verificationDoc=null;
     let forecastData=null,activeMetric="temperature";
     const $=id=>document.getElementById(id);
     const numeric=value=>typeof value==="number"&&Number.isFinite(value);
@@ -1391,6 +1437,7 @@
       $("station-eyupsultan-button").setAttribute("aria-pressed",stationKey==="eyupsultan"?"true":"false");
       renderStationCard(stationKey==="enka"?enkaStationObservation:eyupsultanStationObservation);
       renderStationHistory();
+      renderVerification();
     }
     $("station-enka-button").addEventListener("click",()=>selectStation("enka"));
     $("station-eyupsultan-button").addEventListener("click",()=>selectStation("eyupsultan"));
@@ -1661,12 +1708,75 @@
         $("notification-status").textContent="Rapor arşivi bağlantısı bekleniyor · 5 dakikada bir yeniden denenir";
       }
     }
+
+    function fmt1(value){return numeric(value)?(Math.round(value*10)/10).toFixed(1):"—";}
+    function fmtSigned(value){if(!numeric(value))return "—";const rounded=Math.round(value*10)/10;return (rounded>0?"+":"")+rounded.toFixed(1);}
+    function pctText(value){return numeric(value)?Math.round(value)+"%":"—";}
+    function istStamp(value){
+      if(!value)return "—";
+      return new Intl.DateTimeFormat("tr-TR",{timeZone:"Europe/Istanbul",day:"2-digit",month:"short",hour:"2-digit",minute:"2-digit"}).format(new Date(value));
+    }
+    function runStamp(value){
+      if(!value)return "—";
+      const formatted=new Intl.DateTimeFormat("tr-TR",{timeZone:"UTC",day:"2-digit",month:"short",hour:"2-digit",minute:"2-digit"}).format(new Date(value));
+      return formatted.replace(",","")+"Z";
+    }
+    function renderVerification(){
+      const body=$("verify-body");
+      const lead=$("verify-lead");
+      if(!body)return;
+      const stationName=activeStation==="enka"?"ENKA Balmumcu":"Eyüpsultan";
+      if(!verificationDoc||!verificationDoc.stations){
+        body.innerHTML='<div class="chart-empty">Doğrulama kaydı henüz yok. Bir sonraki yayınla birlikte hesaplanacak.</div>';
+        return;
+      }
+      const station=verificationDoc.stations[activeStation];
+      const operational=station&&station.operational;
+      if(!operational||!operational.pairs){
+        body.innerHTML='<div class="chart-empty">'+stationName+' için gerçekleşmiş saat henüz eşleşmedi.</div>';
+        return;
+      }
+      const bias=operational.bias_c;
+      const biasText=!numeric(bias)?"taraflılık hesaplanamadı":bias>0.15?"GFS ortalama "+fmt1(bias)+"° daha sıcak kalmış":bias<-0.15?"GFS ortalama "+fmt1(Math.abs(bias))+"° daha serin kalmış":"belirgin sıcak veya soğuk taraflılık yok";
+      if(lead)lead.textContent=stationName+" · "+istStamp(operational.from_utc)+" – "+istStamp(operational.to_utc)+" · her saat, o saatte yayında olan son GFS ile karşılaştırıldı.";
+      const leads=(station.by_lead||[]).filter(row=>row.pairs>=4).map(row=>{
+        const width=numeric(row.within_1c_pct)?row.within_1c_pct:0;
+        return '<div class="verify-lead-row"><div class="verify-lead-label">'+row.label+'</div><div class="verify-bar" title="±1°C içindeki pay"><span style="width:'+width+'%"></span></div><div class="verify-lead-meta">'+row.pairs+' saat · ±1°C '+pctText(row.within_1c_pct)+' · ortalama sapma '+fmt1(row.mae_c)+'°</div></div>';
+      }).join("");
+      const runs=(station.runs||[]).filter(row=>row.pairs>=3).map(row=>'<article class="verify-run"><div class="verify-run-title">'+runStamp(row.run_id_utc)+'</div><div class="verify-run-score">±2°C içinde <strong>'+pctText(row.within_2c_pct)+'</strong></div><div class="verify-run-meta">'+row.pairs+' saat doğrulandı · ortalama sapma '+fmt1(row.mae_c)+'° · fark '+fmtSigned(row.bias_c)+'°</div></article>').join("");
+      const recent=(station.recent||[]).slice(0,8).map(row=>{
+        const tone=Math.abs(row.error_c)<=1?"ok":Math.abs(row.error_c)<=2?"mid":"bad";
+        return '<div class="verify-recent-row '+tone+'"><span>'+istStamp(row.valid_time_utc)+'</span><span>'+row.lead_hours+' sa önce</span><span>GFS '+fmt1(row.forecast_c)+'°</span><span>ölçüm '+fmt1(row.observed_c)+'°</span><strong>'+fmtSigned(row.error_c)+'°</strong></div>';
+      }).join("");
+      let rain="";
+      if(station.rain&&station.rain.pairs){
+        const item=station.rain;
+        rain='<p class="verify-note">6 saatlik yağış: '+item.pairs+' karşılaştırma. İstasyonda yağışın arttığı saat '+item.wet_events+', modelin gerçekleşmeyen yağış dediği saat '+item.false_alarms+', ikisinin de kuru kaldığı saat '+item.correct_dry+'.</p>';
+      }
+      body.innerHTML='<div class="verify-score"><div><div class="verify-score-num">'+pctText(operational.within_1c_pct)+'</div><div class="verify-score-label">yayındaki tahmin, ölçümün ±1°C içinde kaldı</div></div><div class="verify-score-side"><div><strong>'+pctText(operational.within_2c_pct)+'</strong> ±2°C içinde</div><div>Ortalama sapma <strong>'+fmt1(operational.mae_c)+'°</strong></div><div>'+biasText+'</div><div>'+operational.pairs+' gerçekleşmiş saat</div></div></div>'
+        +(leads?'<h3 class="verify-sub">Vade uzadıkça</h3><div class="verify-leads">'+leads+'</div>':'')
+        +(runs?'<h3 class="verify-sub">Her GFS çıktısı</h3><div class="verify-runs">'+runs+'</div>':'')
+        +(recent?'<h3 class="verify-sub">Son doğrulanan saatler</h3><div class="verify-recent">'+recent+'</div>':'')
+        +rain
+        +'<p class="verify-note">'+station.logged_pairs+' tahmin-ölçüm çifti kayıtlı. Çubuk, o vadedeki saatlerin yüzde kaçının ±1°C içinde kaldığını gösterir. GFS noktası 41.0°K 29.0°D; istasyonla aynı yer değil. Hata = tahmin − ölçüm. Karşılaştırma, istasyon arşivi kadar (yaklaşık 7 gün) geriye gider.</p>';
+    }
+    async function loadVerification(){
+      try{
+        const response=await fetch(VERIFY_URL+"?t="+Date.now(),{cache:"no-store"});
+        if(!response.ok)throw new Error("missing");
+        verificationDoc=await response.json();
+      }catch(_){
+        verificationDoc=null;
+      }
+      renderVerification();
+    }
+
     async function startPage(){
       await registerAppWorker();
       await loadPushConfig();
       await refreshPushStatus();
-      await Promise.all([loadForecast(),loadNotifications(),refreshStationObservations()]);
-      window.setInterval(()=>{loadForecast();loadNotifications();},300000);
+      await Promise.all([loadForecast(),loadNotifications(),refreshStationObservations(),loadVerification()]);
+      window.setInterval(()=>{loadForecast();loadNotifications();loadVerification();},300000);
       window.setInterval(refreshStationObservations,60000);
     }
 
