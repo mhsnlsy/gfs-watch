@@ -1,6 +1,10 @@
+import { execFile } from "node:child_process";
+import { promisify } from "node:util";
 import { chromium, request } from "playwright";
 import fs from "node:fs";
 import path from "node:path";
+
+const execFileAsync = promisify(execFile);
 
 const STATION_URL = "https://wstatmap.com/tr/embed?station=eyupsultan-18101&radius=30&layer=temperature&user_station=false";
 const WSTAT_DETAIL_URL = "https://api.wstatmap.com/v1/station/detail-by-slug/eyupsultan-18101/";
@@ -30,15 +34,43 @@ function finiteOrNull(value) {
   return Number.isFinite(number) && number > -900 ? number : null;
 }
 
-async function fetchFromWstat() {
-  const response = await fetch(WSTAT_DETAIL_URL, {
+async function readUrl(url, accept) {
+  const args = [
+    "-sS", "--max-time", "25", "--http1.1",
+    "-A", "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/131.0.0.0 Safari/537.36",
+    "-H", "accept-language: tr-TR,tr;q=0.9,en;q=0.8",
+    "-H", "referer: " + STATION_URL,
+    "-H", "origin: https://wstatmap.com",
+    "-H", "accept: " + accept,
+    "-w", "\n%{http_code}",
+    url
+  ];
+  try {
+    const { stdout } = await execFileAsync("curl", args, { maxBuffer: 2_000_000 });
+    const text = String(stdout);
+    const split = text.lastIndexOf("\n");
+    const body = text.slice(0, split);
+    const status = Number(text.slice(split + 1).trim());
+    if (status >= 200 && status < 300 && body) return body;
+    throw new Error("curl HTTP " + status + " " + body.replace(/\s+/g, " ").slice(0, 160));
+  } catch (err) {
+    console.warn("[WSTATMAP] curl:", err.message);
+  }
+  const response = await fetch(url, {
     headers: {
-      "User-Agent": "Mozilla/5.0",
-      "Accept": "application/json"
+      "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/131.0.0.0 Safari/537.36",
+      "Accept": accept,
+      "Accept-Language": "tr-TR,tr;q=0.9",
+      "Referer": STATION_URL,
+      "Origin": "https://wstatmap.com"
     }
   });
-  if (!response.ok) throw new Error("WStatMap API HTTP " + response.status);
-  const data = await response.json();
+  if (!response.ok) throw new Error("WStatMap HTTP " + response.status);
+  return response.text();
+}
+
+async function fetchFromWstat() {
+  const data = JSON.parse(await readUrl(WSTAT_DETAIL_URL, "application/json"));
   const station = data.station || {};
   if (station.user_station || String(station.no) !== STATION_ID) {
     throw new Error("WStatMap istasyonu 18101 değil");
@@ -177,11 +209,7 @@ async function fetchFromMgm() {
 }
 
 async function fetchRainCups() {
-  const response = await fetch(STATION_URL, {
-    headers: { "User-Agent": "Mozilla/5.0", "Accept": "text/html" }
-  });
-  if (!response.ok) throw new Error("WStatMap HTTP " + response.status);
-  const html = await response.text();
+  const html = await readUrl(STATION_URL, "text/html");
   const pairs = [...html.matchAll(/tabular-nums[^>]*>([^<]+)<\/span><span[^>]*>([^<]+)<\/span>/g)];
   const cups = {};
   for (const match of pairs) {
