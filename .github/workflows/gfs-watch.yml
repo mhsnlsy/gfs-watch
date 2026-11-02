@@ -239,7 +239,7 @@ jobs:
             fi
             cp -a "$RUNNER_TEMP/public/." public/
           fi
-          find public/runs -type f -name '*.json' -mtime +10 -delete
+          find public/runs -type f -name '*.json' -mtime +16 -delete
           cp "$RUNNER_TEMP/gfs_watch.db" gfs_watch.db
           git add -f gfs_watch.db public
           if git diff --cached --quiet; then
