@@ -50,12 +50,19 @@ async function fetchFromMgm() {
     const humidity = Number(row.nem);
     const windSpeed = Number(row.ruzgarHiz);
     const windDir = Number(row.ruzgarYon);
-    const rainToday = Number(row.yagis00Now);
-    const rainHour = Number(row.yagis1Saat);
-    const rain10 = Number(row.yagis10Dk);
-    const rain6 = Number(row.yagis6Saat);
-    const rain12 = Number(row.yagis12Saat);
-    const rain24 = Number(row.yagis24Saat);
+    if (!Object.prototype.hasOwnProperty.call(row, "yagis1Saat")) {
+      throw new Error("MGM yagis1Saat alanı yok; saatlik yağış yazılmadı");
+    }
+    const rain = (value) => {
+      const number = Number(value);
+      return Number.isFinite(number) && number > -900 ? number : null;
+    };
+    const rainToday = rain(row.yagis00Now);
+    const rainHour = rain(row.yagis1Saat);
+    const rain10 = rain(row.yagis10Dk);
+    const rain6 = rain(row.yagis6Saat);
+    const rain12 = rain(row.yagis12Saat);
+    const rain24 = rain(row.yagis24Saat);
     const seaLevel = Number(row.denizeIndirgenmisBasinc);
     const stationP = Number(row.aktuelBasinc);
     const dew = Number(row.yagis00Now); // placeholder, will try to compute or leave null
@@ -81,12 +88,12 @@ async function fetchFromMgm() {
       wind_direction_degrees: Number.isFinite(windDir) ? windDir : null,
       wind_direction_cardinal: wind.cardinal,
       wind_direction_tr: wind.tr,
-      precipitation_1h_mm: Number.isFinite(rainHour) && rainHour > -900 ? rainHour : null,
-      precipitation_10m_mm: Number.isFinite(rain10) && rain10 > -900 ? rain10 : null,
-      precipitation_6h_mm: Number.isFinite(rain6) && rain6 > -900 ? rain6 : null,
-      precipitation_12h_mm: Number.isFinite(rain12) && rain12 > -900 ? rain12 : null,
-      precipitation_24h_mm: Number.isFinite(rain24) && rain24 > -900 ? rain24 : null,
-      precipitation_daily_mm: Number.isFinite(rainToday) && rainToday > -900 ? rainToday : 0,
+      precipitation_1h_mm: rainHour,
+      precipitation_10m_mm: rain10,
+      precipitation_6h_mm: rain6,
+      precipitation_12h_mm: rain12,
+      precipitation_24h_mm: rain24,
+      precipitation_daily_mm: rainToday == null ? 0 : rainToday,
       precipitation_source: "MGM 18101 1sa",
       humidity_percent: Number.isFinite(humidity) ? humidity : null,
       dew_point_c: null,
@@ -185,6 +192,21 @@ async function main() {
   }
 
   if (!observation) throw new Error("No observation obtained");
+  if (observation.precipitation_1h_mm == null) {
+    const historyPathForPrevious = process.env.EYUPSULTAN_TEMPERATURE_HISTORY_PATH || "";
+    const previousPath = historyPathForPrevious
+      ? path.join(path.dirname(historyPathForPrevious), "eyupsultan-station-observation.json")
+      : "";
+    const previous = previousPath ? readJsonIfExists(previousPath) : null;
+    const previousObservation = previous && previous.station_observation;
+    const previousAt = previousObservation ? Date.parse(previousObservation.observed_at_utc || "") : NaN;
+    const previousRain = previousObservation ? previousObservation.precipitation_1h_mm : null;
+    if (Number.isFinite(previousRain) && Number.isFinite(previousAt) && Date.now() - previousAt < 30 * 60000) {
+      observation.precipitation_1h_mm = previousRain;
+      observation.precipitation_source = (previousObservation.precipitation_source || "MGM 18101 1sa") + " · son sağlam";
+      console.warn("[MGM] Saatlik yağış boş geldi, son sağlam değer tutuldu:", previousRain, "mm");
+    }
+  }
 
   try {
     const cups = await fetchRainCups();
@@ -208,15 +230,21 @@ async function main() {
   const last = samples[samples.length - 1];
   const lastTime = last ? Date.parse(last.observed_at_utc) : 0;
   const curTime = Date.parse(observation.observed_at_utc);
-  if (!last || Math.abs(curTime - lastTime) > 60000 || last.temperature_2m_c !== observation.temperature_2m_c) {
-    samples.push({
-      logged_at_utc: now.toISOString(),
-      observed_at_utc: observation.observed_at_utc,
-      temperature_2m_c: observation.temperature_2m_c,
-      precipitation_daily_mm: observation.precipitation_daily_mm,
-      precipitation_1h_mm: observation.precipitation_1h_mm,
-      station_pressure_hpa: observation.station_pressure_hpa
-    });
+  const sample = {
+    logged_at_utc: now.toISOString(),
+    observed_at_utc: observation.observed_at_utc,
+    temperature_2m_c: observation.temperature_2m_c,
+    precipitation_daily_mm: observation.precipitation_daily_mm,
+    precipitation_1h_mm: observation.precipitation_1h_mm,
+    station_pressure_hpa: observation.station_pressure_hpa
+  };
+  if (last && lastTime === curTime) {
+    if (sample.precipitation_1h_mm != null) last.precipitation_1h_mm = sample.precipitation_1h_mm;
+    last.precipitation_daily_mm = sample.precipitation_daily_mm;
+    last.temperature_2m_c = sample.temperature_2m_c;
+    last.logged_at_utc = sample.logged_at_utc;
+  } else if (!last || Math.abs(curTime - lastTime) > 60000 || last.temperature_2m_c !== observation.temperature_2m_c || last.precipitation_1h_mm !== observation.precipitation_1h_mm) {
+    samples.push(sample);
   }
   const cutoff = now.getTime() - 14 * 24 * 60 * 60 * 1000;
   const retained = samples.filter(s => Date.parse(s.logged_at_utc || s.observed_at_utc) >= cutoff).slice(-4500);
