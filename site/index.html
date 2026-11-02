@@ -1612,17 +1612,8 @@
         feelsEl.innerHTML = (feels !== null) ? fmt(feels, 1) + '<span class="unit">°</span>' : '—<span class="unit">°</span>';
       }
       $("pressure").innerHTML=hasStation&&numeric(station.station_pressure_hpa)?fmt(station.station_pressure_hpa,1)+'<span class="unit">hPa</span>':'—<span class="unit">hPa</span>';
-      if(hasStation&&numeric(station.station_pressure_hpa)){
-        const pressureKind=station.pressure_type==="mean_sea_level"?"Deniz seviyesi":station.pressure_type==="station"?"İstasyon basıncı":"";
-        const pressureSource=station.pressure_source||"";
-        const actualPressure=numeric(station.actual_station_pressure_hpa)?" · istasyon "+fmt(station.actual_station_pressure_hpa,1)+" hPa":"";
-        const pressureObservedAt=station.pressure_observed_at_utc?Date.parse(station.pressure_observed_at_utc):NaN;
-        const pressureAgeMinutes=Number.isFinite(pressureObservedAt)?Math.max(0,(Date.now()-pressureObservedAt)/60000):station.pressure_age_minutes;
-        const pressureAge=Number.isFinite(pressureAgeMinutes)?" · "+Math.round(pressureAgeMinutes)+" dk":"";
-        $("pressure-detail").textContent=[pressureKind,pressureSource].filter(Boolean).join(" · ")+actualPressure+pressureAge;
-      }else{
-        $("pressure-detail").textContent="";
-      }
+      $("pressure-detail").textContent="";
+      $("pressure-detail").hidden=true;
       $("weather-symbol").textContent=symbolFor(hasStation?station.precipitation_1h_mm||0:0);
       if(hasStation){
         const observed=station.observed_at_utc?new Date(station.observed_at_utc):null;
