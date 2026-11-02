@@ -1974,9 +1974,6 @@ def analyze_and_build_output(current_run_name, payload, previous_runs):
                 f"Rüzgâr{direction_text}, "
                 f"{station['wind_speed_10m_kmh']:.1f} kilometre saat."
             )
-    speech_parts.append(
-        f"GFS başlangıç analizine göre İstanbul'da sıcaklık {curr_t} derece."
-    )
     if curr_w > 20.0:
         speech_parts.append("Başlangıç analizinde rüzgâr hızı yüksek.")
 
