@@ -940,6 +940,7 @@
 
         </div>
         <div class="briefing" id="briefing" aria-live="polite">
+          <div class="briefing-row"><div class="briefing-k">Plan</div><div class="briefing-v" id="brief-plan">Hesaplanıyor…</div></div>
           <div class="briefing-row"><div class="briefing-k">İstasyon</div><div class="briefing-v" id="brief-station">Hesaplanıyor…</div></div>
           <div class="briefing-row"><div class="briefing-k">Yağış saati</div><div class="briefing-v" id="brief-rain">Hesaplanıyor…</div></div>
           <div class="briefing-row"><div class="briefing-k">850 hPa</div><div class="briefing-v" id="brief-850">Hesaplanıyor…</div></div>
@@ -1852,6 +1853,42 @@
       write("brief-850",lines.t850);
       write("brief-runs",lines.runs);
       write("brief-split",lines.split);
+      write("brief-plan",planningLine());
+    }
+    function plannedRainDays(horizonHours){
+      const points=forecastData&&forecastData.forecast_6_hourly;
+      const issued=forecastData&&forecastData.run_id_utc?new Date(forecastData.run_id_utc).getTime():NaN;
+      if(!Array.isArray(points)||!Number.isFinite(issued))return "";
+      const totals=new Map();
+      for(const point of points){
+        const stamp=new Date(point.valid_time_utc).getTime();
+        const lead=(stamp-issued)/3600000;
+        if(!(lead>=0)||lead>horizonHours||!numeric(point.precipitation_6h_mm))continue;
+        const day=new Intl.DateTimeFormat("tr-TR",{timeZone:"Europe/Istanbul",weekday:"long"}).format(new Date(stamp));
+        totals.set(day,(totals.get(day)||0)+point.precipitation_6h_mm);
+      }
+      return Array.from(totals.entries()).filter((entry)=>entry[1]>=0.5).map((entry)=>entry[0]).join(", ");
+    }
+    function planningLine(){
+      const station=verificationDoc&&verificationDoc.stations?verificationDoc.stations[activeStation]:null;
+      const plan=station&&station.planning;
+      const cycle=forecastData&&forecastData.run_id_utc?timeTR(forecastData.run_id_utc)+" TSİ":"Son GFS çıktısı";
+      if(!plan)return "Her çıktı ve gerçekleşen ölçüm saklanıyor. Güvenilir vade birazdan yazılacak.";
+      const tempHours=Number(plan.temperature_horizon_hours)||0;
+      const rainHours=Number(plan.rain_horizon_hours)||0;
+      const observed=station.operational||{};
+      if(tempHours<24&&rainHours<24){
+        const compared=observed.pairs?observed.pairs+" saat gerçekleşenle karşılaştırıldı":"henüz yeterince gerçekleşen saat yok";
+        const hit=numeric(observed.within_2c_pct)?" ±2°C isabeti %"+Math.round(observed.within_2c_pct)+".":"";
+        return cycle+" için %90 ile gün planı kurulacak vade henüz yok. "+compared+"."+hit+" Çıktılar 16 gün, ölçümler 14 gün saklanır; eşik tutunca süre kendiliğinden uzar.";
+      }
+      let line=cycle+" çıktısı";
+      if(tempHours>=24)line+=" önümüzdeki "+tempHours+" saati sıcaklıkta ±2°C içinde %90 ve üzeri doğrulukla söylüyor.";
+      if(rainHours>=24){
+        const wet=plannedRainDays(rainHours);
+        line+=" Yağış kararı da ilk "+rainHours+" saat için %90 üzerinde"+(wet?". Bu aralıkta yağış görülen gün: "+wet:"")+".";
+      }else line+=" Yağış kararı için %90 eşiği henüz dolmadı.";
+      return line;
     }
     function selectStation(stationKey){
       if(stationKey!=="enka"&&stationKey!=="eyupsultan")return;
