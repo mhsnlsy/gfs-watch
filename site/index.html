@@ -1388,24 +1388,29 @@
     }
     function renderNext72Hours(){
       const meta=$("next-72h-meta"),points=forecastData&&Array.isArray(forecastData.forecast_6_hourly)?forecastData.forecast_6_hourly:[];
-      const hourly=points.map(p=>({...p,lead:Number(p.forecast_hour)})).filter(p=>Number.isFinite(p.lead)&&p.lead>=0&&p.lead<=72).sort((a,b)=>a.lead-b.lead);
-      if(hourly.length<2){["next72-temperature","next72-precipitation"].forEach(id=>$(id).innerHTML='<div class="chart-empty">72 saatlik tahmin verisi bekleniyor…</div>');if(meta)meta.textContent="Tahmin verisi eksik";return;}
+      const now=Date.now(),horizon=now+72*3600000;
+      const parsed=points.map(p=>{
+        const stamp=new Date(p.valid_time_utc).getTime();
+        const modelLead=Number(p.forecast_hour);
+        return {...p,stamp,modelLead};
+      }).filter(p=>Number.isFinite(p.stamp)&&Number.isFinite(p.modelLead)).sort((a,b)=>a.stamp-b.stamp);
+      const hourly=parsed.filter(p=>p.stamp>=now-20*60000&&p.stamp<=horizon+20*60000).map(p=>({...p,lead:Math.max(0,(p.stamp-now)/3600000)}));
+      if(hourly.length<2){["next72-temperature","next72-precipitation"].forEach(id=>$(id).innerHTML='<div class="chart-empty">Yeni GFS raporu bekleniyor. 72 saatlik pencere son raporun çıktısına kilitlenir.</div>');if(meta)meta.textContent="Yeni rapor bekleniyor";return;}
       const temperature=hourly.filter(p=>numeric(p.temperature_2m_c)).map(p=>{
-        const skill=skillAtLead(p.lead);
+        const skill=skillAtLead(p.modelLead);
         const mae=skill&&numeric(skill.mae_c)?skill.mae_c:null;
         const bias=skill&&numeric(skill.bias_c)?skill.bias_c:null;
         const within=skill&&numeric(skill.within_2c_pct)?skill.within_2c_pct:null;
         const samples=skill&&skill.pairs?skill.pairs:0;
         const trusted=numeric(within)&&within>=90;
         const detail=within!=null
-          ?"f"+String(p.lead).padStart(3,"0")+" · "+signedMiss(bias,"temp")+" · ±2°C içinde %"+Math.round(within)+" · "+samples+" örnek · "+(trusted?"%90 üzerinde, dikkate al":"%90 altında, plana katma")
-          :"f"+String(p.lead).padStart(3,"0")+" · bu saat henüz doğrulanmadı, plana katma";
+          ?"f"+String(p.modelLead).padStart(3,"0")+" · "+signedMiss(bias,"temp")+" · ±2°C içinde %"+Math.round(within)+" · "+samples+" örnek · "+(trusted?"%90 üzerinde, dikkate al":"%90 altında, plana katma")
+          :"f"+String(p.modelLead).padStart(3,"0")+" · bu saat henüz doğrulanmadı, plana katma";
         return {lead:p.lead,time:p.valid_time_utc,value:p.temperature_2m_c,mae,bias,within,trusted,label:fmt(p.temperature_2m_c,1)+" °C",detail};
       });
-      const rain=[];hourly.filter(p=>p.lead>0&&p.lead%3===0).forEach(p=>{const interval=hourly.filter(q=>q.lead>p.lead-3&&q.lead<=p.lead);if(interval.length!==3||interval.some(q=>!numeric(q.precipitation_6h_mm)))return;const amount=interval.reduce((sum,q)=>sum+q.precipitation_6h_mm,0);const skill=skillAtLeadRain(p.lead);const mae=skill&&numeric(skill.mae_mm)?skill.mae_mm:null;const bias=skill&&numeric(skill.bias_mm)?skill.bias_mm:null;const within=skill&&numeric(skill.within_1mm_pct)?skill.within_1mm_pct:null;const samples=skill&&skill.pairs?skill.pairs:0;const trusted=numeric(within)&&within>=90;const detail=within!=null?"f"+String(p.lead).padStart(3,"0")+" · "+signedMiss(bias,"rain")+" · ±1 mm içinde %"+Math.round(within)+" · "+samples+" örnek · "+(trusted?"%90 üzerinde, dikkate al":"%90 altında, plana katma"):"f"+String(p.lead).padStart(3,"0")+" · bu yağış saati henüz doğrulanmadı, plana katma";rain.push({lead:p.lead,time:p.valid_time_utc,value:amount,mae,bias,within,trusted,label:fmt(amount,2)+" mm / 3 saat",detail});});
-      const known=temperature.filter(p=>numeric(p.within));
-      const stationName=activeStation==="eyupsultan"?"Eyüpsultan":"ENKA";
-      if(meta)meta.textContent=known.length?stationName+" kaydı":"GFS";
+      const rain=[];parsed.filter(p=>p.modelLead>0&&p.modelLead%3===0&&p.stamp>=now-20*60000&&p.stamp<=horizon+20*60000).forEach(p=>{const interval=parsed.filter(q=>q.modelLead>p.modelLead-3&&q.modelLead<=p.modelLead);if(interval.length!==3||interval.some(q=>!numeric(q.precipitation_6h_mm)))return;const amount=interval.reduce((sum,q)=>sum+q.precipitation_6h_mm,0);const skill=skillAtLeadRain(p.modelLead);const mae=skill&&numeric(skill.mae_mm)?skill.mae_mm:null;const bias=skill&&numeric(skill.bias_mm)?skill.bias_mm:null;const within=skill&&numeric(skill.within_1mm_pct)?skill.within_1mm_pct:null;const samples=skill&&skill.pairs?skill.pairs:0;const trusted=numeric(within)&&within>=90;const detail=within!=null?"f"+String(p.modelLead).padStart(3,"0")+" · "+signedMiss(bias,"rain")+" · ±1 mm içinde %"+Math.round(within)+" · "+samples+" örnek · "+(trusted?"%90 üzerinde, dikkate al":"%90 altında, plana katma"):"f"+String(p.modelLead).padStart(3,"0")+" · bu yağış saati henüz doğrulanmadı, plana katma";rain.push({lead:Math.max(0,(p.stamp-now)/3600000),time:p.valid_time_utc,value:amount,mae,bias,within,trusted,label:fmt(amount,2)+" mm / 3 saat",detail});});
+      const cycle=forecastData&&forecastData.run_id_utc?timeTR(forecastData.run_id_utc)+" TSİ":"GFS";
+      if(meta)meta.textContent=cycle+" · sonraki 72 saat";
       const tempSpan=document.querySelector("#next72-temperature")?.closest(".next-72h-card")?.querySelector("span");
       const rainSpan=document.querySelector("#next72-precipitation")?.closest(".next-72h-card")?.querySelector("span");
       if(tempSpan){tempSpan.textContent="°C";tempSpan.classList.remove("bias-tag");}
@@ -1845,11 +1850,14 @@
       write("brief-plan",planningLine());
     }
     function trustedLeadHours(kind){
+      const now=Date.now();
       const points=forecastData&&Array.isArray(forecastData.forecast_6_hourly)?forecastData.forecast_6_hourly:[];
       const leads=[];
       for(const point of points){
+        const stamp=new Date(point.valid_time_utc).getTime();
         const lead=Number(point.forecast_hour);
-        if(!Number.isFinite(lead)||lead<0||lead>72)continue;
+        if(!Number.isFinite(stamp)||stamp<now-20*60000||stamp>now+72*3600000)continue;
+        if(!Number.isFinite(lead)||lead<0)continue;
         const skill=kind==="rain"?skillAtLeadRain(lead):skillAtLead(lead);
         const percent=skill&&(kind==="rain"?skill.within_1mm_pct:skill.within_2c_pct);
         if(skill&&skill.pairs>=3&&numeric(percent)&&percent>=90)leads.push(lead);
@@ -2195,6 +2203,9 @@
         latestNotificationItems=document.items.slice(0,4);
         renderNotifications(latestNotificationItems,document.updated_at_utc||document.items[0]?.published_at_utc||Date.now());
         $("notification-status").textContent="Otomatik yenileme aktif · Son kontrol: "+new Intl.DateTimeFormat("tr-TR",{timeZone:"Europe/Istanbul",hour:"2-digit",minute:"2-digit"}).format(new Date());
+        const reportRun=latestNotificationItems[0]&&latestNotificationItems[0].run_id_utc;
+        const forecastRun=forecastData&&forecastData.run_id_utc;
+        if(reportRun&&(!forecastRun||reportRun>forecastRun))loadForecast();
       }catch(error){
         $("notifications-list").innerHTML='<div class="chart-empty">Rapor arşivi şu anda alınamıyor. Sayfa açıkken otomatik olarak yeniden denenecek.</div>';
         $("notification-status").textContent="Rapor arşivi bağlantısı bekleniyor · 5 dakikada bir yeniden denenir";
