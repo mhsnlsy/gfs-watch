@@ -43,9 +43,24 @@ jobs:
         run: |
           npm install --no-save playwright
           npx playwright install --with-deps chromium
+          # Verify browser is usable
+          npx playwright install --dry-run chromium || true
 
       - name: Fetch Eyüpsultan observation
-        run: node scripts/eyupsultan_weather.mjs
+        id: scrape
+        run: |
+          set -e
+          node scripts/eyupsultan_weather.mjs
+          # Verify output was written and is recent
+          if [ ! -f public/eyupsultan-station-observation.json ]; then
+            echo "ERROR: Observation file was not created"
+            exit 1
+          fi
+          AGE=$(jq -r '.station_observation.age_minutes // 999' public/eyupsultan-station-observation.json)
+          echo "Scraped observation age: $AGE minutes"
+          if [ "$AGE" -gt 90 ]; then
+            echo "WARNING: Data is older than 90 minutes"
+          fi
         env:
           EYUPSULTAN_PREVIOUS_OBSERVATION_PATH: forecast-data/public/eyupsultan-station-observation.json
           EYUPSULTAN_TEMPERATURE_HISTORY_PATH: forecast-data/public/eyupsultan-station-temperature-history.json
@@ -57,6 +72,9 @@ jobs:
           if [ -f public/eyupsultan-station-observation.json ]; then
             cp -f public/eyupsultan-station-observation.json forecast-data/public/
             cp -f public/eyupsultan-station-temperature-history.json forecast-data/public/ 2>/dev/null || true
+          else
+            echo "No new observation file to publish"
+            exit 0
           fi
           cd forecast-data
           git config user.name "github-actions[bot]"
@@ -67,12 +85,21 @@ jobs:
             git pull --rebase origin gfs-watch-state || true
             git push origin gfs-watch-state
             echo "changed=true" >> "$GITHUB_OUTPUT"
+            echo "Data published successfully"
           else
             echo "changed=false" >> "$GITHUB_OUTPUT"
+            echo "No changes to publish"
           fi
 
       - name: Force Pages deploy
-        if: always()
+        if: always() && steps.scrape.outcome == 'success'
         env:
           GH_TOKEN: ${{ github.token }}
-        run: gh workflow run pages.yml --ref main --repo "$GITHUB_REPOSITORY" || true
+        run: |
+          gh workflow run pages.yml --ref main --repo "$GITHUB_REPOSITORY" || echo "Pages trigger attempted"
+
+      - name: Fail if scrape failed
+        if: steps.scrape.outcome != 'success'
+        run: |
+          echo "Scrape step failed - data was not updated"
+          exit 1
