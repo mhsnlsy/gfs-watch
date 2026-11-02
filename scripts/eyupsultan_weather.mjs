@@ -186,6 +186,9 @@ async function main() {
       throw new Error("WStatMap sayfası otomatik erişim doğrulaması gösterdi; veri alınmadı.");
     }
     observation = parseObservation(bodyText, new Date());
+    if (observation.is_stale) {
+      throw new Error(`WStatMap 18101 ölçümü ${observation.age_minutes} dk yaşında; 20 dk sınırını aştığı için eski veri yayımlanmadı.`);
+    }
   } finally {
     await browser.close();
   }
