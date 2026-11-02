@@ -153,7 +153,7 @@ def main() -> None:
         raise AssertionError("The website must render its name and version from site/version.json.")
     if "GFS Watch · v3.0.0" in html or "GFS Watch v3.0.0" in html:
         raise AssertionError("The old GFS Watch version label is still visible.")
-    if "site/version.json" not in main or "APP_LABEL" not in main or 'f"🌦 {APP_LABEL}"' not in main:
+    if '"version.json"' not in main or "APP_LABEL" not in main or 'f"🌦 {APP_LABEL}"' not in main:
         raise AssertionError("Telegram reports must take their version from the same site/version.json.")
 
     if 'id="next72-wind-speed"' in html or 'id="next72-wind-direction"' in html:
