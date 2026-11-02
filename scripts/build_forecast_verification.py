@@ -23,7 +23,64 @@ LEAD_BUCKETS = (
     ("3–5 gün", 72, 120),
     ("5–7.5 gün", 120, 181),
 )
-# GFS is hourly through f120, then every 3 hours through f180.
+# A planning day counts only when it has enough realized hours.
+# Temperature is "right" inside ±2°C. Rain is "right" when the wet/dry call matches.
+PLAN_DAYS = (
+    (24, "1 gün"),
+    (48, "2 gün"),
+    (72, "3 gün"),
+    (96, "4 gün"),
+    (120, "5 gün"),
+    (144, "6 gün"),
+    (168, "7 gün"),
+    (192, "8 gün"),
+    (240, "10 gün"),
+)
+PLAN_MIN_PAIRS = 8
+PLAN_MIN_PERCENT = 90
+
+
+def rain_occurrence(pairs: list[dict]) -> dict:
+    judged = [
+        pair for pair in pairs
+        if isinstance(pair.get("forecast_3h_mm"), (int, float)) and isinstance(pair.get("observed_3h_mm"), (int, float))
+    ]
+    if not judged:
+        return {"pairs": 0, "accuracy_pct": None}
+    correct = sum((pair["forecast_3h_mm"] >= 0.2) == (pair["observed_3h_mm"] >= 0.2) for pair in judged)
+    return {"pairs": len(judged), "accuracy_pct": round(100 * correct / len(judged))}
+
+
+def _trusted_horizon(rows: list[dict], percent_key: str) -> int:
+    horizon = 0
+    for row in rows:
+        percent = row.get(percent_key)
+        if row.get("pairs", 0) >= PLAN_MIN_PAIRS and isinstance(percent, (int, float)) and percent >= PLAN_MIN_PERCENT:
+            horizon = row["through_hours"]
+            continue
+        break
+    return horizon
+
+
+def planning_horizon(pairs: list[dict]) -> dict:
+    """Longest lead, from now outward, that history still gets right at least 90% of the time."""
+    temperature_days = []
+    rain_days = []
+    previous = 0
+    for end, label in PLAN_DAYS:
+        chosen = [pair for pair in pairs if previous <= pair["lead_hours"] < end]
+        temperature_days.append({"through_hours": end, "label": label, **summarize(chosen)})
+        rain_days.append({"through_hours": end, "label": label, **rain_occurrence(chosen)})
+        previous = end
+    return {
+        "rule": "Sıcaklık ±2°C içinde, yağış var ya da yok. Dilimde en az 8 gerçekleşmiş saat ve isabet en az %90.",
+        "minimum_pairs": PLAN_MIN_PAIRS,
+        "minimum_percent": PLAN_MIN_PERCENT,
+        "temperature_days": temperature_days,
+        "rain_days": rain_days,
+        "temperature_horizon_hours": _trusted_horizon(temperature_days, "within_2c_pct"),
+        "rain_horizon_hours": _trusted_horizon(rain_days, "accuracy_pct"),
+    }
 CANONICAL_HOURS = list(range(0, 121)) + list(range(123, 181, 3))
 FOCUS_HOURS = (0, 6, 12, 24, 36, 48, 60, 72, 76, 84, 96, 108, 120, 144, 168, 180)
 
@@ -343,6 +400,7 @@ def score_station(runs: list[dict], samples: list[dict], now: datetime) -> dict:
         "runs": list(reversed(per_run)),
         "recent": recent,
         "rain": rain_skill(all_pairs, samples),
+        "planning": planning_horizon(all_pairs),
         "logged_pairs": len(all_pairs),
     }
 
