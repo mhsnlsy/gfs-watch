@@ -10,9 +10,10 @@ on:
       - "scripts/backfill_gfs_wind_direction.py"
   workflow_dispatch:
   schedule:
-    # Poll every five minutes, offset from minute zero to avoid the busiest boundary.
-    # Each run resumes the NOAA partial cache.
-    - cron: "2/5 * * * *"
+    # Run 4 times a day, timed for when GFS cycle data (00Z/06Z/12Z/18Z) is typically available.
+    # 05:30 UTC ~ 00Z, 11:30 UTC ~ 06Z, 17:30 UTC ~ 12Z, 23:30 UTC ~ 18Z.
+    # Each run discovers completed cycles, processes one reportable cycle, and sends Telegram if new.
+    - cron: "30 5,11,17,23 * * *"
 
 concurrency:
   group: gfs-watch-run-v6
@@ -229,3 +230,19 @@ jobs:
       contents: read
     uses: ./.github/workflows/web-push-notify.yml
     secrets: inherit
+
+  notify-failure:
+    name: Notify Telegram on workflow failure
+    needs: [check-gfs, deploy-pages, send-web-push]
+    if: failure()
+    runs-on: ubuntu-latest
+    steps:
+      - name: Send failure alert to Telegram
+        env:
+          TELEGRAM_TOKEN: ${{ secrets.TELEGRAM_TOKEN }}
+          CHAT_ID: ${{ secrets.CHAT_ID }}
+        run: |
+          curl -s -X POST "https://api.telegram.org/bot${TELEGRAM_TOKEN}/sendMessage" \
+            -d chat_id="${CHAT_ID}" \
+            -d text="GFS Watch workflow failed. Details: https://github.com/${{ github.repository }}/actions/runs/${{ github.run_id }}" \
+            -d parse_mode="HTML"
