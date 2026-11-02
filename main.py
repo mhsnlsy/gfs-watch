@@ -3649,9 +3649,9 @@ async def run_scheduled_watch():
             print(
                 "[WATCH CATCH-UP] Yeni işlenen döngü(ler): "
                 + ", ".join(newly_processed)
-                + "; sıradaki hazır döngü hemen kontrol edilecek."
+                + ". Rapor çıktı; sayfa yayını beklememesi için izleme kapanıyor."
             )
-            continue
+            return
 
         next_poll_at += poll_seconds
         current_monotonic = time.monotonic()
