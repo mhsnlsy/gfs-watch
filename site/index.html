@@ -385,7 +385,7 @@
 .next-72h-card-head{display:flex;align-items:center;justify-content:space-between;gap:8px}
 .next-72h-card-head h3{font:700 14px Manrope,sans-serif;margin:0}
 .next-72h-card-head span{font-size:8px;color:var(--muted)}
-.next-72h-card-head span.bias-tag{font:700 13px/1.25 Manrope,sans-serif;color:#f1c98b;letter-spacing:-.02em;white-space:normal;text-align:right}
+.next-72h-card-head span.bias-tag{font:500 10px/1.2 Manrope,sans-serif;color:#8ea3b0;letter-spacing:-.01em;white-space:normal;text-align:right}
 .next72-skill-note{margin:6px 2px 0;font-size:13px;line-height:1.4;color:#d7e6ee}
 .next-72h-chart{height:190px;width:100%;margin-top:8px;min-width:0}
 .next72-skill-note{margin:6px 2px 0;font-size:13px;line-height:1.4;color:#d7e6ee}
@@ -1199,8 +1199,8 @@
       if(!numeric(pct))return "rgba(125,211,215,.55)";
       if(pct>=85)return "#8fd7ba";
       if(pct>=70)return "#7dd3d7";
-      if(pct>=50)return "#f1c98b";
-      return "#f0bd9f";
+      if(pct>=50)return "#8ea4b6";
+      return "#7d8e9c";
     }
     function signedMiss(bias,kind){
       if(!numeric(bias))return "yön henüz yok";
@@ -1263,7 +1263,7 @@
       const biases=data.map(p=>p.bias).filter(numeric);
       const meanBias=biases.length?biases.reduce((sum,value)=>sum+value,0)/biases.length:null;
       const phrase=data.caption||(numeric(meanBias)?signedMiss(meanBias,rainChart?"rain":"temp"):"");
-      const width=520,height=150,left=34,right=10,top=phrase?30:12,bottom=26,pw=width-left-right,ph=height-top-bottom,values=data.map(p=>p.value);
+      const width=520,height=150,left=34,right=10,top=phrase?16:12,bottom=26,pw=width-left-right,ph=height-top-bottom,values=data.map(p=>p.value);
       const edge=(value,mae,sign)=>{const next=value+sign*(numeric(mae)?mae:0);return rainChart?Math.max(0,next):next;};
       const usual=p=>numeric(p.bias)?(rainChart?Math.max(0,p.value-p.bias):p.value-p.bias):p.value;
       const banded=data.flatMap(p=>numeric(p.mae)?[edge(p.value,p.mae,-1),edge(p.value,p.mae,1),usual(p)]:[usual(p)]);
@@ -1281,12 +1281,12 @@
       let biasLine="";
       if(data.some(p=>numeric(p.bias))){
         const path=data.map((p,i)=>(i?"L":"M")+x(p.lead).toFixed(1)+" "+y(usual(p)).toFixed(1)).join(" ");
-        biasLine='<path d="'+path+'" fill="none" stroke="#f1c98b" stroke-width="1.6" stroke-dasharray="4 3" stroke-linecap="round"/>';
+        biasLine='<path d="'+path+'" fill="none" stroke="rgba(168,188,200,.42)" stroke-width="1" stroke-dasharray="3 3" stroke-linecap="round"/>';
       }
       const colored=data.some(p=>numeric(p.within));
       const stroke=colored?coords.slice(0,-1).map((p,i)=>'<path d="M'+p.x.toFixed(1)+" "+p.y.toFixed(1)+" L "+coords[i+1].x.toFixed(1)+" "+coords[i+1].y.toFixed(1)+'" fill="none" stroke="'+skillColor(data[i].within)+'" stroke-width="2.8" stroke-linecap="round" stroke-linejoin="round"/>').join(""):'<path d="'+coords.map((p,i)=>(i?"L":"M")+p.x.toFixed(1)+" "+p.y.toFixed(1)).join(" ")+'" fill="none" stroke="'+color+'" stroke-width="2.7" stroke-linecap="round" stroke-linejoin="round"/>';
       const dots=coords.map((p,i)=>'<circle cx="'+p.x+'" cy="'+p.y+'" r="2.6" fill="'+(numeric(data[i].within)?skillColor(data[i].within):color)+'"/>').join("");
-      const banner=phrase?'<rect x="'+left+'" y="1" width="'+(width-left-right)+'" height="18" rx="5" fill="rgba(241,201,139,.18)"/><text x="'+(left+8)+'" y="14" fill="#ffe3a3" font-size="12" font-weight="700" font-family="Manrope,sans-serif">'+esc(phrase)+'</text>':"";
+      const banner=phrase?'<text x="'+(left+2)+'" y="11" fill="#7f93a1" font-size="9" font-weight="500" font-family="Manrope,sans-serif">'+esc(phrase)+'</text>':"";
       holder.innerHTML='<svg viewBox="0 0 '+width+' '+height+'" role="img" aria-label="Önümüzdeki 72 saat '+esc(label)+' tahmini. '+esc(phrase||"Sapma yönü henüz yok")+'.">'+banner+grid+band+biasLine+stroke+dots+ticks+'</svg>';
       if(typeof document!=="undefined")attachStationHistoryTooltip(holder,holder.querySelector("svg"),coords,width,height,top,bottom,color);
     }
