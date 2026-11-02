@@ -722,6 +722,16 @@
           <button type="button" id="station-enka-button" class="active" aria-pressed="true">ENKA Balmumcu</button>
           <button type="button" id="station-eyupsultan-button" aria-pressed="false">Eyüpsultan</button>
         </div>
+        <script>
+          try{
+            if(localStorage.getItem("istanbul-hava-station")==="eyupsultan"){
+              document.getElementById("station-eyupsultan-button").classList.add("active");
+              document.getElementById("station-eyupsultan-button").setAttribute("aria-pressed","true");
+              document.getElementById("station-enka-button").classList.remove("active");
+              document.getElementById("station-enka-button").setAttribute("aria-pressed","false");
+            }
+          }catch(_){}
+        </script>
         <div class="station-overview">
   <div class="station-current">
     <div class="temp-row">
@@ -826,6 +836,7 @@
     const EYUPSULTAN_STATION_HISTORY_URL="./data/eyupsultan-station-temperature-history.json";
     const VERIFY_URL="./data/forecast-verification.json";
     let enkaStationObservation=null,eyupsultanStationObservation=null,activeStation="enka";
+    try{const savedStation=localStorage.getItem("istanbul-hava-station");if(savedStation==="enka"||savedStation==="eyupsultan")activeStation=savedStation;}catch(_){}
     let enkaStationHistorySamples=[],eyupsultanStationHistorySamples=[];
     let verificationDoc=null;
     let forecastData=null,activeMetric="temperature";
@@ -1501,13 +1512,15 @@
     function selectStation(stationKey){
       if(stationKey!=="enka"&&stationKey!=="eyupsultan")return;
       activeStation=stationKey;
+      try{localStorage.setItem("istanbul-hava-station",stationKey);}catch(_){}
       $("station-enka-button").classList.toggle("active",stationKey==="enka");
       $("station-eyupsultan-button").classList.toggle("active",stationKey==="eyupsultan");
       $("station-enka-button").setAttribute("aria-pressed",stationKey==="enka"?"true":"false");
       $("station-eyupsultan-button").setAttribute("aria-pressed",stationKey==="eyupsultan"?"true":"false");
       renderStationCard(stationKey==="enka"?enkaStationObservation:eyupsultanStationObservation);
       renderStationHistory();
-      if(forecastData)renderNext72Hours();
+      if(typeof forecastData!=="undefined"&&forecastData&&typeof renderNext72Hours==="function")renderNext72Hours();
+      if(typeof refreshSelectedStation==="function")refreshSelectedStation();
     }
     $("station-enka-button").addEventListener("click",()=>selectStation("enka"));
     $("station-eyupsultan-button").addEventListener("click",()=>selectStation("eyupsultan"));
@@ -1551,6 +1564,39 @@
         }catch(_){}
       }
       renderStationCard(activeStation==="enka"?enkaStationObservation:eyupsultanStationObservation);
+    }
+    async function refreshSelectedStation(){
+      const stationKey=activeStation;
+      const cacheKey=Date.now();
+      const observationUrl=stationKey==="eyupsultan"?EYUPSULTAN_STATION_URL:STATION_URL;
+      const historyUrl=stationKey==="eyupsultan"?EYUPSULTAN_STATION_HISTORY_URL:STATION_HISTORY_URL;
+      const [observationResponse,historyResponse]=await Promise.all([
+        fetch(observationUrl+"?t="+cacheKey,{cache:"no-store"}).catch(()=>null),
+        fetch(historyUrl+"?t="+cacheKey,{cache:"no-store"}).catch(()=>null)
+      ]);
+      if(observationResponse&&observationResponse.ok){
+        try{
+          const document=await observationResponse.json();
+          const candidate=document&&document.station_observation;
+          if(document&&document.schema==="gfs-watch.station-observation.v1"&&candidate){
+            if(stationKey==="eyupsultan"&&String(candidate.station_id)==="18101")eyupsultanStationObservation=candidate;
+            if(stationKey==="enka"&&candidate.station_id==="ENKA-BALMUMCU-VANTAGE-PRO")enkaStationObservation=candidate;
+          }
+        }catch(_){}
+      }
+      if(historyResponse&&historyResponse.ok){
+        try{
+          const document=await historyResponse.json();
+          if(document&&document.schema==="gfs-watch.station-temperature-history.v1"&&Array.isArray(document.samples)){
+            if(stationKey==="eyupsultan"&&String(document.station_id)==="18101")eyupsultanStationHistorySamples=document.samples;
+            if(stationKey==="enka")enkaStationHistorySamples=document.samples;
+          }
+        }catch(_){}
+      }
+      if(activeStation!==stationKey)return;
+      renderStationCard(activeStation==="enka"?enkaStationObservation:eyupsultanStationObservation);
+      renderStationHistory();
+      if(typeof forecastData!=="undefined"&&forecastData&&typeof renderNext72Hours==="function")renderNext72Hours();
     }
     async function loadForecast(){
       try{
@@ -1799,7 +1845,7 @@
       }catch(_){
         verificationDoc=null;
       }
-      if(forecastData)renderNext72Hours();
+      if(typeof forecastData!=="undefined"&&forecastData&&typeof renderNext72Hours==="function")renderNext72Hours();
     }
 
     async function startPage(){
