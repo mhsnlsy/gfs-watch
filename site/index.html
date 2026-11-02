@@ -704,35 +704,16 @@
     .station-card .stat .detail { font-size: 6.5px !important; }
     .station-card .stat .unit { font-size: 6.5px !important; }
 
-    /* Live observation: shorter card, same information. */
-    .dashboard-top{padding:10px 0 8px;gap:10px;grid-template-columns:minmax(280px,.72fr) minmax(0,1.28fr)}
-    .dashboard-top .station-card{padding:9px 11px 8px!important;border-radius:16px;min-height:0!important}
-    .station-card .label{font-size:8px}
-    .station-card .place{font-size:14px;margin-top:1px;line-height:1.2}
-    .station-card .model-state{padding:3px 6px;font-size:8px}
-    .station-switch{margin-top:5px;padding:2px}
-    .station-switch button{min-height:0!important;padding:3px 8px!important;font-size:9px;line-height:1.2}
-    .dashboard-top .station-overview{margin-top:4px!important}
-    .station-card .temp-row,.dashboard-top .station-card .temp-row{margin-top:2px!important;gap:4px!important}
-    .dashboard-top .station-card .temperature{font-size:clamp(34px,3.4vw,42px)!important;line-height:.92}
-    .station-card .weather-symbol{font-size:20px}
-    .station-current .temp-meta{margin-top:1px!important}
-    .station-card .temp-caption{font-size:8px;line-height:1.3;margin-top:2px}
-    .delta-badge{margin-top:2px!important;padding:1px 6px!important;min-height:0;font-size:9px}
-    .station-card .weather-stats,.dashboard-top .station-card .weather-stats{margin-top:6px!important;padding-top:5px!important}
-    .station-history-inline{margin-top:6px!important;padding-top:5px!important}
+    /* Close empty gaps in the live panel. Sizes stay as they were. */
+    .dashboard-top{padding:12px 0 10px;gap:10px}
+    .dashboard-top .station-card{padding:12px 14px 10px}
+    .station-switch{margin-top:6px}
+    .station-switch button{min-height:0;padding:6px 11px}
+    .dashboard-top .station-overview{margin-top:6px}
+    .station-card .temp-row,.dashboard-top .station-card .temp-row{margin-top:4px!important}
+    .station-card .weather-stats,.dashboard-top .station-card .weather-stats{margin-top:6px!important;padding-top:6px}
+    .station-history-inline{margin-top:8px;padding-top:6px!important}
     .station-history-inline .history-panel-head{margin-bottom:4px}
-    .station-history-inline .history-panel-head h2{font-size:13px}
-    .station-history-inline .history-charts{gap:6px}
-    .station-history-inline .history-chart{height:62px}
-    @media(min-width:1600px){
-      .dashboard-top{grid-template-columns:minmax(320px,.7fr) minmax(0,1.3fr)}
-    }
-    @media(max-width:560px){
-      .dashboard-top .station-card{padding:10px 10px 8px!important}
-      .dashboard-top .station-card .temperature{font-size:38px!important}
-      .station-history-inline .history-chart{height:58px}
-    }
 
 </style>
 </head>
