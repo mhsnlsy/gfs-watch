@@ -158,7 +158,7 @@ def main() -> None:
 
     if 'id="next72-wind-speed"' in html or 'id="next72-wind-direction"' in html:
         raise AssertionError("The 72-hour panel must show only temperature and precipitation.")
-    for marker in ('id="briefing"', 'id="brief-station"', 'id="brief-rain"', 'id="brief-850"', 'id="brief-runs"', 'id="brief-split"', "function buildBriefing"):
+    for marker in ('id="briefing"', 'id="brief-plan"', 'id="brief-station"', 'id="brief-rain"', 'id="brief-850"', 'id="brief-runs"', 'id="brief-split"', "function buildBriefing", "function planningLine"):
         if marker not in html:
             raise AssertionError("72-hour briefing is missing: " + marker)
     if "viewport-fit=cover" not in html or "env(safe-area-inset-top)" not in html:
