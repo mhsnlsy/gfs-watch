@@ -821,6 +821,58 @@
       .dashboard-top .station-card .stat .detail,.dashboard-top .station-card .stat .unit{font-size:10px!important}
     }
 
+    /* Left and right panels share one top and one bottom, both stations. */
+    .dashboard-top{align-items:stretch!important}
+    .dashboard-left{
+      display:flex!important;
+      flex-direction:column!important;
+      align-self:stretch!important;
+      height:100%!important;
+      min-height:100%!important;
+      margin:0!important;
+      padding:0!important;
+    }
+    .dashboard-top .station-card{
+      flex:1 1 auto!important;
+      height:100%!important;
+      min-height:100%!important;
+      margin:0!important;
+      align-self:stretch!important;
+      grid-template-rows:auto auto auto minmax(0,1fr) auto!important;
+    }
+    .dashboard-top .next-72h-panel{
+      margin:0!important;
+      align-self:stretch!important;
+      height:100%!important;
+    }
+    .dashboard-top .station-card>.station-history-inline{
+      grid-column:1 / -1!important;
+      grid-row:4!important;
+      display:flex!important;
+      flex-direction:column!important;
+      min-height:0!important;
+      height:100%!important;
+      margin-top:8px!important;
+    }
+    .dashboard-top .station-card>.station-alert{grid-column:1 / -1!important;grid-row:5!important}
+    .dashboard-top .station-history-inline .history-charts{
+      flex:1 1 auto!important;
+      min-height:0!important;
+      display:grid!important;
+      grid-template-rows:minmax(0,1fr) minmax(0,1fr)!important;
+      align-content:stretch!important;
+    }
+    .dashboard-top .station-history-inline .history-chart-card{
+      display:flex!important;
+      flex-direction:column!important;
+      min-height:0!important;
+    }
+    .dashboard-top .station-history-inline .history-chart{
+      flex:1 1 auto!important;
+      height:auto!important;
+      min-height:92px!important;
+    }
+
 </style>
 </head>
 <body>
