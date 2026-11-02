@@ -9,14 +9,14 @@
     "latitude": 41.102778,
     "longitude": 28.924167,
     "elevation_m": 54,
-    "observed_at_utc": "2026-11-01T23:49:27.312Z",
-    "fetched_at_utc": "2026-11-02T00:00:27.312Z",
+    "observed_at_utc": "2026-11-01T23:54:24.090Z",
+    "fetched_at_utc": "2026-11-02T00:05:24.090Z",
     "age_minutes": 11,
     "stale_after_minutes": 20,
     "is_stale": false,
     "temperature_2m_c": 16.3,
-    "wind_speed_10m_kmh": 6.8,
-    "wind_direction_degrees": 353,
+    "wind_speed_10m_kmh": 6.5,
+    "wind_direction_degrees": 356,
     "wind_direction_cardinal": "N",
     "wind_direction_tr": "Kuzey",
     "precipitation_1h_mm": 0,
@@ -26,8 +26,8 @@
     "actual_station_pressure_hpa": 1012,
     "pressure_type": "mean_sea_level",
     "pressure_source": "MGM 18101",
-    "pressure_observed_at_utc": "2026-11-01T23:54:00.000Z",
-    "pressure_age_minutes": 6.5
+    "pressure_observed_at_utc": "2026-11-01T23:59:00.000Z",
+    "pressure_age_minutes": 6.4
   },
-  "updated_at_utc": "2026-11-02T00:00:29.330Z"
+  "updated_at_utc": "2026-11-02T00:05:26.009Z"
 }
