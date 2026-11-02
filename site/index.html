@@ -961,10 +961,6 @@
 </section>
     <section class="section" id="basinc"><div class="section-head"><div><div class="section-kicker">NOAA / NCEP GFS · MODEL ANALİZİ</div><h2>Basınç düzeni ve kaynak</h2></div><div class="section-note">İstanbul merkezli 2.500 km çaplı<br>bölgesel analiz</div></div><div class="lower-grid"><article class="pressure-card"><div class="label">Bölgesel basınç merkezleri ve İstanbul'a etkisi</div><ul class="pressure-list" id="pressure-findings"><li class="loading">Analiz yükleniyor…</li></ul></article><article class="info-card"><div class="label">Veri hakkında</div><p>İstasyon ölçümü ile GFS tahmini ayrı kaynaklardır. Model, İstanbul'a en yakın 0.25° hücredir.</p><div class="source-row"><span>Model: <strong>GFS 0.25°</strong></span><span id="valid-until">Geçerlilik: —</span></div></article></div></section>
     <section class="section" id="tahmin"><div class="section-head"><div><div class="section-kicker">NOAA / NCEP GFS · MODEL TAHMİNİ</div><h2>8 günlük tahmin</h2></div><div class="section-note"><span id="cycle-chip">Model döngüsü yükleniyor</span><br><span id="updated-chip">Yayın zamanı bekleniyor</span><br>Günlük en düşük / en yüksek sıcaklık</div></div><div class="daily-grid" id="daily-grid"><div class="loading">Tahmin verisi yükleniyor…</div></div>
-      <article class="chart-card" id="gfs-850-card" style="margin-top:14px">
-        <div class="chart-card-head"><div><div class="chart-title">Sıcaklık · 850 hPa</div><div class="chart-subtitle">Son dört GFS çıktısı · aynı geçerlilik saati · °C</div></div><span class="chart-count" id="gfs-cycle-t850-count">4 çıktı</span></div>
-        <div class="chart-wrap" id="gfs-cycle-t850-chart"><div class="chart-empty">850 hPa sıcaklık yükleniyor…</div></div>
-      </article>
     </div>
     <div id="ecmwf-model-view" hidden aria-label="ECMWF tahmin görünümü">
       <div class="section-head" style="padding-top:30px"><div><div class="section-kicker">ECMWF IFS · HRES + ENS</div><h2>ECMWF IFS · İstanbul</h2></div><div class="section-note"><span id="ecmwf-run-meta">ECMWF döngüsü bekleniyor</span><br><span id="ecmwf-updated-chip">Yayın zamanı</span><br>Günlük en düşük / en yüksek sıcaklık</div></div>
@@ -1888,7 +1884,6 @@
       }
       if(data.forecast_valid_until_utc)$("valid-until").textContent="Son geçerlilik: "+new Intl.DateTimeFormat("tr-TR",{timeZone:"Europe/Istanbul",day:"2-digit",month:"2-digit"}).format(new Date(data.forecast_valid_until_utc));
       renderDaily(data.daily_summary);renderFindings(data.regional_pressure_analysis&&data.regional_pressure_analysis.findings,data.current_conditions&&data.current_conditions.mean_sea_level_pressure_hpa);
-      if(typeof renderEcmwfComparisonChart==="function")renderEcmwfComparisonChart("t850","gfs-cycle-t850-chart",Array.isArray(data.comparison_runs)?data.comparison_runs:[]);
     }
     // Station observations refresh independently from forecast/model data.
     // A delayed GFS/ECMWF payload must never block live station readings.
