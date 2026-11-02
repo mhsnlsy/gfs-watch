@@ -134,6 +134,61 @@ def init_db():
         conn.commit()
         if deleted:
             print(f"[DB] {deleted} eski kayıt silindi; saklama süresi {RETENTION_DAYS} gün.")
+        _ensure_telegram_ledger(conn)
+        conn.commit()
+    finally:
+        conn.close()
+
+
+# 12Z ve öncesi Telegram'a bir kez gitti. Defterde yoksa bile tekrarlanmaz.
+TELEGRAM_ALREADY_SENT_THROUGH = "2026-11-02T12:00:00+00:00"
+
+
+def _ensure_telegram_ledger(conn):
+    conn.execute("""
+        CREATE TABLE IF NOT EXISTS gfs_telegram_sent (
+            run_name TEXT PRIMARY KEY,
+            sent_at TEXT DEFAULT CURRENT_TIMESTAMP
+        )
+    """)
+    conn.execute("""
+        INSERT OR IGNORE INTO gfs_telegram_sent (run_name)
+        SELECT run_name FROM gfs_runs_v3
+    """)
+    conn.execute(
+        "INSERT OR IGNORE INTO gfs_telegram_sent (run_name) VALUES (?)",
+        (TELEGRAM_ALREADY_SENT_THROUGH,),
+    )
+
+
+def telegram_already_sent(run_id):
+    """True when this cycle already produced its one Telegram report."""
+    normalized = _parse_utc_datetime(run_id).isoformat(timespec="seconds")
+    if normalized <= TELEGRAM_ALREADY_SENT_THROUGH:
+        return True
+    conn = sqlite3.connect(DB_PATH)
+    try:
+        _ensure_telegram_ledger(conn)
+        row = conn.execute(
+            "SELECT 1 FROM gfs_telegram_sent WHERE run_name = ?",
+            (normalized,),
+        ).fetchone()
+        conn.commit()
+        return row is not None
+    finally:
+        conn.close()
+
+
+def mark_telegram_sent(run_id):
+    normalized = _parse_utc_datetime(run_id).isoformat(timespec="seconds")
+    conn = sqlite3.connect(DB_PATH)
+    try:
+        _ensure_telegram_ledger(conn)
+        conn.execute(
+            "INSERT OR IGNORE INTO gfs_telegram_sent (run_name) VALUES (?)",
+            (normalized,),
+        )
+        conn.commit()
     finally:
         conn.close()
 
@@ -2416,8 +2471,8 @@ async def generate_speech_with_retry(text, max_attempts=3):
     return None
 
 def _telegram_enabled():
-    """Telegram stays off unless GFS_TELEGRAM=1. The page does not wait on it."""
-    return os.getenv("GFS_TELEGRAM", "0").strip().lower() in {"1", "true", "yes"}
+    """Yeni bir çıktı bir kez gider. GFS_TELEGRAM=0 ile tamamen kapanır."""
+    return os.getenv("GFS_TELEGRAM", "1").strip().lower() in {"1", "true", "yes"}
 
 
 async def _no_speech():
@@ -3372,6 +3427,14 @@ async def process_gfs_update(strict=False, target_run_id=None):
     print(f"[GFS CYCLE COMMITTED] {run_id}; Telegram and Pages deliveries start independently.")
 
     async def deliver_telegram_report():
+        if telegram_already_sent(run_id):
+            print(f"[TELEGRAM] {run_id} için bildirim zaten gitti; tekrar yok.")
+            return
+        if not _telegram_enabled():
+            print("[TELEGRAM KAPALI] Bu çıktı için bildirim gönderilmedi.")
+            return
+        # Sayfa yenilemesi aynı çıktıyı tekrar işlemeye kalksa bile ikinci mesaj gitmesin.
+        mark_telegram_sent(run_id)
         try:
             await send_telegram_text(full_text_report)
         except Exception as telegram_exc:
