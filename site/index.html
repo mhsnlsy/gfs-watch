@@ -1749,15 +1749,23 @@
       if(lead)lead.textContent=stationName+" · "+istStamp(operational.from_utc)+" – "+istStamp(operational.to_utc)+" · her saat, o saatte yayında olan son GFS ile karşılaştırıldı.";
       const byHour=station.by_hour||[];
       const hourAt=f=>byHour.find(row=>row.f===f);
-      const scored=byHour.filter(row=>row.pairs>=3);
+      const scored=byHour.filter(row=>row.pairs>=4);
       let verdict="";
       if(scored.length){
-        const best=[...scored].sort((a,b)=>a.mae_c-b.mae_c||b.within_1c_pct-a.within_1c_pct)[0];
+        const best=[...scored].sort((a,b)=>a.mae_c-b.mae_c||b.within_1c_pct-a.within_1c_pct||a.f-b.f)[0];
         const worst=[...scored].sort((a,b)=>b.mae_c-a.mae_c||a.within_1c_pct-b.within_1c_pct)[0];
         const longest=byHour.reduce((max,row)=>row.pairs?Math.max(max,row.f):max,0);
-        const spread=Math.abs(worst.mae_c-best.mae_c);
-        const trend=spread<0.3?"Ölçülebilen vadeler birbirine yakın; kısa vade henüz belirgin biçimde öne çıkmıyor.":"Kısa vade, daha uzun vadeden daha az sapıyor.";
-        verdict='<p class="verify-note">En tutarlı ölçülen vade <strong>f'+String(best.f).padStart(3,"0")+'</strong> (ortalama sapma '+fmt1(best.mae_c)+'°, ±1°C '+pctText(best.within_1c_pct)+', '+best.pairs+' örnek). En zayıfı <strong>f'+String(worst.f).padStart(3,"0")+'</strong> ('+fmt1(worst.mae_c)+'°). Doğrulanan en uzun vade f'+String(longest).padStart(3,"0")+'. '+trend+'</p>';
+        const mean=rows=>rows.reduce((sum,row)=>sum+row.mae_c,0)/rows.length;
+        const shortLeads=scored.filter(row=>row.f<=12);
+        const longerLeads=scored.filter(row=>row.f>=24);
+        let trend="Örnek az; vade kısaldıkça düzelir beklentisi bu aralıkta henüz net değil.";
+        if(shortLeads.length&&longerLeads.length){
+          const gap=mean(longerLeads)-mean(shortLeads);
+          if(gap>=0.25)trend="Kısa vade (f000–f012), bir gün ve sonrasından daha az sapıyor.";
+          else if(gap<=-0.25)trend="Bu pencerede uzun vade daha isabetli görünüyor; örnek artınca netleşir.";
+          else trend="Ölçülebilen vadeler birbirine yakın. Kısa vadenin belirgin üstünlüğü henüz yok.";
+        }
+        verdict='<p class="verify-note">En az 4 örneği olan saatler içinde en tutarlısı <strong>f'+String(best.f).padStart(3,"0")+'</strong> (sapma '+fmt1(best.mae_c)+'°, ±1°C '+pctText(best.within_1c_pct)+', '+best.pairs+' örnek). En zayıfı <strong>f'+String(worst.f).padStart(3,"0")+'</strong> ('+fmt1(worst.mae_c)+'°). Doğrulanan en uzun vade f'+String(longest).padStart(3,"0")+'. '+trend+'</p>';
       }
       const focus=[0,6,12,24,36,48,72,76,96,120,144,168,180];
       const focusHtml=focus.map(f=>{
