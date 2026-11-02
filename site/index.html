@@ -80,6 +80,10 @@
       .notification-list,.chart-stack,.lower-grid{width:100%;grid-template-columns:minmax(0,1fr)}
       .section,.section-head,.chart-card,.notification-card{min-width:0}
     }
+    @media(min-width:851px){
+      #ecmwf-report-images{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:18px 16px;align-items:start}
+      #ecmwf-report-images .chart-card,#ecmwf-report-images .notification-image{min-width:0;width:100%}
+    }
     @media(max-width:560px){
       .chart-wrap svg{min-width:0;width:100%}
       .notification-image{height:auto;object-fit:contain}

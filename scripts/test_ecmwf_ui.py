@@ -116,6 +116,8 @@ def main() -> None:
 
     if "ecmwf-report-images" not in ecmwf:
         raise AssertionError("ECMWF PNG report gallery is missing.")
+    if "#ecmwf-report-images{display:grid;grid-template-columns:repeat(2,minmax(0,1fr))" not in html:
+        raise AssertionError("Desktop ECMWF report images must sit in a 2x2 grid.")
 
     if "ecmwf-wind-chart" in html or "ecmwf-forecast-table" in html:
         raise AssertionError("Legacy ECMWF-only layout remains in the website.")
