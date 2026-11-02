@@ -313,14 +313,18 @@ async function main() {
     temperature_2m_c: observation.temperature_2m_c,
     precipitation_daily_mm: observation.precipitation_daily_mm,
     precipitation_1h_mm: observation.precipitation_1h_mm,
+    precipitation_10m_mm: observation.precipitation_10m_mm,
     station_pressure_hpa: observation.station_pressure_hpa
   };
-  if (last && lastTime === curTime) {
+  const bucket = (time) => Math.floor(time / 600000);
+  if (last && bucket(lastTime) === bucket(curTime)) {
     if (sample.precipitation_1h_mm != null) last.precipitation_1h_mm = sample.precipitation_1h_mm;
+    if (sample.precipitation_10m_mm != null) last.precipitation_10m_mm = sample.precipitation_10m_mm;
     last.precipitation_daily_mm = sample.precipitation_daily_mm;
     last.temperature_2m_c = sample.temperature_2m_c;
+    last.observed_at_utc = sample.observed_at_utc;
     last.logged_at_utc = sample.logged_at_utc;
-  } else if (!last || Math.abs(curTime - lastTime) > 60000 || last.temperature_2m_c !== observation.temperature_2m_c || last.precipitation_1h_mm !== observation.precipitation_1h_mm) {
+  } else {
     samples.push(sample);
   }
   const cutoff = now.getTime() - 14 * 24 * 60 * 60 * 1000;
