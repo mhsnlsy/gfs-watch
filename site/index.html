@@ -722,7 +722,13 @@
     .dashboard-top .station-card>.station-alert,
     .dashboard-top .station-card>.station-history-inline{grid-column:1 / -1}
     .dashboard-top .station-card>.station-overview{grid-column:1;margin:0!important}
-    .dashboard-top .station-card>.weather-stats{grid-column:2;margin:0!important;padding-top:0!important;align-self:end}
+    .dashboard-top .station-card>.weather-stats{
+      grid-column:2;margin:0!important;padding-top:0!important;align-self:center;
+      display:flex!important;flex-wrap:nowrap!important;width:100%;min-width:0!important;
+      overflow:visible!important;
+    }
+    .station-card .stat .name,.station-card .stat .value{white-space:nowrap}
+    .station-card .stat .detail{white-space:normal!important;overflow-wrap:anywhere!important;line-height:1.15}
     .station-card .place{margin-top:1px}
     .station-switch{margin-top:2px!important;padding:2px}
     .station-switch button{min-height:0!important;padding:5px 10px!important}
@@ -1523,7 +1529,36 @@
         $("station-alert").hidden=false;
         $("station-alert").textContent="⚠ "+stationName+" istasyon verisi alınamadı. Kartta güncel ölçüm bulunmuyor.";
       }
+      fitStationStats();
     }
+    function fitStationStats(){
+      const row=document.querySelector(".dashboard-top .station-card>.weather-stats");
+      if(!row)return;
+      const card=row.parentElement;
+      const stats=[...row.querySelectorAll(":scope>.stat")];
+      row.style.transform="none";
+      row.style.width="max-content";
+      row.style.marginBottom="0px";
+      stats.forEach(stat=>{stat.style.flex="0 0 auto";stat.style.minWidth="max-content";stat.style.overflow="visible";});
+      const needed=row.scrollWidth;
+      const styles=getComputedStyle(card);
+      const pad=(parseFloat(styles.paddingLeft)||0)+(parseFloat(styles.paddingRight)||0);
+      const gap=parseFloat(styles.columnGap)||0;
+      const columns=styles.gridTemplateColumns.trim().split(/\s+/).filter(Boolean);
+      const overview=card.querySelector(":scope>.station-overview");
+      const available=columns.length>1&&overview?card.clientWidth-pad-overview.offsetWidth-gap:card.clientWidth-pad;
+      stats.forEach(stat=>{stat.style.flex="";stat.style.minWidth="";stat.style.overflow="";});
+      const scale=available>8&&needed>available+1?available/needed:1;
+      if(scale<0.999){
+        row.style.width=needed+"px";
+        row.style.transformOrigin="left center";
+        row.style.transform="scale("+scale.toFixed(4)+")";
+        row.style.marginBottom=(-(row.offsetHeight*(1-scale))).toFixed(1)+"px";
+      }else{
+        row.style.width="100%";
+      }
+    }
+    window.addEventListener("resize",fitStationStats);
     function selectStation(stationKey){
       if(stationKey!=="enka"&&stationKey!=="eyupsultan")return;
       activeStation=stationKey;
