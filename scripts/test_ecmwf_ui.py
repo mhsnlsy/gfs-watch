@@ -3,6 +3,7 @@ from __future__ import annotations
 
 import re
 import math
+import json
 from collections import Counter
 from pathlib import Path
 
@@ -108,8 +109,10 @@ def main() -> None:
         raise AssertionError("GFS eight-day forecast must be the final model section.")
     if 'id="ecmwf-tahmin"' not in ecmwf or ecmwf.index('id="ecmwf-tahmin"') < ecmwf.index('id="ecmwf-basinc"'):
         raise AssertionError("ECMWF eight-day forecast must be the final model section.")
-    if 'class="chart-stack"' in gfs or 'class="chart-card"' in gfs:
+    if 'class="chart-stack"' in gfs:
         raise AssertionError("GFS legacy 180-hour graph card container remains.")
+    if gfs.count('class="chart-card"') != 1 or 'id="gfs-850-card"' not in gfs:
+        raise AssertionError("GFS should keep only the 850 hPa comparison card.")
     if 'class="chart-stack"' not in ecmwf or 'class="chart-card"' not in ecmwf:
         raise AssertionError("The remaining ECMWF wind comparison charts are missing.")
     if '.next-72h-card{\n      border:0!important' not in html or '.chart-stack>.chart-card{\n      border:0!important' not in html:
@@ -142,6 +145,16 @@ def main() -> None:
     assert abs(direction_from_uv(-1.0, 0.0) - 90.0) < 1e-9
     assert abs(direction_from_uv(0.0, 1.0) - 180.0) < 1e-9
     assert abs(direction_from_uv(1.0, 0.0) - 270.0) < 1e-9
+
+    version = json.loads((ROOT / "site" / "version.json").read_text(encoding="utf-8"))
+    if version.get("name") != "İstanbul'un Havası" or version.get("version") != "3.0":
+        raise AssertionError("Shared app identity must stay İstanbul'un Havası 3.0 until the version file changes.")
+    if 'data-app-name' not in html or 'data-app-version' not in html or "./version.json" not in html:
+        raise AssertionError("The website must render its name and version from site/version.json.")
+    if "GFS Watch · v3.0.0" in html or "GFS Watch v3.0.0" in html:
+        raise AssertionError("The old GFS Watch version label is still visible.")
+    if "site/version.json" not in main or "APP_LABEL" not in main or 'f"🌦 {APP_LABEL}"' not in main:
+        raise AssertionError("Telegram reports must take their version from the same site/version.json.")
 
     if 'id="next72-wind-speed"' in html or 'id="next72-wind-direction"' in html:
         raise AssertionError("The 72-hour panel must show only temperature and precipitation.")
