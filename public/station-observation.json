@@ -9,18 +9,18 @@
     "latitude": 41.1,
     "longitude": 28.9,
     "elevation_m": 107,
-    "observed_at_utc": "2026-11-02T19:25:00+00:00",
-    "age_minutes": 5.4,
+    "observed_at_utc": "2026-11-02T19:30:00+00:00",
+    "age_minutes": 5.3,
     "is_stale": false,
-    "temperature_2m_c": 16.1,
-    "wind_speed_10m_kmh": 4.8,
-    "wind_speed_10m_knots": 2.6,
+    "temperature_2m_c": 15.9,
+    "wind_speed_10m_kmh": 3.1,
+    "wind_speed_10m_knots": 1.7,
     "wind_direction_cardinal": "W",
     "wind_direction_tr": "Batı",
     "precipitation_1h_mm": null,
     "precipitation_daily_mm": 0.0,
     "humidity_percent": 90.0,
-    "station_pressure_hpa": 1016.3
+    "station_pressure_hpa": 1016.5
   },
-  "updated_at_utc": "2026-11-02T19:30:21+00:00"
+  "updated_at_utc": "2026-11-02T19:35:17+00:00"
 }
