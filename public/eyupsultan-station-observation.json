@@ -18,8 +18,8 @@
     "wind_direction_degrees": 353,
     "wind_direction_cardinal": "N",
     "wind_direction_tr": "Kuzey",
-    "precipitation_1h_mm": null,
-    "precipitation_daily_mm": 1,
+    "precipitation_1h_mm": 0.0,
+    "precipitation_daily_mm": 1.0,
     "humidity_percent": 85,
     "dew_point_c": null,
     "station_pressure_hpa": 1017.1,
@@ -27,7 +27,12 @@
     "pressure_type": "mean_sea_level",
     "pressure_source": "MGM 18101",
     "pressure_observed_at_utc": "2026-11-02T15:19:00.000Z",
-    "pressure_age_minutes": 6.5
+    "pressure_age_minutes": 6.5,
+    "precipitation_10m_mm": 0.0,
+    "precipitation_6h_mm": 0.0,
+    "precipitation_12h_mm": 0.0,
+    "precipitation_24h_mm": 1.0,
+    "precipitation_source": "WStatMap 1sa"
   },
   "updated_at_utc": "2026-11-02T15:25:27.636Z"
 }
