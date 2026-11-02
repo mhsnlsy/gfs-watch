@@ -251,7 +251,7 @@ def _reject_older_observation(observation):
 
 
 def update_temperature_history(observation):
-    """Append one point per distinct fresh ENKA measurement to the 7-day log."""
+    """Append one point per distinct fresh ENKA measurement to the 14-day log."""
     history_path = Path(
         os.getenv(
             "STATION_TEMPERATURE_HISTORY_PATH",
@@ -297,7 +297,7 @@ def update_temperature_history(observation):
             ),
         })
 
-    cutoff = logged_at.timestamp() - 7 * 24 * 60 * 60
+    cutoff = logged_at.timestamp() - 14 * 24 * 60 * 60
     retained = []
     for sample in samples:
         try:
@@ -312,7 +312,7 @@ def update_temperature_history(observation):
                 retained.append(sample)
         except (KeyError, TypeError, ValueError, OverflowError):
             continue
-    retained = retained[-2016:]
+    retained = retained[-4500:]
 
     document = {
         "schema": "gfs-watch.station-temperature-history.v1",
@@ -320,7 +320,7 @@ def update_temperature_history(observation):
         "station_name": observation["station_name"],
         "sampling_interval_minutes": 5,
         "aggregation_interval_minutes": 30,
-        "retention_days": 7,
+        "retention_days": 14,
         "updated_at_utc": logged_at.isoformat(timespec="seconds"),
         "samples": retained,
     }
@@ -330,7 +330,7 @@ def update_temperature_history(observation):
         encoding="utf-8",
     )
     temporary_path.replace(history_path)
-    print(f"[TEMPERATURE LOG] {len(retained)} kayıt tutuluyor; 7 günlük kayan arşiv.")
+    print(f"[TEMPERATURE LOG] {len(retained)} kayıt tutuluyor; 14 günlük kayan arşiv.")
     return len(retained)
 
 
