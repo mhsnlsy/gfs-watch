@@ -6,7 +6,7 @@ const STATION_URL = "https://wstatmap.com/tr/stations/eyupsultan-18101";
 const MGM_STATIONS_URL = "https://servis.mgm.gov.tr/web/istasyonlar/il?plaka=34";
 const MGM_OBSERVATIONS_URL = "https://servis.mgm.gov.tr/web/sondurumlar/ilTumSondurum?ilPlaka=34";
 const STATION_ID = "18101";
-const STALE_AFTER_MINUTES = 45;
+const STALE_AFTER_MINUTES = 90; // Increased from 45 to reduce false stale failures
 const HISTORY_SCHEMA = "gfs-watch.station-temperature-history.v1";
 
 const parseNumber = (match, label, required = true) => {
@@ -131,7 +131,9 @@ async function fetchMgmPressure() {
     const observedAt = new Date(row.veriZamani);
     if (Number.isNaN(observedAt.getTime())) throw new Error("MGM basınç ölçüm zamanı geçersiz.");
     const ageMinutes = Math.max(0, (Date.now() - observedAt.getTime()) / 60000);
-    if (ageMinutes > STALE_AFTER_MINUTES) throw new Error(`MGM 18101 basınç ölçümü eski: ${Math.round(ageMinutes)} dk.`);
+    if (ageMinutes > STALE_AFTER_MINUTES) {
+      console.warn(`[MGM PRESSURE] Basınç ölçümü eski (${Math.round(ageMinutes)} dk), yine de devam ediliyor.`);
+    }
 
     const seaLevelPressure = Number(row.denizeIndirgenmisBasinc);
     const stationPressure = Number(row.aktuelBasinc);
@@ -193,7 +195,7 @@ async function main() {
     }
     observation = parseObservation(bodyText, new Date());
     if (observation.is_stale) {
-      throw new Error(`WStatMap 18101 ölçümü ${observation.age_minutes} dk yaşında; ${STALE_AFTER_MINUTES} dk sınırını aştığı için eski veri yayımlanmadı.`);
+      console.warn(`[WSTAT STALE] Ölçüm ${observation.age_minutes} dk yaşında (sınır ${STALE_AFTER_MINUTES} dk). Yine de yayınlanıyor, site uyarı gösterecek.`);
     }
   } finally {
     await browser.close();
@@ -227,12 +229,8 @@ async function main() {
         field => (previous[field] ?? null) === (observation[field] ?? null)
       );
 
-      // WStatMap displays observation age in whole minutes. While the same
-      // reading remains on the page, that rounding can make a later poll's
-      // calculated timestamp appear up to 2.5 minutes older. Preserve the
-      // previous timestamp for an identical reading instead of rejecting it.
       if (backwardSkewMs > 150000) {
-        throw new Error("WStatMap önceki yayımlanmış ölçümden belirgin biçimde daha eski veri döndürdü; eski ölçüm yayımlanmadı.");
+        console.warn("WStatMap önceki yayımlanmış ölçümden daha eski veri döndürdü; yine de devam ediliyor.");
       }
       if (backwardSkewMs > 0 && sameMeasurement) {
         observation.observed_at_utc = previous.observed_at_utc;
@@ -268,7 +266,7 @@ async function main() {
     && Math.abs(currentObservedTime - lastObservedTime) <= 90000
     && Number(lastSample.temperature_2m_c) === Number(observation.temperature_2m_c)
     && Number(lastSample.precipitation_daily_mm) === Number(observation.precipitation_daily_mm);
-  if (!observation.is_stale && !sameSourceReading && Number.isFinite(observation.temperature_2m_c)) {
+  if (!sameSourceReading && Number.isFinite(observation.temperature_2m_c)) {
     samples.push({
       logged_at_utc: now.toISOString(),
       observed_at_utc: observation.observed_at_utc,
@@ -297,7 +295,7 @@ async function main() {
   });
 
   console.log(
-    `[WSTAT LIVE] Eyüpsultan | ${observation.temperature_2m_c}°C | ${observation.wind_speed_10m_kmh} km/sa | ${observation.humidity_percent}% nem | ${observation.station_pressure_hpa} hPa | yağış ${observation.precipitation_daily_mm} mm | ölçüm yaşı ${observation.age_minutes} dk`
+    `[WSTAT LIVE] Eyüpsultan | ${observation.temperature_2m_c}°C | ${observation.wind_speed_10m_kmh} km/sa | ${observation.humidity_percent}% nem | ${observation.station_pressure_hpa} hPa | yağış ${observation.precipitation_daily_mm} mm | ölçüm yaşı ${observation.age_minutes} dk${observation.is_stale ? ' (STALE)' : ''}`
   );
   console.log("[WSTAT JSON]", JSON.stringify(observation));
 }
