@@ -3,7 +3,7 @@ name: Eyüpsultan Station Refresh
 on:
   workflow_dispatch:
   schedule:
-    - cron: "*/4 * * * *"  # every 4 minutes
+    - cron: "*/4 * * * *"
   push:
     branches: [main]
     paths:
@@ -21,7 +21,7 @@ concurrency:
 jobs:
   refresh:
     runs-on: ubuntu-latest
-    timeout-minutes: 8
+    timeout-minutes: 10
     steps:
       - name: Check out application
         uses: actions/checkout@v4
@@ -39,41 +39,40 @@ jobs:
         with:
           node-version: "22"
 
-      - name: Install Playwright
-        run: npm install --no-save playwright
+      - name: Install Playwright and browsers
+        run: |
+          npm install --no-save playwright
+          npx playwright install --with-deps chromium
 
-      - name: Fetch Eyüpsultan observation (with retries)
+      - name: Fetch Eyüpsultan observation
         run: node scripts/eyupsultan_weather.mjs
         env:
           EYUPSULTAN_PREVIOUS_OBSERVATION_PATH: forecast-data/public/eyupsultan-station-observation.json
           EYUPSULTAN_TEMPERATURE_HISTORY_PATH: forecast-data/public/eyupsultan-station-temperature-history.json
-        continue-on-error: true
 
       - name: Publish data
         id: publish
         run: |
           mkdir -p forecast-data/public
           if [ -f public/eyupsultan-station-observation.json ]; then
-            cp public/eyupsultan-station-observation.json forecast-data/public/
-            cp public/eyupsultan-station-temperature-history.json forecast-data/public/ 2>/dev/null || true
+            cp -f public/eyupsultan-station-observation.json forecast-data/public/
+            cp -f public/eyupsultan-station-temperature-history.json forecast-data/public/ 2>/dev/null || true
           fi
           cd forecast-data
           git config user.name "github-actions[bot]"
           git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
           git add public/eyupsultan-station-observation.json public/eyupsultan-station-temperature-history.json || true
-          if git diff --cached --quiet; then
-            echo "changed=false" >> "$GITHUB_OUTPUT"
-            echo "No changes"
-          else
+          if ! git diff --cached --quiet; then
             git commit -m "Refresh Eyüpsultan observation [$(date -u +%H:%M)]"
             git pull --rebase origin gfs-watch-state || true
-            git push origin gfs-watch-state || true
+            git push origin gfs-watch-state
             echo "changed=true" >> "$GITHUB_OUTPUT"
+          else
+            echo "changed=false" >> "$GITHUB_OUTPUT"
           fi
 
       - name: Force Pages deploy
         if: always()
         env:
           GH_TOKEN: ${{ github.token }}
-        run: |
-          gh workflow run pages.yml --ref main --repo "$GITHUB_REPOSITORY" || echo "Pages trigger attempted"
+        run: gh workflow run pages.yml --ref main --repo "$GITHUB_REPOSITORY" || true
