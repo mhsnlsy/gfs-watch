@@ -1537,21 +1537,22 @@
         rows.push({observed_at_utc:eyupsultanStationObservation.observed_at_utc||eyupsultanStationObservation.fetched_at_utc,precipitation_daily_mm:eyupsultanStationObservation.precipitation_daily_mm});
       }
       const readings=rows.map(sample=>({time:Date.parse(sample.observed_at_utc||sample.logged_at_utc||""),daily:Number(sample.precipitation_daily_mm)})).filter(sample=>Number.isFinite(sample.time)&&sample.time>=start&&sample.time<=now+60000&&Number.isFinite(sample.daily)&&sample.daily>=0).sort((a,b)=>a.time-b.time);
+      const slotOf=time=>Math.floor(time/slotMs);
       const fallenBySlot=new Map();
       for(let i=1;i<readings.length;i++){
         const prev=readings[i-1],cur=readings[i];
         const fallen=cur.daily>=prev.daily?cur.daily-prev.daily:cur.daily;
         if(!Number.isFinite(fallen)||fallen<0)continue;
-        const key=Math.floor(cur.time/slotMs)*slotMs;
+        const key=slotOf(cur.time);
         fallenBySlot.set(key,(fallenBySlot.get(key)||0)+fallen);
       }
       const points=[];
       if(readings.length){
-        const first=Math.max(start,Math.floor(readings[0].time/slotMs)*slotMs);
-        const last=Math.floor(now/slotMs)*slotMs;
-        for(let t=first;t<=last;t+=slotMs){
-          const mm=fallenBySlot.get(t)||0;
-          points.push({time:t,mm:Math.round(mm*10)/10});
+        const first=Math.max(slotOf(start),slotOf(readings[0].time));
+        const last=slotOf(now);
+        for(let slot=first;slot<=last;slot++){
+          const mm=Math.round((fallenBySlot.get(slot)||0)*10)/10;
+          points.push({time:slot*slotMs,mm});
         }
       }
       if(points.length<2){holder.innerHTML='<div class="station-trend-empty">Yarım saatlik çizgi, bir sonraki MGM ölçümüyle ilerlemeye başlar. Yağış yoksa çizgi sıfırda kalır.</div>';if(meta)meta.textContent=stationName+" · 30 dk kayıt bekleniyor";return;}
