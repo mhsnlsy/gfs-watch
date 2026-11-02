@@ -2,7 +2,8 @@ import { chromium, request } from "playwright";
 import fs from "node:fs";
 import path from "node:path";
 
-const STATION_URL = "https://wstatmap.com/tr/stations/eyupsultan-18101";
+const STATION_URL = "https://wstatmap.com/tr/embed?station=eyupsultan-18101&radius=30&layer=temperature&user_station=false";
+const WSTAT_DETAIL_URL = "https://api.wstatmap.com/v1/station/detail-by-slug/eyupsultan-18101/";
 const MGM_STATIONS_URL = "https://servis.mgm.gov.tr/web/istasyonlar/il?plaka=34";
 const MGM_OBSERVATIONS_URL = "https://servis.mgm.gov.tr/web/sondurumlar/ilTumSondurum?ilPlaka=34";
 const STATION_ID = "18101";
@@ -22,6 +23,72 @@ function windFromDegrees(deg) {
   if (deg == null || !Number.isFinite(deg)) return { tr: null, cardinal: null };
   const idx = Math.floor(((deg % 360) + 11.25) / 22.5) % 16;
   return { tr: directions[idx][0], cardinal: directions[idx][1] };
+}
+
+function finiteOrNull(value) {
+  const number = Number(value);
+  return Number.isFinite(number) && number > -900 ? number : null;
+}
+
+async function fetchFromWstat() {
+  const response = await fetch(WSTAT_DETAIL_URL, {
+    headers: {
+      "User-Agent": "Mozilla/5.0",
+      "Accept": "application/json"
+    }
+  });
+  if (!response.ok) throw new Error("WStatMap API HTTP " + response.status);
+  const data = await response.json();
+  const station = data.station || {};
+  if (station.user_station || String(station.no) !== STATION_ID) {
+    throw new Error("WStatMap istasyonu 18101 değil");
+  }
+  const observedAt = new Date(data.timestamp);
+  if (Number.isNaN(observedAt.getTime())) throw new Error("WStatMap zamanı yok");
+  const temp = finiteOrNull(data.temperature && data.temperature.temperature);
+  if (temp == null) throw new Error("WStatMap sıcaklığı yok");
+  const rain = data.precipitation || {};
+  const wind = data.wind || {};
+  const air = data.atmospheric || {};
+  const ageMinutes = Math.max(0, (Date.now() - observedAt.getTime()) / 60000);
+  const direction = windFromDegrees(finiteOrNull(wind.direction));
+  const seaLevel = finiteOrNull(air.pressure);
+  const stationP = finiteOrNull(air.actual_pressure);
+  const daily = finiteOrNull(rain.total_daily);
+  return {
+    station_name: "Eyüpsultan",
+    station_id: STATION_ID,
+    source: "WStatMap · MGM 18101",
+    source_url: STATION_URL,
+    latitude: finiteOrNull(station.latitude) ?? 41.102778,
+    longitude: finiteOrNull(station.longitude) ?? 28.924167,
+    elevation_m: finiteOrNull(station.elevation) ?? 54,
+    observed_at_utc: observedAt.toISOString(),
+    fetched_at_utc: new Date().toISOString(),
+    age_minutes: Math.round(ageMinutes),
+    stale_after_minutes: STALE_AFTER_MINUTES,
+    is_stale: ageMinutes > STALE_AFTER_MINUTES,
+    temperature_2m_c: temp,
+    wind_speed_10m_kmh: finiteOrNull(wind.speed),
+    wind_direction_degrees: finiteOrNull(wind.direction),
+    wind_direction_cardinal: direction.cardinal,
+    wind_direction_tr: direction.tr,
+    precipitation_1h_mm: finiteOrNull(rain["1h"]),
+    precipitation_10m_mm: finiteOrNull(rain["10m"]),
+    precipitation_6h_mm: finiteOrNull(rain["6h"]),
+    precipitation_12h_mm: finiteOrNull(rain["12h"]),
+    precipitation_24h_mm: finiteOrNull(rain["24h"]),
+    precipitation_daily_mm: daily == null ? (finiteOrNull(rain.daily) ?? 0) : daily,
+    precipitation_source: "WStatMap 1sa",
+    humidity_percent: finiteOrNull(air.humidity),
+    dew_point_c: finiteOrNull(data.temperature && data.temperature.dewpoint),
+    station_pressure_hpa: seaLevel != null && seaLevel > 850 ? seaLevel : stationP,
+    actual_station_pressure_hpa: stationP,
+    pressure_type: seaLevel != null ? "mean_sea_level" : "station",
+    pressure_source: "WStatMap · MGM 18101",
+    pressure_observed_at_utc: observedAt.toISOString(),
+    pressure_age_minutes: Math.round(ageMinutes * 10) / 10
+  };
 }
 
 async function fetchFromMgm() {
@@ -154,8 +221,16 @@ async function main() {
   const now = new Date();
   let observation = null;
 
-  // Prefer MGM API (reliable, no browser)
+  // Embed parametresi: station=eyupsultan-18101, user_station=false.
+  // Harita sayfada yok; aynı istasyonun 1sa yağışı API'den okunur.
   try {
+    observation = await fetchFromWstat();
+    console.log("[WSTATMAP] Success:", observation.temperature_2m_c + "°C", "1sa", observation.precipitation_1h_mm, "mm", "age", observation.age_minutes, "dk");
+  } catch (err) {
+    console.warn("[WSTATMAP] Failed:", err.message);
+  }
+
+  if (!observation) try {
     observation = await fetchFromMgm();
     console.log("[MGM] Success:", observation.temperature_2m_c + "°C", "1sa", observation.precipitation_1h_mm, "mm", "age", observation.age_minutes, "dk");
   } catch (err) {
@@ -203,17 +278,19 @@ async function main() {
     const previousRain = previousObservation ? previousObservation.precipitation_1h_mm : null;
     if (Number.isFinite(previousRain) && Number.isFinite(previousAt) && Date.now() - previousAt < 30 * 60000) {
       observation.precipitation_1h_mm = previousRain;
-      observation.precipitation_source = (previousObservation.precipitation_source || "MGM 18101 1sa") + " · son sağlam";
+      observation.precipitation_source = (previousObservation.precipitation_source || "WStatMap 1sa") + " · son sağlam";
       console.warn("[MGM] Saatlik yağış boş geldi, son sağlam değer tutuldu:", previousRain, "mm");
     }
   }
 
-  try {
-    const cups = await fetchRainCups();
-    applyRainCups(observation, cups);
-    console.log("[WSTATMAP] 1sa", cups["1sa"], "mm · bugün", cups["Bugün"], "mm");
-  } catch (err) {
-    console.warn("[WSTATMAP] Saatlik yağış alınamadı:", err.message);
+  if (observation.precipitation_source !== "WStatMap 1sa") {
+    try {
+      const cups = await fetchRainCups();
+      applyRainCups(observation, cups);
+      console.log("[WSTATMAP] 1sa", cups["1sa"], "mm · bugün", cups["Bugün"], "mm");
+    } catch (err) {
+      console.warn("[WSTATMAP] Saatlik yağış alınamadı:", err.message);
+    }
   }
 
   const outDir = "public";
