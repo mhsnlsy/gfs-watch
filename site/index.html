@@ -729,6 +729,14 @@
     .verify-recent-row.mid strong{color:#f1c98b}
     .verify-recent-row.bad strong{color:#f0bd9f}
     .verify-note{color:#8ea6b3;font-size:11px;line-height:1.55;margin:12px 0 0}
+    .verify-fhours{display:grid;grid-template-columns:repeat(auto-fill,minmax(104px,1fr));gap:6px}
+    .fh{border:1px solid var(--line);border-radius:12px;padding:8px 8px 7px;background:rgba(5,20,31,.28);min-width:0}
+    .fh b{display:block;font:700 13px Manrope,sans-serif;letter-spacing:-.02em}
+    .fh .fh-score{display:block;margin-top:3px;font:700 15px Manrope,sans-serif;color:var(--cyan)}
+    .fh small{display:block;margin-top:2px;color:#8ea6b3;font-size:10px;line-height:1.35}
+    .fh.empty .fh-score{color:#8ea6b3;font:600 12px Manrope,sans-serif}
+    .fh.best{border-color:rgba(143,215,186,.6);box-shadow:inset 0 0 0 1px rgba(143,215,186,.25)}
+    .fh.thin{opacity:.8}
     @media(max-width:560px){
       .verify-panel{padding:14px;border-radius:18px}
       .verify-score{grid-template-columns:1fr;gap:8px}
@@ -1739,10 +1747,36 @@
       const bias=operational.bias_c;
       const biasText=!numeric(bias)?"taraflılık hesaplanamadı":bias>0.15?"GFS ortalama "+fmt1(bias)+"° daha sıcak kalmış":bias<-0.15?"GFS ortalama "+fmt1(Math.abs(bias))+"° daha serin kalmış":"belirgin sıcak veya soğuk taraflılık yok";
       if(lead)lead.textContent=stationName+" · "+istStamp(operational.from_utc)+" – "+istStamp(operational.to_utc)+" · her saat, o saatte yayında olan son GFS ile karşılaştırıldı.";
-      const leads=(station.by_lead||[]).filter(row=>row.pairs>=4).map(row=>{
-        const width=numeric(row.within_1c_pct)?row.within_1c_pct:0;
-        return '<div class="verify-lead-row"><div class="verify-lead-label">'+row.label+'</div><div class="verify-bar" title="±1°C içindeki pay"><span style="width:'+width+'%"></span></div><div class="verify-lead-meta">'+row.pairs+' saat · ±1°C '+pctText(row.within_1c_pct)+' · ortalama sapma '+fmt1(row.mae_c)+'°</div></div>';
+      const byHour=station.by_hour||[];
+      const hourAt=f=>byHour.find(row=>row.f===f);
+      const scored=byHour.filter(row=>row.pairs>=3);
+      let verdict="";
+      if(scored.length){
+        const best=[...scored].sort((a,b)=>a.mae_c-b.mae_c||b.within_1c_pct-a.within_1c_pct)[0];
+        const worst=[...scored].sort((a,b)=>b.mae_c-a.mae_c||a.within_1c_pct-b.within_1c_pct)[0];
+        const longest=byHour.reduce((max,row)=>row.pairs?Math.max(max,row.f):max,0);
+        const spread=Math.abs(worst.mae_c-best.mae_c);
+        const trend=spread<0.3?"Ölçülebilen vadeler birbirine yakın; kısa vade henüz belirgin biçimde öne çıkmıyor.":"Kısa vade, daha uzun vadeden daha az sapıyor.";
+        verdict='<p class="verify-note">En tutarlı ölçülen vade <strong>f'+String(best.f).padStart(3,"0")+'</strong> (ortalama sapma '+fmt1(best.mae_c)+'°, ±1°C '+pctText(best.within_1c_pct)+', '+best.pairs+' örnek). En zayıfı <strong>f'+String(worst.f).padStart(3,"0")+'</strong> ('+fmt1(worst.mae_c)+'°). Doğrulanan en uzun vade f'+String(longest).padStart(3,"0")+'. '+trend+'</p>';
+      }
+      const focus=[0,6,12,24,36,48,72,76,96,120,144,168,180];
+      const focusHtml=focus.map(f=>{
+        const row=hourAt(f);
+        const label="f"+String(f).padStart(3,"0");
+        if(!row||!row.pairs){
+          return '<article class="fh empty"><b>'+label+'</b><span class="fh-score">henüz yok</span><small>Geçerli saati gelmedi</small></article>';
+        }
+        const best=scored.length&&scored.slice().sort((a,b)=>a.mae_c-b.mae_c)[0].f===f;
+        const thin=row.pairs<3?" thin":"";
+        return '<article class="fh'+(best?" best":"")+thin+'"><b>'+label+'</b><span class="fh-score">±1°C '+pctText(row.within_1c_pct)+'</span><small>sapma '+fmt1(row.mae_c)+'° · fark '+fmtSigned(row.bias_c)+'° · '+row.pairs+' örnek</small></article>';
       }).join("");
+      const bins=(station.by_bin||[]).filter(row=>row.pairs>0);
+      const emptyTail=(station.by_bin||[]).filter(row=>!row.pairs);
+      const binHtml=bins.map(row=>{
+        const width=numeric(row.within_1c_pct)?row.within_1c_pct:0;
+        return '<div class="verify-lead-row"><div class="verify-lead-label">'+row.label+'</div><div class="verify-bar" title="±1°C içindeki pay"><span style="width:'+width+'%"></span></div><div class="verify-lead-meta">'+row.pairs+' saat · ±1°C '+pctText(row.within_1c_pct)+' · sapma '+fmt1(row.mae_c)+'°</div></div>';
+      }).join("");
+      const tailNote=emptyTail.length?'<p class="verify-note">'+emptyTail[0].label+' ve sonrası (f180 dahil) henüz skorlanamadı. O vadelerin gerçekleşme zamanı istasyon kaydına düşmedi; arşiv uzadıkça dolar.</p>':'';
       const runs=(station.runs||[]).filter(row=>row.pairs>=3).map(row=>'<article class="verify-run"><div class="verify-run-title">'+runStamp(row.run_id_utc)+'</div><div class="verify-run-score">±2°C içinde <strong>'+pctText(row.within_2c_pct)+'</strong></div><div class="verify-run-meta">'+row.pairs+' saat doğrulandı · ortalama sapma '+fmt1(row.mae_c)+'° · fark '+fmtSigned(row.bias_c)+'°</div></article>').join("");
       const recent=(station.recent||[]).slice(0,8).map(row=>{
         const tone=Math.abs(row.error_c)<=1?"ok":Math.abs(row.error_c)<=2?"mid":"bad";
@@ -1754,11 +1788,15 @@
         rain='<p class="verify-note">6 saatlik yağış: '+item.pairs+' karşılaştırma. İstasyonda yağışın arttığı saat '+item.wet_events+', modelin gerçekleşmeyen yağış dediği saat '+item.false_alarms+', ikisinin de kuru kaldığı saat '+item.correct_dry+'.</p>';
       }
       body.innerHTML='<div class="verify-score"><div><div class="verify-score-num">'+pctText(operational.within_1c_pct)+'</div><div class="verify-score-label">yayındaki tahmin, ölçümün ±1°C içinde kaldı</div></div><div class="verify-score-side"><div><strong>'+pctText(operational.within_2c_pct)+'</strong> ±2°C içinde</div><div>Ortalama sapma <strong>'+fmt1(operational.mae_c)+'°</strong></div><div>'+biasText+'</div><div>'+operational.pairs+' gerçekleşmiş saat</div></div></div>'
-        +(leads?'<h3 class="verify-sub">Vade uzadıkça</h3><div class="verify-leads">'+leads+'</div>':'')
+        +'<h3 class="verify-sub">Hangi f saati daha tutuyor?</h3>'
+        +verdict
+        +'<div class="verify-fhours">'+focusHtml+'</div>'
+        +(binHtml?'<h3 class="verify-sub">6 saatlik dilimler, f000–f180</h3><div class="verify-leads">'+binHtml+'</div>':'')
+        +tailNote
         +(runs?'<h3 class="verify-sub">Her GFS çıktısı</h3><div class="verify-runs">'+runs+'</div>':'')
         +(recent?'<h3 class="verify-sub">Son doğrulanan saatler</h3><div class="verify-recent">'+recent+'</div>':'')
         +rain
-        +'<p class="verify-note">'+station.logged_pairs+' tahmin-ölçüm çifti kayıtlı. Çubuk, o vadedeki saatlerin yüzde kaçının ±1°C içinde kaldığını gösterir. GFS noktası 41.0°K 29.0°D; istasyonla aynı yer değil. Hata = tahmin − ölçüm. Karşılaştırma, istasyon arşivi kadar (yaklaşık 7 gün) geriye gider.</p>';
+        +'<p class="verify-note">'+station.logged_pairs+' tahmin-ölçüm çifti kayıtlı. f000–f120 her saat, f123–f180 üç saatte bir skorlanır. Karttaki yüzde, o f saatinde tahminin ölçümün ±1°C içinde kalma oranıdır. Az örnekli saatler (3’ten az) kalın yazılmaz. GFS noktası 41.0°K 29.0°D. Hata = tahmin − ölçüm.</p>';
     }
     async function loadVerification(){
       try{
