@@ -595,23 +595,28 @@
     }
 
 
-    /* Force clean side-by-side stats on mobile */
+    
+    }
+
+
+    /* Balanced mobile stats */
     @media (max-width: 640px) {
       .station-card .weather-stats {
         display: grid !important;
-        grid-template-columns: repeat(2, minmax(0, 1fr)) !important;
-        gap: 8px !important;
-        margin-top: 16px !important;
+        grid-template-columns: repeat(3, minmax(0, 1fr)) !important;
+        gap: 6px !important;
+        margin-top: 14px !important;
       }
       .station-card .stat {
-        padding: 10px 8px !important;
-        min-width: 0;
+        padding: 8px 6px !important;
+        text-align: center;
       }
-      .station-card .stat .name { font-size: 9px !important; }
-      .station-card .stat .value { font-size: 15px !important; }
-      .station-card .stat .detail { font-size: 8px !important; margin-top: 1px; }
+      .station-card .stat .name { font-size: 8px !important; letter-spacing: .02em; }
+      .station-card .stat .value { font-size: 14px !important; margin-top: 3px; }
+      .station-card .stat .detail { font-size: 7.5px !important; margin-top: 1px; color: #8aa3b0; }
+      .station-card .stat .unit { font-size: 8px !important; }
     }
-    @media (max-width: 420px) {
+    @media (max-width: 380px) {
       .station-card .weather-stats {
         grid-template-columns: repeat(2, minmax(0, 1fr)) !important;
       }
