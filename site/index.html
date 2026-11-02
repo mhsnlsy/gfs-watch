@@ -1938,11 +1938,26 @@
         }
       }
       if(!peak.at)lines.split="Ortak saat bulunamadı.";
-      else if(peak.abs<1.5&&!rain)lines.split="Önümüzdeki 72 saatte GFS ile ECMWF sıcaklıkta en fazla "+num(peak.abs)+"° ayrılıyor. Yağış saati uyumlu.";
       else{
-        let line=when(new Date(peak.at))+" GFS "+num(peak.gfs)+"°, ECMWF "+num(peak.ec)+"° ("+num(peak.abs)+"°, GFS daha "+(peak.delta>0?"sıcak":"soğuk")+").";
-        if(rain)line+=" Yağış da ayrışıyor: "+when(new Date(rain.at))+" GFS "+num(rain.gfs)+" mm, ECMWF "+num(rain.ec)+" mm.";
-        lines.split=line;
+        const fromEcmwf=typeof activeModel!=="undefined"&&activeModel==="ecmwf";
+        const lead=fromEcmwf?"ECMWF":"GFS";
+        const other=fromEcmwf?"GFS":"ECMWF";
+        const otherFrom=fromEcmwf?"GFS'ten":"ECMWF'den";
+        const leadDelta=fromEcmwf?-peak.delta:peak.delta;
+        const way=leadDelta>0?"sıcak":"soğuk";
+        const leadTemp=fromEcmwf?peak.ec:peak.gfs;
+        const otherTemp=fromEcmwf?peak.gfs:peak.ec;
+        if(peak.abs<1.5&&!rain){
+          lines.split="Önümüzdeki 72 saatte "+lead+", "+otherFrom+" sıcaklıkta en fazla "+num(peak.abs)+"° daha "+way+". Yağış saati uyumlu.";
+        }else{
+          let line=when(new Date(peak.at))+" "+lead+" "+num(leadTemp)+"°, "+other+" "+num(otherTemp)+"° ("+num(peak.abs)+"°, "+lead+" "+otherFrom+" daha "+way+").";
+          if(rain){
+            const leadRain=fromEcmwf?rain.ec:rain.gfs;
+            const otherRain=fromEcmwf?rain.gfs:rain.ec;
+            line+=" Yağış da ayrışıyor: "+when(new Date(rain.at))+" "+lead+" "+num(leadRain)+" mm, "+other+" "+num(otherRain)+" mm.";
+          }
+          lines.split=line;
+        }
       }
       return lines;
     }
@@ -2615,6 +2630,7 @@
       const nav=document.querySelector(".topbar nav");
       if(nav)nav.hidden=ecmwf;
       if(persist){try{localStorage.setItem("istanbul-hava-model-view",activeModel);}catch(_){}}
+      if(typeof renderBriefing==="function")renderBriefing();
       if(ecmwf)loadEcmwf();
     }
     $("model-gfs-button").addEventListener("click",()=>setModelView("gfs"));
