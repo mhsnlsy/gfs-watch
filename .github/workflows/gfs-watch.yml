@@ -111,7 +111,6 @@ jobs:
         run: python -u scripts/backfill_gfs_wind_direction.py
       - name: Discover NOAA cycles, prefetch and process one reportable cycle
         id: check-gfs
-        continue-on-error: true
         env:
           GFS_WATCH_ONCE: "1"
           DB_PATH: gfs_watch.db
