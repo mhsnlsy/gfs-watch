@@ -750,6 +750,77 @@
       .dashboard-top .station-card>.weather-stats{grid-column:1}
     }
 
+    /* Readable station details: fill the space beside the temperature. */
+    .dashboard-top{
+      grid-template-columns:minmax(480px,1fr) minmax(0,1.08fr)!important;
+      align-items:stretch!important;
+    }
+    .dashboard-top .station-card{
+      align-items:stretch!important;
+      column-gap:14px!important;
+      row-gap:8px!important;
+    }
+    .dashboard-top .station-card>.station-overview{align-self:center}
+    .dashboard-top .station-card>.weather-stats{
+      display:grid!important;
+      grid-template-columns:repeat(3,minmax(0,1fr))!important;
+      grid-column:2;
+      gap:6px 8px!important;
+      width:auto!important;
+      min-width:0!important;
+      margin:0!important;
+      padding:0!important;
+      overflow:visible!important;
+      transform:none!important;
+      align-self:stretch;
+      align-content:space-between;
+    }
+    .dashboard-top .station-card .stat{
+      flex:none!important;
+      min-width:0!important;
+      padding:2px 4px!important;
+      text-align:left;
+      border-right:0!important;
+    }
+    .dashboard-top .station-card .stat .name{
+      font-size:11px!important;
+      letter-spacing:.04em!important;
+      white-space:nowrap!important;
+      overflow:hidden;
+      text-overflow:ellipsis;
+    }
+    .dashboard-top .station-card .stat .value{
+      font-size:20px!important;
+      margin-top:1px!important;
+      white-space:nowrap!important;
+      letter-spacing:-.03em;
+    }
+    .dashboard-top .station-card .stat .unit{font-size:11px!important;margin-left:2px!important}
+    .dashboard-top .station-card .stat .detail{
+      font-size:11px!important;
+      margin-top:1px!important;
+      line-height:1.2!important;
+      white-space:normal!important;
+    }
+    @media(max-width:1180px){
+      .dashboard-top .station-card>.weather-stats{grid-template-columns:repeat(2,minmax(0,1fr))!important}
+      .dashboard-top .station-card .stat .value{font-size:18px!important}
+    }
+    @media(max-width:900px){
+      .dashboard-top{grid-template-columns:minmax(0,1fr)!important}
+    }
+    @media(max-width:560px){
+      .dashboard-top .station-card>.weather-stats{
+        grid-column:1!important;
+        grid-template-columns:repeat(3,minmax(0,1fr))!important;
+        gap:8px 6px!important;
+        margin-top:8px!important;
+      }
+      .dashboard-top .station-card .stat .name{font-size:10px!important}
+      .dashboard-top .station-card .stat .value{font-size:16px!important}
+      .dashboard-top .station-card .stat .detail,.dashboard-top .station-card .stat .unit{font-size:10px!important}
+    }
+
 </style>
 </head>
 <body>
@@ -1555,29 +1626,9 @@
     function fitStationStats(){
       const row=document.querySelector(".dashboard-top .station-card>.weather-stats");
       if(!row)return;
-      const card=row.parentElement;
-      const stats=[...row.querySelectorAll(":scope>.stat")];
       row.style.transform="none";
-      row.style.width="max-content";
-      row.style.marginBottom="0px";
-      stats.forEach(stat=>{stat.style.flex="0 0 auto";stat.style.minWidth="max-content";stat.style.overflow="visible";});
-      const needed=row.scrollWidth;
-      const styles=getComputedStyle(card);
-      const pad=(parseFloat(styles.paddingLeft)||0)+(parseFloat(styles.paddingRight)||0);
-      const gap=parseFloat(styles.columnGap)||0;
-      const columns=styles.gridTemplateColumns.trim().split(/\s+/).filter(Boolean);
-      const overview=card.querySelector(":scope>.station-overview");
-      const available=columns.length>1&&overview?card.clientWidth-pad-overview.offsetWidth-gap:card.clientWidth-pad;
-      stats.forEach(stat=>{stat.style.flex="";stat.style.minWidth="";stat.style.overflow="";});
-      const scale=available>8&&needed>available+1?available/needed:1;
-      if(scale<0.999){
-        row.style.width=needed+"px";
-        row.style.transformOrigin="left center";
-        row.style.transform="scale("+scale.toFixed(4)+")";
-        row.style.marginBottom=(-(row.offsetHeight*(1-scale))).toFixed(1)+"px";
-      }else{
-        row.style.width="100%";
-      }
+      row.style.width="";
+      row.style.marginBottom="";
     }
     window.addEventListener("resize",fitStationStats);
     function buildBriefing(state){
