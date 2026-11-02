@@ -1,8 +1,8 @@
 #!/usr/bin/env python3
 """
 Radar monitor for İstanbul (41.015 N, 28.950 E).
-Checks RainViewer tiles for ≥20 dBZ and ≥30 dBZ masses within ~25 km radius
-that are approaching the target location. Sends Telegram alerts.
+Checks RainViewer tiles for ≥20 dBZ and ≥30 dBZ masses within ~25 km radius.
+Tracks motion (speed, direction, ETA) and alerts if approaching or on site.
 """
 import os
 import json
@@ -20,9 +20,11 @@ THRESHOLD_DBZ = 20
 THRESHOLD_DBZ_STRONG = 30
 ZOOM = 7
 TILE_SIZE = 256
+PIXEL_KM = 0.55  # approx km per pixel at zoom 7
 TELEGRAM_TOKEN = os.getenv("TELEGRAM_TOKEN")
 CHAT_ID = os.getenv("CHAT_ID")
 STATE_PATH = os.getenv("RADAR_STATE_PATH", "/tmp/radar_state.json")
+HISTORY_LEN = 4
 
 HIGH_DBZ_HINTS = [
     (20, (0, 163, 224)), (25, (0, 119, 170)), (30, (0, 85, 136)),
@@ -97,16 +99,17 @@ def analyze_frame(host, path):
     for dx, dy, r, g, b, a in samples:
         dbz = estimate_dbz(r, g, b)
         if dbz >= THRESHOLD_DBZ:
-            dist_km = math.hypot(dx, dy) * 0.55
+            dist_km = math.hypot(dx, dy) * PIXEL_KM
             point = {"dx": dx, "dy": dy, "dist_km": dist_km, "dbz": dbz}
             high.append(point)
             if dbz >= THRESHOLD_DBZ_STRONG:
                 strong.append(point)
     if not high:
-        return {"max_dbz": 0, "count": 0, "centroid_dist": None, "strong_count": 0, "strong_max": 0}
+        return {"max_dbz": 0, "count": 0, "centroid_dist": None, "strong_count": 0, "strong_max": 0,
+                "avg_dx": 0, "avg_dy": 0}
     avg_dx = sum(p["dx"] for p in high) / len(high)
     avg_dy = sum(p["dy"] for p in high) / len(high)
-    centroid_dist = math.hypot(avg_dx, avg_dy) * 0.55
+    centroid_dist = math.hypot(avg_dx, avg_dy) * PIXEL_KM
     max_dbz = max(p["dbz"] for p in high)
     strong_max = max((p["dbz"] for p in strong), default=0)
     return {
@@ -124,21 +127,52 @@ def load_state():
         with open(STATE_PATH) as f:
             return json.load(f)
     except Exception:
-        return {}
+        return {"history": []}
 
 def save_state(state):
     with open(STATE_PATH, "w") as f:
         json.dump(state, f)
 
+def compute_motion(history):
+    """Return speed_kmh, heading_deg, towards, eta_min from recent history."""
+    if len(history) < 2:
+        return None, None, False, None
+    # Use last two points
+    prev = history[-2]
+    curr = history[-1]
+    dt_sec = curr["ts"] - prev["ts"]
+    if dt_sec < 60:
+        return None, None, False, None
+    dx = curr["avg_dx"] - prev["avg_dx"]
+    dy = curr["avg_dy"] - prev["avg_dy"]
+    dist_px = math.hypot(dx, dy)
+    dist_km = dist_px * PIXEL_KM
+    speed_kmh = (dist_km / dt_sec) * 3600
+    # Heading: 0 = north, 90 = east (dy negative is north in image coords)
+    heading = math.degrees(math.atan2(dx, -dy)) % 360
+    # Is moving towards target (0,0)?
+    # Vector to target from current position
+    to_target_dx = -curr["avg_dx"]
+    to_target_dy = -curr["avg_dy"]
+    to_target_len = math.hypot(to_target_dx, to_target_dy)
+    if to_target_len < 1 or dist_px < 0.5:
+        towards = False
+    else:
+        dot = (dx * to_target_dx + dy * to_target_dy) / (dist_px * to_target_len)
+        towards = dot > 0.5  # roughly within 60 degrees of direct path
+    eta_min = None
+    if speed_kmh > 5 and curr["centroid_dist"] and towards:
+        eta_min = (curr["centroid_dist"] / speed_kmh) * 60
+    return round(speed_kmh, 0), round(heading, 0), towards, round(eta_min, 0) if eta_min else None
+
 def is_approaching(prev, curr, threshold):
-    if not prev or not curr or curr.get("centroid_dist") is None:
+    if not curr or curr.get("centroid_dist") is None:
         return False
-    prev_dist = prev.get("centroid_dist")
     max_key = "max_dbz" if threshold == THRESHOLD_DBZ else "strong_max"
     curr_max = curr.get(max_key, 0)
-    if prev_dist is None:
+    if not prev or prev.get("centroid_dist") is None:
         return curr["centroid_dist"] < 20 and curr_max >= threshold
-    return (curr["centroid_dist"] < prev_dist - 1.0 and
+    return (curr["centroid_dist"] < prev.get("centroid_dist", 999) - 0.8 and
             curr["centroid_dist"] < RADIUS_KM and
             curr_max >= threshold)
 
@@ -168,22 +202,46 @@ def main():
         return
 
     state = load_state()
-    prev = state.get("last")
+    history = state.get("history", [])
+    history.append({
+        "ts": ts,
+        "avg_dx": curr.get("avg_dx", 0),
+        "avg_dy": curr.get("avg_dy", 0),
+        "centroid_dist": curr.get("centroid_dist"),
+        "max_dbz": curr.get("max_dbz", 0),
+    })
+    history = history[-HISTORY_LEN:]
+
+    speed, heading, towards, eta = compute_motion(history)
+    prev = history[-2] if len(history) >= 2 else None
 
     approaching_20 = is_approaching(prev, curr, THRESHOLD_DBZ)
     approaching_30 = is_approaching(prev, curr, THRESHOLD_DBZ_STRONG)
     on_site_20 = curr.get("centroid_dist", 999) < 5 and curr.get("max_dbz", 0) >= THRESHOLD_DBZ
     on_site_30 = curr.get("centroid_dist", 999) < 5 and curr.get("strong_max", 0) >= THRESHOLD_DBZ_STRONG
 
+    # Prefer motion-based approach if available
+    if towards and curr.get("centroid_dist", 999) < RADIUS_KM:
+        approaching_20 = approaching_20 or (curr.get("max_dbz", 0) >= THRESHOLD_DBZ)
+        approaching_30 = approaching_30 or (curr.get("strong_max", 0) >= THRESHOLD_DBZ_STRONG)
+
     alert_20 = approaching_20 or on_site_20
     alert_30 = approaching_30 or on_site_30
+
+    motion_txt = ""
+    if speed is not None:
+        motion_txt = f"Hız: ~{int(speed)} km/sa, yön: {int(heading)}°"
+        if eta:
+            motion_txt += f", tahmini varış: ~{int(eta)} dk"
+        if towards:
+            motion_txt += " (konuma doğru)"
 
     summary = (
         f"max {curr.get('max_dbz', 0)} dBZ, "
         f"centroid {curr.get('centroid_dist', '—')} km, "
         f"{curr.get('count', 0)} high pixels"
     )
-    print(f"[RADAR] {summary} | alert20={alert_20} alert30={alert_30}")
+    print(f"[RADAR] {summary} | alert20={alert_20} alert30={alert_30} | {motion_txt}")
 
     if alert_30:
         msg = (
@@ -191,6 +249,7 @@ def main():
             f"Konum: 41.015 N, 28.950 E\n"
             f"{summary}\n"
             f"Güçlü kütle: max {curr.get('strong_max', 0)} dBZ ({curr.get('strong_count', 0)} piksel)\n"
+            f"{motion_txt}\n"
             f"{'Konuma ulaşıyor / üzerinde.' if on_site_30 else 'Yaklaşıyor.'}\n"
             f"https://mhsnlsy.github.io/gfs-watch/#radar"
         )
@@ -201,12 +260,14 @@ def main():
             f"🌧️ <b>Radar Uyarısı — İstanbul (≥20 dBZ)</b>\n"
             f"Konum: 41.015 N, 28.950 E\n"
             f"{summary}\n"
+            f"{motion_txt}\n"
             f"{'Konuma ulaşıyor / üzerinde.' if on_site_20 else 'Yaklaşıyor.'}\n"
             f"https://mhsnlsy.github.io/gfs-watch/#radar"
         )
         send_telegram(msg)
         print("[RADAR] ALERT (≥20) SENT")
 
+    state["history"] = history
     state["last"] = curr
     state["last_ts"] = ts
     state["checked_at"] = datetime.now(timezone.utc).isoformat()
