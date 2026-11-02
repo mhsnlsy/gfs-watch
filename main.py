@@ -30,8 +30,23 @@ from telegram import Bot
 TELEGRAM_TOKEN = os.getenv("TELEGRAM_TOKEN")
 CHAT_ID = os.getenv("CHAT_ID")
 GCP_SA_KEY = os.getenv("GCP_SA_KEY")
-APP_NAME = "İstanbul'un Havası"
-APP_VERSION = "2.1.0"
+APP_NAME, APP_VERSION = None, None
+
+
+def _read_app_identity():
+    """Read the one version shared by the website and every Telegram report."""
+    version_path = os.path.join(os.path.dirname(os.path.abspath(__file__)), "site", "version.json")
+    with open(version_path, encoding="utf-8") as handle:
+        document = json.load(handle)
+    name = str(document.get("name", "")).strip()
+    version = str(document.get("version", "")).strip()
+    if not name or not version:
+        raise RuntimeError("site/version.json must define name and version.")
+    return name, version
+
+
+APP_NAME, APP_VERSION = _read_app_identity()
+APP_LABEL = f"{APP_NAME} {APP_VERSION}"
 
 LAT = 41.014
 LON = 28.950
@@ -1994,7 +2009,7 @@ def analyze_and_build_output(current_run_name, payload, previous_runs):
     ).astimezone(TR_TZ)
 
     text_report_lines = [
-        f"🌦 {APP_NAME.upper()} | v{APP_VERSION}",
+        f"🌦 {APP_LABEL}",
         "İSTANBUL GFS TAHMİN RAPORU",
         "📄 Çıktı: Yazılı tahmin raporu",
         f"🛰 Model döngüsü: {_format_tr_datetime(run_local)} TSİ ({run_utc:%H}Z UTC)",
@@ -2985,7 +3000,7 @@ async def process_gfs_update(strict=False, target_run_id=None):
                     f"{comparison_utc:%H}Z ({comparison_local:%d.%m} TSİ)"
                 )
             telegram_caption = (
-                "📊 İstanbul GFS | Dört döngü karşılaştırması\n"
+                f"📊 {APP_LABEL} | Dört döngü karşılaştırması\n"
                 "Eski → yeni: " + " → ".join(cycle_labels)
             )
     except Exception as exc:
@@ -3009,7 +3024,7 @@ async def process_gfs_update(strict=False, target_run_id=None):
             try:
                 await send_telegram_photo(
                     chart_buffer,
-                    telegram_caption or "📊 İstanbul GFS | Dört döngü karşılaştırması",
+                    telegram_caption or f"📊 {APP_LABEL} | Dört döngü karşılaştırması",
                 )
             except Exception as exc:
                 print(f"[TELEGRAM IMAGE ERROR] Karşılaştırma görseli gönderilemedi: {exc}")
