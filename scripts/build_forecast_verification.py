@@ -124,6 +124,73 @@ def bin_rows(pairs: list[dict]) -> list[dict]:
     return rows
 
 
+def rain_summary(pairs: list[dict]) -> dict:
+    errors = [pair["rain_error_mm"] for pair in pairs if isinstance(pair.get("rain_error_mm"), (int, float))]
+    if not errors:
+        return {"pairs": 0, "mae_mm": None, "bias_mm": None, "within_1mm_pct": None}
+    count = len(errors)
+    return {
+        "pairs": count,
+        "mae_mm": round1(sum(abs(error) for error in errors) / count),
+        "bias_mm": round1(sum(errors) / count),
+        "within_1mm_pct": round(100 * sum(abs(error) <= 1 for error in errors) / count),
+    }
+
+
+def rain_hour_rows(pairs: list[dict]) -> list[dict]:
+    grouped: dict[int, list[dict]] = {}
+    for pair in pairs:
+        if not isinstance(pair.get("rain_error_mm"), (int, float)):
+            continue
+        grouped.setdefault(int(pair["lead_hours"]), []).append(pair)
+    return [{"f": hour, **rain_summary(grouped.get(hour, []))} for hour in CANONICAL_HOURS]
+
+
+def rain_bin_rows(pairs: list[dict]) -> list[dict]:
+    rows = []
+    for start in range(0, 181, 6):
+        end = min(start + 6, 181)
+        chosen = [pair for pair in pairs if start <= int(pair["lead_hours"]) < end]
+        rows.append({
+            "f_from": start,
+            "f_to": end - 1,
+            "label": f"f{start:03d}–f{end - 1:03d}",
+            **rain_summary(chosen),
+        })
+    return rows
+
+
+def rain_window(by_lead: dict, point: dict, samples: list[dict], obs: dict) -> dict:
+    empty = {"forecast_3h_mm": None, "observed_3h_mm": None, "rain_error_mm": None}
+    lead = int(point["lead_hours"])
+    if lead < 3 or lead % 3:
+        return empty
+    amounts = []
+    for step in (lead - 2, lead - 1, lead):
+        earlier = by_lead.get(step)
+        amount = None if earlier is None else earlier.get("precipitation_6h_mm")
+        if not isinstance(amount, (int, float)):
+            return empty
+        amounts.append(float(amount))
+    earlier_obs = nearest(samples, point["valid"] - timedelta(hours=3))
+    if earlier_obs is None:
+        return empty
+    if earlier_obs["_when"].astimezone(IST).date() != point["valid"].astimezone(IST).date():
+        return empty
+    early_rain = earlier_obs.get("precipitation_daily_mm")
+    late_rain = obs.get("precipitation_daily_mm")
+    if not isinstance(early_rain, (int, float)) or not isinstance(late_rain, (int, float)):
+        return empty
+    forecast = sum(amounts)
+    observed = max(0.0, float(late_rain) - float(early_rain))
+    return {
+        "forecast_3h_mm": round(forecast, 2),
+        "observed_3h_mm": round(observed, 2),
+        "rain_error_mm": round(forecast - observed, 2),
+    }
+
+
+
 def rain_skill(pairs: list[dict], samples: list[dict]) -> dict | None:
     hits = false_alarms = misses = correct_dry = 0
     for pair in pairs:
@@ -216,6 +283,7 @@ def score_station(runs: list[dict], samples: list[dict], now: datetime) -> dict:
     by_valid = {}
     for run in runs:
         run_pairs = []
+        by_lead = {point["lead_hours"]: point for point in run["points"]}
         for point in run["points"]:
             if point["valid"] > cutoff or point["valid"] < run["issued"]:
                 continue
@@ -233,6 +301,7 @@ def score_station(runs: list[dict], samples: list[dict], now: datetime) -> dict:
                 "precipitation_6h_mm": point["precipitation_6h_mm"],
                 "_valid": point["valid"],
                 "_obs": obs,
+                **rain_window(by_lead, point, samples, obs),
             }
             run_pairs.append(pair)
             previous = by_valid.get(point["valid"])
@@ -268,6 +337,8 @@ def score_station(runs: list[dict], samples: list[dict], now: datetime) -> dict:
         "by_lead": lead_rows(all_pairs),
         "by_hour": hour_rows(all_pairs),
         "by_bin": bin_rows(all_pairs),
+        "rain_by_hour": rain_hour_rows(all_pairs),
+        "rain_by_bin": rain_bin_rows(all_pairs),
         "focus_hours": list(FOCUS_HOURS),
         "runs": list(reversed(per_run)),
         "recent": recent,
