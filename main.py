@@ -1822,8 +1822,26 @@ def _meteopt_max_step(document):
     return max(numbers) if numbers else 0
 
 
+def _meteopt_rows_through_f180(document):
+    """Positive 3-hour steps up to f180. Sixty of these is the publish trigger."""
+    rows = []
+    for step in (document.get("steps") or {}).get("values") or []:
+        try:
+            hour = int(step)
+        except (TypeError, ValueError):
+            continue
+        if 0 < hour <= MIN_FORECAST_HOURS:
+            rows.append(hour)
+    return rows
+
+
+def _meteopt_f180_ready(document):
+    rows = _meteopt_rows_through_f180(document)
+    return MIN_FORECAST_HOURS in rows and len(rows) >= 60
+
+
 def fetch_meteopt_available_runs():
-    """List recent GFS cycles whose MeteoPT series already reaches +180h."""
+    """List recent GFS cycles that already have the 60 rows through f180."""
     now = datetime.now(timezone.utc)
     latest_cycle = now.replace(
         hour=(now.hour // 6) * 6, minute=0, second=0, microsecond=0
@@ -1837,14 +1855,15 @@ def fetch_meteopt_available_runs():
         except Exception as exc:
             print(f"[METEOPT MISS] {run_id}: {type(exc).__name__}: {exc}")
             continue
-        last_step = _meteopt_max_step(document)
-        if last_step < MIN_FORECAST_HOURS:
+        rows = _meteopt_rows_through_f180(document)
+        if not _meteopt_f180_ready(document):
+            last_step = max(rows) if rows else _meteopt_max_step(document)
             print(
-                f"[METEOPT PENDING] {run_id}: seri +{last_step} saatte; "
-                f"+{MIN_FORECAST_HOURS} tamamlanınca alınacak."
+                f"[METEOPT PENDING] {run_id}: f180'e kadar {len(rows)} satır; "
+                f"son +{last_step}. 60 satır dolunca Telegram ve sayfa aynı paketten gider. "
+                "Serinin geri kalanı beklenmez."
             )
             continue
-        steps = (document.get("steps") or {}).get("values") or []
         candidates.append({
             "model": MODEL_NAME,
             "metadata_source": "MeteoPT GFS 3-hourly point",
@@ -1853,7 +1872,7 @@ def fetch_meteopt_available_runs():
             "last_run_availability_time": datetime.now(timezone.utc).isoformat(timespec="seconds"),
             "last_modified_time": datetime.now(timezone.utc).isoformat(timespec="seconds"),
             "last_valid_time": (
-                run_dt + timedelta(hours=last_step)
+                run_dt + timedelta(hours=MIN_FORECAST_HOURS)
             ).isoformat(timespec="minutes"),
             "forecast_horizon_hours": MIN_FORECAST_HOURS,
             "completed": True,
@@ -1863,11 +1882,11 @@ def fetch_meteopt_available_runs():
                 "https://api.meteopt.com/gfs/json"
                 f"?lat={LAT:.4f}&lon={LON:.4f}&run={run_dt:%H}"
             ),
-            "meteopt_steps": len(steps),
+            "meteopt_steps": len(rows),
         })
         print(
-            f"[METEOPT READY] {run_id}: +{last_step} saat, "
-            f"{len(steps)} adımın +{MIN_FORECAST_HOURS} saate kadarı kullanılacak."
+            f"[METEOPT READY] {run_id}: f180 dahil {len(rows)} satır hazır. "
+            "Devamı beklenmeden Telegram ve sayfa basılacak."
         )
     return candidates
 
@@ -1882,11 +1901,11 @@ def fetch_meteopt_weather_data(run_id):
         print(f"[STEP 1 HATA] MeteoPT erişilemedi: {type(exc).__name__}: {exc}")
         return None
 
-    last_step = _meteopt_max_step(document)
-    if last_step < MIN_FORECAST_HOURS:
+    if not _meteopt_f180_ready(document):
+        rows = _meteopt_rows_through_f180(document)
         reason = (
-            f"MeteoPT serisi +{last_step} saatte; "
-            f"+{MIN_FORECAST_HOURS} henüz yok"
+            f"MeteoPT f180 satırı henüz yok; şu an {len(rows)} satır. "
+            "60 satır dolunca basılacak, serinin sonrası beklenmeyecek."
         )
         print(f"[PENDING] {reason}")
         return {

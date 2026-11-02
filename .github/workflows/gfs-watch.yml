@@ -119,6 +119,7 @@ jobs:
         id: check-gfs
         env:
           GFS_SOURCE: meteopt
+          GFS_TELEGRAM: "1"
           GFS_WATCH_ONCE: "1"
           GFS_WATCH_CONTINUOUS: "1"
           GFS_WATCH_WINDOW_MINUTES: "55"
