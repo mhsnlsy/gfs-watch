@@ -1537,16 +1537,24 @@
         rows.push({observed_at_utc:eyupsultanStationObservation.observed_at_utc||eyupsultanStationObservation.fetched_at_utc,precipitation_daily_mm:eyupsultanStationObservation.precipitation_daily_mm});
       }
       const readings=rows.map(sample=>({time:Date.parse(sample.observed_at_utc||sample.logged_at_utc||""),daily:Number(sample.precipitation_daily_mm)})).filter(sample=>Number.isFinite(sample.time)&&sample.time>=start&&sample.time<=now+60000&&Number.isFinite(sample.daily)&&sample.daily>=0).sort((a,b)=>a.time-b.time);
-      const slots=new Map();
+      const fallenBySlot=new Map();
       for(let i=1;i<readings.length;i++){
         const prev=readings[i-1],cur=readings[i];
         const fallen=cur.daily>=prev.daily?cur.daily-prev.daily:cur.daily;
         if(!Number.isFinite(fallen)||fallen<0)continue;
         const key=Math.floor(cur.time/slotMs)*slotMs;
-        slots.set(key,(slots.get(key)||0)+fallen);
+        fallenBySlot.set(key,(fallenBySlot.get(key)||0)+fallen);
       }
-      const points=[...slots.entries()].sort((a,b)=>a[0]-b[0]).map(([time,mm])=>({time,mm}));
-      if(!points.length){holder.innerHTML='<div class="station-trend-empty">Yarım saatlik yağış çizgisi, MGM günlük toplamı değiştikçe dolacak.</div>';if(meta)meta.textContent=stationName+" · 30 dk kayıt bekleniyor";return;}
+      const points=[];
+      if(readings.length){
+        const first=Math.max(start,Math.floor(readings[0].time/slotMs)*slotMs);
+        const last=Math.floor(now/slotMs)*slotMs;
+        for(let t=first;t<=last;t+=slotMs){
+          const mm=fallenBySlot.get(t)||0;
+          points.push({time:t,mm:Math.round(mm*10)/10});
+        }
+      }
+      if(points.length<2){holder.innerHTML='<div class="station-trend-empty">Yarım saatlik çizgi, bir sonraki MGM ölçümüyle ilerlemeye başlar. Yağış yoksa çizgi sıfırda kalır.</div>';if(meta)meta.textContent=stationName+" · 30 dk kayıt bekleniyor";return;}
       const width=560,height=160,left=42,right=12,top=14,bottom=27,pw=width-left-right,ph=height-top-bottom;
       const max=Math.max(1,...points.map(point=>point.mm))*1.15;
       const x=t=>left+(t-start)/86400000*pw,y=v=>top+ph-v/max*ph;
@@ -1556,8 +1564,8 @@
       const dots=points.map(point=>'<circle cx="'+x(point.time).toFixed(1)+'" cy="'+y(point.mm).toFixed(1)+'" r="2.6" fill="'+(point.mm>0?"#83c9eb":"rgba(131,201,235,.4)")+'"/>').join("");
       holder.innerHTML='<svg viewBox="0 0 '+width+' '+height+'" role="img" aria-label="'+esc(stationName)+' son 24 saat, her yarım saatte düşen yağış">'+grid+'<path d="'+line+'" fill="none" stroke="#83c9eb" stroke-width="1.8" stroke-linejoin="round"/>'+dots+labels+'</svg>';
       const latest=points[points.length-1];
-      if(meta)meta.textContent=stationName+" · MGM · 30 dk · "+points.length+" nokta · son yarım saat "+fmt(latest.mm,1)+" mm";
-      if(typeof document!=="undefined"){const svg=holder.querySelector("svg");attachStationHistoryTooltip(holder,svg,points.map(point=>({x:x(point.time),y:y(point.mm),time:point.time,valueLabel:fmt(point.mm,1)+" mm",detail:"O yarım saatte düşen yağış"})),width,height,top,bottom,"#83c9eb");}
+      if(meta)meta.textContent=stationName+" · MGM · her 30 dk ayrı · son yarım saat "+fmt(latest.mm,1)+" mm"+(latest.mm>0?"":" · yağış yok");
+      if(typeof document!=="undefined"){const svg=holder.querySelector("svg");attachStationHistoryTooltip(holder,svg,points.map(point=>({x:x(point.time),y:y(point.mm),time:point.time,valueLabel:fmt(point.mm,1)+" mm",detail:"Yalnızca bu yarım saat. Önceki noktaya eklenmez."})),width,height,top,bottom,"#83c9eb");}
     }
     function renderStationRainTrend(samples,stationName){
       stationName=stationName||"İstasyon";const holder=$("station-rain-trend"),meta=$("station-rain-meta");if(!holder)return;
