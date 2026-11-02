@@ -10,10 +10,10 @@ on:
       - "scripts/backfill_gfs_wind_direction.py"
   workflow_dispatch:
   schedule:
-    # Run 4 times a day, timed for when GFS cycle data (00Z/06Z/12Z/18Z) is typically available.
-    # 05:30 UTC ~ 00Z, 11:30 UTC ~ 06Z, 17:30 UTC ~ 12Z, 23:30 UTC ~ 18Z.
-    # Each run discovers completed cycles, processes one reportable cycle, and sends Telegram if new.
-    - cron: "30 5,11,17,23 * * *"
+    # f180 becomes ready ~4 hours 20 minutes after the cycle time (00Z/06Z/12Z/18Z).
+    # Run 5 minutes after expected readiness so Telegram + Pages update as soon as data is available.
+    # 04:25 UTC (00Z), 10:25 UTC (06Z), 16:25 UTC (12Z), 22:25 UTC (18Z)
+    - cron: "25 4,10,16,22 * * *"
 
 concurrency:
   group: gfs-watch-run-v6
