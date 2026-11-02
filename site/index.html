@@ -1950,7 +1950,7 @@
         if(peak.abs<1.5&&!rain){
           lines.split="Önümüzdeki 72 saatte "+lead+", "+otherFrom+" sıcaklıkta en fazla "+num(peak.abs)+"° daha "+way+". Yağış saati uyumlu.";
         }else{
-          let line=when(new Date(peak.at))+" "+lead+" "+num(leadTemp)+"°, "+other+" "+num(otherTemp)+"° ("+num(peak.abs)+"°, "+lead+" "+otherFrom+" daha "+way+").";
+          let line=when(new Date(peak.at))+" "+lead+" "+num(leadTemp)+"°, "+other+" "+num(otherTemp)+"° ("+num(peak.abs)+"° "+otherFrom+" daha "+way+").";
           if(rain){
             const leadRain=fromEcmwf?rain.ec:rain.gfs;
             const otherRain=fromEcmwf?rain.gfs:rain.ec;
