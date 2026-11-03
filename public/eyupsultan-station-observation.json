@@ -8,16 +8,16 @@
     "latitude": 41.102778,
     "longitude": 28.924167,
     "elevation_m": 54,
-    "observed_at_utc": "2026-11-03T04:29:00.000Z",
-    "fetched_at_utc": "2026-11-03T04:35:25.699Z",
+    "observed_at_utc": "2026-11-03T04:34:00.000Z",
+    "fetched_at_utc": "2026-11-03T04:40:15.574Z",
     "age_minutes": 6,
     "stale_after_minutes": 120,
     "is_stale": false,
     "temperature_2m_c": 14.1,
-    "wind_speed_10m_kmh": 3.2,
-    "wind_direction_degrees": 27,
-    "wind_direction_cardinal": "NNE",
-    "wind_direction_tr": "Kuzey-kuzeydoğu",
+    "wind_speed_10m_kmh": 2.5,
+    "wind_direction_degrees": 4,
+    "wind_direction_cardinal": "N",
+    "wind_direction_tr": "Kuzey",
     "precipitation_1h_mm": 0,
     "precipitation_10m_mm": 0,
     "precipitation_6h_mm": 0.2,
@@ -31,8 +31,8 @@
     "actual_station_pressure_hpa": 1010.2,
     "pressure_type": "mean_sea_level",
     "pressure_source": "MGM 18101",
-    "pressure_observed_at_utc": "2026-11-03T04:29:00.000Z",
-    "pressure_age_minutes": 6.4
+    "pressure_observed_at_utc": "2026-11-03T04:34:00.000Z",
+    "pressure_age_minutes": 6.3
   },
-  "updated_at_utc": "2026-11-03T04:35:24.141Z"
+  "updated_at_utc": "2026-11-03T04:40:14.059Z"
 }
