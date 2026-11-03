@@ -99,6 +99,16 @@ jobs:
           echo "MeteoPT GFS monitor queued by the active five-minute station chain."
 
       # Run radar on alternating five-minute station cycles: one scan every ten minutes.
+      - name: Set up Python 3.12 for radar monitor
+        if: always() && !cancelled()
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+
+      - name: Install radar monitor dependencies
+        if: always() && !cancelled()
+        run: python -m pip install --disable-pip-version-check requests pillow numpy
+
       - name: Run RainViewer radar scan every ten minutes
         if: always() && !cancelled()
         run: |
