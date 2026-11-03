@@ -12,10 +12,6 @@ on:
     # Actions cron UTC'dir: 21:30, 03:30, 09:30, 15:30 UTC.
     - cron: "30 3,9,15,21 * * *"
 
-concurrency:
-  group: gfs-watch-run-v6
-  cancel-in-progress: false
-
 permissions:
   actions: write
   contents: write
@@ -25,6 +21,9 @@ permissions:
 jobs:
   check-gfs:
     name: Discover, prefetch and report every completed GFS cycle
+    concurrency:
+      group: gfs-watch-run-v6
+      cancel-in-progress: false
     outputs:
       gfs_updated: ${{ steps.report.outputs.gfs_updated }}
     runs-on: ubuntu-latest
@@ -226,6 +225,40 @@ jobs:
           done
           echo "Could not publish GFS run history after five attempts."
           exit 1
+
+  queue-next:
+    name: Queue the next Istanbul scan
+    needs: check-gfs
+    if: always() && !cancelled()
+    runs-on: ubuntu-latest
+    timeout-minutes: 360
+    permissions:
+      actions: write
+    steps:
+      - name: Dispatch the next 00:30, 06:30, 12:30 or 18:30 TSİ scan
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          delay="$(python - <<'PY'
+          from datetime import datetime, timedelta
+          from zoneinfo import ZoneInfo
+          now = datetime.now(ZoneInfo("Europe/Istanbul"))
+          slots = []
+          for extra in (0, 1):
+              day = (now + timedelta(days=extra)).replace(hour=0, minute=0, second=0, microsecond=0)
+              for hour in (0, 6, 12, 18):
+                  slots.append(day.replace(hour=hour, minute=30))
+          nxt = min(slot for slot in slots if slot > now + timedelta(seconds=90))
+          delay = int((nxt - now).total_seconds())
+          print(f"Next scan {nxt.isoformat()} in {delay}s", flush=True)
+          print(min(delay, 340 * 60))
+          PY
+          )"
+          delay="${delay##*$'\n'}"
+          echo "Waiting ${delay}s so the next scan does not depend on GitHub's clock."
+          sleep "$delay"
+          gh workflow run gfs-watch.yml --ref main --repo "$GITHUB_REPOSITORY"
+
   deploy-pages:
     name: Publish latest report to GitHub Pages
     needs: check-gfs
