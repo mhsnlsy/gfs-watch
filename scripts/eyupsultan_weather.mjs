@@ -133,14 +133,20 @@ async function main() {
     logged_at_utc: now.toISOString(),
     observed_at_utc: observation.observed_at_utc,
     temperature_2m_c: observation.temperature_2m_c,
-    precipitation_daily_mm: observation.precipitation_daily_mm,
     precipitation_1h_mm: observation.precipitation_1h_mm,
+    precipitation_6h_mm: observation.precipitation_6h_mm,
+    precipitation_12h_mm: observation.precipitation_12h_mm,
+    precipitation_24h_mm: observation.precipitation_24h_mm,
+    precipitation_daily_mm: observation.precipitation_daily_mm,
     station_pressure_hpa: observation.station_pressure_hpa
   };
   if (last && lastTime === curTime) {
     last.temperature_2m_c = sample.temperature_2m_c;
-    last.precipitation_daily_mm = sample.precipitation_daily_mm;
     last.precipitation_1h_mm = sample.precipitation_1h_mm;
+    last.precipitation_6h_mm = sample.precipitation_6h_mm;
+    last.precipitation_12h_mm = sample.precipitation_12h_mm;
+    last.precipitation_24h_mm = sample.precipitation_24h_mm;
+    last.precipitation_daily_mm = sample.precipitation_daily_mm;
     last.station_pressure_hpa = sample.station_pressure_hpa;
     last.logged_at_utc = sample.logged_at_utc;
   } else if (!last || Math.abs(curTime - lastTime) > 60000) {
