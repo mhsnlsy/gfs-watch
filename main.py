@@ -2566,16 +2566,18 @@ def _draw_comparison_precip_line_axis(axis, chart_data):
         )
     axis.set_ylim(bottom=0)
     axis.set_xlim(-0.5, len(times) - 0.5)
-    step = 8 if len(times) > 24 else 4
-    tick_index = list(range(0, len(times), step))
-    if tick_index[-1] != len(times) - 1:
-        tick_index.append(len(times) - 1)
+    # One visible tick for every 3-hour forecast interval.
+    tick_index = list(range(len(times)))
     labels = []
     for index in tick_index:
         stamp = datetime.strptime(times[index], "%Y-%m-%dT%H:%M")
-        labels.append(f"{stamp:%d.%m}\n{stamp:%H:%M}")
+        labels.append(f"{stamp:%d.%m}\\n{stamp:%H:%M}")
     axis.set_xticks(tick_index)
-    axis.set_xticklabels(labels, fontsize=9, color=GFS_REPORT_TEXT)
+    axis.set_xticklabels(
+        labels, fontsize=7.2, color=GFS_REPORT_TEXT,
+        rotation=90, ha="center", va="top",
+    )
+    axis.tick_params(axis="x", which="major", pad=2, length=2)
     axis.set_title("3 saatlik yağış | çizgi trend", loc="left", fontsize=11)
     axis.set_ylabel("mm / 3 saat", fontsize=10)
     axis.set_xlabel("İstanbul yerel saati · 3 saat", fontsize=9.5, color=GFS_REPORT_TEXT)
