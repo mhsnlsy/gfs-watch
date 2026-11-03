@@ -24,7 +24,7 @@ on:
   schedule:
     # GFS metni MeteoPT'te 00:30, 06:30, 12:30 ve 18:30 TSİ çıkıyor.
     # Actions cron UTC'dir: 21:30, 03:30, 09:30, 15:30 UTC.
-    - cron: "30 3,9,15,21 * * *"
+    - cron: "*/15 * * * *"
 
 permissions:
   actions: write
@@ -124,7 +124,7 @@ jobs:
           GFS_TELEGRAM: "1"
           GFS_WATCH_ONCE: "1"
           GFS_WATCH_CONTINUOUS: "1"
-          GFS_WATCH_WINDOW_MINUTES: "12"
+          GFS_WATCH_WINDOW_MINUTES: "10"
           GFS_WATCH_POLL_SECONDS: "60"
           GFS_WATCH_RESEND_CHARTS: ${{ github.event_name == 'workflow_dispatch' && inputs.resend_charts && '1' || '0' }}
           GFS_WATCH_MANUAL_RUN_ID: ${{ github.event_name == 'workflow_dispatch' && inputs.manual_run_id || '' }}
