@@ -335,6 +335,15 @@ jobs:
               assert not path.is_absolute() and ".." not in path.parts
               assert path.parts and path.parts[0] == "media", f"Unexpected media path: {asset}"
           pathlib.Path(sys.argv[3]).write_text("\\n".join(assets), encoding="utf-8")
+          retired = {"icon.svg"}
+          for retained_item in items[:4]:
+              for image in retained_item.get("images", []):
+                  if isinstance(image, dict) and str(image.get("path", "")).lower().endswith(".png"):
+                      retired.add("data/notifications/" + image["path"][:-4] + ".svg")
+              old_image = retained_item.get("image_path")
+              if isinstance(old_image, str) and old_image.lower().endswith(".png"):
+                  retired.add("data/notifications/" + old_image[:-4] + ".svg")
+          pathlib.Path(sys.argv[3] + ".retired-svg").write_text("\\n".join(sorted(retired)), encoding="utf-8")
           print(f"Live Pages report verified: {item['run_id_utc']} · {len(assets)} assets")
           PY
 
@@ -346,7 +355,17 @@ jobs:
               exit 1
             fi
           done < "$RUNNER_TEMP/notification-assets.txt"
-          echo "Latest GFS report and its text/image/audio references are live on Pages."
+
+          while IFS= read -r retired; do
+            [ -n "$retired" ] || continue
+            retired_url="${PAGE_URL%/}/$retired?verify=$GITHUB_RUN_ID"
+            status="$(curl --silent --show-error -o /dev/null -w "%{http_code}" "$retired_url")"
+            if [ "$status" != "404" ]; then
+              echo "Retired SVG endpoint is still published: $retired (HTTP $status)"
+              exit 1
+            fi
+          done < "$RUNNER_TEMP/notification-assets.txt.retired-svg"
+          echo "Latest GFS report and its PNG assets are live; all retired SVG URLs return 404."
 
 # Re-deploy when the public notification archive is refreshed.
 # Ensure the published archive (including regenerated 850 hPa charts) is bundled in Pages.
