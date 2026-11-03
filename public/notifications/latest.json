@@ -1,7 +1,37 @@
 {
   "schema": "gfs-watch.notifications.v1",
-  "updated_at_utc": "2026-11-03T06:16:54+00:00",
+  "updated_at_utc": "2026-11-03T10:25:45+00:00",
   "items": [
+    {
+      "id": "20261103T06Z",
+      "title": "İstanbul GFS tahmin raporu",
+      "run_id_utc": "2026-11-03T06:00:00+00:00",
+      "published_at_utc": "2026-11-03T10:25:45+00:00",
+      "published_at_istanbul": "Salı 3 Kasım 2026 13:25",
+      "cycle_label": "06Z · 03.11.2026 09:00 TSİ",
+      "summary": "🌡 GFS başlangıç sıcaklığı: 18.2°C\n💨 GFS başlangıç rüzgârı: 7.0 km/sa\n📡 yerel istasyon GERÇEK İSTASYON GÖZLEMİ | VANTAGE PRO · SON İSTASYON ÖLÇÜMÜ\n🌡 İstasyon sıcaklığı: 19.6°C\n🌧 Günlük toplam yağış: 0.0 mm\n💨 İstasyon rüzgârı: 6.5 km/sa · yön: NE",
+      "report_text": "🌦 İstanbul'un Havası 4.0\nİSTANBUL GFS TAHMİN RAPORU\n📄 Çıktı: Yazılı tahmin raporu\n🛰 Model döngüsü: Salı 3 Kasım 2026 09:00 TSİ (06Z UTC)\n🗓 Tahmin aralığı: Salı 3 Kasım 2026 09:00 – Salı 10 Kasım 2026 21:00 TSİ (+180 saat)\n🕒 Rapor zamanı: Salı 3 Kasım 2026 13:25 TSİ\n📍 Konum: İstanbul, Türkiye\n\n🌡 GFS başlangıç sıcaklığı: 18.2°C\n💨 GFS başlangıç rüzgârı: 7.0 km/sa\n\n📡 YEREL İSTASYON GERÇEK İSTASYON GÖZLEMİ | VANTAGE PRO · SON İSTASYON ÖLÇÜMÜ\n🕒 Ölçüm zamanı: Salı 3 Kasım 2026 13:25 TSİ\n🌡 İstasyon sıcaklığı: 19.6°C\n🌧 Günlük toplam yağış: 0.0 mm\n💨 İstasyon rüzgârı: 6.5 km/sa · yön: NE\nKaynak: Yerel istasyon · Davis Vantage PRO istasyonu · canlı tablo ölçümü\n\n📅 ÖNÜMÜZDEKİ 3 GÜN\n• Çarşamba 4 Kasım: 14.1–16.2°C | Yağış: 21.1 mm | Maks. rüzgâr: 27.0 km/sa | Rüzgârlı\n• Perşembe 5 Kasım: 11.5–13.4°C | Yağış: 0.4 mm | Maks. rüzgâr: 26.0 km/sa | Rüzgârlı\n• Cuma 6 Kasım: 10.6–12.0°C | Yağış: 0.5 mm | Maks. rüzgâr: 21.0 km/sa | Rüzgârlı",
+      "image_path": null,
+      "images": [
+        {
+          "label": "Sıcaklık",
+          "path": "media/gfs-20261103T06Z-temperature.png"
+        },
+        {
+          "label": "Sıcaklık · 850 hPa",
+          "path": "media/gfs-20261103T06Z-temperature_850.png"
+        },
+        {
+          "label": "Yağış",
+          "path": "media/gfs-20261103T06Z-precipitation.png"
+        },
+        {
+          "label": "Rüzgâr hızı + yönü · 10 m",
+          "path": "media/gfs-20261103T06Z-wind_10m.png"
+        }
+      ],
+      "audio_path": null
+    },
     {
       "id": "20261103T00Z",
       "title": "İstanbul GFS tahmin raporu",
@@ -91,36 +121,6 @@
         }
       ],
       "audio_path": "media/gfs-20261102T12Z-voice.mp3"
-    },
-    {
-      "id": "20261102T06Z",
-      "title": "İstanbul GFS tahmin raporu",
-      "run_id_utc": "2026-11-02T06:00:00+00:00",
-      "published_at_utc": "2026-11-02T11:25:21+00:00",
-      "published_at_istanbul": "Pazartesi 2 Kasım 2026 14:25",
-      "cycle_label": "06Z · 02.11.2026 09:00 TSİ",
-      "summary": "Balmumcu istasyonunda, Pazartesi 2 Kasım 2026 14:20 itibarıyla sıcaklık 22.1 derece. Günlük toplam yağış 0.0 milimetre. Rüzgâr, yönü SW, 3.1 kilometre saat. Önümüzdeki üç günün özeti: Salı 3 Kasım: En düşük 15.8, en yüksek 19.8 derece. Toplam yağış 8.2 milimetre. Çarşamba 4 Kasım: En düşük 13.8, en yüksek 15.8 derece. Toplam yağış 22.8 milimetre. Rüzgâr hızı yüksek. Perşembe 5 Kasım: En düşük 11.6, en yüksek 13.6 derece. Toplam yağış 1.0 milimetre. Rüzgâr hızı yüksek.",
-      "report_text": "🌦 İSTANBUL'UN HAVASI | v2.1.0\nİSTANBUL GFS TAHMİN RAPORU\n📄 Çıktı: Yazılı tahmin raporu\n🛰 Model döngüsü: Pazartesi 2 Kasım 2026 09:00 TSİ (06Z UTC)\n🗓 Tahmin aralığı: Pazartesi 2 Kasım 2026 09:00 – Pazartesi 9 Kasım 2026 21:00 TSİ (+180 saat)\n🕒 Rapor zamanı: Pazartesi 2 Kasım 2026 14:25 TSİ\n📍 Konum: İstanbul, Türkiye\n\n🌡 GFS başlangıç sıcaklığı: 16.2°C\n💨 GFS başlangıç rüzgârı: 3.4 km/sa\n\n📡 YEREL İSTASYON GERÇEK İSTASYON GÖZLEMİ | VANTAGE PRO · SON İSTASYON ÖLÇÜMÜ\n🕒 Ölçüm zamanı: Pazartesi 2 Kasım 2026 14:20 TSİ\n🌡 İstasyon sıcaklığı: 22.1°C\n🌧 Günlük toplam yağış: 0.0 mm\n💨 İstasyon rüzgârı: 3.1 km/sa · yön: SW\nKaynak: Yerel istasyon · Davis Vantage PRO istasyonu · canlı tablo ölçümü\n\n📅 ÖNÜMÜZDEKİ 3 GÜN\n• Salı 3 Kasım: 15.8–19.8°C | Yağış: 8.2 mm | Maks. rüzgâr: 16.3 km/sa\n• Çarşamba 4 Kasım: 13.8–15.8°C | Yağış: 22.8 mm | Maks. rüzgâr: 30.9 km/sa | Rüzgârlı\n• Perşembe 5 Kasım: 11.6–13.6°C | Yağış: 1.0 mm | Maks. rüzgâr: 29.5 km/sa | Rüzgârlı\n\n🌀 BASINÇ DURUMU | İstanbul merkezli 2.500 km çaplı alan\nGeçerlilik zamanı: Pazartesi 2 Kasım 2026 09:00 TSİ (model başlangıç saati)\n• Bölgesel yüksek basınç odağı: 1030.1 hPa — Doğu Avrupa (Romanya-Ukrayna çevresi); İstanbul'un yaklaşık 1250 km kuzeybatı yönünde.\n• Bölgesel alçak basınç odağı: 1000.4 hPa — Adriyatik Denizi ve Batı Balkan kıyıları; İstanbul'un yaklaşık 1231 km batı yönünde.\n• İstanbul başlangıç basıncı: 1016.1 hPa; bölgesel basınç farkı: 29.6 hPa.\n\n🎙 Seslendirme metni:\n“Balmumcu istasyonunda, Pazartesi 2 Kasım 2026 14:20 itibarıyla sıcaklık 22.1 derece. Günlük toplam yağış 0.0 milimetre. Rüzgâr, yönü SW, 3.1 kilometre saat. Önümüzdeki üç günün özeti: Salı 3 Kasım: En düşük 15.8, en yüksek 19.8 derece. Toplam yağış 8.2 milimetre. Çarşamba 4 Kasım: En düşük 13.8, en yüksek 15.8 derece. Toplam yağış 22.8 milimetre. Rüzgâr hızı yüksek. Perşembe 5 Kasım: En düşük 11.6, en yüksek 13.6 derece. Toplam yağış 1.0 milimetre. Rüzgâr hızı yüksek.”",
-      "image_path": null,
-      "images": [
-        {
-          "label": "Sıcaklık",
-          "path": "media/gfs-20261102T06Z-temperature.png"
-        },
-        {
-          "label": "Sıcaklık · 850 hPa",
-          "path": "media/gfs-20261102T06Z-temperature_850.png"
-        },
-        {
-          "label": "Yağış",
-          "path": "media/gfs-20261102T06Z-precipitation.png"
-        },
-        {
-          "label": "Rüzgâr hızı + yönü · 10 m",
-          "path": "media/gfs-20261102T06Z-wind_10m.png"
-        }
-      ],
-      "audio_path": "media/gfs-20261102T06Z-voice.mp3"
     }
   ]
 }
