@@ -24,7 +24,7 @@ jobs:
   check-gfs:
     name: Discover, prefetch and report every completed GFS cycle
     concurrency:
-      group: gfs-watch-run-v7
+      group: gfs-watch-run-v6
       cancel-in-progress: false
     outputs:
       gfs_updated: ${{ steps.report.outputs.gfs_updated }}
