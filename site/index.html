@@ -2381,29 +2381,34 @@
     $("enable-notifications").addEventListener("click",enableNotifications);
     async function loadNotifications(){
       const bundled=forecastData&&forecastData.report;
-      if(bundled&&bundled.report_text&&(!forecastData.run_id_utc||bundled.run_id_utc===forecastData.run_id_utc)){
-        latestNotificationItems=[bundled];
-        renderNotifications(latestNotificationItems, forecastData.published_at_utc||bundled.published_at_utc||Date.now());
-        $("notification-status").textContent="Rapor, tahminle aynı paketten · "+new Intl.DateTimeFormat("tr-TR",{timeZone:"Europe/Istanbul",hour:"2-digit",minute:"2-digit"}).format(new Date());
-        return;
-      }
       try{
+        // The notification archive contains the four-cycle comparison PNGs.
+        // Prefer it over the single-cycle SVGs bundled with latest.json.
         const response=await fetch("./data/notifications/latest.json?t="+Date.now(),{cache:"no-store"});
         if(!response.ok)throw new Error("Rapor arşivi henüz oluşturulmadı.");
         const document=await response.json();
-        if(document.schema!=="gfs-watch.notifications.v1"||!Array.isArray(document.items))throw new Error("Rapor arşivi biçimi geçersiz.");
+        if(document.schema!=="gfs-watch.notifications.v1"||!Array.isArray(document.items)||!document.items.length){
+          throw new Error("Rapor arşivi biçimi geçersiz veya boş.");
+        }
         latestNotificationItems=document.items.slice(0,4);
         renderNotifications(latestNotificationItems,document.updated_at_utc||document.items[0]?.published_at_utc||Date.now());
         $("notification-status").textContent="Otomatik yenileme aktif · Son kontrol: "+new Intl.DateTimeFormat("tr-TR",{timeZone:"Europe/Istanbul",hour:"2-digit",minute:"2-digit"}).format(new Date());
         const reportRun=latestNotificationItems[0]&&latestNotificationItems[0].run_id_utc;
         const forecastRun=forecastData&&forecastData.run_id_utc;
         if(reportRun&&(!forecastRun||reportRun>forecastRun))loadForecast();
+        return;
       }catch(error){
+        // Keep the current report visible if the archive is temporarily unavailable.
+        if(bundled&&bundled.report_text&&(!forecastData.run_id_utc||bundled.run_id_utc===forecastData.run_id_utc)){
+          latestNotificationItems=[bundled];
+          renderNotifications(latestNotificationItems,forecastData.published_at_utc||bundled.published_at_utc||Date.now());
+          $("notification-status").textContent="Rapor arşivi bekleniyor; güncel tahmin raporu gösteriliyor.";
+          return;
+        }
         $("notifications-list").innerHTML='<div class="chart-empty">Rapor arşivi şu anda alınamıyor. Sayfa açıkken otomatik olarak yeniden denenecek.</div>';
         $("notification-status").textContent="Rapor arşivi bağlantısı bekleniyor · 5 dakikada bir yeniden denenir";
       }
     }
-
     function fmt1(value){return numeric(value)?(Math.round(value*10)/10).toFixed(1):"—";}
     function fmtSigned(value){if(!numeric(value))return "—";const rounded=Math.round(value*10)/10;return (rounded>0?"+":"")+rounded.toFixed(1);}
     function pctText(value){return numeric(value)?Math.round(value)+"%":"—";}
