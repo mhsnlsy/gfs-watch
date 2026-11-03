@@ -989,7 +989,7 @@
       </article>
       </div>
       <section class="next-72h-panel" id="next-72h-panel" aria-label="Önümüzdeki 72 saatlik hava tahmini">
-        <div class="next-72h-head"><div><div class="section-kicker">GFS · İSTANBUL</div><h2>Önümüzdeki 72 saat</h2><p>Bant sapmanın büyüklüğü. Kesik çizgi yönü: model sıcak kaçırdıysa istasyon çizginin altında kalmıştır.</p></div><span class="next-72h-badge" id="next-72h-meta">Model verisi bekleniyor</span></div>
+        <div class="next-72h-head"><div><div class="section-kicker">GFS · İSTANBUL</div><h2>Önümüzdeki 72 saat</h2><p>Son GFS çıktısındaki ham tahmin. Yağış değerleri 3 saatlik aralıklarla gösterilir; veri olmayan zamanlar boş kalır.</p></div><span class="next-72h-badge" id="next-72h-meta">Model verisi bekleniyor</span></div>
         <div class="next-72h-grid">
           <article class="next-72h-card"><div class="next-72h-card-head"><h3>Sıcaklık</h3><span>°C</span></div><div class="next-72h-chart" id="next72-temperature"><div class="chart-empty">Tahmin bekleniyor…</div></div></article>
           <article class="next-72h-card"><div class="next-72h-card-head"><h3>Yağış</h3><span>mm / 3 saat</span></div><div class="next-72h-chart" id="next72-precipitation"><div class="chart-empty">Tahmin bekleniyor…</div></div></article>
@@ -1448,7 +1448,7 @@
           :"f"+String(p.modelLead).padStart(3,"0")+" · bu saat henüz doğrulanmadı, plana katma";
         return {lead:p.lead,time:p.valid_time_utc,value:p.temperature_2m_c,mae,bias,within,trusted,label:fmt(p.temperature_2m_c,1)+" °C",detail};
       });
-      const rain=[];parsed.filter(p=>p.stamp>=now-20*60000&&p.stamp<=horizon+20*60000&&numeric(p.precipitation_3h_mm)).forEach(p=>{const amount=Math.max(0,p.precipitation_3h_mm);const rainSkill=verificationDoc&&verificationDoc.stations?verificationDoc.stations.eyupsultan?.rain:null;const bias=numeric(rainSkill?.mean_bias_6h_mm)&&Number(rainSkill.amount_pairs)>0?rainSkill.mean_bias_6h_mm/2:null;const corrected=numeric(bias)?Math.max(0,amount-bias):amount;const samples=rainSkill?.amount_pairs||0;const detail=numeric(bias)?"MGM geçmiş sapma düzeltmesi: "+fmt(bias,2)+" mm / 3 saat · "+samples+" eşleşme":"Kalibrasyon yok; ham GFS değeri korunuyor";rain.push({lead:Math.max(0,(p.stamp-now)/3600000),time:p.valid_time_utc,value:corrected,rawValue:amount,mae:null,bias,within:null,trusted:numeric(bias),label:fmt(corrected,2)+" mm / 3 saat",detail});});
+      const rain=parsed.filter(p=>p.stamp>=now-20*60000&&p.stamp<=horizon+20*60000&&numeric(p.precipitation_3h_mm)).map(p=>({lead:Math.max(0,(p.stamp-now)/3600000),time:p.valid_time_utc,value:Math.max(0,Number(p.precipitation_3h_mm)),rawValue:null,mae:null,bias:null,within:null,trusted:null,label:fmt(Math.max(0,Number(p.precipitation_3h_mm)),2)+" mm / 3 saat",detail:"Son GFS çıktısı · f"+String(p.modelLead).padStart(3,"0")+" · ham 3 saatlik yağış tahmini"}));
       renderRainVerificationSummary();
       const cycle=forecastData&&forecastData.run_id_utc?timeTR(forecastData.run_id_utc)+" TSİ":"GFS";
       if(meta)meta.textContent=cycle+" · sonraki 72 saat";
@@ -1457,7 +1457,6 @@
       if(tempSpan){tempSpan.textContent="°C";tempSpan.classList.remove("bias-tag");}
       if(rainSpan){rainSpan.textContent="mm / 3 saat";rainSpan.classList.remove("bias-tag");}
       drawNext72Line("next72-temperature",temperature,"#7dd3d7","Sıcaklık °C");drawNext72Line("next72-precipitation",rain,"#83c9eb","Yağış mm");
-      const rainHolder=$("next72-precipitation");if(rainHolder&&rain.length){const legend=document.createElement("div");legend.className="chart-legend";legend.innerHTML='<span><i class="legend-dot" style="background:#83c9eb"></i>Düzeltilmiş tahmin</span><span><i class="legend-dot" style="background:#f1c98b"></i>Ham GFS</span>';rainHolder.appendChild(legend);}
     }
     function drawNext72Line(targetId,data,color,label){
       const holder=$(targetId);const rainChart=label.startsWith("Yağış");if(!data.length){holder.innerHTML='<div class="chart-empty">'+(rainChart?"Son GFS çıktısında önümüzdeki 72 saat için sayısal 3 saatlik yağış verisi yok. Tahmin verisi olmayan aralıklar boş bırakıldı.":"Bu değişken için tahmin verisi bulunmuyor.")+'</div>';return;}
