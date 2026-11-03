@@ -1291,7 +1291,7 @@
       const points=sourceData&&sourceData.forecast_6_hourly;
       const temperature=metric==="temperature";
       const isEcmwf=sourceData&&sourceData.schema==="gfs-watch.ecmwf-eps.v1";
-      const field=temperature?"temperature_2m_c":"precipitation_6h_mm";
+      const field=temperature?"temperature_2m_c":"precipitation_3h_mm";
       const title=temperature?"2 m sıcaklık · °C":(isEcmwf?"Tahmin adımı yağış birikimi · mm":"3 saatlik toplam yağış · mm");
       const counter=$(isEcmwf?(temperature?"ecmwf-temperature-count":"ecmwf-precipitation-count"):(temperature?"temperature-count":"precipitation-count"));
       if(!Array.isArray(points)){container.innerHTML='<div class="chart-empty">Tahmin verisi bulunamadı.</div>';return;}
@@ -1328,12 +1328,12 @@
         valid=threeHourEndpoints.map(endpoint=>{
           const startLead=endpoint.lead-3;
           const intervalPoints=byLead.filter(point=>point.lead>startLead&&point.lead<=endpoint.lead);
-          const expectedCount=endpoint.lead<=120?3:1;
+          const expectedCount=1;
           const measured=intervalPoints.filter(point=>numeric(point[field]));
           const startPoint=byLead.find(point=>point.lead===startLead);
           if(measured.length!==expectedCount||!startPoint)return null;
           return {
-            value:measured.reduce((total,point)=>total+point[field],0),
+            value:measured[0][field],
             date:endpoint.valid_time_istanbul,
             forecastHour:endpoint.lead,
             intervalStart:startPoint.valid_time_istanbul,
