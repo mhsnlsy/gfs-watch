@@ -95,11 +95,12 @@ async def rebuild() -> None:
     if not item or item.get("run_id_utc") != run_id or not item.get("report_text", "").strip():
         raise RuntimeError("Rebuilt Pages report failed its manifest validation.")
 
+    run_key = archive._parse_utc_datetime(run_id).strftime("%Y%m%dT%HZ")
     expected_images = {
-        f"gfs-{run_id.replace('-', '').replace(':', '')[:11]}-temperature.png",
-        f"gfs-{run_id.replace('-', '').replace(':', '')[:11]}-temperature_850.png",
-        f"gfs-{run_id.replace('-', '').replace(':', '')[:11]}-precipitation.png",
-        f"gfs-{run_id.replace('-', '').replace(':', '')[:11]}-wind_10m.png",
+        f"gfs-{run_key}-temperature.png",
+        f"gfs-{run_key}-temperature_850.png",
+        f"gfs-{run_key}-precipitation.png",
+        f"gfs-{run_key}-wind_10m.png",
     }
     images = item.get("images")
     image_paths = [image.get("path", "") for image in images or [] if isinstance(image, dict)]
