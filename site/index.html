@@ -1175,9 +1175,15 @@
 
     const chartDateTimeTR=value=>{
       const date=new Date(value);
+      const dayMonth=new Intl.DateTimeFormat("tr-TR",{timeZone:"Europe/Istanbul",day:"numeric",month:"long"}).format(date);
+      const clock=new Intl.DateTimeFormat("tr-TR",{timeZone:"Europe/Istanbul",hour:"2-digit",minute:"2-digit",hourCycle:"h23"}).format(date);
+      return dayMonth+" "+clock;
+    };
+    const forecastDateTimeUTC=value=>{
+      const date=new Date(value);
       const dayMonth=new Intl.DateTimeFormat("tr-TR",{timeZone:"UTC",day:"numeric",month:"long"}).format(date);
       const clock=new Intl.DateTimeFormat("tr-TR",{timeZone:"UTC",hour:"2-digit",minute:"2-digit",hourCycle:"h23"}).format(date);
-      return dayMonth+" "+clock+" UTC";
+      return dayMonth+" "+clock;
     };
     function attachForecastChartTooltip(container,svg,coords,temperature,width,height,top,bottom){
       const ns="http://www.w3.org/2000/svg";
@@ -1237,13 +1243,13 @@
           ? "Sıcaklık: "+fmt(point.value,1)+" °C"
           : "Yağış: "+fmt(point.value,2)+" mm";
         const intervalLabel=!temperature&&point.intervalStart
-          ? '<div class="chart-tooltip-meta">Yağış aralığı: '+esc(chartDateTimeTR(point.intervalStart))+' – '+esc(chartDateTimeTR(point.date))+' UTC</div>'
+          ? '<div class="chart-tooltip-meta">Yağış aralığı: '+esc(forecastDateTimeUTC(point.intervalStart))+' – '+esc(forecastDateTimeUTC(point.date))+' UTC</div>'
           : "";
         const intervalDuration=!temperature&&point.intervalHours
           ? '<div class="chart-tooltip-meta">'+point.intervalHours+' saatlik yağış dilimi</div>'
           : "";
         tooltip.innerHTML=
-          '<div class="chart-tooltip-time">'+esc(chartDateTimeTR(point.date))+' UTC</div>'+
+          '<div class="chart-tooltip-time">'+esc(forecastDateTimeUTC(point.date))+' UTC</div>'+
           '<div class="chart-tooltip-value">'+esc(valueLabel)+'</div>'+
           intervalLabel+
           '<div class="chart-tooltip-meta">Tahmin adımı: +'+esc(point.forecastHour)+' saat</div>'+
@@ -1462,7 +1468,7 @@
         return {lead:p.lead,time:p.valid_time_utc,value:p.temperature_2m_c,mae,bias,within,trusted,label:fmt(p.temperature_2m_c,1)+" °C",detail};
       });
       const rain=[];parsed.filter(p=>p.modelLead>0&&p.modelLead%3===0&&p.stamp>=now-20*60000&&p.stamp<=horizon+20*60000).forEach(p=>{const interval=parsed.filter(q=>q.modelLead>p.modelLead-3&&q.modelLead<=p.modelLead);const native3h=interval.length===1&&numeric(interval[0].precipitation_6h_mm);if(!native3h&&(interval.length!==3||interval.some(q=>!numeric(q.precipitation_6h_mm))))return;const amount=native3h?interval[0].precipitation_6h_mm:interval.reduce((sum,q)=>sum+q.precipitation_6h_mm,0);const skill=skillAtLeadRain(p.modelLead);const mae=skill&&numeric(skill.mae_mm)?skill.mae_mm:null;const bias=skill&&numeric(skill.bias_mm)?skill.bias_mm:null;const within=skill&&numeric(skill.within_1mm_pct)?skill.within_1mm_pct:null;const samples=skill&&skill.pairs?skill.pairs:0;const trusted=numeric(within)&&within>=90;const detail=within!=null?"f"+String(p.modelLead).padStart(3,"0")+" · "+signedMiss(bias,"rain")+" · ±1 mm içinde %"+Math.round(within)+" · "+samples+" örnek · "+(trusted?"%90 üzerinde, dikkate al":"%90 altında, plana katma"):"f"+String(p.modelLead).padStart(3,"0")+" · bu yağış saati henüz doğrulanmadı, plana katma";rain.push({lead:Math.max(0,(p.stamp-now)/3600000),time:p.valid_time_utc,value:amount,mae,bias,within,trusted,label:fmt(amount,2)+" mm / 3 saat",detail});});
-      const cycle=forecastData&&forecastData.run_id_utc?timeTR(forecastData.run_id_utc)+" TSİ":"GFS";
+      const cycle=forecastData&&forecastData.run_id_utc?timeUTC(forecastData.run_id_utc)+" UTC":"GFS";
       if(meta)meta.textContent=cycle+" · sonraki 72 saat";
       const tempSpan=document.querySelector("#next72-temperature")?.closest(".next-72h-card")?.querySelector("span");
       const rainSpan=document.querySelector("#next72-precipitation")?.closest(".next-72h-card")?.querySelector("span");
@@ -2721,8 +2727,8 @@
       const viewData={schema:"gfs-watch.ecmwf-eps.v1",model:document.model,forecast_horizon_hours:document.forecast_horizon_hours,forecast_6_hourly:document.forecast_6_hourly,daily_summary:document.daily_summary,regional_pressure_analysis:document.regional_pressure_analysis};
       if(!Array.isArray(viewData.forecast_6_hourly)||viewData.forecast_6_hourly.length!==forecasts.length)throw new Error("ECMWF ortak tahmin zaman çizelgesi eksik.");
       if(!Array.isArray(viewData.daily_summary)||!viewData.daily_summary.length)throw new Error("ECMWF günlük özet verisi eksik.");
-      $("ecmwf-run-meta").textContent="Döngü: "+timeTR(document.run_id_utc)+" TSİ · Geçerlilik: +"+last.forecast_hour+" saat";
-      if($("ecmwf-daily-cycle-chip"))$("ecmwf-daily-cycle-chip").textContent="Döngü: "+timeTR(document.run_id_utc)+" TSİ";
+      $("ecmwf-run-meta").textContent="Döngü: "+timeUTC(document.run_id_utc)+" UTC · Geçerlilik: +"+last.forecast_hour+" saat";
+      if($("ecmwf-daily-cycle-chip"))$("ecmwf-daily-cycle-chip").textContent="Döngü: "+timeUTC(document.run_id_utc)+" UTC";
       if($("ecmwf-daily-updated-chip"))$("ecmwf-daily-updated-chip").textContent="Yayınlandı: "+timeTR(document.updated_at_utc)+" TSİ";
       $("ecmwf-updated-chip").textContent="Yayınlandı · "+timeTR(document.updated_at_utc);
       $("ecmwf-valid-until").textContent="Son geçerlilik: "+new Intl.DateTimeFormat("tr-TR",{timeZone:"Europe/Istanbul",day:"2-digit",month:"2-digit"}).format(new Date(document.forecast_valid_until_utc));
