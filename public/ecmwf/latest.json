@@ -1643,8 +1643,7 @@
           "precipitation_6h_mm": 0.0,
           "precipitation_interval_hours": 6
         }
-      ],
-      "label": "00Z | 02.11 03:00 TSİ"
+      ]
     },
     {
       "run_id_utc": "2026-11-02T12:00:00+00:00",
@@ -2657,8 +2656,7 @@
           "precipitation_6h_mm": 0.0,
           "precipitation_interval_hours": 6
         }
-      ],
-      "label": "12Z | 02.11 15:00 TSİ"
+      ]
     },
     {
       "run_id_utc": "2026-11-03T00:00:00+00:00",
@@ -2819,8 +2817,7 @@
           "precipitation_6h_mm": 1.2,
           "precipitation_interval_hours": 3
         }
-      ],
-      "label": "00Z | 03.11 03:00 TSİ"
+      ]
     },
     {
       "run_id_utc": "2026-11-03T12:00:00+00:00",
@@ -3005,8 +3002,7 @@
           "precipitation_6h_mm": 0.3,
           "precipitation_interval_hours": 3
         }
-      ],
-      "label": "YENİ · 12Z | 03.11 15:00 TSİ"
+      ]
     }
   ],
   "report_images": [
