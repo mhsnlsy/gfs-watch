@@ -1439,7 +1439,7 @@
         return {...p,stamp,modelLead};
       }).filter(p=>Number.isFinite(p.stamp)&&Number.isFinite(p.modelLead)).sort((a,b)=>a.stamp-b.stamp);
       const hourly=parsed.filter(p=>p.stamp>=now-20*60000&&p.stamp<=horizon+20*60000).map(p=>({...p,lead:Math.max(0,(p.stamp-now)/3600000)}));
-      if(hourly.length<2){["next72-temperature","next72-precipitation"].forEach(id=>$(id).innerHTML='<div class="chart-empty">Yeni GFS raporu bekleniyor. 72 saatlik pencere son raporun çıktısına kilitlenir.</div>');if(meta)meta.textContent="Yeni rapor bekleniyor";return;}
+      if(hourly.length<2){["next72-temperature","next72-precipitation"].forEach(id=>$(id).innerHTML='<div class="chart-empty">Yeni GFS raporu bekleniyor. 72 saatlik pencere son raporun çıktısına kilitlenir.</div>');if(meta)meta.textContent="Yeni rapor bekleniyor";renderRainWindow(parsed);return;}
       const temperature=hourly.filter(p=>numeric(p.temperature_2m_c)).map(p=>{
         const skill=skillAtLead(p.modelLead);
         const mae=skill&&numeric(skill.mae_c)?skill.mae_c:null;
