@@ -250,10 +250,12 @@ def rain_window(by_lead: dict, point: dict, samples: list[dict], obs: dict) -> d
 
 def rain_skill(pairs: list[dict], samples: list[dict]) -> dict | None:
     hits = false_alarms = misses = correct_dry = 0
+    rain_errors = []
     for pair in pairs:
         forecast_rain = pair.get("precipitation_6h_mm")
         lead = pair["lead_hours"]
-        if not isinstance(forecast_rain, (int, float)) or lead < 6:
+        # Use only the first 72 forecast hours for the operational correction.
+        if not isinstance(forecast_rain, (int, float)) or lead < 6 or lead > 72:
             continue
         earlier = nearest(samples, pair["_valid"] - timedelta(hours=6))
         later = pair.get("_obs")
@@ -266,6 +268,7 @@ def rain_skill(pairs: list[dict], samples: list[dict]) -> dict | None:
         if not isinstance(early_rain, (int, float)) or not isinstance(late_rain, (int, float)):
             continue
         observed = max(0.0, float(late_rain) - float(early_rain))
+        rain_errors.append(float(forecast_rain) - observed)
         forecast_wet = float(forecast_rain) >= 0.2
         observed_wet = observed >= 0.2
         if forecast_wet and observed_wet:
@@ -281,6 +284,9 @@ def rain_skill(pairs: list[dict], samples: list[dict]) -> dict | None:
         return None
     return {
         "pairs": total,
+        "mean_bias_6h_mm": round1(sum(rain_errors) / len(rain_errors)) if rain_errors else None,
+        "mean_absolute_error_6h_mm": round1(sum(abs(error) for error in rain_errors) / len(rain_errors)) if rain_errors else None,
+        "amount_pairs": len(rain_errors),
         "hits": hits,
         "false_alarms": false_alarms,
         "misses": misses,
