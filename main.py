@@ -2418,7 +2418,7 @@ def _wind_cardinal(direction_deg):
     return names[int((float(direction_deg) + 22.5) % 360.0 // 45)]
 
 
-def _draw_wind_direction_marker(axis, x, speed, direction_deg):
+def _draw_wind_direction_marker(axis, x, speed, direction_deg, label_offset=20):
     """White arrow above the bar: it points where the wind is going.
 
     The letter is the GFS FROM bearing (K = rüzgâr kuzeyden geliyor).
@@ -2450,7 +2450,7 @@ def _draw_wind_direction_marker(axis, x, speed, direction_deg):
     label = axis.annotate(
         _wind_cardinal(direction_deg),
         xy=(x, speed),
-        xytext=(0, 20),
+        xytext=(0, label_offset),
         textcoords="offset points",
         ha="center",
         va="bottom",
@@ -2550,7 +2550,7 @@ def _draw_comparison_bar_axis(axis, chart_data, metric, title, ylabel):
             axis.bar(bar_positions, bar_values, width=bar_width, color=color)
     if metric == "wind":
         low, high = axis.get_ylim()
-        axis.set_ylim(0, max(high, 1) * 1.28)
+        axis.set_ylim(0, max(high, 1) * 1.52)
         for series_index, item in enumerate(series):
             for index, day in enumerate(dates):
                 direction = _daily_wind_direction(item, day)
@@ -2562,6 +2562,7 @@ def _draw_comparison_bar_axis(axis, chart_data, metric, title, ylabel):
                     x_positions[index] + offsets[series_index],
                     float(speed),
                     direction,
+                    label_offset=16 + series_index * 12,
                 )
     axis.set_title(title, loc="left", fontsize=11)
     axis.set_ylabel(ylabel, fontsize=10)
@@ -2591,7 +2592,9 @@ def _format_comparison_date_axis(axis, dates):
     for day in dates:
         local_date = datetime.strptime(day, "%Y-%m-%d")
         labels.append(f"{local_date:%d.%m}\n{turkish_weekdays[local_date.weekday()]}")
-    axis.set_xticks(list(range(len(dates))))
+    positions = list(range(len(dates)))
+    axis.set_xlim(-0.5, max(len(dates) - 0.5, 0.5))
+    axis.set_xticks(positions)
     axis.set_xticklabels(labels, fontsize=9.5, color=GFS_REPORT_TEXT)
     axis.set_xlabel("İstanbul yerel tarihi", fontsize=9.5, color=GFS_REPORT_TEXT)
     axis.xaxis.label.set_color(GFS_REPORT_TEXT)
@@ -2610,7 +2613,7 @@ def create_comparison_chart(current_run_id, payload, previous_runs):
         dates = chart_data["dates"]
         count = len(series)
         fig, axes = plt.subplots(
-            4, 1, figsize=(18, 15), sharex=True,
+            4, 1, figsize=(18, 15), sharex=False,
             gridspec_kw={"height_ratios": [1.5, 1, 1, 1]},
         )
         fig.suptitle(
