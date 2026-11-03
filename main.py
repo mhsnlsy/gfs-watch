@@ -2820,6 +2820,24 @@ def create_pages_comparison_charts(current_run_id, payload, previous_runs):
                     tick_label.set_fontweight("semibold")
                     tick_label.set_color(GFS_REPORT_TEXT)
                 axis.tick_params(axis="x", labelsize=14, labelbottom=True, pad=7, labelcolor=GFS_REPORT_TEXT, colors=GFS_REPORT_TEXT)
+                if metric == "precipitation":
+                    # Keep the existing daily date anchors, and add a compact
+                    # Istanbul clock label at every 3-hour forecast grid.
+                    rain_times = _comparison_precip_times(chart_data)
+                    rain_positions = list(range(len(rain_times)))
+                    rain_labels = []
+                    for rain_time in rain_times:
+                        rain_stamp = datetime.strptime(rain_time, "%Y-%m-%dT%H:%M")
+                        if rain_stamp.hour == 6:
+                            rain_labels.append(f"{rain_stamp:%d.%m}\\n{rain_stamp:%H:%M}")
+                        else:
+                            rain_labels.append(f"{rain_stamp:%H:%M}")
+                    axis.set_xticks(rain_positions)
+                    axis.set_xticklabels(
+                        rain_labels, fontsize=7.2, fontweight="semibold",
+                        color=GFS_REPORT_TEXT, rotation=0, ha="center",
+                    )
+                    axis.tick_params(axis="x", which="major", labelbottom=True, pad=7)
                 axis.margins(x=0.015)
                 # Put the four run labels in a dedicated, figure-level 2x2 legend.
                 # This prevents long cycle names from colliding in a four-column row.
