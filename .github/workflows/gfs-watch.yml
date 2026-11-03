@@ -7,6 +7,8 @@ on:
         description: Son dört döngünün grafiklerini beyaz yazıyla yeniden gönder
         type: boolean
         default: false
+  repository_dispatch:
+    types: [gfs-watch-backup]
   schedule:
     # GFS metni MeteoPT'te 00:30, 06:30, 12:30 ve 18:30 TSİ çıkıyor.
     # Actions cron UTC'dir: 21:30, 03:30, 09:30, 15:30 UTC.
@@ -47,8 +49,6 @@ jobs:
           if git cat-file -e origin/gfs-watch-state:gfs_watch.db 2>/dev/null; then
             git show origin/gfs-watch-state:gfs_watch.db > gfs_watch.db
           fi
-          # Restore the complete public data tree so a targeted wind-direction
-          # repair can update the existing GFS cycle without waiting for a new f180.
           if git cat-file -e origin/gfs-watch-state:public/latest.json 2>/dev/null; then
             git archive origin/gfs-watch-state public | tar -x -C .
             echo "Previous Pages forecast, run archive and notification media restored."
@@ -194,8 +194,6 @@ jobs:
           rm -rf public
           git checkout -B gfs-watch-state origin/gfs-watch-state
           mkdir -p public/runs
-          # Replace the report feed only when this run actually produced one.
-          # A failed or report-less check must leave the published archive intact.
           if [ "$report_ok" = "1" ]; then
             if [ -d "$RUNNER_TEMP/public/notifications" ]; then
               rm -rf public/notifications
@@ -279,7 +277,6 @@ jobs:
     secrets: inherit
 
   notify-failure:
-    name: Notify Telegram on workflow failure
     needs: [check-gfs, deploy-pages, send-web-push]
     if: false
     runs-on: ubuntu-latest
