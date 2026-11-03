@@ -1549,20 +1549,38 @@
     function renderEyupsultanHourlyRain(samples,stationName,holder,meta){
       const now=Date.now(),windowMs=86400000,start=now-windowMs,hourMs=3600000;
       const rows=Array.isArray(samples)?samples.slice():[];
-      // Canlı MGM ölçümünü arşive henüz yazılmamış olsa da grafiğe dahil et.
       if(typeof eyupsultanStationObservation!=="undefined"&&eyupsultanStationObservation){
         rows.push({
           observed_at_utc:eyupsultanStationObservation.observed_at_utc||eyupsultanStationObservation.fetched_at_utc,
-          precipitation_1h_mm:eyupsultanStationObservation.precipitation_1h_mm
+          precipitation_1h_mm:eyupsultanStationObservation.precipitation_1h_mm,
+          precipitation_daily_mm:eyupsultanStationObservation.precipitation_daily_mm
         });
       }
-      // yagis1Saat kayan son 60 dakikanın toplamıdır. Beş dakikalık
-      // örnekleri toplamayız; her saat dilimindeki en son geçerli ölçümü seçeriz.
-      const rawPoints=rows.map(sample=>({
+      const parsed=rows.map(sample=>({
         time:Date.parse(sample.observed_at_utc||sample.logged_at_utc||""),
-        mm:sample.precipitation_1h_mm==null?NaN:Number(sample.precipitation_1h_mm)
-      })).filter(point=>Number.isFinite(point.time)&&point.time>=start&&point.time<=now+60000&&Number.isFinite(point.mm)&&point.mm>=0)
+        oneHour:sample.precipitation_1h_mm==null?NaN:Number(sample.precipitation_1h_mm),
+        daily:sample.precipitation_daily_mm==null?NaN:Number(sample.precipitation_daily_mm)
+      })).filter(point=>Number.isFinite(point.time)&&point.time>=start-hourMs-5*60000&&point.time<=now+60000)
         .sort((a,b)=>a.time-b.time);
+      // MGM yagis1Saat varsa doğrudan kayan 60 dakikalık ölçümü kullan.
+      // Yoksa 72 saatlik doğrulamadaki yöntemle günlük birikim farkını türet:
+      // yalnızca yaklaşık 1 saat aralıklı ve aynı İstanbul takvim günündeki
+      // iki ölçüm karşılaştırılır; gün değişimindeki sayaç sıfırlaması kullanılmaz.
+      const rawPoints=parsed.map((point,index)=>{
+        if(Number.isFinite(point.oneHour)&&point.oneHour>=0)return {time:point.time,mm:point.oneHour,method:"MGM kayan 1 saat"};
+        let previous=null,best=Infinity;
+        for(let j=index-1;j>=0;j--){
+          const candidate=parsed[j],delta=point.time-candidate.time;
+          if(delta>65*60000)break;
+          if(delta>=55*60000&&delta<=65*60000&&Number.isFinite(candidate.daily)&&Number.isFinite(point.daily)){
+            const sameDay=new Date(candidate.time).toLocaleDateString("en-CA",{timeZone:"Europe/Istanbul"})===new Date(point.time).toLocaleDateString("en-CA",{timeZone:"Europe/Istanbul"});
+            if(sameDay&&Math.abs(delta-hourMs)<best){previous=candidate;best=Math.abs(delta-hourMs);}
+          }
+        }
+        if(!previous)return null;
+        const difference=point.daily-previous.daily;
+        return difference>=-0.05?{time:point.time,mm:Math.max(0,difference),method:"MGM günlük birikim farkı"}:null;
+      }).filter(point=>point&&point.time>=start&&point.time<=now+60000&&Number.isFinite(point.mm)&&point.mm>=0);
       const buckets=new Map();
       for(const point of rawPoints)buckets.set(Math.floor(point.time/hourMs),point);
       const points=Array.from(buckets.entries()).map(([hour,point])=>({...point,hour})).sort((a,b)=>a.time-b.time);
@@ -1581,14 +1599,14 @@
       const line=groups.map(group=>group.map((point,index)=>(index?"L":"M")+x(point.time).toFixed(1)+" "+y(point.mm).toFixed(1)).join(" ")).join(" ");
       const dots=points.map(point=>'<circle cx="'+x(point.time).toFixed(1)+'" cy="'+y(point.mm).toFixed(1)+'" r="3" fill="'+(point.mm>0?"#83c9eb":"rgba(131,201,235,.55)")+'"/>').join("");
       holder.innerHTML='<svg viewBox="0 0 '+width+' '+height+'" role="img" aria-label="'+esc(stationName)+' son 24 saatte her saat için MGM son 1 saatlik yağış ölçümü">'+grid+'<path d="'+line+'" fill="none" stroke="#83c9eb" stroke-width="1.8" stroke-linejoin="round"/>'+dots+labels+'</svg>';
-      const latest=points[points.length-1];
-      if(meta)meta.textContent=stationName+" · MGM · "+coverage+"/24 saatlik örnek · son ölçüm "+fmt(latest.mm,1)+" mm/1 sa";
+      const latest=points[points.length-1],derived=points.filter(point=>point.method!=="MGM kayan 1 saat").length;
+      if(meta)meta.textContent=stationName+" · MGM · "+coverage+"/24 saatlik örnek · son "+fmt(latest.mm,1)+" mm/1 sa"+(derived?" · "+derived+" örnek birikim farkından":"");
       if(typeof document!=="undefined"){
         const svg=holder.querySelector("svg");
         attachStationHistoryTooltip(holder,svg,points.map(point=>({
           x:x(point.time),y:y(point.mm),time:point.time,
           valueLabel:fmt(point.mm,1)+" mm / 1 saat",
-          detail:"Ölçüm: "+new Intl.DateTimeFormat("tr-TR",{timeZone:"Europe/Istanbul",hour:"2-digit",minute:"2-digit"}).format(new Date(point.time))+" · geriye dönük kayan 60 dakika"
+          detail:(point.method||"MGM ölçümü")+" · "+new Intl.DateTimeFormat("tr-TR",{timeZone:"Europe/Istanbul",hour:"2-digit",minute:"2-digit"}).format(new Date(point.time))
         })),width,height,top,bottom,"#83c9eb");
       }
     }
