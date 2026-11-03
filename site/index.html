@@ -1450,9 +1450,9 @@
         return {lead:p.lead,time:p.valid_time_utc,value:p.temperature_2m_c,mae,bias,within,trusted,label:fmt(p.temperature_2m_c,1)+" °C",detail};
       });
       // 72-hour precipitation is the unadjusted MeteoPT GFS field only.
-      // MeteoPT publishes precipitation_6h_mm at 3-hour forecast timestamps.
-      const rainField="precipitation_6h_mm";
-      const rainInterval=6;
+      // Canonical GFS dataset stores MeteoPT precipitation on its native 3-hour steps.
+      const rainField="precipitation_3h_mm";
+      const rainInterval=3;
       const rain=parsed.filter(p=>p.stamp>=now-20*60000&&p.stamp<=horizon+20*60000&&numeric(p[rainField])).map(p=>({lead:Math.max(0,(p.stamp-now)/3600000),time:p.valid_time_utc,value:Math.max(0,Number(p[rainField])),rawValue:null,mae:null,bias:null,within:null,trusted:null,label:fmt(Math.max(0,Number(p[rainField])),2)+" mm / "+rainInterval+" saat",detail:"Son GFS "+(rainInterval===3?"3":"6")+" saatlik birikim · f"+String(p.modelLead).padStart(3,"0")+" · ham yağış tahmini"}));
       renderRainVerificationSummary();
       const cycle=forecastData&&forecastData.run_id_utc?timeTR(forecastData.run_id_utc)+" TSİ":"GFS";
@@ -1823,7 +1823,7 @@
       }else if(gfsNow){
         lines.station="İstasyon ölçümü yok. GFS bu saatte "+num(gfsNow.temperature_2m_c)+"°.";
       }
-      const wet=gfs.filter(point=>(point.precipitation_6h_mm||0)>=0.2);
+      const wet=gfs.filter(point=>(point.precipitation_3h_mm||0)>=0.2);
       const istHour=ms=>Number(new Intl.DateTimeFormat("en-GB",{timeZone:"Europe/Istanbul",hour:"2-digit",hourCycle:"h23"}).format(new Date(ms)));
       const istClock=ms=>new Intl.DateTimeFormat("tr-TR",{timeZone:"Europe/Istanbul",hour:"2-digit",minute:"2-digit"}).format(new Date(ms));
       const istDay=ms=>{
@@ -1867,7 +1867,7 @@
           const stamp=new Date(point.valid_time_utc).getTime();
           const key=istKey(stamp);
           if(!groups.has(key))groups.set(key,[]);
-          groups.get(key).push({stamp,mm:point.precipitation_6h_mm||0});
+          groups.get(key).push({stamp,mm:point.precipitation_3h_mm||0});
         }
         const parts=[];
         for(const items of groups.values()){
@@ -1894,9 +1894,9 @@
             parts.push(day+" "+(afterText.length?afterText:beforeText).join(" ve ")+".");
           }
         }
-        const peak=wet.reduce((best,point)=>(point.precipitation_6h_mm||0)>(best.precipitation_6h_mm||0)?point:best,wet[0]);
+        const peak=wet.reduce((best,point)=>(point.precipitation_3h_mm||0)>(best.precipitation_3h_mm||0)?point:best,wet[0]);
         const peakAt=new Date(peak.valid_time_utc).getTime();
-        lines.rain=parts.join(" ")+" En yoğun "+istDay(peakAt)+" "+istClock(peakAt)+", "+num(peak.precipitation_6h_mm)+" mm.";
+        lines.rain=parts.join(" ")+" En yoğun "+istDay(peakAt)+" "+istClock(peakAt)+", "+num(peak.precipitation_3h_mm)+" mm.";
       }
       if(gfsNow&&gfsNow.temperature_850hpa_c!=null){
         const later=nearest(gfs,new Date(gfsNow.valid_time_utc).getTime()+24*3600000,3*3600000);
@@ -1967,7 +1967,7 @@
         const gfsRain=gfs.filter(item=>{
           const itemStamp=new Date(item.valid_time_utc).getTime();
           return itemStamp>stamp-3*3600000&&itemStamp<=stamp;
-        }).reduce((sum,item)=>sum+(item.precipitation_6h_mm||0),0);
+        }).reduce((sum,item)=>sum+(item.precipitation_3h_mm||0),0);
         const ecRain=point.precipitation_interval_mm||0;
         if((gfsRain>=0.5&&ecRain<0.15)||(ecRain>=0.5&&gfsRain<0.15)){
           if(!rain||Math.abs(gfsRain-ecRain)>Math.abs(rain.gfs-rain.ec))rain={at:stamp,gfs:gfsRain,ec:ecRain};
@@ -2047,7 +2047,7 @@
           return stamp>=Math.max(start,Date.now()-30*60000)&&stamp<end&&stamp<=horizon+60000;
         });
         if(!dayPoints.length)continue;
-        const wet=dayPoints.filter(point=>(point.precipitation_6h_mm||0)>=0.2).map(point=>({stamp:new Date(point.valid_time_utc).getTime(),mm:point.precipitation_6h_mm})).sort((a,b)=>a.stamp-b.stamp);
+        const wet=dayPoints.filter(point=>(point.precipitation_3h_mm||0)>=0.2).map(point=>({stamp:new Date(point.valid_time_utc).getTime(),mm:point.precipitation_3h_mm})).sort((a,b)=>a.stamp-b.stamp);
         const spells=[];
         let current=null;
         for(const item of wet){
@@ -2142,7 +2142,9 @@
     $("station-eyupsultan-button").addEventListener("click",()=>selectStation("eyupsultan"));
 
     function render(data){
-      forecastData=data;
+      const canonical=data&&data.gfs_dataset&&data.gfs_dataset.schema==="gfs-watch.dataset.v2"?data.gfs_dataset:null;
+      forecastData=canonical?{...data,forecast_6_hourly:canonical.points,daily_summary:canonical.daily_summary}:data;
+      data=forecastData;
       renderNext72Hours();
       renderBriefing();
       if(data.report&&data.report.report_text){
