@@ -103,7 +103,6 @@ jobs:
                   day -= timedelta(days=1)
           target = datetime(day.year, day.month, day.day, hour, tzinfo=timezone.utc)
           print(f"GFS_WATCH_TARGET_RUN_ID={target.isoformat(timespec='seconds')}")
-          print(f"Locked target: {target:%Y-%m-%d %H}Z for Istanbul time {now:%H:%M}")
           PY
       - name: Watch only the GFS cycle assigned to this Istanbul time slot
         id: check-gfs
