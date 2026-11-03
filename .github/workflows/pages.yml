@@ -273,11 +273,11 @@ jobs:
           assert item.get("summary", "").strip()
           assert item.get("report_text", "").strip()
           images = item.get("images")
-          expected_suffixes = {
-              "-temperature.png",
-              "-temperature_850.png",
-              "-precipitation.png",
-              "-wind_10m.png",
+          expected_names = {
+              f"gfs-{item['id']}-temperature.png",
+              f"gfs-{item['id']}-temperature_850.png",
+              f"gfs-{item['id']}-precipitation.png",
+              f"gfs-{item['id']}-wind_10m.png",
           }
           assert isinstance(images, list) and len(images) == 4, (
               f"Expected exactly four comparison PNGs, found {len(images) if isinstance(images, list) else 'invalid'}"
@@ -285,7 +285,7 @@ jobs:
           image_paths = [image.get("path", "") for image in images if isinstance(image, dict)]
           assert len(image_paths) == 4 and len(set(image_paths)) == 4
           assert all(path.endswith(".png") for path in image_paths), "Comparison charts must be PNG only."
-          assert {pathlib.PurePosixPath(path).name.replace(item["id"], "") for path in image_paths} == expected_suffixes, (
+          assert {pathlib.PurePosixPath(path).name for path in image_paths} == expected_names, (
               f"Unexpected comparison chart set: {image_paths}"
           )
           assets = []
