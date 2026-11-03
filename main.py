@@ -677,7 +677,15 @@ def _normalise_model_timestamp(value):
 
 
 def _parse_utc_datetime(value):
-    parsed = datetime.fromisoformat(str(value).replace("Z", "+00:00"))
+    raw_value = str(value).strip()
+    try:
+        parsed = datetime.fromisoformat(raw_value.replace("Z", "+00:00"))
+    except (TypeError, ValueError) as exc:
+        raise ValueError(
+            f"Geçersiz GFS döngü zamanı: {raw_value!r}. "
+            "manual_run_id alanına Telegram blob bağlantısı değil, "
+            "2026-11-03T00:00:00+00:00 biçiminde UTC tarih/saat girin."
+        ) from exc
     if parsed.tzinfo is None:
         parsed = parsed.replace(tzinfo=timezone.utc)
     return parsed.astimezone(timezone.utc)
