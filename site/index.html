@@ -1611,10 +1611,16 @@
       }
     }
     function renderStationRainTrend(samples,stationName){
-      stationName=stationName||"İstasyon";const holder=$("station-rain-trend"),meta=$("station-rain-meta");if(!holder)return;
+      stationName=stationName||"İstasyon";
+      const holder=$("station-rain-trend"),meta=$("station-rain-meta");
+      if(!holder)return;
       const caption=$("station-rain-caption");
-      if(caption)caption.textContent="mm · son 1 saatlik yağış / saatlik örnek";
-      return renderEyupsultanHourlyRain(typeof eyupsultanStationHistorySamples!=="undefined"?eyupsultanStationHistorySamples:[], "Eyüpsultan", holder, meta);
+      if(caption)caption.textContent="mm · kayan 1 saatlik yağış · son 24 saat";
+      // Use the history payload already selected and loaded by the caller.
+      // Do not silently fall back to a global array that may still be empty
+      // while the station-history request is completing.
+      const history=Array.isArray(samples)?samples:[];
+      return renderEyupsultanHourlyRain(history,"Eyüpsultan",holder,meta);
     }
     function renderStationHistory(){
       const stationName=activeStation==="eyupsultan"?"Eyüpsultan":"ENKA Balmumcu";
