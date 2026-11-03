@@ -9,8 +9,8 @@
     "latitude": 41.1,
     "longitude": 28.9,
     "elevation_m": 107,
-    "observed_at_utc": "2026-11-03T18:30:00+00:00",
-    "age_minutes": 0.9,
+    "observed_at_utc": "2026-11-03T18:35:00+00:00",
+    "age_minutes": 0.6,
     "is_stale": false,
     "temperature_2m_c": 15.3,
     "wind_speed_10m_kmh": 4.8,
@@ -19,8 +19,8 @@
     "wind_direction_tr": "Doğu-kuzeydoğu",
     "precipitation_1h_mm": null,
     "precipitation_daily_mm": 0.0,
-    "humidity_percent": 93.0,
+    "humidity_percent": 94.0,
     "station_pressure_hpa": 1014.4
   },
-  "updated_at_utc": "2026-11-03T18:30:51+00:00"
+  "updated_at_utc": "2026-11-03T18:35:34+00:00"
 }
