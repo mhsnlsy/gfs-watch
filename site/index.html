@@ -11,6 +11,8 @@
   <link rel="manifest" href="./manifest.webmanifest">
   <meta name="description" content="İstanbul için GFS ve ECMWF hava tahmini, 72 saatlik sıcaklık, yağış, rüzgâr ve bölgesel basınç analizi.">
   <title>İstanbul'un Havası — İstanbul Hava Tahmini</title>
+  <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css">
+  <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;500;600;700&family=Manrope:wght@400;500;600;700;800&display=swap" rel="stylesheet">
@@ -56,6 +58,10 @@
     @media(max-width:850px){.shell{width:min(100% - 32px,1120px)}.topbar{gap:10px}.hero{grid-template-columns:1fr;gap:18px;padding-top:34px}.weather-card{min-height:0}.daily-grid{grid-template-columns:repeat(4,minmax(0,1fr))}.lower-grid{grid-template-columns:1fr}.chart-card{padding:18px}}
     @media(max-width:560px){.shell{width:calc(100% - 24px)}.topbar{height:auto;min-height:64px;padding:10px 0}.brand{font-size:14px;gap:9px}.brand small{font-size:8px;letter-spacing:.09em}.brand-mark{width:32px;height:32px;border-radius:10px}.version{font-size:9px;padding:6px 7px}.top-right{margin-left:auto}.hero{padding:28px 0 16px;gap:15px}h1{font-size:clamp(38px,11vw,46px);line-height:1.02}.intro{font-size:13px;line-height:1.65}.hero-meta{margin-top:17px}.meta-chip{font-size:10px;padding:8px}.weather-card{padding:17px;border-radius:19px}.weather-top{gap:8px}.label{font-size:9px;letter-spacing:.1em}.place{font-size:16px}.model-state{font-size:9px;padding:6px 8px}.temperature{font-size:60px}.weather-symbol{font-size:36px}.temp-row{margin-top:22px}.temp-caption{font-size:10px;line-height:1.5}.weather-stats{grid-template-columns:repeat(3,minmax(0,1fr));gap:6px;margin-top:17px}.stat{padding:10px 8px}.stat .name{font-size:9px}.stat .value{font-size:15px;overflow-wrap:anywhere}.stat .unit{font-size:9px;margin-left:2px}.section{padding:19px 0}.section-head{align-items:flex-start;flex-direction:column;gap:8px;margin-bottom:13px}h2{font-size:21px}.section-note{text-align:left;font-size:10px}.daily-grid{grid-template-columns:repeat(2,minmax(0,1fr));gap:7px}.day{padding:11px 5px;border-radius:12px}.day-icon{margin:8px 0;font-size:20px}.day-name{font-size:10px}.day-range{font-size:13px}.day-rain,.day-wind{font-size:9px}.chart-stack{gap:10px}.chart-card{padding:14px;border-radius:16px}.chart-title{font-size:16px}.chart-subtitle,.chart-count{font-size:9px}.chart-wrap{margin-top:9px}.chart-wrap svg{min-width:620px}.report-head{gap:12px}.notification-controls{align-items:stretch;width:100%}.notification-button{width:100%;min-height:46px}.notification-status{text-align:left}.notification-card{padding:15px;border-radius:15px}.notification-card h3{font-size:15px}.notification-summary{font-size:11px;margin:12px 0}.notification-image{max-height:300px}.notification-images{grid-template-columns:minmax(0,1fr);gap:12px}.notification-footnote{font-size:10px}.chart-card,.pressure-card,.info-card{padding:15px}.source-row{font-size:9px}.footer{flex-direction:column;gap:8px;margin-top:24px;padding-bottom:26px;font-size:10px}}
     @media(max-width:560px){.topbar{flex-wrap:wrap;justify-content:flex-start}.topbar nav{display:flex;order:3;width:100%;overflow-x:auto;gap:16px;padding:6px 0 2px;white-space:nowrap;scrollbar-width:none}.topbar nav::-webkit-scrollbar{display:none}.topbar nav a{font-size:11px;flex:none}}
+    #rainviewer-map .leaflet-container{width:100%;height:100%;background:#0b1c29;font-family:"DM Sans",sans-serif}
+    #rainviewer-map .leaflet-control-attribution{font-size:9px}
+    #rainviewer-map .leaflet-control-zoom a{background:#102535;color:#edf5f8;border-color:rgba(204,225,239,.2)}
+    @media(max-width:850px){#radar-gfs .lower-grid{grid-template-columns:minmax(0,1fr)!important}#rainviewer-map{height:300px!important}}
     @media(prefers-reduced-motion:reduce){html{scroll-behavior:auto}*{animation-duration:.01ms!important;transition-duration:.01ms!important}}
   
     /* Latest reports: responsive two-column desktop, readable full-width mobile. */
@@ -1025,6 +1031,13 @@
         <div class="briefing-row"><div class="briefing-k">Ayrışma</div><div class="briefing-v" id="brief-split">Hesaplanıyor…</div></div>
         </div>
       </section>
+    </section>
+    <section class="section" id="radar-gfs">
+      <div class="section-head"><div><div class="section-kicker">CANLI RADAR + MODEL</div><h2>Radar · GFS karşılaştırması</h2><p class="section-description">RainViewer son radar görüntüsü ile GFS yağış tahminini aynı panelde karşılaştır. Radar gözlemi ve model tahmini ayrı kaynaklar olarak gösterilir.</p></div><div class="section-note" id="radar-gfs-status">Radar verisi yükleniyor…</div></div>
+      <div class="lower-grid" style="grid-template-columns:1.1fr .9fr">
+        <article class="chart-card"><div class="chart-card-head"><div><div class="chart-title">RainViewer · Anlık radar</div><div class="chart-subtitle" id="radar-frame-time">Son radar karesi bekleniyor</div></div><span class="model-state">Gözlem</span></div><div id="rainviewer-map" role="img" aria-label="İstanbul RainViewer yağış radarı" style="height:340px;border-radius:13px;overflow:hidden;background:#0b1c29"><div class="chart-empty">Radar haritası yükleniyor…</div></div><div class="notification-footnote">Radar renkleri yağış yansımasını gösterir. Radar hareketi yeni kareler geldikçe güncellenir.</div></article>
+        <article class="chart-card"><div class="chart-card-head"><div><div class="chart-title">GFS · Yağış tahmini</div><div class="chart-subtitle" id="radar-gfs-forecast-time">Model verisi bekleniyor</div></div><span class="model-state">Tahmin</span></div><div id="radar-gfs-precipitation"><div class="chart-empty">GFS yağış grafiği yükleniyor…</div></div><div class="notification-footnote">GFS grafiği ana 72 saatlik tahminle aynı veriyi kullanır. Radar anlık gözlem, GFS üç saatlik model adımlarıdır.</div></article>
+      </div>
     </section>
     <div id="gfs-model-view">
     <section class="section" id="bildirimler">
@@ -2504,12 +2517,49 @@
       if(forecastData&&typeof renderBriefing==="function")renderBriefing();
     }
 
+    let rainviewerMap=null,rainviewerLayer=null,rainviewerLoading=false;
+    async function loadRadarGfsComparison(){
+      const status=$("radar-gfs-status"),mapNode=$("rainviewer-map");
+      if(rainviewerLoading)return;
+      rainviewerLoading=true;
+      try{
+        if(!window.L)throw new Error("Harita kütüphanesi yüklenemedi.");
+        const response=await fetch("https://api.rainviewer.com/public/weather-maps.json?t="+Date.now(),{cache:"no-store"});
+        if(!response.ok)throw new Error("RainViewer verisi alınamadı (HTTP "+response.status+").");
+        const doc=await response.json(),frames=doc.radar&&doc.radar.past||[];
+        if(!frames.length)throw new Error("RainViewer radar karesi bulunamadı.");
+        const frame=frames[frames.length-1],host=doc.host||"https://tilecache.rainviewer.com";
+        if(!rainviewerMap){
+          rainviewerMap=L.map(mapNode,{zoomControl:true,scrollWheelZoom:false}).setView([41.014,28.950],8);
+          L.tileLayer("https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png",{maxZoom:18,attribution:"© OpenStreetMap"}).addTo(rainviewerMap);
+          L.circleMarker([41.014,28.950],{radius:6,color:"#ffffff",weight:2,fillColor:"#7dd3d7",fillOpacity:1}).addTo(rainviewerMap).bindPopup("İstanbul referans noktası");
+        }
+        const tileUrl=host+frame.path+"/256/{z}/{x}/{y}/2/1_1.png";
+        if(rainviewerLayer)rainviewerMap.removeLayer(rainviewerLayer);
+        rainviewerLayer=L.tileLayer(tileUrl,{opacity:.72,maxZoom:12,tileSize:256,attribution:"RainViewer"}).addTo(rainviewerMap);
+        $("radar-frame-time").textContent="Radar karesi: "+istStamp(new Date(frame.time*1000).toISOString())+" TSİ";
+        const gfs=$("next72-precipitation"),target=$("radar-gfs-precipitation");
+        if(gfs&&gfs.innerHTML&&!gfs.querySelector(".chart-empty")?.textContent.includes("yükleniyor")){
+          target.innerHTML=gfs.innerHTML;
+          $("radar-gfs-forecast-time").textContent="GFS · "+(forecastData&&forecastData.run_id_utc?runStamp(forecastData.run_id_utc)+"Z döngüsü":"son yayımlanan döngü");
+        }else{
+          target.innerHTML='<div class="chart-empty">GFS yağış tahmini henüz hazır değil.</div>';
+          $("radar-gfs-forecast-time").textContent="Model verisi bekleniyor";
+        }
+        status.textContent="RainViewer güncellendi · "+new Intl.DateTimeFormat("tr-TR",{timeZone:"Europe/Istanbul",hour:"2-digit",minute:"2-digit"}).format(new Date())+" TSİ";
+        setTimeout(()=>rainviewerMap&&rainviewerMap.invalidateSize(),100);
+      }catch(error){
+        status.textContent="Radar: "+(error.message||"geçici bağlantı sorunu");
+        if(!rainviewerMap)mapNode.innerHTML='<div class="chart-empty">RainViewer radarı şu anda yüklenemiyor. Otomatik olarak yeniden denenecek.</div>';
+      }finally{rainviewerLoading=false;}
+    }
     async function startPage(){
       await registerAppWorker();
       await loadPushConfig();
       await refreshPushStatus();
       await Promise.all([loadForecast(),loadNotifications(),refreshStationObservations(),loadVerification()]);
-      window.setInterval(()=>{loadForecast();loadNotifications();loadVerification();},300000);
+      await loadRadarGfsComparison();
+      window.setInterval(()=>{loadForecast();loadNotifications();loadVerification();loadRadarGfsComparison();},300000);
       window.setInterval(refreshStationObservations,60000);
     }
 
