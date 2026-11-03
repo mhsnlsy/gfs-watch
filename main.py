@@ -499,7 +499,8 @@ def _forecast_points_from_payload(payload):
             "wind_speed_10m_kmh": values.get("wind"),
             "wind_direction_10m_deg": values.get("wind_direction_deg"),
             "wind_speed_850hpa_kmh": values.get("wind_850"),
-            "precipitation_6h_mm": values.get("precip"),
+            "precipitation_3h_mm": values.get("precip"),
+            "precipitation_interval_hours": 3,
         })
     return forecast
 
@@ -2107,6 +2108,56 @@ def analyze_and_build_output(current_run_name, payload, previous_runs):
         ])
         for syn_item in synoptic:
             text_report_lines.append(f"• {syn_item}")
+
+
+    # Shared native 3-hour precipitation values for the Telegram and Pages report.
+    rain_skill = None
+    try:
+        verification_path = os.path.join(PUBLIC_DATA_DIR, "forecast-verification.json")
+        with open(verification_path, encoding="utf-8") as verification_file:
+            verification_doc = json.load(verification_file)
+        rain_skill = (verification_doc.get("stations") or {}).get("eyupsultan", {}).get("rain")
+    except (OSError, ValueError, TypeError, AttributeError):
+        pass
+    rain_bias_3h = None
+    if (
+        isinstance(rain_skill, dict)
+        and isinstance(rain_skill.get("mean_bias_6h_mm"), (int, float))
+        and isinstance(rain_skill.get("amount_pairs"), int)
+        and rain_skill["amount_pairs"] >= 8
+    ):
+        rain_bias_3h = float(rain_skill["mean_bias_6h_mm"]) / 2.0
+
+    now_utc = datetime.now(timezone.utc)
+    rain_events = []
+    for local_time, values in sorted(timeline.items()):
+        step = int(values.get("step_hour") or 0)
+        valid_utc = run_utc + timedelta(hours=step)
+        amount = values.get("precip")
+        if valid_utc < now_utc - timedelta(minutes=20) or valid_utc > now_utc + timedelta(hours=72):
+            continue
+        if not isinstance(amount, (int, float)):
+            continue
+        raw_amount = max(0.0, float(amount))
+        adjusted_amount = max(0.0, raw_amount - rain_bias_3h) if rain_bias_3h is not None else raw_amount
+        if raw_amount >= 0.1 or adjusted_amount >= 0.1:
+            local_valid = valid_utc.astimezone(TR_TZ)
+            rain_events.append(
+                f"• {local_valid:%d.%m %H:%M}: ham {raw_amount:.1f} mm"
+                + (f" · düzeltilmiş {adjusted_amount:.1f} mm" if rain_bias_3h is not None else "")
+                + " / 3 saat"
+            )
+    text_report_lines.extend(["", "🌧 ÖNÜMÜZDEKİ 72 SAAT · 3 SAATLİK YAĞIŞ"])
+    text_report_lines.extend(rain_events[:24] if rain_events else [
+        "Modelin kalan 72 saatlik penceresinde anlamlı yağış sinyali yok."
+    ])
+    if rain_bias_3h is not None:
+        text_report_lines.append(
+            f"Kalibrasyon: MGM Eyüpsultan geçmiş 6 saatlik ortalama sapmasının yarısı "
+            f"({rain_bias_3h:+.2f} mm / 3 saat); {rain_skill['amount_pairs']} eşleşme."
+        )
+    else:
+        text_report_lines.append("Kalibrasyon henüz etkin değil; ham GFS değerleri kullanılıyor.")
 
     full_text_report = "\n".join(text_report_lines)
 
