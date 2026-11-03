@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 """
 Radar monitor for İstanbul (41.015 N, 28.950 E).
-Checks RainViewer tiles for ≥20 dBZ and ≥30 dBZ masses within ~25 km radius.
+Checks RainViewer tiles for ≥10 dBZ and ≥30 dBZ masses within ~25 km radius.
 Tracks motion (speed, direction, ETA) and alerts if approaching or on site.
 """
 import os
@@ -16,7 +16,7 @@ import numpy as np
 LAT = 41.015
 LON = 28.950
 RADIUS_KM = 25.0
-THRESHOLD_DBZ = 20
+THRESHOLD_DBZ = 10
 THRESHOLD_DBZ_STRONG = 30
 ZOOM = 7
 TILE_SIZE = 256
@@ -27,9 +27,10 @@ STATE_PATH = os.getenv("RADAR_STATE_PATH", "/tmp/radar_state.json")
 HISTORY_LEN = 4
 
 HIGH_DBZ_HINTS = [
-    (20, (0, 163, 224)), (25, (0, 119, 170)), (30, (0, 85, 136)),
-    (35, (255, 238, 0)), (40, (255, 170, 0)), (45, (255, 68, 0)),
-    (50, (193, 0, 0)), (55, (255, 170, 255)),
+    (10, (0, 220, 220)), (15, (0, 190, 220)), (20, (0, 163, 224)),
+    (25, (0, 119, 170)), (30, (0, 85, 136)), (35, (255, 238, 0)),
+    (40, (255, 170, 0)), (45, (255, 68, 0)), (50, (193, 0, 0)),
+    (55, (255, 170, 255)),
 ]
 
 def haversine(lat1, lon1, lat2, lon2):
@@ -137,7 +138,6 @@ def compute_motion(history):
     """Return speed_kmh, heading_deg, towards, eta_min from recent history."""
     if len(history) < 2:
         return None, None, False, None
-    # Use last two points
     prev = history[-2]
     curr = history[-1]
     dt_sec = curr["ts"] - prev["ts"]
@@ -148,10 +148,7 @@ def compute_motion(history):
     dist_px = math.hypot(dx, dy)
     dist_km = dist_px * PIXEL_KM
     speed_kmh = (dist_km / dt_sec) * 3600
-    # Heading: 0 = north, 90 = east (dy negative is north in image coords)
     heading = math.degrees(math.atan2(dx, -dy)) % 360
-    # Is moving towards target (0,0)?
-    # Vector to target from current position
     to_target_dx = -curr["avg_dx"]
     to_target_dy = -curr["avg_dy"]
     to_target_len = math.hypot(to_target_dx, to_target_dy)
@@ -159,7 +156,7 @@ def compute_motion(history):
         towards = False
     else:
         dot = (dx * to_target_dx + dy * to_target_dy) / (dist_px * to_target_len)
-        towards = dot > 0.5  # roughly within 60 degrees of direct path
+        towards = dot > 0.5
     eta_min = None
     if speed_kmh > 5 and curr["centroid_dist"] and towards:
         eta_min = (curr["centroid_dist"] / speed_kmh) * 60
@@ -220,7 +217,6 @@ def main():
     on_site_20 = curr.get("centroid_dist", 999) < 5 and curr.get("max_dbz", 0) >= THRESHOLD_DBZ
     on_site_30 = curr.get("centroid_dist", 999) < 5 and curr.get("strong_max", 0) >= THRESHOLD_DBZ_STRONG
 
-    # Prefer motion-based approach if available
     if towards and curr.get("centroid_dist", 999) < RADIUS_KM:
         approaching_20 = approaching_20 or (curr.get("max_dbz", 0) >= THRESHOLD_DBZ)
         approaching_30 = approaching_30 or (curr.get("strong_max", 0) >= THRESHOLD_DBZ_STRONG)
@@ -241,7 +237,7 @@ def main():
         f"centroid {curr.get('centroid_dist', '—')} km, "
         f"{curr.get('count', 0)} high pixels"
     )
-    print(f"[RADAR] {summary} | alert20={alert_20} alert30={alert_30} | {motion_txt}")
+    print(f"[RADAR] {summary} | alert10={alert_20} alert30={alert_30} | {motion_txt}")
 
     if alert_30:
         msg = (
@@ -257,7 +253,7 @@ def main():
         print("[RADAR] STRONG ALERT (≥30) SENT")
     elif alert_20:
         msg = (
-            f"🌧️ <b>Radar Uyarısı — İstanbul (≥20 dBZ)</b>\n"
+            f"🌧️ <b>Radar Uyarısı — İstanbul (≥10 dBZ)</b>\n"
             f"Konum: 41.015 N, 28.950 E\n"
             f"{summary}\n"
             f"{motion_txt}\n"
@@ -265,7 +261,7 @@ def main():
             f"https://mhsnlsy.github.io/gfs-watch/#radar"
         )
         send_telegram(msg)
-        print("[RADAR] ALERT (≥20) SENT")
+        print("[RADAR] ALERT (≥10) SENT")
 
     state["history"] = history
     state["last"] = curr
