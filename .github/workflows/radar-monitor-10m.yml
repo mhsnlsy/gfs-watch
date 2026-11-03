@@ -3,6 +3,10 @@ name: Radar Monitor 10m
 # Fresh workflow registration on the default branch.
 # Runs every 10 minutes (UTC): :03, :13, :23, :33, :43, :53.
 on:
+  push:
+    branches: [main]
+    paths:
+      - ".github/workflows/radar-monitor-10m.yml"
   schedule:
     - cron: "3,13,23,33,43,53 * * * *"
   workflow_dispatch:
