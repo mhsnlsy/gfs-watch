@@ -134,7 +134,7 @@ def append_check_log(status, **fields):
         **fields,
     }
     with open(CHECK_LOG_PATH, "a", encoding="utf-8") as f:
-        f.write(json.dumps(record, ensure_ascii=False, separators=(",", ":")) + "\\n")
+        f.write(json.dumps(record, ensure_ascii=False, separators=(",", ":")) + "\n")
     print(f"[RADAR] Check logged: {status}")
 
 
@@ -344,4 +344,11 @@ def main():
     print("[RADAR] Done.")
 
 if __name__ == "__main__":
-    main()
+    try:
+        main()
+    except Exception as exc:
+        try:
+            append_check_log("error", error_type=type(exc).__name__, error=str(exc)[:500])
+        except Exception as log_exc:
+            print(f"[RADAR] Could not persist error log: {log_exc}")
+        raise
