@@ -220,12 +220,12 @@ def rain_bin_rows(pairs: list[dict]) -> list[dict]:
 def rain_window(by_lead: dict, point: dict, samples: list[dict], obs: dict) -> dict:
     empty = {"forecast_3h_mm": None, "observed_3h_mm": None, "rain_error_mm": None}
     lead = int(point["lead_hours"])
-    if lead < 3 or lead % 3:
+    if lead < 6 or lead % 6:
         return empty
     amounts = []
-    for step in (lead - 2, lead - 1, lead):
+    for step in (lead - 3, lead):
         earlier = by_lead.get(step)
-        amount = None if earlier is None else earlier.get("precipitation_6h_mm")
+        amount = None if earlier is None else earlier.get("precipitation_3h_mm")
         if not isinstance(amount, (int, float)):
             return empty
         amounts.append(float(amount))
@@ -331,7 +331,7 @@ def load_runs(runs_dir: Path) -> list[dict]:
                 "valid": moment,
                 "lead_hours": int(lead),
                 "temperature_2m_c": float(temp),
-                "precipitation_6h_mm": point.get("precipitation_6h_mm") if isinstance(point.get("precipitation_6h_mm"), (int, float)) else None,
+                "precipitation_3h_mm": point.get("precipitation_3h_mm") if isinstance(point.get("precipitation_3h_mm"), (int, float)) else None,
             })
         if cleaned:
             runs.append({"run_id_utc": run_id, "issued": issued, "points": cleaned})
@@ -361,7 +361,20 @@ def score_station(runs: list[dict], samples: list[dict], now: datetime) -> dict:
                 "forecast_c": round1(point["temperature_2m_c"]),
                 "observed_c": round1(obs["temperature_2m_c"]),
                 "error_c": round1(error),
-                "precipitation_6h_mm": point["precipitation_6h_mm"],
+                "precipitation_6h_mm": (
+                    sum(
+                        float(by_lead[step]["precipitation_3h_mm"])
+                        for step in (point["lead_hours"] - 3, point["lead_hours"])
+                    )
+                    if point["lead_hours"] >= 6
+                    and point["lead_hours"] % 6 == 0
+                    and all(
+                        step in by_lead
+                        and isinstance(by_lead[step].get("precipitation_3h_mm"), (int, float))
+                        for step in (point["lead_hours"] - 3, point["lead_hours"])
+                    )
+                    else None
+                ),
                 "_valid": point["valid"],
                 "_obs": obs,
                 **rain_window(by_lead, point, samples, obs),
