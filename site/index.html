@@ -1093,6 +1093,8 @@
     const fmt=(value,digits=1)=>numeric(value)?value.toLocaleString("tr-TR",{minimumFractionDigits:digits,maximumFractionDigits:digits}):"—";
     const esc=value=>String(value??"").replace(/[&<>"']/g,char=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[char]));
     const timeTR=value=>new Intl.DateTimeFormat("tr-TR",{timeZone:"Europe/Istanbul",day:"2-digit",month:"2-digit",hour:"2-digit",minute:"2-digit"}).format(new Date(value));
+    const timeUTC=value=>new Intl.DateTimeFormat("tr-TR",{timeZone:"UTC",day:"2-digit",month:"2-digit",hour:"2-digit",minute:"2-digit",hourCycle:"h23"}).format(new Date(value));
+    const forecastClockUTC=value=>new Intl.DateTimeFormat("tr-TR",{timeZone:"UTC",hour:"2-digit",minute:"2-digit",hourCycle:"h23"}).format(new Date(value));
     const symbolFor=rain=>rain>=5?"🌧️":rain>=1?"🌦️":"⛅";
     function renderDaily(items,targetId="daily-grid"){
       const grid=$(targetId);
@@ -1173,9 +1175,9 @@
 
     const chartDateTimeTR=value=>{
       const date=new Date(value);
-      const dayMonth=new Intl.DateTimeFormat("tr-TR",{timeZone:"Europe/Istanbul",day:"numeric",month:"long"}).format(date);
-      const clock=new Intl.DateTimeFormat("tr-TR",{timeZone:"Europe/Istanbul",hour:"2-digit",minute:"2-digit",hourCycle:"h23"}).format(date);
-      return dayMonth+" "+clock;
+      const dayMonth=new Intl.DateTimeFormat("tr-TR",{timeZone:"UTC",day:"numeric",month:"long"}).format(date);
+      const clock=new Intl.DateTimeFormat("tr-TR",{timeZone:"UTC",hour:"2-digit",minute:"2-digit",hourCycle:"h23"}).format(date);
+      return dayMonth+" "+clock+" UTC";
     };
     function attachForecastChartTooltip(container,svg,coords,temperature,width,height,top,bottom){
       const ns="http://www.w3.org/2000/svg";
@@ -1235,13 +1237,13 @@
           ? "Sıcaklık: "+fmt(point.value,1)+" °C"
           : "Yağış: "+fmt(point.value,2)+" mm";
         const intervalLabel=!temperature&&point.intervalStart
-          ? '<div class="chart-tooltip-meta">Yağış aralığı: '+esc(chartDateTimeTR(point.intervalStart))+' – '+esc(chartDateTimeTR(point.date))+' TSİ</div>'
+          ? '<div class="chart-tooltip-meta">Yağış aralığı: '+esc(chartDateTimeTR(point.intervalStart))+' – '+esc(chartDateTimeTR(point.date))+' UTC</div>'
           : "";
         const intervalDuration=!temperature&&point.intervalHours
           ? '<div class="chart-tooltip-meta">'+point.intervalHours+' saatlik yağış dilimi</div>'
           : "";
         tooltip.innerHTML=
-          '<div class="chart-tooltip-time">'+esc(chartDateTimeTR(point.date))+' TSİ</div>'+
+          '<div class="chart-tooltip-time">'+esc(chartDateTimeTR(point.date))+' UTC</div>'+
           '<div class="chart-tooltip-value">'+esc(valueLabel)+'</div>'+
           intervalLabel+
           '<div class="chart-tooltip-meta">Tahmin adımı: +'+esc(point.forecastHour)+' saat</div>'+
@@ -1402,7 +1404,7 @@
       const markers=coords.filter((point,index)=>index===0||index===coords.length-1||index%8===0)
         .map(point=>'<circle cx="'+point.x+'" cy="'+point.y+'" r="3.2" fill="#c8f2ec" stroke="#133548" stroke-width="2"/>').join("");
       const labels=[coords[0],coords[Math.floor(coords.length/2)],coords[coords.length-1]]
-        .map(point=>'<text x="'+point.x+'" y="'+(height-12)+'" fill="#91a9b8" font-size="7" text-anchor="middle">'+esc(new Intl.DateTimeFormat("tr-TR",{timeZone:"Europe/Istanbul",day:"2-digit",month:"2-digit",hour:"2-digit"}).format(new Date(point.date)))+'</text>').join("");
+        .map(point=>'<text x="'+point.x+'" y="'+(height-12)+'" fill="#91a9b8" font-size="7" text-anchor="middle">'+esc(new Intl.DateTimeFormat("tr-TR",{timeZone:"UTC",day:"2-digit",month:"2-digit",hour:"2-digit",hourCycle:"h23"}).format(new Date(point.date)))+'</text>').join("");
       const gradientId=targetId+"-fill";
       const stroke=temperature?"#7dd3d7":"#8abce8";
       container.innerHTML='<svg viewBox="0 0 '+width+' '+height+'" role="img" aria-label="'+title+' grafiği"><defs><linearGradient id="'+gradientId+'" x1="0" x2="0" y1="0" y2="1"><stop offset="0%" stop-color="'+stroke+'" stop-opacity=".28"/><stop offset="100%" stop-color="'+stroke+'" stop-opacity="0"/></linearGradient></defs>'+grid+'<path d="'+area+'" fill="url(#'+gradientId+')"/><path d="'+line+'" fill="none" stroke="'+stroke+'" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"/>'+markers+labels+'</svg>';
@@ -1805,7 +1807,7 @@
     window.addEventListener("resize",fitStationStats);
     function buildBriefing(state){
       const num=value=>Number(value).toFixed(1).replace(".",",");
-      const when=date=>new Intl.DateTimeFormat("tr-TR",{timeZone:"Europe/Istanbul",weekday:"short",hour:"2-digit",minute:"2-digit"}).format(date);
+      const when=date=>new Intl.DateTimeFormat("tr-TR",{timeZone:"UTC",weekday:"short",hour:"2-digit",minute:"2-digit",hourCycle:"h23"}).format(date)+" UTC";
       const nearest=(points,timeMs,maxGap)=>{
         let best=null,gap=maxGap;
         for(const point of points||[]){
@@ -1847,8 +1849,8 @@
         lines.station="İstasyon ölçümü yok. GFS bu saatte "+num(gfsNow.temperature_2m_c)+"°.";
       }
       const wet=gfs.filter(point=>(point.precipitation_6h_mm||0)>=0.2);
-      const istHour=ms=>Number(new Intl.DateTimeFormat("en-GB",{timeZone:"Europe/Istanbul",hour:"2-digit",hourCycle:"h23"}).format(new Date(ms)));
-      const istClock=ms=>new Intl.DateTimeFormat("tr-TR",{timeZone:"Europe/Istanbul",hour:"2-digit",minute:"2-digit"}).format(new Date(ms));
+      const istHour=ms=>Number(new Intl.DateTimeFormat("en-GB",{timeZone:"UTC",hour:"2-digit",hourCycle:"h23"}).format(new Date(ms)));
+      const istClock=ms=>forecastClockUTC(ms);
       const istDay=ms=>{
         const name=new Intl.DateTimeFormat("tr-TR",{timeZone:"Europe/Istanbul",weekday:"long"}).format(new Date(ms));
         return name.charAt(0).toLocaleUpperCase("tr-TR")+name.slice(1);
@@ -2046,8 +2048,8 @@
       if(!holder)return;
       const points=forecastData&&Array.isArray(forecastData.forecast_6_hourly)?forecastData.forecast_6_hourly:[];
       const horizon=Date.now()+72*3600000;
-      const clock=ms=>new Intl.DateTimeFormat("tr-TR",{timeZone:"Europe/Istanbul",hour:"2-digit",minute:"2-digit"}).format(new Date(ms));
-      const hourOf=ms=>Number(new Intl.DateTimeFormat("en-GB",{timeZone:"Europe/Istanbul",hour:"2-digit",hourCycle:"h23"}).format(new Date(ms)));
+      const clock=ms=>forecastClockUTC(ms);
+      const hourOf=ms=>Number(new Intl.DateTimeFormat("en-GB",{timeZone:"UTC",hour:"2-digit",hourCycle:"h23"}).format(new Date(ms)));
       const cover=(startHour,endHour)=>{
         if(endHour<=5)return "gece";
         if(startHour>=6&&endHour<=11)return "sabah";
@@ -2136,7 +2138,7 @@
       return parts.join(", ");
     }
     function planningLine(){
-      const cycle=forecastData&&forecastData.run_id_utc?timeTR(forecastData.run_id_utc)+" TSİ":"Son GFS çıktısı";
+      const cycle=forecastData&&forecastData.run_id_utc?timeUTC(forecastData.run_id_utc)+" UTC":"Son GFS çıktısı";
       if(!verificationDoc)return "Saatlik güven kaydı yükleniyor. Her çıktı gerçekleşen ölçümle karşılaştırılıyor.";
       const temperature=formatLeadRanges(trustedLeadHours("temp"));
       const rain=formatLeadRanges(trustedLeadHours("rain"));
