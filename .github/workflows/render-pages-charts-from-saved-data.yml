@@ -1,5 +1,5 @@
 name: Re-render latest Pages charts from saved data
-# Rebuild after full chart-layout reset; preserve the existing typography.
+# Rebuild the current report's four comparison charts without changing forecast data.
 
 on:
   workflow_dispatch:
@@ -30,14 +30,14 @@ jobs:
           ref: gfs-watch-state
           path: state
       - name: Set up Python
-        working-directory: source
-        run: python -m pip install -r requirements.txt
-      - name: Set up Python
         uses: actions/setup-python@v7
         with:
           python-version: "3.12"
           cache: pip
           cache-dependency-path: source/requirements.txt
+      - name: Install Python dependencies
+        working-directory: source
+        run: python -m pip install -r requirements.txt
       - name: Render four comparison charts from saved SQLite data only
         working-directory: source
         env:
