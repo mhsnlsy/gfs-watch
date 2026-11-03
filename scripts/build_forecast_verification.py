@@ -229,7 +229,7 @@ def rain_window(by_lead: dict, point: dict, samples: list[dict], obs: dict) -> d
         if not isinstance(amount, (int, float)):
             return empty
         amounts.append(float(amount))
-    earlier_obs = nearest(samples, point["valid"] - timedelta(hours=3))
+    earlier_obs = nearest(samples, point["valid"] - timedelta(hours=6))
     if earlier_obs is None:
         return empty
     if earlier_obs["_when"].astimezone(IST).date() != point["valid"].astimezone(IST).date():
