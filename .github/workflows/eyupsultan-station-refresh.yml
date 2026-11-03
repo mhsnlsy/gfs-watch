@@ -98,21 +98,58 @@ jobs:
           gh workflow run meteopt-gfs-monitor.yml --ref main --repo "$GITHUB_REPOSITORY"
           echo "MeteoPT GFS monitor queued by the active five-minute station chain."
 
-      # Radar has its own ten-minute self-queue. This five-minute station chain
-      # supervises it and restarts it if a run was lost or the chain stopped.
-      - name: Ensure the ten-minute radar scan chain is alive
+      # Run radar on alternating five-minute station cycles: one scan every ten minutes.
+      - name: Run RainViewer radar scan every ten minutes
         if: always() && !cancelled()
-        env:
-          GH_TOKEN: ${{ github.token }}
         run: |
-          active=$(gh run list --workflow=radar-monitor.yml --limit 10 --json status --jq '[.[] | select(.status=="queued" or .status=="in_progress" or .status=="pending" or .status=="waiting" or .status=="requested")] | length')
-          echo "Active radar runs: $active"
-          if [ "$active" = "0" ]; then
-            gh workflow run radar-monitor.yml --ref main --repo "$GITHUB_REPOSITORY"
-            echo "Radar chain was stopped. Restarted."
-          else
-            echo "Radar chain is alive."
+          now=$(date -u +%s)
+          minute=$(( (now / 300) % 2 ))
+          if [ "$minute" -ne 0 ]; then
+            echo "This is the five-minute midpoint; next radar scan is in five minutes."
+            exit 0
           fi
+          echo "Running the ten-minute RainViewer scan."
+          python -u radar_monitor.py
+        env:
+          TELEGRAM_TOKEN: ${{ secrets.TELEGRAM_TOKEN }}
+          CHAT_ID: ${{ secrets.CHAT_ID }}
+          RADAR_STATE_PATH: ${{ github.workspace }}/radar_state.json
+          RADAR_ALERT_STATE_PATH: ${{ github.workspace }}/radar_alert_state.json
+          RADAR_CHECK_LOG_PATH: ${{ github.workspace }}/radar_checks.jsonl
+
+      - name: Persist radar history on dedicated branch
+        if: always() && !cancelled()
+        run: |
+          if [ ! -f radar_checks.jsonl ] && [ ! -f radar_state.json ] && [ ! -f radar_alert_state.json ]; then
+            echo "No radar data created on this five-minute tick."
+            exit 0
+          fi
+          cd "$GITHUB_WORKSPACE"
+          git clone --quiet --branch radar-state "https://x-access-token:${GITHUB_TOKEN}@github.com/${GITHUB_REPOSITORY}.git" "$RUNNER_TEMP/radar-state"
+          cd "$RUNNER_TEMP/radar-state"
+          cp "$GITHUB_WORKSPACE/radar_checks.jsonl" . 2>/dev/null || true
+          cp "$GITHUB_WORKSPACE/radar_state.json" . 2>/dev/null || true
+          cp "$GITHUB_WORKSPACE/radar_alert_state.json" . 2>/dev/null || true
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add radar_checks.jsonl radar_state.json radar_alert_state.json
+          if git diff --cached --quiet; then
+            echo "Radar state is already current."
+            exit 0
+          fi
+          git commit -m "Persist radar check"
+          for attempt in 1 2 3 4 5; do
+            git pull --rebase origin radar-state
+            if git push origin HEAD:radar-state; then
+              echo "Radar data persisted to radar-state."
+              exit 0
+            fi
+            sleep $((attempt * 2))
+          done
+          echo "Radar-state persistence failed after five attempts."
+          exit 1
+        env:
+          GITHUB_TOKEN: ${{ github.token }}
 
       - name: Queue next five-minute Eyüpsultan refresh
         if: always() && !cancelled()
