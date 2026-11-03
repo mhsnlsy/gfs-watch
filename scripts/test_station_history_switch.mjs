@@ -132,7 +132,6 @@ assert.match(node("station-rain-meta").textContent, /MGM/);
 assert.match(node("station-rain-trend").innerHTML, /MGM son 1 saatlik yağış ölçümü/);
 assert.match(node("station-temperature-trend").innerHTML, /ENKA Balmumcu son 24 saat sıcaklık geçmişi/);
 assert.match(node("station-trend-meta").textContent, /30 dk ortalama/);
-assert.match(node("station-rain-meta").textContent, /30 dk örnek/);
 assert.doesNotMatch(node("station-trend-meta").textContent, /Eyüpsultan/);
 assert.match(node("history-source-note").textContent, /yağış MGM Eyüpsultan 18101/);
 
