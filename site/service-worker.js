@@ -1,5 +1,5 @@
 const CACHE_NAME = "istanbul-hava-shell-v7";
-const APP_SHELL = ["./", "./manifest.webmanifest", ""];
+const APP_SHELL = ["./", "./manifest.webmanifest"];
 
 self.addEventListener("install", event => {
   event.waitUntil(
@@ -35,8 +35,6 @@ self.addEventListener("push", event => {
   catch (_) { payload = { body: "Yeni İstanbul GFS hava raporu yayımlandı." }; }
   event.waitUntil(self.registration.showNotification(payload.title || "İstanbul'un Havası", {
     body: payload.body || "Yeni GFS hava raporu yayımlandı.",
-    icon: "",
-    badge: "",
     tag: payload.tag || "istanbul-gfs-report",
     data: { url: payload.url || "./#bildirimler" }
   }));
