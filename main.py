@@ -1922,8 +1922,10 @@ def fetch_meteopt_weather_data(run_id):
         temp = _meteopt_number(temperature[index])
         if temp is None:
             continue
-        valid_utc = run_dt + timedelta(hours=lead)
-        valid_local = valid_utc.astimezone(TR_TZ)
+        # MeteoPT's displayed step timestamps are Istanbul wall-clock times,
+        # despite the table's trailing Z label. Preserve the displayed clock hour.
+        valid_local = run_dt.replace(tzinfo=TR_TZ) + timedelta(hours=lead)
+        valid_utc = valid_local.astimezone(timezone.utc)
         precip = _meteopt_number(precipitation[index]) if index < len(precipitation) else None
         wind_value = _meteopt_number(wind[index]) if index < len(wind) else None
         direction = _meteopt_number(wind_direction[index]) if index < len(wind_direction) else None
