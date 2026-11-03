@@ -214,8 +214,20 @@ def main():
 
     approaching_20 = is_approaching(prev, curr, THRESHOLD_DBZ)
     approaching_30 = is_approaching(prev, curr, THRESHOLD_DBZ_STRONG)
-    on_site_20 = curr.get("centroid_dist", 999) < 5 and curr.get("max_dbz", 0) >= THRESHOLD_DBZ
-    on_site_30 = curr.get("centroid_dist", 999) < 5 and curr.get("strong_max", 0) >= THRESHOLD_DBZ_STRONG
+    centroid_dist = curr.get("centroid_dist")
+    has_rain_echo = centroid_dist is not None and curr.get("count", 0) > 0
+
+    # No detected echo means no on-site alert. Avoid comparing None with a number.
+    on_site_20 = (
+        has_rain_echo
+        and centroid_dist < 5
+        and curr.get("max_dbz", 0) >= THRESHOLD_DBZ
+    )
+    on_site_30 = (
+        has_rain_echo
+        and centroid_dist < 5
+        and curr.get("strong_max", 0) >= THRESHOLD_DBZ_STRONG
+    )
 
     if towards and curr.get("centroid_dist", 999) < RADIUS_KM:
         approaching_20 = approaching_20 or (curr.get("max_dbz", 0) >= THRESHOLD_DBZ)
