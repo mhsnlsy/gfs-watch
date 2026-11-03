@@ -1448,8 +1448,10 @@
           :"f"+String(p.modelLead).padStart(3,"0")+" · bu saat henüz doğrulanmadı, plana katma";
         return {lead:p.lead,time:p.valid_time_utc,value:p.temperature_2m_c,mae,bias,within,trusted,label:fmt(p.temperature_2m_c,1)+" °C",detail};
       });
-      const rainField=parsed.some(p=>numeric(p.precipitation_3h_mm))?"precipitation_3h_mm":"precipitation_6h_mm";
-      const rainInterval=rainField==="precipitation_3h_mm"?3:6;
+      // 72-hour precipitation is the unadjusted MeteoPT GFS field only.
+      // MeteoPT publishes precipitation_6h_mm at 3-hour forecast timestamps.
+      const rainField="precipitation_6h_mm";
+      const rainInterval=6;
       const rain=parsed.filter(p=>p.stamp>=now-20*60000&&p.stamp<=horizon+20*60000&&numeric(p[rainField])).map(p=>({lead:Math.max(0,(p.stamp-now)/3600000),time:p.valid_time_utc,value:Math.max(0,Number(p[rainField])),rawValue:null,mae:null,bias:null,within:null,trusted:null,label:fmt(Math.max(0,Number(p[rainField])),2)+" mm / "+rainInterval+" saat",detail:"Son GFS "+(rainInterval===3?"3":"6")+" saatlik birikim · f"+String(p.modelLead).padStart(3,"0")+" · ham yağış tahmini"}));
       renderRainVerificationSummary();
       const cycle=forecastData&&forecastData.run_id_utc?timeTR(forecastData.run_id_utc)+" TSİ":"GFS";
@@ -1461,7 +1463,7 @@
       drawNext72Line("next72-temperature",temperature,"#7dd3d7","Sıcaklık °C");drawNext72Line("next72-precipitation",rain,"#83c9eb","Yağış mm");
     }
     function drawNext72Line(targetId,data,color,label){
-      const holder=$(targetId);const rainChart=label.startsWith("Yağış");if(!data.length){holder.innerHTML='<div class="chart-empty">'+(rainChart?"Son GFS çıktısında önümüzdeki 72 saat için sayısal 3 saatlik yağış verisi yok. Tahmin verisi olmayan aralıklar boş bırakıldı.":"Bu değişken için tahmin verisi bulunmuyor.")+'</div>';return;}
+      const holder=$(targetId);const rainChart=label.startsWith("Yağış");if(!data.length){holder.innerHTML='<div class="chart-empty">'+(rainChart?"Son MeteoPT GFS çıktısında önümüzdeki 72 saat için 6 saatlik yağış verisi yok. Tahmin verisi olmayan aralıklar boş bırakıldı.":"Bu değişken için tahmin verisi bulunmuyor.")+'</div>';return;}
       const biases=data.map(p=>p.bias).filter(numeric);
       const meanBias=biases.length?biases.reduce((sum,value)=>sum+value,0)/biases.length:null;
       const phrase=numeric(meanBias)?signedMiss(meanBias,rainChart?"rain":"temp"):"";
