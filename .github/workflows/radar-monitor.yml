@@ -15,6 +15,14 @@ jobs:
       - name: Checkout
         uses: actions/checkout@v4
 
+      - name: Restore radar motion history
+        uses: actions/cache@v4
+        with:
+          path: radar_state.json
+          key: radar-motion-${{ github.run_id }}-${{ github.run_attempt }}
+          restore-keys: |
+            radar-motion-
+
       - name: Set up Python
         uses: actions/setup-python@v5
         with:
