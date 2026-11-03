@@ -45,18 +45,22 @@ jobs:
           CHAT_ID: ${{ secrets.CHAT_ID }}
           RADAR_STATE_PATH: ${{ github.workspace }}/radar_state.json
           RADAR_ALERT_STATE_PATH: ${{ github.workspace }}/radar_alert_state.json
+          RADAR_CHECK_LOG_PATH: ${{ github.workspace }}/radar_checks.jsonl
         run: python -u radar_monitor.py
 
-      - name: Persist radar history and Telegram cooldown
-        if: success()
+      - name: Persist radar history, cooldown, and every check
+        if: always()
         run: |
-          if [ -f radar_state.json ]; then git add -f radar_state.json; fi
-          if [ -f radar_alert_state.json ]; then git add -f radar_alert_state.json; fi
-          if ! git diff --cached --quiet; then
-            git config user.name "github-actions[bot]"
-            git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
-            git commit -m "Persist radar monitor state"
-            git push origin HEAD:main
+          if [ -d .git ]; then
+            if [ -f radar_state.json ]; then git add -f radar_state.json; fi
+            if [ -f radar_alert_state.json ]; then git add -f radar_alert_state.json; fi
+            if [ -f radar_checks.jsonl ]; then git add -f radar_checks.jsonl; fi
+            if ! git diff --cached --quiet; then
+              git config user.name "github-actions[bot]"
+              git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+              git commit -m "Persist radar monitor check log"
+              git push origin HEAD:main
+            fi
           fi
 
       - name: Publish run summary
