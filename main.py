@@ -542,7 +542,7 @@ def export_public_forecast_json(
         "meteopt" if "MeteoPT" in str(payload.get("data_source", "")) else "noaa"
     )
     document = {
-        "schema": "gfs-watch.forecast.v1",
+        "schema": "gfs-watch.forecast.v2",
         "model": MODEL_NAME,
         "forecast_source": forecast_source,
         "run_id_utc": run_dt.isoformat(timespec="seconds"),
@@ -587,7 +587,18 @@ def export_public_forecast_json(
             "diameter_km": REGIONAL_PRESSURE_DIAMETER_KM,
             "findings": payload.get("synoptic_alerts", []),
         },
-        "forecast_6_hourly": forecast,
+        "forecast_6_hourly": forecast,  # Legacy alias; points are on a 3-hour cadence.
+        "gfs_dataset": {
+            "schema": "gfs-watch.dataset.v2",
+            "source": "MeteoPT GFS",
+            "run_id_utc": run_dt.isoformat(timespec="seconds"),
+            "published_at_utc": datetime.now(timezone.utc).isoformat(timespec="seconds"),
+            "time_zone": "Europe/Istanbul",
+            "forecast_step_hours": 3,
+            "precipitation_interval_hours": 3,
+            "points": forecast,
+            "daily_summary": daily_summary,
+        },
     }
 
     run_filename = run_dt.strftime("%Y%m%dT%HZ") + ".json"
