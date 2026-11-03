@@ -2160,7 +2160,8 @@ def analyze_and_build_output(current_run_name, payload, previous_runs):
     text_report_lines.extend(["", "📅 ÖNÜMÜZDEKİ 3 GÜN"])
 
     for i in daily_indices:
-        day_label = _format_tr_date(daily["time"][i])
+        day_key = daily["time"][i]
+        day_label = _format_tr_date(day_key)
         t_max = round(daily["temp_max"][i], 1)
         t_min = round(daily["temp_min"][i], 1)
         p_sum = round(daily["precip_sum"][i], 1)
@@ -2170,6 +2171,68 @@ def analyze_and_build_output(current_run_name, payload, previous_runs):
             f"• {day_label}: {t_min}–{t_max}°C | Yağış: {p_sum} mm | "
             f"Maks. rüzgâr: {w_max} km/sa{wind_tag}"
         )
+
+        # MeteoPT'nin 3 saatlik yağış noktalarını İstanbul yerel saatine göre
+        # gün bazında grupla. Her nokta, bitiş saatinden önceki 3 saatlik
+        # birikimi temsil eder; saatlik ara değer türetilmez.
+        rain_points = []
+        for local_time, values in timeline.items():
+            if not str(local_time).startswith(day_key + "T"):
+                continue
+            raw_rain = values.get("precip")
+            if raw_rain is None:
+                continue
+            try:
+                amount = max(0.0, float(raw_rain))
+                end_time = datetime.strptime(local_time, "%Y-%m-%dT%H:%M")
+            except (TypeError, ValueError):
+                continue
+            if amount > 0:
+                rain_points.append((end_time, amount))
+
+        rain_points.sort(key=lambda item: item[0])
+        if rain_points:
+            # Ardışık 3 saatlik yağış noktalarını tek bir yağış periyodu yap.
+            periods = []
+            for end_time, amount in rain_points:
+                if periods and end_time - periods[-1][-1][0] == timedelta(hours=3):
+                    periods[-1].append((end_time, amount))
+                else:
+                    periods.append([(end_time, amount)])
+
+            period_summaries = []
+            for period in periods:
+                peak_end, peak_amount = max(period, key=lambda item: item[1])
+                start_time = period[0][0] - timedelta(hours=3)
+                end_time = period[-1][0]
+                period_total = sum(value for _, value in period)
+                period_summaries.append({
+                    "start": start_time,
+                    "end": end_time,
+                    "total": period_total,
+                    "peak_end": peak_end,
+                    "peak_amount": peak_amount,
+                })
+
+            # Günün en yüksek 3 saatlik birikimlerini göster; eşit zirveleri
+            # koru, ancak uzun raporu önlemek için en fazla iki aralık yaz.
+            highest = max(item["peak_amount"] for item in period_summaries)
+            peak_periods = [
+                item for item in period_summaries
+                if item["peak_amount"] >= highest - 0.01
+            ][:2]
+            windows = []
+            for item in peak_periods:
+                windows.append(
+                    f"{item['peak_end'] - timedelta(hours=3):%H:%M}–"
+                    f"{item['peak_end']:%H:%M} "
+                    f"({item['peak_amount']:.1f} mm/3 sa)"
+                )
+            text_report_lines.append(
+                "  ↳ Yağışın yoğunlaştığı saatler: " + " ve ".join(windows)
+            )
+        elif p_sum <= 0:
+            text_report_lines.append("  ↳ Belirgin yağış beklenmiyor.")
 
     if synoptic:
         text_report_lines.extend([
