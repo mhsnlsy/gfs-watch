@@ -5,6 +5,11 @@ name: Eyüpsultan Station Refresh
 # next run, and the ENKA workflow restarts the chain if it ever stops.
 
 on:
+  push:
+    branches:
+      - main
+    paths:
+      - ".github/workflows/eyupsultan-station-refresh.yml"
   workflow_dispatch:
 
 permissions:
