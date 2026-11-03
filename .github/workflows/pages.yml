@@ -248,6 +248,28 @@ jobs:
           print(item["run_id_utc"])
           PY
           )"
+          python - "$manifest" forecast-data/public/latest.json <<'PY'
+          import json, pathlib, sys
+          manifest = json.loads(pathlib.Path(sys.argv[1]).read_text(encoding="utf-8"))
+          latest = json.loads(pathlib.Path(sys.argv[2]).read_text(encoding="utf-8"))
+          item = manifest["items"][0]
+          report = latest.get("report") or {}
+          images = report.get("images")
+          assert report.get("run_id_utc") == item.get("run_id_utc")
+          assert images == item.get("images"), "Embedded latest report differs from notification feed."
+          assert isinstance(images, list) and len(images) == 4, "Latest report must have four comparison charts."
+          paths = [image.get("path", "") for image in images if isinstance(image, dict)]
+          expected = {
+              f"gfs-{item['id']}-temperature.png",
+              f"gfs-{item['id']}-temperature_850.png",
+              f"gfs-{item['id']}-precipitation.png",
+              f"gfs-{item['id']}-wind_10m.png",
+          }
+          assert {pathlib.PurePosixPath(path).name for path in paths} == expected
+          assert all(path.endswith(".png") for path in paths)
+          assert ".svg" not in json.dumps(latest).lower(), "Legacy SVG path found in public/latest.json."
+          print("Embedded latest GFS report is synchronized with four PNG charts; no SVG reference.")
+          PY
           if [ "$expected_notification_run_id" != "$expected_run_id" ]; then
             echo "Notification feed is stale: $expected_notification_run_id != $expected_run_id"
             exit 1
