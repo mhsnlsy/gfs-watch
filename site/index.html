@@ -1465,7 +1465,7 @@
       const biases=data.map(p=>p.bias).filter(numeric);
       const meanBias=biases.length?biases.reduce((sum,value)=>sum+value,0)/biases.length:null;
       const phrase=numeric(meanBias)?signedMiss(meanBias,rainChart?"rain":"temp"):"";
-      const width=520,height=150,left=34,right=10,top=12,bottom=26,pw=width-left-right,ph=height-top-bottom,values=data.map(p=>p.value);
+      const width=520,height=150,left=34,right=10,top=12,bottom=26,pw=width-left-right,ph=height-top-bottom,values=data.flatMap(p=>rainChart&&numeric(p.rawValue)?[p.value,p.rawValue]:[p.value]);
       const edge=(value,mae,sign)=>{const next=value+sign*(numeric(mae)?mae:0);return rainChart?Math.max(0,next):next;};
       const usual=p=>p.value;
       const banded=data.flatMap(p=>numeric(p.mae)?[edge(p.value,p.mae,-1),edge(p.value,p.mae,1),usual(p)]:[usual(p)]);
