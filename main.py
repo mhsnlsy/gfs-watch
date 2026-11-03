@@ -3334,73 +3334,58 @@ async def run_manual_comparison(previous_run_id, current_run_id):
     )
 
 
-async def run_manual_report(run_id):
-    """Send one selected GFS run without changing processed-run history."""
+async def run_manual_report(run_id, media_only=False):
+    """Send a selected GFS report or only its missing media, without changing history."""
     init_db()
     run_dt = _parse_utc_datetime(run_id)
     normalized_run_id = run_dt.isoformat(timespec="seconds")
-    print(
-        f"[MANUAL] {normalized_run_id} için tek seferlik rapor hazırlanıyor; "
-        "GFS geçmişi güncellenmeyecek."
-    )
+    mode_label = "eksik görsel/ses" if media_only else "metin + görsel + ses"
+    print(f"[MANUAL] {normalized_run_id} için {mode_label} hazırlanıyor; geçmiş değişmeyecek.")
 
-    stored_runs = await asyncio.to_thread(get_previous_runs)
-    earlier_runs = [
-        row for row in stored_runs
-        if _parse_utc_datetime(row[0]) < run_dt
-    ]
-    previous_runs = sorted(earlier_runs, key=lambda row: row[0], reverse=True)[:1]
-
-    payload = await asyncio.to_thread(
-        fetch_full_weather_data, normalized_run_id
-    )
+    comparison_runs = await load_previous_three_runs_for_comparison(normalized_run_id)
+    payload = await asyncio.to_thread(fetch_full_weather_data, normalized_run_id)
     if payload and "_pending_noaa_gfs" in payload:
         raise RuntimeError(
-            f"{normalized_run_id} için NOAA verisi henüz alınamadı: "
-            f"{payload.get('_reason', payload.get('_http_status', 'eksik GRIB2'))}"
+            f"{normalized_run_id} için veri henüz alınamadı: "
+            f"{payload.get('_reason', payload.get('_http_status', 'eksik veri'))}"
         )
     if not payload:
-        raise RuntimeError(
-            f"{normalized_run_id} için NOAA/NCEP GRIB2 tahmini oluşturulamadı."
-        )
+        raise RuntimeError(f"{normalized_run_id} için GFS tahmini oluşturulamadı.")
 
-    # This is a manual resend of an already processed model cycle. It does not
-    # export JSON, save another DB row, or change the run's notification state.
-    payload["model_metadata"] = {
-        "manual_resend": True,
-        "run_id": normalized_run_id,
-    }
-    payload["station_observation"] = await asyncio.to_thread(
-        fetch_enka_station_observation
-    )
+    payload["model_metadata"] = {"manual_resend": True, "run_id": normalized_run_id}
+    payload["station_observation"] = await asyncio.to_thread(fetch_enka_station_observation)
     full_text_report, speech_text = analyze_and_build_output(
-        normalized_run_id, payload, previous_runs
+        normalized_run_id, payload, comparison_runs
     )
+    # Voice was disabled in the standard report builder. For an explicitly
+    # requested manual voice delivery, narrate the written report itself.
+    narration = speech_text.strip() or full_text_report.strip()
+    chart = create_comparison_chart(normalized_run_id, payload, comparison_runs)
+    if not chart:
+        raise RuntimeError("Telegram için karşılaştırma görseli üretilemedi.")
 
-    audio_task = asyncio.create_task(generate_speech_with_retry(speech_text) if _telegram_enabled() else _no_speech())
+    audio_file = None
     try:
-        await send_telegram_text(full_text_report)
-    except Exception:
-        try:
-            audio_file = await audio_task
-            if audio_file and os.path.exists(audio_file):
-                os.remove(audio_file)
-        except Exception:
-            pass
-        raise
-
-    audio_file = await audio_task
-    if audio_file:
-        try:
+        if _telegram_enabled():
+            audio_file = await generate_speech_with_retry(narration)
+        if not media_only:
+            await send_telegram_text(full_text_report)
+        await send_telegram_photo(
+            chart,
+            f"📊 İstanbul GFS | Dört döngü karşılaştırması · {run_dt:%Y-%m-%d %HZ} UTC"
+        )
+        if audio_file:
             await send_telegram_voice(audio_file)
-        except Exception as exc:
-            print(f"[MANUAL VOICE HATA] Ses gönderilemedi: {exc}")
-            raise
-    else:
-        print("[MANUAL VOICE] Ses üretilemedi; metin raporu gönderildi.")
+        else:
+            print("[MANUAL VOICE] Ses üretilemedi; hata/eksik TTS ayarı loglandı.")
+    finally:
+        chart.close()
+        if audio_file and os.path.exists(audio_file):
+            os.remove(audio_file)
 
     print(
-        f"[MANUAL COMPLETE] {normalized_run_id} metin raporu gönderildi; "
+        f"[MANUAL COMPLETE] {normalized_run_id}: "
+        f"{'görsel/ses' if media_only else 'metin/görsel/ses'} gönderim adımları tamamlandı; "
         "işlenmiş GFS geçmişi değiştirilmedi."
     )
 
@@ -3577,8 +3562,9 @@ if __name__ == "__main__":
             asyncio.run(run_manual_comparison(compare_previous, compare_current))
         else:
             manual_run_id = os.getenv("GFS_WATCH_MANUAL_RUN_ID", "").strip()
+            manual_media_only = os.getenv("GFS_WATCH_MANUAL_MEDIA_ONLY", "").strip().lower() in {"1", "true", "yes"}
             if manual_run_id:
-                asyncio.run(run_manual_report(manual_run_id))
+                asyncio.run(run_manual_report(manual_run_id, media_only=manual_media_only))
             elif os.getenv("GFS_WATCH_ONCE", "").strip().lower() in {"1", "true", "yes"}:
                 asyncio.run(run_once())
             else:
