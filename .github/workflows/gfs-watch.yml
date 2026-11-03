@@ -83,15 +83,38 @@ jobs:
           print(f"Previously processed latest GFS cycle: {run_id}")
           print(f"Previously published public-data fingerprint: {fingerprint}")
           PY
-      - name: Watch MeteoPT until the 3-hour series reaches +180h
+      - name: Lock this scan to the Istanbul time-slot GFS cycle
+        id: target-cycle
+        run: |
+          python - <<'PY' >> "$GITHUB_ENV"
+          from datetime import datetime, timedelta, timezone
+          from zoneinfo import ZoneInfo
+          now = datetime.now(ZoneInfo("Europe/Istanbul"))
+          minute = now.hour * 60 + now.minute
+          if 30 <= minute < 390:
+              day, hour = now.date() - timedelta(days=1), 18
+          elif 390 <= minute < 750:
+              day, hour = now.date(), 0
+          elif 750 <= minute < 1110:
+              day, hour = now.date(), 6
+          else:
+              day, hour = now.date(), 12
+              if minute < 30:
+                  day -= timedelta(days=1)
+          target = datetime(day.year, day.month, day.day, hour, tzinfo=timezone.utc)
+          print(f"GFS_WATCH_TARGET_RUN_ID={target.isoformat(timespec='seconds')}")
+          print(f"Locked target: {target:%Y-%m-%d %H}Z for Istanbul time {now:%H:%M}")
+          PY
+      - name: Watch only the GFS cycle assigned to this Istanbul time slot
         id: check-gfs
         env:
+          GFS_WATCH_TARGET_RUN_ID: ${{ env.GFS_WATCH_TARGET_RUN_ID }}
           GFS_SOURCE: meteopt
           GFS_TELEGRAM: "1"
           GFS_WATCH_ONCE: "1"
           GFS_WATCH_CONTINUOUS: "1"
-          GFS_WATCH_WINDOW_MINUTES: "80"
-          GFS_WATCH_POLL_SECONDS: "120"
+          GFS_WATCH_WINDOW_MINUTES: "12"
+          GFS_WATCH_POLL_SECONDS: "60"
           GFS_WATCH_RESEND_CHARTS: ${{ github.event_name == 'workflow_dispatch' && inputs.resend_charts && '1' || '0' }}
           DB_PATH: gfs_watch.db
           PUBLIC_DATA_DIR: public
