@@ -60,7 +60,17 @@ jobs:
               git config user.name "github-actions[bot]"
               git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
               git commit -m "Persist radar monitor check log"
-              git push origin HEAD:main
+              for attempt in 1 2 3 4 5; do
+                git pull --rebase origin main
+                if git push origin HEAD:main; then
+                  echo "Radar state and check log persisted."
+                  exit 0
+                fi
+                echo "Push attempt $attempt failed; retrying."
+                sleep $((attempt * 2))
+              done
+              echo "Could not persist radar state after five attempts."
+              exit 1
             fi
           fi
 
