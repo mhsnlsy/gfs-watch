@@ -2383,7 +2383,7 @@
       const bundled=forecastData&&forecastData.report;
       try{
         // The notification archive contains the four-cycle comparison PNGs.
-        // Prefer it over the single-cycle SVGs bundled with latest.json.
+        // The embedded forecast report and the archive now share the same PNG chart paths.
         const response=await fetch("./data/notifications/latest.json?t="+Date.now(),{cache:"no-store"});
         if(!response.ok)throw new Error("Rapor arşivi henüz oluşturulmadı.");
         const document=await response.json();
