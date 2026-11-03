@@ -616,6 +616,14 @@ def export_public_forecast_json(
             published["comparison_runs"] = entries[-4:]
         else:
             published["comparison_runs"] = _load_gfs_850_comparison_runs()
+        # Canonical GFS consumers read this one complete model dataset.
+        published["gfs_dataset"].update({
+            "forecast_valid_until_utc": published["forecast_valid_until_utc"],
+            "location": published["location"],
+            "current_conditions": published["current_conditions"],
+            "regional_pressure_analysis": published["regional_pressure_analysis"],
+            "comparison_runs": published["comparison_runs"],
+        })
         if isinstance(report, dict):
             published["report"] = report
         _write_json_atomically(os.path.join(PUBLIC_DATA_DIR, "latest.json"), published)
