@@ -170,6 +170,35 @@ jobs:
           else
             python -u scripts/rebuild_missing_pages_report.py
           fi
+      - name: Validate the shared 72-hour forecast and report package
+        if: steps.check-gfs.outcome == 'success'
+        run: |
+          python - <<'PY'
+          import json
+          from pathlib import Path
+          latest = json.loads(Path("public/latest.json").read_text(encoding="utf-8"))
+          run_id = latest.get("run_id_utc")
+          points = latest.get("forecast_6_hourly")
+          if not run_id or not isinstance(points, list) or not points:
+              raise SystemExit("72-hour forecast package is missing its run ID or points.")
+          leads = []
+          for point in points:
+              lead = point.get("forecast_hour")
+              if not isinstance(lead, (int, float)) or lead % 3:
+                  raise SystemExit(f"Non-3-hour forecast step found: {lead!r}")
+              if "precipitation_3h_mm" not in point:
+                  raise SystemExit("A forecast point is missing native precipitation_3h_mm.")
+              leads.append(lead)
+          if max(leads) < 72:
+              raise SystemExit("Forecast package does not cover the next 72 hours.")
+          report_path = Path("public/notifications/latest.json")
+          manifest = json.loads(report_path.read_text(encoding="utf-8"))
+          items = manifest.get("items") or []
+          current = next((item for item in items if item.get("run_id_utc") == run_id), None)
+          if not current or "ÖNÜMÜZDEKİ 72 SAAT" not in current.get("report_text", ""):
+              raise SystemExit("Telegram/Pages report and 72-hour forecast do not share the same GFS cycle.")
+          print(f"Shared 3-hour forecast package validated: {run_id}; {len(points)} points.")
+          PY
       - name: Detect newly generated GFS report
         id: report
         if: always() && steps.check-gfs.outcome == 'success'
