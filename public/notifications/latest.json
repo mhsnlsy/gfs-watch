@@ -1,7 +1,37 @@
 {
   "schema": "gfs-watch.notifications.v1",
-  "updated_at_utc": "2026-11-02T18:00:07+00:00",
+  "updated_at_utc": "2026-11-03T02:35:15+00:00",
   "items": [
+    {
+      "id": "20261102T18Z",
+      "title": "İstanbul GFS tahmin raporu",
+      "run_id_utc": "2026-11-02T18:00:00+00:00",
+      "published_at_utc": "2026-11-03T02:35:15+00:00",
+      "published_at_istanbul": "Salı 3 Kasım 2026 05:35",
+      "cycle_label": "18Z · 02.11.2026 21:00 TSİ",
+      "summary": "",
+      "report_text": "🌦 İstanbul'un Havası 4.0\nİSTANBUL GFS TAHMİN RAPORU\n📄 Çıktı: Yazılı tahmin raporu\n🛰 Model döngüsü: Pazartesi 2 Kasım 2026 21:00 TSİ (18Z UTC)\n🗓 Tahmin aralığı: Pazartesi 2 Kasım 2026 21:00 – Salı 10 Kasım 2026 09:00 TSİ (+180 saat)\n🕒 Rapor zamanı: Salı 3 Kasım 2026 05:35 TSİ\n📍 Konum: İstanbul, Türkiye\n\n🌡 GFS başlangıç sıcaklığı: 15.8°C\n💨 GFS başlangıç rüzgârı: 4.0 km/sa\n\n📡 YEREL İSTASYON GERÇEK İSTASYON GÖZLEMİ | VANTAGE PRO · SON İSTASYON ÖLÇÜMÜ\n🕒 Ölçüm zamanı: Salı 3 Kasım 2026 05:30 TSİ\n🌡 İstasyon sıcaklığı: 15.1°C\n🌧 Günlük toplam yağış: 0.0 mm\n💨 İstasyon rüzgârı: 0.0 km/sa · yön: ENE\nKaynak: Yerel istasyon · Davis Vantage PRO istasyonu · canlı tablo ölçümü\n\n📅 ÖNÜMÜZDEKİ 3 GÜN\n• Çarşamba 4 Kasım: 14.5–16.6°C | Yağış: 8.0 mm | Maks. rüzgâr: 27.0 km/sa | Rüzgârlı\n• Perşembe 5 Kasım: 11.9–13.9°C | Yağış: 0.7 mm | Maks. rüzgâr: 26.0 km/sa | Rüzgârlı\n• Cuma 6 Kasım: 10.8–12.4°C | Yağış: 0.2 mm | Maks. rüzgâr: 21.0 km/sa | Rüzgârlı",
+      "image_path": null,
+      "images": [
+        {
+          "label": "Sıcaklık",
+          "path": "media/gfs-20261102T18Z-temperature.png"
+        },
+        {
+          "label": "Sıcaklık · 850 hPa",
+          "path": "media/gfs-20261102T18Z-temperature_850.png"
+        },
+        {
+          "label": "Yağış",
+          "path": "media/gfs-20261102T18Z-precipitation.png"
+        },
+        {
+          "label": "Rüzgâr hızı + yönü · 10 m",
+          "path": "media/gfs-20261102T18Z-wind_10m.png"
+        }
+      ],
+      "audio_path": null
+    },
     {
       "id": "20261102T12Z",
       "title": "İstanbul GFS tahmin raporu",
