@@ -380,6 +380,18 @@
 .dashboard-left .history-chart-head h3{font-size:12px}
 .dashboard-left .history-chart-head p,.dashboard-left .history-chart-meta,.dashboard-left .history-source-note{font-size:8px}
 .next-72h-panel{min-width:0;padding:15px;background:linear-gradient(145deg,rgba(18,43,61,.94),rgba(12,31,46,.96));border:1px solid var(--line);border-radius:20px}
+.rain-window{margin-top:14px;padding:13px 14px;border:1px solid rgba(131,201,235,.22);border-radius:14px;background:linear-gradient(120deg,rgba(30,79,103,.24),rgba(4,19,29,.24))}
+.rain-window-head{display:flex;align-items:center;justify-content:space-between;gap:10px;margin-bottom:9px}
+.rain-window-title{font:700 13px Manrope,sans-serif;color:#d9edf4}
+.rain-window-tag{font-size:9px;color:#9fc8d9;border:1px solid rgba(131,201,235,.24);border-radius:999px;padding:5px 8px;white-space:nowrap}
+.rain-window-main{font:700 16px/1.35 Manrope,sans-serif;color:#eff8fb;letter-spacing:-.02em}
+.rain-window-detail{font-size:11px;line-height:1.55;color:#a8c0ca;margin-top:5px}
+.rain-window-times{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:8px;margin-top:10px}
+.rain-window-time{padding:8px 10px;border-radius:10px;background:rgba(3,16,26,.3);border:1px solid rgba(204,225,239,.08)}
+.rain-window-time span{display:block;font-size:9px;color:#91aab8}
+.rain-window-time strong{display:block;font:700 14px Manrope,sans-serif;color:#e8f5f8;margin-top:3px}
+@media(max-width:560px){.rain-window{padding:11px}.rain-window-main{font-size:14px}.rain-window-time strong{font-size:13px}}
+
 .next-72h-head{display:flex;justify-content:space-between;align-items:flex-start;gap:10px;margin-bottom:12px}
 .next-72h-head h2{font-size:20px;margin-top:5px}
 .next-72h-head p{font-size:9px;color:var(--muted);margin:5px 0 0}
@@ -995,6 +1007,15 @@
           <article class="next-72h-card"><div class="next-72h-card-head"><h3>Yağış</h3><span>mm / 3 saat</span></div><div class="next-72h-chart" id="next72-precipitation"><div class="chart-empty">Tahmin bekleniyor…</div></div></article>
 
         </div>
+        <section class="rain-window" id="rain-window" aria-live="polite" aria-label="Yağış başlangıç ve bitiş tahmini">
+          <div class="rain-window-head"><div class="section-kicker">İSTANBUL · YAĞIŞ TAKİBİ</div><span class="rain-window-tag">GFS tahmini</span></div>
+          <div class="rain-window-main" id="rain-window-main">Yağış zamanı hesaplanıyor…</div>
+          <div class="rain-window-detail" id="rain-window-detail">Modelin yağış adımları inceleniyor.</div>
+          <div class="rain-window-times" id="rain-window-times" hidden>
+            <div class="rain-window-time"><span>Başlangıç</span><strong id="rain-window-start">—</strong></div>
+            <div class="rain-window-time"><span>Beklenen bitiş</span><strong id="rain-window-end">—</strong></div>
+          </div>
+        </section>
         <div class="briefing" id="briefing" aria-live="polite">
         <div class="briefing-row" id="brief-rain">
           <div class="briefing-k">Yağış saatleri</div>
@@ -1439,6 +1460,43 @@
       if(tempSpan){tempSpan.textContent="°C";tempSpan.classList.remove("bias-tag");}
       if(rainSpan){rainSpan.textContent="mm / 3 saat";rainSpan.classList.remove("bias-tag");}
       drawNext72Line("next72-temperature",temperature,"#7dd3d7","Sıcaklık °C");drawNext72Line("next72-precipitation",rain,"#83c9eb","Yağış mm");
+      renderRainWindow(parsed);
+    }
+    function renderRainWindow(parsed){
+      const main=$("rain-window-main"),detail=$("rain-window-detail"),times=$("rain-window-times");
+      if(!main||!detail||!times)return;
+      const now=Date.now(),points=parsed.filter(p=>p.modelLead>0&&numeric(p.precipitation_6h_mm)).sort((a,b)=>a.stamp-b.stamp);
+      if(points.length<2){main.textContent="Yağış tahmini henüz hazır değil";detail.textContent="Yeni GFS verisi geldiğinde başlangıç ve bitiş saatleri burada gösterilecek.";times.hidden=true;return;}
+      const gaps=points.slice(1).map((p,i)=>(p.stamp-points[i].stamp)/3600000).filter(v=>v>0&&v<=12).sort((a,b)=>a-b);
+      const stepH=gaps.length?gaps[Math.floor(gaps.length/2)]:3;
+      const stepMs=stepH*3600000,wet=points.filter(p=>p.precipitation_6h_mm>=0.2).map(p=>({start:p.stamp-stepMs,end:p.stamp,mm:p.precipitation_6h_mm}));
+      const events=[];
+      for(const item of wet){
+        const last=events[events.length-1];
+        if(last&&item.start<=last.end+stepMs*.25){last.end=Math.max(last.end,item.end);last.sum+=item.mm;last.count++;}
+        else events.push({start:item.start,end:item.end,sum:item.mm,count:1});
+      }
+      const active=events.find(e=>e.start<=now&&e.end>=now);
+      const next=events.find(e=>e.start>now);
+      const event=active||next;
+      const dateTime=ms=>new Intl.DateTimeFormat("tr-TR",{timeZone:"Europe/Istanbul",weekday:"short",day:"2-digit",month:"short",hour:"2-digit",minute:"2-digit"}).format(new Date(ms));
+      const clock=ms=>new Intl.DateTimeFormat("tr-TR",{timeZone:"Europe/Istanbul",hour:"2-digit",minute:"2-digit"}).format(new Date(ms));
+      times.hidden=true;
+      if(!event){
+        main.textContent="Önümüzdeki tahmin süresinde belirgin yağış görünmüyor";
+        detail.textContent="GFS'nin mevcut tahmin ufkunda 0,2 mm ve üzeri yağış adımı bulunamadı. Yeni model çıktısıyla yeniden hesaplanır.";
+        return;
+      }
+      times.hidden=false;
+      $("rain-window-start").textContent=dateTime(event.start);
+      $("rain-window-end").textContent=dateTime(event.end);
+      if(active){
+        main.textContent="Yağış bekleniyor / modelde şu anda sürüyor";
+        detail.textContent="Tahmini bitiş: "+dateTime(event.end)+". Bu yağış aralığında toplam yaklaşık "+fmt(event.sum,1)+" mm bekleniyor.";
+      }else{
+        main.textContent="İlk yağış "+dateTime(event.start)+" saatlerinde bekleniyor";
+        detail.textContent="Tahmini bitiş: "+dateTime(event.end)+". Bu aralıkta toplam yaklaşık "+fmt(event.sum,1)+" mm yağış öngörülüyor.";
+      }
     }
     function drawNext72Line(targetId,data,color,label){
       const holder=$(targetId);if(data.length<2){holder.innerHTML='<div class="chart-empty">Bu değişken için yeterli tahmin noktası yok.</div>';return;}
