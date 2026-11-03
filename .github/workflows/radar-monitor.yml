@@ -9,7 +9,7 @@ permissions:
   contents: write
 
 concurrency:
-  group: radar-monitor-legacy
+  group: radar-monitor-10m
   cancel-in-progress: false
 
 jobs:
