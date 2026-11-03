@@ -2249,7 +2249,7 @@
         const imageItems=Array.isArray(item.images)&&item.images.length
           ? item.images.filter(image=>image&&image.path).map(image=>({label:image.label||"GFS grafiği",url:notificationAsset(image.path,cacheVersion)}))
           : legacyImage?[{label:"Dört döngü karşılaştırması",url:legacyImage}]:[];
-        const imagesHtml=imageItems.length
+        const imagesHtml=imageItems.length===4
           ? '<div class="comparison-heading">SON 4 GFS DÖNGÜSÜ · KIYASLAMA</div><div class="notification-images">'+imageItems.map(image=>
               '<div class="notification-image-item"><div class="notification-image-caption">'+esc(image.label)+'</div><a class="notification-image-link" href="'+image.url+'" target="_blank" rel="noopener"><img class="notification-image" src="'+image.url+'" alt="'+esc(image.label)+' · son dört GFS döngüsü karşılaştırması" loading="eager" decoding="async" fetchpriority="high" onerror="this.style.display=\'none\';this.parentElement.insertAdjacentHTML(\'beforeend\',\'<span class=\\\'media-pending\\\'>Grafik yüklenemedi · yeniden denenecek</span>\')"></a></div>'
             ).join("")+'</div>'
