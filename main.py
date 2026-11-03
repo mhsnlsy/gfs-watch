@@ -2571,13 +2571,13 @@ def _draw_comparison_precip_line_axis(axis, chart_data):
     labels = []
     for index in tick_index:
         stamp = datetime.strptime(times[index], "%Y-%m-%dT%H:%M")
-        labels.append(f"{stamp:%d.%m}\n{stamp:%H:%M}")
+        labels.append(f"{stamp:%d.%m}\\n{stamp:%H:%M}")
     axis.set_xticks(tick_index)
     axis.set_xticklabels(
-        labels, fontsize=6.8, color=GFS_REPORT_TEXT,
-        rotation=0, ha="center", va="top", linespacing=1.05,
+        labels, fontsize=7.2, color=GFS_REPORT_TEXT,
+        rotation=90, ha="center", va="top",
     )
-    axis.tick_params(axis="x", which="major", pad=5, length=3, labelbottom=True)
+    axis.tick_params(axis="x", which="major", pad=2, length=2)
     axis.set_title("3 saatlik yağış | çizgi trend", loc="left", fontsize=11)
     axis.set_ylabel("mm / 3 saat", fontsize=10)
     axis.set_xlabel("İstanbul yerel saati · 3 saat", fontsize=9.5, color=GFS_REPORT_TEXT)
@@ -2591,8 +2591,7 @@ def _apply_precip_hour_grid(axis):
     axis.xaxis.set_minor_locator(ticker.MultipleLocator(1))
     axis.set_axisbelow(True)
     axis.grid(which="major", axis="y", color=GFS_REPORT_GRID, alpha=0.5, linewidth=0.8)
-    # Each forecast timestamp is a real 3-hour slot: draw its divider visibly.
-    axis.grid(which="major", axis="x", color=GFS_REPORT_GRID, alpha=0.55, linewidth=0.75)
+    axis.grid(which="minor", axis="x", color=GFS_REPORT_GRID, alpha=0.38, linewidth=0.6)
     axis.tick_params(axis="x", which="minor", length=0)
     axis.tick_params(axis="y", which="major", labelcolor=GFS_REPORT_MUTED, colors=GFS_REPORT_MUTED)
 
@@ -2681,8 +2680,8 @@ def create_comparison_chart(current_run_id, payload, previous_runs):
         dates = chart_data["dates"]
         count = len(series)
         fig, axes = plt.subplots(
-            4, 1, figsize=(18, 17), sharex=False,
-            gridspec_kw={"height_ratios": [1.5, 1, 1.8, 1]},
+            4, 1, figsize=(18, 15), sharex=False,
+            gridspec_kw={"height_ratios": [1.5, 1, 1, 1]},
         )
         fig.suptitle(
             f"İSTANBUL GFS | SON {count} DÖNGÜ KARŞILAŞTIRMASI",
