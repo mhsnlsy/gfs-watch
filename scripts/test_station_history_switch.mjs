@@ -92,6 +92,8 @@ sandbox.enkaStationHistorySamples = [
 sandbox.eyupsultanStationHistorySamples = [
   sample(22, 18.2, 2.0),
   sample(12, 17.3, 2.6),
+  { ...sample(2, 17.0, 3.1), precipitation_1h_mm: 0.3 },
+  { ...sample(1, 16.8, 3.5), precipitation_1h_mm: 0.4 },
   sample(0.3, 16.5, 3.7)
 ];
 
