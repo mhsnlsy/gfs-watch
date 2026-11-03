@@ -30,10 +30,10 @@
     .station-current .temp-meta{margin-top:6px}
     .delta-badge{display:inline-flex;align-items:center;gap:4px;margin-top:6px;padding:3px 9px;border-radius:999px;background:rgba(125,211,215,.12);border:1px solid rgba(125,211,215,.28);color:var(--cyan);font-size:11px;font-weight:600;letter-spacing:.01em;min-height:22px}
     .delta-badge:empty{display:none}
-    .rain-brief{display:grid;gap:3px;margin-top:6px;color:#aee4e4;font-size:11px;line-height:1.45;font-weight:600}
+    .rain-brief{display:grid;justify-items:start;gap:2px;margin-top:3px}
+    .rain-brief .delta-badge{margin-top:2px!important;white-space:normal;max-width:100%;line-height:1.35}
     .rain-brief div:empty{display:none}
-    .rain-brief div+div{color:#c4d7df;font-weight:500}
-    @media(max-width:560px){.rain-brief{font-size:10px;line-height:1.4;margin-top:4px}}
+    @media(max-width:560px){.rain-brief{gap:1px;margin-top:2px}.rain-brief .delta-badge{font-size:10px;padding:2px 7px!important}}
     .dew-point{margin-top:5px;font-size:11px;color:#a8c4d0;letter-spacing:.01em}
     .dew-point:empty{display:none}
     .weather-stats .stat{transition:background .15s ease}
@@ -986,9 +986,11 @@
     </div>
     <div class="temp-meta">
       <div class="temp-caption" id="station-observation-meta">Son istasyon ölçümü bekleniyor</div>
+      <div class="delta-badge" id="station-24h-diff"></div>
+      <div class="delta-badge" id="station-gap" hidden></div>
       <div class="rain-brief" id="rain-brief" aria-live="polite">
-        <div id="rain-brief-current">MGM yağış ölçümü bekleniyor.</div>
-        <div id="rain-brief-forecast">MeteoPT GFS tahmini bekleniyor.</div>
+        <div class="delta-badge" id="rain-brief-current">MGM yağış ölçümü bekleniyor.</div>
+        <div class="delta-badge" id="rain-brief-forecast">MeteoPT GFS tahmini bekleniyor.</div>
       </div>
       
     </div>
