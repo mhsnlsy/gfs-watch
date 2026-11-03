@@ -1687,8 +1687,25 @@ def _payload_reaches_f180(payload):
     return False
 
 
+def scheduled_istanbul_gfs_run(now=None):
+    """Return the single GFS cycle assigned to the current Istanbul half-day slot."""
+    local_now = now or datetime.now(TR_TZ)
+    minute = local_now.hour * 60 + local_now.minute
+    if 30 <= minute < 390:       # 00:30–06:30 TSİ -> previous day's 18Z
+        day, hour = local_now.date() - timedelta(days=1), 18
+    elif 390 <= minute < 750:    # 06:30–12:30 TSİ -> today's 00Z
+        day, hour = local_now.date(), 0
+    elif 750 <= minute < 1110:   # 12:30–18:30 TSİ -> today's 06Z
+        day, hour = local_now.date(), 6
+    else:                        # 18:30–00:30 TSİ -> today's 12Z
+        day, hour = local_now.date(), 12
+        if minute < 30:
+            day -= timedelta(days=1)
+    return datetime(day.year, day.month, day.day, hour, tzinfo=timezone.utc)
+
+
 async def stage_open_meteopt_cycle(processed_run_ids):
-    """Package a growing cycle at +40, +120 and +170. Publish only after +180.
+    """Package only the GFS cycle assigned to the current Istanbul time slot. Publish only after +180.
 
     Returns False while the open cycle is still short of f180, True when the
     cached package is ready to become the report, and None when there is nothing
@@ -1697,7 +1714,12 @@ async def stage_open_meteopt_cycle(processed_run_ids):
     if os.getenv("GFS_SOURCE", "meteopt").strip().lower() == "noaa":
         return None
     now = datetime.now(timezone.utc)
-    run_dt = now.replace(hour=(now.hour // 6) * 6, minute=0, second=0, microsecond=0)
+    configured_target = os.getenv("GFS_WATCH_TARGET_RUN_ID", "").strip()
+    run_dt = (
+        _parse_utc_datetime(configured_target)
+        if configured_target
+        else scheduled_istanbul_gfs_run()
+    )
     run_id = run_dt.isoformat(timespec="seconds")
     if run_id in processed_run_ids:
         return None
@@ -1756,16 +1778,16 @@ async def stage_open_meteopt_cycle(processed_run_ids):
 
 
 def fetch_meteopt_available_runs():
-    """List recent GFS cycles that already have the 60 rows through f180."""
-    now = datetime.now(timezone.utc)
-    latest_cycle = now.replace(
-        hour=(now.hour // 6) * 6, minute=0, second=0, microsecond=0
+    """Check only the GFS cycle assigned to the current Istanbul time slot."""
+    configured_target = os.getenv("GFS_WATCH_TARGET_RUN_ID", "").strip()
+    run_dt = (
+        _parse_utc_datetime(configured_target)
+        if configured_target
+        else scheduled_istanbul_gfs_run()
     )
     candidates = []
-    # MeteoPT keys a cycle by hour only. Four steps stay on 12/06/00/18 and do not
-    # ask yesterday's 12Z, which the API answers with today's 12Z.
-    for offset in range(4):
-        run_dt = latest_cycle - timedelta(hours=6 * offset)
+    # Deliberately do not probe the other three cycles: each Istanbul slot has
+    # exactly one permitted target, preventing stale/newer cycles from winning.
         run_id = run_dt.isoformat(timespec="seconds")
         try:
             document = fetch_meteopt_document(run_dt)
@@ -3383,6 +3405,10 @@ async def run_scheduled_watch():
             f"Kontrol {poll_seconds} saniye, oturum {window_minutes} dakika."
         )
 
+    if not target_run_id:
+        target_run_id = scheduled_istanbul_gfs_run().isoformat(timespec="seconds")
+        os.environ["GFS_WATCH_TARGET_RUN_ID"] = target_run_id
+    print(f"[ISTANBUL SLOT LOCK] Bu oturum yalnızca {target_run_id} döngüsünü tarayacak.")
     existing_runs = await asyncio.to_thread(get_processed_run_ids)
     if target_run_id and target_run_id in existing_runs:
         print(f"[WATCH SKIP] {target_run_id} daha önce işlendi.")
