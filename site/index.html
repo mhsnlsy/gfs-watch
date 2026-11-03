@@ -2517,7 +2517,7 @@
       if(forecastData&&typeof renderBriefing==="function")renderBriefing();
     }
 
-    let rainviewerMap=null,rainviewerLayer=null,rainviewerLoading=false;
+    let rainviewerMap=null,rainviewerLayer=null,rainviewerLoading=false,rainviewerFrames=[],rainviewerFrameIndex=0,rainviewerTimer=null;
     async function loadRadarGfsComparison(){
       const status=$("radar-gfs-status"),mapNode=$("rainviewer-map");
       if(rainviewerLoading)return;
@@ -2528,16 +2528,24 @@
         if(!response.ok)throw new Error("RainViewer verisi alınamadı (HTTP "+response.status+").");
         const doc=await response.json(),frames=doc.radar&&doc.radar.past||[];
         if(!frames.length)throw new Error("RainViewer radar karesi bulunamadı.");
-        const frame=frames[frames.length-1],host=doc.host||"https://tilecache.rainviewer.com";
+        rainviewerFrames=frames.slice(-8);rainviewerFrameIndex=0;
+        const host=doc.host||"https://tilecache.rainviewer.com";
         if(!rainviewerMap){
           rainviewerMap=L.map(mapNode,{zoomControl:true,scrollWheelZoom:false}).setView([41.014,28.950],8);
           L.tileLayer("https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png",{maxZoom:18,attribution:"© OpenStreetMap"}).addTo(rainviewerMap);
           L.circleMarker([41.014,28.950],{radius:6,color:"#ffffff",weight:2,fillColor:"#7dd3d7",fillOpacity:1}).addTo(rainviewerMap).bindPopup("İstanbul referans noktası");
         }
-        const tileUrl=host+frame.path+"/256/{z}/{x}/{y}/2/1_1.png";
-        if(rainviewerLayer)rainviewerMap.removeLayer(rainviewerLayer);
-        rainviewerLayer=L.tileLayer(tileUrl,{opacity:.72,maxZoom:12,tileSize:256,attribution:"RainViewer"}).addTo(rainviewerMap);
-        $("radar-frame-time").textContent="Radar karesi: "+istStamp(new Date(frame.time*1000).toISOString())+" TSİ";
+        const showRadarFrame=()=>{
+          const frame=rainviewerFrames[rainviewerFrameIndex];
+          const tileUrl=host+frame.path+"/256/{z}/{x}/{y}/2/1_1.png";
+          if(rainviewerLayer)rainviewerMap.removeLayer(rainviewerLayer);
+          rainviewerLayer=L.tileLayer(tileUrl,{opacity:.72,maxZoom:12,tileSize:256,attribution:"RainViewer"}).addTo(rainviewerMap);
+          $("radar-frame-time").textContent="Radar hareketi · "+istStamp(new Date(frame.time*1000).toISOString())+" TSİ · "+(rainviewerFrameIndex+1)+"/"+rainviewerFrames.length;
+          rainviewerFrameIndex=(rainviewerFrameIndex+1)%rainviewerFrames.length;
+        };
+        showRadarFrame();
+        if(rainviewerTimer)clearInterval(rainviewerTimer);
+        rainviewerTimer=setInterval(showRadarFrame,900);
         const gfs=$("next72-precipitation"),target=$("radar-gfs-precipitation");
         if(gfs&&gfs.innerHTML&&!gfs.querySelector(".chart-empty")?.textContent.includes("yükleniyor")){
           target.innerHTML=gfs.innerHTML;
