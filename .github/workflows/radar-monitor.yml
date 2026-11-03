@@ -47,7 +47,12 @@ jobs:
       - name: Persist radar history and Telegram cooldown state
         if: success()
         run: |
-          git add radar_state.json radar_alert_state.json
+          if [ -f radar_state.json ]; then
+            git add -f radar_state.json
+          fi
+          if [ -f radar_alert_state.json ]; then
+            git add -f radar_alert_state.json
+          fi
           if ! git diff --cached --quiet; then
             git config user.name "github-actions[bot]"
             git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
