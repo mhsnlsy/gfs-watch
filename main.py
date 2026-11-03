@@ -547,8 +547,10 @@ def export_public_forecast_json(
         "forecast_source": forecast_source,
         "run_id_utc": run_dt.isoformat(timespec="seconds"),
         "forecast_valid_until_utc": (
-            run_dt + timedelta(hours=MIN_FORECAST_HOURS)
-        ).isoformat(timespec="seconds"),
+            forecast[-1]["valid_time_utc"]
+            if forecast and forecast[-1].get("valid_time_utc")
+            else (run_dt + timedelta(hours=MIN_FORECAST_HOURS)).isoformat(timespec="seconds")
+        ),
         "published_at_utc": datetime.now(timezone.utc).isoformat(timespec="seconds"),
         "forecast_horizon_hours": MIN_FORECAST_HOURS,
         "location": {
@@ -1853,8 +1855,9 @@ def fetch_meteopt_available_runs():
         "last_run_initialisation_time": run_id,
         "last_run_availability_time": now_utc,
         "last_modified_time": now_utc,
+        # MeteoPT step clocks are Istanbul local hours, three hours ahead of UTC.
         "last_valid_time": (
-            run_dt + timedelta(hours=MIN_FORECAST_HOURS)
+            run_dt + timedelta(hours=MIN_FORECAST_HOURS - 3)
         ).isoformat(timespec="minutes"),
         "forecast_horizon_hours": MIN_FORECAST_HOURS,
         "completed": True,
@@ -2032,8 +2035,9 @@ def analyze_and_build_output(current_run_name, payload, previous_runs):
     run_utc = _parse_utc_datetime(current_run_name)
     run_local = run_utc.astimezone(TR_TZ)
     forecast_end_local = (
-        run_utc + timedelta(hours=payload.get("forecast_horizon_hours", MIN_FORECAST_HOURS))
-    ).astimezone(TR_TZ)
+        datetime.strptime(max(timeline), "%Y-%m-%dT%H:%M").replace(tzinfo=TR_TZ)
+        if timeline else (run_utc + timedelta(hours=payload.get("forecast_horizon_hours", MIN_FORECAST_HOURS))).astimezone(TR_TZ)
+    )
 
     text_report_lines = [
         f"🌦 {APP_LABEL}",
@@ -2133,8 +2137,9 @@ def analyze_and_build_output(current_run_name, payload, previous_runs):
     now_utc = datetime.now(timezone.utc)
     rain_events = []
     for local_time, values in sorted(timeline.items()):
-        step = int(values.get("step_hour") or 0)
-        valid_utc = run_utc + timedelta(hours=step)
+        # timeline keys are the canonical Istanbul-local valid times for every source.
+        local_valid = datetime.strptime(local_time, "%Y-%m-%dT%H:%M").replace(tzinfo=TR_TZ)
+        valid_utc = local_valid.astimezone(timezone.utc)
         amount = values.get("precip")
         if valid_utc < now_utc - timedelta(minutes=20) or valid_utc > now_utc + timedelta(hours=72):
             continue
@@ -2143,7 +2148,6 @@ def analyze_and_build_output(current_run_name, payload, previous_runs):
         raw_amount = max(0.0, float(amount))
         adjusted_amount = max(0.0, raw_amount - rain_bias_3h) if rain_bias_3h is not None else raw_amount
         if raw_amount >= 0.1 or adjusted_amount >= 0.1:
-            local_valid = valid_utc.astimezone(TR_TZ)
             rain_events.append(
                 f"• {local_valid:%d.%m %H:%M}: ham {raw_amount:.1f} mm"
                 + (f" · düzeltilmiş {adjusted_amount:.1f} mm" if rain_bias_3h is not None else "")
