@@ -7,6 +7,10 @@ on:
         description: Son dört döngünün grafiklerini beyaz yazıyla yeniden gönder
         type: boolean
         default: false
+      manual_run_id:
+        description: Tek seferlik Telegram raporu için UTC GFS döngüsü (örn. 2026-11-02T18:00:00+00:00)
+        type: string
+        required: false
   repository_dispatch:
     types: [gfs-watch-backup]
   schedule:
@@ -115,6 +119,7 @@ jobs:
           GFS_WATCH_WINDOW_MINUTES: "12"
           GFS_WATCH_POLL_SECONDS: "60"
           GFS_WATCH_RESEND_CHARTS: ${{ github.event_name == 'workflow_dispatch' && inputs.resend_charts && '1' || '0' }}
+          GFS_WATCH_MANUAL_RUN_ID: ${{ github.event_name == 'workflow_dispatch' && inputs.manual_run_id || '' }}
           DB_PATH: gfs_watch.db
           PUBLIC_DATA_DIR: public
           TELEGRAM_TOKEN: ${{ secrets.TELEGRAM_TOKEN }}
