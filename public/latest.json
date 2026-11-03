@@ -3479,19 +3479,19 @@
     "images": [
       {
         "label": "Sıcaklık",
-        "path": "media/gfs-20261103T00Z-temperature.svg"
+        "path": "media/gfs-20261103T00Z-temperature.png"
       },
       {
         "label": "Sıcaklık · 850 hPa",
-        "path": "media/gfs-20261103T00Z-temperature_850.svg"
+        "path": "media/gfs-20261103T00Z-temperature_850.png"
       },
       {
-        "label": "Yağış · 6 saatlik birikim",
-        "path": "media/gfs-20261103T00Z-precipitation.svg"
+        "label": "Yağış",
+        "path": "media/gfs-20261103T00Z-precipitation.png"
       },
       {
         "label": "Rüzgâr hızı + yönü · 10 m",
-        "path": "media/gfs-20261103T00Z-wind_10m.svg"
+        "path": "media/gfs-20261103T00Z-wind_10m.png"
       }
     ],
     "audio_path": null
