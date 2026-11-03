@@ -377,11 +377,25 @@ def publish_public_notification(
             audio_path = f"media/{audio_filename}"
 
     run_local = run_dt.astimezone(TR_TZ)
+    # Pages summaries must remain available even when voice reports are disabled.
+    # Prefer spoken copy when present; otherwise derive a concise summary from the
+    # written report so the notification feed never publishes an empty summary.
+    summary_source = speech_text.strip() or full_text_report.strip()
     summary = (
-        speech_text
+        summary_source
         .replace("ENKA Balmumcu istasyonunda", "yerel istasyonda")
         .replace("ENKA BALMUMCU", "yerel istasyon")
     )
+    if not speech_text.strip():
+        summary_lines = [
+            line.strip()
+            for line in summary.splitlines()
+            if line.strip()
+            and not line.startswith(("🌦", "İSTANBUL GFS TAHMİN RAPORU", "📄", "🛰", "🗓", "🕒", "📍"))
+        ]
+        summary = "\n".join(summary_lines[:6]).strip()
+    if not summary:
+        raise ValueError("Pages notification summary could not be derived from the written report.")
     web_report = (
         full_text_report
         .replace("ENKA BALMUMCU", "YEREL İSTASYON")
