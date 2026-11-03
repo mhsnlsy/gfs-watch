@@ -2095,7 +2095,69 @@ def analyze_and_build_output(current_run_name, payload, previous_runs):
             "📡 ENKA BALMUMCU İSTASYON GÖZLEMİ: Bu rapor hazırlanırken ENKA verisi alınamadı.",
             "",
         ])
-    text_report_lines.append("📅 ÖNÜMÜZDEKİ 3 GÜN")
+    # Kalan gün özeti: yalnızca rapor anından gece yarısına kadar olan
+    # MeteoPT 3 saatlik tahmin noktaları hesaba katılır.
+    today_points = []
+    for local_time, values in sorted(timeline.items()):
+        try:
+            point_time = datetime.strptime(local_time, "%Y-%m-%dT%H:%M").replace(tzinfo=TR_TZ)
+        except (TypeError, ValueError):
+            continue
+        if point_time.date() != now_local.date() or point_time <= now_local:
+            continue
+        if point_time.hour == 0 and point_time.minute == 0:
+            continue
+        today_points.append((point_time, values))
+
+    midnight = (now_local + timedelta(days=1)).replace(
+        hour=0, minute=0, second=0, microsecond=0
+    )
+    remaining_points = [
+        (point_time, values) for point_time, values in today_points
+        if point_time < midnight
+    ]
+    remaining_rain = [
+        (point_time, max(0.0, float(values["precip"])))
+        for point_time, values in remaining_points
+        if values.get("precip") is not None
+    ]
+    remaining_total = sum(value for _, value in remaining_rain)
+    text_report_lines.extend([
+        "🌆 GÜNÜN KALANINDA",
+        (
+            f"⏳ Süre: {_format_tr_datetime(now_local)} – "
+            f"{_format_tr_datetime(midnight)} TSİ"
+        ),
+    ])
+    if remaining_points:
+        temps = [
+            float(values["temp"]) for _, values in remaining_points
+            if values.get("temp") is not None
+        ]
+        winds = [
+            float(values["wind"]) for _, values in remaining_points
+            if values.get("wind") is not None
+        ]
+        if temps:
+            text_report_lines.append(
+                f"🌡 Sıcaklık: {min(temps):.1f}–{max(temps):.1f}°C"
+            )
+        if winds:
+            text_report_lines.append(
+                f"💨 Rüzgâr: en fazla {max(winds):.1f} km/sa"
+            )
+        text_report_lines.append(f"🌧 Beklenen yağış: {remaining_total:.1f} mm")
+        if remaining_rain and remaining_total > 0:
+            peak_time, peak_value = max(remaining_rain, key=lambda item: item[1])
+            peak_start = peak_time - timedelta(hours=3)
+            text_report_lines.append(
+                f"📈 En belirgin yağış aralığı: "
+                f"{peak_start:%H:%M}–{peak_time:%H:%M} TSİ "
+                f"(model noktası: {peak_value:.1f} mm / 3 saat)"
+            )
+    else:
+        text_report_lines.append("Bu gece yarısına kadar kullanılabilir tahmin noktası bulunmuyor.")
+    text_report_lines.extend(["", "📅 ÖNÜMÜZDEKİ 3 GÜN"])
 
     for i in daily_indices:
         day_label = _format_tr_date(daily["time"][i])
@@ -3394,38 +3456,61 @@ async def run_manual_report(run_id, media_only=False, image_only=False):
     full_text_report, speech_text = analyze_and_build_output(
         normalized_run_id, payload, comparison_runs
     )
-    # Voice was disabled in the standard report builder. For an explicitly
-    # requested manual voice delivery, narrate the written report itself.
-    narration = speech_text.strip() or full_text_report.strip()
     chart = create_comparison_chart(normalized_run_id, payload, comparison_runs)
     if not chart:
         raise RuntimeError("Telegram için karşılaştırma görseli üretilemedi.")
 
-    audio_file = None
+    pages_charts = create_pages_comparison_charts(
+        normalized_run_id, payload, comparison_runs
+    )
     try:
-        if _telegram_enabled() and not image_only:
-            audio_file = await generate_speech_with_retry(narration)
+        image_paths = await asyncio.to_thread(
+            save_public_notification_images, normalized_run_id, pages_charts
+        ) if pages_charts else []
+        image_path = await asyncio.to_thread(
+            save_public_notification_image, normalized_run_id, chart
+        )
+        report_entry = await asyncio.to_thread(
+            publish_public_notification,
+            normalized_run_id,
+            full_text_report,
+            speech_text,
+            image_path,
+            None,
+            image_paths,
+        )
+        bundle = [(normalized_run_id, payload)]
+        for cycle_id, forecast_json in comparison_runs:
+            bundle.append((cycle_id, json.loads(forecast_json)))
+        await asyncio.to_thread(
+            export_public_forecast_json,
+            normalized_run_id,
+            payload,
+            True,
+            bundle,
+            report_entry,
+        )
+
+        # One-time resend intentionally contains no voice: Telegram text and
+        # the Pages written report are generated from this exact same string.
         if not media_only and not image_only:
             await send_telegram_text(full_text_report)
         await send_telegram_photo(
             chart,
             f"📊 İstanbul GFS | Dört döngü karşılaştırması · {run_dt:%Y-%m-%d %HZ} UTC"
         )
-        if image_only:
-            print("[MANUAL IMAGE ONLY] Yalnızca karşılaştırma görseli gönderildi.")
-        elif audio_file:
-            await send_telegram_voice(audio_file)
-        else:
-            print("[MANUAL VOICE] Ses üretilemedi; hata/eksik TTS ayarı loglandı.")
     finally:
         chart.close()
-        if audio_file and os.path.exists(audio_file):
-            os.remove(audio_file)
+        for image_buffer in (pages_charts or {}).values():
+            try:
+                image_buffer.close()
+            except Exception:
+                pass
 
     print(
         f"[MANUAL COMPLETE] {normalized_run_id}: "
-        f"{'görsel/ses' if media_only else 'metin/görsel/ses'} gönderim adımları tamamlandı; "
-        "işlenmiş GFS geçmişi değiştirilmedi."
+        "Telegram metin/görsel ve Pages yazılı raporu aynı rapor metniyle güncellendi; "
+        "ses gönderilmedi, SQLite çalışma geçmişi değiştirilmedi."
     )
 
 
