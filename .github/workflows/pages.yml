@@ -5,6 +5,8 @@ name: Deploy İstanbul'un Havası
 # The ENKA Weather workflow explicitly dispatches this workflow after each fresh station publication.
 
 on:
+  push:
+    branches: [main]
   workflow_call:
   workflow_dispatch:
 
