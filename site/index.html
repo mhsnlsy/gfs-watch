@@ -1032,13 +1032,6 @@
         </div>
       </section>
     </section>
-    <section class="section" id="radar-gfs">
-      <div class="section-head"><div><div class="section-kicker">CANLI RADAR + MODEL</div><h2>Radar · GFS karşılaştırması</h2><p class="section-description">RainViewer son radar görüntüsü ile GFS yağış tahminini aynı panelde karşılaştır. Radar gözlemi ve model tahmini ayrı kaynaklar olarak gösterilir.</p></div><div class="section-note" id="radar-gfs-status">Radar verisi yükleniyor…</div></div>
-      <div class="lower-grid" style="grid-template-columns:1.1fr .9fr">
-        <article class="chart-card"><div class="chart-card-head"><div><div class="chart-title">RainViewer · Anlık radar</div><div class="chart-subtitle" id="radar-frame-time">Son radar karesi bekleniyor</div></div><span class="model-state">Gözlem</span></div><div id="rainviewer-map" role="img" aria-label="İstanbul RainViewer yağış radarı" style="height:340px;border-radius:13px;overflow:hidden;background:#0b1c29"><div class="chart-empty">Radar haritası yükleniyor…</div></div><div class="notification-footnote">Radar renkleri yağış yansımasını gösterir. Radar hareketi yeni kareler geldikçe güncellenir.</div></article>
-        <article class="chart-card"><div class="chart-card-head"><div><div class="chart-title">GFS · Yağış tahmini</div><div class="chart-subtitle" id="radar-gfs-forecast-time">Model verisi bekleniyor</div></div><span class="model-state">Tahmin</span></div><div id="radar-gfs-precipitation"><div class="chart-empty">GFS yağış grafiği yükleniyor…</div></div><div class="notification-footnote">GFS grafiği ana 72 saatlik tahminle aynı veriyi kullanır. Radar anlık gözlem, GFS üç saatlik model adımlarıdır.</div></article>
-      </div>
-    </section>
     <div id="gfs-model-view">
     <section class="section" id="bildirimler">
       <div class="section-head report-head">
@@ -2582,7 +2575,6 @@
       await loadPushConfig();
       await refreshPushStatus();
       await Promise.all([loadForecast(),loadNotifications(),refreshStationObservations(),loadVerification()]);
-      await loadRadarGfsComparison();
       window.setInterval(()=>{loadForecast();loadNotifications();loadVerification();loadRadarGfsComparison();},300000);
       window.setInterval(refreshStationObservations,60000);
     }
