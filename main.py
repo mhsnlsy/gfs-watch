@@ -452,6 +452,19 @@ def publish_public_notification(
     )
     retained = retained[:4]
 
+    # Never carry legacy SVG paths forward in the public notification archive.
+    # PNG is the sole supported report image format for current and retained runs.
+    for retained_item in retained:
+        legacy_image = retained_item.get("image_path")
+        if isinstance(legacy_image, str) and legacy_image.lower().endswith(".svg"):
+            retained_item["image_path"] = None
+        retained_item["images"] = [
+            image for image in retained_item.get("images", [])
+            if isinstance(image, dict)
+            and isinstance(image.get("path"), str)
+            and image["path"].lower().endswith(".png")
+        ]
+
     _write_json_atomically(
         manifest_path,
         {
