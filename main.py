@@ -2041,9 +2041,7 @@ def analyze_and_build_output(current_run_name, payload, previous_runs):
     now_local = datetime.now(TR_TZ)
     run_utc = _parse_utc_datetime(current_run_name)
     run_local = run_utc.astimezone(TR_TZ)
-    forecast_end_local = (
-        run_utc + timedelta(hours=payload.get("forecast_horizon_hours", MIN_FORECAST_HOURS))
-    ).astimezone(TR_TZ)
+    forecast_end_utc = run_utc + timedelta(hours=payload.get("forecast_horizon_hours", MIN_FORECAST_HOURS))
 
     text_report_lines = [
         f"🌦 {APP_LABEL}",
@@ -2051,8 +2049,8 @@ def analyze_and_build_output(current_run_name, payload, previous_runs):
         "📄 Çıktı: Yazılı tahmin raporu",
         f"🛰 Model döngüsü: {run_utc:%d.%m.%Y %H:%M} UTC ({run_utc:%H}Z)",
         (
-            f"🗓 Tahmin aralığı: {_format_tr_datetime(run_local)} – "
-            f"{_format_tr_datetime(forecast_end_local)} TSİ "
+            f"🗓 Tahmin aralığı: {run_utc:%d.%m.%Y %H:%M} – "
+            f"{forecast_end_utc:%d.%m.%Y %H:%M} UTC "
             f"(+{payload.get('forecast_horizon_hours', MIN_FORECAST_HOURS)} saat)"
         ),
         f"🕒 Rapor zamanı: {_format_tr_datetime(now_local)} TSİ",
