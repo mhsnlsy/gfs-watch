@@ -56,48 +56,48 @@
       "date_istanbul": "2026-11-03",
       "temperature_min_c": 15.5,
       "temperature_max_c": 19.4,
-      "temperature_850hpa_min_c": 7.2,
+      "temperature_850hpa_min_c": 7.1,
       "temperature_850hpa_max_c": 9.1,
-      "precipitation_total_mm": 14.1,
+      "precipitation_total_mm": 14.2,
       "wind_speed_max_10m_kmh": 16,
       "wind_speed_max_850hpa_kmh": 40
     },
     {
       "date_istanbul": "2026-11-04",
-      "temperature_min_c": 14,
-      "temperature_max_c": 15.7,
-      "temperature_850hpa_min_c": 4,
+      "temperature_min_c": 13.7,
+      "temperature_max_c": 15.6,
+      "temperature_850hpa_min_c": 3,
       "temperature_850hpa_max_c": 7.1,
-      "precipitation_total_mm": 22.6,
+      "precipitation_total_mm": 22.8,
       "wind_speed_max_10m_kmh": 27,
-      "wind_speed_max_850hpa_kmh": 37
+      "wind_speed_max_850hpa_kmh": 34
     },
     {
       "date_istanbul": "2026-11-05",
-      "temperature_min_c": 10.9,
-      "temperature_max_c": 13.7,
-      "temperature_850hpa_min_c": -1.2,
-      "temperature_850hpa_max_c": 3,
-      "precipitation_total_mm": 0.9,
+      "temperature_min_c": 10.6,
+      "temperature_max_c": 13.2,
+      "temperature_850hpa_min_c": -2,
+      "temperature_850hpa_max_c": 2.1,
+      "precipitation_total_mm": 0.6,
       "wind_speed_max_10m_kmh": 26,
-      "wind_speed_max_850hpa_kmh": 31
+      "wind_speed_max_850hpa_kmh": 28
     },
     {
       "date_istanbul": "2026-11-06",
       "temperature_min_c": 10.6,
       "temperature_max_c": 12.4,
       "temperature_850hpa_min_c": -2.8,
-      "temperature_850hpa_max_c": -1.6,
+      "temperature_850hpa_max_c": -1.4,
       "precipitation_total_mm": 0.1,
       "wind_speed_max_10m_kmh": 19,
       "wind_speed_max_850hpa_kmh": 35
     },
     {
       "date_istanbul": "2026-11-07",
-      "temperature_min_c": 10.8,
+      "temperature_min_c": 10.3,
       "temperature_max_c": 12.7,
       "temperature_850hpa_min_c": -2.4,
-      "temperature_850hpa_max_c": 2.7,
+      "temperature_850hpa_max_c": 3.5,
       "precipitation_total_mm": 0.6,
       "wind_speed_max_10m_kmh": 21,
       "wind_speed_max_850hpa_kmh": 39
@@ -106,27 +106,27 @@
       "date_istanbul": "2026-11-08",
       "temperature_min_c": 9.4,
       "temperature_max_c": 14,
-      "temperature_850hpa_min_c": 3.5,
-      "temperature_850hpa_max_c": 6.6,
+      "temperature_850hpa_min_c": 3.9,
+      "temperature_850hpa_max_c": 6.7,
       "precipitation_total_mm": 0,
       "wind_speed_max_10m_kmh": 16,
-      "wind_speed_max_850hpa_kmh": 20
+      "wind_speed_max_850hpa_kmh": 16
     },
     {
       "date_istanbul": "2026-11-09",
       "temperature_min_c": 10.1,
       "temperature_max_c": 13.8,
       "temperature_850hpa_min_c": 5.8,
-      "temperature_850hpa_max_c": 6.7,
+      "temperature_850hpa_max_c": 6.5,
       "precipitation_total_mm": 0,
       "wind_speed_max_10m_kmh": 11,
       "wind_speed_max_850hpa_kmh": 20
     },
     {
       "date_istanbul": "2026-11-10",
-      "temperature_min_c": 12.3,
+      "temperature_min_c": 12.5,
       "temperature_max_c": 15,
-      "temperature_850hpa_min_c": 6.2,
+      "temperature_850hpa_min_c": 6.3,
       "temperature_850hpa_max_c": 7.5,
       "precipitation_total_mm": 0,
       "wind_speed_max_10m_kmh": 12,
@@ -3474,7 +3474,7 @@
     "published_at_istanbul": "Salı 3 Kasım 2026 07:31",
     "cycle_label": "00Z · 03.11.2026 03:00 TSİ",
     "summary": "🌡 GFS başlangıç sıcaklığı: 15.6°C\n💨 GFS başlangıç rüzgârı: 4.0 km/sa\n📡 yerel istasyon GERÇEK İSTASYON GÖZLEMİ | VANTAGE PRO · SON İSTASYON ÖLÇÜMÜ\n🌡 İstasyon sıcaklığı: 15.3°C\n🌧 Günlük toplam yağış: 0.0 mm\n💨 İstasyon rüzgârı: 4.8 km/sa · yön: NE",
-    "report_text": "🌦 İstanbul'un Havası 4.0\nİSTANBUL GFS TAHMİN RAPORU\n📄 Çıktı: Yazılı tahmin raporu\n🛰 Model döngüsü: Salı 3 Kasım 2026 03:00 TSİ (00Z UTC)\n🗓 Tahmin aralığı: Salı 3 Kasım 2026 03:00 – Salı 10 Kasım 2026 15:00 TSİ (+180 saat)\n🕒 Rapor zamanı: Salı 3 Kasım 2026 07:31 TSİ\n📍 Konum: İstanbul, Türkiye\n\n🌡 GFS başlangıç sıcaklığı: 15.6°C\n💨 GFS başlangıç rüzgârı: 4.0 km/sa\n\n📡 YEREL İSTASYON GERÇEK İSTASYON GÖZLEMİ | VANTAGE PRO · SON İSTASYON ÖLÇÜMÜ\n🕒 Ölçüm zamanı: Salı 3 Kasım 2026 07:30 TSİ\n🌡 İstasyon sıcaklığı: 15.3°C\n🌧 Günlük toplam yağış: 0.0 mm\n💨 İstasyon rüzgârı: 4.8 km/sa · yön: NE\nKaynak: Yerel istasyon · Davis Vantage PRO istasyonu · canlı tablo ölçümü\n\n📅 ÖNÜMÜZDEKİ 3 GÜN\n• Çarşamba 4 Kasım: 14.0–15.7°C | Yağış: 22.6 mm | Maks. rüzgâr: 27.0 km/sa | Rüzgârlı\n• Perşembe 5 Kasım: 10.9–13.7°C | Yağış: 0.9 mm | Maks. rüzgâr: 26.0 km/sa | Rüzgârlı\n• Cuma 6 Kasım: 10.6–12.4°C | Yağış: 0.1 mm | Maks. rüzgâr: 19.0 km/sa",
+    "report_text": "🌦 İstanbul'un Havası 4.0\nİSTANBUL GFS TAHMİN RAPORU\n📄 Çıktı: Yazılı tahmin raporu\n🛰 Model döngüsü: Salı 3 Kasım 2026 03:00 TSİ (00Z UTC)\n🗓 Tahmin aralığı: 3 Kasım 2026 Salı 03:00 – 10 Kasım 2026 Salı 12:00 TSİ (+180 saat)\n🕒 Rapor zamanı: Salı 3 Kasım 2026 07:31 TSİ\n📍 Konum: İstanbul, Türkiye\n\n🌡 GFS başlangıç sıcaklığı: 15.6°C\n💨 GFS başlangıç rüzgârı: 4.0 km/sa\n\n📡 YEREL İSTASYON GERÇEK İSTASYON GÖZLEMİ | VANTAGE PRO · SON İSTASYON ÖLÇÜMÜ\n🕒 Ölçüm zamanı: Salı 3 Kasım 2026 07:30 TSİ\n🌡 İstasyon sıcaklığı: 15.3°C\n🌧 Günlük toplam yağış: 0.0 mm\n💨 İstasyon rüzgârı: 4.8 km/sa · yön: NE\nKaynak: Yerel istasyon · Davis Vantage PRO istasyonu · canlı tablo ölçümü\n\n📅 ÖNÜMÜZDEKİ 3 GÜN\n• 4 Kasım Çarşamba: 13.7–15.6°C | Yağış: 22.8 mm | Maks. rüzgâr: 27.0 km/sa | Rüzgârlı\n• 5 Kasım Perşembe: 10.6–13.2°C | Yağış: 0.6 mm | Maks. rüzgâr: 26.0 km/sa | Rüzgârlı\n• 6 Kasım Cuma: 10.6–12.4°C | Yağış: 0.1 mm | Maks. rüzgâr: 19.0 km/sa",
     "image_path": null,
     "images": [
       {
