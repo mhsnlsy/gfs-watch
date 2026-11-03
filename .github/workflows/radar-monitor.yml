@@ -1,99 +1,34 @@
-name: Radar Monitor 10m
+name: Radar Monitor 10m (manual fallback)
 
+# Automated radar checks run inside the persistent Eyüpsultan station chain.
+# This workflow is retained for one-off manual diagnostics only.
 on:
-  push:
-    branches:
-      - main
-    paths:
-      - ".github/workflows/radar-monitor.yml"
   workflow_dispatch:
 
 permissions:
-  actions: write
-  contents: write
-
-concurrency:
-  group: radar-monitor-10m
-  cancel-in-progress: false
+  contents: read
 
 jobs:
   radar-check:
-    name: RainViewer check — Istanbul
+    name: Manual RainViewer diagnostic
     runs-on: ubuntu-latest
-    timeout-minutes: 17
+    timeout-minutes: 5
     steps:
-      - name: Check out radar state branch
+      - name: Checkout main
         uses: actions/checkout@v4
         with:
-          ref: radar-state
-          fetch-depth: 0
-          token: ${{ github.token }}
-
-      - name: Log trigger
-        run: |
-          echo "Started: $(date -u '+%Y-%m-%d %H:%M:%S UTC')"
-          echo "Event: ${GITHUB_EVENT_NAME}"
-          echo "Workflow: Radar Monitor 10m"
-
+          ref: main
       - name: Set up Python
         uses: actions/setup-python@v5
         with:
           python-version: "3.12"
-
       - name: Install dependencies
         run: python -m pip install --disable-pip-version-check requests pillow numpy
-
-      - name: Run Istanbul radar check
+      - name: Run one RainViewer check
+        run: python -u radar_monitor.py
         env:
           TELEGRAM_TOKEN: ${{ secrets.TELEGRAM_TOKEN }}
           CHAT_ID: ${{ secrets.CHAT_ID }}
           RADAR_STATE_PATH: ${{ github.workspace }}/radar_state.json
           RADAR_ALERT_STATE_PATH: ${{ github.workspace }}/radar_alert_state.json
           RADAR_CHECK_LOG_PATH: ${{ github.workspace }}/radar_checks.jsonl
-        run: python -u radar_monitor.py
-
-      - name: Persist radar history, cooldown, and every check
-        if: always()
-        run: |
-          if [ -d .git ]; then
-            if [ -f radar_state.json ]; then git add -f radar_state.json; fi
-            if [ -f radar_alert_state.json ]; then git add -f radar_alert_state.json; fi
-            if [ -f radar_checks.jsonl ]; then git add -f radar_checks.jsonl; fi
-            if ! git diff --cached --quiet; then
-              git config user.name "github-actions[bot]"
-              git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
-              git commit -m "Persist radar check"
-              for attempt in 1 2 3 4 5; do
-                git pull --rebase origin radar-state
-                if git push origin HEAD:radar-state; then
-                  echo "Radar state and check log persisted to radar-state."
-                  exit 0
-                fi
-                echo "Radar-state push attempt $attempt failed; retrying."
-                sleep $((attempt * 2))
-              done
-              echo "Could not persist radar state after five attempts."
-              exit 1
-            fi
-          fi
-
-      - name: Publish run summary
-        if: always()
-        run: |
-          echo "### Radar Monitor 10m" >> "$GITHUB_STEP_SUMMARY"
-          echo "- Trigger: ${GITHUB_EVENT_NAME}" >> "$GITHUB_STEP_SUMMARY"
-          echo "- Finished: $(date -u '+%Y-%m-%d %H:%M:%S UTC')" >> "$GITHUB_STEP_SUMMARY"
-          echo "- Result: ${{ job.status }}" >> "$GITHUB_STEP_SUMMARY"
-
-      - name: Queue the next ten-minute radar scan
-        if: always() && !cancelled()
-        env:
-          GH_TOKEN: ${{ github.token }}
-        run: |
-          now=$(date -u +%s)
-          next=$(( (now / 600 + 1) * 600 ))
-          delay=$(( next - now ))
-          echo "Next radar scan at $(date -u -d "@$next" +'%Y-%m-%dT%H:%M:%SZ') (sleeping ${delay}s)."
-          sleep "$delay"
-          gh workflow run radar-monitor.yml --ref main --repo "$GITHUB_REPOSITORY"
-          echo "Next radar scan queued."
