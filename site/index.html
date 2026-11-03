@@ -2405,9 +2405,13 @@
       }
       list.innerHTML=items.slice(0,1).map(item=>{
         const legacyImage=notificationAsset(item.image_path,cacheVersion);
-        const imageItems=Array.isArray(item.images)&&item.images.length
-          ? item.images.filter(image=>image&&image.path).map(image=>({label:image.label||"GFS grafiği",url:notificationAsset(image.path,cacheVersion)}))
-          : legacyImage?[{label:"Dört döngü karşılaştırması",url:legacyImage}]:[];
+        // Restore the original single composite chart comparing the last four GFS runs.
+        // The separate per-variable image set is only a fallback for reports without it.
+        const imageItems=legacyImage
+          ? [{label:"Son dört GFS çıktısı karşılaştırması",url:legacyImage}]
+          : Array.isArray(item.images)&&item.images.length
+            ? item.images.filter(image=>image&&image.path).map(image=>({label:image.label||"GFS grafiği",url:notificationAsset(image.path,cacheVersion)}))
+            : [];
         const imagesHtml=imageItems.length
           ? '<div class="notification-images">'+imageItems.map(image=>
               '<div class="notification-image-item"><div class="notification-image-caption">'+esc(image.label)+'</div><a class="notification-image-link" href="'+image.url+'" target="_blank" rel="noopener"><img class="notification-image" src="'+image.url+'" alt="'+esc(image.label)+' · dört GFS döngüsü karşılaştırması" loading="lazy"></a></div>'
