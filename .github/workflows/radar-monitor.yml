@@ -6,8 +6,6 @@ on:
       - main
     paths:
       - ".github/workflows/radar-monitor.yml"
-  schedule:
-    - cron: "3,13,23,33,43,53 * * * *"
   workflow_dispatch:
 
 permissions:
@@ -21,7 +19,7 @@ jobs:
   radar-check:
     name: RainViewer check — Istanbul
     runs-on: ubuntu-latest
-    timeout-minutes: 8
+    timeout-minutes: 17
     steps:
       - name: Checkout main
         uses: actions/checkout@v4
@@ -73,3 +71,16 @@ jobs:
           echo "- Trigger: ${GITHUB_EVENT_NAME}" >> "$GITHUB_STEP_SUMMARY"
           echo "- Finished: $(date -u '+%Y-%m-%d %H:%M:%S UTC')" >> "$GITHUB_STEP_SUMMARY"
           echo "- Result: ${{ job.status }}" >> "$GITHUB_STEP_SUMMARY"
+
+      - name: Queue the next ten-minute radar scan
+        if: always() && !cancelled()
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          now=$(date -u +%s)
+          next=$(( (now / 600 + 1) * 600 ))
+          delay=$(( next - now ))
+          echo "Next radar scan at $(date -u -d "@$next" +'%Y-%m-%dT%H:%M:%SZ') (sleeping ${delay}s)."
+          sleep "$delay"
+          gh workflow run radar-monitor.yml --ref main --repo "$GITHUB_REPOSITORY"
+          echo "Next radar scan queued."
