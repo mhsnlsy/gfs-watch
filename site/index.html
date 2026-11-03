@@ -2258,7 +2258,9 @@
         ]);
         if(!response.ok)throw new Error("Tahmin verisi şu anda alınamıyor.");
         const data=await response.json();
-        if(!data||data.schema!=="gfs-watch.forecast.v1")throw new Error("Tahmin verisinin biçimi beklenenden farklı.");
+        const legacyForecast=data&&data.schema==="gfs-watch.forecast.v1";
+        const canonicalForecast=data&&data.schema==="gfs-watch.forecast.v2"&&data.gfs_dataset&&data.gfs_dataset.schema==="gfs-watch.dataset.v2"&&Array.isArray(data.gfs_dataset.points);
+        if(!legacyForecast&&!canonicalForecast)throw new Error("GFS tahmin verisinin şeması desteklenmiyor veya merkezi veri seti eksik.");
         enkaStationObservation=null;
         eyupsultanStationObservation=null;
         if(stationResponse&&stationResponse.ok){
