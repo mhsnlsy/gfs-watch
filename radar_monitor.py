@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 """
 Radar monitor for İstanbul (41.015 N, 28.950 E).
-Checks RainViewer tiles for ≥10 dBZ and ≥30 dBZ masses within ~25 km radius.
+Checks RainViewer tiles and classifies detected echoes into four dBZ intensity levels within ~25 km radius.
 Tracks motion (speed, direction, ETA) and alerts if approaching or on site.
 """
 import os
@@ -212,29 +212,35 @@ def main():
     speed, heading, towards, eta = compute_motion(history)
     prev = history[-2] if len(history) >= 2 else None
 
-    approaching_20 = is_approaching(prev, curr, THRESHOLD_DBZ)
-    approaching_30 = is_approaching(prev, curr, THRESHOLD_DBZ_STRONG)
+    approaching = is_approaching(prev, curr, THRESHOLD_DBZ)
     centroid_dist = curr.get("centroid_dist")
     has_rain_echo = centroid_dist is not None and curr.get("count", 0) > 0
+    max_dbz = curr.get("max_dbz", 0)
 
     # No detected echo means no on-site alert. Avoid comparing None with a number.
-    on_site_20 = (
+    on_site = (
         has_rain_echo
         and centroid_dist < 5
-        and curr.get("max_dbz", 0) >= THRESHOLD_DBZ
-    )
-    on_site_30 = (
-        has_rain_echo
-        and centroid_dist < 5
-        and curr.get("strong_max", 0) >= THRESHOLD_DBZ_STRONG
+        and max_dbz >= THRESHOLD_DBZ
     )
 
-    if towards and curr.get("centroid_dist", 999) < RADIUS_KM:
-        approaching_20 = approaching_20 or (curr.get("max_dbz", 0) >= THRESHOLD_DBZ)
-        approaching_30 = approaching_30 or (curr.get("strong_max", 0) >= THRESHOLD_DBZ_STRONG)
+    if towards and has_rain_echo and centroid_dist < RADIUS_KM:
+        approaching = approaching or (max_dbz >= THRESHOLD_DBZ)
 
-    alert_20 = approaching_20 or on_site_20
-    alert_30 = approaching_30 or on_site_30
+    alert = approaching or on_site
+
+    if max_dbz <= 10:
+        intensity = "DÜŞÜK"
+        intensity_emoji = "🌦️"
+    elif max_dbz <= 20:
+        intensity = "ORTA"
+        intensity_emoji = "🌧️"
+    elif max_dbz <= 30:
+        intensity = "GÜÇLÜ"
+        intensity_emoji = "⛈️"
+    else:
+        intensity = "ÇOK GÜÇLÜ"
+        intensity_emoji = "⚠️"
 
     motion_txt = ""
     if speed is not None:
@@ -245,35 +251,24 @@ def main():
             motion_txt += " (konuma doğru)"
 
     summary = (
-        f"max {curr.get('max_dbz', 0)} dBZ, "
-        f"centroid {curr.get('centroid_dist', '—')} km, "
-        f"{curr.get('count', 0)} high pixels"
+        f"Şiddet: {intensity} ({max_dbz} dBZ), "
+        f"merkez uzaklığı: {centroid_dist if centroid_dist is not None else '—'} km, "
+        f"{curr.get('count', 0)} yağış pikseli"
     )
-    print(f"[RADAR] {summary} | alert10={alert_20} alert30={alert_30} | {motion_txt}")
+    print(f"[RADAR] {summary} | alert={alert} | {motion_txt}")
 
-    if alert_30:
+    if alert:
+        location_status = "Konuma ulaşıyor / üzerinde." if on_site else "Yaklaşıyor."
         msg = (
-            f"⚠️ <b>GÜÇLÜ Radar Uyarısı — İstanbul (≥30 dBZ)</b>\n"
-            f"Konum: 41.015 N, 28.950 E\n"
-            f"{summary}\n"
-            f"Güçlü kütle: max {curr.get('strong_max', 0)} dBZ ({curr.get('strong_count', 0)} piksel)\n"
-            f"{motion_txt}\n"
-            f"{'Konuma ulaşıyor / üzerinde.' if on_site_30 else 'Yaklaşıyor.'}\n"
+            f"{intensity_emoji} <b>{intensity} YAĞIŞ UYARISI — İstanbul</b>\\n"
+            f"Konum: 41.015 N, 28.950 E\\n"
+            f"{summary}\\n"
+            f"{motion_txt}\\n"
+            f"{location_status}\\n"
             f"https://mhsnlsy.github.io/gfs-watch/#radar"
         )
         send_telegram(msg)
-        print("[RADAR] STRONG ALERT (≥30) SENT")
-    elif alert_20:
-        msg = (
-            f"🌧️ <b>Radar Uyarısı — İstanbul (≥10 dBZ)</b>\n"
-            f"Konum: 41.015 N, 28.950 E\n"
-            f"{summary}\n"
-            f"{motion_txt}\n"
-            f"{'Konuma ulaşıyor / üzerinde.' if on_site_20 else 'Yaklaşıyor.'}\n"
-            f"https://mhsnlsy.github.io/gfs-watch/#radar"
-        )
-        send_telegram(msg)
-        print("[RADAR] ALERT (≥10) SENT")
+        print(f"[RADAR] {intensity} ALERT SENT")
 
     state["history"] = history
     state["last"] = curr
