@@ -150,10 +150,28 @@ def _ensure_telegram_ledger(conn):
             sent_at TEXT DEFAULT CURRENT_TIMESTAMP
         )
     """)
+    # A processed GFS row is NOT proof that Telegram delivery succeeded.
+    # Keep the ledger strictly limited to cycles whose Telegram text was accepted.
     conn.execute("""
-        INSERT OR IGNORE INTO gfs_telegram_sent (run_name)
-        SELECT run_name FROM gfs_runs_v3
+        CREATE TABLE IF NOT EXISTS gfs_telegram_migrations (
+            migration_id TEXT PRIMARY KEY,
+            applied_at TEXT DEFAULT CURRENT_TIMESTAMP
+        )
     """)
+    migration_id = "remove_false_sent_mark_2026_11_03_00z"
+    migrated = conn.execute(
+        "SELECT 1 FROM gfs_telegram_migrations WHERE migration_id = ?",
+        (migration_id,),
+    ).fetchone()
+    if not migrated:
+        conn.execute(
+            "DELETE FROM gfs_telegram_sent WHERE run_name = ?",
+            ("2026-11-03T00:00:00+00:00",),
+        )
+        conn.execute(
+            "INSERT INTO gfs_telegram_migrations (migration_id) VALUES (?)",
+            (migration_id,),
+        )
     conn.execute(
         "INSERT OR IGNORE INTO gfs_telegram_sent (run_name) VALUES (?)",
         (TELEGRAM_ALREADY_SENT_THROUGH,),
@@ -3106,12 +3124,14 @@ async def process_gfs_update(strict=False, target_run_id=None):
         if not _telegram_enabled():
             print("[TELEGRAM KAPALI] Bu çıktı için bildirim gönderilmedi.")
             return
-        # Sayfa yenilemesi aynı çıktıyı tekrar işlemeye kalksa bile ikinci mesaj gitmesin.
-        mark_telegram_sent(run_id)
+        # Only mark a cycle after Telegram confirms that the text message was accepted.
+        # A failed request remains eligible for retry on the next scan.
         try:
             await send_telegram_text(full_text_report)
         except Exception as telegram_exc:
-            print(f"[TELEGRAM TEXT UYARI] Metin gönderilemedi: {telegram_exc}")
+            print(f"[TELEGRAM TEXT ERROR] {telegram_exc}")
+            raise
+        mark_telegram_sent(run_id)
 
         if chart_buffer:
             try:
