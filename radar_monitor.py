@@ -25,6 +25,7 @@ TELEGRAM_TOKEN = os.getenv("TELEGRAM_TOKEN")
 CHAT_ID = os.getenv("CHAT_ID")
 STATE_PATH = os.getenv("RADAR_STATE_PATH", "/tmp/radar_state.json")
 ALERT_STATE_PATH = os.getenv("RADAR_ALERT_STATE_PATH", "radar_alert_state.json")
+CHECK_LOG_PATH = os.getenv("RADAR_CHECK_LOG_PATH", "radar_checks.jsonl")
 ALERT_COOLDOWN_SECONDS = 3600
 HISTORY_LEN = 4
 
@@ -125,6 +126,18 @@ def analyze_frame(host, path):
         "strong_max": strong_max,
     }
 
+def append_check_log(status, **fields):
+    """Append one durable record for every scheduled check, including empty/error frames."""
+    record = {
+        "checked_at": datetime.now(timezone.utc).isoformat(),
+        "status": status,
+        **fields,
+    }
+    with open(CHECK_LOG_PATH, "a", encoding="utf-8") as f:
+        f.write(json.dumps(record, ensure_ascii=False, separators=(",", ":")) + "\\n")
+    print(f"[RADAR] Check logged: {status}")
+
+
 def load_state():
     try:
         with open(STATE_PATH) as f:
@@ -207,6 +220,7 @@ def main():
     past = timeline.get("radar", {}).get("past", [])
     if not past:
         print("[RADAR] No past frames")
+        append_check_log("no_past_frames")
         return
     latest = past[-1]
     path = latest["path"]
@@ -216,6 +230,7 @@ def main():
     curr = analyze_frame(host, path)
     if curr is None:
         print("[RADAR] Tile download failed")
+        append_check_log("tile_download_failed", frame_path=path, frame_ts=ts)
         return
 
     state = load_state()
@@ -276,6 +291,22 @@ def main():
         f"{curr.get('count', 0)} yağış pikseli"
     )
     print(f"[RADAR] {summary} | alert={alert} | {motion_txt}")
+    append_check_log(
+        "ok",
+        frame_path=path,
+        frame_ts=ts,
+        max_dbz=max_dbz,
+        intensity=intensity,
+        centroid_dist_km=centroid_dist,
+        echo_pixels=curr.get("count", 0),
+        strong_echo_pixels=curr.get("strong_count", 0),
+        approaching=bool(approaching),
+        on_site=bool(on_site),
+        alert=bool(alert),
+        speed_kmh=speed,
+        heading_deg=heading,
+        eta_min=eta,
+    )
 
     if alert:
         alert_state = load_alert_state()
