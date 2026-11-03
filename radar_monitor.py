@@ -24,6 +24,8 @@ PIXEL_KM = 0.55  # approx km per pixel at zoom 7
 TELEGRAM_TOKEN = os.getenv("TELEGRAM_TOKEN")
 CHAT_ID = os.getenv("CHAT_ID")
 STATE_PATH = os.getenv("RADAR_STATE_PATH", "/tmp/radar_state.json")
+ALERT_STATE_PATH = os.getenv("RADAR_ALERT_STATE_PATH", "radar_alert_state.json")
+ALERT_COOLDOWN_SECONDS = 3600
 HISTORY_LEN = 4
 
 HIGH_DBZ_HINTS = [
@@ -134,6 +136,17 @@ def save_state(state):
     with open(STATE_PATH, "w") as f:
         json.dump(state, f)
 
+def load_alert_state():
+    try:
+        with open(ALERT_STATE_PATH) as f:
+            return json.load(f)
+    except Exception:
+        return {}
+
+def save_alert_state(state):
+    with open(ALERT_STATE_PATH, "w") as f:
+        json.dump(state, f)
+
 def compute_motion(history):
     """Return speed_kmh, heading_deg, towards, eta_min from recent history."""
     if len(history) < 2:
@@ -176,9 +189,16 @@ def is_approaching(prev, curr, threshold):
 def send_telegram(text):
     if not TELEGRAM_TOKEN or not CHAT_ID:
         print("[TELEGRAM] Token/Chat missing, skipping")
-        return
+        return False
     url = f"https://api.telegram.org/bot{TELEGRAM_TOKEN}/sendMessage"
-    requests.post(url, json={"chat_id": CHAT_ID, "text": text, "parse_mode": "HTML"}, timeout=15)
+    response = requests.post(
+        url,
+        json={"chat_id": CHAT_ID, "text": text, "parse_mode": "HTML"},
+        timeout=15,
+    )
+    response.raise_for_status()
+    result = response.json()
+    return bool(result.get("ok"))
 
 def main():
     print("[RADAR] Checking RainViewer for 41.015, 28.950 ...")
@@ -258,17 +278,32 @@ def main():
     print(f"[RADAR] {summary} | alert={alert} | {motion_txt}")
 
     if alert:
-        location_status = "Konuma ulaşıyor / üzerinde." if on_site else "Yaklaşıyor."
-        msg = (
-            f"{intensity_emoji} <b>{intensity} YAĞIŞ UYARISI — İstanbul</b>\\n"
-            f"Konum: 41.015 N, 28.950 E\\n"
-            f"{summary}\\n"
-            f"{motion_txt}\\n"
-            f"{location_status}\\n"
-            f"https://mhsnlsy.github.io/gfs-watch/#radar"
-        )
-        send_telegram(msg)
-        print(f"[RADAR] {intensity} ALERT SENT")
+        alert_state = load_alert_state()
+        now_ts = datetime.now(timezone.utc).timestamp()
+        last_alert_ts = float(alert_state.get("last_alert_ts", 0) or 0)
+        seconds_since_alert = now_ts - last_alert_ts
+
+        if seconds_since_alert >= ALERT_COOLDOWN_SECONDS:
+            location_status = "Konuma ulaşıyor / üzerinde." if on_site else "Yaklaşıyor."
+            msg = (
+                f"{intensity_emoji} <b>{intensity} YAĞIŞ UYARISI — İstanbul</b>\\n"
+                f"Konum: 41.015 N, 28.950 E\\n"
+                f"{summary}\\n"
+                f"{motion_txt}\\n"
+                f"{location_status}\\n"
+                f"https://mhsnlsy.github.io/gfs-watch/#radar"
+            )
+            if send_telegram(msg):
+                alert_state["last_alert_ts"] = now_ts
+                alert_state["last_alert_utc"] = datetime.now(timezone.utc).isoformat()
+                alert_state["last_intensity"] = intensity
+                save_alert_state(alert_state)
+                print(f"[RADAR] {intensity} ALERT SENT; 60-minute cooldown started")
+            else:
+                print("[RADAR] Alert not sent; cooldown state unchanged")
+        else:
+            remaining = int(ALERT_COOLDOWN_SECONDS - seconds_since_alert)
+            print(f"[RADAR] Telegram suppressed by 60-minute cooldown; {remaining}s remaining")
 
     state["history"] = history
     state["last"] = curr
