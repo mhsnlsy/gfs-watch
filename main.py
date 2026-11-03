@@ -2149,10 +2149,12 @@ def analyze_and_build_output(current_run_name, payload, previous_runs):
         text_report_lines.append(f"🌧 Beklenen yağış: {remaining_total:.1f} mm")
         if remaining_rain and remaining_total > 0:
             peak_time, peak_value = max(remaining_rain, key=lambda item: item[1])
-            peak_start = peak_time - timedelta(hours=3)
+            # MeteoPT/GFS geçerlilik saatleri UTC'dir; raporda UTC olarak göster.
+            peak_time_utc = peak_time - timedelta(hours=3)
+            peak_start_utc = peak_time_utc - timedelta(hours=3)
             text_report_lines.append(
                 f"📈 En belirgin yağış aralığı: "
-                f"{peak_start:%H:%M}–{peak_time:%H:%M} TSİ "
+                f"{peak_start_utc:%H:%M}–{peak_time_utc:%H:%M} UTC "
                 f"(model noktası: {peak_value:.1f} mm / 3 saat)"
             )
     else:
@@ -2223,9 +2225,11 @@ def analyze_and_build_output(current_run_name, payload, previous_runs):
             ][:2]
             windows = []
             for item in peak_periods:
+                # Timeline anahtarları İstanbul saatinde tutulur; GFS saatini UTC'ye çevir.
+                peak_end_utc = item["peak_end"] - timedelta(hours=3)
                 windows.append(
-                    f"{item['peak_end'] - timedelta(hours=3):%H:%M}–"
-                    f"{item['peak_end']:%H:%M} "
+                    f"{peak_end_utc - timedelta(hours=3):%H:%M}–"
+                    f"{peak_end_utc:%H:%M} UTC "
                     f"({item['peak_amount']:.1f} mm/3 sa)"
                 )
             text_report_lines.append(
