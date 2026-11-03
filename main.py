@@ -1785,50 +1785,51 @@ def fetch_meteopt_available_runs():
         if configured_target
         else scheduled_istanbul_gfs_run()
     )
-    candidates = []
-    # Deliberately do not probe the other three cycles: each Istanbul slot has
-    # exactly one permitted target, preventing stale/newer cycles from winning.
-        run_id = run_dt.isoformat(timespec="seconds")
-        try:
-            document = fetch_meteopt_document(run_dt)
-        except Exception as exc:
-            print(f"[METEOPT MISS] {run_id}: {type(exc).__name__}: {exc}")
-            continue
-        rows = _meteopt_rows_through_f180(document)
-        if not _meteopt_f180_ready(document):
-            last_step = max(rows) if rows else _meteopt_max_step(document)
-            print(
-                f"[METEOPT PENDING] {run_id}: f180'e kadar {len(rows)} satır; "
-                f"son +{last_step}. 60 satır dolunca Telegram ve sayfa aynı paketten gider. "
-                "Serinin geri kalanı beklenmez."
-            )
-            continue
-        candidates.append({
-            "model": MODEL_NAME,
-            "metadata_source": "MeteoPT GFS 3-hourly point",
-            "run_id": run_id,
-            "last_run_initialisation_time": run_id,
-            "last_run_availability_time": datetime.now(timezone.utc).isoformat(timespec="seconds"),
-            "last_modified_time": datetime.now(timezone.utc).isoformat(timespec="seconds"),
-            "last_valid_time": (
-                run_dt + timedelta(hours=MIN_FORECAST_HOURS)
-            ).isoformat(timespec="minutes"),
-            "forecast_horizon_hours": MIN_FORECAST_HOURS,
-            "completed": True,
-            "noaa_f180_available": False,
-            "source_name": "MeteoPT",
-            "source_url": (
-                "https://api.meteopt.com/gfs/json"
-                f"?lat={LAT:.4f}&lon={LON:.4f}&run={run_dt:%H}"
-            ),
-            "meteopt_steps": len(rows),
-        })
-        print(
-            f"[METEOPT READY] {run_id}: f180 dahil {len(rows)} satır hazır. "
-            "Devamı beklenmeden Telegram ve sayfa basılacak."
-        )
-    return candidates
+    run_id = run_dt.isoformat(timespec="seconds")
 
+    # One slot has exactly one target cycle; never fall through to another run.
+    try:
+        document = fetch_meteopt_document(run_dt)
+    except Exception as exc:
+        print(f"[METEOPT MISS] {run_id}: {type(exc).__name__}: {exc}")
+        return []
+
+    rows = _meteopt_rows_through_f180(document)
+    if not _meteopt_f180_ready(document):
+        last_step = max(rows) if rows else _meteopt_max_step(document)
+        print(
+            f"[METEOPT PENDING] {run_id}: f180'e kadar {len(rows)} satır; "
+            f"son +{last_step}. 60 satır dolunca Telegram ve sayfa aynı paketten gider. "
+            "Serinin geri kalanı beklenmez."
+        )
+        return []
+
+    now_utc = datetime.now(timezone.utc).isoformat(timespec="seconds")
+    candidate = {
+        "model": MODEL_NAME,
+        "metadata_source": "MeteoPT GFS 3-hourly point",
+        "run_id": run_id,
+        "last_run_initialisation_time": run_id,
+        "last_run_availability_time": now_utc,
+        "last_modified_time": now_utc,
+        "last_valid_time": (
+            run_dt + timedelta(hours=MIN_FORECAST_HOURS)
+        ).isoformat(timespec="minutes"),
+        "forecast_horizon_hours": MIN_FORECAST_HOURS,
+        "completed": True,
+        "noaa_f180_available": False,
+        "source_name": "MeteoPT",
+        "source_url": (
+            "https://api.meteopt.com/gfs/json"
+            f"?lat={LAT:.4f}&lon={LON:.4f}&run={run_dt:%H}"
+        ),
+        "meteopt_steps": len(rows),
+    }
+    print(
+        f"[METEOPT READY] {run_id}: f180 dahil {len(rows)} satır hazır. "
+        "Devamı beklenmeden Telegram ve sayfa basılacak."
+    )
+    return [candidate]
 
 def fetch_meteopt_weather_data(run_id):
     """Build the forecast payload from MeteoPT's native 3-hour GFS point."""
