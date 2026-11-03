@@ -1430,6 +1430,7 @@
       const meta=$("next-72h-meta"),points=forecastData&&Array.isArray(forecastData.forecast_6_hourly)?forecastData.forecast_6_hourly:[];
       const now=Date.now(),horizon=now+72*3600000;
       const parsed=points.map(p=>{
+        // MeteoPT timestamps are already aligned to Istanbul wall-clock hours; consume the published UTC equivalent as-is.
         const stamp=new Date(p.valid_time_utc).getTime();
         const modelLead=Number(p.forecast_hour);
         return {...p,stamp,modelLead};
