@@ -1485,7 +1485,7 @@
       const station=typeof eyupsultanStationObservation!=="undefined"?eyupsultanStationObservation:null;
       const measured=station&&typeof station.precipitation_1h_mm==="number"?station.precipitation_1h_mm:null;
       const points=latestRainForecastPoints.filter(p=>p.modelLead>0&&numeric(p.precipitation_6h_mm)).sort((a,b)=>a.stamp-b.stamp);
-      const dateTime=ms=>new Intl.DateTimeFormat("tr-TR",{timeZone:"Europe/Istanbul",weekday:"short",day:"2-digit",month:"short",hour:"2-digit",minute:"2-digit"}).format(new Date(ms));
+      const dateTime=ms=>new Intl.DateTimeFormat("tr-TR",{timeZone:"UTC",weekday:"short",day:"2-digit",month:"short",hour:"2-digit",minute:"2-digit",hourCycle:"h23"}).format(new Date(ms))+" UTC";
       if(measured===null){
         current.textContent="MGM Eyüpsultan anlık yağış ölçümü alınamıyor.";
         forecast.textContent="Yağış durumu doğrulanamadığı için tahmin yorumu yapılmıyor.";
@@ -1558,9 +1558,9 @@
       const stroke=colored?coords.slice(0,-1).map((p,i)=>'<path d="M'+p.x.toFixed(1)+" "+p.y.toFixed(1)+" L "+coords[i+1].x.toFixed(1)+" "+coords[i+1].y.toFixed(1)+'" fill="none" stroke="'+skillColor(data[i].within)+'" stroke-width="2.8" stroke-linecap="round" stroke-linejoin="round"/>').join(""):'<path d="'+coords.map((p,i)=>(i?"L":"M")+p.x.toFixed(1)+" "+p.y.toFixed(1)).join(" ")+'" fill="none" stroke="'+color+'" stroke-width="2.7" stroke-linecap="round" stroke-linejoin="round"/>';
       const dots=coords.map((p,i)=>'<circle cx="'+p.x+'" cy="'+p.y+'" r="'+(data[i].trusted?3.6:2.2)+'" fill="'+(numeric(data[i].within)?skillColor(data[i].within):color)+'"'+(data[i].trusted?' stroke="#edf8f4" stroke-width="1"':'')+'/>').join("");
       holder.innerHTML='<svg viewBox="0 0 '+width+' '+height+'" role="img" aria-label="Önümüzdeki 72 saat '+esc(label)+' tahmini. '+esc(phrase||"Sapma yönü henüz yok")+'.">'+grid+band+stroke+biasLine+dots+ticks+'</svg>';
-      if(typeof document!=="undefined")attachStationHistoryTooltip(holder,holder.querySelector("svg"),coords,width,height,top,bottom,color);
+      if(typeof document!=="undefined")attachStationHistoryTooltip(holder,holder.querySelector("svg"),coords,width,height,top,bottom,color,true);
     }
-    function attachStationHistoryTooltip(holder,svg,coords,width,height,top,bottom,color){
+    function attachStationHistoryTooltip(holder,svg,coords,width,height,top,bottom,color,forecastUTC=false){
       if(!coords.length||typeof document==="undefined")return;
       const card=holder.closest(".history-chart-card")||holder,tip=document.createElement("div");
       tip.className="station-history-tooltip";tip.hidden=true;tip.setAttribute("role","tooltip");card.appendChild(tip);
@@ -1575,7 +1575,8 @@
       };
       const show=p=>{
         line.setAttribute("x1",String(p.x));line.setAttribute("x2",String(p.x));dot.setAttribute("cx",String(p.x));dot.setAttribute("cy",String(p.y));line.setAttribute("visibility","visible");dot.setAttribute("visibility","visible");
-        tip.innerHTML='<div class="station-history-tooltip-time">'+esc(chartDateTimeTR(p.time))+' TSİ</div><div class="station-history-tooltip-value">'+esc(p.valueLabel)+'</div>'+(p.detail?'<div class="station-history-tooltip-detail">'+esc(p.detail)+'</div>':"");tip.hidden=false;
+        const stampLabel=forecastUTC?forecastDateTimeUTC(p.time)+" UTC":chartDateTimeTR(p.time)+" TSİ";
+         tip.innerHTML='<div class="station-history-tooltip-time">'+esc(stampLabel)+'</div><div class="station-history-tooltip-value">'+esc(p.valueLabel)+'</div>'+(p.detail?'<div class="station-history-tooltip-detail">'+esc(p.detail)+'</div>':"");tip.hidden=false;
         const cr=card.getBoundingClientRect(),sr=svg.getBoundingClientRect(),px=p.x/width*sr.width+sr.left-cr.left,py=p.y/height*sr.height+sr.top-cr.top,tw=tip.offsetWidth,th=tip.offsetHeight;
         let left=px-tw/2;if(left<8)left=px+10;if(left+tw>cr.width-8)left=px-tw-10;
         tip.style.left=Math.max(8,Math.min(cr.width-tw-8,left))+"px";tip.style.top=Math.max(8,Math.min(cr.height-th-8,py-th-10))+"px";
