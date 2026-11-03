@@ -3421,11 +3421,11 @@ async def run_manual_comparison(previous_run_id, current_run_id):
 
 
 async def run_manual_report(run_id, media_only=False, image_only=False):
-    """Send a selected GFS report or only its missing media, without changing history."""
+    """Regenerate one report for Telegram and Pages without changing run history."""
     init_db()
     run_dt = _parse_utc_datetime(run_id)
     normalized_run_id = run_dt.isoformat(timespec="seconds")
-    mode_label = "yalnızca düzeltme görseli" if image_only else ("eksik görsel/ses" if media_only else "metin + görsel + ses")
+    mode_label = "yalnızca düzeltme görseli" if image_only else ("yalnızca görsel" if media_only else "metin + görsel; ses kapalı")
     print(f"[MANUAL] {normalized_run_id} için {mode_label} hazırlanıyor; geçmiş değişmeyecek.")
 
     comparison_runs = []
