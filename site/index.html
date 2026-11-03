@@ -1435,7 +1435,7 @@
         return {...p,stamp,modelLead};
       }).filter(p=>Number.isFinite(p.stamp)&&Number.isFinite(p.modelLead)).sort((a,b)=>a.stamp-b.stamp);
       const hourly=parsed.filter(p=>p.stamp>=now-20*60000&&p.stamp<=horizon+20*60000).map(p=>({...p,lead:Math.max(0,(p.stamp-now)/3600000)}));
-      if(hourly.length<2){["next72-temperature","next72-precipitation"].forEach(id=>$(id).innerHTML='<div class="chart-empty">Yeni GFS raporu bekleniyor. 72 saatlik pencere son raporun çıktısına kilitlenir.</div>');if(meta)meta.textContent="Yeni rapor bekleniyor";return;}
+      if(!hourly.length){["next72-temperature","next72-precipitation"].forEach(id=>$(id).innerHTML='<div class="chart-empty">Bu GFS döngüsüne ait tahmin zaman çizelgesi henüz bulunmuyor.</div>');if(meta)meta.textContent="Tahmin verisi bekleniyor";return;}
       const temperature=hourly.filter(p=>numeric(p.temperature_2m_c)).map(p=>{
         const skill=skillAtLead(p.modelLead);
         const mae=skill&&numeric(skill.mae_c)?skill.mae_c:null;
@@ -1460,8 +1460,7 @@
       const rainHolder=$("next72-precipitation");if(rainHolder&&rain.length){const legend=document.createElement("div");legend.className="chart-legend";legend.innerHTML='<span><i class="legend-dot" style="background:#83c9eb"></i>Düzeltilmiş tahmin</span><span><i class="legend-dot" style="background:#f1c98b"></i>Ham GFS</span>';rainHolder.appendChild(legend);}
     }
     function drawNext72Line(targetId,data,color,label){
-      const holder=$(targetId);if(data.length<2){holder.innerHTML='<div class="chart-empty">Bu değişken için yeterli tahmin noktası yok.</div>';return;}
-      const rainChart=label.startsWith("Yağış");
+      const holder=$(targetId);const rainChart=label.startsWith("Yağış");if(!data.length){holder.innerHTML='<div class="chart-empty">'+(rainChart?"Bu GFS döngüsünde 72 saatlik dönem için 3 saatlik yağış tahmin noktası bulunmuyor. Veri olmayan aralıklar boş bırakıldı.":"Bu değişken için tahmin verisi bulunmuyor.")+'</div>';return;}
       const biases=data.map(p=>p.bias).filter(numeric);
       const meanBias=biases.length?biases.reduce((sum,value)=>sum+value,0)/biases.length:null;
       const phrase=numeric(meanBias)?signedMiss(meanBias,rainChart?"rain":"temp"):"";
