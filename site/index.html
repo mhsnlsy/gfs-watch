@@ -2178,7 +2178,7 @@
         ]);
         if(!response.ok)throw new Error("Tahmin verisi şu anda alınamıyor.");
         const data=await response.json();
-        if(!data||data.schema!=="gfs-watch.forecast.v1")throw new Error("Tahmin verisinin biçimi beklenenden farklı.");
+        if(!data||!["gfs-watch.forecast.v1","gfs-watch.forecast.v2"].includes(data.schema))throw new Error("Tahmin verisinin biçimi beklenenden farklı.");
         enkaStationObservation=null;
         eyupsultanStationObservation=null;
         if(stationResponse&&stationResponse.ok){
