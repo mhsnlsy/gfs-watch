@@ -3337,12 +3337,12 @@ async def run_manual_comparison(previous_run_id, current_run_id):
     )
 
 
-async def run_manual_report(run_id, media_only=False):
+async def run_manual_report(run_id, media_only=False, image_only=False):
     """Send a selected GFS report or only its missing media, without changing history."""
     init_db()
     run_dt = _parse_utc_datetime(run_id)
     normalized_run_id = run_dt.isoformat(timespec="seconds")
-    mode_label = "eksik görsel/ses" if media_only else "metin + görsel + ses"
+    mode_label = "yalnızca düzeltme görseli" if image_only else ("eksik görsel/ses" if media_only else "metin + görsel + ses")
     print(f"[MANUAL] {normalized_run_id} için {mode_label} hazırlanıyor; geçmiş değişmeyecek.")
 
     comparison_runs = []
@@ -3382,15 +3382,17 @@ async def run_manual_report(run_id, media_only=False):
 
     audio_file = None
     try:
-        if _telegram_enabled():
+        if _telegram_enabled() and not image_only:
             audio_file = await generate_speech_with_retry(narration)
-        if not media_only:
+        if not media_only and not image_only:
             await send_telegram_text(full_text_report)
         await send_telegram_photo(
             chart,
             f"📊 İstanbul GFS | Dört döngü karşılaştırması · {run_dt:%Y-%m-%d %HZ} UTC"
         )
-        if audio_file:
+        if image_only:
+            print("[MANUAL IMAGE ONLY] Yalnızca karşılaştırma görseli gönderildi.")
+        elif audio_file:
             await send_telegram_voice(audio_file)
         else:
             print("[MANUAL VOICE] Ses üretilemedi; hata/eksik TTS ayarı loglandı.")
@@ -3579,8 +3581,9 @@ if __name__ == "__main__":
         else:
             manual_run_id = os.getenv("GFS_WATCH_MANUAL_RUN_ID", "").strip()
             manual_media_only = os.getenv("GFS_WATCH_MANUAL_MEDIA_ONLY", "").strip().lower() in {"1", "true", "yes"}
+            manual_image_only = os.getenv("GFS_WATCH_MANUAL_IMAGE_ONLY", "").strip().lower() in {"1", "true", "yes"}
             if manual_run_id:
-                asyncio.run(run_manual_report(manual_run_id, media_only=manual_media_only))
+                asyncio.run(run_manual_report(manual_run_id, media_only=manual_media_only, image_only=manual_image_only))
             elif os.getenv("GFS_WATCH_ONCE", "").strip().lower() in {"1", "true", "yes"}:
                 asyncio.run(run_once())
             else:
