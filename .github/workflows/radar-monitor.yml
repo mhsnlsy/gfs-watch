@@ -1,8 +1,9 @@
 name: Radar Monitor
 
+# Run every 10 minutes, offset from the busiest top-of-hour queue.
 on:
   schedule:
-    - cron: "*/10 * * * *"   # every 10 minutes
+    - cron: "3,13,23,33,43,53 * * * *"
   workflow_dispatch:
 
 permissions:
@@ -15,9 +16,16 @@ concurrency:
 jobs:
   check:
     runs-on: ubuntu-latest
+    timeout-minutes: 8
     steps:
       - name: Checkout
         uses: actions/checkout@v4
+
+      - name: Record scheduled start
+        run: |
+          echo "Radar monitor started at $(date -u '+%Y-%m-%d %H:%M:%S UTC')"
+          echo "Event: $GITHUB_EVENT_NAME"
+          echo "Scheduled cron: 3,13,23,33,43,53 * * * *"
 
       - name: Set up Python
         uses: actions/setup-python@v5
@@ -34,17 +42,27 @@ jobs:
           CHAT_ID: ${{ secrets.CHAT_ID }}
           RADAR_STATE_PATH: ${{ github.workspace }}/radar_state.json
           RADAR_ALERT_STATE_PATH: ${{ github.workspace }}/radar_alert_state.json
-        run: python radar_monitor.py
+        run: python -u radar_monitor.py
 
-      - name: Persist Telegram cooldown state
+      - name: Persist radar history and Telegram cooldown state
         if: success()
         run: |
-          if [ -f radar_alert_state.json ]; then
-            git add radar_alert_state.json
-            if ! git diff --cached --quiet; then
-              git config user.name "github-actions[bot]"
-              git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
-              git commit -m "Update radar Telegram cooldown state"
-              git push
-            fi
+          git add radar_state.json radar_alert_state.json
+          if ! git diff --cached --quiet; then
+            git config user.name "github-actions[bot]"
+            git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+            git commit -m "Update radar monitor state"
+            git push
           fi
+
+      - name: Record successful completion
+        if: success()
+        run: |
+          echo "Radar monitor completed at $(date -u '+%Y-%m-%d %H:%M:%S UTC')" | tee -a "$GITHUB_STEP_SUMMARY"
+          echo "Trigger: $GITHUB_EVENT_NAME" | tee -a "$GITHUB_STEP_SUMMARY"
+
+      - name: Record failure
+        if: failure()
+        run: |
+          echo "Radar monitor failed at $(date -u '+%Y-%m-%d %H:%M:%S UTC')" | tee -a "$GITHUB_STEP_SUMMARY"
+          echo "Inspect the preceding step logs." | tee -a "$GITHUB_STEP_SUMMARY"
