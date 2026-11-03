@@ -426,7 +426,7 @@ def publish_public_notification(
         "run_id_utc": run_dt.isoformat(timespec="seconds"),
         "published_at_utc": datetime.now(timezone.utc).isoformat(timespec="seconds"),
         "published_at_istanbul": _format_tr_datetime(datetime.now(TR_TZ)),
-        "cycle_label": f"{run_dt:%H}Z · {run_local:%d.%m.%Y %H:%M} TSİ",
+        "cycle_label": f"{run_dt:%H}Z · {run_dt:%d.%m.%Y %H:%M} UTC",
         "summary": summary,
         "report_text": web_report,
         "image_path": image_path,
@@ -2049,7 +2049,7 @@ def analyze_and_build_output(current_run_name, payload, previous_runs):
         f"🌦 {APP_LABEL}",
         "İSTANBUL GFS TAHMİN RAPORU",
         "📄 Çıktı: Yazılı tahmin raporu",
-        f"🛰 Model döngüsü: {_format_tr_datetime(run_local)} TSİ ({run_utc:%H}Z UTC)",
+        f"🛰 Model döngüsü: {run_utc:%d.%m.%Y %H:%M} UTC ({run_utc:%H}Z)",
         (
             f"🗓 Tahmin aralığı: {_format_tr_datetime(run_local)} – "
             f"{_format_tr_datetime(forecast_end_local)} TSİ "
@@ -2371,7 +2371,7 @@ def _prepare_comparison_chart_data(current_run_id, payload, previous_runs):
             raise ValueError(f"{run_id} için günlük tahmin verisi bulunamadı.")
         run_utc = _parse_utc_datetime(run_id)
         run_local = run_utc.astimezone(TR_TZ)
-        cycle_label = f"{run_utc:%H}Z | {run_local:%d.%m %H:%M} TSİ"
+        cycle_label = f"{run_utc:%H}Z | {run_utc:%d.%m %H:%M} UTC"
         if run_id == current_run_id:
             cycle_label = "YENİ · " + cycle_label
         series.append({
