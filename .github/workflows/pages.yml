@@ -281,7 +281,12 @@ jobs:
             echo "Pages notification feed is not reachable."
             exit 1
           fi
-          python - "$RUNNER_TEMP/live-notifications.json" "$expected_notification_run_id" "$RUNNER_TEMP/notification-assets.txt" <<'PY'
+          latest_url="${PAGE_URL%/}/data/latest.json?verify=$GITHUB_RUN_ID"
+          if ! curl --fail --silent --show-error "$latest_url" -o "$RUNNER_TEMP/live-latest.json"; then
+            echo "Live latest GFS forecast bundle is not reachable."
+            exit 1
+          fi
+          python - "$RUNNER_TEMP/live-notifications.json" "$expected_notification_run_id" "$RUNNER_TEMP/notification-assets.txt" "$RUNNER_TEMP/live-latest.json" <<'PY'
           import json, pathlib, sys
           with open(sys.argv[1], encoding="utf-8") as source:
               document = json.load(source)
@@ -294,6 +299,14 @@ jobs:
           )
           assert item.get("summary", "").strip()
           assert item.get("report_text", "").strip()
+          latest = json.loads(pathlib.Path(sys.argv[4]).read_text(encoding="utf-8"))
+          embedded = latest.get("report") or {}
+          assert embedded.get("run_id_utc") == item.get("run_id_utc")
+          assert embedded.get("images") == item.get("images"), "Live forecast/report and notification feed are out of sync."
+          assert ".svg" not in json.dumps(latest).lower(), "Live latest.json still contains an SVG reference."
+          assert isinstance(embedded.get("images"), list) and len(embedded["images"]) == 4
+          assert all(image.get("path", "").endswith(".png") for image in embedded["images"])
+          print("Live latest.json is synchronized with four PNG charts; no SVG reference.")
           images = item.get("images")
           expected_names = {
               f"gfs-{item['id']}-temperature.png",
