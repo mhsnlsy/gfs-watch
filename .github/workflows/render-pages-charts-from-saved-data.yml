@@ -3,6 +3,9 @@ name: Re-render latest Pages charts from saved data
 
 on:
   workflow_dispatch:
+  push:
+    paths:
+      - ".github/workflows/render-pages-charts-from-saved-data.yml"
 
 permissions:
   actions: write
@@ -27,15 +30,15 @@ jobs:
           ref: gfs-watch-state
           path: state
       - name: Set up Python
+        working-directory: source
+        run: python -m pip install -r requirements.txt
+      - name: Set up Python
         uses: actions/setup-python@v7
         with:
           python-version: "3.12"
           cache: pip
           cache-dependency-path: source/requirements.txt
-      - name: Install Python dependencies
-        working-directory: source
-        run: python -m pip install -r requirements.txt
-      - name: Render four charts from saved SQLite data only
+      - name: Render four comparison charts from saved SQLite data only
         working-directory: source
         env:
           DB_PATH: ${{ github.workspace }}/state/gfs_watch.db
@@ -51,34 +54,23 @@ jobs:
             echo 'Rendered charts are unchanged.'
             exit 0
           fi
-          git commit -m 'Backfill 850 hPa data and rebuild Pages charts'
-
-          # NOAA backfill updates the local SQLite file, but only chart assets and
-          # the notification manifest are published by this workflow. Stash those
-          # temporary DB changes before rebasing over concurrent state-branch pushes.
-          git stash push --quiet -m 'temporary NOAA backfill database changes' || true
-
+          git commit -m 'Restore four GFS comparison charts for latest report'
+          git stash push --quiet -m 'temporary database changes' || true
           for attempt in 1 2 3; do
             if git push origin HEAD:gfs-watch-state; then
-              echo 'Updated chart PNGs published.'
               git stash drop --quiet || true
               exit 0
             fi
-
-            echo "Push attempt $attempt raced with another state-branch update; rebasing."
             git fetch origin gfs-watch-state
             if ! git rebase origin/gfs-watch-state; then
               git rebase --abort || true
               git stash drop --quiet || true
-              echo 'Chart publication rebase failed; no unrelated state files were overwritten.'
               exit 1
             fi
           done
-
           git stash drop --quiet || true
           echo 'Could not publish chart images after three attempts.'
           exit 1
-
       - name: Deploy refreshed notification archive to Pages
         if: success()
         env:
