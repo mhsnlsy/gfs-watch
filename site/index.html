@@ -1417,7 +1417,7 @@
       const holder=$("rain-verification-summary");
       if(!holder)return;
       const rain=verificationDoc&&verificationDoc.stations?.eyupsultan?.rain;
-      if(!rain||!numeric(rain.mean_bias_6h_mm)||!Number.isFinite(rain.amount_pairs)||rain.amount_pairs<8){
+      if(!rain||!numeric(rain.mean_bias_6h_mm)||!Number.isFinite(rain.amount_pairs)||rain.amount_pairs<1){
         holder.innerHTML="Henüz yeterli eşleşmiş veri yok. En az 8 adet 6 saatlik MGM–GFS karşılaştırması birikene kadar 72 saatlik yağış tahminine düzeltme uygulanmıyor.";
         return;
       }
@@ -1448,7 +1448,7 @@
           :"f"+String(p.modelLead).padStart(3,"0")+" · bu saat henüz doğrulanmadı, plana katma";
         return {lead:p.lead,time:p.valid_time_utc,value:p.temperature_2m_c,mae,bias,within,trusted,label:fmt(p.temperature_2m_c,1)+" °C",detail};
       });
-      const rain=[];parsed.filter(p=>p.modelLead>0&&p.modelLead%3===0&&p.stamp>=now-20*60000&&p.stamp<=horizon+20*60000&&numeric(p.precipitation_3h_mm)).forEach(p=>{const amount=Math.max(0,p.precipitation_3h_mm);const rainSkill=verificationDoc&&verificationDoc.stations?verificationDoc.stations.eyupsultan?.rain:null;const bias=numeric(rainSkill?.mean_bias_6h_mm)&&rainSkill.amount_pairs>=8?rainSkill.mean_bias_6h_mm/2:null;const corrected=numeric(bias)?Math.max(0,amount-bias):amount;const samples=rainSkill?.amount_pairs||0;const detail=numeric(bias)?"MGM geçmiş sapma düzeltmesi: "+fmt(bias,2)+" mm / 3 saat · "+samples+" eşleşme":"Kalibrasyon yok; ham GFS değeri korunuyor";rain.push({lead:Math.max(0,(p.stamp-now)/3600000),time:p.valid_time_utc,value:corrected,rawValue:amount,mae:null,bias,within:null,trusted:numeric(bias),label:fmt(corrected,2)+" mm / 3 saat",detail});});
+      const rain=[];parsed.filter(p=>p.stamp>=now-20*60000&&p.stamp<=horizon+20*60000&&numeric(p.precipitation_3h_mm)).forEach(p=>{const amount=Math.max(0,p.precipitation_3h_mm);const rainSkill=verificationDoc&&verificationDoc.stations?verificationDoc.stations.eyupsultan?.rain:null;const bias=numeric(rainSkill?.mean_bias_6h_mm)&&Number(rainSkill.amount_pairs)>0?rainSkill.mean_bias_6h_mm/2:null;const corrected=numeric(bias)?Math.max(0,amount-bias):amount;const samples=rainSkill?.amount_pairs||0;const detail=numeric(bias)?"MGM geçmiş sapma düzeltmesi: "+fmt(bias,2)+" mm / 3 saat · "+samples+" eşleşme":"Kalibrasyon yok; ham GFS değeri korunuyor";rain.push({lead:Math.max(0,(p.stamp-now)/3600000),time:p.valid_time_utc,value:corrected,rawValue:amount,mae:null,bias,within:null,trusted:numeric(bias),label:fmt(corrected,2)+" mm / 3 saat",detail});});
       renderRainVerificationSummary();
       const cycle=forecastData&&forecastData.run_id_utc?timeTR(forecastData.run_id_utc)+" TSİ":"GFS";
       if(meta)meta.textContent=cycle+" · sonraki 72 saat";
@@ -1460,7 +1460,7 @@
       const rainHolder=$("next72-precipitation");if(rainHolder&&rain.length){const legend=document.createElement("div");legend.className="chart-legend";legend.innerHTML='<span><i class="legend-dot" style="background:#83c9eb"></i>Düzeltilmiş tahmin</span><span><i class="legend-dot" style="background:#f1c98b"></i>Ham GFS</span>';rainHolder.appendChild(legend);}
     }
     function drawNext72Line(targetId,data,color,label){
-      const holder=$(targetId);const rainChart=label.startsWith("Yağış");if(!data.length){holder.innerHTML='<div class="chart-empty">'+(rainChart?"Bu GFS döngüsünde 72 saatlik dönem için 3 saatlik yağış tahmin noktası bulunmuyor. Veri olmayan aralıklar boş bırakıldı.":"Bu değişken için tahmin verisi bulunmuyor.")+'</div>';return;}
+      const holder=$(targetId);const rainChart=label.startsWith("Yağış");if(!data.length){holder.innerHTML='<div class="chart-empty">'+(rainChart?"Son GFS çıktısında önümüzdeki 72 saat için sayısal 3 saatlik yağış verisi yok. Tahmin verisi olmayan aralıklar boş bırakıldı.":"Bu değişken için tahmin verisi bulunmuyor.")+'</div>';return;}
       const biases=data.map(p=>p.bias).filter(numeric);
       const meanBias=biases.length?biases.reduce((sum,value)=>sum+value,0)/biases.length:null;
       const phrase=numeric(meanBias)?signedMiss(meanBias,rainChart?"rain":"temp"):"";
