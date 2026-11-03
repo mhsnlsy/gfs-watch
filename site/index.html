@@ -1464,7 +1464,7 @@
       drawNext72Line("next72-temperature",temperature,"#7dd3d7","Sıcaklık °C");drawNext72Line("next72-precipitation",rain,"#83c9eb","Yağış mm");
     }
     function drawNext72Line(targetId,data,color,label){
-      const holder=$(targetId);const rainChart=label.startsWith("Yağış");if(!data.length){holder.innerHTML='<div class="chart-empty">'+(rainChart?"Son MeteoPT GFS çıktısında önümüzdeki 72 saat için 6 saatlik yağış verisi yok. Tahmin verisi olmayan aralıklar boş bırakıldı.":"Bu değişken için tahmin verisi bulunmuyor.")+'</div>';return;}
+      const holder=$(targetId);const rainChart=label.startsWith("Yağış");if(!data.length){holder.innerHTML='<div class="chart-empty">'+(rainChart?"Son MeteoPT GFS çıktısında önümüzdeki 72 saat için 3 saatlik yağış verisi yok. Tahmin verisi olmayan aralıklar boş bırakıldı.":"Bu değişken için tahmin verisi bulunmuyor.")+'</div>';return;}
       const biases=data.map(p=>p.bias).filter(numeric);
       const meanBias=biases.length?biases.reduce((sum,value)=>sum+value,0)/biases.length:null;
       const phrase=numeric(meanBias)?signedMiss(meanBias,rainChart?"rain":"temp"):"";
