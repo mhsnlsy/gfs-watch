@@ -1,0 +1,68 @@
+name: Radar Monitor 10m
+
+# Fresh workflow registration on the default branch.
+# Runs every 10 minutes (UTC): :03, :13, :23, :33, :43, :53.
+on:
+  schedule:
+    - cron: "3,13,23,33,43,53 * * * *"
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+concurrency:
+  group: radar-monitor-10m
+  cancel-in-progress: false
+
+jobs:
+  radar-check:
+    name: RainViewer check — Istanbul
+    runs-on: ubuntu-latest
+    timeout-minutes: 8
+    steps:
+      - name: Checkout main
+        uses: actions/checkout@v4
+        with:
+          ref: main
+
+      - name: Log trigger
+        run: |
+          echo "Started: $(date -u '+%Y-%m-%d %H:%M:%S UTC')"
+          echo "Event: ${GITHUB_EVENT_NAME}"
+          echo "Workflow: Radar Monitor 10m"
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+
+      - name: Install dependencies
+        run: python -m pip install --disable-pip-version-check requests pillow numpy
+
+      - name: Run Istanbul radar check
+        env:
+          TELEGRAM_TOKEN: ${{ secrets.TELEGRAM_TOKEN }}
+          CHAT_ID: ${{ secrets.CHAT_ID }}
+          RADAR_STATE_PATH: ${{ github.workspace }}/radar_state.json
+          RADAR_ALERT_STATE_PATH: ${{ github.workspace }}/radar_alert_state.json
+        run: python -u radar_monitor.py
+
+      - name: Persist radar history and Telegram cooldown
+        if: success()
+        run: |
+          if [ -f radar_state.json ]; then git add -f radar_state.json; fi
+          if [ -f radar_alert_state.json ]; then git add -f radar_alert_state.json; fi
+          if ! git diff --cached --quiet; then
+            git config user.name "github-actions[bot]"
+            git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+            git commit -m "Persist radar monitor state"
+            git push origin HEAD:main
+          fi
+
+      - name: Publish run summary
+        if: always()
+        run: |
+          echo "### Radar Monitor 10m" >> "$GITHUB_STEP_SUMMARY"
+          echo "- Trigger: ${GITHUB_EVENT_NAME}" >> "$GITHUB_STEP_SUMMARY"
+          echo "- Finished: $(date -u '+%Y-%m-%d %H:%M:%S UTC')" >> "$GITHUB_STEP_SUMMARY"
+          echo "- Result: ${{ job.status }}" >> "$GITHUB_STEP_SUMMARY"
