@@ -1695,13 +1695,12 @@
       const holder=$("station-rain-trend"),meta=$("station-rain-meta");
       if(!holder)return;
       const caption=$("station-rain-caption");
-      const history=Array.isArray(samples)?samples:[];
-      if(activeStation==="enka"){
-        if(caption)caption.textContent="mm · günlük sayaçtan türetilen saatlik yağış · son 24 saat";
-        return renderEnkaHourlyRain(history,stationName,holder,meta);
-      }
-      if(caption)caption.textContent="mm · kayan 1 saatlik yağış · son 24 saat";
-      return renderEyupsultanHourlyRain(history,stationName,holder,meta);
+      // Both station views deliberately use the same MGM 18101 rain feed.
+      // Temperature history remains station-specific; only rainfall is shared.
+      const rainHistory=Array.isArray(eyupsultanStationHistorySamples)?eyupsultanStationHistorySamples:[];
+      const rainLabel=activeStation==="enka"?"Balmumcu · MGM Eyüpsultan 18101": "Eyüpsultan · MGM 18101";
+      if(caption)caption.textContent="mm · MGM Eyüpsultan 18101 · kayan 1 saatlik yağış · son 24 saat";
+      return renderEyupsultanHourlyRain(rainHistory,rainLabel,holder,meta);
     }
     function renderStationHistory(){
       const stationName=activeStation==="eyupsultan"?"Eyüpsultan":"ENKA Balmumcu";
@@ -1709,9 +1708,9 @@
       $("history-station-source").textContent=stationName.toLocaleUpperCase("tr-TR")+" · GERÇEK ÖLÇÜMLER";
       $("station-history-panel").setAttribute("aria-label",stationName+" son 24 saat geçmişi");
       $("history-source-note").hidden=false;
-      $("history-source-note").textContent=activeStation==="enka"?"Sıcaklık ve yağış ENKA Balmumcu istasyonunun kendi ölçümlerinden. Yağış saatlik toplamları günlük sayaç farklarından türetilir.":"Sıcaklık ve yağış MGM Eyüpsultan 18101 istasyonunun ölçümlerinden.";
+      $("history-source-note").textContent=activeStation==="enka"?"Sıcaklık ENKA Balmumcu'nun kendi ölçümlerinden; yağış MGM Eyüpsultan 18101 istasyonundan alınır.":"Sıcaklık ve yağış MGM Eyüpsultan 18101 istasyonunun ölçümlerinden.";
       renderStationTemperatureTrend(samples,stationName);
-      renderStationRainTrend(samples,stationName);
+      renderStationRainTrend(eyupsultanStationHistorySamples,stationName);
     }
 
     
@@ -1788,14 +1787,14 @@
       $("wind").innerHTML=hasStation&&numeric(station.wind_speed_10m_kmh)?fmt(station.wind_speed_10m_kmh,1)+'<span class="unit">km/sa</span>':'—<span class="unit">km/sa</span>';
       const direction=hasStation?(station.wind_direction_tr||windDirectionTr[station.wind_direction_cardinal]||station.wind_direction_cardinal):null;
       $("wind-direction").textContent=direction?direction:"Yön —";
-      const rainSource=activeStation==="enka"?enkaStationObservation:eyupsultanStationObservation;
-      const rainAmount=activeStation==="enka"
-        ?(rainSource&&numeric(rainSource.precipitation_daily_mm)?rainSource.precipitation_daily_mm:null)
-        :(rainSource&&numeric(rainSource.precipitation_12h_mm)?rainSource.precipitation_12h_mm:null);
+      // Balmumcu and Eyüpsultan share the verified MGM 18101 rainfall feed.
+      // Temperature, wind, humidity and pressure still come from the selected station.
+      const rainSource=eyupsultanStationObservation;
+      const rainAmount=rainSource&&numeric(rainSource.precipitation_12h_mm)?rainSource.precipitation_12h_mm:null;
       const rain1h=rainSource&&numeric(rainSource.precipitation_1h_mm)?rainSource.precipitation_1h_mm:null;
       $("rain").innerHTML=numeric(rainAmount)?fmt(rainAmount,1)+'<span class="unit">mm</span>':'—<span class="unit">mm</span>';
       const rainDetail=$("rain-detail");
-      if(rainDetail)rainDetail.textContent=activeStation==="enka"?"Bugün · ENKA":"Son 12 saat · MGM";
+      if(rainDetail)rainDetail.textContent="Son 12 saat · MGM Eyüpsultan 18101";
       $("humidity").innerHTML=hasStation&&numeric(station.humidity_percent)?fmt(station.humidity_percent,0)+'<span class="unit">%</span>':'—<span class="unit">%</span>';
       const feels = hasStation ? calculateFeelsLike(station.temperature_2m_c, station.humidity_percent, station.wind_speed_10m_kmh) : null;
       const feelsEl = $("feels-like");
