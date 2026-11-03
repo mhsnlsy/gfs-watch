@@ -2143,7 +2143,15 @@
 
     function render(data){
       const canonical=data&&data.gfs_dataset&&data.gfs_dataset.schema==="gfs-watch.dataset.v2"?data.gfs_dataset:null;
-      forecastData=canonical?{...data,forecast_6_hourly:canonical.points,daily_summary:canonical.daily_summary}:data;
+      forecastData=canonical?{
+        ...data,
+        forecast_6_hourly:canonical.points,
+        daily_summary:canonical.daily_summary,
+        comparison_runs:canonical.comparison_runs||data.comparison_runs,
+        current_conditions:canonical.current_conditions||data.current_conditions,
+        regional_pressure_analysis:canonical.regional_pressure_analysis||data.regional_pressure_analysis,
+        forecast_valid_until_utc:canonical.forecast_valid_until_utc||data.forecast_valid_until_utc
+      }:data;
       data=forecastData;
       renderNext72Hours();
       renderBriefing();
