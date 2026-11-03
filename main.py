@@ -3342,7 +3342,20 @@ async def run_manual_report(run_id, media_only=False):
     mode_label = "eksik görsel/ses" if media_only else "metin + görsel + ses"
     print(f"[MANUAL] {normalized_run_id} için {mode_label} hazırlanıyor; geçmiş değişmeyecek.")
 
-    comparison_runs = await load_previous_three_runs_for_comparison(normalized_run_id)
+    comparison_runs = []
+    for hours_back in (18, 12, 6):
+        previous_id = (run_dt - timedelta(hours=hours_back)).isoformat(timespec="seconds")
+        stored_record = await asyncio.to_thread(get_run_payload, previous_id)
+        if not stored_record:
+            raise RuntimeError(
+                f"{previous_id} karşılaştırma verisi geçmişte bulunamadı; "
+                "manuel medya gönderimi geçmiş kayıtları değiştirmeden durduruldu."
+            )
+        comparison_runs.append((
+            stored_record[0],
+            json.dumps(stored_record[1], ensure_ascii=False),
+        ))
+
     payload = await asyncio.to_thread(fetch_full_weather_data, normalized_run_id)
     if payload and "_pending_noaa_gfs" in payload:
         raise RuntimeError(
