@@ -30,6 +30,10 @@
     .station-current .temp-meta{margin-top:6px}
     .delta-badge{display:inline-flex;align-items:center;gap:4px;margin-top:6px;padding:3px 9px;border-radius:999px;background:rgba(125,211,215,.12);border:1px solid rgba(125,211,215,.28);color:var(--cyan);font-size:11px;font-weight:600;letter-spacing:.01em;min-height:22px}
     .delta-badge:empty{display:none}
+    .rain-brief{display:grid;gap:3px;margin-top:6px;color:#aee4e4;font-size:11px;line-height:1.45;font-weight:600}
+    .rain-brief div:empty{display:none}
+    .rain-brief div+div{color:#c4d7df;font-weight:500}
+    @media(max-width:560px){.rain-brief{font-size:10px;line-height:1.4;margin-top:4px}}
     .dew-point{margin-top:5px;font-size:11px;color:#a8c4d0;letter-spacing:.01em}
     .dew-point:empty{display:none}
     .weather-stats .stat{transition:background .15s ease}
@@ -982,8 +986,10 @@
     </div>
     <div class="temp-meta">
       <div class="temp-caption" id="station-observation-meta">Son istasyon ölçümü bekleniyor</div>
-      <div class="delta-badge" id="station-24h-diff"></div>
-      <div class="delta-badge" id="station-gap" hidden></div>
+      <div class="rain-brief" id="rain-brief" aria-live="polite">
+        <div id="rain-brief-current">MGM yağış ölçümü bekleniyor.</div>
+        <div id="rain-brief-forecast">MeteoPT GFS tahmini bekleniyor.</div>
+      </div>
       
     </div>
   </div>
@@ -1006,15 +1012,7 @@
         <div class="history-source-note" id="history-source-note">Sıcaklık seçili istasyonun. Yağış iki istasyonda da MGM Eyüpsultan.</div>
       </section>
       </article>
-      <section class="rain-window rain-window-left" id="rain-window" aria-live="polite" aria-label="Yağış başlangıç ve bitiş tahmini">
-        <div class="rain-window-head"><div class="section-kicker">İSTANBUL · YAĞIŞ TAKİBİ</div><span class="rain-window-tag">GFS tahmini</span></div>
-        <div class="rain-window-main" id="rain-window-main">Yağış zamanı hesaplanıyor…</div>
-        <div class="rain-window-detail" id="rain-window-detail">Modelin yağış adımları inceleniyor.</div>
-        <div class="rain-window-times" id="rain-window-times" hidden>
-          <div class="rain-window-time"><span>Başlangıç</span><strong id="rain-window-start">—</strong></div>
-          <div class="rain-window-time"><span>Beklenen bitiş</span><strong id="rain-window-end">—</strong></div>
-        </div>
-      </section>
+
       </div>
       <section class="next-72h-panel" id="next-72h-panel" aria-label="Önümüzdeki 72 saatlik hava tahmini">
         <div class="next-72h-head"><div><div class="section-kicker">GFS · İSTANBUL</div><h2>Önümüzdeki 72 saat</h2><p>Bant sapmanın büyüklüğü. Kesik çizgi yönü: model sıcak kaçırdıysa istasyon çizginin altında kalmıştır.</p></div><span class="next-72h-badge" id="next-72h-meta">Model verisi bekleniyor</span></div>
@@ -1476,40 +1474,55 @@
       drawNext72Line("next72-temperature",temperature,"#7dd3d7","Sıcaklık °C");drawNext72Line("next72-precipitation",rain,"#83c9eb","Yağış mm");
       renderRainWindow(parsed);
     }
+    let latestRainForecastPoints=[];
     function renderRainWindow(parsed){
-      const main=$("rain-window-main"),detail=$("rain-window-detail"),times=$("rain-window-times");
-      if(!main||!detail||!times)return;
-      const now=Date.now(),points=parsed.filter(p=>p.modelLead>0&&numeric(p.precipitation_6h_mm)).sort((a,b)=>a.stamp-b.stamp);
-      if(points.length<2){main.textContent="Yağış tahmini henüz hazır değil";detail.textContent="Yeni GFS verisi geldiğinde başlangıç ve bitiş saatleri burada gösterilecek.";times.hidden=true;return;}
+      latestRainForecastPoints=Array.isArray(parsed)?parsed:[];
+      const current=$("rain-brief-current"),forecast=$("rain-brief-forecast");
+      if(!current||!forecast)return;
+      const station=typeof eyupsultanStationObservation!=="undefined"?eyupsultanStationObservation:null;
+      const measured=station&&typeof station.precipitation_1h_mm==="number"?station.precipitation_1h_mm:null;
+      const points=latestRainForecastPoints.filter(p=>p.modelLead>0&&numeric(p.precipitation_6h_mm)).sort((a,b)=>a.stamp-b.stamp);
+      const dateTime=ms=>new Intl.DateTimeFormat("tr-TR",{timeZone:"Europe/Istanbul",weekday:"short",day:"2-digit",month:"short",hour:"2-digit",minute:"2-digit"}).format(new Date(ms));
+      if(measured===null){
+        current.textContent="MGM Eyüpsultan anlık yağış ölçümü alınamıyor.";
+        forecast.textContent="Yağış durumu doğrulanamadığı için tahmin yorumu yapılmıyor.";
+        return;
+      }
+      const isWet=measured>=0.1;
+      current.textContent=isWet
+        ?"MGM Eyüpsultan ölçümüne göre şu anda yağış var ("+fmt(measured,1)+" mm/son 1 saat)."
+        :"MGM Eyüpsultan ölçümüne göre şu anda yağış yok (0,0 mm/son 1 saat).";
+      if(points.length<2){
+        forecast.textContent="MeteoPT GFS verisi yeterli değil; yağışın başlangıç veya bitiş zamanı henüz hesaplanamıyor.";
+        return;
+      }
       const gaps=points.slice(1).map((p,i)=>(p.stamp-points[i].stamp)/3600000).filter(v=>v>0&&v<=12).sort((a,b)=>a-b);
       const stepH=gaps.length?gaps[Math.floor(gaps.length/2)]:3;
-      const stepMs=stepH*3600000,wet=points.filter(p=>p.precipitation_6h_mm>=0.2).map(p=>({start:p.stamp-stepMs,end:p.stamp,mm:p.precipitation_6h_mm}));
+      const stepMs=stepH*3600000;
+      const wet=points.filter(p=>p.precipitation_6h_mm>=0.2).map(p=>({start:p.stamp-stepMs,end:p.stamp,mm:p.precipitation_6h_mm}));
       const events=[];
       for(const item of wet){
         const last=events[events.length-1];
-        if(last&&item.start<=last.end+stepMs*.25){last.end=Math.max(last.end,item.end);last.sum+=item.mm;last.count++;}
-        else events.push({start:item.start,end:item.end,sum:item.mm,count:1});
+        if(last&&item.start<=last.end+stepMs*.25){last.end=Math.max(last.end,item.end);last.sum+=item.mm;}
+        else events.push({start:item.start,end:item.end,sum:item.mm});
       }
-      const active=events.find(e=>e.start<=now&&e.end>=now);
-      const next=events.find(e=>e.start>now);
-      const event=active||next;
-      const dateTime=ms=>new Intl.DateTimeFormat("tr-TR",{timeZone:"Europe/Istanbul",weekday:"short",day:"2-digit",month:"short",hour:"2-digit",minute:"2-digit"}).format(new Date(ms));
-      const clock=ms=>new Intl.DateTimeFormat("tr-TR",{timeZone:"Europe/Istanbul",hour:"2-digit",minute:"2-digit"}).format(new Date(ms));
-      times.hidden=true;
-      if(!event){
-        main.textContent="Önümüzdeki tahmin süresinde belirgin yağış görünmüyor";
-        detail.textContent="GFS'nin mevcut tahmin ufkunda 0,2 mm ve üzeri yağış adımı bulunamadı. Yeni model çıktısıyla yeniden hesaplanır.";
-        return;
-      }
-      times.hidden=false;
-      $("rain-window-start").textContent=dateTime(event.start);
-      $("rain-window-end").textContent=dateTime(event.end);
-      if(active){
-        main.textContent="Yağış bekleniyor / modelde şu anda sürüyor";
-        detail.textContent="Tahmini bitiş: "+dateTime(event.end)+". Bu yağış aralığında toplam yaklaşık "+fmt(event.sum,1)+" mm bekleniyor.";
+      const now=Date.now();
+      if(isWet){
+        const nextDry=events.find(e=>e.end>now);
+        if(nextDry){
+          forecast.textContent="MeteoPT GFS tahminine göre yağışın "+dateTime(nextDry.end)+" civarında sona ermesi bekleniyor.";
+        }else{
+          forecast.textContent="MeteoPT GFS tahmininde mevcut yağışın sona ereceği net bir zaman görünmüyor.";
+        }
       }else{
-        main.textContent="İlk yağış "+dateTime(event.start)+" saatlerinde bekleniyor";
-        detail.textContent="Tahmini bitiş: "+dateTime(event.end)+". Bu aralıkta toplam yaklaşık "+fmt(event.sum,1)+" mm yağış öngörülüyor.";
+        const nextRain=events.find(e=>e.start>now);
+        if(nextRain){
+          const hours=Math.max(0,(nextRain.start-now)/3600000);
+          const lead=hours<1?"1 saatten az":Math.round(hours)+" saat";
+          forecast.textContent="MeteoPT GFS tahminine göre yaklaşık "+lead+" içinde ("+dateTime(nextRain.start)+") yağmur bekleniyor.";
+        }else{
+          forecast.textContent="MeteoPT GFS tahmininde önümüzdeki tahmin süresinde belirgin yağış görünmüyor.";
+        }
       }
     }
     function drawNext72Line(targetId,data,color,label){
@@ -2199,6 +2212,7 @@
         }catch(_){}
       }
       renderStationCard(activeStation==="enka"?enkaStationObservation:eyupsultanStationObservation);
+      if(latestRainForecastPoints.length)renderRainWindow(latestRainForecastPoints);
       if(typeof renderBriefing==="function")renderBriefing();
     }
     async function refreshSelectedStation(){
