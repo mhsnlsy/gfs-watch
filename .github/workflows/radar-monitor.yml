@@ -22,10 +22,12 @@ jobs:
     runs-on: ubuntu-latest
     timeout-minutes: 17
     steps:
-      - name: Checkout main
+      - name: Check out radar state branch
         uses: actions/checkout@v4
         with:
-          ref: main
+          ref: radar-state
+          fetch-depth: 0
+          token: ${{ github.token }}
 
       - name: Log trigger
         run: |
@@ -60,14 +62,14 @@ jobs:
             if ! git diff --cached --quiet; then
               git config user.name "github-actions[bot]"
               git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
-              git commit -m "Persist radar monitor check log"
+              git commit -m "Persist radar check"
               for attempt in 1 2 3 4 5; do
-                git pull --rebase origin main
-                if git push origin HEAD:main; then
-                  echo "Radar state and check log persisted."
+                git pull --rebase origin radar-state
+                if git push origin HEAD:radar-state; then
+                  echo "Radar state and check log persisted to radar-state."
                   exit 0
                 fi
-                echo "Push attempt $attempt failed; retrying."
+                echo "Radar-state push attempt $attempt failed; retrying."
                 sleep $((attempt * 2))
               done
               echo "Could not persist radar state after five attempts."
