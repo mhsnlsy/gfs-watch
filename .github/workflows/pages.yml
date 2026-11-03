@@ -189,6 +189,8 @@ jobs:
           assert isinstance(observation.get("wind_speed_10m_kmh"), (int, float))
           assert isinstance(observation.get("humidity_percent"), (int, float))
           assert isinstance(observation.get("precipitation_daily_mm"), (int, float))
+          assert isinstance(observation.get("precipitation_1h_mm"), (int, float))
+          assert isinstance(observation.get("precipitation_12h_mm"), (int, float))
           print(
               "Live Eyüpsultan observation verified: "
               f"{observation['temperature_2m_c']}°C · "
@@ -217,6 +219,7 @@ jobs:
               and sample.get("logged_at_utc")
               and isinstance(sample.get("temperature_2m_c"), (int, float))
               and isinstance(sample.get("precipitation_daily_mm"), (int, float))
+              and isinstance(sample.get("precipitation_1h_mm"), (int, float))
           ]
           assert valid, "Eyüpsultan history contains no valid temperature/rain samples."
           print(f"Live Eyüpsultan history verified: {len(valid)} samples")
