@@ -1534,10 +1534,14 @@
       if(typeof eyupsultanStationObservation!=="undefined"&&eyupsultanStationObservation&&numeric(eyupsultanStationObservation.precipitation_12h_mm)){
         rows.push({observed_at_utc:eyupsultanStationObservation.observed_at_utc||eyupsultanStationObservation.fetched_at_utc,precipitation_12h_mm:eyupsultanStationObservation.precipitation_12h_mm});
       }
-      // MGM yagis12Saat kayan 12 saatlik toplamdir; ardışık ölçümlerden fark alınmaz.
-      const points=rows.map(sample=>({time:Date.parse(sample.observed_at_utc||sample.logged_at_utc||""),mm:Number(sample.precipitation_12h_mm)}))
+      // MGM yagis12Saat kayan 12 saatlik toplamdir; fark alınmaz.
+      // Her sabit 30 dakikalık dilimdeki en son MGM ölçümü tek trend noktası olur.
+      const rawPoints=rows.map(sample=>({time:Date.parse(sample.observed_at_utc||sample.logged_at_utc||""),mm:Number(sample.precipitation_12h_mm)}))
         .filter(point=>Number.isFinite(point.time)&&point.time>=start&&point.time<=now+60000&&Number.isFinite(point.mm)&&point.mm>=0)
         .sort((a,b)=>a.time-b.time);
+      const halfHour=30*60*1000,buckets=new Map();
+      for(const point of rawPoints)buckets.set(Math.floor(point.time/halfHour),point);
+      const points=Array.from(buckets.values()).sort((a,b)=>a.time-b.time);
       if(points.length<2){holder.innerHTML='<div class="station-trend-empty">MGM 12 saatlik yağış ölçümleri biriktiriliyor. Yeni istasyon ölçümleri geldikçe grafik oluşacak.</div>';if(meta)meta.textContent=stationName+" · 12 saatlik toplam bekleniyor";return;}
       const width=560,height=160,left=42,right=12,top=14,bottom=27,pw=width-left-right,ph=height-top-bottom;
       const max=Math.max(1,...points.map(point=>point.mm))*1.15;
