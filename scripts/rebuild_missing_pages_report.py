@@ -94,9 +94,31 @@ async def rebuild() -> None:
     item = manifest.get("items", [None])[0]
     if not item or item.get("run_id_utc") != run_id or not item.get("report_text", "").strip():
         raise RuntimeError("Rebuilt Pages report failed its manifest validation.")
+
+    expected_images = {
+        f"gfs-{run_id.replace('-', '').replace(':', '')[:11]}-temperature.png",
+        f"gfs-{run_id.replace('-', '').replace(':', '')[:11]}-temperature_850.png",
+        f"gfs-{run_id.replace('-', '').replace(':', '')[:11]}-precipitation.png",
+        f"gfs-{run_id.replace('-', '').replace(':', '')[:11]}-wind_10m.png",
+    }
+    images = item.get("images")
+    image_paths = [image.get("path", "") for image in images or [] if isinstance(image, dict)]
+    if len(image_paths) != 4 or {Path(path).name for path in image_paths} != expected_images:
+        raise RuntimeError(
+            "Rebuilt Pages report must contain exactly four PNG comparison charts; "
+            f"found {image_paths!r}"
+        )
+
+    # Keep the embedded forecast report and the notification feed identical.
+    # Otherwise latest.json can continue exposing deleted legacy SVG paths.
+    latest["report"] = item
+    latest_text = json.dumps(latest, ensure_ascii=False, indent=2) + "\\n"
+    if ".svg" in latest_text.lower():
+        raise RuntimeError("Legacy SVG reference remains in public/latest.json.")
+    archive._write_json_atomically(str(latest_path), latest)
     print(
         f"[REPORT REPAIR COMPLETE] {run_id}; "
-        f"images={len(item.get('images', []))}; audio={'yes' if item.get('audio_path') else 'no'}."
+        f"images={len(image_paths)} PNG; embedded report synced; audio={'yes' if item.get('audio_path') else 'no'}."
     )
 
 
