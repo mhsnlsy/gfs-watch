@@ -107,24 +107,12 @@ def fetch_enka_station_observation():
         raise ValueError("ENKA sayfasında ölçüm zaman damgası bulunamadı.")
 
     timestamp_text = f"{timestamp_match.group(1)} {timestamp_match.group(2)}"
-    # ENKA publishes its timezone explicitly, e.g. "(UTC 2:00)".
-    # This is UTC+02:00, not Europe/Istanbul's local timezone.
-    timezone_match = re.search(
-        r"\(\s*UTC\s*([+-]?)\s*(\d{1,2})(?::(\d{2}))?\s*\)",
-        page_text,
-        flags=re.I,
-    )
-    offset_hours = int(timezone_match.group(2)) if timezone_match else 0
-    offset_minutes = int(timezone_match.group(3) or 0) if timezone_match else 0
-    if timezone_match and timezone_match.group(1) == "-":
-        offset_hours, offset_minutes = -offset_hours, -offset_minutes
-    from datetime import timedelta
-    from datetime import timezone as dt_timezone
-    source_tz = dt_timezone(timedelta(hours=offset_hours, minutes=offset_minutes))
+    # ENKA's "As of" date/time is Istanbul local time. The parenthetical
+    # "(UTC 23:00)" is the corresponding UTC clock reading, NOT a UTC offset.
     observed_local = None
     for date_format in ("%d/%m/%y %H:%M", "%d/%m/%Y %H:%M", "%m/%d/%y %H:%M"):
         try:
-            observed_local = datetime.strptime(timestamp_text, date_format).replace(tzinfo=source_tz)
+            observed_local = datetime.strptime(timestamp_text, date_format).replace(tzinfo=TR_TZ)
             break
         except ValueError:
             continue
