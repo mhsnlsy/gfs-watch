@@ -34,7 +34,7 @@
     if (!Number.isFinite(date.getTime())) return "—";
     const datePart = new Intl.DateTimeFormat("en-GB", { timeZone: "UTC", weekday: "short", day: "numeric", month: "short" }).format(date);
     const hour = new Intl.DateTimeFormat("en-GB", { timeZone: "UTC", hour: "2-digit", hourCycle: "h23" }).format(date);
-    return datePart + " " + hour + "Z";
+    return datePart + " " + hour + " TSİ";
   }
   function render(document) {
     const body = $("meteopt-table-body");
