@@ -222,7 +222,7 @@ public final class WeatherData {
     private static String runLabel(String runId) {
         int separator = runId.indexOf('T');
         if (separator < 0 || runId.length() < separator + 3) return "GFS";
-        return runId.substring(separator + 1, Math.min(runId.length(), separator + 4)) + "Z";
+        return runId.substring(separator + 1, Math.min(runId.length(), separator + 3)) + "Z";
     }
 
     private static String format(double value) {
