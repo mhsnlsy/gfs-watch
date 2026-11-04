@@ -5,56 +5,6 @@
   const $ = (id) => document.getElementById(id);
   const finite = (value) => value !== null && value !== undefined && value !== "" && Number.isFinite(Number(value));
   const number = (value) => finite(value) ? Number(value) : null;
-  const normalise = (value) => String(value || "").toLowerCase().replace(/[^a-z0-9]/g, "");
-  const aliases = {
-    li: ["li", "liftedindex", "liftedindexsfc", "liftedindexsurface", "lifted", "lidx"],
-    rh2m: ["rh2m", "relhum2m", "relativehumidity2m", "humidity2m", "rh"],
-    t500: ["tmp500mb", "tmp500hpa", "tmp500", "temp500mb", "temp500hpa", "temperature500mb", "temperature500hpa", "t500"],
-    clouds: ["tcdc", "tcc", "clouds", "cloudcover", "totalcloudcover", "cloudtotal", "cldcover"],
-    snowln: ["snowline", "snowln", "snowlevel", "snowlineheight", "snowlevelheight"]
-  };
-  function findSeries(series, field) {
-    if (!series || typeof series !== "object") return null;
-    const entries = Object.entries(series);
-    const wanted = aliases[field] || [];
-    for (const alias of wanted) {
-      const found = entries.find(([key]) => normalise(key) === alias);
-      if (found) return found;
-    }
-    if (field === "li") {
-      const found = entries.find(([key]) => /lift/.test(normalise(key)));
-      return found || null;
-    }
-    if (field === "rh2m") {
-      const found = entries.find(([key]) => {
-        const k = normalise(key);
-        return (k.includes("rh") || k.includes("humidity")) && (k.includes("2m") || k === "rh");
-      });
-      return found || null;
-    }
-    if (field === "t500") {
-      const found = entries.find(([key]) => {
-        const k = normalise(key);
-        return k.includes("500") && (k.includes("tmp") || k.includes("temp") || k.startsWith("t500"));
-      });
-      return found || null;
-    }
-    if (field === "clouds") {
-      const found = entries.find(([key]) => {
-        const k = normalise(key);
-        return k.includes("cloud") || k === "tcdc";
-      });
-      return found || null;
-    }
-    if (field === "snowln") {
-      const found = entries.find(([key]) => {
-        const k = normalise(key);
-        return k.includes("snow") && (k.includes("line") || k.includes("level") || k.includes("height"));
-      });
-      return found || null;
-    }
-    return null;
-  }
   function colour(field, value) {
     if (value === null) return "";
     const v = value;
@@ -89,44 +39,29 @@
     const body = $("meteopt-table-body");
     if (!body) return;
     const points = Array.isArray(document.forecast_6_hourly) ? document.forecast_6_hourly : [];
-    const table = document.meteopt_table || {};
-    const steps = Array.isArray(table.steps) ? table.steps : [];
-    const series = table.series && typeof table.series === "object" ? table.series : {};
-    const rawFields = {};
-    for (const field of ["li", "rh2m", "t500", "clouds", "snowln"]) rawFields[field] = findSeries(series, field);
-    const rawAt = (field, index) => {
-      const entry = rawFields[field];
-      return entry && Array.isArray(entry[1]) ? number(entry[1][index]) : null;
-    };
+    const pointsThrough39h = points.filter(point => Number(point.forecast_hour) > 0 && Number(point.forecast_hour) <= 39);
     const pointByHour = new Map(points.map(point => [Number(point.forecast_hour), point]));
     const rows = [];
-    const hours = steps.length ? steps.map((step, index) => ({ step: Number(step), index })) : points.map((point, index) => ({ step: Number(point.forecast_hour), index }));
+    const hours = pointsThrough39h.map(point => ({ step: Number(point.forecast_hour), point }));
     for (const item of hours) {
-      if (!Number.isFinite(item.step) || item.step <= 0 || item.step > 180) continue;
-      const point = pointByHour.get(item.step) || null;
-      const raw = (field) => rawAt(field, item.index);
+      if (!Number.isFinite(item.step) || item.step <= 0 || item.step > 39) continue;
+      const point = item.point || pointByHour.get(item.step) || null;
       const wind10 = point ? number(point.wind_speed_10m_kmh) : null;
       const wind850 = point ? number(point.wind_speed_850hpa_kmh) : null;
       const precip = point ? number(point.precipitation_6h_mm) : null;
       const temp2 = point ? number(point.temperature_2m_c) : null;
-      const rh = raw("rh2m");
       const temp850 = point ? number(point.temperature_850hpa_c) : null;
       const values = [
         valueCell(wind10, "wind", 0),
         valueCell(wind850, "wind", 0),
         valueCell(precip, "precip"),
-        valueCell(raw("li"), "li"),
         valueCell(temp2, "t2m"),
-        valueCell(rh, "rh2m", 0),
-        valueCell(temp850, "t850"),
-        valueCell(raw("t500"), "t500"),
-        valueCell(raw("clouds"), "clouds", 0),
-        valueCell(raw("snowln"), "snowln", 0)
+        valueCell(temp850, "t850")
       ];
       rows.push('<tr><td>' + item.step + '</td><td>' + dateLabel(point, document.run_id_utc, item.step) + '</td>' + values.map(value => '<td>' + value + '</td>').join("") + '</tr>');
     }
     if (!rows.length) {
-      body.innerHTML = '<tr><td colspan="12" class="meteopt-table-empty">Bu GFS çıktısında tablo satırı bulunamadı.</td></tr>';
+      body.innerHTML = '<tr><td colspan="7" class="meteopt-table-empty">Bu GFS çıktısında tablo satırı bulunamadı.</td></tr>';
       $("meteopt-table-status").textContent = "Tahmin adımı bulunamadı";
       return;
     }
@@ -138,10 +73,7 @@
     $("meteopt-table-updated").textContent = document.published_at_utc
       ? "Yayın: " + new Intl.DateTimeFormat("tr-TR", { timeZone: "Europe/Istanbul", day: "2-digit", month: "2-digit", hour: "2-digit", minute: "2-digit" }).format(new Date(document.published_at_utc)) + " TSİ"
       : "Yayın zamanı bilinmiyor";
-    const missing = Object.entries(rawFields).filter(([, entry]) => !entry).map(([field]) => field.toUpperCase());
-    $("meteopt-table-status").textContent = missing.length
-      ? rows.length + " adım · bazı ham alanlar bekleniyor: " + missing.join(", ")
-      : rows.length + " adım · 12 sütun hazır";
+    $("meteopt-table-status").textContent = rows.length + " / 13 adım · 39. saate kadar";
   }
   async function refresh() {
     const status = $("meteopt-table-status");
