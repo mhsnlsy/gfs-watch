@@ -1177,6 +1177,8 @@
     fetch("./version.json",{cache:"no-store"}).then(response=>response.ok?response.json():null).then(applyAppVersion).catch(()=>{});
     const STATION_URL="./data/station-observation.json";
     const STATION_HISTORY_URL="./data/station-temperature-history.json";
+    const STATION_CAMERA_BACKUP_URL="./data/station-camera-backup.json";
+    const STATION_CAMERA_BACKUP_HISTORY_URL="./data/station-camera-backup-history.json";
     const EYUPSULTAN_STATION_URL="./data/eyupsultan-station-observation.json";
     const EYUPSULTAN_STATION_HISTORY_URL="./data/eyupsultan-station-temperature-history.json";
     const VERIFY_URL="./data/forecast-verification.json";
@@ -2430,14 +2432,24 @@
       const cacheKey=Date.now();
       const requests=[
         fetch(STATION_URL+"?t="+cacheKey,{cache:"no-store"}).catch(()=>null),
-        fetch(EYUPSULTAN_STATION_URL+"?t="+cacheKey,{cache:"no-store"}).catch(()=>null)
+        fetch(EYUPSULTAN_STATION_URL+"?t="+cacheKey,{cache:"no-store"}).catch(()=>null),
+        fetch(STATION_CAMERA_BACKUP_URL+"?t="+cacheKey,{cache:"no-store"}).catch(()=>null)
       ];
-      const [enkaResponse,eyupsultanResponse]=await Promise.all(requests);
+      const [enkaResponse,eyupsultanResponse,cameraBackupResponse]=await Promise.all(requests);
       if(enkaResponse&&enkaResponse.ok){
         try{
           const document=await enkaResponse.json();
           if(document?.schema==="gfs-watch.station-observation.v1"&&document.station_observation?.station_id==="ENKA-BALMUMCU-VANTAGE-PRO"){
             enkaStationObservation=document.station_observation;
+          }
+        }catch(_){}
+      }
+      if(cameraBackupResponse&&cameraBackupResponse.ok){
+        try{
+          const document=await cameraBackupResponse.json();
+          const candidate=document?.station_observation;
+          if(document?.schema==="gfs-watch.station-observation.v1"&&candidate?.station_id==="ENKA-BALMUMCU-CAMERA-OCR"&&!stationObservationIsFresh(enkaStationObservation)&&stationObservationIsFresh(candidate)){
+            enkaStationObservation=candidate;
           }
         }catch(_){}
       }
@@ -2474,11 +2486,13 @@
       const cacheKey=Date.now();
       const observationUrl=stationKey==="eyupsultan"?EYUPSULTAN_STATION_URL:STATION_URL;
       const historyUrl=stationKey==="eyupsultan"?EYUPSULTAN_STATION_HISTORY_URL:STATION_HISTORY_URL;
-      const [observationResponse,historyResponse,eyupObservationResponse,eyupHistoryResponse]=await Promise.all([
+      const [observationResponse,historyResponse,eyupObservationResponse,eyupHistoryResponse,cameraBackupResponse,cameraBackupHistoryResponse]=await Promise.all([
         fetch(observationUrl+"?t="+cacheKey,{cache:"no-store"}).catch(()=>null),
         fetch(historyUrl+"?t="+cacheKey,{cache:"no-store"}).catch(()=>null),
         stationKey==="enka"?fetch(EYUPSULTAN_STATION_URL+"?t="+cacheKey,{cache:"no-store"}).catch(()=>null):Promise.resolve(null),
-        stationKey==="enka"?fetch(EYUPSULTAN_STATION_HISTORY_URL+"?t="+cacheKey,{cache:"no-store"}).catch(()=>null):Promise.resolve(null)
+        stationKey==="enka"?fetch(EYUPSULTAN_STATION_HISTORY_URL+"?t="+cacheKey,{cache:"no-store"}).catch(()=>null):Promise.resolve(null),
+        stationKey==="enka"?fetch(STATION_CAMERA_BACKUP_URL+"?t="+cacheKey,{cache:"no-store"}).catch(()=>null):Promise.resolve(null),
+        stationKey==="enka"?fetch(STATION_CAMERA_BACKUP_HISTORY_URL+"?t="+cacheKey,{cache:"no-store"}).catch(()=>null):Promise.resolve(null)
       ]);
       if(observationResponse&&observationResponse.ok){
         try{
@@ -2487,6 +2501,15 @@
           if(document&&document.schema==="gfs-watch.station-observation.v1"&&candidate){
             if(stationKey==="eyupsultan"&&String(candidate.station_id)==="18101")eyupsultanStationObservation=candidate;
             if(stationKey==="enka"&&candidate.station_id==="ENKA-BALMUMCU-VANTAGE-PRO")enkaStationObservation=candidate;
+          }
+        }catch(_){}
+      }
+      if(stationKey==="enka"&&cameraBackupResponse&&cameraBackupResponse.ok){
+        try{
+          const document=await cameraBackupResponse.json();
+          const candidate=document?.station_observation;
+          if(document?.schema==="gfs-watch.station-observation.v1"&&candidate?.station_id==="ENKA-BALMUMCU-CAMERA-OCR"&&!stationObservationIsFresh(enkaStationObservation)&&stationObservationIsFresh(candidate)){
+            enkaStationObservation=candidate;
           }
         }catch(_){}
       }
@@ -2506,6 +2529,14 @@
           if(document&&document.schema==="gfs-watch.station-observation.v1"&&candidate&&String(candidate.station_id)==="18101")eyupsultanStationObservation=candidate;
         }catch(_){}
       }
+      if(stationKey==="enka"&&cameraBackupHistoryResponse&&cameraBackupHistoryResponse.ok&&!stationObservationIsFresh(
+        enkaStationObservation&&enkaStationObservation.station_id==="ENKA-BALMUMCU-CAMERA-OCR"?enkaStationObservation:null
+      )){
+        try{
+          const document=await cameraBackupHistoryResponse.json();
+          if(document?.schema==="gfs-watch.station-temperature-history.v1"&&document.station_id==="ENKA-BALMUMCU-CAMERA-OCR"&&Array.isArray(document.samples))enkaStationHistorySamples=document.samples;
+        }catch(_){}
+      }
       if(eyupHistoryResponse&&eyupHistoryResponse.ok){
         try{
           const document=await eyupHistoryResponse.json();
@@ -2521,12 +2552,14 @@
     async function loadForecast(){
       try{
         const cacheKey=Date.now();
-        const [response,stationResponse,historyResponse,eyupsultanResponse,eyupsultanHistoryResponse]=await Promise.all([
+        const [response,stationResponse,historyResponse,eyupsultanResponse,eyupsultanHistoryResponse,cameraBackupResponse,cameraBackupHistoryResponse]=await Promise.all([
           fetch(DATA_URL+"?t="+cacheKey,{cache:"no-store"}),
           fetch(STATION_URL+"?t="+cacheKey,{cache:"no-store"}).catch(()=>null),
           fetch(STATION_HISTORY_URL+"?t="+cacheKey,{cache:"no-store"}).catch(()=>null),
           fetch(EYUPSULTAN_STATION_URL+"?t="+cacheKey,{cache:"no-store"}).catch(()=>null),
-          fetch(EYUPSULTAN_STATION_HISTORY_URL+"?t="+cacheKey,{cache:"no-store"}).catch(()=>null)
+          fetch(EYUPSULTAN_STATION_HISTORY_URL+"?t="+cacheKey,{cache:"no-store"}).catch(()=>null),
+          fetch(STATION_CAMERA_BACKUP_URL+"?t="+cacheKey,{cache:"no-store"}).catch(()=>null),
+          fetch(STATION_CAMERA_BACKUP_HISTORY_URL+"?t="+cacheKey,{cache:"no-store"}).catch(()=>null)
         ]);
         if(!response.ok)throw new Error("Tahmin verisi şu anda alınamıyor.");
         const data=await response.json();
@@ -2538,6 +2571,15 @@
           if(stationDocument&&stationDocument.schema==="gfs-watch.station-observation.v1"){
             enkaStationObservation=stationDocument.station_observation||null;
           }
+        }
+        if(cameraBackupResponse&&cameraBackupResponse.ok){
+          try{
+            const backupDocument=await cameraBackupResponse.json();
+            const candidate=backupDocument?.station_observation;
+            if(backupDocument?.schema==="gfs-watch.station-observation.v1"&&candidate?.station_id==="ENKA-BALMUMCU-CAMERA-OCR"&&!stationObservationIsFresh(enkaStationObservation)&&stationObservationIsFresh(candidate)){
+              enkaStationObservation=candidate;
+            }
+          }catch(_){}
         }
         if(eyupsultanResponse&&eyupsultanResponse.ok){
           try{
@@ -2575,6 +2617,12 @@
               enkaStationHistorySamples=historyDocument.samples;
             }
           }catch(_){enkaStationHistorySamples=[];}
+        }
+        if(cameraBackupHistoryResponse&&cameraBackupHistoryResponse.ok&&enkaStationObservation?.station_id==="ENKA-BALMUMCU-CAMERA-OCR"){
+          try{
+            const historyDocument=await cameraBackupHistoryResponse.json();
+            if(historyDocument?.schema==="gfs-watch.station-temperature-history.v1"&&historyDocument.station_id==="ENKA-BALMUMCU-CAMERA-OCR"&&Array.isArray(historyDocument.samples))enkaStationHistorySamples=historyDocument.samples;
+          }catch(_){}
         }
         if(eyupsultanHistoryResponse&&eyupsultanHistoryResponse.ok){
           try{
