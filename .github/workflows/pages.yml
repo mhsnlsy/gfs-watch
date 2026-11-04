@@ -107,7 +107,10 @@ jobs:
           python - <<'PY'
           import json, urllib.request, datetime, pathlib
 
-          API_URL = "https://www.dolulukorani.com/api/v1/provinces/istanbul"
+          API_URLS = [
+              "https://www.dolulukorani.com/api/v1/provinces/istanbul",
+              "https://www.dolulukorani.com/api/v1/provinces",
+          ]
           SOURCE_URL = "https://www.dolulukorani.com/il/istanbul"
           PREVIOUS_URL = "https://mhsnlsy.github.io/gfs-watch/data/iski-dams.json"
           now = datetime.datetime.now(datetime.timezone.utc)
@@ -137,38 +140,57 @@ jobs:
               return None
 
           try:
-              request = urllib.request.Request(
-                  API_URL,
-                  headers={
-                      "User-Agent": "IstanbulHava/4.0 (+https://mhsnlsy.github.io/gfs-watch/)",
-                      "Accept": "application/json",
-                  },
-              )
-              with urllib.request.urlopen(request, timeout=30) as response:
-                  raw = json.load(response)
+              raw = None
+              errors = []
+              for api_url in API_URLS:
+                  try:
+                      request = urllib.request.Request(
+                          api_url,
+                          headers={
+                              "User-Agent": "IstanbulHava/4.1 (+https://mhsnlsy.github.io/gfs-watch/)",
+                              "Accept": "application/json",
+                              "Cache-Control": "no-cache",
+                          },
+                      )
+                      with urllib.request.urlopen(request, timeout=25) as response:
+                          candidate_raw = json.load(response)
+                      if not isinstance(candidate_raw, dict):
+                          raise ValueError("API yanıtı JSON nesnesi değil")
+                      raw = candidate_raw
+                      break
+                  except Exception as api_error:
+                      errors.append(api_url + ": " + str(api_error))
+              if raw is None:
+                  raise RuntimeError("API uç noktalarının hiçbiri yanıt vermedi: " + " | ".join(errors))
 
-              if not isinstance(raw, dict):
-                  raise ValueError("API yanıtı JSON nesnesi değil")
               payload = raw.get("data", raw)
               candidates = list(walk(payload))
+              def numeric(value):
+                  if isinstance(value, bool) or value is None:
+                      return None
+                  try:
+                      number = float(str(value).replace(",", "."))
+                      return number if 0 <= number <= 100 else None
+                  except (TypeError, ValueError):
+                      return None
+
               province = next(
                   (item for item in candidates
                    if str(item.get("slug", "")).casefold() == "istanbul"
-                   and isinstance(item.get("fill_rate"), (int, float))),
+                   and numeric(item.get("fill_rate")) is not None),
                   None,
               )
-              if province is None:
+              if province is None and "/provinces/istanbul" in api_url:
                   province = next(
                       (item for item in candidates
-                       if isinstance(item.get("fill_rate"), (int, float))
-                       and ("measured_at" in item or "freshness" in item)),
+                       if numeric(item.get("fill_rate")) is not None),
                       None,
                   )
               if province is None:
                   raise ValueError("İstanbul doluluk kaydı API yanıtında bulunamadı")
 
-              rate = province.get("fill_rate")
-              if isinstance(rate, bool) or not isinstance(rate, (int, float)) or not 0 <= rate <= 100:
+              rate = numeric(province.get("fill_rate"))
+              if rate is None:
                   raise ValueError("fill_rate geçersiz")
 
               measured = province.get("measured_at")
