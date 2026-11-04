@@ -27,7 +27,7 @@ public final class WeatherData {
     private WeatherData() {}
 
     public static void refresh(Context context) throws Exception {
-        JSONObject latest = fetchAndCache("data/latest.json");
+        JSONObject latest = fetchAndCache(context, "data/latest.json");
         if (!"gfs-watch.forecast.v1".equals(latest.optString("schema"))) {
             throw new IllegalStateException("Unexpected GFS forecast schema");
         }
@@ -82,24 +82,11 @@ public final class WeatherData {
         WidgetRenderer.renderAll(context);
     }
 
-    private static JSONObject fetchAndCache(String key) throws Exception {
+    private static JSONObject fetchAndCache(Context context, String key) throws Exception {
         String body = download(key);
         JSONObject document = new JSONObject(body);
-        CacheFiles.save(AppContextHolder.context(), key, body);
+        CacheFiles.save(context, key, body);
         return document;
-    }
-
-    /*
-     * This method is initialized by refresh(Context) and avoids keeping a static
-     * Activity reference. The worker context is application-scoped.
-     */
-    private static final class AppContextHolder {
-        private static Context app;
-        static void set(Context context) { app = context.getApplicationContext(); }
-        static Context context() {
-            if (app == null) throw new IllegalStateException("Application context not initialized");
-            return app;
-        }
     }
 
     private static JSONObject fetchOptional(Context context, String key) {
