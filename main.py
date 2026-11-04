@@ -598,6 +598,8 @@ def export_public_forecast_json(
             "findings": payload.get("synoptic_alerts", []),
         },
         "forecast_6_hourly": forecast,
+        # Dedicated raw MeteoPT arrays consumed only by the bottom model table.
+        "meteopt_table": payload.get("meteopt_table_raw") or {},
     }
 
     run_filename = run_dt.strftime("%Y%m%dT%HZ") + ".json"
@@ -2002,6 +2004,19 @@ def fetch_meteopt_weather_data(run_id):
         },
         "daily": daily,
         "timeline_180h": forecast_timeline,
+        # Keep MeteoPT's native point series for the isolated raw-model table.
+        # Existing forecast consumers continue using the unchanged timeline fields.
+        "meteopt_table_raw": {
+            "steps": steps,
+            "series": {
+                str(name): [
+                    _meteopt_number(value)
+                    for value in ((entry or {}).get("values") or [])
+                ]
+                for name, entry in data.items()
+                if isinstance(entry, dict) and isinstance(entry.get("values"), list)
+            },
+        },
         "forecast_horizon_hours": MIN_FORECAST_HOURS,
         "synoptic_alerts": [],
         "initial_source": "MeteoPT GFS noktası +3 saatten başlar; ayrı analiz saati yok",
