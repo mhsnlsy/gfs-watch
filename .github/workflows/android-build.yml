@@ -55,6 +55,26 @@ jobs:
       - name: Synchronize Capacitor project
         run: npx cap sync android
 
+      - name: Restore stable debug signing key
+        uses: actions/cache@v4
+        with:
+          path: ~/.android/debug.keystore
+          key: istanbul-hava-debug-keystore-v1-ubuntu-latest
+
+      - name: Create stable debug signing key when needed
+        shell: bash
+        run: |
+          mkdir -p "$HOME/.android"
+          if [ ! -s "$HOME/.android/debug.keystore" ]; then
+            keytool -genkeypair -v \
+              -keystore "$HOME/.android/debug.keystore" \
+              -storepass android \
+              -alias androiddebugkey \
+              -keypass android \
+              -dname "CN=Android Debug,O=Android,C=US" \
+              -keyalg RSA -keysize 2048 -validity 10000
+          fi
+
       - name: Validate and build APK
         run: |
           cd android
