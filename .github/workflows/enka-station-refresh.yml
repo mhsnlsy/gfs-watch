@@ -52,6 +52,7 @@ jobs:
           python -u scripts/update_station_observation.py public/station-observation.json
 
       - name: Read ENKA camera overlay as independent backup
+        continue-on-error: true
         run: |
           mkdir -p public
           if [ "${{ steps.primary.outcome }}" = "success" ]; then
@@ -89,11 +90,15 @@ jobs:
         if: success()
         run: |
           cp public/station-observation.json forecast-data/public/station-observation.json
-          cp public/station-camera-backup.json forecast-data/public/station-camera-backup.json
+          if [ -s public/station-camera-backup.json ]; then
+            cp public/station-camera-backup.json forecast-data/public/station-camera-backup.json
+          fi
           cd forecast-data
           git config user.name "github-actions[bot]"
           git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
-          git add public/station-observation.json public/station-temperature-history.json public/station-camera-backup.json public/station-camera-backup-history.json
+          git add public/station-observation.json public/station-temperature-history.json
+          if [ -s public/station-camera-backup.json ]; then git add public/station-camera-backup.json; fi
+          if [ -s public/station-camera-backup-history.json ]; then git add public/station-camera-backup-history.json; fi
           if git diff --cached --quiet; then
             echo "No station data changes to publish."
             exit 0
