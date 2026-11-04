@@ -1744,11 +1744,10 @@
       const direction=hasStation?(station.wind_direction_tr||windDirectionTr[station.wind_direction_cardinal]||station.wind_direction_cardinal):null;
       $("wind-direction").textContent=direction?direction:"Yön —";
       const rainSource=typeof eyupsultanStationObservation!=="undefined"?eyupsultanStationObservation:null;
-      const rain12h=rainSource&&typeof rainSource.precipitation_12h_mm==="number"?rainSource.precipitation_12h_mm:null;
       const rain1h=rainSource&&typeof rainSource.precipitation_1h_mm==="number"?rainSource.precipitation_1h_mm:null;
-      $("rain").innerHTML=numeric(rain12h)?fmt(rain12h,1)+'<span class="unit">mm</span>':'—<span class="unit">mm</span>';
+      $("rain").innerHTML=numeric(rain1h)?fmt(rain1h,1)+'<span class="unit">mm</span>':'—<span class="unit">mm</span>';
       const rainDetail=$("rain-detail");
-      if(rainDetail)rainDetail.textContent="Son 12 saat";
+      if(rainDetail)rainDetail.textContent="Son 1 saat";
       $("humidity").innerHTML=hasStation&&numeric(station.humidity_percent)?fmt(station.humidity_percent,0)+'<span class="unit">%</span>':'—<span class="unit">%</span>';
       const feels = hasStation ? calculateFeelsLike(station.temperature_2m_c, station.humidity_percent, station.wind_speed_10m_kmh) : null;
       const feelsEl = $("feels-like");
