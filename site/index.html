@@ -1327,11 +1327,14 @@
       const clock=new Intl.DateTimeFormat("tr-TR",{timeZone:"Europe/Istanbul",hour:"2-digit",minute:"2-digit",hourCycle:"h23"}).format(date);
       return dayMonth+" "+clock;
     };
-    const forecastDateTimeUTC=value=>{
+    // GFS forecast display convention: the forecast UTC clock is shown as TSİ
+    // without applying the Istanbul +03 offset a second time. Thus a 12Z run's
+    // Step 3 (15Z) is displayed as 15 TSİ, not 18 TSİ.
+    const forecastDateTimeTSI=value=>{
       const date=new Date(value);
       const dayMonth=new Intl.DateTimeFormat("tr-TR",{timeZone:"UTC",day:"numeric",month:"long"}).format(date);
       const clock=new Intl.DateTimeFormat("tr-TR",{timeZone:"UTC",hour:"2-digit",minute:"2-digit",hourCycle:"h23"}).format(date);
-      return dayMonth+" "+clock;
+      return dayMonth+" "+clock+" TSİ";
     };
     function attachForecastChartTooltip(container,svg,coords,temperature,width,height,top,bottom){
       const ns="http://www.w3.org/2000/svg";
@@ -1489,7 +1492,7 @@
           .filter(point=>point.lead%3===0&&numeric(point[field]))
           .map(point=>({
             value:point[field],
-            date:point.valid_time_istanbul,
+            date:point.valid_time_utc,
             forecastHour:point.lead
           }));
       }else if(isEcmwf){
@@ -1497,7 +1500,7 @@
           const startPoint=byLead[index];
           return {
             value:endpoint.precipitation_6h_mm,
-            date:endpoint.valid_time_istanbul,
+            date:endpoint.valid_time_utc,
             forecastHour:endpoint.lead,
             intervalStart:startPoint.valid_time_istanbul,
             intervalHours:Number(endpoint.precipitation_interval_hours)||endpoint.lead-startPoint.lead
