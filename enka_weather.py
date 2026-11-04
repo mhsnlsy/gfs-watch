@@ -1,6 +1,7 @@
 """Fetch and publish the live ENKA Balmumcu Vantage PRO observation."""
 
 import json
+import io
 import math
 import os
 import re
@@ -11,10 +12,12 @@ from pathlib import Path
 from zoneinfo import ZoneInfo
 
 import requests
+import pytesseract
+from PIL import Image, ImageEnhance, ImageFilter
 
 TR_TZ = ZoneInfo("Europe/Istanbul")
-CURRENT_URL = "https://w.enka.com/weather/currentvalues.html"
-HOME_URL = "https://w.enka.com/weather/index.html"
+CURRENT_URL = "https://w.enka.com/camhd/cam1/c.jpg"
+HOME_URL = "https://w.enka.com/camhd/cam1/index.html"
 POLL_STALE_MINUTES = 15
 
 WIND_DIRECTIONS_TR = {
@@ -38,35 +41,11 @@ WIND_DIRECTIONS_TR = {
 WIND_PATTERN = r"NNE|ENE|ESE|SSE|SSW|WSW|WNW|NNW|N|NE|E|SE|S|SW|W|NW"
 
 
-def _clean_html(fragment):
-    fragment = re.sub(r"<script\b[^>]*>.*?</script>", " ", fragment, flags=re.I | re.S)
-    fragment = re.sub(r"<style\b[^>]*>.*?</style>", " ", fragment, flags=re.I | re.S)
-    fragment = re.sub(r"<[^>]+>", " ", fragment)
-    return re.sub(r"\s+", " ", unescape(fragment)).strip()
-
-
-def _number(value):
-    match = re.search(r"[-+]?\d+(?:[.,]\d+)?", value or "")
-    if not match:
-        return None
-    try:
-        result = float(match.group(0).replace(",", "."))
-    except ValueError:
-        return None
-    return result if math.isfinite(result) else None
-
-
-def _text_number(page_text, pattern):
-    match = re.search(pattern, page_text, flags=re.I)
-    return _number(match.group(1)) if match else None
-
-
-def _fetch_page():
-    """Fetch a cache-busted ENKA page, retrying transient network errors."""
+def _fetch_camera():
+    """Fetch the latest ENKA camera frame without relying on browser cache."""
     headers = {
-        "User-Agent": "Mozilla/5.0 (compatible; GFS-Watch/1.1)",
-        "Accept": "text/html,application/xhtml+xml",
-        "Accept-Language": "tr-TR,tr;q=0.9,en;q=0.8",
+        "User-Agent": "Mozilla/5.0 (compatible; GFS-Watch/4.1)",
+        "Accept": "image/avif,image/webp,image/apng,image/*,*/*;q=0.8",
         "Cache-Control": "no-cache, no-store, max-age=0",
         "Pragma": "no-cache",
         "Referer": HOME_URL,
@@ -78,127 +57,95 @@ def _fetch_page():
                 CURRENT_URL,
                 params={"_gfs_watch": int(time.time() * 1000)},
                 headers=headers,
-                timeout=20,
+                timeout=25,
             )
             response.raise_for_status()
-            response.encoding = response.apparent_encoding or "utf-8"
-            page = response.text
-            if len(page) < 300:
-                raise ValueError(f"ENKA yanıtı beklenenden kısa ({len(page)} karakter).")
-            return page
-        except (requests.RequestException, ValueError) as error:
+            if not response.headers.get("Content-Type", "").lower().startswith("image/"):
+                raise ValueError("ENKA kamera adresi görsel yerine farklı içerik döndürdü.")
+            image = Image.open(io.BytesIO(response.content)).convert("RGB")
+            if image.width < 300 or image.height < 200:
+                raise ValueError(f"ENKA kamera görseli beklenenden küçük: {image.size}")
+            return image
+        except Exception as error:
             last_error = error
-            print(f"[ENKA FETCH] Deneme {attempt + 1}/3 başarısız: {error}")
+            print(f"[ENKA CAMERA] Deneme {attempt + 1}/3 başarısız: {error}")
             if attempt < 2:
                 time.sleep(2 * (attempt + 1))
-    raise RuntimeError(f"ENKA sayfası üç denemede alınamadı: {last_error}")
+    raise RuntimeError(f"ENKA kamera karesi üç denemede alınamadı: {last_error}")
+
+
+def _ocr_region(image, box, psm=6):
+    crop = image.crop(box).resize(
+        ((box[2] - box[0]) * 3, (box[3] - box[1]) * 3)
+    ).convert("L")
+    crop = ImageEnhance.Contrast(crop).enhance(2.2)
+    crop = ImageEnhance.Sharpness(crop).enhance(2.0)
+    crop = crop.filter(ImageFilter.MedianFilter(size=3))
+    return pytesseract.image_to_string(
+        crop,
+        config=f"--oem 3 --psm {psm}",
+        lang="eng",
+    )
+
+
+def _parse_decimal(pattern, text, field):
+    match = re.search(pattern, text, flags=re.I)
+    if not match:
+        raise ValueError(f"OCR {field} alanını okuyamadı. Okunan metin: {text!r}")
+    value = float(match.group(1).replace(",", "."))
+    if not math.isfinite(value):
+        raise ValueError(f"OCR {field} değeri geçersiz.")
+    return value
 
 
 def fetch_enka_station_observation():
-    page = _fetch_page()
-    page_text = _clean_html(page)
+    image = _fetch_camera()
+    width, height = image.size
 
-    timestamp_match = re.search(
-        r"As\s+of\s*:?\s*(\d{1,2}/\d{1,2}/\d{2,4})\s+(\d{1,2}:\d{2})",
-        page_text,
+    # ENKA overlays the weather values at the lower-right and timestamp
+    # at the bottom-centre. Read these areas separately to reduce OCR noise.
+    right = _ocr_region(image, (int(width * 0.82), int(height * 0.78), width, height - 2), 6)
+    bottom = _ocr_region(image, (int(width * 0.30), int(height * 0.91), int(width * 0.72), height), 7)
+    print("[ENKA OCR] Weather overlay:", repr(right))
+    print("[ENKA OCR] Timestamp overlay:", repr(bottom))
+
+    temperature = _parse_decimal(r"([-+]?\d{1,2}[.,]\d)\s*°?\s*C", right, "sıcaklık")
+    humidity = _parse_decimal(r"(\d{1,3})\s*%", right, "nem")
+    pressure = _parse_decimal(r"(\d{3,4}[.,]\d)\s*hPa", right, "basınç")
+    wind_match = re.search(
+        r"(\d{1,2}[.,]\d)\s*(?:kt|kts)\s*([NSEW]{1,3})\b",
+        right,
         flags=re.I,
     )
-    if not timestamp_match:
-        raise ValueError("ENKA sayfasında ölçüm zaman damgası bulunamadı.")
+    if not wind_match:
+        raise ValueError(f"OCR rüzgâr hız/yön alanını okuyamadı: {right!r}")
+    wind_knots = float(wind_match.group(1).replace(",", "."))
+    wind_direction = wind_match.group(2).upper()
+    daily_rain = _parse_decimal(r"(\d{1,3}[.,]\d)\s*mm", right, "yağış")
 
-    timestamp_text = f"{timestamp_match.group(1)} {timestamp_match.group(2)}"
-    # ENKA's "As of" date/time is Istanbul local time. The parenthetical
-    # "(UTC 23:00)" is the corresponding UTC clock reading, NOT a UTC offset.
-    observed_local = None
-    for date_format in ("%d/%m/%y %H:%M", "%d/%m/%Y %H:%M", "%m/%d/%y %H:%M"):
-        try:
-            observed_local = datetime.strptime(timestamp_text, date_format).replace(tzinfo=TR_TZ)
-            break
-        except ValueError:
-            continue
-    if observed_local is None:
-        raise ValueError(f"ENKA zaman damgası çözümlenemedi: {timestamp_text}")
+    timestamp_match = re.search(
+        r"(\d{1,2})[-/](\d{1,2})[-/](\d{4})\s+(\d{1,2}):(\d{2}):(\d{2})",
+        bottom,
+    )
+    if not timestamp_match:
+        # Tesseract may place the date in the right-side crop on some frames.
+        timestamp_match = re.search(
+            r"(\d{1,2})[-/](\d{1,2})[-/](\d{4})\s+(\d{1,2}):(\d{2}):(\d{2})",
+            _ocr_region(image, (0, int(height * 0.91), width, height), 7),
+        )
+    if not timestamp_match:
+        raise ValueError(f"OCR kamera zaman damgasını okuyamadı: {bottom!r}")
+
+    day, month, year, hour, minute, second = map(int, timestamp_match.groups())
+    observed_local = datetime(year, month, day, hour, minute, second, tzinfo=TR_TZ)
     observed_utc = observed_local.astimezone(timezone.utc)
 
-    # First parse the traditional HTML table. ENKA has used more than one
-    # table layout, so text-pattern fallbacks below cover the rendered layout.
-    rows = []
-    for row_html in re.findall(r"<tr\b[^>]*>(.*?)</tr>", page, flags=re.I | re.S):
-        cells = re.findall(r"<t[dh]\b[^>]*>(.*?)</t[dh]>", row_html, flags=re.I | re.S)
-        cleaned = [_clean_html(cell) for cell in cells]
-        if len(cleaned) >= 2:
-            rows.append(cleaned)
-
-    temperature = humidity = wind_knots = wind_direction = daily_rain = pressure = None
-    for cells in rows:
-        label = cells[0].strip().lower().rstrip(".")
-        value = cells[1]
-        if "day temperature" in label or label == "temperature":
-            temperature = _number(value)
-        elif label == "humidity":
-            humidity = _number(value)
-        elif "wind - 10 min avg" in label or "wind – 10 min avg" in label:
-            wind_knots = _number(value)
-        elif label == "wind":
-            direction = re.match(rf"\s*({WIND_PATTERN})\b", value, flags=re.I)
-            if direction:
-                wind_direction = direction.group(1).upper()
-            if wind_knots is None:
-                wind_knots = _number(value)
-        elif label == "daily rain":
-            daily_rain = _number(value)
-        elif label.startswith("barometer (hpa)"):
-            pressure = _number(value)
-
-    # Fallbacks parse the actual visible ENKA labels even if the page stops
-    # using table rows/cells or changes the number of columns.
-    if temperature is None:
-        temperature = _text_number(
-            page_text,
-            r"\bDay\s+Temperature\s*:?\s*([-+]?\d+(?:[.,]\d+)?)\s*°?\s*C\b",
-        )
-    if humidity is None:
-        humidity = _text_number(
-            page_text,
-            r"\bHumidity\s*:?\s*([-+]?\d+(?:[.,]\d+)?)\s*%",
-        )
-    if wind_knots is None:
-        wind_knots = _text_number(
-            page_text,
-            r"\bWind\s*[-–—]\s*10\s*Min(?:ute)?s?\s*Avg\.?\s*:?\s*([-+]?\d+(?:[.,]\d+)?)\s*kt\b",
-        )
-    if wind_direction is None:
-        direction_match = re.search(
-            rf"\bWind\s+({WIND_PATTERN})\s+[-+]?\d+(?:[.,]\d+)?\s*kt\b",
-            page_text,
-            flags=re.I,
-        )
-        if direction_match:
-            wind_direction = direction_match.group(1).upper()
-    if daily_rain is None:
-        daily_rain = _text_number(
-            page_text,
-            r"\bDaily\s+Rain\s*:?\s*([-+]?\d+(?:[.,]\d+)?)\s*mm\b",
-        )
-    if pressure is None:
-        pressure = _text_number(
-            page_text,
-            r"\bBarometer\s*\(hPa\)\s*:?\s*([-+]?\d+(?:[.,]\d+)?)",
-        )
-
-    missing = [
-        name for name, value in (
-            ("temperature", temperature),
-            ("10-min wind", wind_knots),
-            ("daily rain", daily_rain),
-        ) if value is None
-    ]
-    if missing:
-        raise ValueError(
-            "ENKA ölçüm alanları okunamadı: "
-            + ", ".join(missing)
-            + f". Sayfa uzunluğu={len(page)} karakter."
-        )
+    if not 0 <= humidity <= 100:
+        raise ValueError(f"OCR nem değeri aralık dışında: {humidity}")
+    if not 800 <= pressure <= 1100:
+        raise ValueError(f"OCR basınç değeri aralık dışında: {pressure}")
+    if not 0 <= wind_knots <= 150 or not 0 <= daily_rain <= 500:
+        raise ValueError("OCR rüzgâr/yağış değeri aralık dışında.")
 
     age_minutes = max(
         0.0,
@@ -206,10 +153,10 @@ def fetch_enka_station_observation():
     )
     return {
         "station_name": "ENKA Balmumcu",
-        "station_id": "ENKA-BALMUMCU-VANTAGE-PRO",
-        "source": "ENKA Balmumcu Vantage PRO weather station",
-        "source_url": CURRENT_URL,
-        "station_home_url": HOME_URL,
+        "station_id": "ENKA-BALMUMCU-CAMERA-OCR",
+        "source": "ENKA Balmumcu live camera image OCR",
+        "source_url": HOME_URL,
+        "image_url": CURRENT_URL,
         "latitude": 41.1,
         "longitude": 28.9,
         "elevation_m": 107,
@@ -225,6 +172,8 @@ def fetch_enka_station_observation():
         "precipitation_daily_mm": daily_rain,
         "humidity_percent": humidity,
         "station_pressure_hpa": pressure,
+        "observation_method": "tesseract-ocr",
+        "ocr_regions": {"weather_overlay": right.strip(), "timestamp_overlay": bottom.strip()},
     }
 
 
