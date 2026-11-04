@@ -45,7 +45,7 @@ public final class WeatherData {
 
         JSONObject eyupsultanDoc = fetchOptional(context, "data/eyupsultan-station-observation.json");
         JSONObject enkaDoc = fetchOptional(context, "data/station-observation.json");
-        JSONObject enkaCameraDoc = fetchOptional(context, "data/station-camera-backup-observation.json");
+        JSONObject enkaCameraDoc = fetchOptional(context, "data/station-camera-backup.json");
         JSONObject station = freshStation(eyupsultanDoc, true);
         if (station == null) station = freshStation(enkaDoc, false);
         if (station == null) station = freshStation(enkaCameraDoc, false);
