@@ -47,7 +47,7 @@
         android:id="@+id/widget_updated"
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
-        android:layout_marginTop="auto"
+        android:layout_marginTop="6dp"
         android:text="Son veri bekleniyor"
         android:textColor="#8FAAB8"
         android:textSize="9sp" />
