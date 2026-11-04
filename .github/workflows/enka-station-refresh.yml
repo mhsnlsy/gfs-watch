@@ -101,13 +101,29 @@ jobs:
           exit 1
 
       # A push made with GITHUB_TOKEN does not start another workflow.
-      - name: Deploy refreshed station data to GitHub Pages
+      - name: Deploy refreshed station data to GitHub Pages (throttled)
         if: steps.publish.outputs.changed == 'true'
         env:
           GH_TOKEN: ${{ github.token }}
         run: |
+          set -euo pipefail
+          active=$(gh run list --workflow=pages.yml --limit 20 --json status --jq '[.[] | select(.status=="queued" or .status=="in_progress" or .status=="pending" or .status=="waiting" or .status=="requested")] | length')
+          if [ "$active" -gt 0 ]; then
+            echo "Pages deployment already active ($active); skipping this station-triggered deployment."
+            exit 0
+          fi
+          latest=$(gh run list --workflow=pages.yml --limit 1 --json createdAt --jq '.[0].createdAt // empty')
+          if [ -n "$latest" ]; then
+            latest_epoch=$(date -u -d "$latest" +%s)
+            now_epoch=$(date -u +%s)
+            age=$((now_epoch - latest_epoch))
+            if [ "$age" -lt 900 ]; then
+              echo "A Pages deployment was started $age seconds ago; enforcing 15-minute station publish interval."
+              exit 0
+            fi
+          fi
           gh workflow run pages.yml --ref main --repo "$GITHUB_REPOSITORY"
-          echo "GitHub Pages deployment requested."
+          echo "Throttled GitHub Pages deployment requested."
 
       # Eyüpsultan must not depend on GitHub cron. That schedule does not fire
       # on this repository. Restart its self-queue if the chain has died.
