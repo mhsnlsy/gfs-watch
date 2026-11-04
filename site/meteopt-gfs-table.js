@@ -32,6 +32,10 @@
   function dateLabel(point, runId, step) {
     let date = point && point.valid_time_utc ? new Date(point.valid_time_utc) : new Date(new Date(runId).getTime() + step * 3600000);
     if (!Number.isFinite(date.getTime())) return "—";
+    // MeteoPT panel convention: the forecast step is displayed on the Istanbul
+    // clock with the feed's 3-hour UTC/TSI alignment corrected here. This keeps
+    // Step 3 of the 12Z run at 15 TSİ (not 18 TSİ), while preserving the data values.
+    date = new Date(date.getTime() - 3 * 3600000);
     const datePart = new Intl.DateTimeFormat("en-GB", { timeZone: "Europe/Istanbul", weekday: "short", day: "numeric", month: "short" }).format(date);
     const hour = new Intl.DateTimeFormat("en-GB", { timeZone: "Europe/Istanbul", hour: "2-digit", hourCycle: "h23" }).format(date);
     return datePart + " " + hour + " TSİ";
