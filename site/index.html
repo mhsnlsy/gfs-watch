@@ -1609,8 +1609,21 @@
       const active=intervals.filter(x=>x.start<=now&&x.end>now);
       const upcoming=intervals.filter(x=>x.start>now);
       if(active.length){
-        const amount=active.reduce((sum,x)=>sum+x.mm,0);
-        forecast.textContent="GFS tahmininde şu anda da yağış var: mevcut 3 saatlik model adımında "+fmt(amount,2)+" mm bekleniyor ("+dateTime(active[0].start)+"–"+dateTime(active[active.length-1].end)+").";
+        // Yağış sürüyorsa, birbirine bitişik yağışlı model adımlarını birleştir
+        // ve mevcut yağış periyodunun sona ereceği ilk kuru zamanı göster.
+        const orderedRain=intervals.slice().sort((a,b)=>a.start-b.start);
+        let dryAt=Math.max(...active.map(x=>x.end));
+        let extended=true;
+        while(extended){
+          extended=false;
+          for(const period of orderedRain){
+            if(period.start<=dryAt&&period.end>dryAt){
+              dryAt=period.end;
+              extended=true;
+            }
+          }
+        }
+        forecast.textContent="MeteoPT GFS tahminine göre bir sonraki kuru zaman: "+dateTime(dryAt)+" itibarıyla yağış beklenmiyor.";
       }else if(upcoming.length){
         const next=upcoming[0],hours=Math.max(0,(next.start-now)/3600000);
         const lead=hours<1?"1 saatten az":Math.round(hours)+" saat";
