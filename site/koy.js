@@ -1,6 +1,6 @@
 (() => {
 "use strict";
-const BASE="https://raw.githubusercontent.com/mhsnlsy/gfs-watch/koy-gfs-data/gfs/";
+const BASE="./koy-data/gfs/";
 const $=id=>document.getElementById(id), n=v=>v==null||v===""||!Number.isFinite(Number(v))?null:Number(v);
 const fmt=(v,d=1)=>v==null?"—":Number(v).toLocaleString("tr-TR",{maximumFractionDigits:d,minimumFractionDigits:d});
 const ts=v=>{if(!v)return "—";const d=new Date(v);return Number.isFinite(d.getTime())?new Intl.DateTimeFormat("tr-TR",{timeZone:"Europe/Istanbul",day:"2-digit",month:"2-digit",hour:"2-digit",minute:"2-digit"}).format(d)+" TSİ":"—"};
