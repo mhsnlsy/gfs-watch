@@ -42,6 +42,7 @@ jobs:
 
       - name: Check out independent Köy forecast data
         uses: actions/checkout@v7
+        continue-on-error: true
         with:
           ref: koy-gfs-data
           path: koy-data
