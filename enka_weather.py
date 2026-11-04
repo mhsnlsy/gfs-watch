@@ -241,6 +241,9 @@ def update_temperature_history(observation):
             "logged_at_utc": logged_at.isoformat(timespec="seconds"),
             "observed_at_utc": observed_at,
             "temperature_2m_c": float(observation["temperature_2m_c"]),
+            "station_pressure_hpa": float(observation["station_pressure_hpa"]) if observation.get("station_pressure_hpa") is not None else None,
+            "humidity_percent": float(observation["humidity_percent"]) if observation.get("humidity_percent") is not None else None,
+            "wind_speed_10m_kmh": float(observation["wind_speed_10m_kmh"]) if observation.get("wind_speed_10m_kmh") is not None else None,
             "precipitation_daily_mm": (
                 float(observation["precipitation_daily_mm"])
                 if observation.get("precipitation_daily_mm") is not None
@@ -257,6 +260,10 @@ def update_temperature_history(observation):
             ).timestamp()
             temperature = float(sample["temperature_2m_c"])
             if math.isfinite(temperature) and timestamp >= cutoff:
+                for field in ("station_pressure_hpa", "humidity_percent", "wind_speed_10m_kmh"):
+                    value = sample.get(field)
+                    if value is not None and not math.isfinite(float(value)):
+                        sample[field] = None
                 rain = sample.get("precipitation_daily_mm")
                 if rain is not None and not math.isfinite(float(rain)):
                     sample["precipitation_daily_mm"] = None
