@@ -73,6 +73,7 @@ jobs:
           PY
 
       - name: Publish station observation and temperature history
+        id: publish
         if: success()
         run: |
           cp public/station-observation.json forecast-data/public/station-observation.json
@@ -83,6 +84,7 @@ jobs:
           git add public/station-observation.json public/station-temperature-history.json
           if git diff --cached --quiet; then
             echo "No station data changes to publish."
+            echo "changed=false" >> "$GITHUB_OUTPUT"
             exit 0
           fi
           git commit -m "Refresh ENKA Balmumcu camera OCR observation"
@@ -90,6 +92,7 @@ jobs:
             git pull --rebase origin gfs-watch-state
             if git push origin gfs-watch-state; then
               echo "Station data pushed to gfs-watch-state."
+              echo "changed=true" >> "$GITHUB_OUTPUT"
               exit 0
             fi
             sleep $((attempt * 2))
@@ -99,6 +102,7 @@ jobs:
 
       # A push made with GITHUB_TOKEN does not start another workflow.
       - name: Deploy refreshed station data to GitHub Pages
+        if: steps.publish.outputs.changed == 'true'
         env:
           GH_TOKEN: ${{ github.token }}
         run: |
@@ -169,10 +173,5 @@ jobs:
         env:
           GH_TOKEN: ${{ github.token }}
         run: |
-          now=$(date -u +%s)
-          next=$(( (now / 300 + 1) * 300 ))
-          delay=$(( next - now ))
-          echo "Next ENKA refresh at $(date -u -d "@$next" +'%Y-%m-%dT%H:%M:%SZ') (sleeping ${delay}s)."
-          sleep "$delay"
           gh workflow run enka-station-refresh.yml --ref main --repo "$GITHUB_REPOSITORY"
-          echo "Next ENKA refresh queued."
+          echo "Next ENKA refresh queued immediately; no runner is held idle."
