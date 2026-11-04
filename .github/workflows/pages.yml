@@ -105,8 +105,9 @@ jobs:
       - name: Fetch daily Istanbul dam status from verified ISKI dataset
         run: |
           python - <<'PY'
-          import json, urllib.request, datetime
+          import json, urllib.request, datetime, pathlib
           url = "https://www.dolulukorani.com/api/v1/provinces/istanbul"
+          previous_url = "https://mhsnlsy.github.io/gfs-watch/data/iski-dams.json"
           out = {"schema":"gfs-watch.iski-dams.v1","status":"unavailable","authority":"İSKİ"}
           try:
               req=urllib.request.Request(url,headers={"User-Agent":"IstanbulHava/4.0","Accept":"application/json"})
@@ -122,7 +123,18 @@ jobs:
                   try: label=datetime.datetime.fromisoformat(measured.replace("Z","+00:00")).astimezone(datetime.timezone(datetime.timedelta(hours=3))).strftime("%d.%m.%Y")
                   except Exception: pass
               out.update({"status":"ok","fill_rate":rate,"measured_at":measured,"measured_at_label":label,"delta_7d":data.get("delta_7d"),"freshness":freshness,"fetched_at":datetime.datetime.now(datetime.timezone.utc).isoformat()})
-          except Exception as exc: out["error"]=str(exc)
+          except Exception as exc:
+              out["error"]=str(exc)
+              try:
+                  req=urllib.request.Request(previous_url,headers={"Cache-Control":"no-cache"})
+                  with urllib.request.urlopen(req,timeout=15) as response: previous=json.load(response)
+                  if previous.get("schema")=="gfs-watch.iski-dams.v1" and isinstance(previous.get("fill_rate"),(int,float)):
+                      out.update(previous)
+                      out["status"]="stale"
+                      out["last_fetch_error"]=str(exc)
+              except Exception as previous_error:
+                  out["previous_payload_error"]=str(previous_error)
+          pathlib.Path("_site/data").mkdir(parents=True,exist_ok=True)
           with open("_site/data/iski-dams.json","w",encoding="utf-8") as f: json.dump(out,f,ensure_ascii=False)
           print("ISKI status:",out["status"],out.get("fill_rate"),out.get("error",""))
           PY
