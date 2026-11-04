@@ -38,10 +38,13 @@ jobs:
         with:
           python-version: "3.12"
 
-      - name: Install lightweight dependency
-        run: python -m pip install --disable-pip-version-check requests
+      - name: Install OCR engine and Python dependencies
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y --no-install-recommends tesseract-ocr
+          python -m pip install --disable-pip-version-check requests pillow pytesseract
 
-      - name: Fetch latest ENKA Balmumcu observation
+      - name: Read ENKA Balmumcu camera overlay with OCR
         run: |
           mkdir -p public
           python -u enka_weather.py
