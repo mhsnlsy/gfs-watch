@@ -1028,6 +1028,44 @@
     }
 </style>
   <link rel="stylesheet" href="./meteopt-gfs-table.css?v=20261104-3">
+
+  <style id="mobile-scroll-recovery">
+    /* Keep the document itself as the vertical scroll container on Android WebView. */
+    html, body {
+      height: auto !important;
+      min-height: 100% !important;
+      overflow-x: clip !important;
+      overflow-y: auto !important;
+      touch-action: pan-y pinch-zoom !important;
+    }
+    body, main, .shell, .water-gfs-layout, #meteopt-gfs-table, #iski-water-card {
+      position: relative;
+      overflow-y: visible !important;
+      touch-action: pan-y pinch-zoom !important;
+    }
+    .water-gfs-layout {
+      display: grid;
+      grid-template-columns: minmax(0, 1fr);
+      gap: 18px;
+      align-items: start;
+    }
+    .meteopt-table-card { min-width: 0; max-width: 100%; }
+    .meteopt-table-scroll {
+      display: block;
+      width: 100%;
+      max-width: 100%;
+      overflow-x: auto !important;
+      overflow-y: visible !important;
+      -webkit-overflow-scrolling: touch;
+      overscroll-behavior-x: contain;
+      touch-action: pan-x pan-y pinch-zoom !important;
+    }
+    .meteopt-data-table { min-width: 680px; }
+    @media (min-width: 900px) {
+      .water-gfs-layout { grid-template-columns: minmax(0, 1.55fr) minmax(280px, .75fr); }
+    }
+  </style>
+
 </head>
 <body>
   <header class="shell topbar">
