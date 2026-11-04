@@ -68,6 +68,24 @@ if (await exists(gradleGroovy)) {
   await writeFile(gradleKts, gradle);
 }
 
+// Keep Android installs upgradeable: preserve the application id and move the
+// generated versionCode forward for every distributed APK.
+const appGradlePath = await exists(gradleGroovy) ? gradleGroovy : gradleKts;
+let appGradle = await readFile(appGradlePath, 'utf8');
+if (/versionCode\\s+\\d+/.test(appGradle)) {
+  appGradle = appGradle.replace(/versionCode\\s+\\d+/, 'versionCode 10404');
+} else {
+  appGradle = appGradle.replace(/defaultConfig\\s*\\{/, match =>
+    match + '\\n        versionCode 10404'
+  );
+}
+if (/versionName\\s+["'][^"']+["']/.test(appGradle)) {
+  appGradle = appGradle.replace(/versionName\\s+["'][^"']+["']/, 'versionName "1.4.4"');
+} else {
+  appGradle = appGradle.replace(/versionCode\\s+10404/, 'versionCode 10404\\n        versionName "1.4.4"');
+}
+await writeFile(appGradlePath, appGradle);
+
 const manifestPath = join(mainRoot, 'AndroidManifest.xml');
 let manifest = await readFile(manifestPath, 'utf8');
 for (const permission of [
