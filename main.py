@@ -2108,8 +2108,6 @@ def analyze_and_build_output(current_run_name, payload, previous_runs):
         f"🕒 Rapor zamanı: {_format_tr_datetime(now_local)} TSİ",
         "📍 Konum: İstanbul, Türkiye",
         "",
-        f"🌡 GFS başlangıç sıcaklığı: {curr_t}°C",
-        f"💨 GFS başlangıç rüzgârı: {curr_w} km/sa",
         "",
     ]
     if station:
