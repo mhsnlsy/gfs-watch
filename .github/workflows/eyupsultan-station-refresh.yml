@@ -55,8 +55,15 @@ jobs:
             echo "Observation is older than 30 minutes."
             exit 1
           fi
+          node scripts/sisli_weather.mjs
+          test -s public/sisli-station-observation.json
+          SISLI_AGE=$(jq -r '.station_observation.age_minutes // 999' public/sisli-station-observation.json)
+          SISLI_TEMP=$(jq -r '.station_observation.temperature_2m_c' public/sisli-station-observation.json)
+          echo "MGM Şişli 18401: $SISLI_AGE min · $SISLI_TEMP C"
+          if [ "$SISLI_AGE" -gt 30 ]; then echo "Şişli observation stale."; exit 1; fi
         env:
           EYUPSULTAN_TEMPERATURE_HISTORY_PATH: forecast-data/public/eyupsultan-station-temperature-history.json
+          SISLI_TEMPERATURE_HISTORY_PATH: forecast-data/public/sisli-station-temperature-history.json
 
       - name: Publish data
         if: steps.scrape.outcome == 'success'
@@ -64,10 +71,12 @@ jobs:
           mkdir -p forecast-data/public
           cp -f public/eyupsultan-station-observation.json forecast-data/public/
           cp -f public/eyupsultan-station-temperature-history.json forecast-data/public/ || true
+          cp -f public/sisli-station-observation.json forecast-data/public/
+          cp -f public/sisli-station-temperature-history.json forecast-data/public/ || true
           cd forecast-data
           git config user.name "github-actions[bot]"
           git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
-          git add public/eyupsultan-station-observation.json public/eyupsultan-station-temperature-history.json
+          git add public/eyupsultan-station-observation.json public/eyupsultan-station-temperature-history.json public/sisli-station-observation.json public/sisli-station-temperature-history.json
           if git diff --cached --quiet; then
             echo "No Eyüpsultan changes to publish."
             exit 0
