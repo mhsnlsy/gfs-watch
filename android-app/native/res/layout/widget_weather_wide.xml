@@ -1,106 +1,28 @@
 <?xml version="1.0" encoding="utf-8"?>
 <LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
-    android:id="@+id/widget_root"
-    android:layout_width="match_parent"
-    android:layout_height="match_parent"
-    android:background="@drawable/widget_background"
-    android:clickable="true"
-    android:focusable="true"
-    android:gravity="center_vertical"
-    android:orientation="horizontal"
-    android:padding="14dp">
-
-    <LinearLayout
-        android:layout_width="0dp"
-        android:layout_height="match_parent"
-        android:layout_weight="0.9"
-        android:gravity="center_vertical"
-        android:orientation="vertical">
-
-        <TextView
-            android:id="@+id/widget_source"
-            android:layout_width="match_parent"
-            android:layout_height="wrap_content"
-            android:ellipsize="end"
-            android:maxLines="1"
-            android:text="İSTANBUL"
-            android:textColor="#B9D6E0"
-            android:textSize="10sp"
-            android:textStyle="bold" />
-
-        <TextView
-            android:id="@+id/widget_temperature"
-            android:layout_width="match_parent"
-            android:layout_height="wrap_content"
-            android:layout_marginTop="3dp"
-            android:includeFontPadding="false"
-            android:text="--°"
-            android:textColor="#F2F8FB"
-            android:textSize="36sp"
-            android:textStyle="bold" />
-
-        <TextView
-            android:id="@+id/widget_updated"
-            android:layout_width="match_parent"
-            android:layout_height="wrap_content"
-            android:layout_marginTop="5dp"
-            android:text="Son veri bekleniyor"
-            android:textColor="#8FAAB8"
-            android:textSize="9sp" />
-    </LinearLayout>
-
-    <TextView
-        android:layout_width="1dp"
-        android:layout_height="match_parent"
-        android:layout_marginStart="12dp"
-        android:layout_marginEnd="12dp"
-        android:background="#33516A"
-        android:text="" />
-
-    <LinearLayout
-        android:layout_width="0dp"
-        android:layout_height="match_parent"
-        android:layout_weight="1.35"
-        android:gravity="center_vertical"
-        android:orientation="vertical">
-
-        <TextView
-            android:id="@+id/widget_model"
-            android:layout_width="match_parent"
-            android:layout_height="wrap_content"
-            android:text="GFS · İSTANBUL"
-            android:textColor="#7DD3D7"
-            android:textSize="10sp"
-            android:textStyle="bold" />
-
-        <TextView
-            android:id="@+id/widget_rain_forecast"
-            android:layout_width="match_parent"
-            android:layout_height="wrap_content"
-            android:layout_marginTop="7dp"
-            android:ellipsize="end"
-            android:maxLines="3"
-            android:text="Yağış tahmini bekleniyor"
-            android:textColor="#E5F2F6"
-            android:textSize="12sp"
-            android:textStyle="bold" />
-
-        <TextView
-            android:id="@+id/widget_rain_now"
-            android:layout_width="match_parent"
-            android:layout_height="wrap_content"
-            android:layout_marginTop="7dp"
-            android:text="Ölçülen yağış · -- mm/sa"
-            android:textColor="#B9D6E0"
-            android:textSize="10sp" />
-
-        <TextView
-            android:id="@+id/widget_wind"
-            android:layout_width="match_parent"
-            android:layout_height="wrap_content"
-            android:layout_marginTop="5dp"
-            android:text="Rüzgâr · -- km/sa"
-            android:textColor="#B9D6E0"
-            android:textSize="10sp" />
-    </LinearLayout>
+ android:id="@+id/widget_root" android:layout_width="match_parent" android:layout_height="match_parent"
+ android:background="@drawable/widget_background" android:clickable="true" android:focusable="true"
+ android:gravity="center_vertical" android:orientation="horizontal" android:padding="14dp">
+ <LinearLayout android:layout_width="0dp" android:layout_height="match_parent" android:layout_weight="0.9"
+  android:gravity="center_vertical" android:orientation="vertical">
+  <TextView android:id="@+id/widget_source" android:layout_width="match_parent" android:layout_height="wrap_content"
+   android:ellipsize="end" android:maxLines="1" android:text="Eyüpsultan · CANLI" android:textColor="#B9D6E0" android:textSize="10sp" android:textStyle="bold"/>
+  <TextView android:id="@+id/widget_temperature" android:layout_width="match_parent" android:layout_height="wrap_content"
+   android:layout_marginTop="3dp" android:includeFontPadding="false" android:text="--°" android:textColor="#F2F8FB" android:textSize="36sp" android:textStyle="bold"/>
+  <TextView android:id="@+id/widget_updated" android:layout_width="match_parent" android:layout_height="wrap_content"
+   android:layout_marginTop="5dp" android:text="Ölçüm bekleniyor" android:textColor="#8FAAB8" android:textSize="9sp"/>
+ </LinearLayout>
+ <TextView android:layout_width="1dp" android:layout_height="match_parent" android:layout_marginStart="12dp" android:layout_marginEnd="12dp" android:background="#33516A" android:text=""/>
+ <LinearLayout android:layout_width="0dp" android:layout_height="match_parent" android:layout_weight="1.45"
+  android:gravity="center_vertical" android:orientation="vertical">
+  <TextView android:id="@+id/widget_model" android:layout_width="match_parent" android:layout_height="wrap_content"
+   android:text="CANLI İSTASYON GÖZLEMİ" android:textColor="#7DD3D7" android:textSize="10sp" android:textStyle="bold"/>
+  <TextView android:id="@+id/widget_rain_forecast" android:layout_width="match_parent" android:layout_height="wrap_content"
+   android:layout_marginTop="7dp" android:ellipsize="end" android:maxLines="2" android:text="Yağış ölçümü bekleniyor"
+   android:textColor="#E5F2F6" android:textSize="11sp" android:textStyle="bold"/>
+  <TextView android:id="@+id/widget_rain_now" android:layout_width="match_parent" android:layout_height="wrap_content"
+   android:layout_marginTop="7dp" android:text="Yağış · -- mm/1s | Nem · --%" android:textColor="#B9D6E0" android:textSize="10sp"/>
+  <TextView android:id="@+id/widget_wind" android:layout_width="match_parent" android:layout_height="wrap_content"
+   android:layout_marginTop="5dp" android:text="Rüzgâr · -- km/sa | Basınç · -- hPa" android:textColor="#B9D6E0" android:textSize="10sp"/>
+ </LinearLayout>
 </LinearLayout>
