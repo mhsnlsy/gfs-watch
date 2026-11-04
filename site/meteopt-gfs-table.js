@@ -10,7 +10,7 @@
     li: ["li", "liftedindex", "liftedindexsfc", "liftedindexsurface", "lifted", "lidx"],
     rh2m: ["rh2m", "relhum2m", "relativehumidity2m", "humidity2m", "rh"],
     t500: ["tmp500mb", "tmp500hpa", "tmp500", "temp500mb", "temp500hpa", "temperature500mb", "temperature500hpa", "t500"],
-    clouds: ["tcdc", "clouds", "cloudcover", "totalcloudcover", "cloudtotal", "cldcover"],
+    clouds: ["tcdc", "tcc", "clouds", "cloudcover", "totalcloudcover", "cloudtotal", "cldcover"],
     snowln: ["snowline", "snowln", "snowlevel", "snowlineheight", "snowlevelheight"]
   };
   function findSeries(series, field) {
@@ -112,8 +112,8 @@
       const rh = raw("rh2m");
       const temp850 = point ? number(point.temperature_850hpa_c) : null;
       const values = [
-        valueCell(wind10, "wind"),
-        valueCell(wind850, "wind"),
+        valueCell(wind10, "wind", 0),
+        valueCell(wind850, "wind", 0),
         valueCell(precip, "precip"),
         valueCell(raw("li"), "li"),
         valueCell(temp2, "t2m"),
