@@ -1,0 +1,231 @@
+{
+  "location": {
+    "name": "Giresun / Çanakçı",
+    "latitude": 40.9557,
+    "longitude": 39.0065
+  },
+  "source": "MeteoPT GFS",
+  "source_url": "https://api.meteopt.com/gfs/json?lat=40.9557&lon=39.0065&run=18&lang=en",
+  "run_id_utc": "2026-11-03T18:00:00+00:00",
+  "schema": "koy-gfs.first72.v1",
+  "forecast_source": "meteopt",
+  "published_at_utc": "2026-11-04T21:26:07+00:00",
+  "forecast_6_hourly": [
+    {
+      "forecast_hour": 3,
+      "valid_time_utc": "2026-11-03T21:00+00:00",
+      "temperature_2m_c": 15.2,
+      "temperature_850hpa_c": 12.9,
+      "wind_speed_10m_kmh": 8.0,
+      "wind_speed_850hpa_kmh": 6.0,
+      "precipitation_6h_mm": 0.2
+    },
+    {
+      "forecast_hour": 6,
+      "valid_time_utc": "2026-11-04T00:00+00:00",
+      "temperature_2m_c": 15.0,
+      "temperature_850hpa_c": 12.5,
+      "wind_speed_10m_kmh": 7.0,
+      "wind_speed_850hpa_kmh": 11.0,
+      "precipitation_6h_mm": 0.1
+    },
+    {
+      "forecast_hour": 9,
+      "valid_time_utc": "2026-11-04T03:00+00:00",
+      "temperature_2m_c": 13.8,
+      "temperature_850hpa_c": 12.3,
+      "wind_speed_10m_kmh": 7.0,
+      "wind_speed_850hpa_kmh": 9.0,
+      "precipitation_6h_mm": 0.1
+    },
+    {
+      "forecast_hour": 12,
+      "valid_time_utc": "2026-11-04T06:00+00:00",
+      "temperature_2m_c": 16.0,
+      "temperature_850hpa_c": 12.4,
+      "wind_speed_10m_kmh": 5.0,
+      "wind_speed_850hpa_kmh": 13.0,
+      "precipitation_6h_mm": 0.1
+    },
+    {
+      "forecast_hour": 15,
+      "valid_time_utc": "2026-11-04T09:00+00:00",
+      "temperature_2m_c": 16.9,
+      "temperature_850hpa_c": 11.5,
+      "wind_speed_10m_kmh": 8.0,
+      "wind_speed_850hpa_kmh": 18.0,
+      "precipitation_6h_mm": 0.3
+    },
+    {
+      "forecast_hour": 18,
+      "valid_time_utc": "2026-11-04T12:00+00:00",
+      "temperature_2m_c": 16.9,
+      "temperature_850hpa_c": 9.6,
+      "wind_speed_10m_kmh": 3.0,
+      "wind_speed_850hpa_kmh": 11.0,
+      "precipitation_6h_mm": 0.4
+    },
+    {
+      "forecast_hour": 21,
+      "valid_time_utc": "2026-11-04T15:00+00:00",
+      "temperature_2m_c": 14.4,
+      "temperature_850hpa_c": 9.4,
+      "wind_speed_10m_kmh": 2.0,
+      "wind_speed_850hpa_kmh": 6.0,
+      "precipitation_6h_mm": 0.7
+    },
+    {
+      "forecast_hour": 24,
+      "valid_time_utc": "2026-11-04T18:00+00:00",
+      "temperature_2m_c": 14.4,
+      "temperature_850hpa_c": 8.8,
+      "wind_speed_10m_kmh": 7.0,
+      "wind_speed_850hpa_kmh": 7.0,
+      "precipitation_6h_mm": 0.3
+    },
+    {
+      "forecast_hour": 27,
+      "valid_time_utc": "2026-11-04T21:00+00:00",
+      "temperature_2m_c": 13.5,
+      "temperature_850hpa_c": 6.9,
+      "wind_speed_10m_kmh": 9.0,
+      "wind_speed_850hpa_kmh": 14.0,
+      "precipitation_6h_mm": 0.4
+    },
+    {
+      "forecast_hour": 30,
+      "valid_time_utc": "2026-11-05T00:00+00:00",
+      "temperature_2m_c": 13.5,
+      "temperature_850hpa_c": 6.5,
+      "wind_speed_10m_kmh": 9.0,
+      "wind_speed_850hpa_kmh": 17.0,
+      "precipitation_6h_mm": 1.2
+    },
+    {
+      "forecast_hour": 33,
+      "valid_time_utc": "2026-11-05T03:00+00:00",
+      "temperature_2m_c": 13.2,
+      "temperature_850hpa_c": 6.2,
+      "wind_speed_10m_kmh": 12.0,
+      "wind_speed_850hpa_kmh": 23.0,
+      "precipitation_6h_mm": 1.9
+    },
+    {
+      "forecast_hour": 36,
+      "valid_time_utc": "2026-11-05T06:00+00:00",
+      "temperature_2m_c": 11.8,
+      "temperature_850hpa_c": 4.5,
+      "wind_speed_10m_kmh": 21.0,
+      "wind_speed_850hpa_kmh": 37.0,
+      "precipitation_6h_mm": 22.9
+    },
+    {
+      "forecast_hour": 39,
+      "valid_time_utc": "2026-11-05T09:00+00:00",
+      "temperature_2m_c": 10.9,
+      "temperature_850hpa_c": 1.8,
+      "wind_speed_10m_kmh": 12.0,
+      "wind_speed_850hpa_kmh": 32.0,
+      "precipitation_6h_mm": 11.6
+    },
+    {
+      "forecast_hour": 42,
+      "valid_time_utc": "2026-11-05T12:00+00:00",
+      "temperature_2m_c": 10.3,
+      "temperature_850hpa_c": 1.2,
+      "wind_speed_10m_kmh": 9.0,
+      "wind_speed_850hpa_kmh": 19.0,
+      "precipitation_6h_mm": 4.3
+    },
+    {
+      "forecast_hour": 45,
+      "valid_time_utc": "2026-11-05T15:00+00:00",
+      "temperature_2m_c": 9.8,
+      "temperature_850hpa_c": 0.8,
+      "wind_speed_10m_kmh": 6.0,
+      "wind_speed_850hpa_kmh": 15.0,
+      "precipitation_6h_mm": 2.0
+    },
+    {
+      "forecast_hour": 48,
+      "valid_time_utc": "2026-11-05T18:00+00:00",
+      "temperature_2m_c": 9.4,
+      "temperature_850hpa_c": 0.1,
+      "wind_speed_10m_kmh": 7.0,
+      "wind_speed_850hpa_kmh": 14.0,
+      "precipitation_6h_mm": 0.9
+    },
+    {
+      "forecast_hour": 51,
+      "valid_time_utc": "2026-11-05T21:00+00:00",
+      "temperature_2m_c": 9.0,
+      "temperature_850hpa_c": -0.4,
+      "wind_speed_10m_kmh": 4.0,
+      "wind_speed_850hpa_kmh": 9.0,
+      "precipitation_6h_mm": 0.6
+    },
+    {
+      "forecast_hour": 54,
+      "valid_time_utc": "2026-11-06T00:00+00:00",
+      "temperature_2m_c": 8.6,
+      "temperature_850hpa_c": -0.6,
+      "wind_speed_10m_kmh": 0.0,
+      "wind_speed_850hpa_kmh": 8.0,
+      "precipitation_6h_mm": 0.5
+    },
+    {
+      "forecast_hour": 57,
+      "valid_time_utc": "2026-11-06T03:00+00:00",
+      "temperature_2m_c": 8.3,
+      "temperature_850hpa_c": -0.8,
+      "wind_speed_10m_kmh": 3.0,
+      "wind_speed_850hpa_kmh": 8.0,
+      "precipitation_6h_mm": 0.5
+    },
+    {
+      "forecast_hour": 60,
+      "valid_time_utc": "2026-11-06T06:00+00:00",
+      "temperature_2m_c": 8.1,
+      "temperature_850hpa_c": -0.5,
+      "wind_speed_10m_kmh": 4.0,
+      "wind_speed_850hpa_kmh": 8.0,
+      "precipitation_6h_mm": 0.2
+    },
+    {
+      "forecast_hour": 63,
+      "valid_time_utc": "2026-11-06T09:00+00:00",
+      "temperature_2m_c": 9.6,
+      "temperature_850hpa_c": -0.2,
+      "wind_speed_10m_kmh": 4.0,
+      "wind_speed_850hpa_kmh": 7.0,
+      "precipitation_6h_mm": 0.0
+    },
+    {
+      "forecast_hour": 66,
+      "valid_time_utc": "2026-11-06T12:00+00:00",
+      "temperature_2m_c": 9.4,
+      "temperature_850hpa_c": -0.2,
+      "wind_speed_10m_kmh": 4.0,
+      "wind_speed_850hpa_kmh": 7.0,
+      "precipitation_6h_mm": 0.1
+    },
+    {
+      "forecast_hour": 69,
+      "valid_time_utc": "2026-11-06T15:00+00:00",
+      "temperature_2m_c": 8.7,
+      "temperature_850hpa_c": -0.1,
+      "wind_speed_10m_kmh": 3.0,
+      "wind_speed_850hpa_kmh": 7.0,
+      "precipitation_6h_mm": 0.0
+    },
+    {
+      "forecast_hour": 72,
+      "valid_time_utc": "2026-11-06T18:00+00:00",
+      "temperature_2m_c": 8.4,
+      "temperature_850hpa_c": -0.1,
+      "wind_speed_10m_kmh": 5.0,
+      "wind_speed_850hpa_kmh": 6.0,
+      "precipitation_6h_mm": 0.1
+    }
+  ]
+}
