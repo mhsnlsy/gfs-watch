@@ -32,8 +32,8 @@
   function dateLabel(point, runId, step) {
     let date = point && point.valid_time_utc ? new Date(point.valid_time_utc) : new Date(new Date(runId).getTime() + step * 3600000);
     if (!Number.isFinite(date.getTime())) return "—";
-    const datePart = new Intl.DateTimeFormat("en-GB", { timeZone: "UTC", weekday: "short", day: "numeric", month: "short" }).format(date);
-    const hour = new Intl.DateTimeFormat("en-GB", { timeZone: "UTC", hour: "2-digit", hourCycle: "h23" }).format(date);
+    const datePart = new Intl.DateTimeFormat("en-GB", { timeZone: "Europe/Istanbul", weekday: "short", day: "numeric", month: "short" }).format(date);
+    const hour = new Intl.DateTimeFormat("en-GB", { timeZone: "Europe/Istanbul", hour: "2-digit", hourCycle: "h23" }).format(date);
     return datePart + " " + hour + " TSİ";
   }
   function render(document) {
