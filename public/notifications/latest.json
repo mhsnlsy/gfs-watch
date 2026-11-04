@@ -1,7 +1,37 @@
 {
   "schema": "gfs-watch.notifications.v1",
-  "updated_at_utc": "2026-11-03T22:21:37+00:00",
+  "updated_at_utc": "2026-11-04T04:23:07+00:00",
   "items": [
+    {
+      "id": "20261104T00Z",
+      "title": "İstanbul GFS tahmin raporu",
+      "run_id_utc": "2026-11-04T00:00:00+00:00",
+      "published_at_utc": "2026-11-04T04:23:07+00:00",
+      "published_at_istanbul": "Çarşamba 4 Kasım 2026 07:23",
+      "cycle_label": "00Z · 04.11.2026 00:00 UTC",
+      "summary": "🌡 GFS başlangıç sıcaklığı: 16.1°C\n💨 GFS başlangıç rüzgârı: 1.0 km/sa\n📡 yerel istasyon GERÇEK İSTASYON GÖZLEMİ | VANTAGE PRO · GECİKMELİ ÖLÇÜM\n🌡 İstasyon sıcaklığı: 14.8°C\n🌧 Günlük toplam yağış: 0.0 mm\n💨 İstasyon rüzgârı: 0.0 km/sa · yön: NNE",
+      "report_text": "🌦 İstanbul'un Havası 4.0\nİSTANBUL GFS TAHMİN RAPORU\n📄 Çıktı: Yazılı tahmin raporu\n🛰 Model döngüsü: 04.11.2026 00:00 UTC (00Z)\n🗓 Tahmin aralığı: 04.11.2026 00:00 – 11.11.2026 12:00 UTC (+180 saat)\n🕒 Rapor zamanı: Çarşamba 4 Kasım 2026 07:23 TSİ\n📍 Konum: İstanbul, Türkiye\n\n🌡 GFS başlangıç sıcaklığı: 16.1°C\n💨 GFS başlangıç rüzgârı: 1.0 km/sa\n\n📡 YEREL İSTASYON GERÇEK İSTASYON GÖZLEMİ | VANTAGE PRO · GECİKMELİ ÖLÇÜM\n🕒 Ölçüm zamanı: Çarşamba 4 Kasım 2026 02:00 TSİ\n🌡 İstasyon sıcaklığı: 14.8°C\n🌧 Günlük toplam yağış: 0.0 mm\n💨 İstasyon rüzgârı: 0.0 km/sa · yön: NNE\nKaynak: Yerel istasyon · Davis Vantage PRO istasyonu · canlı tablo ölçümü\n\n🌆 GÜNÜN KALANINDA\n⏳ Süre: Çarşamba 4 Kasım 2026 07:23 – Perşembe 5 Kasım 2026 00:00 TSİ\n🌡 Sıcaklık: 13.2–15.7°C\n💨 Rüzgâr: en fazla 33.0 km/sa\n🌧 Beklenen yağış: 17.6 mm\n📈 En belirgin yağış aralığı: 15:00–18:00 UTC (model noktası: 6.4 mm / 3 saat)\n\n📅 ÖNÜMÜZDEKİ 3 GÜN\n• Perşembe 5 Kasım: 10.7–12.8°C | Yağış: 6.4 mm | Maks. rüzgâr: 28.0 km/sa | Rüzgârlı\n  ↳ Yağışın yoğunlaştığı saatler: 18:00–21:00 UTC (5.4 mm/3 sa)\n• Cuma 6 Kasım: 10.5–11.7°C | Yağış: 0.5 mm | Maks. rüzgâr: 19.0 km/sa\n  ↳ Yağışın yoğunlaştığı saatler: 06:00–09:00 UTC (0.2 mm/3 sa)\n• Cumartesi 7 Kasım: 10.6–12.7°C | Yağış: 0.4 mm | Maks. rüzgâr: 19.0 km/sa\n  ↳ Yağışın yoğunlaştığı saatler: 00:00–03:00 UTC (0.2 mm/3 sa)",
+      "image_path": null,
+      "images": [
+        {
+          "label": "Sıcaklık",
+          "path": "media/gfs-20261104T00Z-temperature.png"
+        },
+        {
+          "label": "Sıcaklık · 850 hPa",
+          "path": "media/gfs-20261104T00Z-temperature_850.png"
+        },
+        {
+          "label": "Yağış",
+          "path": "media/gfs-20261104T00Z-precipitation.png"
+        },
+        {
+          "label": "Rüzgâr hızı + yönü · 10 m",
+          "path": "media/gfs-20261104T00Z-wind_10m.png"
+        }
+      ],
+      "audio_path": null
+    },
     {
       "id": "20261103T18Z",
       "title": "İstanbul GFS tahmin raporu",
@@ -88,36 +118,6 @@
         {
           "label": "Rüzgâr hızı + yönü · 10 m",
           "path": "media/gfs-20261103T06Z-wind_10m.png"
-        }
-      ],
-      "audio_path": null
-    },
-    {
-      "id": "20261103T00Z",
-      "title": "İstanbul GFS tahmin raporu",
-      "run_id_utc": "2026-11-03T00:00:00+00:00",
-      "published_at_utc": "2026-11-03T04:31:09+00:00",
-      "published_at_istanbul": "Salı 3 Kasım 2026 07:31",
-      "cycle_label": "00Z · 03.11.2026 03:00 TSİ",
-      "summary": "🌡 GFS başlangıç sıcaklığı: 15.6°C\n💨 GFS başlangıç rüzgârı: 4.0 km/sa\n📡 yerel istasyon GERÇEK İSTASYON GÖZLEMİ | VANTAGE PRO · SON İSTASYON ÖLÇÜMÜ\n🌡 İstasyon sıcaklığı: 15.3°C\n🌧 Günlük toplam yağış: 0.0 mm\n💨 İstasyon rüzgârı: 4.8 km/sa · yön: NE",
-      "report_text": "🌦 İstanbul'un Havası 4.0\nİSTANBUL GFS TAHMİN RAPORU\n📄 Çıktı: Yazılı tahmin raporu\n🛰 Model döngüsü: Salı 3 Kasım 2026 03:00 TSİ (00Z UTC)\n🗓 Tahmin aralığı: Salı 3 Kasım 2026 03:00 – Salı 10 Kasım 2026 12:00 TSİ (+180 saat)\n🕒 Rapor zamanı: Salı 3 Kasım 2026 07:31 TSİ\n📍 Konum: İstanbul, Türkiye\n\n🌡 GFS başlangıç sıcaklığı: 15.6°C\n💨 GFS başlangıç rüzgârı: 4.0 km/sa\n\n📡 YEREL İSTASYON GERÇEK İSTASYON GÖZLEMİ | VANTAGE PRO · SON İSTASYON ÖLÇÜMÜ\n🕒 Ölçüm zamanı: Salı 3 Kasım 2026 07:30 TSİ\n🌡 İstasyon sıcaklığı: 15.3°C\n🌧 Günlük toplam yağış: 0.0 mm\n💨 İstasyon rüzgârı: 4.8 km/sa · yön: NE\nKaynak: Yerel istasyon · Davis Vantage PRO istasyonu · canlı tablo ölçümü\n\n📅 ÖNÜMÜZDEKİ 3 GÜN\n• Çarşamba 4 Kasım: 13.7–15.6°C | Yağış: 22.8 mm | Maks. rüzgâr: 27.0 km/sa | Rüzgârlı\n• Perşembe 5 Kasım: 10.6–13.2°C | Yağış: 0.6 mm | Maks. rüzgâr: 26.0 km/sa | Rüzgârlı\n• Cuma 6 Kasım: 10.6–12.4°C | Yağış: 0.1 mm | Maks. rüzgâr: 19.0 km/sa",
-      "image_path": null,
-      "images": [
-        {
-          "label": "Sıcaklık",
-          "path": "media/gfs-20261103T00Z-temperature.png"
-        },
-        {
-          "label": "Sıcaklık · 850 hPa",
-          "path": "media/gfs-20261103T00Z-temperature_850.png"
-        },
-        {
-          "label": "Yağış",
-          "path": "media/gfs-20261103T00Z-precipitation.png"
-        },
-        {
-          "label": "Rüzgâr hızı + yönü · 10 m",
-          "path": "media/gfs-20261103T00Z-wind_10m.png"
         }
       ],
       "audio_path": null
