@@ -133,7 +133,7 @@ jobs:
           python - <<'PY'
           import re
           from pathlib import Path
-          html = Path("site/index.html").read_text(encoding="utf-8")
+          html = Path("source/site/index.html").read_text(encoding="utf-8")
           blocks = re.findall(r'<script(?:\s[^>]*)?>(.*?)</script>', html, re.S | re.I)
           scripts = [block for block in blocks if block.strip()]
           if not scripts:
