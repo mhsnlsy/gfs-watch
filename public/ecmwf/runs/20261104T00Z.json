@@ -1,0 +1,552 @@
+{
+  "schema": "gfs-watch.ecmwf-eps.v1",
+  "status": "ready",
+  "forecast_source": "meteopt",
+  "model": "ECMWF via MeteoPT",
+  "product": "MeteoPT ECMWF 3-hour point",
+  "surface_forecast_source": "MeteoPT ECMWF point",
+  "ensemble_forecast_source": "MeteoPT ECMWF point",
+  "surface_ensemble_spread_available": false,
+  "resolution": "MeteoPT nokta",
+  "forecast_horizon_hours": 39,
+  "run_id_utc": "2026-11-04T00:00:00+00:00",
+  "updated_at_utc": "2026-11-04T07:40:45+00:00",
+  "forecast_valid_until_utc": "2026-11-05T15:00:00+00:00",
+  "location": {
+    "name": "Istanbul, TR",
+    "latitude": 41.014,
+    "longitude": 28.95,
+    "nearest_grid_latitude": 41.014,
+    "nearest_grid_longitude": 28.95
+  },
+  "units": {
+    "temperature_850hpa": "°C",
+    "wind_850hpa": "km/sa",
+    "mslp": "hPa",
+    "spread": "MeteoPT noktasında ensemble sapması yok"
+  },
+  "attribution": "ECMWF nokta serisi MeteoPT üzerinden alınır.",
+  "license": "MeteoPT",
+  "license_url": "https://www.meteopt.com/modelos/ecmwf",
+  "source_url": "https://www.meteopt.com/modelos/ecmwf?lat=41.014&lon=28.950",
+  "notes": [
+    "Sıcaklık, rüzgâr, yağış, 850 hPa ve basınç aynı MeteoPT ECMWF noktasından gelir.",
+    "Seri 3 saatte bir. Ensemble sapması ve bölgesel basınç merkezi bu kaynakta yok."
+  ],
+  "forecasts": [
+    {
+      "forecast_hour": 3,
+      "valid_time_utc": "2026-11-04T03:00:00+00:00",
+      "valid_time_istanbul": "2026-11-04T06:00:00+03:00",
+      "temperature_2m_c": 14.1,
+      "temperature_2m_stddev_c": null,
+      "wind_speed_10m_kmh": 3.0,
+      "wind_direction_10m_deg": 339.0,
+      "wind_speed_10m_stddev_kmh": null,
+      "precipitation_interval_mm": 1.6,
+      "precipitation_interval_stddev_mm": null,
+      "precipitation_accumulated_mm": null,
+      "temperature_850hpa": {
+        "mean_c": 7.3,
+        "stddev_c": null
+      },
+      "wind_850hpa": {
+        "mean_kmh": 26.0,
+        "stddev_kmh": null
+      },
+      "mslp": {
+        "mean_hpa": 1013.3,
+        "stddev_hpa": null
+      }
+    },
+    {
+      "forecast_hour": 6,
+      "valid_time_utc": "2026-11-04T06:00:00+00:00",
+      "valid_time_istanbul": "2026-11-04T09:00:00+03:00",
+      "temperature_2m_c": 13.9,
+      "temperature_2m_stddev_c": null,
+      "wind_speed_10m_kmh": 5.0,
+      "wind_direction_10m_deg": 59.0,
+      "wind_speed_10m_stddev_kmh": null,
+      "precipitation_interval_mm": 3.7,
+      "precipitation_interval_stddev_mm": null,
+      "precipitation_accumulated_mm": null,
+      "temperature_850hpa": {
+        "mean_c": 7.0,
+        "stddev_c": null
+      },
+      "wind_850hpa": {
+        "mean_kmh": 16.0,
+        "stddev_kmh": null
+      },
+      "mslp": {
+        "mean_hpa": 1014.1,
+        "stddev_hpa": null
+      }
+    },
+    {
+      "forecast_hour": 9,
+      "valid_time_utc": "2026-11-04T09:00:00+00:00",
+      "valid_time_istanbul": "2026-11-04T12:00:00+03:00",
+      "temperature_2m_c": 14.9,
+      "temperature_2m_stddev_c": null,
+      "wind_speed_10m_kmh": 5.0,
+      "wind_direction_10m_deg": 33.0,
+      "wind_speed_10m_stddev_kmh": null,
+      "precipitation_interval_mm": 4.5,
+      "precipitation_interval_stddev_mm": null,
+      "precipitation_accumulated_mm": null,
+      "temperature_850hpa": {
+        "mean_c": 6.3,
+        "stddev_c": null
+      },
+      "wind_850hpa": {
+        "mean_kmh": 9.0,
+        "stddev_kmh": null
+      },
+      "mslp": {
+        "mean_hpa": 1015.0,
+        "stddev_hpa": null
+      }
+    },
+    {
+      "forecast_hour": 12,
+      "valid_time_utc": "2026-11-04T12:00:00+00:00",
+      "valid_time_istanbul": "2026-11-04T15:00:00+03:00",
+      "temperature_2m_c": 14.7,
+      "temperature_2m_stddev_c": null,
+      "wind_speed_10m_kmh": 9.0,
+      "wind_direction_10m_deg": 8.0,
+      "wind_speed_10m_stddev_kmh": null,
+      "precipitation_interval_mm": 6.8,
+      "precipitation_interval_stddev_mm": null,
+      "precipitation_accumulated_mm": null,
+      "temperature_850hpa": {
+        "mean_c": 6.4,
+        "stddev_c": null
+      },
+      "wind_850hpa": {
+        "mean_kmh": 17.0,
+        "stddev_kmh": null
+      },
+      "mslp": {
+        "mean_hpa": 1015.3,
+        "stddev_hpa": null
+      }
+    },
+    {
+      "forecast_hour": 15,
+      "valid_time_utc": "2026-11-04T15:00:00+00:00",
+      "valid_time_istanbul": "2026-11-04T18:00:00+03:00",
+      "temperature_2m_c": 13.9,
+      "temperature_2m_stddev_c": null,
+      "wind_speed_10m_kmh": 21.0,
+      "wind_direction_10m_deg": 29.0,
+      "wind_speed_10m_stddev_kmh": null,
+      "precipitation_interval_mm": 8.4,
+      "precipitation_interval_stddev_mm": null,
+      "precipitation_accumulated_mm": null,
+      "temperature_850hpa": {
+        "mean_c": 5.6,
+        "stddev_c": null
+      },
+      "wind_850hpa": {
+        "mean_kmh": 27.0,
+        "stddev_kmh": null
+      },
+      "mslp": {
+        "mean_hpa": 1017.3,
+        "stddev_hpa": null
+      }
+    },
+    {
+      "forecast_hour": 18,
+      "valid_time_utc": "2026-11-04T18:00:00+00:00",
+      "valid_time_istanbul": "2026-11-04T21:00:00+03:00",
+      "temperature_2m_c": 13.1,
+      "temperature_2m_stddev_c": null,
+      "wind_speed_10m_kmh": 24.0,
+      "wind_direction_10m_deg": 19.0,
+      "wind_speed_10m_stddev_kmh": null,
+      "precipitation_interval_mm": 6.1,
+      "precipitation_interval_stddev_mm": null,
+      "precipitation_accumulated_mm": null,
+      "temperature_850hpa": {
+        "mean_c": 4.5,
+        "stddev_c": null
+      },
+      "wind_850hpa": {
+        "mean_kmh": 46.0,
+        "stddev_kmh": null
+      },
+      "mslp": {
+        "mean_hpa": 1020.5,
+        "stddev_hpa": null
+      }
+    },
+    {
+      "forecast_hour": 21,
+      "valid_time_utc": "2026-11-04T21:00:00+00:00",
+      "valid_time_istanbul": "2026-11-05T00:00:00+03:00",
+      "temperature_2m_c": 12.6,
+      "temperature_2m_stddev_c": null,
+      "wind_speed_10m_kmh": 23.0,
+      "wind_direction_10m_deg": 10.0,
+      "wind_speed_10m_stddev_kmh": null,
+      "precipitation_interval_mm": 1.3,
+      "precipitation_interval_stddev_mm": null,
+      "precipitation_accumulated_mm": null,
+      "temperature_850hpa": {
+        "mean_c": 2.8,
+        "stddev_c": null
+      },
+      "wind_850hpa": {
+        "mean_kmh": 41.0,
+        "stddev_kmh": null
+      },
+      "mslp": {
+        "mean_hpa": 1022.6,
+        "stddev_hpa": null
+      }
+    },
+    {
+      "forecast_hour": 24,
+      "valid_time_utc": "2026-11-05T00:00:00+00:00",
+      "valid_time_istanbul": "2026-11-05T03:00:00+03:00",
+      "temperature_2m_c": 12.5,
+      "temperature_2m_stddev_c": null,
+      "wind_speed_10m_kmh": 19.0,
+      "wind_direction_10m_deg": 15.0,
+      "wind_speed_10m_stddev_kmh": null,
+      "precipitation_interval_mm": 0.0,
+      "precipitation_interval_stddev_mm": null,
+      "precipitation_accumulated_mm": null,
+      "temperature_850hpa": {
+        "mean_c": 2.7,
+        "stddev_c": null
+      },
+      "wind_850hpa": {
+        "mean_kmh": 32.0,
+        "stddev_kmh": null
+      },
+      "mslp": {
+        "mean_hpa": 1023.8,
+        "stddev_hpa": null
+      }
+    },
+    {
+      "forecast_hour": 27,
+      "valid_time_utc": "2026-11-05T03:00:00+00:00",
+      "valid_time_istanbul": "2026-11-05T06:00:00+03:00",
+      "temperature_2m_c": 12.0,
+      "temperature_2m_stddev_c": null,
+      "wind_speed_10m_kmh": 18.0,
+      "wind_direction_10m_deg": 16.0,
+      "wind_speed_10m_stddev_kmh": null,
+      "precipitation_interval_mm": 0.0,
+      "precipitation_interval_stddev_mm": null,
+      "precipitation_accumulated_mm": null,
+      "temperature_850hpa": {
+        "mean_c": 0.4,
+        "stddev_c": null
+      },
+      "wind_850hpa": {
+        "mean_kmh": 30.0,
+        "stddev_kmh": null
+      },
+      "mslp": {
+        "mean_hpa": 1024.6,
+        "stddev_hpa": null
+      }
+    },
+    {
+      "forecast_hour": 30,
+      "valid_time_utc": "2026-11-05T06:00:00+00:00",
+      "valid_time_istanbul": "2026-11-05T09:00:00+03:00",
+      "temperature_2m_c": 12.0,
+      "temperature_2m_stddev_c": null,
+      "wind_speed_10m_kmh": 15.0,
+      "wind_direction_10m_deg": 23.0,
+      "wind_speed_10m_stddev_kmh": null,
+      "precipitation_interval_mm": 0.1,
+      "precipitation_interval_stddev_mm": null,
+      "precipitation_accumulated_mm": null,
+      "temperature_850hpa": {
+        "mean_c": 0.1,
+        "stddev_c": null
+      },
+      "wind_850hpa": {
+        "mean_kmh": 29.0,
+        "stddev_kmh": null
+      },
+      "mslp": {
+        "mean_hpa": 1025.8,
+        "stddev_hpa": null
+      }
+    },
+    {
+      "forecast_hour": 33,
+      "valid_time_utc": "2026-11-05T09:00:00+00:00",
+      "valid_time_istanbul": "2026-11-05T12:00:00+03:00",
+      "temperature_2m_c": 12.0,
+      "temperature_2m_stddev_c": null,
+      "wind_speed_10m_kmh": 20.0,
+      "wind_direction_10m_deg": 15.0,
+      "wind_speed_10m_stddev_kmh": null,
+      "precipitation_interval_mm": 0.0,
+      "precipitation_interval_stddev_mm": null,
+      "precipitation_accumulated_mm": null,
+      "temperature_850hpa": {
+        "mean_c": -0.1,
+        "stddev_c": null
+      },
+      "wind_850hpa": {
+        "mean_kmh": 25.0,
+        "stddev_kmh": null
+      },
+      "mslp": {
+        "mean_hpa": 1026.6,
+        "stddev_hpa": null
+      }
+    },
+    {
+      "forecast_hour": 36,
+      "valid_time_utc": "2026-11-05T12:00:00+00:00",
+      "valid_time_istanbul": "2026-11-05T15:00:00+03:00",
+      "temperature_2m_c": 11.8,
+      "temperature_2m_stddev_c": null,
+      "wind_speed_10m_kmh": 20.0,
+      "wind_direction_10m_deg": 18.0,
+      "wind_speed_10m_stddev_kmh": null,
+      "precipitation_interval_mm": 0.1,
+      "precipitation_interval_stddev_mm": null,
+      "precipitation_accumulated_mm": null,
+      "temperature_850hpa": {
+        "mean_c": -0.7,
+        "stddev_c": null
+      },
+      "wind_850hpa": {
+        "mean_kmh": 22.0,
+        "stddev_kmh": null
+      },
+      "mslp": {
+        "mean_hpa": 1025.7,
+        "stddev_hpa": null
+      }
+    },
+    {
+      "forecast_hour": 39,
+      "valid_time_utc": "2026-11-05T15:00:00+00:00",
+      "valid_time_istanbul": "2026-11-05T18:00:00+03:00",
+      "temperature_2m_c": 10.4,
+      "temperature_2m_stddev_c": null,
+      "wind_speed_10m_kmh": 17.0,
+      "wind_direction_10m_deg": 13.0,
+      "wind_speed_10m_stddev_kmh": null,
+      "precipitation_interval_mm": 0.0,
+      "precipitation_interval_stddev_mm": null,
+      "precipitation_accumulated_mm": null,
+      "temperature_850hpa": {
+        "mean_c": -0.1,
+        "stddev_c": null
+      },
+      "wind_850hpa": {
+        "mean_kmh": 20.0,
+        "stddev_kmh": null
+      },
+      "mslp": {
+        "mean_hpa": 1025.6,
+        "stddev_hpa": null
+      }
+    }
+  ],
+  "daily_summary": [
+    {
+      "date_istanbul": "2026-11-04",
+      "temperature_min_c": 13.1,
+      "temperature_max_c": 14.9,
+      "precipitation_total_mm": 31.1,
+      "wind_speed_max_10m_kmh": 24.0,
+      "wind_speed_max_850hpa_kmh": 46.0
+    },
+    {
+      "date_istanbul": "2026-11-05",
+      "temperature_min_c": 10.4,
+      "temperature_max_c": 12.6,
+      "precipitation_total_mm": 1.5,
+      "wind_speed_max_10m_kmh": 23.0,
+      "wind_speed_max_850hpa_kmh": 41.0
+    }
+  ],
+  "forecast_6_hourly": [
+    {
+      "forecast_hour": 3,
+      "valid_time_utc": "2026-11-04T03:00:00+00:00",
+      "valid_time_istanbul": "2026-11-04T06:00:00+03:00",
+      "temperature_2m_c": 14.1,
+      "temperature_850hpa_c": 7.3,
+      "wind_speed_10m_kmh": 3.0,
+      "wind_direction_10m_deg": 339.0,
+      "wind_speed_850hpa_kmh": 26.0,
+      "precipitation_6h_mm": 1.6,
+      "precipitation_interval_hours": 3
+    },
+    {
+      "forecast_hour": 6,
+      "valid_time_utc": "2026-11-04T06:00:00+00:00",
+      "valid_time_istanbul": "2026-11-04T09:00:00+03:00",
+      "temperature_2m_c": 13.9,
+      "temperature_850hpa_c": 7.0,
+      "wind_speed_10m_kmh": 5.0,
+      "wind_direction_10m_deg": 59.0,
+      "wind_speed_850hpa_kmh": 16.0,
+      "precipitation_6h_mm": 3.7,
+      "precipitation_interval_hours": 3
+    },
+    {
+      "forecast_hour": 9,
+      "valid_time_utc": "2026-11-04T09:00:00+00:00",
+      "valid_time_istanbul": "2026-11-04T12:00:00+03:00",
+      "temperature_2m_c": 14.9,
+      "temperature_850hpa_c": 6.3,
+      "wind_speed_10m_kmh": 5.0,
+      "wind_direction_10m_deg": 33.0,
+      "wind_speed_850hpa_kmh": 9.0,
+      "precipitation_6h_mm": 4.5,
+      "precipitation_interval_hours": 3
+    },
+    {
+      "forecast_hour": 12,
+      "valid_time_utc": "2026-11-04T12:00:00+00:00",
+      "valid_time_istanbul": "2026-11-04T15:00:00+03:00",
+      "temperature_2m_c": 14.7,
+      "temperature_850hpa_c": 6.4,
+      "wind_speed_10m_kmh": 9.0,
+      "wind_direction_10m_deg": 8.0,
+      "wind_speed_850hpa_kmh": 17.0,
+      "precipitation_6h_mm": 6.8,
+      "precipitation_interval_hours": 3
+    },
+    {
+      "forecast_hour": 15,
+      "valid_time_utc": "2026-11-04T15:00:00+00:00",
+      "valid_time_istanbul": "2026-11-04T18:00:00+03:00",
+      "temperature_2m_c": 13.9,
+      "temperature_850hpa_c": 5.6,
+      "wind_speed_10m_kmh": 21.0,
+      "wind_direction_10m_deg": 29.0,
+      "wind_speed_850hpa_kmh": 27.0,
+      "precipitation_6h_mm": 8.4,
+      "precipitation_interval_hours": 3
+    },
+    {
+      "forecast_hour": 18,
+      "valid_time_utc": "2026-11-04T18:00:00+00:00",
+      "valid_time_istanbul": "2026-11-04T21:00:00+03:00",
+      "temperature_2m_c": 13.1,
+      "temperature_850hpa_c": 4.5,
+      "wind_speed_10m_kmh": 24.0,
+      "wind_direction_10m_deg": 19.0,
+      "wind_speed_850hpa_kmh": 46.0,
+      "precipitation_6h_mm": 6.1,
+      "precipitation_interval_hours": 3
+    },
+    {
+      "forecast_hour": 21,
+      "valid_time_utc": "2026-11-04T21:00:00+00:00",
+      "valid_time_istanbul": "2026-11-05T00:00:00+03:00",
+      "temperature_2m_c": 12.6,
+      "temperature_850hpa_c": 2.8,
+      "wind_speed_10m_kmh": 23.0,
+      "wind_direction_10m_deg": 10.0,
+      "wind_speed_850hpa_kmh": 41.0,
+      "precipitation_6h_mm": 1.3,
+      "precipitation_interval_hours": 3
+    },
+    {
+      "forecast_hour": 24,
+      "valid_time_utc": "2026-11-05T00:00:00+00:00",
+      "valid_time_istanbul": "2026-11-05T03:00:00+03:00",
+      "temperature_2m_c": 12.5,
+      "temperature_850hpa_c": 2.7,
+      "wind_speed_10m_kmh": 19.0,
+      "wind_direction_10m_deg": 15.0,
+      "wind_speed_850hpa_kmh": 32.0,
+      "precipitation_6h_mm": 0.0,
+      "precipitation_interval_hours": 3
+    },
+    {
+      "forecast_hour": 27,
+      "valid_time_utc": "2026-11-05T03:00:00+00:00",
+      "valid_time_istanbul": "2026-11-05T06:00:00+03:00",
+      "temperature_2m_c": 12.0,
+      "temperature_850hpa_c": 0.4,
+      "wind_speed_10m_kmh": 18.0,
+      "wind_direction_10m_deg": 16.0,
+      "wind_speed_850hpa_kmh": 30.0,
+      "precipitation_6h_mm": 0.0,
+      "precipitation_interval_hours": 3
+    },
+    {
+      "forecast_hour": 30,
+      "valid_time_utc": "2026-11-05T06:00:00+00:00",
+      "valid_time_istanbul": "2026-11-05T09:00:00+03:00",
+      "temperature_2m_c": 12.0,
+      "temperature_850hpa_c": 0.1,
+      "wind_speed_10m_kmh": 15.0,
+      "wind_direction_10m_deg": 23.0,
+      "wind_speed_850hpa_kmh": 29.0,
+      "precipitation_6h_mm": 0.1,
+      "precipitation_interval_hours": 3
+    },
+    {
+      "forecast_hour": 33,
+      "valid_time_utc": "2026-11-05T09:00:00+00:00",
+      "valid_time_istanbul": "2026-11-05T12:00:00+03:00",
+      "temperature_2m_c": 12.0,
+      "temperature_850hpa_c": -0.1,
+      "wind_speed_10m_kmh": 20.0,
+      "wind_direction_10m_deg": 15.0,
+      "wind_speed_850hpa_kmh": 25.0,
+      "precipitation_6h_mm": 0.0,
+      "precipitation_interval_hours": 3
+    },
+    {
+      "forecast_hour": 36,
+      "valid_time_utc": "2026-11-05T12:00:00+00:00",
+      "valid_time_istanbul": "2026-11-05T15:00:00+03:00",
+      "temperature_2m_c": 11.8,
+      "temperature_850hpa_c": -0.7,
+      "wind_speed_10m_kmh": 20.0,
+      "wind_direction_10m_deg": 18.0,
+      "wind_speed_850hpa_kmh": 22.0,
+      "precipitation_6h_mm": 0.1,
+      "precipitation_interval_hours": 3
+    },
+    {
+      "forecast_hour": 39,
+      "valid_time_utc": "2026-11-05T15:00:00+00:00",
+      "valid_time_istanbul": "2026-11-05T18:00:00+03:00",
+      "temperature_2m_c": 10.4,
+      "temperature_850hpa_c": -0.1,
+      "wind_speed_10m_kmh": 17.0,
+      "wind_direction_10m_deg": 13.0,
+      "wind_speed_850hpa_kmh": 20.0,
+      "precipitation_6h_mm": 0.0,
+      "precipitation_interval_hours": 3
+    }
+  ],
+  "current_conditions": {
+    "temperature_2m_c": 14.1,
+    "wind_speed_10m_kmh": 3.0,
+    "precipitation_mm": 1.6,
+    "mean_sea_level_pressure_hpa": 1013.3
+  },
+  "regional_pressure_analysis": {
+    "valid_time_utc": "2026-11-04T03:00:00+00:00",
+    "diameter_km": null,
+    "findings": [
+      "İstanbul deniz seviyesi basıncı 1013.3 hPa. MeteoPT ECMWF noktası; bölgesel basınç merkezi bu kaynakta yok."
+    ]
+  }
+}
