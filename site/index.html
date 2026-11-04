@@ -1086,7 +1086,7 @@
         <div class="history-panel-head"><div><div class="section-kicker" id="history-station-source">ENKA BALMUMCU · GERÇEK ÖLÇÜMLER</div><h2>Son 24 saat</h2></div></div>
         <div class="history-charts">
           <article class="history-chart-card"><div class="history-chart-head"><div><h3>Sıcaklık</h3><p>°C · 30 dk ortalama, min–maks</p></div><span class="history-chart-icon">℃</span></div><div class="history-chart" id="station-temperature-trend"><div class="station-trend-empty">Sıcaklık kayıtları bekleniyor…</div></div><div class="history-chart-meta" id="station-trend-meta">Seçili istasyonun ölçüm geçmişi</div></article>
-          <article class="history-chart-card"><div class="history-chart-head"><div><h3 id="station-rain-title">Basınç</h3><p id="station-rain-caption">hPa · 30 dk ortalama</p></div><span class="history-chart-icon">☂</span></div><div class="history-chart" id="station-rain-trend"><div class="station-trend-empty">Yağış geçmişi oluşturuluyor…</div></div><div class="history-chart-meta" id="station-rain-meta">MGM · yarım saat</div></article>
+          <article class="history-chart-card"><div class="history-chart-head"><div><h3 id="station-rain-title">Yağış</h3><p id="station-rain-caption">mm · kayan 1 saatlik toplam</p></div><span class="history-chart-icon">☂</span></div><div class="history-chart" id="station-rain-trend"><div class="station-trend-empty">Yağış geçmişi oluşturuluyor…</div></div><div class="history-chart-meta" id="station-rain-meta">MGM · yarım saat</div></article>
         </div>
         <div class="history-source-note" id="history-source-note">Sıcaklık seçili istasyonun. Yağış iki istasyonda da MGM Eyüpsultan.</div>
       </section>
@@ -1803,11 +1803,10 @@
       }
     }
     function renderStationRainTrend(samples,stationName){
-      stationName=stationName||"İstasyon";const holder=$("station-rain-trend"),meta=$("station-rain-meta");if(!holder)return;
-      const caption=$("station-rain-caption");
-      if(activeStation==="enka"){const title=$("station-rain-title");if(title)title.textContent="Basınç";return renderStationPressureTrend(samples,stationName);}
+      const holder=$("station-rain-trend"),meta=$("station-rain-meta");if(!holder)return;
+      const caption=$("station-rain-caption"),title=$("station-rain-title");
       if(caption)caption.textContent="mm · kayan 1 saatlik toplam";
-      const title=$("station-rain-title");if(title)title.textContent="Yağış";
+      if(title)title.textContent="Yağış";
       return renderEyupsultanHourlyRain(typeof eyupsultanStationHistorySamples!=="undefined"?eyupsultanStationHistorySamples:[], "Eyüpsultan", holder, meta);
     }
     function renderStationHistory(){
@@ -1816,7 +1815,7 @@
       $("history-station-source").textContent=stationName.toLocaleUpperCase("tr-TR")+" · GERÇEK ÖLÇÜMLER";
       $("station-history-panel").setAttribute("aria-label",stationName+" son 24 saat geçmişi");
       $("history-source-note").hidden=false;
-      $("history-source-note").textContent=activeStation==="enka"?"Sıcaklık ve basınç: ENKA kamera OCR ölçümleri.":"Sıcaklık ve yağış: MGM Eyüpsultan ölçümleri.";
+      $("history-source-note").textContent=activeStation==="enka"?"Sıcaklık: ENKA kamera OCR ölçümleri. Yağış: MGM Eyüpsultan ölçümleri.":"Sıcaklık ve yağış: MGM Eyüpsultan ölçümleri.";
       renderStationTemperatureTrend(samples,stationName);
       renderStationRainTrend(samples,stationName);
     }
