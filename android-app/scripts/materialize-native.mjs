@@ -77,7 +77,7 @@ for (const permission of [
   'android.permission.RECEIVE_BOOT_COMPLETED'
 ]) {
   if (!manifest.includes('android:name="' + permission + '"')) {
-    manifest = manifest.replace('<application', '    <uses-permission android:name="' + permission + '" />\\n    <application');
+    manifest = manifest.replace('<application', '    <uses-permission android:name="' + permission + '" />\n    <application');
   }
 }
 
