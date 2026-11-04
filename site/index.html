@@ -1843,8 +1843,10 @@
       const observedAt=Date.parse(station.observed_at_utc);
       if(!Number.isFinite(observedAt))return false;
       const ageMinutes=Math.max(0,(Date.now()-observedAt)/60000);
-      const staleAfter=Number.isFinite(station.stale_after_minutes)?station.stale_after_minutes:15;
-      return ageMinutes<=Math.min(staleAfter,15);
+      const isMgmEyupsultan=String(station.station_id||"")==="18101"||String(station.source||"").includes("MGM 18101");
+      const defaultLimit=isMgmEyupsultan?30:15;
+      const staleAfter=Number.isFinite(station.stale_after_minutes)?station.stale_after_minutes:defaultLimit;
+      return ageMinutes<=Math.min(staleAfter,defaultLimit);
     }
     function renderStationCard(station){
       const hasStation=!!station;
