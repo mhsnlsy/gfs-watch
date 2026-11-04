@@ -1104,6 +1104,7 @@
       <section class="section" aria-label="ECMWF veri kaynağı ve lisans"><p class="ecmwf-source-note">Kaynak: <a href="https://www.meteopt.com/modelos/ecmwf?lat=41.014&lon=28.950" target="_blank" rel="noopener">MeteoPT ECMWF</a> · İstanbul noktası 41.014°N 28.950°E · 3 saatlik sıcaklık, yağış, rüzgâr, 850 hPa ve basınç. Ensemble sapması bu kaynakta yok.</p></section>
 <section class="section" id="ecmwf-tahmin"><div class="section-head"><div><div class="section-kicker">ECMWF IFS · MODEL TAHMİNİ</div><h2>8 günlük tahmin</h2></div><div class="section-note"><span id="ecmwf-daily-cycle-chip">ECMWF döngüsü yükleniyor</span><br><span id="ecmwf-daily-updated-chip">Yayın zamanı bekleniyor</span><br>Günlük en düşük / en yüksek sıcaklık · HRES yüzey tahmini</div></div><div class="daily-grid" id="ecmwf-daily-grid"><div class="loading">ECMWF tahmini yükleniyor…</div></div></section>
     </div>
+    <div class="water-gfs-layout">
     <section class="section" id="meteopt-gfs-table" aria-label="MeteoPT GFS ham model tablosu">
       <div class="section-head">
         <div>
@@ -1128,6 +1129,8 @@
 
       </article>
     </section>
+    <aside class="section" id="iski-water-card"><div class="section-head"><div><div class="section-kicker">İSKİ · SU DURUMU</div><h2>Baraj doluluğu</h2></div></div><article class="iski-mini-card"><div class="iski-mini-top"><span>İstanbul geneli</span><span id="iski-water-date">Veri bekleniyor</span></div><div class="iski-mini-value" id="iski-water-rate">—<small>%</small></div><div class="iski-mini-track"><span id="iski-water-fill"></span></div><div class="iski-mini-bottom"><span id="iski-water-delta">7 günlük değişim: —</span><span>Kaynak: İSKİ</span></div></article></aside>
+    </div>
   </main>
   <footer class="shell footer"><span><strong data-app-name>İstanbul'un Havası</strong> <span data-app-version>4.0</span></span><span>Veri kaynakları: ENKA Balmumcu Vantage PRO · MGM Eyüpsultan 18101 · MeteoPT GFS · MeteoPT ECMWF · Otomatik yenileme: 5 dakika</span></footer>
   <script>
@@ -2952,6 +2955,7 @@
     startPage();
   </script>
   <script src="./meteopt-gfs-table.js" defer></script>
+  <script src="./iski-dams.js" defer></script>
 </body>
 </html>
 
