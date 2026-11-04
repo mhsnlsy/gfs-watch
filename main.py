@@ -2104,7 +2104,6 @@ def analyze_and_build_output(current_run_name, payload, previous_runs):
     text_report_lines = [
         f"🌦 {APP_LABEL}",
         "İSTANBUL GFS TAHMİN RAPORU",
-        "📄 Çıktı: Yazılı tahmin raporu",
         f"🛰 Model döngüsü: {run_utc:%d.%m.%Y %H:%M} UTC ({run_utc:%H}Z)",
         (
             f"🗓 Tahmin aralığı: {run_utc:%d.%m.%Y %H:%M} – "
@@ -2124,7 +2123,7 @@ def analyze_and_build_output(current_run_name, payload, previous_runs):
         ).astimezone(TR_TZ)
         freshness_label = "GECİKMELİ ÖLÇÜM" if station.get("is_stale") else "SON İSTASYON ÖLÇÜMÜ"
         text_report_lines.extend([
-            f"📡 ENKA BALMUMCU GERÇEK İSTASYON GÖZLEMİ | VANTAGE PRO · {freshness_label}",
+            f"📡 ENKA BALMUMCU İSTASYON GÖZLEMİ · {freshness_label}",
             f"🕒 Ölçüm zamanı: {_format_tr_datetime(observed_local)} TSİ",
         ])
         if station.get("temperature_2m_c") is not None:
@@ -2142,10 +2141,7 @@ def analyze_and_build_output(current_run_name, payload, previous_runs):
                 f"💨 İstasyon rüzgârı: {station['wind_speed_10m_kmh']:.1f} km/sa"
                 f"{direction_text}"
             )
-        text_report_lines.extend([
-            "Kaynak: ENKA Balmumcu · Davis Vantage PRO istasyonu · canlı tablo ölçümü", 
-            "",
-        ])
+        text_report_lines.append("")
     else:
         text_report_lines.extend([
             "📡 ENKA BALMUMCU İSTASYON GÖZLEMİ: Bu rapor hazırlanırken ENKA verisi alınamadı.",
