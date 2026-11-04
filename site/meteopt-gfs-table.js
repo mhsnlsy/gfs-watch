@@ -1,7 +1,7 @@
 (() => {
   "use strict";
   const ROOT = "meteopt-gfs-table";
-  const DATA_URL = "./data/latest.json";
+  const DATA_URL = "./data/meteopt-gfs-first72.json";
   const $ = (id) => document.getElementById(id);
   const finite = (value) => value !== null && value !== undefined && value !== "" && Number.isFinite(Number(value));
   const number = (value) => finite(value) ? Number(value) : null;
@@ -39,12 +39,12 @@
     const body = $("meteopt-table-body");
     if (!body) return;
     const points = Array.isArray(document.forecast_6_hourly) ? document.forecast_6_hourly : [];
-    const pointsThrough39h = points.filter(point => Number(point.forecast_hour) > 0 && Number(point.forecast_hour) <= 39);
+    const pointsThrough72h = points.filter(point => Number(point.forecast_hour) > 0 && Number(point.forecast_hour) <= 72);
     const pointByHour = new Map(points.map(point => [Number(point.forecast_hour), point]));
     const rows = [];
-    const hours = pointsThrough39h.map(point => ({ step: Number(point.forecast_hour), point }));
+    const hours = pointsThrough72h.map(point => ({ step: Number(point.forecast_hour), point })).sort((a, b) => a.step - b.step);
     for (const item of hours) {
-      if (!Number.isFinite(item.step) || item.step <= 0 || item.step > 39) continue;
+      if (!Number.isFinite(item.step) || item.step <= 0 || item.step > 72) continue;
       const point = item.point || pointByHour.get(item.step) || null;
       const wind10 = point ? number(point.wind_speed_10m_kmh) : null;
       const wind850 = point ? number(point.wind_speed_850hpa_kmh) : null;
@@ -73,7 +73,7 @@
     $("meteopt-table-updated").textContent = document.published_at_utc
       ? "Yayın: " + new Intl.DateTimeFormat("tr-TR", { timeZone: "Europe/Istanbul", day: "2-digit", month: "2-digit", hour: "2-digit", minute: "2-digit" }).format(new Date(document.published_at_utc)) + " TSİ"
       : "Yayın zamanı bilinmiyor";
-    $("meteopt-table-status").textContent = rows.length + " / 13 adım · 39. saate kadar";
+    $("meteopt-table-status").textContent = rows.length + " / 24 adım · 72. saate kadar";
   }
   async function refresh() {
     const status = $("meteopt-table-status");
@@ -82,7 +82,7 @@
       if (!response.ok) throw new Error("HTTP " + response.status);
       const document = await response.json();
       if (!document || document.forecast_source !== "meteopt" || !Array.isArray(document.forecast_6_hourly)) {
-        throw new Error("Güncel MeteoPT GFS veri paketi bulunamadı.");
+        throw new Error("MeteoPT GFS f72 tablosu henüz yayınlanmadı; f72 bekleniyor.");
       }
       render(document);
     } catch (error) {
