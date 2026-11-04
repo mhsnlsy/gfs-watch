@@ -2,6 +2,10 @@
 name: ENKA Station Refresh
 
 on:
+  push:
+    branches: [main]
+    paths:
+      - ".github/workflows/enka-station-refresh.yml"
   workflow_dispatch:
 
 permissions:
@@ -47,7 +51,24 @@ jobs:
           STATION_PREVIOUS_OBSERVATION_PATH: forecast-data/public/station-observation.json
           STATION_TEMPERATURE_HISTORY_PATH: forecast-data/public/station-temperature-history.json
 
+      - name: Reject stale ENKA observations
+        run: |
+          python - <<'PY'
+          import json
+          from pathlib import Path
+          doc=json.loads(Path("public/station-observation.json").read_text(encoding="utf-8"))
+          station=doc["station_observation"]
+          age=float(station.get("age_minutes", 9999))
+          stale_after=float(station.get("stale_after_minutes", 15))
+          print(f"ENKA measurement age: {age:.1f} min (limit {stale_after:.0f} min)")
+          if age > 15 or station.get("is_stale"):
+              raise SystemExit("ENKA source is stale; keeping the last published record and retrying on the next five-minute poll.")
+          if station.get("temperature_2m_c") is None:
+              raise SystemExit("ENKA temperature missing; refusing to publish.")
+          PY
+
       - name: Publish station observation and temperature history
+        if: success()
         run: |
           cp public/station-observation.json forecast-data/public/station-observation.json
           cd forecast-data
