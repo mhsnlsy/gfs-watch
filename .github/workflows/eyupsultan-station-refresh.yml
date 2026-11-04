@@ -56,8 +56,8 @@ jobs:
             echo "Saatlik yağış yok. Son sağlam kayıt korunuyor."
             exit 1
           fi
-          if [ "$AGE" -gt 90 ]; then
-            echo "Observation is older than 90 minutes."
+          if [ "$AGE" -gt 30 ]; then
+            echo "Observation is older than 30 minutes."
             exit 1
           fi
         env:
