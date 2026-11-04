@@ -2105,11 +2105,6 @@ def analyze_and_build_output(current_run_name, payload, previous_runs):
         f"🌦 {APP_LABEL}",
         "İSTANBUL GFS TAHMİN RAPORU",
         f"🛰 Model döngüsü: {run_utc:%d.%m.%Y %H:%M} UTC ({run_utc:%H}Z)",
-        (
-            f"🗓 Tahmin aralığı: {run_utc:%d.%m.%Y %H:%M} – "
-            f"{forecast_end_utc:%d.%m.%Y %H:%M} UTC "
-            f"(+{payload.get('forecast_horizon_hours', MIN_FORECAST_HOURS)} saat)"
-        ),
         f"🕒 Rapor zamanı: {_format_tr_datetime(now_local)} TSİ",
         "📍 Konum: İstanbul, Türkiye",
         "",
