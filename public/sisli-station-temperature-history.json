@@ -1,0 +1,19 @@
+{
+  "schema": "gfs-watch.station-temperature-history.v1",
+  "station_id": "18401",
+  "station_name": "Şişli",
+  "updated_at_utc": "2026-11-04T17:34:56.122Z",
+  "samples": [
+    {
+      "logged_at_utc": "2026-11-04T17:34:56.122Z",
+      "observed_at_utc": "2026-11-04T17:29:00.000Z",
+      "temperature_2m_c": 13,
+      "precipitation_1h_mm": 0.89,
+      "precipitation_6h_mm": 15.43,
+      "precipitation_12h_mm": 18.63,
+      "precipitation_24h_mm": 26.24,
+      "precipitation_daily_mm": 26.24,
+      "station_pressure_hpa": null
+    }
+  ]
+}
