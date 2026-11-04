@@ -90,6 +90,9 @@ const receivers = [
             <intent-filter><action android:name="android.appwidget.action.APPWIDGET_UPDATE" /></intent-filter>
             <meta-data android:name="android.appwidget.provider" android:resource="@xml/widget_weather_wide_info" />
         </receiver>`
+  `        <receiver android:name=".WidgetRefreshReceiver" android:enabled="true" android:exported="true">
+            <intent-filter><action android:name="android.intent.action.MY_PACKAGE_REPLACED" /></intent-filter>
+        </receiver>`
 ];
 for (const receiver of receivers) {
   const className = receiver.match(/android:name="([^"]+)"/)[1];
