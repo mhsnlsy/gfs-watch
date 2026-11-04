@@ -1550,7 +1550,7 @@
       if(!current||!forecast)return;
       const station=typeof eyupsultanStationObservation!=="undefined"?eyupsultanStationObservation:null;
       const measured=station&&typeof station.precipitation_1h_mm==="number"?station.precipitation_1h_mm:null;
-      const dateTime=ms=>new Intl.DateTimeFormat("tr-TR",{timeZone:"UTC",weekday:"short",day:"2-digit",month:"short",hour:"2-digit",minute:"2-digit",hourCycle:"h23"}).format(new Date(ms))+" UTC";
+      const dateTime=ms=>new Intl.DateTimeFormat("tr-TR",{timeZone:"UTC",weekday:"short",day:"2-digit",month:"short",hour:"2-digit",minute:"2-digit",hourCycle:"h23"}).format(new Date(ms));
       if(measured===null){
         current.textContent="MGM Eyüpsultan anlık yağış ölçümü alınamıyor.";
       }else{
@@ -1573,7 +1573,7 @@
       const upcoming=intervals.filter(x=>x.start>now);
       if(active.length){
         const amount=active.reduce((sum,x)=>sum+x.mm,0);
-        forecast.textContent="MeteoPT GFS tahmininde şu anda da yağış var: mevcut 3 saatlik model adımında "+fmt(amount,2)+" mm bekleniyor ("+dateTime(active[0].start)+"–"+dateTime(active[active.length-1].end)+").";
+        forecast.textContent="GFS tahmininde şu anda da yağış var: mevcut 3 saatlik model adımında "+fmt(amount,2)+" mm bekleniyor ("+dateTime(active[0].start)+"–"+dateTime(active[active.length-1].end)+").";
       }else if(upcoming.length){
         const next=upcoming[0],hours=Math.max(0,(next.start-now)/3600000);
         const lead=hours<1?"1 saatten az":Math.round(hours)+" saat";
