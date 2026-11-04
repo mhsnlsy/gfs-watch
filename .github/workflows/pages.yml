@@ -62,6 +62,14 @@ jobs:
           else
             printf '{"schema":"gfs-watch.station-temperature-history.v1","sampling_interval_minutes":5,"aggregation_interval_minutes":60,"samples":[]}\n' > _site/data/station-temperature-history.json
           fi
+          if [ -s forecast-data/public/station-camera-backup.json ]; then
+            python -m json.tool forecast-data/public/station-camera-backup.json > /dev/null
+            cp forecast-data/public/station-camera-backup.json _site/data/station-camera-backup.json
+          fi
+          if [ -s forecast-data/public/station-camera-backup-history.json ]; then
+            python -m json.tool forecast-data/public/station-camera-backup-history.json > /dev/null
+            cp forecast-data/public/station-camera-backup-history.json _site/data/station-camera-backup-history.json
+          fi
           if [ -s forecast-data/public/eyupsultan-station-observation.json ]; then
             python -m json.tool forecast-data/public/eyupsultan-station-observation.json > /dev/null
             cp forecast-data/public/eyupsultan-station-observation.json _site/data/eyupsultan-station-observation.json
