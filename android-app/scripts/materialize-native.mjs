@@ -82,11 +82,11 @@ for (const permission of [
 }
 
 const receivers = [
-  `        <receiver android:name=".WeatherWidgetProvider" android:exported="true" android:permission="android.permission.BIND_APPWIDGET">
+  `        <receiver android:name=".WeatherWidgetProvider" android:exported="true">
             <intent-filter><action android:name="android.appwidget.action.APPWIDGET_UPDATE" /></intent-filter>
             <meta-data android:name="android.appwidget.provider" android:resource="@xml/widget_weather_small_info" />
         </receiver>`,
-  `        <receiver android:name=".WeatherWideWidgetProvider" android:exported="true" android:permission="android.permission.BIND_APPWIDGET">
+  `        <receiver android:name=".WeatherWideWidgetProvider" android:exported="true">
             <intent-filter><action android:name="android.appwidget.action.APPWIDGET_UPDATE" /></intent-filter>
             <meta-data android:name="android.appwidget.provider" android:resource="@xml/widget_weather_wide_info" />
         </receiver>`
