@@ -46,6 +46,8 @@ public final class WeatherData {
         JSONObject eyupsultanDoc = fetchOptional(context, "data/eyupsultan-station-observation.json");
         JSONObject enkaDoc = fetchOptional(context, "data/station-observation.json");
         JSONObject enkaCameraDoc = fetchOptional(context, "data/station-camera-backup.json");
+        JSONObject enkaForComparison = freshStation(enkaDoc, false);
+        fetchOptional(context, "data/eyupsultan-station-temperature-history.json");
         JSONObject station = freshStation(eyupsultanDoc, true);
         if (station == null) station = freshStation(enkaDoc, false);
         if (station == null) station = freshStation(enkaCameraDoc, false);
@@ -93,6 +95,7 @@ public final class WeatherData {
         edit.apply();
 
         evaluateRainAlerts(context, prefs, live && !stationStale ? station : null, forecast, latest);
+        DashboardInsights.update(context, eyupsultanDoc == null ? null : eyupsultanDoc.optJSONObject("station_observation"), enkaForComparison, points, stationStale);
         WidgetRenderer.renderAll(context);
     }
 
