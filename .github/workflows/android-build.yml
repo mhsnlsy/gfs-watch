@@ -32,11 +32,14 @@ jobs:
         with:
           node-version: '22'
 
-      - name: Set up Android SDK
-        uses: android-actions/setup-android@v3
-
-      - name: Install Android SDK platform
-        run: sdkmanager "platforms;android-36" "build-tools;36.0.0"
+      - name: Accept Android SDK licences and install platform
+        shell: bash
+        run: |
+          set -euo pipefail
+          sdkmanager_path="$(find "${ANDROID_HOME:-/usr/local/lib/android/sdk}/cmdline-tools" -type f -name sdkmanager | sort | tail -n 1)"
+          test -x "$sdkmanager_path"
+          yes | "$sdkmanager_path" --licenses >/dev/null
+          "$sdkmanager_path" "platforms;android-36" "build-tools;36.0.0"
 
       - name: Install Capacitor dependencies
         run: npm install --no-audit --no-fund
