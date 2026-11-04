@@ -2462,22 +2462,7 @@
           }
         }catch(_){}
       }
-      // ENKA's published sensor timestamp can stall while MGM Eyüpsultan
-      // continues to provide fresh observations. Prefer the fresh measured
-      // station automatically rather than leaving the live dashboard blank.
-      if(activeStation==="enka"&&!stationObservationIsFresh(enkaStationObservation)&&stationObservationIsFresh(eyupsultanStationObservation)){
-        activeStation="eyupsultan";
-        try{localStorage.setItem("istanbul-hava-station","eyupsultan");}catch(_){}
-        $("station-enka-button").classList.remove("active");
-        $("station-eyupsultan-button").classList.add("active");
-        $("station-enka-button").setAttribute("aria-pressed","false");
-        $("station-eyupsultan-button").setAttribute("aria-pressed","true");
-        renderStationCard(eyupsultanStationObservation);
-        renderStationHistory();
-        refreshSelectedStation();
-      }else{
-        renderStationCard(activeStation==="enka"?enkaStationObservation:eyupsultanStationObservation);
-      }
+      renderStationCard(activeStation==="enka"?enkaStationObservation:eyupsultanStationObservation);
       if(latestRainForecastPoints.length)renderRainWindow(latestRainForecastPoints);
       if(typeof renderBriefing==="function")renderBriefing();
     }
@@ -2590,23 +2575,11 @@
             }
           }catch(_){eyupsultanStationObservation=null;}
         }
-        // Select the freshest actual station measurement on every page load.
-        // ENKA may remain selected in localStorage after its feed stalls.
-        if(!stationObservationIsFresh(enkaStationObservation)&&stationObservationIsFresh(eyupsultanStationObservation)){
-          activeStation="eyupsultan";
-          try{localStorage.setItem("istanbul-hava-station","eyupsultan");}catch(_){}
-          $("station-enka-button").classList.remove("active");
-          $("station-eyupsultan-button").classList.add("active");
-          $("station-enka-button").setAttribute("aria-pressed","false");
-          $("station-eyupsultan-button").setAttribute("aria-pressed","true");
-        }else if(stationObservationIsFresh(enkaStationObservation)){
-          activeStation="enka";
-          try{localStorage.setItem("istanbul-hava-station","enka");}catch(_){}
-          $("station-enka-button").classList.add("active");
-          $("station-eyupsultan-button").classList.remove("active");
-          $("station-enka-button").setAttribute("aria-pressed","true");
-          $("station-eyupsultan-button").setAttribute("aria-pressed","false");
-        }
+        // Keep the user's selected station. ENKA Balmumcu is always fed by camera OCR.
+        $("station-enka-button").classList.toggle("active",activeStation==="enka");
+        $("station-eyupsultan-button").classList.toggle("active",activeStation==="eyupsultan");
+        $("station-enka-button").setAttribute("aria-pressed",String(activeStation==="enka"));
+        $("station-eyupsultan-button").setAttribute("aria-pressed",String(activeStation==="eyupsultan"));
         render(data);
         enkaStationHistorySamples=[];
         eyupsultanStationHistorySamples=[];
