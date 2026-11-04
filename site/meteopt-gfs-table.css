@@ -240,3 +240,22 @@
     table-layout:fixed!important;
   }
 }
+
+
+/* Mobile typography + compact spacing refinement. */
+@media(max-width:850px){
+  #meteopt-gfs-table .meteopt-data-table th,
+  #meteopt-gfs-table .meteopt-data-table td{
+    padding-left:0!important;
+    padding-right:0!important;
+  }
+  #meteopt-gfs-table .meteopt-data-table th:first-child,
+  #meteopt-gfs-table .meteopt-data-table td:first-child{width:6%!important}
+  #meteopt-gfs-table .meteopt-data-table th:nth-child(2),
+  #meteopt-gfs-table .meteopt-data-table td:nth-child(2){width:22%!important}
+  #meteopt-gfs-table .meteopt-data-table th:nth-child(n+3),
+  #meteopt-gfs-table .meteopt-data-table td:nth-child(n+3){width:14.4%!important}
+  #meteopt-gfs-table .meteopt-data-table{font-size:8px!important}
+  #meteopt-gfs-table .meteopt-data-table th{font-size:8px!important}
+  #meteopt-gfs-table .meteopt-value{font-size:8px!important}
+}
