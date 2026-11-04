@@ -1,0 +1,122 @@
+name: MGM Şişli Station Refresh
+
+# Independent five-minute polling chain. This workflow owns only Şişli files.
+on:
+  push:
+    branches: [main]
+    paths:
+      - ".github/workflows/sisli-station-refresh.yml"
+      - "scripts/sisli_weather.mjs"
+  workflow_dispatch:
+
+permissions:
+  contents: write
+  actions: write
+
+concurrency:
+  group: sisli-weather-refresh
+  cancel-in-progress: false
+
+jobs:
+  refresh:
+    runs-on: ubuntu-latest
+    timeout-minutes: 8
+    steps:
+      - name: Check out application
+        uses: actions/checkout@v4
+        with:
+          ref: main
+
+      - name: Check out published station data
+        uses: actions/checkout@v4
+        with:
+          ref: gfs-watch-state
+          path: forecast-data
+
+      - name: Set up Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: "22"
+
+      - name: Fetch MGM Şişli 18401 observation
+        id: scrape
+        run: |
+          set -euo pipefail
+          mkdir -p public forecast-data/public
+          node scripts/sisli_weather.mjs
+          test -s public/sisli-station-observation.json
+          AGE=$(jq -r '.station_observation.age_minutes // 999' public/sisli-station-observation.json)
+          TEMP=$(jq -r '.station_observation.temperature_2m_c' public/sisli-station-observation.json)
+          echo "MGM Şişli 18401: $AGE min · $TEMP C"
+          if [ "$AGE" -gt 30 ]; then
+            echo "Şişli observation stale; previous published data will be preserved."
+            exit 1
+          fi
+          if [ "$TEMP" = "null" ]; then
+            echo "Şişli temperature missing; previous published data will be preserved."
+            exit 1
+          fi
+        env:
+          SISLI_TEMPERATURE_HISTORY_PATH: forecast-data/public/sisli-station-temperature-history.json
+
+      - name: Publish only Şişli observation and history
+        id: publish
+        if: steps.scrape.outcome == 'success'
+        run: |
+          set -euo pipefail
+          cp -f public/sisli-station-observation.json forecast-data/public/
+          cp -f public/sisli-station-temperature-history.json forecast-data/public/ || true
+          cd forecast-data
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add public/sisli-station-observation.json public/sisli-station-temperature-history.json
+          if git diff --cached --quiet; then
+            echo "No Şişli data changes."
+            echo "changed=false" >> "$GITHUB_OUTPUT"
+            exit 0
+          fi
+          git commit -m "Refresh MGM Şişli station observation [$(date -u +%H:%M)]"
+          for attempt in 1 2 3 4 5; do
+            git pull --rebase origin gfs-watch-state
+            if git push origin gfs-watch-state; then
+              echo "Şişli data published without modifying other station files."
+              echo "changed=true" >> "$GITHUB_OUTPUT"
+              exit 0
+            fi
+            sleep $((attempt * 2))
+          done
+          echo "Could not publish Şişli data after five attempts."
+          exit 1
+
+      - name: Deploy changed station data to GitHub Pages (throttled)
+        if: steps.publish.outputs.changed == 'true'
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          set -euo pipefail
+          active=$(gh run list --workflow=pages.yml --limit 20 --json status --jq '[.[] | select(.status=="queued" or .status=="in_progress" or .status=="pending" or .status=="waiting" or .status=="requested")] | length')
+          if [ "$active" -gt 0 ]; then
+            echo "Pages deployment already active ($active); station payload is safely published and will be included in that deployment."
+            exit 0
+          fi
+          latest=$(gh run list --workflow=pages.yml --limit 1 --json createdAt --jq '.[0].createdAt // empty')
+          if [ -n "$latest" ]; then
+            latest_epoch=$(date -u -d "$latest" +%s)
+            now_epoch=$(date -u +%s)
+            age=$((now_epoch - latest_epoch))
+            if [ "$age" -lt 900 ]; then
+              echo "A Pages deployment was started $age seconds ago; enforcing 15-minute deployment interval."
+              exit 0
+            fi
+          fi
+          gh workflow run pages.yml --ref main --repo "$GITHUB_REPOSITORY"
+          echo "Pages deployment requested."
+
+      # The next poll is queued even if this station's fetch or publish failed.
+      - name: Queue next five-minute Şişli refresh
+        if: always() && !cancelled()
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          gh workflow run sisli-station-refresh.yml --ref main --repo "$GITHUB_REPOSITORY"
+          echo "Next independent Şişli poll queued."
