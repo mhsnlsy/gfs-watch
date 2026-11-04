@@ -1,62 +1,46 @@
-# GFS Watch
+# İstanbul'un Havası
 
-İstanbul için NOAA/NCEP GFS 0.25° tahminlerini doğrudan GRIB2 dosyalarından işleyen ve sonuçları Telegram üzerinden gönderen izleme sistemi.
+**Resmî sürüm: 1.4.3**
 
-## Nasıl çalışır?
+İstanbul için GFS ve ECMWF tahminlerini, gerçek istasyon gözlemlerini ve yağış/radar bilgisini bir araya getiren otomatik meteoroloji panosu.
 
-- GFS GRIB2 dosyaları her tahmin saati için doğrudan NOAA NOMADS `gfs/prod/gfs.YYYYMMDD/HH/atmos/` dizininden alınır; NOMADS yanıt vermezse aynı dosyanın AWS S3 aynası denenir. İndirme kaynağı dosya bazında loglanır.
-- Gerekli meteorolojik alanlar, Her dosyanın `.idx` envanterinden seçilir ve yalnızca raporun kullandığı sıcaklık, rüzgâr, yağış ve başlangıç basınç mesajlarının byte aralıkları indirilir. Yaklaşık 500 MB'lık küresel dosyanın tamamı indirilmez.
-- Her yeni tahmin dosyası indirildiğinde ecCodes ile çözülür; İstanbul için sıcaklık, 10 m rüzgârı ve yağış değerleri önceden hazırlanıp önbelleğe yazılır.
-- Ön veriler f000–f120 arasında saatlik, f123–f177 arasında üç saatlik adımlardan oluşur: toplam 140 lead. f180 son dosyadır. f180 yayımlandığında sistem önce 140 ön verinin hazır olduğunu doğrular, ardından f180'i alıp 141 zaman noktalı tahmini birleştirir.
-- GFS'nin 00Z, 06Z, 12Z ve 18Z çevrimleri beş dakikada bir otomatik keşfedilir. Her GitHub Actions çalışması tek keşif/ön indirme/rapor kontrolü yapar; eksik GRIB2 alanları çevrime özel önbellekten tamamlanır ve kısmi önbellek her çalışmanın sonunda Actions Cache'e kaydedilir. f180 ile önceki 140 girdi hazır olduğunda rapor aynı çalışmada oluşturulur, GFS geçmişi `gfs-watch-state` dalına yazılır ve Pages dağıtımı hemen başlar. Sonraki kontrol, bağımsız kuyruk işi tarafından beş dakika sonra otomatik başlatılır.
-- GRIB2 alanları yerel olarak ecCodes ile çözülür. Günlük sıcaklık, yağış ve rüzgâr özetleri modelin mevcut zaman adımlarından hesaplanır.
-- Koordinat: **41.014°N, 28.950°E**. En yakın 0.25° GFS grid noktası **41.000°N, 29.000°E**; değerler tüm İstanbul için enterpolasyon değil, bu grid hücresi içindir.
+- **Canlı site:** https://mhsnlsy.github.io/gfs-watch/
+- **Depo:** https://github.com/mhsnlsy/gfs-watch
 
-## Otomatik çalışma
+## Veri kaynakları
 
-GitHub Actions sabit bir döngü saatine kilitlenmez. NOAA'nın son altı GFS çevrimi NOMADS üzerinden, gerekli dosya yoksa AWS S3 aynasından kontrol edilir. f180 dosyası hazır olan ve henüz raporlanmamış her çevrim kronolojik sırayla işlenir. Böylece 06Z gibi ara çevrimler de atlanmaz; önceki üç çevrimin verisi gerekirse kendi tarih/saat dizinlerinden salt okunur olarak tamamlanır.
+- **GFS:** Kullanıcının belirlediği tek GFS kaynağı [MeteoPT GFS](https://www.meteopt.com/modelos/gfs?lat=41.014&lon=28.950&lang=en). İstanbul koordinatları 41.014°N, 28.950°E.
+- **ECMWF IFS:** Ayrı tahmin akışı; GFS verisinin yerine geçmez.
+- **ENKA Balmumcu:** Kamera görüntüsünden OCR ile alınan istasyon gözlemleri.
+- **Eyüpsultan:** İstasyon gözlemleri ve geçmiş ölçüm arşivi.
+- **Yağış radarı:** RainViewer verisi.
 
-GitHub Actions her çalıştırmada tek bir NOAA keşif/ön indirme/rapor kontrolü yapar. Kısmi GRIB2 önbelleği ve GFS geçmişi aynı çalıştırmanın sonunda hemen kaydedilir. Yeni rapor üretildiyse `gfs-watch-state` dalına gönderildikten hemen sonra GitHub Pages dağıtımı başlar. Bağımsız bir kuyruk işi beş dakika bekleyerek sonraki kontrolü otomatik başlatır; dosyalar henüz yayımlanmamışsa sonraki kontrolde aynı çevrime ait önbellekten devam edilir. Böylece runner 330 dakika açık tutulmaz ve Pages yayını uzun izleme oturumunun bitmesini beklemez. Yeni bir çevrim için elle UTC hedef saati güncellemek gerekmez.
+GFS ve ECMWF tahminleri ayrı tutulur; arayüzde model seçimiyle görüntülenir. GFS'nin ilk 72 saatlik tablo verisi MeteoPT çevrimi ilerledikçe hazırlanır.
 
-## Kurulum
+## Otomatik işleyiş
 
-Repository → **Settings → Secrets and variables → Actions** bölümüne şu secrets değerlerini ekleyin:
+- GitHub Actions, GFS çevrimlerini düzenli aralıklarla kontrol eder ve mevcut çevrimi işler.
+- İstasyon yenileme ve radar kontrolü kendi otomatik iş akışlarında yürütülür.
+- Yeni tahmin veya istasyon verisi yayıma hazır olduğunda GitHub Pages güncellenir.
+- Tahmin ve istasyon geçmişi `gfs-watch-state` dalında saklanır; site bu daldan hazırlanan yayın verilerini kullanır.
+- İş akışları gerektiğinde GitHub Actions üzerinden elle de çalıştırılabilir.
 
-- `TELEGRAM_TOKEN`: Telegram bot token'ı (zorunlu).
-- `CHAT_ID`: Bildirim gönderilecek Telegram sohbeti (zorunlu).
-- `GCP_SA_KEY`: Google Cloud servis hesabı JSON anahtarı (isteğe bağlı; yoksa metin bildirimi çalışır, ses üretimi atlanır).
+## Bildirimler
 
-GitHub Actions, ecCodes sistem kütüphanesini ve Python bağımlılıklarını çalışma sırasında kurar.
+- Tamamlanan GFS çevrimleri için Telegram raporları ve karşılaştırma görselleri gönderilir.
+- Bildirimlerde uygulama adı ve resmî sürüm numarası bulunur.
+- Telegram için depo ayarlarında `TELEGRAM_TOKEN` ve `CHAT_ID` Actions secrets olarak tanımlanmalıdır.
 
-## Bildirimler ve grafik
+## Yayın ve sürüm yönetimi
 
-- Her tamamlanan GFS döngüsü için bir Telegram metin raporu gönderilir.
-- Ayrıca mevcut döngü ile önceki üç altı saatlik döngüyü karşılaştıran dört çevrimli grafik gönderilir.
-- Sesli özet isteğe bağlıdır. TTS veya ses gönderimi başarısız olsa bile metin raporu gönderilmiş kalır.
-- Karşılaştırma için geçmişte eksik olan bir tahmin NOAA'dan salt okunur alınabilir; bu işlem bildirim geçmişini veya kayıt veritabanını değiştirmez.
+GitHub Pages, `main` dalındaki site dosyaları ile `gfs-watch-state` dalındaki güncel veri dosyaları birleştirilerek yayımlanır.
 
-## Tahmin arşivi
+Resmî sürümün tek kaynağı `site/version.json` dosyasıdır. Web arayüzü ve Telegram raporları aynı dosyadan sürüm bilgisini alır.
 
-Başarıyla işlenen tahminler `gfs-watch-state` dalında tutulur:
+Sürüm artışını değişikliğin kapsamına göre proje bakımını yapan kişi belirler:
 
-- [En son tahmin JSON](https://raw.githubusercontent.com/mhsnlsy/gfs-watch/gfs-watch-state/public/latest.json)
-- Arşiv yolu: `public/runs/YYYYMMDDTHHZ.json`
-- JSON, 141 yerel model zamanını, günlük özetleri, birimleri ve kaynak/koordinat bilgilerini içerir.
-- SQLite geçmişi (`gfs_watch.db`) aynı dalda tutulur. Veritabanını elle silmeyin veya düzenlemeyin.
-- Eski tahmin arşivleri 10 gün, tamamlanmamış GRIB2 önbellekleri 48 saat tutulur.
+- **PATCH**: hata düzeltmesi veya küçük iyileştirme (ör. 1.4.3 → 1.4.4)
+- **MINOR**: geriye uyumlu yeni özellik (ör. 1.4.3 → 1.5.0)
+- **MAJOR**: büyük mimari değişiklik veya uyumsuzluk (ör. 1.4.3 → 2.0.0)
 
-## Veri notları
-
-f000 alanı canlı gözlem değildir; GFS modelinin başlangıç analizidir. Basınç analizi f000 deniz seviyesi basınç alanını kullanır ve İstanbul merkezli 2.500 km çaplı bölgeyi değerlendirir. Değerler °C, km/sa ve mm cinsine çevrilir.
-
-## Web sitesi
-
-İstanbul'un Havası, GitHub Pages üzerinde ücretsiz statik site olarak yayınlanır: https://mhsnlsy.github.io/gfs-watch/ . Site, GFS Watch'ın `gfs-watch-state` dalındaki `public/latest.json` tahmin çıktısını kullanır; başarılı GFS çalışmaları tamamlandığında web yayını otomatik yenilenir. İlk kurulumda **Settings → Pages → Build and deployment → Source** alanı **GitHub Actions** olarak seçilmeli ve `Deploy İstanbul'un Havası` workflow'u bir kez elle çalıştırılmalıdır.
-
- 
-## Sürümleme ve dağıtım politikası
-
-- Resmî uygulama sürümü `site/version.json` dosyasındaki tek kaynaktan yönetilir.
-- Web arayüzü ve Telegram raporları aynı sürüm bilgisini kullanır; her rapor başlığında uygulama adı ve sürümü yer alır.
-- Her Pages dağıtımında yayınlanan arayüz sürümü gösterilir. Kod değişikliklerinde sürüm türü değişikliğin kapsamına göre artırılır: **PATCH** (hata düzeltmesi/ufak iyileştirme), **MINOR** (geriye uyumlu yeni özellik), **MAJOR** (uyumsuz veya kapsamlı yeniden tasarım).
-- Resmî başlangıç sürümü: **1.4.3**.
+Yalnızca dokümantasyon değişiklikleri uygulama sürümünü artırmaz.
