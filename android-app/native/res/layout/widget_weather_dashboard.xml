@@ -1,21 +1,77 @@
 <?xml version="1.0" encoding="utf-8"?>
 <LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
- android:id="@+id/widget_root" android:layout_width="match_parent" android:layout_height="match_parent"
- android:background="@drawable/widget_background" android:clickable="true" android:focusable="true"
- android:orientation="vertical">
+ android:id="@+id/widget_root"
+ android:layout_width="match_parent" android:layout_height="match_parent"
+ android:orientation="vertical" android:padding="10dp"
+ android:background="@drawable/widget_background"
+ android:clickable="true" android:focusable="true">
+
  <LinearLayout android:layout_width="match_parent" android:layout_height="wrap_content"
-  android:orientation="vertical" android:padding="12dp">
-  <TextView android:id="@+id/widget_source" android:layout_width="match_parent" android:layout_height="wrap_content"
-   android:text="İSTANBUL · CANLI GÖZLEM" android:textColor="#8DDDE0" android:textSize="11sp" android:textStyle="bold"/>
-  <TextView android:id="@+id/widget_comparison" android:layout_width="match_parent" android:layout_height="wrap_content"
-   android:layout_marginTop="6dp" android:text="Sıcaklık karşılaştırması bekleniyor" android:textColor="#E5F2F6" android:textSize="12sp" android:textStyle="bold"/>
-  <TextView android:id="@+id/widget_current_rain" android:layout_width="match_parent" android:layout_height="wrap_content"
-   android:layout_marginTop="7dp" android:text="MGM Eyüpsultan yağış ölçümü bekleniyor" android:textColor="#7DD3D7" android:textSize="12sp"/>
-  <TextView android:id="@+id/widget_dry_window" android:layout_width="match_parent" android:layout_height="wrap_content"
-   android:layout_marginTop="7dp" android:text="MeteoPT GFS kuru aralık hesaplanıyor" android:textColor="#D5EAF0" android:textSize="11sp"/>
-  <TextView android:id="@+id/widget_heavy_rain" android:layout_width="match_parent" android:layout_height="wrap_content"
-   android:layout_marginTop="7dp" android:text="Kuvvetli yağış uyarısı bekleniyor" android:textColor="#FFD28A" android:textSize="11sp" android:textStyle="bold"/>
-  <TextView android:id="@+id/widget_dashboard_updated" android:layout_width="match_parent" android:layout_height="wrap_content"
-   android:layout_marginTop="8dp" android:text="Ölçüm zamanı bekleniyor" android:textColor="#8FAAB8" android:textSize="9sp"/>
+  android:orientation="horizontal" android:gravity="center_vertical">
+  <TextView android:id="@+id/widget_source" android:layout_width="0dp" android:layout_height="wrap_content"
+   android:layout_weight="1" android:text="İSTANBUL · CANLI GÖZLEM"
+   android:textColor="#8DDDE0" android:textSize="10sp" android:textStyle="bold"/>
+  <TextView android:layout_width="wrap_content" android:layout_height="wrap_content"
+   android:text="GFS + MGM" android:textColor="#8FAAB8" android:textSize="9sp"/>
  </LinearLayout>
+
+ <LinearLayout android:layout_width="match_parent" android:layout_height="0dp"
+  android:layout_weight="1" android:layout_marginTop="8dp"
+  android:orientation="horizontal" android:baselineAligned="false">
+  <LinearLayout android:layout_width="0dp" android:layout_height="match_parent"
+   android:layout_weight="1" android:layout_marginEnd="4dp" android:padding="9dp"
+   android:orientation="vertical" android:gravity="center_vertical"
+   android:background="@drawable/widget_tile_background">
+   <TextView android:layout_width="match_parent" android:layout_height="wrap_content"
+    android:text="SICAKLIK KARŞILAŞTIRMASI" android:textColor="#8FAAB8"
+    android:textSize="8sp" android:textStyle="bold"/>
+   <TextView android:id="@+id/widget_comparison" android:layout_width="match_parent"
+    android:layout_height="wrap_content" android:layout_marginTop="6dp"
+    android:text="Veri bekleniyor" android:textColor="#E5F2F6"
+    android:textSize="12sp" android:textStyle="bold"/>
+  </LinearLayout>
+  <LinearLayout android:layout_width="0dp" android:layout_height="match_parent"
+   android:layout_weight="1" android:layout_marginStart="4dp" android:padding="9dp"
+   android:orientation="vertical" android:gravity="center_vertical"
+   android:background="@drawable/widget_tile_background">
+   <TextView android:layout_width="match_parent" android:layout_height="wrap_content"
+    android:text="ANLIK MGM YAĞIŞI" android:textColor="#8FAAB8"
+    android:textSize="8sp" android:textStyle="bold"/>
+   <TextView android:id="@+id/widget_current_rain" android:layout_width="match_parent"
+    android:layout_height="wrap_content" android:layout_marginTop="6dp"
+    android:text="Ölçüm bekleniyor" android:textColor="#7DD3D7" android:textSize="11sp"/>
+  </LinearLayout>
+ </LinearLayout>
+
+ <LinearLayout android:layout_width="match_parent" android:layout_height="0dp"
+  android:layout_weight="1" android:layout_marginTop="8dp"
+  android:orientation="horizontal" android:baselineAligned="false">
+  <LinearLayout android:layout_width="0dp" android:layout_height="match_parent"
+   android:layout_weight="1" android:layout_marginEnd="4dp" android:padding="9dp"
+   android:orientation="vertical" android:gravity="center_vertical"
+   android:background="@drawable/widget_tile_background">
+   <TextView android:layout_width="match_parent" android:layout_height="wrap_content"
+    android:text="KURU ARALIK / YAĞIŞIN DÖNÜŞÜ" android:textColor="#8FAAB8"
+    android:textSize="8sp" android:textStyle="bold"/>
+   <TextView android:id="@+id/widget_dry_window" android:layout_width="match_parent"
+    android:layout_height="wrap_content" android:layout_marginTop="6dp"
+    android:text="MeteoPT GFS verisi bekleniyor" android:textColor="#D5EAF0" android:textSize="10sp"/>
+  </LinearLayout>
+  <LinearLayout android:layout_width="0dp" android:layout_height="match_parent"
+   android:layout_weight="1" android:layout_marginStart="4dp" android:padding="9dp"
+   android:orientation="vertical" android:gravity="center_vertical"
+   android:background="@drawable/widget_tile_background">
+   <TextView android:layout_width="match_parent" android:layout_height="wrap_content"
+    android:text="KUVVETLİ YAĞIŞ" android:textColor="#8FAAB8"
+    android:textSize="8sp" android:textStyle="bold"/>
+   <TextView android:id="@+id/widget_heavy_rain" android:layout_width="match_parent"
+    android:layout_height="wrap_content" android:layout_marginTop="6dp"
+    android:text="GFS tahmini bekleniyor" android:textColor="#FFD28A"
+    android:textSize="10sp" android:textStyle="bold"/>
+  </LinearLayout>
+ </LinearLayout>
+
+ <TextView android:id="@+id/widget_dashboard_updated" android:layout_width="match_parent"
+  android:layout_height="wrap_content" android:layout_marginTop="7dp"
+  android:text="Ölçüm zamanı bekleniyor" android:textColor="#8FAAB8" android:textSize="8sp"/>
 </LinearLayout>
