@@ -1,0 +1,75 @@
+name: Köy MGM
+
+on:
+  workflow_dispatch:
+  schedule:
+    - cron: "17 * * * *"
+
+permissions:
+  contents: write
+
+concurrency:
+  group: koy-mgm-independent
+  cancel-in-progress: false
+
+jobs:
+  fetch:
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - name: Fetch only the MGM Giresun-Çanakçı forecast page
+        run: |
+          set -euo pipefail
+          mkdir -p output
+          python - <<'PY'
+          import json
+          from datetime import datetime, timezone
+          from urllib.request import Request, urlopen
+
+          url = "https://mgm.gov.tr/tahmin/il-ve-ilceler.aspx?il=Giresun&ilce=%C3%87anak%C3%A7%C4%B1"
+          request = Request(url, headers={
+              "User-Agent": "Mozilla/5.0 (compatible; Koy-MGM/1.0)",
+              "Accept": "text/html,application/xhtml+xml",
+              "Cache-Control": "no-cache",
+          })
+          with urlopen(request, timeout=40) as response:
+              html = response.read().decode("utf-8", errors="replace")
+              status = response.status
+          if status != 200 or "Çanakçı" not in html:
+              raise SystemExit(f"MGM Çanakçı page validation failed (HTTP {status})")
+          fetched = datetime.now(timezone.utc).isoformat()
+          payload = {
+              "schema": "koy-mgm.page-snapshot.v1",
+              "location": {"province": "Giresun", "district": "Çanakçı"},
+              "source": "Meteoroloji Genel Müdürlüğü",
+              "source_url": url,
+              "fetched_at_utc": fetched,
+              "http_status": status,
+              "html": html,
+          }
+          with open("output/latest.json", "w", encoding="utf-8") as f:
+              json.dump(payload, f, ensure_ascii=False)
+          print(f"MGM Çanakçı page fetched: {len(html)} characters")
+          PY
+      - name: Publish to the dedicated koy-mgm-data branch
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          set -euo pipefail
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git fetch origin koy-mgm-data || true
+          if git show-ref --verify --quiet refs/remotes/origin/koy-mgm-data; then
+            git checkout -B koy-mgm-data origin/koy-mgm-data
+          else
+            git checkout --orphan koy-mgm-data
+            git rm -rf . >/dev/null 2>&1 || true
+          fi
+          mkdir -p mgm
+          cp "$GITHUB_WORKSPACE/output/latest.json" mgm/latest.json
+          cp mgm/latest.json "mgm/$(date -u +%Y%m%dT%H%M%SZ).json"
+          find mgm -type f -name '*.json' -mtime +14 -delete
+          git add mgm
+          if git diff --cached --quiet; then exit 0; fi
+          git commit -m "Update MGM Çanakçı forecast snapshot"
+          git push origin koy-mgm-data
