@@ -24,3 +24,64 @@
 #meteopt-gfs-table .mt-purple{color:#d7a6ff;background:rgba(151,82,205,.2)}
 #meteopt-gfs-table .meteopt-table-empty{padding:14px!important;text-align:center!important;color:var(--muted)!important}
 @media(max-width:560px){#meteopt-gfs-table .meteopt-table-card{padding:8px;border-radius:12px}#meteopt-gfs-table .meteopt-table-toolbar{align-items:flex-start;flex-direction:column;gap:4px}#meteopt-gfs-table .meteopt-data-table{font-size:9px;min-width:560px!important}#meteopt-gfs-table .meteopt-data-table th{padding:6px 3px}#meteopt-gfs-table .meteopt-data-table td{padding:4px 3px}#meteopt-gfs-table .meteopt-data-table th:nth-child(2),#meteopt-gfs-table .meteopt-data-table td:nth-child(2){padding-left:6px;padding-right:6px}}
+
+
+/* Tight, left-stacked MeteoPT panel: width follows the data, not the viewport. */
+#meteopt-gfs-table{
+  display:block!important;
+  width:max-content!important;
+  max-width:100%!important;
+  margin-left:0!important;
+  margin-right:auto!important;
+}
+#meteopt-gfs-table>.section-head{
+  width:100%!important;
+  max-width:100%!important;
+  justify-content:space-between;
+}
+#meteopt-gfs-table .meteopt-table-card{
+  display:block!important;
+  width:max-content!important;
+  max-width:100%!important;
+  min-width:0!important;
+  margin:0!important;
+}
+#meteopt-gfs-table .meteopt-table-toolbar{width:100%;margin-bottom:5px}
+#meteopt-gfs-table .meteopt-table-scroll{
+  display:block!important;
+  width:max-content!important;
+  max-width:100%!important;
+  overflow-x:auto!important;
+}
+#meteopt-gfs-table .meteopt-data-table{
+  width:auto!important;
+  min-width:0!important;
+  max-width:none!important;
+  table-layout:auto!important;
+  border-spacing:0!important;
+}
+#meteopt-gfs-table .meteopt-data-table th,
+#meteopt-gfs-table .meteopt-data-table td{padding:4px 3px!important}
+#meteopt-gfs-table .meteopt-data-table th:first-child,
+#meteopt-gfs-table .meteopt-data-table td:first-child{width:38px!important;min-width:38px!important}
+#meteopt-gfs-table .meteopt-data-table th:nth-child(2),
+#meteopt-gfs-table .meteopt-data-table td:nth-child(2){
+  width:116px!important;min-width:116px!important;padding-left:5px!important;padding-right:5px!important
+}
+#meteopt-gfs-table .meteopt-data-table th:nth-child(n+3),
+#meteopt-gfs-table .meteopt-data-table td:nth-child(n+3){width:58px!important;min-width:58px!important}
+#meteopt-gfs-table .meteopt-value{min-width:0!important;padding:2px 3px!important}
+@media(max-width:560px){
+  #meteopt-gfs-table{width:100%!important}
+  #meteopt-gfs-table .meteopt-table-card{width:100%!important;padding:7px!important}
+  #meteopt-gfs-table .meteopt-table-scroll{width:100%!important}
+  #meteopt-gfs-table .meteopt-data-table{font-size:9px!important}
+  #meteopt-gfs-table .meteopt-data-table th,
+  #meteopt-gfs-table .meteopt-data-table td{padding:4px 2px!important}
+  #meteopt-gfs-table .meteopt-data-table th:first-child,
+  #meteopt-gfs-table .meteopt-data-table td:first-child{width:32px!important;min-width:32px!important}
+  #meteopt-gfs-table .meteopt-data-table th:nth-child(2),
+  #meteopt-gfs-table .meteopt-data-table td:nth-child(2){width:108px!important;min-width:108px!important}
+  #meteopt-gfs-table .meteopt-data-table th:nth-child(n+3),
+  #meteopt-gfs-table .meteopt-data-table td:nth-child(n+3){width:48px!important;min-width:48px!important}
+}
