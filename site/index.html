@@ -1636,7 +1636,9 @@
       if(!current||!forecast)return;
       const station=typeof eyupsultanStationObservation!=="undefined"?eyupsultanStationObservation:null;
       const measured=station&&typeof station.precipitation_1h_mm==="number"?station.precipitation_1h_mm:null;
-      const dateTime=ms=>new Intl.DateTimeFormat("tr-TR",{timeZone:"UTC",weekday:"short",day:"2-digit",month:"short",hour:"2-digit",minute:"2-digit",hourCycle:"h23"}).format(new Date(ms));
+      // GFS yağış özetleri de aynı MeteoPT/TSİ konvansiyonunu kullanır:
+      // 12Z + 3 saat = 15 TSİ. UTC saatine +3 eklenmez.
+      const dateTime=ms=>forecastDateTimeTSI(ms);
       if(measured===null){
         current.textContent="MGM Eyüpsultan anlık yağış ölçümü alınamıyor.";
       }else{
@@ -1700,6 +1702,14 @@
         }
       }
     }
+    function hourlyForecastAxisPoint(data,hour){
+      if(!Array.isArray(data)||!data.length)return null;
+      const target=hour;
+      return data.reduce((best,p)=>{
+        if(!best)return p;
+        return Math.abs(p.lead-target)<Math.abs(best.lead-target)?p:best;
+      },null);
+    }
     function drawNext72Line(targetId,data,color,label){
       const holder=$(targetId);if(data.length<2){holder.innerHTML='<div class="chart-empty">Bu değişken için yeterli tahmin noktası yok.</div>';return;}
       const rainChart=label.startsWith("Yağış");
@@ -1713,7 +1723,14 @@
       const minimum=Math.min(...values,...banded),maximum=Math.max(...values,...banded),span=(maximum-minimum)||1,low=rainChart?0:minimum-span*.12,high=maximum+span*(rainChart?.16:.12);
       const x=lead=>left+lead/72*pw,y=value=>top+(high-value)/(high-low)*ph,coords=data.map(p=>({x:x(p.lead),y:y(p.value),time:p.time,valueLabel:p.label,detail:p.detail||("Tahmin adımı: +"+p.lead+" saat")}));
       const grid=[0,1,2].map(i=>{const value=low+(high-low)*i/2,yy=y(value);return '<line x1="'+left+'" y1="'+yy+'" x2="'+(width-right)+'" y2="'+yy+'" stroke="rgba(190,218,228,.14)" stroke-dasharray="3 5"/><text x="'+(left-6)+'" y="'+(yy+3)+'" fill="#91a9b8" font-size="9" text-anchor="end">'+fmt(value,label.startsWith("Yağış")?1:0)+'</text>';}).join("");
-      const ticks=[0,12,24,36,48,60,72].map(hour=>'<text x="'+x(hour)+'" y="'+(height-7)+'" fill="#91a9b8" font-size="9" text-anchor="middle">'+(hour===0?"Şimdi":"+"+hour+"s")+'</text>').join("");
+      // GFS 72 saatlik eksen: modelin gerçek geçerlilik saatlerini TSİ olarak göster.
+      // Böylece 12Z döngüsünde örneğin +3 saat doğrudan 15 TSİ olarak görünür.
+      const axisHours=[0,12,24,36,48,60,72];
+      const ticks=axisHours.map(hour=>{
+        const target=hourlyForecastAxisPoint(data,hour);
+        const label=target?forecastDateTimeTSI(target.time):"+"+hour+"s";
+        return '<text x="'+x(hour)+'" y="'+(height-7)+'" fill="#91a9b8" font-size="8" text-anchor="middle">'+esc(label)+'</text>';
+      }).join("");
       let band="";
       if(data.some(p=>numeric(p.mae))){
         const hi=data.map(p=>({x:x(p.lead),y:y(edge(p.value,p.mae,1))}));
