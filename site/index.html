@@ -2224,7 +2224,22 @@
           }
         }catch(_){}
       }
-      renderStationCard(activeStation==="enka"?enkaStationObservation:eyupsultanStationObservation);
+      // ENKA's published sensor timestamp can stall while MGM Eyüpsultan
+      // continues to provide fresh observations. Prefer the fresh measured
+      // station automatically rather than leaving the live dashboard blank.
+      if(activeStation==="enka"&&!stationObservationIsFresh(enkaStationObservation)&&stationObservationIsFresh(eyupsultanStationObservation)){
+        activeStation="eyupsultan";
+        try{localStorage.setItem("istanbul-hava-station","eyupsultan");}catch(_){}
+        $("station-enka-button").classList.remove("active");
+        $("station-eyupsultan-button").classList.add("active");
+        $("station-enka-button").setAttribute("aria-pressed","false");
+        $("station-eyupsultan-button").setAttribute("aria-pressed","true");
+        renderStationCard(eyupsultanStationObservation);
+        renderStationHistory();
+        refreshSelectedStation();
+      }else{
+        renderStationCard(activeStation==="enka"?enkaStationObservation:eyupsultanStationObservation);
+      }
       if(latestRainForecastPoints.length)renderRainWindow(latestRainForecastPoints);
       if(typeof renderBriefing==="function")renderBriefing();
     }
