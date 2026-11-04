@@ -102,7 +102,7 @@ jobs:
           cp -a "$RUNNER_TEMP/koy-output/." "$RUNNER_TEMP/" 2>/dev/null || true
           git config user.name "github-actions[bot]"
           git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
-          git fetch origin koy-gfs-data || true
+          git fetch origin +refs/heads/koy-gfs-data:refs/remotes/origin/koy-gfs-data || true
           if git show-ref --verify --quiet refs/remotes/origin/koy-gfs-data; then
             git checkout -B koy-gfs-data origin/koy-gfs-data
           else
