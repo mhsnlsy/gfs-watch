@@ -1086,7 +1086,7 @@
         <div class="history-panel-head"><div><div class="section-kicker" id="history-station-source">ENKA BALMUMCU · GERÇEK ÖLÇÜMLER</div><h2>Son 24 saat</h2></div></div>
         <div class="history-charts">
           <article class="history-chart-card"><div class="history-chart-head"><div><h3>Sıcaklık</h3><p>°C · 30 dk ortalama, min–maks</p></div><span class="history-chart-icon">℃</span></div><div class="history-chart" id="station-temperature-trend"><div class="station-trend-empty">Sıcaklık kayıtları bekleniyor…</div></div><div class="history-chart-meta" id="station-trend-meta">Seçili istasyonun ölçüm geçmişi</div></article>
-          <article class="history-chart-card"><div class="history-chart-head"><div><h3>Yağış</h3><p id="station-rain-caption">mm · 30 dk</p></div><span class="history-chart-icon">☂</span></div><div class="history-chart" id="station-rain-trend"><div class="station-trend-empty">Yağış geçmişi oluşturuluyor…</div></div><div class="history-chart-meta" id="station-rain-meta">MGM · yarım saat</div></article>
+          <article class="history-chart-card"><div class="history-chart-head"><div><h3 id="station-rain-title">Basınç</h3><p id="station-rain-caption">hPa · 30 dk ortalama</p></div><span class="history-chart-icon">☂</span></div><div class="history-chart" id="station-rain-trend"><div class="station-trend-empty">Yağış geçmişi oluşturuluyor…</div></div><div class="history-chart-meta" id="station-rain-meta">MGM · yarım saat</div></article>
         </div>
         <div class="history-source-note" id="history-source-note">Sıcaklık seçili istasyonun. Yağış iki istasyonda da MGM Eyüpsultan.</div>
       </section>
@@ -1742,6 +1742,31 @@
       if(meta)meta.textContent=stationName+" · "+valid.length+" kayıt · son ölçüm "+fmt(valid[valid.length-1].temperature,1)+" °C · 30 dk ortalama / min–maks";
       if(typeof document!=="undefined"){const svg=holder.querySelector("svg");attachStationHistoryTooltip(holder,svg,data.map(p=>({x:xb(p),y:yv(p.mean),time:p.start+bucketMs/2,valueLabel:fmt(p.mean,1)+" °C ortalama",detail:"Min "+fmt(p.min,1)+" °C · Maks "+fmt(p.max,1)+" °C · "+p.count+" kayıt"})),width,height,top,bottom,"#7dd3d7");}
     }
+    function renderStationPressureTrend(samples,stationName){
+      stationName=stationName||"ENKA Balmumcu";
+      const holder=$("station-rain-trend"),meta=$("station-rain-meta");
+      const caption=$("station-rain-caption");
+      if(caption)caption.textContent="hPa · 30 dk ortalama";
+      if(!holder)return;
+      const now=Date.now(),windowMs=86400000,bucketMs=1800000,start=now-windowMs;
+      const valid=(Array.isArray(samples)?samples:[]).map(s=>({time:Date.parse(s.observed_at_utc||s.logged_at_utc||""),pressure:Number(s.station_pressure_hpa)})).filter(s=>Number.isFinite(s.time)&&Number.isFinite(s.pressure)&&s.time>=start&&s.time<=now).sort((a,b)=>a.time-b.time);
+      const bins=[];for(let t=start;t<now;t+=bucketMs)bins.push({start:t,values:[]});
+      valid.forEach(s=>{const i=Math.floor((s.time-start)/bucketMs);if(i>=0&&i<bins.length)bins[i].values.push(s.pressure);});
+      const data=bins.map((bin,index)=>({index,start:bin.start,count:bin.values.length,mean:bin.values.length?bin.values.reduce((a,v)=>a+v,0)/bin.values.length:null,min:bin.values.length?Math.min(...bin.values):null,max:bin.values.length?Math.max(...bin.values):null})).filter(p=>p.count);
+      if(meta)meta.textContent=stationName+" · "+valid.length+" kayıt · "+(valid.length?fmt(valid[valid.length-1].pressure,1)+" hPa · 30 dk ortalama":"basınç kayıtları bekleniyor");
+      if(!data.length){holder.innerHTML='<div class="station-trend-empty">İlk basınç kaydı bekleniyor. OCR ölçümleri geldikçe grafik dolacak.</div>';return;}
+      let low=Math.floor(Math.min(...valid.map(p=>p.pressure))-1),high=Math.ceil(Math.max(...valid.map(p=>p.pressure))+1);if(high-low<3){low-=1;high+=1;}
+      const width=560,height=160,left=44,right=14,top=13,bottom=27,pw=width-left-right,ph=height-top-bottom;
+      const xt=t=>left+(t-start)/windowMs*pw,yv=v=>top+(high-v)/(high-low)*ph,xb=p=>xt(p.start+bucketMs/2);
+      const ticks=[];for(let v=Math.ceil(low/2)*2;v<=high;v+=2)ticks.push(v);
+      const grid=ticks.map(v=>'<line x1="'+left+'" y1="'+yv(v)+'" x2="'+(width-right)+'" y2="'+yv(v)+'" stroke="rgba(190,218,228,.17)" stroke-dasharray="3 5"/><text x="'+(left-8)+'" y="'+(yv(v)+3.5)+'" fill="#a8bfca" font-size="10" text-anchor="end">'+v+'</text>').join("");
+      const groups=[];data.forEach(p=>{const g=groups[groups.length-1];if(!g||p.index!==g[g.length-1].index+1)groups.push([p]);else g.push(p);});
+      const line=groups.map(g=>g.map((p,i)=>(i?"L":"M")+xb(p).toFixed(1)+" "+yv(p.mean).toFixed(1)).join(" ")).join(" ");
+      const labels=bins.map((p,i)=>{if(i%4&&i!==bins.length-1)return "";const t=new Intl.DateTimeFormat("tr-TR",{timeZone:"Europe/Istanbul",hour:"2-digit",minute:"2-digit"}).format(new Date(p.start));return '<text x="'+xt(p.start)+'" y="'+(height-7)+'" fill="#a8bfca" font-size="10" text-anchor="middle">'+t+'</text>';}).join("");
+      const last=data[data.length-1],lx=xb(last),ly=yv(last.mean);
+      holder.innerHTML='<svg viewBox="0 0 '+width+' '+height+'" role="img" aria-label="'+esc(stationName)+' son 24 saat basınç geçmişi; 30 dakikalık ortalama">'+grid+'<path d="'+line+'" fill="none" stroke="#8abce8" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"/><circle cx="'+lx+'" cy="'+ly+'" r="5" fill="#f1fff9" stroke="#8abce8" stroke-width="1.5"/>'+labels+'</svg>';
+      attachStationHistoryTooltip(holder,holder.querySelector("svg"),data.map(p=>({x:xb(p),y:yv(p.mean),time:p.start+bucketMs/2,valueLabel:fmt(p.mean,1)+" hPa",detail:"Min "+fmt(p.min,1)+" · Maks "+fmt(p.max,1)+" hPa · "+p.count+" kayıt"})),width,height,top,bottom,"#8abce8");
+    }
     function renderEyupsultanHourlyRain(samples,stationName,holder,meta){
       const now=Date.now(),start=now-86400000;
       const rows=Array.isArray(samples)?samples.slice():[];
@@ -1780,7 +1805,9 @@
     function renderStationRainTrend(samples,stationName){
       stationName=stationName||"İstasyon";const holder=$("station-rain-trend"),meta=$("station-rain-meta");if(!holder)return;
       const caption=$("station-rain-caption");
+      if(activeStation==="enka"){const title=$("station-rain-title");if(title)title.textContent="Basınç";return renderStationPressureTrend(samples,stationName);}
       if(caption)caption.textContent="mm · kayan 1 saatlik toplam";
+      const title=$("station-rain-title");if(title)title.textContent="Yağış";
       return renderEyupsultanHourlyRain(typeof eyupsultanStationHistorySamples!=="undefined"?eyupsultanStationHistorySamples:[], "Eyüpsultan", holder, meta);
     }
     function renderStationHistory(){
@@ -1789,7 +1816,7 @@
       $("history-station-source").textContent=stationName.toLocaleUpperCase("tr-TR")+" · GERÇEK ÖLÇÜMLER";
       $("station-history-panel").setAttribute("aria-label",stationName+" son 24 saat geçmişi");
       $("history-source-note").hidden=false;
-      $("history-source-note").textContent="Sıcaklık seçili istasyonun. Yağış iki istasyonda da MGM Eyüpsultan.";
+      $("history-source-note").textContent=activeStation==="enka"?"Sıcaklık ve basınç: ENKA kamera OCR ölçümleri.":"Sıcaklık ve yağış: MGM Eyüpsultan ölçümleri.";
       renderStationTemperatureTrend(samples,stationName);
       renderStationRainTrend(samples,stationName);
     }
