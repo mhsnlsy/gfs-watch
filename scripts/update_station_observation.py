@@ -126,6 +126,14 @@ def fetch_observation():
         0.0,
         (datetime.now(timezone.utc) - observed_utc).total_seconds() / 60.0,
     )
+    # A successful HTTP response is not necessarily a live measurement.
+    # Treat an old Vantage timestamp as a failed primary source so the
+    # independent camera OCR backup can take over in the same refresh.
+    if age_minutes > 15:
+        raise ValueError(
+            f"ENKA Vantage PRO measurement is stale ({age_minutes:.1f} min); "
+            "activating camera OCR fallback."
+        )
     return {
         "station_name": "ENKA Balmumcu",
         "station_id": "ENKA-BALMUMCU-VANTAGE-PRO",
