@@ -84,19 +84,18 @@ jobs:
           echo "Could not publish Eyüpsultan data."
           exit 1
 
-      - name: Force Pages deploy
-        if: steps.scrape.outcome == 'success'
-        env:
-          GH_TOKEN: ${{ github.token }}
-        run: gh workflow run pages.yml --ref main --repo "$GITHUB_REPOSITORY" || true
-
       - name: Trigger MeteoPT GFS monitor on every five-minute cycle
         if: always() && !cancelled()
         env:
           GH_TOKEN: ${{ github.token }}
         run: |
-          gh workflow run meteopt-gfs-monitor.yml --ref main --repo "$GITHUB_REPOSITORY"
-          echo "MeteoPT GFS monitor queued by the active five-minute station chain."
+          active=$(gh run list --workflow=meteopt-gfs-monitor.yml --limit 20 --json status --jq '[.[] | select(.status=="queued" or .status=="in_progress" or .status=="pending" or .status=="waiting" or .status=="requested")] | length')
+          if [ "$active" = "0" ]; then
+            gh workflow run meteopt-gfs-monitor.yml --ref main --repo "$GITHUB_REPOSITORY"
+            echo "MeteoPT GFS monitor dispatched."
+          else
+            echo "MeteoPT GFS monitor already active ($active); skipping duplicate dispatch."
+          fi
 
       # Run radar on alternating five-minute station cycles: one scan every ten minutes.
       # Always load the last committed radar history before running a scan.
@@ -187,10 +186,5 @@ jobs:
         env:
           GH_TOKEN: ${{ github.token }}
         run: |
-          now=$(date -u +%s)
-          next=$(( (now / 300 + 1) * 300 ))
-          delay=$(( next - now ))
-          echo "Next Eyüpsultan refresh at $(date -u -d "@$next" +'%Y-%m-%dT%H:%M:%SZ') (sleeping ${delay}s)."
-          sleep "$delay"
           gh workflow run eyupsultan-station-refresh.yml --ref main --repo "$GITHUB_REPOSITORY"
-          echo "Next Eyüpsultan refresh queued."
+          echo "Next Eyüpsultan refresh queued immediately; no runner is held idle."
