@@ -287,21 +287,45 @@ def update_temperature_history(observation):
 
 def main():
     observation = fetch_enka_station_observation()
-    _reject_older_observation(observation)
-
+    now = datetime.now(timezone.utc).isoformat(timespec="seconds")
     document = {
         "schema": "gfs-watch.station-observation.v1",
         "station_observation": observation,
-        "updated_at_utc": datetime.now(timezone.utc).isoformat(timespec="seconds"),
+        "updated_at_utc": now,
+        "role": "backup",
+        "source_priority": 2,
     }
     Path("public").mkdir(exist_ok=True)
-    Path("public/station-observation.json").write_text(
-        json.dumps(document, ensure_ascii=False, indent=2) + "\n",
+
+    # Always retain the camera-derived reading separately, even when the
+    # primary ENKA station feed is healthy.
+    backup_path = Path(os.getenv("ENKA_CAMERA_BACKUP_PATH", "public/station-camera-backup.json"))
+    backup_path.parent.mkdir(parents=True, exist_ok=True)
+    backup_path.write_text(
+        json.dumps(document, ensure_ascii=False, indent=2, allow_nan=False) + "\n",
         encoding="utf-8",
     )
+
+    history_override = os.getenv("ENKA_CAMERA_BACKUP_HISTORY_PATH")
+    if history_override:
+        os.environ["STATION_TEMPERATURE_HISTORY_PATH"] = history_override
     update_temperature_history(observation)
+
+    if os.getenv("ENKA_CAMERA_FALLBACK", "0") == "1":
+        _reject_older_observation(observation)
+        fallback_document = dict(document)
+        fallback_document["role"] = "active-fallback"
+        fallback_document["source_priority"] = 2
+        Path("public/station-observation.json").write_text(
+            json.dumps(fallback_document, ensure_ascii=False, indent=2, allow_nan=False) + "\n",
+            encoding="utf-8",
+        )
+        print("[ENKA FALLBACK] Camera OCR reading promoted because primary feed failed.")
+    else:
+        print("[ENKA BACKUP] Camera OCR archived; primary station data remains active.")
+
     print(
-        f"[ENKA LIVE] {observation['station_name']} | "
+        f"[ENKA CAMERA] {observation['station_name']} | "
         f"{observation['temperature_2m_c']}°C | "
         f"{observation['wind_speed_10m_kmh']} km/sa | "
         f"ölçüm zamanı {observation['observed_at_utc']} | "
