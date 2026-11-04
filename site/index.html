@@ -1623,7 +1623,14 @@
             }
           }
         }
-        forecast.textContent="MeteoPT GFS tahminine göre bir sonraki kuru zaman: "+dateTime(dryAt)+" itibarıyla yağış beklenmiyor.";
+        const resumesAt=orderedRain
+          .filter(period=>period.start>dryAt)
+          .sort((a,b)=>a.start-b.start)[0];
+        if(resumesAt){
+          forecast.textContent="MeteoPT GFS tahminine göre kuru aralık: "+dateTime(dryAt)+"–"+dateTime(resumesAt.start)+". Yağışın "+dateTime(resumesAt.start)+" itibarıyla yeniden başlaması bekleniyor.";
+        }else{
+          forecast.textContent="MeteoPT GFS tahminine göre "+dateTime(dryAt)+" itibarıyla yağış sona eriyor; tahmin süresinin kalanında yeniden yağış görünmüyor.";
+        }
       }else if(upcoming.length){
         const next=upcoming[0],hours=Math.max(0,(next.start-now)/3600000);
         const lead=hours<1?"1 saatten az":Math.round(hours)+" saat";
