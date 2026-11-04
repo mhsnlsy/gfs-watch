@@ -58,22 +58,14 @@ def fetch_observation():
         raise ValueError("ENKA current values page has no readable observation timestamp.")
 
     timestamp_text = f"{timestamp_match.group(1)} {timestamp_match.group(2)}"
-    timezone_match = re.search(
-        r"\(\s*UTC\s*([+-]?)\s*(\d{1,2})(?::(\d{2}))?\s*\)",
-        page_text,
-        flags=re.I,
-    )
-    offset_hours = int(timezone_match.group(2)) if timezone_match else 0
-    offset_minutes = int(timezone_match.group(3) or 0) if timezone_match else 0
-    if timezone_match and timezone_match.group(1) == "-":
-        offset_hours, offset_minutes = -offset_hours, -offset_minutes
-    from datetime import timedelta
-    from datetime import timezone as dt_timezone
-    source_tz = dt_timezone(timedelta(hours=offset_hours, minutes=offset_minutes))
+    # The page's "As of" timestamp is Istanbul local time. Its
+    # parenthetical "(UTC HH:MM)" is a UTC clock display, not an offset.
     observed_local = None
     for date_format in ("%d/%m/%y %H:%M", "%d/%m/%Y %H:%M", "%m/%d/%y %H:%M"):
         try:
-            observed_local = datetime.strptime(timestamp_text, date_format).replace(tzinfo=source_tz)
+            observed_local = datetime.strptime(timestamp_text, date_format).replace(
+                tzinfo=ISTANBUL_TZ
+            )
             break
         except ValueError:
             continue
