@@ -1812,9 +1812,9 @@
       const caption=$("station-rain-caption"),title=$("station-rain-title");
       if(caption)caption.textContent="mm · kayan 1 saatlik toplam";
       if(title)title.textContent="Yağış";
-      const rainSamples=activeStation==="sisli"?sisliStationHistorySamples:eyupsultanStationHistorySamples;
-      const stationName=activeStation==="sisli"?"Şişli":"Eyüpsultan";
-      return renderEyupsultanHourlyRain(rainSamples, stationName, holder, meta);
+      const rainSamples=activeStation==="enka"?eyupsultanStationHistorySamples:samples;
+      const rainStationName=activeStation==="enka"?"Eyüpsultan":stationName;
+      return renderEyupsultanHourlyRain(rainSamples, rainStationName, holder, meta);
     }
     function renderStationHistory(){
       const stationName=activeStation==="eyupsultan"?"Eyüpsultan":activeStation==="sisli"?"Şişli":"ENKA Balmumcu";
@@ -1847,7 +1847,7 @@
       
       if (!station || !numeric(station.temperature_2m_c)) return;
       const current = Number(station.temperature_2m_c);
-      const samples = activeStation === "enka" ? enkaStationHistorySamples : eyupsultanStationHistorySamples;
+      const samples = activeStation === "enka" ? enkaStationHistorySamples : activeStation === "sisli" ? sisliStationHistorySamples : eyupsultanStationHistorySamples;
       if (Array.isArray(samples) && samples.length) {
         const now = Date.now();
         const target = now - 86400000;
