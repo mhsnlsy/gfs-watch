@@ -212,3 +212,31 @@
     border-radius:0!important;
   }
 }
+
+
+/* Mobile/tablet hard stop: no scroll container for the GFS table. */
+@media(max-width:850px){
+  #meteopt-gfs-table .meteopt-table-scroll{
+    display:block!important;
+    width:100%!important;
+    max-width:100%!important;
+    overflow:hidden!important;
+    overflow-x:hidden!important;
+    overflow-y:hidden!important;
+    scrollbar-width:none!important;
+    -ms-overflow-style:none!important;
+    overscroll-behavior:none!important;
+  }
+  #meteopt-gfs-table .meteopt-table-scroll::-webkit-scrollbar{
+    display:none!important;
+    width:0!important;
+    height:0!important;
+    background:transparent!important;
+  }
+  #meteopt-gfs-table .meteopt-data-table{
+    width:100%!important;
+    min-width:0!important;
+    max-width:100%!important;
+    table-layout:fixed!important;
+  }
+}
