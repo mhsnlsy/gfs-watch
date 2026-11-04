@@ -1010,6 +1010,22 @@
       .dashboard-top .station-card .stat .unit,.dashboard-top .station-card .stat .detail{font-size:8px!important}
     }
 
+
+    /* Final mobile density override: trim chart and card whitespace by ~25%. */
+    @media (max-width:700px) and (orientation:portrait) {
+      .next-72h-panel { padding:9px 8px!important; }
+      .next-72h-head { margin-bottom:6px!important; gap:5px!important; }
+      .next-72h-grid { row-gap:13px!important; column-gap:8px!important; }
+      .next-72h-card { padding:2px 1px 0!important; }
+      .next-72h-chart {
+        height:129px!important;
+        min-height:0!important;
+        margin-top:2px!important;
+      }
+      .next-72h-chart svg { height:100%!important; }
+      .briefing { margin-top:5px!important; gap:3px!important; }
+      .briefing-row { padding:4px 6px!important; }
+    }
 </style>
   <link rel="stylesheet" href="./meteopt-gfs-table.css?v=20261104-3">
 </head>
