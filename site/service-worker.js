@@ -1,4 +1,4 @@
-const SHELL_CACHE = "istanbul-hava-shell-v10";
+const SHELL_CACHE = "istanbul-hava-shell-v11";
 const DATA_CACHE = "istanbul-hava-data-v1";
 const APP_SHELL = ["./", "./manifest.webmanifest", "./icon.svg"];
 const MAX_DATA_ENTRIES = 180;
@@ -55,8 +55,8 @@ self.addEventListener("fetch", event => {
         }
         return response;
       } catch (_) {
-        return (await caches.match("./")) || new Response(
-          "<!doctype html><html lang='tr'><meta charset='utf-8'><meta name='viewport' content='width=device-width,initial-scale=1'><title>İstanbul'un Havası</title><body style='font:16px sans-serif;background:#071521;color:#edf5f8;padding:2rem'><h1>Bağlantı yok</h1><p>İstanbul'un Havası şu anda çevrimdışı. Daha önce açılmış uygulama verileri cihaz önbelleğinde bulunuyorsa yeniden deneyin.</p></body></html>",
+        return new Response(
+          "<!doctype html><html lang='tr'><head><meta charset='utf-8'><meta name='viewport' content='width=device-width,initial-scale=1'><meta http-equiv='refresh' content='300'><meta name='theme-color' content='#081827'><title>Bağlantı kurulamadı · İstanbul Havası</title></head><body style='font:16px/1.6 system-ui,sans-serif;background:#071521;color:#edf5f8;padding:2rem;min-height:70vh;display:grid;place-items:center'><main style='max-width:440px;background:#102535;border:1px solid rgba(241,201,139,.35);border-radius:20px;padding:24px'><div style='font-size:12px;color:#f1c98b;font-weight:700;letter-spacing:.12em'>YENİLEME TAMAMLANAMADI</div><h1 style='font-size:25px;margin:12px 0'>Bağlantı kurulamadı</h1><p style='color:#c2d2dc'>Sayfa güncellenemedi. İnternet bağlantını kontrol et. Önceden kaydedilmiş bazı veriler cihazda bulunabilir.</p><button onclick='location.reload()' style='border:0;border-radius:12px;padding:12px 18px;background:#7dd3d7;color:#08202b;font-weight:700;font-size:14px'>Tekrar dene</button><p style='font-size:12px;color:#91a8b6;margin-top:16px'>Bağlantı geldiğinde otomatik olarak 5 dakikada bir yeniden denenecek.</p></main></body></html>",
           { headers: { "Content-Type": "text/html; charset=utf-8" } }
         );
       }
