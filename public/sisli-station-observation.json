@@ -6,19 +6,19 @@
     "source": "MGM 18401",
     "source_url": "https://servis.mgm.gov.tr/web/sondurumlar?merkezid=18401",
     "source_fallback_used": true,
-    "observed_at_utc": "2026-11-04T23:24:00.000Z",
-    "fetched_at_utc": "2026-11-04T23:30:29.969Z",
-    "age_minutes": 6,
+    "observed_at_utc": "2026-11-04T23:29:00.000Z",
+    "fetched_at_utc": "2026-11-04T23:30:49.758Z",
+    "age_minutes": 2,
     "stale_after_minutes": 30,
     "is_stale": false,
     "temperature_2m_c": 11.7,
-    "wind_speed_10m_kmh": 5,
-    "wind_direction_degrees": 357,
+    "wind_speed_10m_kmh": 7.6,
+    "wind_direction_degrees": 1,
     "wind_direction_cardinal": "N",
     "wind_direction_tr": "Kuzey",
     "precipitation_1h_mm": 0,
     "precipitation_10m_mm": 0,
-    "precipitation_6h_mm": 1.85,
+    "precipitation_6h_mm": 1.83,
     "precipitation_12h_mm": 17.28,
     "precipitation_24h_mm": 28.09,
     "precipitation_daily_mm": 28.09,
@@ -29,8 +29,8 @@
     "actual_station_pressure_hpa": null,
     "pressure_type": "station",
     "pressure_source": "MGM 18401",
-    "pressure_observed_at_utc": "2026-11-04T23:24:00.000Z",
-    "pressure_age_minutes": 6.5
+    "pressure_observed_at_utc": "2026-11-04T23:29:00.000Z",
+    "pressure_age_minutes": 1.8
   },
-  "updated_at_utc": "2026-11-04T23:30:26.687Z"
+  "updated_at_utc": "2026-11-04T23:30:46.115Z"
 }
