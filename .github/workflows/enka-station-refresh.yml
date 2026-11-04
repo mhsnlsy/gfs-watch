@@ -44,15 +44,30 @@ jobs:
           sudo apt-get install -y --no-install-recommends tesseract-ocr
           python -m pip install --disable-pip-version-check requests pillow pytesseract
 
-      - name: Read ENKA Balmumcu camera overlay with OCR
+      - name: Fetch primary ENKA Balmumcu station data
+        id: primary
+        continue-on-error: true
         run: |
           mkdir -p public
+          python -u scripts/update_station_observation.py public/station-observation.json
+
+      - name: Read ENKA camera overlay as independent backup
+        run: |
+          mkdir -p public
+          if [ "${{ steps.primary.outcome }}" = "success" ]; then
+            echo "Primary ENKA station feed is healthy; camera OCR will be archived only."
+            echo "ENKA_CAMERA_FALLBACK=0" >> "$GITHUB_ENV"
+          else
+            echo "Primary ENKA station feed failed; a fresh camera OCR reading may be used as fallback."
+            echo "ENKA_CAMERA_FALLBACK=1" >> "$GITHUB_ENV"
+          fi
           python -u enka_weather.py
         env:
           PYTHONPATH: .
           PYTHONUNBUFFERED: "1"
+          ENKA_CAMERA_BACKUP_PATH: public/station-camera-backup.json
+          ENKA_CAMERA_BACKUP_HISTORY_PATH: forecast-data/public/station-camera-backup-history.json
           STATION_PREVIOUS_OBSERVATION_PATH: forecast-data/public/station-observation.json
-          STATION_TEMPERATURE_HISTORY_PATH: forecast-data/public/station-temperature-history.json
 
       - name: Reject stale ENKA observations
         run: |
