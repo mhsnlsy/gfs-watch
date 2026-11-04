@@ -43,8 +43,18 @@ jobs:
           req = Request(url, headers={"User-Agent":"Koy-GFS/1.0","Cache-Control":"no-cache"})
           with urlopen(req, timeout=40) as response:
               doc = json.load(response)
-          if str(doc.get("run") or "") != run_id:
-              raise SystemExit(f"Waiting for MeteoPT cycle {run_id}; got {doc.get('run')!r}")
+          api_run = str(doc.get("run") or "").strip()
+          if not api_run:
+              raise SystemExit("MeteoPT returned no run identifier")
+          # MeteoPT is authoritative for the cycle actually returned. Do not
+          # manufacture a run ID from the runner clock when the source is late.
+          if api_run.isdigit() and len(api_run) == 10:
+              run_id = api_run
+              cycle = datetime.strptime(api_run, "%Y%m%d%H").replace(tzinfo=timezone.utc)
+          elif api_run.isdigit() and len(api_run) == 8:
+              run_id = api_run + f"{cycle_hour:02d}"
+          else:
+              run_id = api_run.replace("-", "").replace(":", "").replace(" ", "")
           steps = []
           for value in (doc.get("steps") or {}).get("values") or []:
               try: steps.append(int(value))
