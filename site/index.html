@@ -1123,6 +1123,7 @@
       <div id="notifications-list" class="notification-list" aria-live="polite"><div class="chart-empty">Son raporlar yükleniyor…</div></div>
     </section>
     <section class="section" id="basinc"><div class="section-head"><div><div class="section-kicker">GFS · DENİZ SEVİYESİ</div><h2>Basınç merkezleri</h2></div></div><div class="lower-grid"><article class="pressure-card"><div class="label">Bölgesel basınç merkezleri ve İstanbul'a etkisi</div><ul class="pressure-list" id="pressure-findings"><li class="loading">Analiz yükleniyor…</li></ul></article></div></section>
+    <section class="section" id="tahmin"><div class="section-head"><div><div class="section-kicker">METEOPT GFS · MODEL TAHMİNİ</div><h2>8 günlük tahmin</h2></div><div class="section-note"><span id="gfs-daily-cycle-chip">GFS döngüsü yükleniyor</span><br><span id="gfs-daily-updated-chip">Yayın zamanı bekleniyor</span><br>Günlük en düşük / en yüksek sıcaklık</div></div><div class="daily-grid" id="daily-grid"><div class="loading">GFS günlük tahmini yükleniyor…</div></div></section>
     </div>
     <div id="ecmwf-model-view" hidden aria-label="ECMWF tahmin görünümü">
       <div class="section-head" style="padding-top:30px"><div><div class="section-kicker">ECMWF IFS · HRES + ENS</div><h2>ECMWF IFS · İstanbul</h2></div><div class="section-note"><span id="ecmwf-run-meta">ECMWF döngüsü bekleniyor</span><br><span id="ecmwf-updated-chip">Yayın zamanı</span><br>Günlük en düşük / en yüksek sıcaklık</div></div>
@@ -2451,6 +2452,11 @@
       forecastData=data;
       renderNext72Hours();
       renderBriefing();
+      if(Array.isArray(data.daily_summary)&&data.daily_summary.length){
+        renderDaily(data.daily_summary,"daily-grid");
+        if($("gfs-daily-cycle-chip"))$("gfs-daily-cycle-chip").textContent="Döngü: "+timeUTC(data.run_id_utc)+" UTC";
+        if($("gfs-daily-updated-chip"))$("gfs-daily-updated-chip").textContent="Yayınlandı: "+timeTR(data.published_at_utc)+" TSİ";
+      }else if($("daily-grid"))$("daily-grid").innerHTML='<div class="chart-empty">GFS günlük tahmin özeti bulunamadı.</div>';
       if(data.report&&data.report.report_text){
         renderNotifications([data.report], data.published_at_utc||data.report.published_at_utc);
       }
@@ -2640,6 +2646,14 @@
               eyupsultanStationHistorySamples=historyDocument.samples;
             }
           }catch(_){eyupsultanStationHistorySamples=[];}
+        }
+        if(sisliHistoryResponse&&sisliHistoryResponse.ok){
+          try{
+            const historyDocument=await sisliHistoryResponse.json();
+            if(historyDocument&&historyDocument.schema==="gfs-watch.station-temperature-history.v1"&&String(historyDocument.station_id)==="18401"&&Array.isArray(historyDocument.samples)){
+              sisliStationHistorySamples=historyDocument.samples;
+            }
+          }catch(_){sisliStationHistorySamples=[];}
         }
         renderStationHistory();
         renderStationCard(activeStation==="enka"?enkaStationObservation:activeStation==="eyupsultan"?eyupsultanStationObservation:sisliStationObservation);
