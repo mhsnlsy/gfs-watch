@@ -1039,7 +1039,7 @@
     <section class="dashboard-top" aria-label="İstanbul anlık gözlem, geçmiş ve 72 saatlik tahmin">
       <div class="dashboard-left">
       <article class="weather-card station-card" role="region" aria-labelledby="station-card-title">
-        <div class="weather-top"><div><div class="label">GERÇEK İSTASYON GÖZLEMİ</div><div class="place" id="station-card-title">ENKA Balmumcu · İstanbul</div></div><span class="model-state" id="freshness">Veri bekleniyor</span></div>
+        <div class="weather-top"><div><div class="label">GERÇEK İSTASYON GÖZLEMİ</div><div class="place" id="station-card-title">ENKA Balmumcu · İstanbul</div><div id="station-source-fallback" hidden style="font-size:1pt;line-height:1.2;color:#f1c98b;margin-top:2px">Kamera yedeği</div></div><span class="model-state" id="freshness">Veri bekleniyor</span></div>
         <div class="station-switch" role="group" aria-label="İstasyon seçimi">
           <button type="button" id="station-enka-button" class="active" aria-pressed="true">ENKA Balmumcu</button>
           <button type="button" id="station-eyupsultan-button" aria-pressed="false">Eyüpsultan</button>
@@ -1852,6 +1852,8 @@
       const hasStation=!!station;
       const stationName=station&&station.station_name?station.station_name:(activeStation==="enka"?"ENKA Balmumcu":"Eyüpsultan");
       $("station-card-title").textContent=stationName+" · İstanbul";
+      const fallbackLabel=$("station-source-fallback");
+      if(fallbackLabel)fallbackLabel.hidden=!(activeStation==="enka"&&hasStation&&(station.station_id==="ENKA-BALMUMCU-CAMERA-OCR"||station.observation_method==="tesseract-ocr"));
       const observed=hasStation&&station.observed_at_utc?new Date(station.observed_at_utc):null;
       const observedValid=observed&&!Number.isNaN(observed.getTime());
       const ageMinutes=observedValid?Math.max(0,(Date.now()-observed.getTime())/60000):null;
