@@ -1,6 +1,7 @@
 (() => {
   "use strict";
   const ROOT = "meteopt-gfs-table";
+  // The table is populated from the independent f72 publication, not the f180 report bundle.
   const DATA_URL = "./data/meteopt-gfs-first72.json";
   const $ = (id) => document.getElementById(id);
   const finite = (value) => value !== null && value !== undefined && value !== "" && Number.isFinite(Number(value));
