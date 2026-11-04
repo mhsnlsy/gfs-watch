@@ -5,16 +5,16 @@
   "sampling_interval_minutes": 5,
   "aggregation_interval_minutes": 30,
   "retention_days": 14,
-  "updated_at_utc": "2026-11-04T23:05:41+00:00",
+  "updated_at_utc": "2026-11-04T23:07:27+00:00",
   "samples": [
     {
-      "logged_at_utc": "2026-11-04T23:05:41+00:00",
-      "observed_at_utc": "2026-11-04T23:04:24+00:00",
-      "temperature_2m_c": 15.1,
-      "station_pressure_hpa": 1014.6,
-      "humidity_percent": 94.0,
-      "wind_speed_10m_kmh": 1.7,
-      "precipitation_daily_mm": 0.2
+      "logged_at_utc": "2026-11-04T23:07:27+00:00",
+      "observed_at_utc": "2026-11-04T23:06:24+00:00",
+      "temperature_2m_c": 11.8,
+      "station_pressure_hpa": 1024.1,
+      "humidity_percent": 85.0,
+      "wind_speed_10m_kmh": 13.0,
+      "precipitation_daily_mm": 0.0
     }
   ]
 }
