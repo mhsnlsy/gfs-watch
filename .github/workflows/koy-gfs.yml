@@ -112,10 +112,17 @@ jobs:
           mkdir -p gfs/f72 gfs/runs
           changed=0
           if [ -f "$RUNNER_TEMP/koy-output/f72.json" ]; then
-            if ! cmp -s "$RUNNER_TEMP/koy-output/f72.json" gfs/f72/latest.json 2>/dev/null; then
+            new_run="$(python -c 'import json,sys; print(json.load(open(sys.argv[1]))["run_id_utc"])' "$RUNNER_TEMP/koy-output/f72.json")"
+            old_run=""
+            if [ -s gfs/f72/latest.json ]; then
+              old_run="$(python -c 'import json; print(json.load(open("gfs/f72/latest.json")).get("run_id_utc",""))')"
+            fi
+            if [ "$new_run" != "$old_run" ]; then
               cp "$RUNNER_TEMP/koy-output/f72.json" gfs/f72/latest.json
               changed=1
-              echo "F72 payload updated."
+              echo "New F72 milestone published for $new_run."
+            else
+              echo "F72 for $new_run is already published; no repeat commit."
             fi
           fi
           for file in "$RUNNER_TEMP"/koy-output/*.json; do
