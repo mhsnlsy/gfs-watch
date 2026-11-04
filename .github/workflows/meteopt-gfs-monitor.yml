@@ -21,10 +21,6 @@ on:
         default: false
   repository_dispatch:
     types: [gfs-watch-backup]
-  schedule:
-    # GFS metni MeteoPT'te 00:30, 06:30, 12:30 ve 18:30 TSİ çıkıyor.
-    # Actions cron UTC'dir: 21:30, 03:30, 09:30, 15:30 UTC.
-    - cron: "*/15 * * * *"
 
 permissions:
   actions: write
@@ -41,7 +37,7 @@ jobs:
     outputs:
       gfs_updated: ${{ steps.report.outputs.gfs_updated }}
     runs-on: ubuntu-latest
-    timeout-minutes: 100
+    timeout-minutes: 20
     steps:
       - name: Check out application
         uses: actions/checkout@v7
