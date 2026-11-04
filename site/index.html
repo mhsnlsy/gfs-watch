@@ -1336,7 +1336,7 @@
       const clock=new Intl.DateTimeFormat("tr-TR",{timeZone:"UTC",hour:"2-digit",minute:"2-digit",hourCycle:"h23"}).format(date);
       return dayMonth+" "+clock+" TSİ";
     };
-    function attachForecastChartTooltip(container,svg,coords,temperature,width,height,top,bottom){
+    function attachForecastChartTooltip(container,svg,coords,temperature,width,height,top,bottom,isEcmwf=false){
       const ns="http://www.w3.org/2000/svg";
       const tooltip=document.createElement("div");
       tooltip.className="chart-tooltip";
@@ -1393,14 +1393,15 @@
         const valueLabel=temperature
           ? "Sıcaklık: "+fmt(point.value,1)+" °C"
           : "Yağış: "+fmt(point.value,2)+" mm";
+        const forecastFormatter=isEcmwf?chartDateTimeTR:forecastDateTimeTSI;
         const intervalLabel=!temperature&&point.intervalStart
-          ? '<div class="chart-tooltip-meta">Yağış aralığı: '+esc(forecastDateTimeUTC(point.intervalStart))+' – '+esc(forecastDateTimeUTC(point.date))+' UTC</div>'
+          ? '<div class="chart-tooltip-meta">Yağış aralığı: '+esc(forecastFormatter(point.intervalStart))+' – '+esc(forecastFormatter(point.date))+(isEcmwf?" TSİ":"")+'</div>'
           : "";
         const intervalDuration=!temperature&&point.intervalHours
           ? '<div class="chart-tooltip-meta">'+point.intervalHours+' saatlik yağış dilimi</div>'
           : "";
         tooltip.innerHTML=
-          '<div class="chart-tooltip-time">'+esc(forecastDateTimeUTC(point.date))+' UTC</div>'+
+          '<div class="chart-tooltip-time">'+esc(forecastFormatter(point.date))+'</div>'+
           '<div class="chart-tooltip-value">'+esc(valueLabel)+'</div>'+
           intervalLabel+
           '<div class="chart-tooltip-meta">Tahmin adımı: +'+esc(point.forecastHour)+' saat</div>'+
@@ -1502,7 +1503,7 @@
             value:endpoint.precipitation_6h_mm,
             date:endpoint.valid_time_utc,
             forecastHour:endpoint.lead,
-            intervalStart:startPoint.valid_time_istanbul,
+            intervalStart:startPoint.valid_time_utc,
             intervalHours:Number(endpoint.precipitation_interval_hours)||endpoint.lead-startPoint.lead
           };
         }).filter(point=>numeric(point.value));
@@ -1566,7 +1567,7 @@
       const stroke=temperature?"#7dd3d7":"#8abce8";
       container.innerHTML='<svg viewBox="0 0 '+width+' '+height+'" role="img" aria-label="'+title+' grafiği"><defs><linearGradient id="'+gradientId+'" x1="0" x2="0" y1="0" y2="1"><stop offset="0%" stop-color="'+stroke+'" stop-opacity=".28"/><stop offset="100%" stop-color="'+stroke+'" stop-opacity="0"/></linearGradient></defs>'+grid+'<path d="'+area+'" fill="url(#'+gradientId+')"/><path d="'+line+'" fill="none" stroke="'+stroke+'" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"/>'+markers+labels+'</svg>';
       const svg=container.querySelector("svg");
-      attachForecastChartTooltip(container,svg,coords,temperature,width,height,top,bottom);
+      attachForecastChartTooltip(container,svg,coords,temperature,width,height,top,bottom,isEcmwf);
     }
     function skillAtLead(lead){
       const doc=verificationDoc&&verificationDoc.stations?verificationDoc.stations[activeStation]:null;
