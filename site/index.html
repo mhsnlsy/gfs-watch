@@ -1064,6 +1064,48 @@
   </main>
   <footer class="shell footer"><span><strong data-app-name>İstanbul'un Havası</strong> <span data-app-version>4.0</span></span><span>Veri kaynakları: ENKA Balmumcu Vantage PRO · MGM Eyüpsultan 18101 · MeteoPT GFS · MeteoPT ECMWF · Otomatik yenileme: 5 dakika</span></footer>
   <script>
+    // Native Android requests are routed to the live Pages JSON endpoints.
+    // Successful responses are stored in the native file cache; failed requests
+    // fall back to that cache so the bundled app remains useful offline.
+    const nativeWeatherCache = window.Capacitor?.isNativePlatform?.()
+      ? window.Capacitor?.Plugins?.WeatherCache
+      : null;
+    if (nativeWeatherCache) {
+      const originalFetch = window.fetch.bind(window);
+      window.fetch = async (resource, options = {}) => {
+        const sourceUrl = typeof resource === "string" ? resource : resource?.url;
+        let parsedUrl;
+        try { parsedUrl = new URL(sourceUrl, window.location.href); }
+        catch (_) { return originalFetch(resource, options); }
+        const match = parsedUrl.pathname.match(/\\/data\\/(.+\\.json)$/);
+        if (!match) return originalFetch(resource, options);
+
+        const cacheKey = "data/" + match[1];
+        const remoteUrl = new URL(cacheKey, "https://mhsnlsy.github.io/gfs-watch/");
+        remoteUrl.search = parsedUrl.search;
+        try {
+          const response = await originalFetch(remoteUrl.toString(), { ...options, cache: "no-store" });
+          if (response.ok) {
+            const body = await response.clone().text();
+            nativeWeatherCache.cacheData({ key: cacheKey, value: body }).catch(() => {});
+            return response;
+          }
+          throw new Error("Weather endpoint returned HTTP " + response.status);
+        } catch (networkError) {
+          try {
+            const cached = await nativeWeatherCache.getCachedData({ key: cacheKey });
+            if (typeof cached?.value === "string") {
+              return new Response(cached.value, {
+                status: 200,
+                headers: { "Content-Type": "application/json; charset=utf-8", "X-Offline-Cache": "1" }
+              });
+            }
+          } catch (_) {}
+          throw networkError;
+        }
+      };
+    }
+
     const DATA_URL="./data/latest.json";
     const ECMWF_DATA_URL="./data/ecmwf/latest.json";
     function applyAppVersion(doc){
