@@ -12,7 +12,7 @@ public final class CacheFiles {
 
     private static File resolve(Context context, String key) throws Exception {
         if (key == null || key.isEmpty() || key.startsWith("/") ||
-                key.contains("..") || key.indexOf('\\\\') >= 0 ||
+                key.contains("..") || key.indexOf('\\') >= 0 ||
                 !key.matches("[A-Za-z0-9._/-]+")) {
             throw new IllegalArgumentException("Invalid cache key");
         }
