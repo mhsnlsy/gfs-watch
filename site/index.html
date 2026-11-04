@@ -2125,7 +2125,7 @@
         const [start,end]=dayWindow(day);
         const values=valid.filter(point=>point.stamp>=start&&point.stamp<end).map(point=>point.temp);
         if(values.length<2)continue;
-        windows.push({day,stamp:start+12*3600000,mean:values.reduce((sum,value)=>sum+value,0)/values.length,min:Math.min(...values),max:Math.max(...values),count:values.length});
+        windows.push({day,stamp:start+12*3600000,mean:values.reduce((sum,value)=>sum+value,0)/values.length});
       }
       const current=Number(station.temperature_2m_c);
       if(windows.length<3){
@@ -2135,9 +2135,6 @@
       const nearTerm=valid.filter(point=>point.stamp<=now+12*3600000).map(point=>point.temp);
       const nearMean=nearTerm.length?nearTerm.reduce((sum,value)=>sum+value,0)/nearTerm.length:current;
       const baseline=(current+nearMean)/2;
-      const last=windows[windows.length-1].mean;
-      const spread=Math.max(...windows.map(item=>item.mean))-Math.min(...windows.map(item=>item.mean));
-      const firstShift=windows.slice(1).find(item=>Math.abs(item.mean-baseline)>=1.5);
       const dayLabel=stamp=>{
         const name=new Intl.DateTimeFormat("tr-TR",{timeZone:"Europe/Istanbul",weekday:"long"}).format(new Date(stamp));
         return name.charAt(0).toLocaleUpperCase("tr-TR")+name.slice(1);
@@ -2145,23 +2142,49 @@
       const magnitude=value=>fmt(Math.abs(value),1)+"°C";
       const currentText="Eyüpsultan şu an "+fmt(current,1)+"°C.";
       const run=forecastData&&forecastData.run_id_utc?timeUTC(forecastData.run_id_utc)+" UTC":null;
+      const series=windows.map((item,index)=>({
+        ...item,
+        delta:item.mean-(index===0?baseline:windows[index-1].mean)
+      }));
+      const falling=series.findIndex(item=>item.delta<=-1.0);
+      const rising=series.findIndex((item,index)=>item.delta>=1.0&&index>(falling<0?-1:falling));
+      const stable=series.filter(item=>Math.abs(item.delta)<1.0);
       let summary="";
-      if(firstShift){
-        const change=firstShift.mean-baseline;
-        const direction=change>0?"ısınıyor":"soğuyor";
-        const amount=change>0?"yükseliyor":"düşüyor";
-        const dayText=firstShift.day===0?"bugün":firstShift.day===1?"yarın":firstShift.day+" gün sonra";
-        summary="Hava "+dayText+" ("+dayLabel(firstShift.stamp)+") "+direction+". 24 saatlik ortalama "+magnitude(change)+" "+amount+". "+currentText;
-      }else if(spread<=2.2&&Math.abs(last-baseline)<1.5){
-        summary="Önümüzdeki 5 gün sıcaklık stabil. Günlük ortalamalar "+fmt(Math.min(...windows.map(item=>item.mean)),1)+"–"+fmt(Math.max(...windows.map(item=>item.mean)),1)+"°C aralığında kalıyor. "+currentText;
+      if(falling>=0){
+        const fallDay=series[falling];
+        const fallEnd=series.slice(falling).findIndex((item,index)=>index>0&&item.delta>=1.0);
+        const recoveryIndex=fallEnd<0?-1:falling+fallEnd;
+        const recovery=recoveryIndex>=0?series[recoveryIndex]:null;
+        const fallAmount=series.slice(falling,recoveryIndex>=0?recoveryIndex:series.length)
+          .reduce((sum,item)=>sum+Math.min(0,item.delta),0);
+        const fallDays=series.slice(falling,recoveryIndex>=0?recoveryIndex:series.length)
+          .filter(item=>item.delta<=-1.0).length;
+        const startText=fallDay.day===0?"bugün":fallDay.day===1?"yarın":fallDay.day+" gün sonra";
+        summary="Hava "+startText+" ("+dayLabel(fallDay.stamp)+") soğuyor; sıcaklık yaklaşık "+magnitude(fallAmount)+" düşüyor.";
+        if(recovery){
+          const recoveryText=recovery.day===0?"bugün":recovery.day===1?"yarın":recovery.day+" gün sonra";
+          summary+=" Ardından "+dayLabel(recovery.stamp)+" günü yeniden ısınma başlıyor.";
+        }else{
+          const coveredDays=series.slice(falling).length;
+          const lastDay=series[series.length-1];
+          if(fallDays>0){
+            summary+=" 5 günlük tahminde sonuna kadar, yaklaşık "+coveredDays+" gün boyunca düşüş eğilimi sürüyor.";
+          }else{
+            summary+=" Sonraki "+coveredDays+" gün boyunca belirgin bir ısınma görünmüyor; sıcaklık stabil seyrediyor.";
+          }
+          if(lastDay.delta< -1.0)summary+=" Son gün de düşüş yönünde.";
+        }
       }else{
-        const change=last-baseline;
-        const direction=change>0?"ısınma":"soğuma";
-        const extreme=windows.reduce((best,item)=>Math.abs(item.mean-baseline)>Math.abs(best.mean-baseline)?item:best,windows[0]);
-        const extremeDelta=extreme.mean-baseline;
-        const dayText=extreme.day===0?"bugün":extreme.day===1?"yarın":extreme.day+" gün sonra";
-        summary="Önümüzdeki 5 günde "+direction+" eğilimi var. En belirgin değişim "+dayText+" ("+dayLabel(extreme.stamp)+"): "+magnitude(extremeDelta)+(extremeDelta>0?" yükseliş":" düşüş")+". "+currentText;
+        const firstRise=series.find(item=>item.delta>=1.0);
+        if(firstRise){
+          const dayText=firstRise.day===0?"bugün":firstRise.day===1?"yarın":firstRise.day+" gün sonra";
+          summary="Belirgin ısınma "+dayText+" ("+dayLabel(firstRise.stamp)+") başlıyor; günlük ortalama "+magnitude(firstRise.delta)+" yükseliyor.";
+        }else{
+          const stableDays=series.filter(item=>Math.abs(item.delta)<1.0).length;
+          summary="Önümüzdeki 5 günlük tahminde belirgin ısınma veya soğuma yok; yaklaşık "+stableDays+" gün sıcaklık stabil seyrediyor.";
+        }
       }
+      summary+=" "+currentText;
       holder.replaceChildren();
       const textNode=document.createElement("span");
       textNode.textContent=summary;
