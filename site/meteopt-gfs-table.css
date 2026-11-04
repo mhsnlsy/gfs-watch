@@ -259,3 +259,31 @@
   #meteopt-gfs-table .meteopt-data-table th{font-size:8px!important}
   #meteopt-gfs-table .meteopt-value{font-size:8px!important}
 }
+
+
+/* Android WebView: the GFS table is content, never a vertical scroll container. */
+@media (max-width: 850px), (pointer: coarse) {
+  #meteopt-gfs-table,
+  .water-gfs-layout,
+  #meteopt-gfs-table .meteopt-table-card,
+  #meteopt-gfs-table .meteopt-table-scroll {
+    position: relative !important;
+    height: auto !important;
+    max-height: none !important;
+    overflow: visible !important;
+    overflow-x: visible !important;
+    overflow-y: visible !important;
+    touch-action: auto !important;
+    overscroll-behavior: auto !important;
+  }
+  #meteopt-gfs-table .meteopt-table-scroll {
+    display: block !important;
+    width: 100% !important;
+    max-width: 100% !important;
+  }
+  #meteopt-gfs-table .meteopt-data-table {
+    width: 100% !important;
+    max-width: 100% !important;
+    min-width: 0 !important;
+  }
+}
