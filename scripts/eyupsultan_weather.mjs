@@ -3,7 +3,7 @@ import path from "node:path";
 
 const MGM_OBSERVATIONS_URL = "https://servis.mgm.gov.tr/web/sondurumlar/ilTumSondurum?ilPlaka=34";
 const STATION_ID = "18101";
-const STALE_AFTER_MINUTES = 120;
+const STALE_AFTER_MINUTES = 30;
 const HISTORY_SCHEMA = "gfs-watch.station-temperature-history.v1";
 
 const directions = [
@@ -36,14 +36,22 @@ function dewPoint(temp, humidity) {
 }
 
 async function fetchFromMgm() {
-  const response = await fetch(MGM_OBSERVATIONS_URL, {
-    headers: {
+  const controller = new AbortController();
+  const timeout = setTimeout(() => controller.abort(), 20000);
+  let response;
+  try {
+    response = await fetch(MGM_OBSERVATIONS_URL, {
+      signal: controller.signal,
+      headers: {
       "User-Agent": "Mozilla/5.0 (compatible; GFS-Watch/1.0)",
       "Accept": "application/json",
       "Origin": "https://istanbul.mgm.gov.tr",
       "Referer": "https://istanbul.mgm.gov.tr/"
-    }
-  });
+      }
+    });
+  } finally {
+    clearTimeout(timeout);
+  }
   if (!response.ok) throw new Error("MGM HTTP " + response.status);
   const observations = await response.json();
   const row = Array.isArray(observations) ? observations.find(item => Number(item.istNo) === Number(STATION_ID)) : null;
@@ -53,7 +61,10 @@ async function fetchFromMgm() {
   }
 
   const observedAt = new Date(row.veriZamani);
-  const ageMinutes = Math.max(0, (Date.now() - observedAt.getTime()) / 60000);
+  if (!Number.isFinite(observedAt.getTime())) throw new Error("MGM ölçüm zamanı geçersiz");
+  const rawAgeMinutes = (Date.now() - observedAt.getTime()) / 60000;
+  if (rawAgeMinutes < -5) throw new Error("MGM ölçüm zamanı gelecekte görünüyor");
+  const ageMinutes = Math.max(0, rawAgeMinutes);
   const temp = mgmNumber(row.sicaklik);
   if (temp == null) throw new Error("MGM sıcaklığı yok");
   const humidity = mgmNumber(row.nem);
