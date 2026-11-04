@@ -1077,7 +1077,7 @@
         let parsedUrl;
         try { parsedUrl = new URL(sourceUrl, window.location.href); }
         catch (_) { return originalFetch(resource, options); }
-        const match = parsedUrl.pathname.match(/\\/data\\/(.+\\.json)$/);
+        const match = parsedUrl.pathname.match(/\/data\/(.+\.json)$/);
         if (!match) return originalFetch(resource, options);
 
         const cacheKey = "data/" + match[1];
