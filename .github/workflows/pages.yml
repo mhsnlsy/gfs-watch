@@ -9,6 +9,8 @@ on:
     branches: [main]
   workflow_call:
   workflow_dispatch:
+  schedule:
+    - cron: "0 7 * * *" # 10:00 Europe/Istanbul
 
 permissions:
   contents: read
@@ -100,6 +102,30 @@ jobs:
           touch _site/.nojekyll
           echo "Website bundle prepared with the latest GFS forecast."
 
+      - name: Fetch daily Istanbul dam status from verified ISKI dataset
+        run: |
+          python - <<'PY'
+          import json, urllib.request, datetime
+          url = "https://www.dolulukorani.com/api/v1/provinces/istanbul"
+          out = {"schema":"gfs-watch.iski-dams.v1","status":"unavailable","authority":"İSKİ"}
+          try:
+              req=urllib.request.Request(url,headers={"User-Agent":"IstanbulHava/4.0","Accept":"application/json"})
+              with urllib.request.urlopen(req,timeout=25) as response: raw=json.load(response)
+              data=raw.get("data",raw)
+              if isinstance(data,list): data=next(x for x in data if x.get("slug")=="istanbul")
+              if not isinstance(data,dict): raise ValueError("Invalid API payload")
+              authority=str(data.get("authority","")).strip().upper(); rate=data.get("fill_rate"); freshness=data.get("freshness")
+              if authority not in ("İSKİ","ISKI") or not isinstance(rate,(int,float)) or freshness not in ("today","recent"):
+                  raise ValueError("ISKI source or fresh measurement could not be verified")
+              measured=data.get("measured_at"); label=measured
+              if measured:
+                  try: label=datetime.datetime.fromisoformat(measured.replace("Z","+00:00")).astimezone(datetime.timezone(datetime.timedelta(hours=3))).strftime("%d.%m.%Y")
+                  except Exception: pass
+              out.update({"status":"ok","fill_rate":rate,"measured_at":measured,"measured_at_label":label,"delta_7d":data.get("delta_7d"),"freshness":freshness,"fetched_at":datetime.datetime.now(datetime.timezone.utc).isoformat()})
+          except Exception as exc: out["error"]=str(exc)
+          with open("_site/data/iski-dams.json","w",encoding="utf-8") as f: json.dump(out,f,ensure_ascii=False)
+          print("ISKI status:",out["status"],out.get("fill_rate"),out.get("error",""))
+          PY
       - name: Configure GitHub Pages
         uses: actions/configure-pages@v5
         with:
