@@ -112,7 +112,6 @@
       .pressure-card, .info-card { width:100%; min-width:0; max-width:100%; }
       .notification-list { display:grid; grid-template-columns:minmax(0,1fr) !important; }
       .chart-wrap { display:block; width:100%; min-width:0; max-width:100%; overflow:hidden; }
-      #tahmin .chart-wrap { width:60%; max-width:60%; margin-left:auto; margin-right:auto; }
       .chart-wrap svg { display:block; width:100% !important; min-width:0 !important; max-width:100% !important; height:auto; }
       .notification-image-link { display:block; width:100%; max-width:100%; }
       .notification-image { display:block; width:100% !important; max-width:100% !important; height:auto; object-fit:contain; }
@@ -957,7 +956,7 @@
 <body>
   <header class="shell topbar">
     <a class="brand" href="#" aria-label="İstanbul'un Havası ana sayfa"><span class="brand-mark">☀</span><span>İstanbul'un Havası<small>Şehir için hava tahmini</small></span></a>
-    <nav aria-label="Ana gezinme"><a href="#bildirimler">Raporlar</a><a href="#tahmin">8 günlük tahmin</a><a href="#basinc">Basınç analizi</a></nav>
+    <nav aria-label="Ana gezinme"><a href="#bildirimler">Raporlar</a><a href="#basinc">Basınç analizi</a></nav>
     <div class="top-right"><div class="model-picker" role="group" aria-label="Tahmin modeli"><button type="button" id="model-gfs-button" class="active" aria-pressed="true">GFS</button><button type="button" id="model-ecmwf-button" aria-pressed="false">ECMWF IFS</button></div><span class="version"><span data-app-name>İstanbul'un Havası</span> <span data-app-version>4.0</span></span></div>
   </header>
   <main class="shell" data-ui-build="responsive-2026-11-01">
@@ -1045,7 +1044,6 @@
       <div id="notifications-list" class="notification-list" aria-live="polite"><div class="chart-empty">Son raporlar yükleniyor…</div></div>
     </section>
     <section class="section" id="basinc"><div class="section-head"><div><div class="section-kicker">GFS · DENİZ SEVİYESİ</div><h2>Basınç merkezleri</h2></div></div><div class="lower-grid"><article class="pressure-card"><div class="label">Bölgesel basınç merkezleri ve İstanbul'a etkisi</div><ul class="pressure-list" id="pressure-findings"><li class="loading">Analiz yükleniyor…</li></ul></article></div></section>
-    <section class="section" id="tahmin"><div class="section-head"><div><div class="section-kicker">METEOPT GFS · MODEL TAHMİNİ</div><h2>8 günlük tahmin</h2></div><div class="section-note"><span id="cycle-chip">Model döngüsü yükleniyor</span><br><span id="updated-chip">Yayın zamanı bekleniyor</span><br>Günlük en düşük / en yüksek sıcaklık</div></div><div class="daily-grid" id="daily-grid"><div class="loading">Tahmin verisi yükleniyor…</div></div></section>
     </div>
     <div id="ecmwf-model-view" hidden aria-label="ECMWF tahmin görünümü">
       <div class="section-head" style="padding-top:30px"><div><div class="section-kicker">ECMWF IFS · HRES + ENS</div><h2>ECMWF IFS · İstanbul</h2></div><div class="section-note"><span id="ecmwf-run-meta">ECMWF döngüsü bekleniyor</span><br><span id="ecmwf-updated-chip">Yayın zamanı</span><br>Günlük en düşük / en yüksek sıcaklık</div></div>
@@ -2215,13 +2213,11 @@
         renderNotifications([data.report], data.published_at_utc||data.report.published_at_utc);
       }
       renderStationCard(activeStation==="enka"?enkaStationObservation:eyupsultanStationObservation);
-      if(data.run_id_utc)$("cycle-chip").textContent="GFS döngüsü · "+timeTR(data.run_id_utc);
       if(data.published_at_utc){
-        $("updated-chip").textContent="Yayınlandı · "+timeTR(data.published_at_utc);
         const age=(Date.now()-new Date(data.published_at_utc).getTime())/3600000;
       }
       if(data.forecast_valid_until_utc&&$("valid-until"))$("valid-until").textContent="Son geçerlilik: "+new Intl.DateTimeFormat("tr-TR",{timeZone:"Europe/Istanbul",day:"2-digit",month:"2-digit"}).format(new Date(data.forecast_valid_until_utc));
-      renderDaily(data.daily_summary);renderFindings(data.regional_pressure_analysis&&data.regional_pressure_analysis.findings,data.current_conditions&&data.current_conditions.mean_sea_level_pressure_hpa);
+      renderFindings(data.regional_pressure_analysis&&data.regional_pressure_analysis.findings,data.current_conditions&&data.current_conditions.mean_sea_level_pressure_hpa);
     }
     // Station observations refresh independently from forecast/model data.
     // A delayed GFS/ECMWF payload must never block live station readings.
