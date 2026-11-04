@@ -2135,7 +2135,9 @@
         return;
       }
       const current=Number(station.temperature_2m_c);
-      const baseline=windows[0].mean;
+      const nearTerm=valid.filter(point=>point.stamp<=now+12*3600000).map(point=>point.temp);
+      const nearMean=nearTerm.length?nearTerm.reduce((sum,value)=>sum+value,0)/nearTerm.length:current;
+      const baseline=(current+nearMean)/2;
       const last=windows[windows.length-1].mean;
       const spread=Math.max(...windows.map(item=>item.mean))-Math.min(...windows.map(item=>item.mean));
       const firstShift=windows.slice(1).find(item=>Math.abs(item.mean-baseline)>=1.5);
