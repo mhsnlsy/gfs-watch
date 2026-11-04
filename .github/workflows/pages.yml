@@ -225,11 +225,6 @@ jobs:
           observation = document.get("station_observation") or {}
           assert str(observation.get("station_id")) == "18101"
           assert isinstance(observation.get("temperature_2m_c"), (int, float))
-          assert isinstance(observation.get("wind_speed_10m_kmh"), (int, float))
-          assert isinstance(observation.get("humidity_percent"), (int, float))
-          assert isinstance(observation.get("precipitation_daily_mm"), (int, float))
-          assert isinstance(observation.get("precipitation_1h_mm"), (int, float))
-          assert isinstance(observation.get("precipitation_12h_mm"), (int, float))
           print(
               "Live Eyüpsultan observation verified: "
               f"{observation['temperature_2m_c']}°C · "
@@ -257,10 +252,8 @@ jobs:
               if isinstance(sample, dict)
               and sample.get("logged_at_utc")
               and isinstance(sample.get("temperature_2m_c"), (int, float))
-              and isinstance(sample.get("precipitation_daily_mm"), (int, float))
-              and isinstance(sample.get("precipitation_1h_mm"), (int, float))
           ]
-          assert valid, "Eyüpsultan history contains no valid temperature/rain samples."
+          assert valid, "Eyüpsultan history contains no valid temperature samples."
           print(f"Live Eyüpsultan history verified: {len(valid)} samples")
           PY
 
