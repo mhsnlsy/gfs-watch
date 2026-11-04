@@ -1,7 +1,37 @@
 {
   "schema": "gfs-watch.notifications.v1",
-  "updated_at_utc": "2026-11-04T16:24:18+00:00",
+  "updated_at_utc": "2026-11-04T22:22:16+00:00",
   "items": [
+    {
+      "id": "20261104T18Z",
+      "title": "İstanbul GFS tahmin raporu",
+      "run_id_utc": "2026-11-04T18:00:00+00:00",
+      "published_at_utc": "2026-11-04T22:22:16+00:00",
+      "published_at_istanbul": "Perşembe 5 Kasım 2026 01:22",
+      "cycle_label": "18Z · 04.11.2026 18:00 UTC",
+      "summary": "📡 yerel istasyon İSTASYON GÖZLEMİ · GECİKMELİ ÖLÇÜM\n🌡 İstasyon sıcaklığı: 15.1°C\n🌧 Günlük toplam yağış: 0.2 mm\n💨 İstasyon rüzgârı: 1.7 km/sa · yön: N\n🌆 GÜNÜN KALANINDA\n⏳ Süre: Perşembe 5 Kasım 2026 01:22 – Cuma 6 Kasım 2026 00:00 TSİ",
+      "report_text": "🌦 İstanbul'un Havası 1.4.3\nİSTANBUL GFS TAHMİN RAPORU\n🛰 Model döngüsü: 04.11.2026 18:00 UTC (18Z)\n🕒 Rapor zamanı: Perşembe 5 Kasım 2026 01:22 TSİ\n📍 Konum: İstanbul, Türkiye\n\n\n📡 YEREL İSTASYON İSTASYON GÖZLEMİ · GECİKMELİ ÖLÇÜM\n🕒 Ölçüm zamanı: Çarşamba 4 Kasım 2026 10:55 TSİ\n🌡 İstasyon sıcaklığı: 15.1°C\n🌧 Günlük toplam yağış: 0.2 mm\n💨 İstasyon rüzgârı: 1.7 km/sa · yön: N\n\n🌆 GÜNÜN KALANINDA\n⏳ Süre: Perşembe 5 Kasım 2026 01:22 – Cuma 6 Kasım 2026 00:00 TSİ\n🌡 Sıcaklık: 10.9–12.5°C\n💨 Rüzgâr: en fazla 25.0 km/sa\n🌧 Beklenen yağış: 0.8 mm\n📈 En belirgin yağış aralığı: 21:00–00:00 UTC (model noktası: 0.2 mm / 3 saat)\n\n📅 ÖNÜMÜZDEKİ 3 GÜN\n• Cuma 6 Kasım: 10.4–11.8°C | Yağış: 0.4 mm | Maks. rüzgâr: 19.0 km/sa\n  ↳ Yağışın yoğunlaştığı saatler: 00:00–03:00 UTC (0.1 mm/3 sa)\n• Cumartesi 7 Kasım: 10.5–12.0°C | Yağış: 0.7 mm | Maks. rüzgâr: 25.0 km/sa | Rüzgârlı\n  ↳ Yağışın yoğunlaştığı saatler: 00:00–03:00 UTC (0.4 mm/3 sa)\n• Pazar 8 Kasım: 9.8–12.5°C | Yağış: 0.0 mm | Maks. rüzgâr: 16.0 km/sa\n  ↳ Belirgin yağış beklenmiyor.",
+      "image_path": null,
+      "images": [
+        {
+          "label": "Sıcaklık",
+          "path": "media/gfs-20261104T18Z-temperature.png"
+        },
+        {
+          "label": "Sıcaklık · 850 hPa",
+          "path": "media/gfs-20261104T18Z-temperature_850.png"
+        },
+        {
+          "label": "Yağış",
+          "path": "media/gfs-20261104T18Z-precipitation.png"
+        },
+        {
+          "label": "Rüzgâr hızı + yönü · 10 m",
+          "path": "media/gfs-20261104T18Z-wind_10m.png"
+        }
+      ],
+      "audio_path": null
+    },
     {
       "id": "20261104T12Z",
       "title": "İstanbul GFS tahmin raporu",
@@ -88,36 +118,6 @@
         {
           "label": "Rüzgâr hızı + yönü · 10 m",
           "path": "media/gfs-20261104T00Z-wind_10m.png"
-        }
-      ],
-      "audio_path": null
-    },
-    {
-      "id": "20261103T18Z",
-      "title": "İstanbul GFS tahmin raporu",
-      "run_id_utc": "2026-11-03T18:00:00+00:00",
-      "published_at_utc": "2026-11-03T22:21:37+00:00",
-      "published_at_istanbul": "Çarşamba 4 Kasım 2026 01:21",
-      "cycle_label": "18Z · 03.11.2026 18:00 UTC",
-      "summary": "🌡 GFS başlangıç sıcaklığı: 15.8°C\n💨 GFS başlangıç rüzgârı: 8.0 km/sa\n📡 yerel istasyon GERÇEK İSTASYON GÖZLEMİ | VANTAGE PRO · SON İSTASYON ÖLÇÜMÜ\n🌡 İstasyon sıcaklığı: 14.8°C\n🌧 Günlük toplam yağış: 0.0 mm\n💨 İstasyon rüzgârı: 0.0 km/sa · yön: N",
-      "report_text": "🌦 İstanbul'un Havası 4.0\nİSTANBUL GFS TAHMİN RAPORU\n📄 Çıktı: Yazılı tahmin raporu\n🛰 Model döngüsü: 03.11.2026 18:00 UTC (18Z)\n🗓 Tahmin aralığı: 03.11.2026 18:00 – 11.11.2026 06:00 UTC (+180 saat)\n🕒 Rapor zamanı: Çarşamba 4 Kasım 2026 01:21 TSİ\n📍 Konum: İstanbul, Türkiye\n\n🌡 GFS başlangıç sıcaklığı: 15.8°C\n💨 GFS başlangıç rüzgârı: 8.0 km/sa\n\n📡 YEREL İSTASYON GERÇEK İSTASYON GÖZLEMİ | VANTAGE PRO · SON İSTASYON ÖLÇÜMÜ\n🕒 Ölçüm zamanı: Çarşamba 4 Kasım 2026 01:20 TSİ\n🌡 İstasyon sıcaklığı: 14.8°C\n🌧 Günlük toplam yağış: 0.0 mm\n💨 İstasyon rüzgârı: 0.0 km/sa · yön: N\nKaynak: Yerel istasyon · Davis Vantage PRO istasyonu · canlı tablo ölçümü\n\n🌆 GÜNÜN KALANINDA\n⏳ Süre: Çarşamba 4 Kasım 2026 01:21 – Perşembe 5 Kasım 2026 00:00 TSİ\n🌡 Sıcaklık: 13.5–16.2°C\n💨 Rüzgâr: en fazla 34.0 km/sa\n🌧 Beklenen yağış: 10.7 mm\n📈 En belirgin yağış aralığı: 03:00–06:00 UTC (model noktası: 6.9 mm / 3 saat)\n\n📅 ÖNÜMÜZDEKİ 3 GÜN\n• Perşembe 5 Kasım: 11.0–13.1°C | Yağış: 0.7 mm | Maks. rüzgâr: 29.0 km/sa | Rüzgârlı\n  ↳ Yağışın yoğunlaştığı saatler: 18:00–21:00 UTC (0.2 mm/3 sa)\n• Cuma 6 Kasım: 10.5–12.0°C | Yağış: 0.6 mm | Maks. rüzgâr: 20.0 km/sa\n  ↳ Yağışın yoğunlaştığı saatler: 03:00–06:00 UTC (0.2 mm/3 sa)\n• Cumartesi 7 Kasım: 10.7–12.8°C | Yağış: 0.8 mm | Maks. rüzgâr: 18.0 km/sa\n  ↳ Yağışın yoğunlaştığı saatler: 00:00–03:00 UTC (0.4 mm/3 sa)",
-      "image_path": null,
-      "images": [
-        {
-          "label": "Sıcaklık",
-          "path": "media/gfs-20261103T18Z-temperature.png"
-        },
-        {
-          "label": "Sıcaklık · 850 hPa",
-          "path": "media/gfs-20261103T18Z-temperature_850.png"
-        },
-        {
-          "label": "Yağış",
-          "path": "media/gfs-20261103T18Z-precipitation.png"
-        },
-        {
-          "label": "Rüzgâr hızı + yönü · 10 m",
-          "path": "media/gfs-20261103T18Z-wind_10m.png"
         }
       ],
       "audio_path": null
