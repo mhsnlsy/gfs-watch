@@ -3079,6 +3079,66 @@
 
     startPage();
   </script>
+
+  <style>
+    #pull-refresh-indicator{position:fixed;z-index:99999;top:calc(env(safe-area-inset-top,0px) + 9px);left:50%;transform:translate(-50%,-150%);opacity:0;pointer-events:none;display:flex;align-items:center;gap:9px;padding:10px 15px;border:1px solid rgba(125,211,215,.35);border-radius:999px;background:rgba(8,25,39,.96);color:#d8f7f1;font:600 12px "DM Sans",sans-serif;box-shadow:0 8px 28px rgba(0,0,0,.32);transition:transform .18s ease,opacity .18s ease}
+    #pull-refresh-indicator.visible{transform:translate(-50%,0);opacity:1}
+    #pull-refresh-indicator .pull-refresh-icon{display:inline-block;font-size:17px;line-height:1;transition:transform .12s ease}
+    #pull-refresh-indicator.loading .pull-refresh-icon{animation:pull-refresh-spin .8s linear infinite}
+    @keyframes pull-refresh-spin{to{transform:rotate(360deg)}}
+    @media(prefers-reduced-motion:reduce){#pull-refresh-indicator{transition:none}#pull-refresh-indicator.loading .pull-refresh-icon{animation:none}}
+  </style>
+  <div id="pull-refresh-indicator" role="status" aria-live="polite"><span class="pull-refresh-icon">↓</span><span class="pull-refresh-label">Yenilemek için aşağı çek</span></div>
+  <script>
+    (() => {
+      const indicator=document.getElementById("pull-refresh-indicator");
+      if(!indicator)return;
+      const label=indicator.querySelector(".pull-refresh-label");
+      const icon=indicator.querySelector(".pull-refresh-icon");
+      let startY=0,lastY=0,tracking=false,refreshing=false;
+      const threshold=86;
+      const reset=()=>{
+        tracking=false;
+        indicator.classList.remove("visible","loading");
+        icon.textContent="↓";
+        label.textContent="Yenilemek için aşağı çek";
+      };
+      document.addEventListener("touchstart",event=>{
+        if(refreshing||event.touches.length!==1||window.scrollY>2)return;
+        startY=lastY=event.touches[0].clientY;
+        tracking=true;
+      },{passive:true});
+      document.addEventListener("touchmove",event=>{
+        if(!tracking||refreshing||event.touches.length!==1)return;
+        lastY=event.touches[0].clientY;
+        const distance=lastY-startY;
+        if(distance<=0){reset();return;}
+        if(window.scrollY>2){reset();return;}
+        if(distance>8){
+          indicator.classList.add("visible");
+          const progress=Math.min(1,distance/threshold);
+          icon.style.transform="rotate("+Math.round(progress*180)+"deg)";
+          label.textContent=distance>=threshold?"Bırakınca yenilenecek":"Yenilemek için biraz daha çek";
+          if(distance>12&&event.cancelable)event.preventDefault();
+        }
+      },{passive:false});
+      document.addEventListener("touchend",()=>{
+        if(!tracking)return;
+        const distance=lastY-startY;
+        tracking=false;
+        if(distance>=threshold&&window.scrollY<=2){
+          refreshing=true;
+          indicator.classList.add("visible","loading");
+          icon.style.transform="";
+          icon.textContent="↻";
+          label.textContent="Sayfa yenileniyor…";
+          setTimeout(()=>window.location.reload(),120);
+        }else reset();
+      },{passive:true});
+      document.addEventListener("touchcancel",()=>{if(!refreshing)reset();},{passive:true});
+    })();
+  </script>
+
   <script src="./meteopt-gfs-table.js?v=20261104-tsi-force-2" defer></script>
   <script src="./iski-dams.js?v=20261104-2" defer></script>
 </body>
