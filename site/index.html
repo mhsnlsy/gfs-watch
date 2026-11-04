@@ -3132,7 +3132,15 @@
           icon.style.transform="";
           icon.textContent="↻";
           label.textContent="Sayfa yenileniyor…";
-          setTimeout(()=>window.location.reload(),120);
+          fetch(window.location.href,{method:"GET",cache:"no-store",credentials:"same-origin"})
+            .then(response=>{if(!response.ok)throw new Error("HTTP "+response.status);window.location.reload();})
+            .catch(()=>{
+              refreshing=false;
+              indicator.classList.remove("loading");
+              icon.textContent="!";
+              label.textContent="Yenileme başarısız · Bağlantıyı kontrol et";
+              window.setTimeout(reset,4500);
+            });
         }else reset();
       },{passive:true});
       document.addEventListener("touchcancel",()=>{if(!refreshing)reset();},{passive:true});
