@@ -406,6 +406,45 @@ jobs:
           print(f"Live Eyüpsultan history verified: {len(valid)} samples")
           PY
 
+      - name: Verify live ENKA Balmumcu and MGM Şişli station payloads
+        if: always()
+        env:
+          PAGE_URL: ${{ steps.deployment.outputs.page_url }}
+        run: |
+          set -euo pipefail
+          for station in enka sisli; do
+            if [ "$station" = "enka" ]; then
+              observation="station-observation.json"
+              history="station-temperature-history.json"
+              expected_id="ENKA-BALMUMCU-CAMERA-OCR"
+            else
+              observation="sisli-station-observation.json"
+              history="sisli-station-temperature-history.json"
+              expected_id="18401"
+            fi
+            curl --fail --silent --show-error "${PAGE_URL%/}/data/$observation?verify=$GITHUB_RUN_ID" -o "$RUNNER_TEMP/$station-observation.json"
+            python - "$RUNNER_TEMP/$station-observation.json" "$expected_id" "$station" <<'PY'
+          import json, sys
+          doc=json.load(open(sys.argv[1], encoding="utf-8"))
+          assert doc.get("schema") == "gfs-watch.station-observation.v1"
+          obs=doc.get("station_observation") or {}
+          assert str(obs.get("station_id")) == sys.argv[2], f"{sys.argv[3]} station ID mismatch"
+          assert isinstance(obs.get("temperature_2m_c"), (int,float)), f"{sys.argv[3]} temperature missing"
+          assert not obs.get("is_stale", False), f"{sys.argv[3]} observation marked stale"
+          print(f"{sys.argv[3]} live payload: {obs['temperature_2m_c']} C · age {obs.get('age_minutes')} min")
+          PY
+            curl --fail --silent --show-error "${PAGE_URL%/}/data/$history?verify=$GITHUB_RUN_ID" -o "$RUNNER_TEMP/$station-history.json"
+            python - "$RUNNER_TEMP/$station-history.json" "$expected_id" "$station" <<'PY'
+          import json, sys
+          doc=json.load(open(sys.argv[1], encoding="utf-8"))
+          assert doc.get("schema") == "gfs-watch.station-temperature-history.v1"
+          assert str(doc.get("station_id")) == sys.argv[2], f"{sys.argv[3]} history station ID mismatch"
+          samples=doc.get("samples")
+          assert isinstance(samples, list), f"{sys.argv[3]} history samples missing"
+          print(f"{sys.argv[3]} history payload: {len(samples)} samples")
+          PY
+          done
+
       - name: Verify latest GFS report and every referenced Pages asset
         if: always()
         env:
