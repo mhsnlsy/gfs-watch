@@ -2541,14 +2541,6 @@
           if(document&&document.schema==="gfs-watch.station-observation.v1"&&candidate&&String(candidate.station_id)==="18101")eyupsultanStationObservation=candidate;
         }catch(_){}
       }
-      if(stationKey==="enka"&&cameraBackupHistoryResponse&&cameraBackupHistoryResponse.ok&&!stationObservationIsFresh(
-        enkaStationObservation&&enkaStationObservation.station_id==="ENKA-BALMUMCU-CAMERA-OCR"?enkaStationObservation:null
-      )){
-        try{
-          const document=await cameraBackupHistoryResponse.json();
-          if(document?.schema==="gfs-watch.station-temperature-history.v1"&&document.station_id==="ENKA-BALMUMCU-CAMERA-OCR"&&Array.isArray(document.samples))enkaStationHistorySamples=document.samples;
-        }catch(_){}
-      }
       if(eyupHistoryResponse&&eyupHistoryResponse.ok){
         try{
           const document=await eyupHistoryResponse.json();
@@ -2617,12 +2609,6 @@
               enkaStationHistorySamples=historyDocument.samples;
             }
           }catch(_){enkaStationHistorySamples=[];}
-        }
-        if(cameraBackupHistoryResponse&&cameraBackupHistoryResponse.ok&&enkaStationObservation?.station_id==="ENKA-BALMUMCU-CAMERA-OCR"){
-          try{
-            const historyDocument=await cameraBackupHistoryResponse.json();
-            if(historyDocument?.schema==="gfs-watch.station-temperature-history.v1"&&historyDocument.station_id==="ENKA-BALMUMCU-CAMERA-OCR"&&Array.isArray(historyDocument.samples))enkaStationHistorySamples=historyDocument.samples;
-          }catch(_){}
         }
         if(eyupsultanHistoryResponse&&eyupsultanHistoryResponse.ok){
           try{
