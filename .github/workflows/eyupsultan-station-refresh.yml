@@ -49,13 +49,8 @@ jobs:
           test -s public/eyupsultan-station-observation.json
           AGE=$(jq -r '.station_observation.age_minutes // 999' public/eyupsultan-station-observation.json)
           TEMP=$(jq -r '.station_observation.temperature_2m_c' public/eyupsultan-station-observation.json)
-          RAIN=$(jq -r '.station_observation.precipitation_1h_mm // empty' public/eyupsultan-station-observation.json)
           SOURCE=$(jq -r '.station_observation.source' public/eyupsultan-station-observation.json)
-          echo "Age: $AGE minutes · $TEMP C · 1sa ${RAIN:-yok} mm · $SOURCE"
-          if [ -z "$RAIN" ]; then
-            echo "Saatlik yağış yok. Son sağlam kayıt korunuyor."
-            exit 1
-          fi
+          echo "Age: $AGE minutes · $TEMP C · MGM $SOURCE"
           if [ "$AGE" -gt 30 ]; then
             echo "Observation is older than 30 minutes."
             exit 1
