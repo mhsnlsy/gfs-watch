@@ -53,16 +53,16 @@ const gradleKts = join(appRoot, 'build.gradle.kts');
 if (await exists(gradleGroovy)) {
   let gradle = await readFile(gradleGroovy, 'utf8');
   if (!gradle.includes('androidx.work:work-runtime')) {
-    gradle = gradle.replace(/dependencies\\s*\\{/, match =>
-      match + '\\n    implementation "androidx.work:work-runtime:2.12.0"'
+    gradle = gradle.replace(/dependencies\s*\{/, match =>
+      match + '\n    implementation "androidx.work:work-runtime:2.12.0"'
     );
   }
   await writeFile(gradleGroovy, gradle);
 } else {
   let gradle = await readFile(gradleKts, 'utf8');
   if (!gradle.includes('androidx.work:work-runtime')) {
-    gradle = gradle.replace(/dependencies\\s*\\{/, match =>
-      match + '\\n    implementation("androidx.work:work-runtime:2.12.0")'
+    gradle = gradle.replace(/dependencies\s*\{/, match =>
+      match + '\n    implementation("androidx.work:work-runtime:2.12.0")'
     );
   }
   await writeFile(gradleKts, gradle);
@@ -94,7 +94,7 @@ const receivers = [
 for (const receiver of receivers) {
   const className = receiver.match(/android:name="([^"]+)"/)[1];
   if (!manifest.includes(className)) {
-    manifest = manifest.replace('</application>', receiver + '\\n    </application>');
+    manifest = manifest.replace('</application>', receiver + '\n    </application>');
   }
 }
 await writeFile(manifestPath, manifest);
