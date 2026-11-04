@@ -2,15 +2,15 @@
   "schema": "gfs-watch.station-observation.v1",
   "station_observation": {
     "station_name": "ENKA Balmumcu",
-    "station_id": "ENKA-BALMUMCU-VANTAGE-PRO",
-    "source": "ENKA Balmumcu Vantage PRO weather station",
-    "source_url": "https://w.enka.com/weather/currentvalues.html",
-    "station_home_url": "https://w.enka.com/weather/index.html",
+    "station_id": "ENKA-BALMUMCU-CAMERA-OCR",
+    "source": "ENKA Balmumcu live camera image OCR",
+    "source_url": "https://w.enka.com/camhd/cam1/index.html",
+    "image_url": "https://w.enka.com/camhd/cam1/c.jpg",
     "latitude": 41.1,
     "longitude": 28.9,
     "elevation_m": 107,
-    "observed_at_utc": "2026-11-04T07:55:00+00:00",
-    "age_minutes": 10.3,
+    "observed_at_utc": "2026-11-04T13:34:24+00:00",
+    "age_minutes": 1.4,
     "is_stale": false,
     "temperature_2m_c": 15.1,
     "wind_speed_10m_kmh": 1.7,
@@ -20,7 +20,12 @@
     "precipitation_1h_mm": null,
     "precipitation_daily_mm": 0.2,
     "humidity_percent": 94.0,
-    "station_pressure_hpa": 1014.6
+    "station_pressure_hpa": 1014.6,
+    "observation_method": "tesseract-ocr",
+    "ocr_regions": {
+      "weather_overlay": "15.1 °C\n94%\n1014.6 hPa\n0.9 kt N\n0.2mm",
+      "timestamp_overlay": "| 04-11-2026 16:34:24"
+    }
   },
-  "updated_at_utc": "2026-11-04T08:05:16+00:00"
+  "updated_at_utc": "2026-11-04T13:35:45+00:00"
 }

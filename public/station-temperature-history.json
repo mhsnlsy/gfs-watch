@@ -1,11 +1,11 @@
 {
   "schema": "gfs-watch.station-temperature-history.v1",
-  "station_id": "ENKA-BALMUMCU-VANTAGE-PRO",
+  "station_id": "ENKA-BALMUMCU-CAMERA-OCR",
   "station_name": "ENKA Balmumcu",
   "sampling_interval_minutes": 5,
   "aggregation_interval_minutes": 30,
   "retention_days": 14,
-  "updated_at_utc": "2026-11-04T08:05:16+00:00",
+  "updated_at_utc": "2026-11-04T13:35:45+00:00",
   "samples": [
     {
       "logged_at_utc": "2026-11-01T02:42:33+00:00",
@@ -3986,6 +3986,12 @@
     {
       "logged_at_utc": "2026-11-04T08:00:20+00:00",
       "observed_at_utc": "2026-11-04T07:55:00+00:00",
+      "temperature_2m_c": 15.1,
+      "precipitation_daily_mm": 0.2
+    },
+    {
+      "logged_at_utc": "2026-11-04T13:35:45+00:00",
+      "observed_at_utc": "2026-11-04T13:34:24+00:00",
       "temperature_2m_c": 15.1,
       "precipitation_daily_mm": 0.2
     }
