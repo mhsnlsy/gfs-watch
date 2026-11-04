@@ -6,6 +6,9 @@ on:
     branches: [main]
     paths:
       - ".github/workflows/enka-station-refresh.yml"
+      - "scripts/update_station_observation.py"
+      - "enka_weather.py"
+      - "site/index.html"
   workflow_dispatch:
 
 permissions:
