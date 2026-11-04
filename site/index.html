@@ -1782,7 +1782,7 @@
         $("freshness").classList.toggle("stale",stale);
         const alert=$("station-alert");
         alert.hidden=!stale;
-        if(stale)alert.textContent=observedValid?"⚠ İstasyon ölçümü "+Math.round(ageMinutes)+" dakika önce alınmış. Güncellik eşiği "+staleAfter+" dakikayı aştığı için güncel hava koşulu olarak değerlendirmeyin.":"⚠ Ölçüm zaman damgası doğrulanamadı. İstasyon verisi güncel kabul edilmemeli.";
+        if(stale)alert.textContent=observedValid?"⚠ "+sourceLabel+" veri kaynağı güncel ölçüm sağlamıyor.":"⚠ İstasyon ölçüm zamanı doğrulanamadı; veri zaman damgası kontrol edilemiyor.";
       }else{
         $("station-observation-meta").textContent=stationName+" istasyon verisine şu anda ulaşılamıyor.";
         updateStation24hDiff(null);
