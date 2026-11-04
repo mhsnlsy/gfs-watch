@@ -1,0 +1,21 @@
+<?xml version="1.0" encoding="utf-8"?>
+<ScrollView xmlns:android="http://schemas.android.com/apk/res/android"
+ android:id="@+id/widget_root" android:layout_width="match_parent" android:layout_height="match_parent"
+ android:background="@drawable/widget_background" android:clickable="true" android:focusable="true"
+ android:fillViewport="true">
+ <LinearLayout android:layout_width="match_parent" android:layout_height="wrap_content"
+  android:orientation="vertical" android:padding="12dp">
+  <TextView android:id="@+id/widget_source" android:layout_width="match_parent" android:layout_height="wrap_content"
+   android:text="İSTANBUL · CANLI GÖZLEM" android:textColor="#8DDDE0" android:textSize="11sp" android:textStyle="bold"/>
+  <TextView android:id="@+id/widget_comparison" android:layout_width="match_parent" android:layout_height="wrap_content"
+   android:layout_marginTop="6dp" android:text="Sıcaklık karşılaştırması bekleniyor" android:textColor="#E5F2F6" android:textSize="12sp" android:textStyle="bold"/>
+  <TextView android:id="@+id/widget_current_rain" android:layout_width="match_parent" android:layout_height="wrap_content"
+   android:layout_marginTop="7dp" android:text="MGM Eyüpsultan yağış ölçümü bekleniyor" android:textColor="#7DD3D7" android:textSize="12sp"/>
+  <TextView android:id="@+id/widget_dry_window" android:layout_width="match_parent" android:layout_height="wrap_content"
+   android:layout_marginTop="7dp" android:text="MeteoPT GFS kuru aralık hesaplanıyor" android:textColor="#D5EAF0" android:textSize="11sp"/>
+  <TextView android:id="@+id/widget_heavy_rain" android:layout_width="match_parent" android:layout_height="wrap_content"
+   android:layout_marginTop="7dp" android:text="Kuvvetli yağış uyarısı bekleniyor" android:textColor="#FFD28A" android:textSize="11sp" android:textStyle="bold"/>
+  <TextView android:id="@+id/widget_dashboard_updated" android:layout_width="match_parent" android:layout_height="wrap_content"
+   android:layout_marginTop="8dp" android:text="Ölçüm zamanı bekleniyor" android:textColor="#8FAAB8" android:textSize="9sp"/>
+ </LinearLayout>
+</ScrollView>
