@@ -1811,9 +1811,9 @@
       const caption=$("station-rain-caption"),title=$("station-rain-title");
       if(caption)caption.textContent="mm · kayan 1 saatlik toplam";
       if(title)title.textContent="Yağış";
-      const samples=activeStation==="sisli"?sisliStationHistorySamples:eyupsultanStationHistorySamples;
+      const rainSamples=activeStation==="sisli"?sisliStationHistorySamples:eyupsultanStationHistorySamples;
       const stationName=activeStation==="sisli"?"Şişli":"Eyüpsultan";
-      return renderEyupsultanHourlyRain(samples, stationName, holder, meta);
+      return renderEyupsultanHourlyRain(rainSamples, stationName, holder, meta);
     }
     function renderStationHistory(){
       const stationName=activeStation==="eyupsultan"?"Eyüpsultan":activeStation==="sisli"?"Şişli":"ENKA Balmumcu";
@@ -2618,10 +2618,8 @@
         $("station-enka-button").classList.toggle("active",activeStation==="enka");
         $("station-eyupsultan-button").classList.toggle("active",activeStation==="eyupsultan");
         $("station-sisli-button").classList.toggle("active",activeStation==="sisli");
-        $("station-sisli-button").classList.toggle("active",activeStation==="sisli");
         $("station-enka-button").setAttribute("aria-pressed",String(activeStation==="enka"));
         $("station-eyupsultan-button").setAttribute("aria-pressed",String(activeStation==="eyupsultan"));
-        $("station-sisli-button").setAttribute("aria-pressed",String(activeStation==="sisli"));
         $("station-sisli-button").setAttribute("aria-pressed",String(activeStation==="sisli"));
         render(data);
         enkaStationHistorySamples=[];
