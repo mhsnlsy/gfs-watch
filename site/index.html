@@ -1501,9 +1501,9 @@
           const startPoint=byLead[index];
           return {
             value:endpoint.precipitation_6h_mm,
-            date:endpoint.valid_time_utc,
+            date:endpoint.valid_time_istanbul,
             forecastHour:endpoint.lead,
-            intervalStart:startPoint.valid_time_utc,
+            intervalStart:startPoint.valid_time_istanbul,
             intervalHours:Number(endpoint.precipitation_interval_hours)||endpoint.lead-startPoint.lead
           };
         }).filter(point=>numeric(point.value));
