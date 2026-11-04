@@ -2165,14 +2165,16 @@
           const recoveryText=recovery.day===0?"bugün":recovery.day===1?"yarın":recovery.day+" gün sonra";
           summary+=" Ardından "+dayLabel(recovery.stamp)+" günü yeniden ısınma başlıyor.";
         }else{
-          const coveredDays=series.slice(falling).length;
-          const lastDay=series[series.length-1];
-          if(fallDays>0){
-            summary+=" 5 günlük tahminde sonuna kadar, yaklaşık "+coveredDays+" gün boyunca düşüş eğilimi sürüyor.";
+          const remaining=series.slice(falling);
+          const continuedFall=remaining.filter(item=>item.delta<=-1.0).length;
+          const stableDays=remaining.filter(item=>Math.abs(item.delta)<1.0).length;
+          if(continuedFall&&stableDays){
+            summary+=" Isınma başlamadan önce "+continuedFall+" gün daha düşüş, ardından "+stableDays+" gün stabil seyir bekleniyor.";
+          }else if(continuedFall){
+            summary+=" 5 günlük tahminin kalan "+remaining.length+" gününde düşüş devam ediyor; bu aralıkta ısınma görünmüyor.";
           }else{
-            summary+=" Sonraki "+coveredDays+" gün boyunca belirgin bir ısınma görünmüyor; sıcaklık stabil seyrediyor.";
+            summary+=" Ardından "+stableDays+" gün boyunca sıcaklık stabil kalıyor; 5 günlük aralıkta yeni bir ısınma görünmüyor.";
           }
-          if(lastDay.delta< -1.0)summary+=" Son gün de düşüş yönünde.";
         }
       }else{
         const firstRise=series.find(item=>item.delta>=1.0);
