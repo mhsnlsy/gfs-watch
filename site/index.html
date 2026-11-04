@@ -2454,6 +2454,7 @@
       if(data.report&&data.report.report_text){
         renderNotifications([data.report], data.published_at_utc||data.report.published_at_utc);
       }
+      if(sisliResponse&&sisliResponse.ok){try{const d=await sisliResponse.json();const s=d?.station_observation;if(d?.schema==="gfs-watch.station-observation.v1"&&s&&String(s.station_id)==="18401")sisliStationObservation=s;}catch(_){}}
       renderStationCard(activeStation==="enka"?enkaStationObservation:activeStation==="eyupsultan"?eyupsultanStationObservation:sisliStationObservation);
       if(data.published_at_utc){
         const age=(Date.now()-new Date(data.published_at_utc).getTime())/3600000;
@@ -2468,9 +2469,10 @@
       const requests=[
         fetch(STATION_URL+"?t="+cacheKey,{cache:"no-store"}).catch(()=>null),
         fetch(EYUPSULTAN_STATION_URL+"?t="+cacheKey,{cache:"no-store"}).catch(()=>null),
+        fetch(SISLI_STATION_URL+"?t="+cacheKey,{cache:"no-store"}).catch(()=>null),
         fetch(STATION_CAMERA_BACKUP_URL+"?t="+cacheKey,{cache:"no-store"}).catch(()=>null)
       ];
-      const [enkaResponse,eyupsultanResponse,cameraBackupResponse]=await Promise.all(requests);
+      const [enkaResponse,eyupsultanResponse,sisliResponse,cameraBackupResponse]=await Promise.all(requests);
       if(enkaResponse&&enkaResponse.ok){
         try{
           const document=await enkaResponse.json();
