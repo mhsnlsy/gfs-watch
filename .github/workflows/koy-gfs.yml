@@ -3,7 +3,7 @@ name: Köy GFS
 on:
   workflow_dispatch:
   schedule:
-    - cron: "*/10 * * * *"
+    - cron: "*/5 * * * *"
 
 permissions:
   contents: write
@@ -13,63 +13,93 @@ concurrency:
   cancel-in-progress: false
 
 jobs:
-  fetch:
+  publish:
     runs-on: ubuntu-latest
     timeout-minutes: 5
     steps:
-      - name: Fetch only the Çanakçı MeteoPT GFS point
-        id: fetch
-        env:
-          LAT: "40.9557"
-          LON: "39.0065"
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+      - name: Poll MeteoPT and prepare independent Köy updates
+        id: prepare
         run: |
           set -euo pipefail
-          mkdir -p output
+          mkdir -p "$RUNNER_TEMP/koy-output"
           python - <<'PY'
           import json, os
           from datetime import datetime, timezone
           from urllib.parse import urlencode
           from urllib.request import Request, urlopen
+          from pathlib import Path
 
           now = datetime.now(timezone.utc)
           cycle_hour = (now.hour // 6) * 6
           cycle = now.replace(hour=cycle_hour, minute=0, second=0, microsecond=0)
-          params = {
-              "lat": os.environ["LAT"],
-              "lon": os.environ["LON"],
-              "run": f"{cycle_hour:02d}",
-              "lang": "en",
-          }
+          run_id = cycle.strftime("%Y%m%d%H")
+          params = {"lat":"40.9557","lon":"39.0065","run":f"{cycle_hour:02d}","lang":"en"}
           url = "https://api.meteopt.com/gfs/json?" + urlencode(params)
-          request = Request(url, headers={"User-Agent": "Koy-GFS/1.0"})
-          with urlopen(request, timeout=40) as response:
-              document = json.load(response)
-          expected = cycle.strftime("%Y%m%d%H")
-          actual = str(document.get("run") or "")
-          if actual != expected:
-              raise SystemExit(f"MeteoPT cycle mismatch: expected {expected}, got {actual or 'empty'}")
-          steps = (document.get("steps") or {}).get("values") or []
+          req = Request(url, headers={"User-Agent":"Koy-GFS/1.0","Cache-Control":"no-cache"})
+          with urlopen(req, timeout=40) as response:
+              doc = json.load(response)
+          if str(doc.get("run") or "") != run_id:
+              raise SystemExit(f"Waiting for MeteoPT cycle {run_id}; got {doc.get('run')!r}")
+          steps = []
+          for value in (doc.get("steps") or {}).get("values") or []:
+              try: steps.append(int(value))
+              except (TypeError, ValueError): pass
           if not steps:
               raise SystemExit("MeteoPT returned no forecast steps")
-          output = {
-              "schema": "koy-gfs.meteopt-point.v1",
-              "location": {"name": "Giresun / Çanakçı", "latitude": 40.9557, "longitude": 39.0065},
-              "source": "MeteoPT",
-              "source_url": url,
-              "run_utc": cycle.isoformat(),
-              "fetched_at_utc": now.isoformat(),
-              "max_forecast_hour": max(int(x) for x in steps),
-              "raw": document,
+          data = doc.get("data") or {}
+          def series(name):
+              return ((data.get(name) or {}).get("values") or [])
+          def num(values, i):
+              try:
+                  x = float(values[i])
+                  return x if x == x and abs(x) != float("inf") else None
+              except (IndexError, TypeError, ValueError):
+                  return None
+          run_iso = cycle.isoformat(timespec="seconds")
+          points = []
+          for i, lead in enumerate(steps):
+              if lead <= 0: continue
+              points.append({
+                  "forecast_hour": lead,
+                  "valid_time_utc": (cycle.replace() + __import__("datetime").timedelta(hours=lead)).isoformat(timespec="minutes"),
+                  "temperature_2m_c": num(series("tmp2m"), i),
+                  "temperature_850hpa_c": num(series("tmp850mb"), i),
+                  "wind_speed_10m_kmh": num(series("wind10m"), i),
+                  "wind_speed_850hpa_kmh": num(series("wind850"), i),
+                  "precipitation_6h_mm": num(series("apcp"), i),
+              })
+          root = Path(os.environ["RUNNER_TEMP"]) / "koy-output"
+          meta = {
+              "location":{"name":"Giresun / Çanakçı","latitude":40.9557,"longitude":39.0065},
+              "source":"MeteoPT GFS","source_url":url,"run_id_utc":run_iso,
           }
-          with open("output/latest.json", "w", encoding="utf-8") as f:
-              json.dump(output, f, ensure_ascii=False, indent=2)
-          print(f"MeteoPT {expected}: {len(steps)} steps; max f{output['max_forecast_hour']}")
+          if 72 in steps and max(steps) >= 72:
+              first72 = {**meta,"schema":"koy-gfs.first72.v1","forecast_source":"meteopt",
+                         "published_at_utc":now.isoformat(timespec="seconds"),
+                         "forecast_6_hourly":[p for p in points if 0 < p["forecast_hour"] <= 72]}
+              (root/"f72.json").write_text(json.dumps(first72,ensure_ascii=False,indent=2),encoding="utf-8")
+              print("F72_READY=true")
+          else:
+              print("F72_READY=false")
+          ready180 = 180 in steps and len([x for x in steps if 0 < x <= 180]) >= 60
+          if ready180:
+              full = {**meta,"schema":"koy-gfs.run.v1","forecast_source":"meteopt",
+                      "published_at_utc":now.isoformat(timespec="seconds"),
+                      "forecast_6_hourly":points}
+              (root/f"{run_id}.json").write_text(json.dumps(full,ensure_ascii=False,indent=2),encoding="utf-8")
+              print("F180_READY=true")
+          else:
+              print("F180_READY=false")
+          print(f"Cycle {run_id}; max forecast hour {max(steps)}; steps {len(steps)}")
           PY
-      - name: Publish to the dedicated koy-gfs-data branch
-        env:
-          GH_TOKEN: ${{ github.token }}
+      - name: Publish only new F72 and F180 milestones to the isolated data branch
         run: |
           set -euo pipefail
+          mkdir -p "$RUNNER_TEMP/koy-output"
+          cp -a "$RUNNER_TEMP/koy-output/." "$RUNNER_TEMP/" 2>/dev/null || true
           git config user.name "github-actions[bot]"
           git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
           git fetch origin koy-gfs-data || true
@@ -79,11 +109,39 @@ jobs:
             git checkout --orphan koy-gfs-data
             git rm -rf . >/dev/null 2>&1 || true
           fi
-          mkdir -p gfs
-          cp "$GITHUB_WORKSPACE/output/latest.json" gfs/latest.json
-          cp gfs/latest.json "gfs/$(date -u +%Y%m%dT%H%M%SZ).json"
-          find gfs -type f -name '*.json' -mtime +14 -delete
-          git add gfs
-          if git diff --cached --quiet; then exit 0; fi
-          git commit -m "Update Çanakçı MeteoPT GFS data"
-          git push origin koy-gfs-data
+          mkdir -p gfs/f72 gfs/runs
+          changed=0
+          if [ -f "$RUNNER_TEMP/koy-output/f72.json" ]; then
+            if ! cmp -s "$RUNNER_TEMP/koy-output/f72.json" gfs/f72/latest.json 2>/dev/null; then
+              cp "$RUNNER_TEMP/koy-output/f72.json" gfs/f72/latest.json
+              changed=1
+              echo "F72 payload updated."
+            fi
+          fi
+          for file in "$RUNNER_TEMP"/koy-output/*.json; do
+            [ -f "$file" ] || continue
+            case "$(basename "$file")" in f72.json) continue;; esac
+            run_file="gfs/runs/$(basename "$file")"
+            if [ ! -f "$run_file" ]; then cp "$file" "$run_file"; changed=1; fi
+          done
+          if [ "$changed" = "1" ]; then
+            python - <<'PY'
+          import json
+          from pathlib import Path
+          runs=[]
+          for path in sorted(Path("gfs/runs").glob("*.json"), reverse=True):
+              try: runs.append(json.loads(path.read_text(encoding="utf-8")))
+              except Exception: pass
+          runs=runs[:4]
+          if runs:
+              bundle={"schema":"koy-gfs.comparison.v1","location":{"name":"Giresun / Çanakçı","latitude":40.9557,"longitude":39.0065},
+                      "updated_at_utc":runs[0].get("published_at_utc"),"runs":runs}
+              Path("gfs/comparison.json").write_text(json.dumps(bundle,ensure_ascii=False,indent=2),encoding="utf-8")
+          PY
+            find gfs/runs -type f -name '*.json' -mtime +45 -delete
+            git add gfs
+            git commit -m "Publish Köy GFS forecast milestone"
+            git push origin koy-gfs-data
+          else
+            echo "No new F72/F180 data; no commit needed."
+          fi
