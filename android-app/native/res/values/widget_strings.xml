@@ -1,0 +1,5 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="widget_weather_small_description">İstanbul sıcaklığı, yağış ve rüzgâr özeti</string>
+    <string name="widget_weather_wide_description">İstanbul hava durumu ve önümüzdeki saatlerin yağış bilgisi</string>
+</resources>
