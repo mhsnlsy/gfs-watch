@@ -56,7 +56,6 @@ public final class WidgetRenderer {
         views.setTextViewText(R.id.widget_updated, updated > 0
                 ? "Güncelleme " + new SimpleDateFormat("HH:mm", Locale.forLanguageTag("tr-TR")).format(new Date(updated))
                 : "İnternet bağlantısı bekleniyor");
-        views.setTextViewText(R.id.widget_root, ""); // Keep the root accessible to RemoteViews on all launchers.
 
         if (wide) {
             views.setTextViewText(R.id.widget_wind, "Rüzgâr  " + wind + " km/sa");
