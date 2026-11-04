@@ -1747,7 +1747,7 @@
       };
       const show=p=>{
         line.setAttribute("x1",String(p.x));line.setAttribute("x2",String(p.x));dot.setAttribute("cx",String(p.x));dot.setAttribute("cy",String(p.y));line.setAttribute("visibility","visible");dot.setAttribute("visibility","visible");
-        const stampLabel=forecastUTC?forecastDateTimeUTC(p.time)+" UTC":chartDateTimeTR(p.time)+" TSİ";
+        const stampLabel=forecastUTC?forecastDateTimeTSI(p.time):chartDateTimeTR(p.time)+" TSİ";
          tip.innerHTML='<div class="station-history-tooltip-time">'+esc(stampLabel)+'</div><div class="station-history-tooltip-value">'+esc(p.valueLabel)+'</div>'+(p.detail?'<div class="station-history-tooltip-detail">'+esc(p.detail)+'</div>':"");tip.hidden=false;
         const cr=card.getBoundingClientRect(),sr=svg.getBoundingClientRect(),px=p.x/width*sr.width+sr.left-cr.left,py=p.y/height*sr.height+sr.top-cr.top,tw=tip.offsetWidth,th=tip.offsetHeight;
         let left=px-tw/2;if(left<8)left=px+10;if(left+tw>cr.width-8)left=px-tw-10;
