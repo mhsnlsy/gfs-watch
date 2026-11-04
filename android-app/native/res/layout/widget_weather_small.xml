@@ -1,55 +1,20 @@
 <?xml version="1.0" encoding="utf-8"?>
 <LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
-    android:id="@+id/widget_root"
-    android:layout_width="match_parent"
-    android:layout_height="match_parent"
-    android:background="@drawable/widget_background"
-    android:clickable="true"
-    android:focusable="true"
-    android:gravity="center_vertical"
-    android:orientation="vertical"
-    android:padding="12dp">
-
-    <TextView
-        android:id="@+id/widget_source"
-        android:layout_width="match_parent"
-        android:layout_height="wrap_content"
-        android:ellipsize="end"
-        android:maxLines="1"
-        android:text="İSTANBUL · GFS"
-        android:textColor="#B9D6E0"
-        android:textSize="10sp"
-        android:textStyle="bold" />
-
-    <TextView
-        android:id="@+id/widget_detail"
-        android:layout_width="match_parent"
-        android:layout_height="wrap_content"
-        android:layout_marginTop="5dp"
-        android:ellipsize="end"
-        android:maxLines="2"
-        android:text="Yağış tahmini bekleniyor"
-        android:textColor="#7DD3D7"
-        android:textSize="12sp"
-        android:textStyle="bold" />
-
-    <TextView
-        android:id="@+id/widget_temperature"
-        android:layout_width="match_parent"
-        android:layout_height="wrap_content"
-        android:layout_marginTop="3dp"
-        android:includeFontPadding="false"
-        android:text="--°"
-        android:textColor="#F2F8FB"
-        android:textSize="32sp"
-        android:textStyle="bold" />
-
-    <TextView
-        android:id="@+id/widget_updated"
-        android:layout_width="match_parent"
-        android:layout_height="wrap_content"
-        android:layout_marginTop="4dp"
-        android:text="Son veri bekleniyor"
-        android:textColor="#8FAAB8"
-        android:textSize="9sp" />
+ android:id="@+id/widget_root" android:layout_width="match_parent" android:layout_height="match_parent"
+ android:background="@drawable/widget_background" android:clickable="true" android:focusable="true"
+ android:gravity="center_vertical" android:orientation="vertical" android:padding="12dp">
+ <TextView android:id="@+id/widget_source" android:layout_width="match_parent" android:layout_height="wrap_content"
+  android:ellipsize="end" android:maxLines="1" android:text="Eyüpsultan · CANLI"
+  android:textColor="#B9D6E0" android:textSize="10sp" android:textStyle="bold"/>
+ <TextView android:id="@+id/widget_temperature" android:layout_width="match_parent" android:layout_height="wrap_content"
+  android:layout_marginTop="3dp" android:includeFontPadding="false" android:text="--°"
+  android:textColor="#F2F8FB" android:textSize="32sp" android:textStyle="bold"/>
+ <TextView android:id="@+id/widget_detail" android:layout_width="match_parent" android:layout_height="wrap_content"
+  android:layout_marginTop="5dp" android:ellipsize="end" android:maxLines="1"
+  android:text="Yağış -- mm/1s · Nem --%" android:textColor="#7DD3D7" android:textSize="10sp" android:textStyle="bold"/>
+ <TextView android:id="@+id/widget_extra" android:layout_width="match_parent" android:layout_height="wrap_content"
+  android:layout_marginTop="3dp" android:ellipsize="end" android:maxLines="1"
+  android:text="Rüzgâr -- km/sa · Basınç -- hPa" android:textColor="#D4E4EA" android:textSize="9sp"/>
+ <TextView android:id="@+id/widget_updated" android:layout_width="match_parent" android:layout_height="wrap_content"
+  android:layout_marginTop="5dp" android:text="Ölçüm bekleniyor" android:textColor="#8FAAB8" android:textSize="8sp"/>
 </LinearLayout>
