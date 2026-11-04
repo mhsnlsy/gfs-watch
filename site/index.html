@@ -1043,12 +1043,14 @@
         <div class="station-switch" role="group" aria-label="İstasyon seçimi">
           <button type="button" id="station-enka-button" class="active" aria-pressed="true">ENKA Balmumcu</button>
           <button type="button" id="station-eyupsultan-button" aria-pressed="false">Eyüpsultan</button>
+          <button type="button" id="station-sisli-button" aria-pressed="false">Şişli</button>
         </div>
         <script>
           try{
-            if(localStorage.getItem("istanbul-hava-station")==="eyupsultan"){
-              document.getElementById("station-eyupsultan-button").classList.add("active");
-              document.getElementById("station-eyupsultan-button").setAttribute("aria-pressed","true");
+            if(["eyupsultan","sisli"].includes(localStorage.getItem("istanbul-hava-station"))){
+              const saved=localStorage.getItem("istanbul-hava-station");
+              const selected=document.getElementById(saved==="sisli"?"station-sisli-button":"station-eyupsultan-button");
+              selected.classList.add("active"); selected.setAttribute("aria-pressed","true");
               document.getElementById("station-enka-button").classList.remove("active");
               document.getElementById("station-enka-button").setAttribute("aria-pressed","false");
             }
@@ -1181,10 +1183,12 @@
     const STATION_CAMERA_BACKUP_HISTORY_URL="./data/station-camera-backup-history.json";
     const EYUPSULTAN_STATION_URL="./data/eyupsultan-station-observation.json";
     const EYUPSULTAN_STATION_HISTORY_URL="./data/eyupsultan-station-temperature-history.json";
+    const SISLI_STATION_URL="./data/sisli-station-observation.json";
+    const SISLI_STATION_HISTORY_URL="./data/sisli-station-temperature-history.json";
     const VERIFY_URL="./data/forecast-verification.json";
-    let enkaStationObservation=null,eyupsultanStationObservation=null,activeStation="enka";
-    try{const savedStation=localStorage.getItem("istanbul-hava-station");if(savedStation==="enka"||savedStation==="eyupsultan")activeStation=savedStation;}catch(_){}
-    let enkaStationHistorySamples=[],eyupsultanStationHistorySamples=[];
+    let enkaStationObservation=null,eyupsultanStationObservation=null,sisliStationObservation=null,activeStation="enka";
+    try{const savedStation=localStorage.getItem("istanbul-hava-station");if(["enka","eyupsultan","sisli"].includes(savedStation))activeStation=savedStation;}catch(_){}
+    let enkaStationHistorySamples=[],eyupsultanStationHistorySamples=[],sisliStationHistorySamples=[];
     let verificationDoc=null;
     let forecastData=null;
     const $=id=>document.getElementById(id);
@@ -1807,15 +1811,17 @@
       const caption=$("station-rain-caption"),title=$("station-rain-title");
       if(caption)caption.textContent="mm · kayan 1 saatlik toplam";
       if(title)title.textContent="Yağış";
-      return renderEyupsultanHourlyRain(typeof eyupsultanStationHistorySamples!=="undefined"?eyupsultanStationHistorySamples:[], "Eyüpsultan", holder, meta);
+      const samples=activeStation==="sisli"?sisliStationHistorySamples:eyupsultanStationHistorySamples;
+      const stationName=activeStation==="sisli"?"Şişli":"Eyüpsultan";
+      return renderEyupsultanHourlyRain(samples, stationName, holder, meta);
     }
     function renderStationHistory(){
-      const stationName=activeStation==="eyupsultan"?"Eyüpsultan":"ENKA Balmumcu";
-      const samples=activeStation==="eyupsultan"?eyupsultanStationHistorySamples:enkaStationHistorySamples;
+      const stationName=activeStation==="eyupsultan"?"Eyüpsultan":activeStation==="sisli"?"Şişli":"ENKA Balmumcu";
+      const samples=activeStation==="eyupsultan"?eyupsultanStationHistorySamples:activeStation==="sisli"?sisliStationHistorySamples:enkaStationHistorySamples;
       $("history-station-source").textContent=stationName.toLocaleUpperCase("tr-TR")+" · GERÇEK ÖLÇÜMLER";
       $("station-history-panel").setAttribute("aria-label",stationName+" son 24 saat geçmişi");
       $("history-source-note").hidden=false;
-      $("history-source-note").textContent=activeStation==="enka"?"Sıcaklık: ENKA kamera OCR ölçümleri. Yağış: MGM Eyüpsultan ölçümleri.":"Sıcaklık ve yağış: MGM Eyüpsultan ölçümleri.";
+      $("history-source-note").textContent=activeStation==="enka"?"Sıcaklık: ENKA kamera OCR ölçümleri. Yağış: MGM Eyüpsultan ölçümleri.":activeStation==="eyupsultan"?"Sıcaklık ve yağış: MGM Eyüpsultan ölçümleri.":"Sıcaklık ve yağış: MGM Şişli ölçümleri.";
       renderStationTemperatureTrend(samples,stationName);
       renderStationRainTrend(samples,stationName);
     }
@@ -2422,14 +2428,16 @@
       return line;
     }
     function selectStation(stationKey){
-      if(stationKey!=="enka"&&stationKey!=="eyupsultan")return;
+      if(!["enka","eyupsultan","sisli"].includes(stationKey))return;
       activeStation=stationKey;
       try{localStorage.setItem("istanbul-hava-station",stationKey);}catch(_){}
       $("station-enka-button").classList.toggle("active",stationKey==="enka");
       $("station-eyupsultan-button").classList.toggle("active",stationKey==="eyupsultan");
-      $("station-enka-button").setAttribute("aria-pressed",stationKey==="enka"?"true":"false");
-      $("station-eyupsultan-button").setAttribute("aria-pressed",stationKey==="eyupsultan"?"true":"false");
-      renderStationCard(stationKey==="enka"?enkaStationObservation:eyupsultanStationObservation);
+      $("station-sisli-button").classList.toggle("active",stationKey==="sisli");
+      $("station-enka-button").setAttribute("aria-pressed",String(stationKey==="enka"));
+      $("station-eyupsultan-button").setAttribute("aria-pressed",String(stationKey==="eyupsultan"));
+      $("station-sisli-button").setAttribute("aria-pressed",String(stationKey==="sisli"));
+      renderStationCard(stationKey==="enka"?enkaStationObservation:stationKey==="eyupsultan"?eyupsultanStationObservation:sisliStationObservation);
       renderStationHistory();
       if(typeof renderBriefing==="function")renderBriefing();
       if(typeof forecastData!=="undefined"&&forecastData&&typeof renderNext72Hours==="function")renderNext72Hours();
@@ -2437,6 +2445,7 @@
     }
     $("station-enka-button").addEventListener("click",()=>selectStation("enka"));
     $("station-eyupsultan-button").addEventListener("click",()=>selectStation("eyupsultan"));
+    $("station-sisli-button").addEventListener("click",()=>selectStation("sisli"));
 
     function render(data){
       forecastData=data;
@@ -2445,7 +2454,7 @@
       if(data.report&&data.report.report_text){
         renderNotifications([data.report], data.published_at_utc||data.report.published_at_utc);
       }
-      renderStationCard(activeStation==="enka"?enkaStationObservation:eyupsultanStationObservation);
+      renderStationCard(activeStation==="enka"?enkaStationObservation:activeStation==="eyupsultan"?eyupsultanStationObservation:sisliStationObservation);
       if(data.published_at_utc){
         const age=(Date.now()-new Date(data.published_at_utc).getTime())/3600000;
       }
@@ -2488,20 +2497,22 @@
           }
         }catch(_){}
       }
-      renderStationCard(activeStation==="enka"?enkaStationObservation:eyupsultanStationObservation);
+      renderStationCard(activeStation==="enka"?enkaStationObservation:activeStation==="eyupsultan"?eyupsultanStationObservation:sisliStationObservation);
       if(latestRainForecastPoints.length)renderRainWindow(latestRainForecastPoints);
       if(typeof renderBriefing==="function")renderBriefing();
     }
     async function refreshSelectedStation(){
       const stationKey=activeStation;
       const cacheKey=Date.now();
-      const observationUrl=stationKey==="eyupsultan"?EYUPSULTAN_STATION_URL:STATION_URL;
-      const historyUrl=stationKey==="eyupsultan"?EYUPSULTAN_STATION_HISTORY_URL:STATION_HISTORY_URL;
-      const [observationResponse,historyResponse,eyupObservationResponse,eyupHistoryResponse,cameraBackupResponse,cameraBackupHistoryResponse]=await Promise.all([
+      const observationUrl=stationKey==="eyupsultan"?EYUPSULTAN_STATION_URL:stationKey==="sisli"?SISLI_STATION_URL:STATION_URL;
+      const historyUrl=stationKey==="eyupsultan"?EYUPSULTAN_STATION_HISTORY_URL:stationKey==="sisli"?SISLI_STATION_HISTORY_URL:STATION_HISTORY_URL;
+      const [observationResponse,historyResponse,eyupObservationResponse,eyupHistoryResponse,sisliObservationResponse,sisliHistoryResponse,cameraBackupResponse,cameraBackupHistoryResponse]=await Promise.all([
         fetch(observationUrl+"?t="+cacheKey,{cache:"no-store"}).catch(()=>null),
         fetch(historyUrl+"?t="+cacheKey,{cache:"no-store"}).catch(()=>null),
-        stationKey==="enka"?fetch(EYUPSULTAN_STATION_URL+"?t="+cacheKey,{cache:"no-store"}).catch(()=>null):Promise.resolve(null),
-        stationKey==="enka"?fetch(EYUPSULTAN_STATION_HISTORY_URL+"?t="+cacheKey,{cache:"no-store"}).catch(()=>null):Promise.resolve(null),
+        stationKey!=="eyupsultan"?fetch(EYUPSULTAN_STATION_URL+"?t="+cacheKey,{cache:"no-store"}).catch(()=>null):Promise.resolve(null),
+        stationKey!=="eyupsultan"?fetch(EYUPSULTAN_STATION_HISTORY_URL+"?t="+cacheKey,{cache:"no-store"}).catch(()=>null):Promise.resolve(null),
+        stationKey!=="sisli"?fetch(SISLI_STATION_URL+"?t="+cacheKey,{cache:"no-store"}).catch(()=>null):Promise.resolve(null),
+        stationKey!=="sisli"?fetch(SISLI_STATION_HISTORY_URL+"?t="+cacheKey,{cache:"no-store"}).catch(()=>null):Promise.resolve(null),
         stationKey==="enka"?fetch(STATION_CAMERA_BACKUP_URL+"?t="+cacheKey,{cache:"no-store"}).catch(()=>null):Promise.resolve(null),
         stationKey==="enka"?fetch(STATION_CAMERA_BACKUP_HISTORY_URL+"?t="+cacheKey,{cache:"no-store"}).catch(()=>null):Promise.resolve(null)
       ]);
@@ -2511,6 +2522,7 @@
           const candidate=document&&document.station_observation;
           if(document&&document.schema==="gfs-watch.station-observation.v1"&&candidate){
             if(stationKey==="eyupsultan"&&String(candidate.station_id)==="18101")eyupsultanStationObservation=candidate;
+            if(stationKey==="sisli"&&String(candidate.station_id)==="18401")sisliStationObservation=candidate;
             if(stationKey==="enka"&&candidate.station_id==="ENKA-BALMUMCU-CAMERA-OCR")enkaStationObservation=candidate;
           }
         }catch(_){}
@@ -2529,6 +2541,7 @@
           const document=await historyResponse.json();
           if(document&&document.schema==="gfs-watch.station-temperature-history.v1"&&Array.isArray(document.samples)){
             if(stationKey==="eyupsultan"&&String(document.station_id)==="18101")eyupsultanStationHistorySamples=document.samples;
+            if(stationKey==="sisli"&&String(document.station_id)==="18401")sisliStationHistorySamples=document.samples;
             if(stationKey==="enka")enkaStationHistorySamples=document.samples;
           }
         }catch(_){}
@@ -2546,8 +2559,10 @@
           if(document&&document.schema==="gfs-watch.station-temperature-history.v1"&&String(document.station_id)==="18101"&&Array.isArray(document.samples))eyupsultanStationHistorySamples=document.samples;
         }catch(_){}
       }
+      if(sisliObservationResponse&&sisliObservationResponse.ok){try{const d=await sisliObservationResponse.json();const s=d&&d.station_observation;if(d&&d.schema==="gfs-watch.station-observation.v1"&&s&&String(s.station_id)==="18401")sisliStationObservation=s;}catch(_){}}
+      if(sisliHistoryResponse&&sisliHistoryResponse.ok){try{const d=await sisliHistoryResponse.json();if(d&&d.schema==="gfs-watch.station-temperature-history.v1"&&String(d.station_id)==="18401"&&Array.isArray(d.samples))sisliStationHistorySamples=d.samples;}catch(_){}}
       if(activeStation!==stationKey)return;
-      renderStationCard(activeStation==="enka"?enkaStationObservation:eyupsultanStationObservation);
+      renderStationCard(activeStation==="enka"?enkaStationObservation:activeStation==="eyupsultan"?eyupsultanStationObservation:sisliStationObservation);
       renderStationHistory();
       if(typeof renderBriefing==="function")renderBriefing();
       if(typeof forecastData!=="undefined"&&forecastData&&typeof renderNext72Hours==="function")renderNext72Hours();
@@ -2555,12 +2570,14 @@
     async function loadForecast(){
       try{
         const cacheKey=Date.now();
-        const [response,stationResponse,historyResponse,eyupsultanResponse,eyupsultanHistoryResponse,cameraBackupResponse,cameraBackupHistoryResponse]=await Promise.all([
+        const [response,stationResponse,historyResponse,eyupsultanResponse,eyupsultanHistoryResponse,sisliResponse,sisliHistoryResponse,cameraBackupResponse,cameraBackupHistoryResponse]=await Promise.all([
           fetch(DATA_URL+"?t="+cacheKey,{cache:"no-store"}),
           fetch(STATION_URL+"?t="+cacheKey,{cache:"no-store"}).catch(()=>null),
           fetch(STATION_HISTORY_URL+"?t="+cacheKey,{cache:"no-store"}).catch(()=>null),
           fetch(EYUPSULTAN_STATION_URL+"?t="+cacheKey,{cache:"no-store"}).catch(()=>null),
           fetch(EYUPSULTAN_STATION_HISTORY_URL+"?t="+cacheKey,{cache:"no-store"}).catch(()=>null),
+          fetch(SISLI_STATION_URL+"?t="+cacheKey,{cache:"no-store"}).catch(()=>null),
+          fetch(SISLI_STATION_HISTORY_URL+"?t="+cacheKey,{cache:"no-store"}).catch(()=>null),
           fetch(STATION_CAMERA_BACKUP_URL+"?t="+cacheKey,{cache:"no-store"}).catch(()=>null),
           fetch(STATION_CAMERA_BACKUP_HISTORY_URL+"?t="+cacheKey,{cache:"no-store"}).catch(()=>null)
         ]);
@@ -2569,6 +2586,7 @@
         if(!data||!["gfs-watch.forecast.v1","gfs-watch.forecast.v2"].includes(data.schema))throw new Error("Tahmin verisinin biçimi beklenenden farklı.");
         enkaStationObservation=null;
         eyupsultanStationObservation=null;
+        sisliStationObservation=null;
         if(stationResponse&&stationResponse.ok){
           const stationDocument=await stationResponse.json();
           if(stationDocument&&stationDocument.schema==="gfs-watch.station-observation.v1"){
@@ -2593,14 +2611,20 @@
             }
           }catch(_){eyupsultanStationObservation=null;}
         }
+        if(sisliResponse&&sisliResponse.ok){try{const d=await sisliResponse.json();const s=d&&d.station_observation;if(d&&d.schema==="gfs-watch.station-observation.v1"&&s&&String(s.station_id)==="18401")sisliStationObservation=s;}catch(_){sisliStationObservation=null;}}
         // Keep the user's selected station. ENKA Balmumcu is always fed by camera OCR.
         $("station-enka-button").classList.toggle("active",activeStation==="enka");
         $("station-eyupsultan-button").classList.toggle("active",activeStation==="eyupsultan");
+        $("station-sisli-button").classList.toggle("active",activeStation==="sisli");
+        $("station-sisli-button").classList.toggle("active",activeStation==="sisli");
         $("station-enka-button").setAttribute("aria-pressed",String(activeStation==="enka"));
         $("station-eyupsultan-button").setAttribute("aria-pressed",String(activeStation==="eyupsultan"));
+        $("station-sisli-button").setAttribute("aria-pressed",String(activeStation==="sisli"));
+        $("station-sisli-button").setAttribute("aria-pressed",String(activeStation==="sisli"));
         render(data);
         enkaStationHistorySamples=[];
         eyupsultanStationHistorySamples=[];
+        sisliStationHistorySamples=[];
         if(historyResponse&&historyResponse.ok){
           try{
             const historyDocument=await historyResponse.json();
@@ -2618,7 +2642,7 @@
           }catch(_){eyupsultanStationHistorySamples=[];}
         }
         renderStationHistory();
-        renderStationCard(activeStation==="enka"?enkaStationObservation:eyupsultanStationObservation);
+        renderStationCard(activeStation==="enka"?enkaStationObservation:activeStation==="eyupsultan"?eyupsultanStationObservation:sisliStationObservation);
       }catch(error){
         $("freshness").textContent="Veriye ulaşılamadı";$("temperature").textContent="—°";
         $("daily-grid").innerHTML='<div class="error">'+esc(error.message)+'</div>';
