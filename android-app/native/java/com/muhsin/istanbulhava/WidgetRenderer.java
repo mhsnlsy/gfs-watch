@@ -19,12 +19,29 @@ public final class WidgetRenderer {
         AppWidgetManager manager = AppWidgetManager.getInstance(context);
         updateSmall(context, manager, manager.getAppWidgetIds(new ComponentName(context, WeatherWidgetProvider.class)));
         updateWide(context, manager, manager.getAppWidgetIds(new ComponentName(context, WeatherWideWidgetProvider.class)));
+        updateDashboard(context, manager, manager.getAppWidgetIds(new ComponentName(context, WeatherDashboardWidgetProvider.class)));
     }
     public static void updateSmall(Context context, AppWidgetManager manager, int[] ids) {
         for (int id : ids) manager.updateAppWidget(id, build(context, false));
     }
     public static void updateWide(Context context, AppWidgetManager manager, int[] ids) {
         for (int id : ids) manager.updateAppWidget(id, build(context, true));
+    }
+    public static void updateDashboard(Context context, AppWidgetManager manager, int[] ids) {
+        for (int id : ids) {
+            SharedPreferences p = context.getSharedPreferences(PREFS, Context.MODE_PRIVATE);
+            RemoteViews v = new RemoteViews(context.getPackageName(), R.layout.widget_weather_dashboard);
+            v.setTextViewText(R.id.widget_source, p.getString("dashboard_source", "İSTANBUL · CANLI GÖZLEM"));
+            v.setTextViewText(R.id.widget_comparison, p.getString("dashboard_comparison", "Sıcaklık karşılaştırması bekleniyor"));
+            v.setTextViewText(R.id.widget_current_rain, p.getString("dashboard_current_rain", "MGM Eyüpsultan yağış ölçümü bekleniyor"));
+            v.setTextViewText(R.id.widget_dry_window, p.getString("dashboard_dry_window", "MeteoPT GFS yağış aralığı hesaplanıyor"));
+            v.setTextViewText(R.id.widget_heavy_rain, p.getString("dashboard_heavy_rain", "Kuvvetli yağış tahmini bekleniyor"));
+            v.setTextViewText(R.id.widget_dashboard_updated, p.getString("dashboard_updated", "Ölçüm zamanı bekleniyor"));
+            Intent open = new Intent(context, MainActivity.class);
+            PendingIntent pi = PendingIntent.getActivity(context, 4303, open, PendingIntent.FLAG_UPDATE_CURRENT | PendingIntent.FLAG_IMMUTABLE);
+            v.setOnClickPendingIntent(R.id.widget_root, pi);
+            manager.updateAppWidget(id, v);
+        }
     }
     private static RemoteViews build(Context context, boolean wide) {
         SharedPreferences p = context.getSharedPreferences(PREFS, Context.MODE_PRIVATE);
