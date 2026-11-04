@@ -128,6 +128,24 @@ jobs:
           touch _site/.nojekyll
           echo "Website bundle prepared with the latest GFS forecast."
 
+      - name: Validate inline website JavaScript syntax
+        run: |
+          python - <<'PY'
+          import re
+          from pathlib import Path
+          html = Path("site/index.html").read_text(encoding="utf-8")
+          blocks = re.findall(r'<script(?:\\s[^>]*)?>(.*?)</script>', html, re.S | re.I)
+          scripts = [block for block in blocks if block.strip()]
+          if not scripts:
+              raise SystemExit("No inline JavaScript blocks found.")
+          for index, script in enumerate(scripts):
+              Path(f"/tmp/gfs-watch-inline-{index}.js").write_text(script, encoding="utf-8")
+          print(f"Extracted {len(scripts)} inline JavaScript blocks.")
+          PY
+          for script in /tmp/gfs-watch-inline-*.js; do
+            node --check "$script"
+          done
+
       - name: Fetch Istanbul dam status from dolulukorani.com API
         run: |
           python - <<'PY'
