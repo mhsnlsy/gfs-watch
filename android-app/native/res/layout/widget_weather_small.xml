@@ -16,38 +16,39 @@
         android:layout_height="wrap_content"
         android:ellipsize="end"
         android:maxLines="1"
-        android:text="İSTANBUL · HAVA"
+        android:text="İSTANBUL · GFS"
         android:textColor="#B9D6E0"
         android:textSize="10sp"
-        android:textStyle="bold" />
-
-    <TextView
-        android:id="@+id/widget_temperature"
-        android:layout_width="match_parent"
-        android:layout_height="wrap_content"
-        android:layout_marginTop="4dp"
-        android:includeFontPadding="false"
-        android:text="--°"
-        android:textColor="#F2F8FB"
-        android:textSize="34sp"
         android:textStyle="bold" />
 
     <TextView
         android:id="@+id/widget_detail"
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
-        android:layout_marginTop="7dp"
+        android:layout_marginTop="5dp"
         android:ellipsize="end"
         android:maxLines="2"
-        android:text="Yağış -- mm · Rüzgâr --"
-        android:textColor="#D4E4EA"
-        android:textSize="10sp" />
+        android:text="Yağış tahmini bekleniyor"
+        android:textColor="#7DD3D7"
+        android:textSize="12sp"
+        android:textStyle="bold" />
+
+    <TextView
+        android:id="@+id/widget_temperature"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:layout_marginTop="3dp"
+        android:includeFontPadding="false"
+        android:text="--°"
+        android:textColor="#F2F8FB"
+        android:textSize="32sp"
+        android:textStyle="bold" />
 
     <TextView
         android:id="@+id/widget_updated"
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
-        android:layout_marginTop="6dp"
+        android:layout_marginTop="4dp"
         android:text="Son veri bekleniyor"
         android:textColor="#8FAAB8"
         android:textSize="9sp" />
