@@ -4,6 +4,14 @@
   "webDir": "site",
   "android": {
     "allowMixedContent": false,
-    "captureInput": true
+    "captureInput": true,
+    "resolveServiceWorkerRequests": false
+  },
+  "server": {
+    "url": "https://mhsnlsy.github.io/gfs-watch/",
+    "allowNavigation": [
+      "mhsnlsy.github.io"
+    ],
+    "errorPath": "offline.html"
   }
 }
