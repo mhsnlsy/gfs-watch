@@ -302,7 +302,7 @@ def main():
     }
     Path("public").mkdir(exist_ok=True)
     Path("public/station-observation.json").write_text(
-        json.dumps(document, ensure_ascii=False, indent=2, allow_nan=False) + "\\n",
+        json.dumps(document, ensure_ascii=False, indent=2, allow_nan=False) + "\n",
         encoding="utf-8",
     )
     update_temperature_history(observation)
