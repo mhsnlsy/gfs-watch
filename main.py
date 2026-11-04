@@ -1820,6 +1820,49 @@ async def stage_open_meteopt_cycle(processed_run_ids):
         print(f"[PAKET] {label}: MeteoPT henüz satır vermedi.")
         return False
 
+    # Publish the first-72-hour table as soon as MeteoPT exposes f72.
+    # This is independent of the full f180 report/Telegram publication gate.
+    if max_hour >= 72:
+        data = document.get("data") or {}
+        steps = []
+        for raw_step in (document.get("steps") or {}).get("values") or []:
+            try:
+                steps.append(int(raw_step))
+            except (TypeError, ValueError):
+                steps.append(None)
+        def table_series(name):
+            return ((data.get(name) or {}).get("values") or [])
+        fields = {
+            "temperature_2m_c": table_series("tmp2m"),
+            "temperature_850hpa_c": table_series("tmp850mb"),
+            "wind_speed_10m_kmh": table_series("wind10m"),
+            "wind_speed_850hpa_kmh": table_series("wind850"),
+            "precipitation_6h_mm": table_series("apcp"),
+        }
+        table_points = []
+        for index, lead in enumerate(steps):
+            if lead is None or lead <= 0 or lead > 72:
+                continue
+            valid = run_dt + timedelta(hours=lead)
+            point = {
+                "forecast_hour": lead,
+                "valid_time_utc": valid.isoformat(timespec="minutes"),
+            }
+            for field, values in fields.items():
+                point[field] = _meteopt_number(values[index]) if index < len(values) else None
+            if point["temperature_2m_c"] is not None:
+                table_points.append(point)
+        if table_points and max(p["forecast_hour"] for p in table_points) >= 72:
+            table_path = os.path.join(PUBLIC_DATA_DIR, "meteopt-gfs-first72.json")
+            _write_json_atomically(table_path, {
+                "schema": "gfs-watch.meteopt-first72.v1",
+                "forecast_source": "meteopt",
+                "run_id_utc": run_id,
+                "published_at_utc": datetime.now(timezone.utc).isoformat(timespec="seconds"),
+                "forecast_6_hourly": table_points,
+            })
+            print(f"[PAKET] {label}: f72 tablosu yayınlandı ({len(table_points)} adım).")
+
     if max_hour >= 40 and max_hour < MIN_FORECAST_HOURS and not stage.get("comparison_ready"):
         try:
             await load_previous_three_runs_for_comparison(run_id)
