@@ -49,6 +49,12 @@ jobs:
           mkdir -p _site/data
           cp -a source/site/. _site/
           cp forecast-data/public/latest.json _site/data/latest.json
+          if [ -s forecast-data/public/meteopt-gfs-first72.json ]; then
+            python -m json.tool forecast-data/public/meteopt-gfs-first72.json > /dev/null
+            cp forecast-data/public/meteopt-gfs-first72.json _site/data/meteopt-gfs-first72.json
+          else
+            printf '{"schema":"gfs-watch.meteopt-first72.v1","forecast_source":"meteopt","forecast_6_hourly":[]}' > _site/data/meteopt-gfs-first72.json
+          fi
           printf '{"apiBaseUrl":"%s"}' "$PUSH_API_URL" > _site/push-config.json
           if [ -s forecast-data/public/station-observation.json ]; then
             python -m json.tool forecast-data/public/station-observation.json > /dev/null
