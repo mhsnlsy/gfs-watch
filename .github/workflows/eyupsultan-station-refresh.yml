@@ -55,43 +55,59 @@ jobs:
             echo "Observation is older than 30 minutes."
             exit 1
           fi
-          node scripts/sisli_weather.mjs
-          test -s public/sisli-station-observation.json
-          SISLI_AGE=$(jq -r '.station_observation.age_minutes // 999' public/sisli-station-observation.json)
-          SISLI_TEMP=$(jq -r '.station_observation.temperature_2m_c' public/sisli-station-observation.json)
-          echo "MGM Şişli 18401: $SISLI_AGE min · $SISLI_TEMP C"
-          if [ "$SISLI_AGE" -gt 30 ]; then echo "Şişli observation stale."; exit 1; fi
         env:
           EYUPSULTAN_TEMPERATURE_HISTORY_PATH: forecast-data/public/eyupsultan-station-temperature-history.json
+
+      - name: Fetch MGM Şişli 18401 observation (independent)
+        id: sisli
+        continue-on-error: true
+        run: |
+          set -e
+          node scripts/sisli_weather.mjs
+          test -s public/sisli-station-observation.json
+          AGE=$(jq -r '.station_observation.age_minutes // 999' public/sisli-station-observation.json)
+          TEMP=$(jq -r '.station_observation.temperature_2m_c' public/sisli-station-observation.json)
+          echo "MGM Şişli 18401: $AGE min · $TEMP C"
+          if [ "$AGE" -gt 30 ]; then echo "Şişli observation stale."; exit 1; fi
+        env:
           SISLI_TEMPERATURE_HISTORY_PATH: forecast-data/public/sisli-station-temperature-history.json
 
       - name: Publish data
+        id: publish
         if: steps.scrape.outcome == 'success'
         run: |
           mkdir -p forecast-data/public
           cp -f public/eyupsultan-station-observation.json forecast-data/public/
           cp -f public/eyupsultan-station-temperature-history.json forecast-data/public/ || true
-          cp -f public/sisli-station-observation.json forecast-data/public/
-          cp -f public/sisli-station-temperature-history.json forecast-data/public/ || true
+          if [ '${{ steps.sisli.outcome }}' = 'success' ]; then cp -f public/sisli-station-observation.json forecast-data/public/; cp -f public/sisli-station-temperature-history.json forecast-data/public/ || true; fi
           cd forecast-data
           git config user.name "github-actions[bot]"
           git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
-          git add public/eyupsultan-station-observation.json public/eyupsultan-station-temperature-history.json public/sisli-station-observation.json public/sisli-station-temperature-history.json
+          git add public/eyupsultan-station-observation.json public/eyupsultan-station-temperature-history.json
+          if [ '${{ steps.sisli.outcome }}' = 'success' ]; then git add public/sisli-station-observation.json public/sisli-station-temperature-history.json; fi
           if git diff --cached --quiet; then
-            echo "No Eyüpsultan changes to publish."
+            echo "No station changes to publish."
+            echo "changed=false" >> "$GITHUB_OUTPUT"
             exit 0
           fi
-          git commit -m "Refresh Eyüpsultan [$(date -u +%H:%M)]"
+          git commit -m "Refresh MGM station observations [$(date -u +%H:%M)]"
           for attempt in 1 2 3 4 5; do
             git pull --rebase origin gfs-watch-state
             if git push origin gfs-watch-state; then
-              echo "Eyüpsultan data pushed."
+              echo "Station data pushed."
+              echo "changed=true" >> "$GITHUB_OUTPUT"
               exit 0
             fi
             sleep $((attempt * 2))
           done
           echo "Could not publish Eyüpsultan data."
           exit 1
+
+      - name: Deploy changed station data to GitHub Pages
+        if: steps.publish.outputs.changed == 'true'
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: gh workflow run pages.yml --ref main --repo "$GITHUB_REPOSITORY"
 
       - name: Trigger MeteoPT GFS monitor on every five-minute cycle
         if: always() && !cancelled()
