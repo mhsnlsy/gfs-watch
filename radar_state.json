@@ -1,1 +1,1 @@
-{"history":[]}
+{"history": [{"ts": 1793806800, "avg_dx": -0.026637069922308545, "avg_dy": -8.907047724750278, "centroid_dist": 4.9, "max_dbz": 30}], "last": {"max_dbz": 30, "count": 3604, "centroid_dist": 4.9, "avg_dx": -0.026637069922308545, "avg_dy": -8.907047724750278, "strong_count": 52, "strong_max": 30}, "last_ts": 1793806800, "checked_at": "2026-11-04T15:50:28.606355+00:00"}
