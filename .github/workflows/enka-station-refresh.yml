@@ -153,6 +153,20 @@ jobs:
             echo "ECMWF fetch already running ($active)."
             exit 0
           fi
+          latest=$(gh run list --workflow=ecmwf-eps.yml --limit 1 --json createdAt,headSha --jq '.[0] // empty')
+          if [ -n "$latest" ]; then
+            latest_sha=$(printf '%s' "$latest" | jq -r '.headSha // empty')
+            latest_created=$(printf '%s' "$latest" | jq -r '.createdAt // empty')
+            if [ "$latest_sha" = "$GITHUB_SHA" ] && [ -n "$latest_created" ]; then
+              latest_epoch=$(date -u -d "$latest_created" +%s)
+              now_epoch=$(date -u +%s)
+              age=$((now_epoch - latest_epoch))
+              if [ "$age" -lt 21600 ]; then
+                echo "ECMWF was already attempted $age seconds ago on this exact code revision; six-hour retry cooldown prevents repeated failures."
+                exit 0
+              fi
+            fi
+          fi
           state=$(python3 - << 'PY'
           import json
           from datetime import datetime, timezone
