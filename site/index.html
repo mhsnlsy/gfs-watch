@@ -1735,6 +1735,14 @@
         }
       }
     }
+    function stationObservationIsFresh(station){
+      if(!station||!numeric(station.temperature_2m_c)||!station.observed_at_utc||station.is_stale)return false;
+      const observedAt=Date.parse(station.observed_at_utc);
+      if(!Number.isFinite(observedAt))return false;
+      const ageMinutes=Math.max(0,(Date.now()-observedAt)/60000);
+      const staleAfter=Number.isFinite(station.stale_after_minutes)?station.stale_after_minutes:15;
+      return ageMinutes<=Math.min(staleAfter,15);
+    }
     function renderStationCard(station){
       const hasStation=!!station;
       const stationName=station&&station.station_name?station.station_name:(activeStation==="enka"?"ENKA Balmumcu":"Eyüpsultan");
@@ -1743,7 +1751,7 @@
       const observedValid=observed&&!Number.isNaN(observed.getTime());
       const ageMinutes=observedValid?Math.max(0,(Date.now()-observed.getTime())/60000):null;
       const staleAfter=hasStation&&Number.isFinite(station.stale_after_minutes)?station.stale_after_minutes:(station&&station.station_id==="18101"?15:15);
-      const isFresh=hasStation&&observedValid&&!station.is_stale&&ageMinutes<=staleAfter;
+      const isFresh=stationObservationIsFresh(station);
       $("temperature").textContent=isFresh&&numeric(station.temperature_2m_c)?fmt(station.temperature_2m_c,1)+"°":"—°";
       $("wind").innerHTML=isFresh&&numeric(station.wind_speed_10m_kmh)?fmt(station.wind_speed_10m_kmh,1)+'<span class="unit">km/sa</span>':'—<span class="unit">km/sa</span>';
       const direction=hasStation?(station.wind_direction_tr||windDirectionTr[station.wind_direction_cardinal]||station.wind_direction_cardinal):null;
@@ -1791,7 +1799,7 @@
       if(!node)return;
       const balmumcu=enkaStationObservation,eyup=eyupsultanStationObservation;
       const hide=()=>{node.hidden=true;node.textContent="";};
-      if(!balmumcu||!eyup||!numeric(balmumcu.temperature_2m_c)||!numeric(eyup.temperature_2m_c)){hide();return;}
+      if(!stationObservationIsFresh(balmumcu)||!stationObservationIsFresh(eyup)){hide();return;}
       const balmumcuAt=Date.parse(balmumcu.observed_at_utc||"");
       const eyupAt=Date.parse(eyup.observed_at_utc||"");
       if(!Number.isFinite(balmumcuAt)||!Number.isFinite(eyupAt)||Math.abs(balmumcuAt-eyupAt)>30*60000){hide();return;}
@@ -2030,7 +2038,8 @@
       return lines;
     }
     function renderBriefing(){
-      const station=activeStation==="eyupsultan"?eyupsultanStationObservation:enkaStationObservation;
+      const selectedStation=activeStation==="eyupsultan"?eyupsultanStationObservation:enkaStationObservation;
+      const station=stationObservationIsFresh(selectedStation)?selectedStation:null;
       const lines=buildBriefing({
         now:Date.now(),
         gfsPoints:forecastData&&forecastData.forecast_6_hourly,
