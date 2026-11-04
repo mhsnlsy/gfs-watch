@@ -170,6 +170,7 @@ jobs:
           fi
 
       - name: Verify live Eyüpsultan station payload
+        if: always()
         env:
           PAGE_URL: ${{ steps.deployment.outputs.page_url }}
         run: |
@@ -226,6 +227,7 @@ jobs:
           PY
 
       - name: Verify latest GFS report and every referenced Pages asset
+        if: always()
         env:
           PAGE_URL: ${{ steps.deployment.outputs.page_url }}
         run: |
