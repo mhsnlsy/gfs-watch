@@ -952,6 +952,7 @@
     }
 
 </style>
+  <link rel="stylesheet" href="./meteopt-gfs-table.css">
 </head>
 <body>
   <header class="shell topbar">
@@ -1061,6 +1062,37 @@
       <section class="section" aria-label="ECMWF veri kaynağı ve lisans"><p class="ecmwf-source-note">Kaynak: <a href="https://www.meteopt.com/modelos/ecmwf?lat=41.014&lon=28.950" target="_blank" rel="noopener">MeteoPT ECMWF</a> · İstanbul noktası 41.014°N 28.950°E · 3 saatlik sıcaklık, yağış, rüzgâr, 850 hPa ve basınç. Ensemble sapması bu kaynakta yok.</p></section>
 <section class="section" id="ecmwf-tahmin"><div class="section-head"><div><div class="section-kicker">ECMWF IFS · MODEL TAHMİNİ</div><h2>8 günlük tahmin</h2></div><div class="section-note"><span id="ecmwf-daily-cycle-chip">ECMWF döngüsü yükleniyor</span><br><span id="ecmwf-daily-updated-chip">Yayın zamanı bekleniyor</span><br>Günlük en düşük / en yüksek sıcaklık · HRES yüzey tahmini</div></div><div class="daily-grid" id="ecmwf-daily-grid"><div class="loading">ECMWF tahmini yükleniyor…</div></div></section>
     </div>
+    <section class="section" id="meteopt-gfs-table" aria-label="MeteoPT GFS ham model tablosu">
+      <div class="section-head">
+        <div>
+          <div class="section-kicker">METEOPT GFS · HAM MODEL VERİSİ</div>
+          <h2>GFS adım tablosu</h2>
+        </div>
+        <div class="section-note"><span id="meteopt-table-run">Model döngüsü bekleniyor</span><br><span id="meteopt-table-updated">Veri bekleniyor</span><br>3 saatlik ham tahmin noktaları · UTC</div>
+      </div>
+      <article class="meteopt-table-card">
+        <div class="meteopt-table-toolbar">
+          <span class="meteopt-table-source"><span class="meteopt-table-dot"></span> Kaynak: MeteoPT GFS</span>
+          <span id="meteopt-table-status" role="status" aria-live="polite">Veri yükleniyor…</span>
+        </div>
+        <div class="meteopt-table-scroll" tabindex="0" aria-label="Yatay kaydırılabilir GFS tahmin tablosu">
+          <table class="meteopt-data-table">
+            <thead><tr>
+              <th>Steps</th><th>Date/Hour</th><th>W.10m</th><th>W.850</th><th>Prec.</th><th>LI</th><th>T.2m</th><th>RH.2m</th><th>T.850</th><th>T.500</th><th>Clouds</th><th>SnowLn</th>
+            </tr></thead>
+            <tbody id="meteopt-table-body"><tr><td colspan="12" class="meteopt-table-empty">MeteoPT verisi yükleniyor…</td></tr></tbody>
+          </table>
+        </div>
+        <div class="meteopt-table-legend" aria-label="Koşullu renk açıklaması">
+          <span><i class="mt-legend-blue"></i> Mavi</span>
+          <span><i class="mt-legend-green"></i> Yeşil</span>
+          <span><i class="mt-legend-yellow"></i> Sarı</span>
+          <span><i class="mt-legend-orange"></i> Turuncu</span>
+          <span><i class="mt-legend-red"></i> Kırmızı</span>
+          <span><i class="mt-legend-purple"></i> Mor</span>
+        </div>
+      </article>
+    </section>
   </main>
   <footer class="shell footer"><span><strong data-app-name>İstanbul'un Havası</strong> <span data-app-version>4.0</span></span><span>Veri kaynakları: ENKA Balmumcu Vantage PRO · MGM Eyüpsultan 18101 · MeteoPT GFS · MeteoPT ECMWF · Otomatik yenileme: 5 dakika</span></footer>
   <script>
@@ -2820,6 +2852,7 @@
 
     startPage();
   </script>
+  <script src="./meteopt-gfs-table.js" defer></script>
 </body>
 </html>
 
