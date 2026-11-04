@@ -417,6 +417,7 @@
 .briefing-row{display:grid;grid-template-columns:86px minmax(0,1fr);gap:8px;align-items:start;padding:5px 8px;border-radius:10px;background:rgba(2,15,24,.28);border:1px solid rgba(143,184,196,.16)}
 .briefing-k{font-size:9px;letter-spacing:.06em;font-weight:700;color:#8fd0c8;text-transform:uppercase;padding-top:2px}
 .briefing-v{font-size:12.5px;line-height:1.35;color:#e7f2f6}
+    .brief-temperature-source{display:block;margin-top:4px;font-size:9px;line-height:1.3;color:#8fa7b5;font-weight:500;letter-spacing:.01em}
 .brief-days{display:grid;gap:4px}
 .brief-spell{font-size:12.5px;line-height:1.4;color:#e7f2f6}
 .brief-spell+.brief-spell{margin-top:2px}
@@ -2118,49 +2119,55 @@
         .sort((a,b)=>a.stamp-b.stamp);
       const windows=[];
       for(let day=0;day<5;day++){
-        const start=now+day*dayMs,end=start+dayMs;
+        const [start,end]=dayWindow(day);
         const values=valid.filter(point=>point.stamp>=start&&point.stamp<end).map(point=>point.temp);
         if(values.length<2)continue;
-        windows.push({
-          day,
-          stamp:start+12*3600000,
-          mean:values.reduce((sum,value)=>sum+value,0)/values.length,
-          min:Math.min(...values),
-          max:Math.max(...values),
-          count:values.length
-        });
-      }
-      if(windows.length<3){
-        holder.textContent="Önümüzdeki 5 gün için yeterli sıcaklık tahmini henüz yayımlanmadı.";
-        return;
+        windows.push({day,stamp:start+12*3600000,mean:values.reduce((sum,value)=>sum+value,0)/values.length,min:Math.min(...values),max:Math.max(...values),count:values.length});
       }
       const current=Number(station.temperature_2m_c);
+      if(windows.length<3){
+        holder.textContent="Önümüzdeki 5 gün için yeterli sıcaklık tahmini henüz yayımlanmadı. Eyüpsultan şu an "+fmt(current,1)+"°C.";
+        return;
+      }
       const nearTerm=valid.filter(point=>point.stamp<=now+12*3600000).map(point=>point.temp);
       const nearMean=nearTerm.length?nearTerm.reduce((sum,value)=>sum+value,0)/nearTerm.length:current;
       const baseline=(current+nearMean)/2;
       const last=windows[windows.length-1].mean;
       const spread=Math.max(...windows.map(item=>item.mean))-Math.min(...windows.map(item=>item.mean));
       const firstShift=windows.slice(1).find(item=>Math.abs(item.mean-baseline)>=1.5);
-      const weekday=stamp=>new Intl.DateTimeFormat("tr-TR",{timeZone:"Europe/Istanbul",weekday:"long"}).format(new Date(stamp));
       const dayLabel=stamp=>{
-        const name=weekday(stamp);
+        const name=new Intl.DateTimeFormat("tr-TR",{timeZone:"Europe/Istanbul",weekday:"long"}).format(new Date(stamp));
         return name.charAt(0).toLocaleUpperCase("tr-TR")+name.slice(1);
       };
-      const deltaText=value=>(value>0?"+":"")+fmt(value,1)+"°C";
+      const magnitude=value=>fmt(Math.abs(value),1)+"°C";
       const currentText="Eyüpsultan şu an "+fmt(current,1)+"°C.";
-      const cycle=forecastData&&forecastData.run_id_utc? " GFS "+timeUTC(forecastData.run_id_utc)+" UTC çıktısı.":"";
+      const run=forecastData&&forecastData.run_id_utc?timeUTC(forecastData.run_id_utc)+" UTC":null;
+      let summary="";
       if(firstShift){
         const change=firstShift.mean-baseline;
         const direction=change>0?"ısınıyor":"soğuyor";
-        holder.textContent="Hava "+(firstShift.day===1?"yarın":firstShift.day+" gün sonra")+" ("+dayLabel(firstShift.stamp)+") "+direction+". 24 saatlik ortalama "+deltaText(change)+" değişiyor. "+currentText+cycle;
+        const amount=change>0?"yükseliyor":"düşüyor";
+        const dayText=firstShift.day===0?"bugün":firstShift.day===1?"yarın":firstShift.day+" gün sonra";
+        summary="Hava "+dayText+" ("+dayLabel(firstShift.stamp)+") "+direction+". 24 saatlik ortalama "+magnitude(change)+" "+amount+". "+currentText;
       }else if(spread<=2.2&&Math.abs(last-baseline)<1.5){
-        holder.textContent="Önümüzdeki 5 gün sıcaklık genel olarak stabil. Günlük ortalamalar "+fmt(Math.min(...windows.map(item=>item.mean)),1)+"–"+fmt(Math.max(...windows.map(item=>item.mean)),1)+"°C aralığında kalıyor. "+currentText+cycle;
+        summary="Önümüzdeki 5 gün sıcaklık stabil. Günlük ortalamalar "+fmt(Math.min(...windows.map(item=>item.mean)),1)+"–"+fmt(Math.max(...windows.map(item=>item.mean)),1)+"°C aralığında kalıyor. "+currentText;
       }else{
         const change=last-baseline;
         const direction=change>0?"ısınma":"soğuma";
         const extreme=windows.reduce((best,item)=>Math.abs(item.mean-baseline)>Math.abs(best.mean-baseline)?item:best,windows[0]);
         const extremeDelta=extreme.mean-baseline;
-        holder.textContent="Önümüzdeki 5 günde kademeli "+direction+" eğilimi var. En belirgin değişim "+(extreme.day===0?"bugün":extreme.day+" gün sonra")+" ("+dayLabel(extreme.stamp)+"): "+deltaText(extremeDelta)+". "+currentText+cycle;
+        const dayText=extreme.day===0?"bugün":extreme.day===1?"yarın":extreme.day+" gün sonra";
+        summary="Önümüzdeki 5 günde "+direction+" eğilimi var. En belirgin değişim "+dayText+" ("+dayLabel(extreme.stamp)+"): "+magnitude(extremeDelta)+(extremeDelta>0?" yükseliş":" düşüş")+". "+currentText;
+      }
+      holder.replaceChildren();
+      const textNode=document.createElement("span");
+      textNode.textContent=summary;
+      holder.appendChild(textNode);
+      if(run){
+        const source=document.createElement("small");
+        source.className="brief-temperature-source";
+        source.textContent="Kaynak: GFS "+run+" çıktısı";
+        holder.appendChild(source);
       }
     }
     function renderBriefing(){
