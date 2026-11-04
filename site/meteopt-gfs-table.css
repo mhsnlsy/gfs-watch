@@ -1,43 +1,24 @@
-/* Isolated MeteoPT GFS raw table. All selectors are scoped to this panel. */
-#meteopt-gfs-table .meteopt-table-card{
-  background:linear-gradient(145deg,rgba(18,43,61,.94),rgba(12,31,46,.96));
-  border:1px solid var(--line);border-radius:20px;padding:16px;min-width:0;
-}
-#meteopt-gfs-table .meteopt-table-toolbar{display:flex;align-items:center;justify-content:space-between;gap:12px;margin-bottom:13px;color:var(--muted);font-size:10px}
-#meteopt-gfs-table .meteopt-table-source{display:inline-flex;align-items:center;gap:7px;color:#b9cbd4;font-weight:700}
-#meteopt-gfs-table .meteopt-table-dot{width:7px;height:7px;border-radius:50%;background:var(--green);box-shadow:0 0 0 4px rgba(143,215,186,.1)}
-#meteopt-gfs-table .meteopt-table-scroll{width:100%;max-width:100%;overflow:auto;overscroll-behavior-x:contain;border:1px solid rgba(204,225,239,.1);border-radius:12px;scrollbar-color:#315267 transparent}
-#meteopt-gfs-table .meteopt-data-table{width:100%;min-width:1120px;border-collapse:separate;border-spacing:0;font-variant-numeric:tabular-nums;font-size:11px;white-space:nowrap}
-#meteopt-gfs-table .meteopt-data-table th{position:sticky;top:0;z-index:2;background:#183447;color:#b8ccd7;font-size:10px;font-weight:700;letter-spacing:.025em;padding:12px 10px;text-align:center;border-bottom:1px solid rgba(204,225,239,.15)}
-#meteopt-gfs-table .meteopt-data-table td{padding:8px 9px;text-align:center;border-bottom:1px solid rgba(204,225,239,.065);color:#d5e2e9}
+/* Isolated compact MeteoPT table. */
+#meteopt-gfs-table .meteopt-table-card{background:linear-gradient(145deg,rgba(18,43,61,.94),rgba(12,31,46,.96));border:1px solid var(--line);border-radius:15px;padding:10px;min-width:0}
+#meteopt-gfs-table .meteopt-table-toolbar{display:flex;align-items:center;justify-content:space-between;gap:8px;margin-bottom:7px;color:var(--muted);font-size:9px}
+#meteopt-gfs-table .meteopt-table-source{display:inline-flex;align-items:center;gap:6px;color:#b9cbd4;font-weight:700}
+#meteopt-gfs-table .meteopt-table-dot{width:6px;height:6px;border-radius:50%;background:var(--green);box-shadow:0 0 0 3px rgba(143,215,186,.1)}
+#meteopt-gfs-table .meteopt-table-scroll{width:100%;max-width:100%;overflow:auto;overscroll-behavior-x:contain;border:1px solid rgba(204,225,239,.1);border-radius:9px;scrollbar-color:#315267 transparent}
+#meteopt-gfs-table .meteopt-data-table{width:100%;min-width:620px;border-collapse:separate;border-spacing:0;font-variant-numeric:tabular-nums;font-size:10px;white-space:nowrap}
+#meteopt-gfs-table .meteopt-data-table th{position:sticky;top:0;z-index:2;background:#183447;color:#b8ccd7;font-size:9px;font-weight:700;padding:7px 7px;text-align:center;border-bottom:1px solid rgba(204,225,239,.15)}
+#meteopt-gfs-table .meteopt-data-table td{padding:5px 6px;text-align:center;border-bottom:1px solid rgba(204,225,239,.065);color:#d5e2e9}
 #meteopt-gfs-table .meteopt-data-table tbody tr:nth-child(even){background:rgba(255,255,255,.018)}
 #meteopt-gfs-table .meteopt-data-table tbody tr:hover{background:rgba(125,211,215,.055)}
 #meteopt-gfs-table .meteopt-data-table tbody tr:last-child td{border-bottom:0}
 #meteopt-gfs-table .meteopt-data-table th:first-child,#meteopt-gfs-table .meteopt-data-table td:first-child{position:sticky;left:0;z-index:1;background:#102838}
 #meteopt-gfs-table .meteopt-data-table th:first-child{z-index:3;background:#183447}
 #meteopt-gfs-table .meteopt-data-table td:nth-child(2){color:#b9cbd4;text-align:left}
-#meteopt-gfs-table .meteopt-value{display:inline-flex;justify-content:center;align-items:center;min-width:34px;padding:4px 7px;border-radius:7px;font-weight:700;line-height:1.15}
+#meteopt-gfs-table .meteopt-value{display:inline-flex;justify-content:center;align-items:center;min-width:28px;padding:3px 5px;border-radius:6px;font-weight:700;line-height:1.1}
 #meteopt-gfs-table .mt-blue{color:#8fd7ff;background:rgba(42,145,218,.17)}
 #meteopt-gfs-table .mt-green{color:#8ce2b5;background:rgba(39,166,105,.17)}
 #meteopt-gfs-table .mt-yellow{color:#ffe08a;background:rgba(220,174,48,.17)}
 #meteopt-gfs-table .mt-orange{color:#ffb477;background:rgba(232,117,50,.18)}
 #meteopt-gfs-table .mt-red{color:#ff9292;background:rgba(220,65,65,.18)}
 #meteopt-gfs-table .mt-purple{color:#d7a6ff;background:rgba(151,82,205,.2)}
-#meteopt-gfs-table .meteopt-table-empty{padding:22px!important;text-align:center!important;color:var(--muted)!important}
-#meteopt-gfs-table .meteopt-table-legend{display:flex;flex-wrap:wrap;gap:9px 15px;margin:12px 2px 0;color:#9fb4c0;font-size:10px}
-#meteopt-gfs-table .meteopt-table-legend span{display:inline-flex;align-items:center;gap:6px}
-#meteopt-gfs-table .meteopt-table-legend i{width:9px;height:9px;border-radius:3px;display:inline-block}
-#meteopt-gfs-table .mt-legend-blue{background:#3296d8}
-#meteopt-gfs-table .mt-legend-green{background:#27a66a}
-#meteopt-gfs-table .mt-legend-yellow{background:#dcae30}
-#meteopt-gfs-table .mt-legend-orange{background:#e87532}
-#meteopt-gfs-table .mt-legend-red{background:#dc4141}
-#meteopt-gfs-table .mt-legend-purple{background:#9752cd}
-@media(max-width:560px){
-  #meteopt-gfs-table .meteopt-table-card{padding:11px;border-radius:15px}
-  #meteopt-gfs-table .meteopt-table-toolbar{align-items:flex-start;flex-direction:column;gap:5px}
-  #meteopt-gfs-table .meteopt-table-legend{gap:8px 11px;font-size:9px}
-  #meteopt-gfs-table .meteopt-data-table{font-size:10px}
-  #meteopt-gfs-table .meteopt-data-table th{padding:11px 8px}
-  #meteopt-gfs-table .meteopt-data-table td{padding:8px 7px}
-}
+#meteopt-gfs-table .meteopt-table-empty{padding:14px!important;text-align:center!important;color:var(--muted)!important}
+@media(max-width:560px){#meteopt-gfs-table .meteopt-table-card{padding:8px;border-radius:12px}#meteopt-gfs-table .meteopt-table-toolbar{align-items:flex-start;flex-direction:column;gap:4px}#meteopt-gfs-table .meteopt-data-table{font-size:9px;min-width:590px}#meteopt-gfs-table .meteopt-data-table th{padding:7px 6px}#meteopt-gfs-table .meteopt-data-table td{padding:5px 5px}}
