@@ -2454,7 +2454,6 @@
       if(data.report&&data.report.report_text){
         renderNotifications([data.report], data.published_at_utc||data.report.published_at_utc);
       }
-      if(sisliResponse&&sisliResponse.ok){try{const d=await sisliResponse.json();const s=d?.station_observation;if(d?.schema==="gfs-watch.station-observation.v1"&&s&&String(s.station_id)==="18401")sisliStationObservation=s;}catch(_){}}
       renderStationCard(activeStation==="enka"?enkaStationObservation:activeStation==="eyupsultan"?eyupsultanStationObservation:sisliStationObservation);
       if(data.published_at_utc){
         const age=(Date.now()-new Date(data.published_at_utc).getTime())/3600000;
@@ -2499,6 +2498,7 @@
           }
         }catch(_){}
       }
+      if(sisliResponse&&sisliResponse.ok){try{const d=await sisliResponse.json();const s=d?.station_observation;if(d?.schema==="gfs-watch.station-observation.v1"&&s&&String(s.station_id)==="18401")sisliStationObservation=s;}catch(_){}}
       renderStationCard(activeStation==="enka"?enkaStationObservation:activeStation==="eyupsultan"?eyupsultanStationObservation:sisliStationObservation);
       if(latestRainForecastPoints.length)renderRainWindow(latestRainForecastPoints);
       if(typeof renderBriefing==="function")renderBriefing();
