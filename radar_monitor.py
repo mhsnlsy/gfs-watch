@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
 """
-Radar monitor for İstanbul (41.015 N, 28.950 E).
+Radar monitor for İstanbul (41.0904 N, 28.9438 E).
 Checks RainViewer tiles and classifies detected echoes into four dBZ intensity levels within ~25 km radius.
 Tracks motion (speed, direction, ETA) and alerts if approaching or on site.
 """
@@ -13,8 +13,8 @@ import requests
 from PIL import Image
 import numpy as np
 
-LAT = 41.015
-LON = 28.950
+LAT = 41.0904
+LON = 28.9438
 RADIUS_KM = 25.0
 THRESHOLD_DBZ = 10
 THRESHOLD_DBZ_STRONG = 30
@@ -214,7 +214,7 @@ def send_telegram(text):
     return bool(result.get("ok"))
 
 def main():
-    print("[RADAR] Checking RainViewer for 41.015, 28.950 ...")
+    print("[RADAR] Checking RainViewer for 41.0904, 28.9438 ...")
     timeline = fetch_timeline()
     host = timeline.get("host", "https://tilecache.rainviewer.com")
     past = timeline.get("radar", {}).get("past", [])
@@ -318,11 +318,11 @@ def main():
             location_status = "Konuma ulaşıyor / üzerinde." if on_site else "Yaklaşıyor."
             msg = (
                 f"{intensity_emoji} <b>{intensity} YAĞIŞ UYARISI — İstanbul</b>\\n"
-                f"Konum: 41.015 N, 28.950 E\\n"
+                f"Konum: 41.0904 N, 28.9438 E\\n"
                 f"{summary}\\n"
                 f"{motion_txt}\\n"
                 f"{location_status}\\n"
-                f"https://mhsnlsy.github.io/gfs-watch/#radar"
+                f"https://www.google.com/maps?q=41.0904,28.9438"
             )
             if send_telegram(msg):
                 alert_state["last_alert_ts"] = now_ts
