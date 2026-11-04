@@ -89,9 +89,13 @@ const receivers = [
   `        <receiver android:name=".WeatherWideWidgetProvider" android:exported="true">
             <intent-filter><action android:name="android.appwidget.action.APPWIDGET_UPDATE" /></intent-filter>
             <meta-data android:name="android.appwidget.provider" android:resource="@xml/widget_weather_wide_info" />
-        </receiver>`
+        </receiver>`,
   `        <receiver android:name=".WidgetRefreshReceiver" android:enabled="true" android:exported="true">
             <intent-filter><action android:name="android.intent.action.MY_PACKAGE_REPLACED" /></intent-filter>
+        </receiver>`,
+  `        <receiver android:name=".WeatherDashboardWidgetProvider" android:exported="true">
+            <intent-filter><action android:name="android.appwidget.action.APPWIDGET_UPDATE" /></intent-filter>
+            <meta-data android:name="android.appwidget.provider" android:resource="@xml/widget_weather_dashboard_info" />
         </receiver>`
 ];
 for (const receiver of receivers) {
