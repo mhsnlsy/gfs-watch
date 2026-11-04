@@ -4,11 +4,14 @@ import android.Manifest;
 import android.content.pm.PackageManager;
 import android.os.Build;
 import android.os.Bundle;
+import android.webkit.WebView;
 
+import com.getcapacitor.Bridge;
 import com.getcapacitor.BridgeActivity;
 
 public class MainActivity extends BridgeActivity {
     private static final int NOTIFICATION_PERMISSION_REQUEST = 7104;
+    private static final String LIVE_PAGES_URL = "https://mhsnlsy.github.io/gfs-watch/";
 
     @Override
     public void onCreate(Bundle savedInstanceState) {
@@ -18,6 +21,28 @@ public class MainActivity extends BridgeActivity {
         WeatherNotifications.ensureChannel(this);
         WeatherWorkScheduler.schedule(this);
         requestNotificationPermissionIfNeeded();
+        forceLivePages();
+    }
+
+    @Override
+    public void onStart() {
+        super.onStart();
+        // Capacitor's server.url is configured as well. Explicitly enforce the
+        // Pages URL after Bridge initialization to avoid ever showing bundled HTML.
+        forceLivePages();
+    }
+
+    private void forceLivePages() {
+        getWindow().getDecorView().post(() -> {
+            Bridge bridge = getBridge();
+            if (bridge == null) return;
+            WebView webView = bridge.getWebView();
+            if (webView == null) return;
+            String current = webView.getUrl();
+            if (current == null || !current.startsWith("https://mhsnlsy.github.io/gfs-watch/")) {
+                webView.loadUrl(LIVE_PAGES_URL);
+            }
+        });
     }
 
     private void requestNotificationPermissionIfNeeded() {
