@@ -1,0 +1,9 @@
+{
+  "appId": "com.muhsin.istanbulhava",
+  "appName": "İstanbul'un Havası",
+  "webDir": "site",
+  "android": {
+    "allowMixedContent": false,
+    "captureInput": true
+  }
+}
