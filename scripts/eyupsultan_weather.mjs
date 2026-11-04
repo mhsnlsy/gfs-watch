@@ -1,7 +1,8 @@
 import fs from "node:fs";
 import path from "node:path";
 
-const MGM_OBSERVATIONS_URL = "https://servis.mgm.gov.tr/web/sondurumlar/ilTumSondurum?ilPlaka=34";
+const MGM_STATION_URL = "https://servis.mgm.gov.tr/web/sondurumlar?merkezid=18101";
+const MGM_CITY_URL = "https://servis.mgm.gov.tr/web/sondurumlar/ilTumSondurum?ilPlaka=34";
 const STATION_ID = "18101";
 const STALE_AFTER_MINUTES = 30;
 const HISTORY_SCHEMA = "gfs-watch.station-temperature-history.v1";
@@ -35,38 +36,50 @@ function dewPoint(temp, humidity) {
   return Number.isFinite(point) ? Math.round(point * 10) / 10 : null;
 }
 
-async function fetchFromMgm() {
+async function requestMgm(url) {
   const controller = new AbortController();
   const timeout = setTimeout(() => controller.abort(), 20000);
-  let response;
   try {
-    response = await fetch(MGM_OBSERVATIONS_URL, {
+    const response = await fetch(url, {
       signal: controller.signal,
+      cache: "no-store",
       headers: {
-      "User-Agent": "Mozilla/5.0 (compatible; GFS-Watch/1.0)",
-      "Accept": "application/json",
-      "Origin": "https://istanbul.mgm.gov.tr",
-      "Referer": "https://istanbul.mgm.gov.tr/"
+        "User-Agent": "Mozilla/5.0 (compatible; GFS-Watch/1.0)",
+        "Accept": "application/json",
+        "Cache-Control": "no-cache, no-store, max-age=0",
+        "Pragma": "no-cache",
+        "Origin": "https://www.mgm.gov.tr",
+        "Referer": "https://www.mgm.gov.tr/"
       }
     });
+    if (!response.ok) throw new Error("MGM HTTP " + response.status);
+    const payload = await response.json();
+    if (!Array.isArray(payload)) throw new Error("MGM JSON listesi bekleniyordu");
+    const row = payload.find(item => Number(item.istNo) === Number(STATION_ID));
+    if (!row) throw new Error("MGM 18101 kaydı bu uç noktada bulunamadı");
+    return row;
   } finally {
     clearTimeout(timeout);
   }
-  if (!response.ok) throw new Error("MGM HTTP " + response.status);
-  const observations = await response.json();
-  const row = Array.isArray(observations) ? observations.find(item => Number(item.istNo) === Number(STATION_ID)) : null;
-  if (!row || !row.veriZamani) throw new Error("MGM satırı yok");
-  if (!Object.prototype.hasOwnProperty.call(row, "yagis1Saat")) {
-    throw new Error("MGM yagis1Saat alanı yok");
-  }
+}
 
+async function fetchFromMgm() {
+  let row, firstError;
+  try {
+    row = await requestMgm(MGM_STATION_URL);
+  } catch (error) {
+    firstError = error;
+    console.warn("[MGM] İstasyon uç noktası başarısız; İstanbul listesi deneniyor:", error.message);
+    row = await requestMgm(MGM_CITY_URL);
+  }
+  if (!row.veriZamani) throw new Error("MGM 18101 ölçüm zamanı yok");
   const observedAt = new Date(row.veriZamani);
   if (!Number.isFinite(observedAt.getTime())) throw new Error("MGM ölçüm zamanı geçersiz");
   const rawAgeMinutes = (Date.now() - observedAt.getTime()) / 60000;
   if (rawAgeMinutes < -5) throw new Error("MGM ölçüm zamanı gelecekte görünüyor");
   const ageMinutes = Math.max(0, rawAgeMinutes);
   const temp = mgmNumber(row.sicaklik);
-  if (temp == null) throw new Error("MGM sıcaklığı yok");
+  if (temp == null) throw new Error("MGM 18101 sıcaklık ölçümü yok/geçersiz");
   const humidity = mgmNumber(row.nem);
   const windSpeed = mgmNumber(row.ruzgarHiz);
   const windDir = mgmNumber(row.ruzgarYon);
@@ -77,7 +90,8 @@ async function fetchFromMgm() {
     station_name: "Eyüpsultan",
     station_id: STATION_ID,
     source: "MGM 18101",
-    source_url: "https://servis.mgm.gov.tr/",
+    source_url: MGM_STATION_URL,
+    source_fallback_used: Boolean(firstError),
     latitude: 41.102778,
     longitude: 28.924167,
     elevation_m: 54,
@@ -96,7 +110,7 @@ async function fetchFromMgm() {
     precipitation_6h_mm: mgmNumber(row.yagis6Saat),
     precipitation_12h_mm: mgmNumber(row.yagis12Saat),
     precipitation_24h_mm: mgmNumber(row.yagis24Saat),
-    precipitation_daily_mm: mgmNumber(row.yagis00Now) ?? 0,
+    precipitation_daily_mm: mgmNumber(row.yagis00Now),
     precipitation_source: "MGM 18101",
     humidity_percent: humidity,
     dew_point_c: dewPoint(temp, humidity),
@@ -124,7 +138,6 @@ async function main() {
   const now = new Date();
   const observation = await fetchFromMgm();
   console.log("[MGM]", observation.temperature_2m_c + "°C", "1sa", observation.precipitation_1h_mm, "mm", "bugün", observation.precipitation_daily_mm, "mm", "age", observation.age_minutes, "dk");
-  if (observation.precipitation_1h_mm == null) throw new Error("MGM saatlik yağış yok");
 
   const outDir = "public";
   fs.mkdirSync(outDir, { recursive: true });
