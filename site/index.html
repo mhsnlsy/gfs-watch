@@ -2322,6 +2322,23 @@
             }
           }catch(_){eyupsultanStationObservation=null;}
         }
+        // Select the freshest actual station measurement on every page load.
+        // ENKA may remain selected in localStorage after its feed stalls.
+        if(!stationObservationIsFresh(enkaStationObservation)&&stationObservationIsFresh(eyupsultanStationObservation)){
+          activeStation="eyupsultan";
+          try{localStorage.setItem("istanbul-hava-station","eyupsultan");}catch(_){}
+          $("station-enka-button").classList.remove("active");
+          $("station-eyupsultan-button").classList.add("active");
+          $("station-enka-button").setAttribute("aria-pressed","false");
+          $("station-eyupsultan-button").setAttribute("aria-pressed","true");
+        }else if(stationObservationIsFresh(enkaStationObservation)){
+          activeStation="enka";
+          try{localStorage.setItem("istanbul-hava-station","enka");}catch(_){}
+          $("station-enka-button").classList.add("active");
+          $("station-eyupsultan-button").classList.remove("active");
+          $("station-enka-button").setAttribute("aria-pressed","true");
+          $("station-eyupsultan-button").setAttribute("aria-pressed","false");
+        }
         render(data);
         enkaStationHistorySamples=[];
         eyupsultanStationHistorySamples=[];
