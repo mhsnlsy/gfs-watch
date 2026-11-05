@@ -5,7 +5,7 @@ on:
     branches: [main]
   workflow_dispatch:
   schedule:
-    - cron: "17,47 * * * *"
+    - cron: "*/5 * * * *"
 
 permissions:
   contents: write
@@ -129,9 +129,9 @@ jobs:
           if history_path.exists():
               doc=json.loads(history_path.read_text(encoding="utf-8"))
           else:
-              doc={"schema":"koy-mgm.station-history.v1","station_id":obs["station_id"],"station_name":"Çanakçı","sampling_interval_minutes":30,"samples":[]}
+              doc={"schema":"koy-mgm.station-history.v1","station_id":obs["station_id"],"station_name":"Çanakçı","sampling_interval_minutes":5,"samples":[]}
           samples=doc.get("samples",[])
-          samples=[s for s in samples if s.get("observed_at_utc")!=obs.get("observed_at_utc")]
+          samples=[s for s in samples if s.get("logged_at_utc")!=obs.get("fetched_at_utc")]
           samples.append({
               "observed_at_utc":obs.get("observed_at_utc"),
               "logged_at_utc":obs.get("fetched_at_utc"),
@@ -154,53 +154,6 @@ jobs:
           doc["updated_at_utc"]=obs.get("fetched_at_utc")
           pathlib.Path("output/history.json").write_text(json.dumps(doc,ensure_ascii=False),encoding="utf-8")
           print(f"MGM Çanakçı history: {len(kept)} samples")
-          PY
-
-      - name: Fetch structured MGM station observation
-        run: |
-          set -euo pipefail
-          python - <<'PY'
-          import json, urllib.request
-          from datetime import datetime, timezone
-          H={"User-Agent":"Mozilla/5.0 (compatible; Koy-MGM/1.0)","Accept":"application/json","Origin":"https://www.mgm.gov.tr"}
-          def get(url):
-              req=urllib.request.Request(url,headers=H)
-              with urllib.request.urlopen(req,timeout=30) as r: return json.load(r)
-          centers=get("https://servis.mgm.gov.tr/web/merkezler?il=Giresun&ilce=Canakci")
-          if not centers: raise SystemExit("MGM Çanakçı merkezi bulunamadı")
-          center=next((x for x in centers if str(x.get("ilce","")).casefold()=="çanakçı"),centers[0])
-          merkez_id=center.get("merkezId")
-          station_no=center.get("sondurumIstNo") or center.get("gunlukTahminIstNo")
-          if not merkez_id: raise SystemExit("MGM Çanakçı merkezId bulunamadı")
-          rows=get(f"https://servis.mgm.gov.tr/web/sondurumlar?merkezid={merkez_id}")
-          if not rows: raise SystemExit("MGM Çanakçı son durum verisi boş")
-          o=rows[0]
-          p={"schema":"koy-mgm.station-observation.v1","station_id":str(station_no or o.get("istNo") or merkez_id),"station_name":"Çanakçı","center_id":merkez_id,"latitude":center.get("enlem"),"longitude":center.get("boylam"),"elevation_m":center.get("yukseklik"),"observed_at_utc":o.get("veriZamani"),"fetched_at_utc":datetime.now(timezone.utc).isoformat(),"temperature_2m_c":o.get("sicaklik"),"humidity_percent":o.get("nem"),"wind_speed_10m_kmh":o.get("ruzgarHiz"),"wind_direction_deg":o.get("ruzgarYon"),"pressure_hpa":o.get("aktuelBasinc"),"sea_level_pressure_hpa":o.get("denizeIndirgenmisBasinc"),"precipitation_1h_mm":o.get("yagis1Saat"),"precipitation_6h_mm":o.get("yagis6Saat"),"precipitation_12h_mm":o.get("yagis12Saat"),"precipitation_24h_mm":o.get("yagis24Saat"),"condition_code":o.get("hadiseKodu")}
-          open("output/observation.json","w",encoding="utf-8").write(json.dumps(p,ensure_ascii=False))
-          print(json.dumps(p,ensure_ascii=False))
-          PY
-
-      - name: Build independent MGM station history
-        run: |
-          set -euo pipefail
-          python - <<'PY'
-          import json, pathlib
-          from datetime import datetime, timezone, timedelta
-          o=json.loads(pathlib.Path("output/observation.json").read_text(encoding="utf-8"))
-          hp=pathlib.Path("output/history.json")
-          d=json.loads(hp.read_text(encoding="utf-8")) if hp.exists() else {"schema":"koy-mgm.station-history.v1","station_id":o["station_id"],"station_name":"Çanakçı","sampling_interval_minutes":30,"samples":[]}
-          samples=[s for s in d.get("samples",[]) if s.get("observed_at_utc")!=o.get("observed_at_utc")]
-          samples.append({"observed_at_utc":o.get("observed_at_utc"),"logged_at_utc":o.get("fetched_at_utc"),"temperature_2m_c":o.get("temperature_2m_c"),"precipitation_1h_mm":o.get("precipitation_1h_mm"),"precipitation_6h_mm":o.get("precipitation_6h_mm"),"humidity_percent":o.get("humidity_percent"),"pressure_hpa":o.get("pressure_hpa"),"wind_speed_10m_kmh":o.get("wind_speed_10m_kmh")})
-          cutoff=datetime.now(timezone.utc)-timedelta(days=7); kept=[]
-          for s in samples:
-              try:
-                  t=datetime.fromisoformat(str(s.get("logged_at_utc")).replace("Z","+00:00"))
-                  if t>=cutoff: kept.append(s)
-              except Exception: pass
-          kept.sort(key=lambda x:x.get("logged_at_utc",""))
-          d["samples"]=kept; d["updated_at_utc"]=o.get("fetched_at_utc")
-          hp.write_text(json.dumps(d,ensure_ascii=False),encoding="utf-8")
-          print("history samples:",len(kept))
           PY
 
       - name: Publish to the dedicated koy-mgm-data branch
