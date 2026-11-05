@@ -1,0 +1,189 @@
+name: İstanbul GFS Independent
+
+on:
+  schedule:
+    - cron: "*/5 * * * *"
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+concurrency:
+  group: istanbul-gfs-independent
+  cancel-in-progress: false
+
+jobs:
+  publish:
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Poll MeteoPT and prepare Istanbul GFS
+        run: |
+          set -euo pipefail
+          mkdir -p "$RUNNER_TEMP/istanbul-gfs"
+          python - <<'PY'
+          import json, os
+          from datetime import datetime, timezone, timedelta
+          from urllib.parse import urlencode
+          from urllib.request import Request, urlopen
+          from pathlib import Path
+
+          now = datetime.now(timezone.utc)
+          candidates = []
+          for requested_hour in (18, 12, 6, 0):
+              params = {"lat":"41.014","lon":"28.950","run":f"{requested_hour:02d}","lang":"en"}
+              url = "https://api.meteopt.com/gfs/json?" + urlencode(params)
+              req = Request(url, headers={"User-Agent":"Istanbul-GFS/1.0","Cache-Control":"no-cache"})
+              try:
+                  with urlopen(req, timeout=40) as response:
+                      doc = json.load(response)
+                  api_run = str(doc.get("run") or "").strip()
+                  if api_run:
+                      candidates.append((api_run, doc, url))
+                      print(f"MeteoPT run={requested_hour:02d} -> {api_run}")
+              except Exception as exc:
+                  print(f"MeteoPT run={requested_hour:02d} unavailable: {exc}")
+
+          if not candidates:
+              raise SystemExit("MeteoPT returned no usable Istanbul GFS cycle")
+
+          def run_key(value):
+              digits = "".join(ch for ch in value if ch.isdigit())
+              return digits[:10] if len(digits) >= 10 else digits
+
+          candidates.sort(key=lambda item: run_key(item[0]), reverse=True)
+          api_run, doc, source_url = candidates[0]
+          parsed = run_key(api_run)
+          if len(parsed) != 10:
+              raise SystemExit(f"Unexpected MeteoPT run value: {api_run}")
+
+          cycle = datetime.strptime(parsed, "%Y%m%d%H").replace(tzinfo=timezone.utc)
+          run_iso = cycle.isoformat(timespec="seconds")
+
+          steps = []
+          for value in (doc.get("steps") or {}).get("values") or []:
+              try: steps.append(int(value))
+              except (TypeError, ValueError): pass
+          if not steps:
+              raise SystemExit("MeteoPT returned no forecast steps")
+
+          data = doc.get("data") or {}
+          def series(name): return ((data.get(name) or {}).get("values") or [])
+          def num(values, index):
+              try:
+                  value = float(values[index])
+                  return value if value == value and abs(value) != float("inf") else None
+              except (IndexError, TypeError, ValueError):
+                  return None
+
+          points = []
+          for index, lead in enumerate(steps):
+              if lead <= 0: continue
+              valid = cycle + timedelta(hours=lead)
+              points.append({
+                  "forecast_hour": lead,
+                  "valid_time_utc": valid.isoformat(timespec="minutes"),
+                  "valid_time_istanbul": valid.astimezone(timezone(timedelta(hours=3))).isoformat(timespec="minutes"),
+                  "temperature_2m_c": num(series("tmp2m"), index),
+                  "temperature_850hpa_c": num(series("tmp850mb"), index),
+                  "wind_speed_10m_kmh": num(series("wind10m"), index),
+                  "wind_direction_10m_deg": num(series("winddir10m"), index),
+                  "wind_speed_850hpa_kmh": num(series("wind850"), index),
+                  "precipitation_6h_mm": num(series("apcp"), index),
+              })
+
+          days = {}
+          for point in points: days.setdefault(point["valid_time_utc"][:10], []).append(point)
+          daily = []
+          for day, vals in sorted(days.items()):
+              def nums(key): return [p[key] for p in vals if p.get(key) is not None]
+              t2,t850=nums("temperature_2m_c"),nums("temperature_850hpa_c")
+              rain,w10,w850=nums("precipitation_6h_mm"),nums("wind_speed_10m_kmh"),nums("wind_speed_850hpa_kmh")
+              daily.append({
+                  "date_istanbul":day,
+                  "temperature_min_c":min(t2) if t2 else None,
+                  "temperature_max_c":max(t2) if t2 else None,
+                  "temperature_850hpa_min_c":min(t850) if t850 else None,
+                  "temperature_850hpa_max_c":max(t850) if t850 else None,
+                  "precipitation_total_mm":sum(rain) if rain else 0,
+                  "wind_speed_max_10m_kmh":max(w10) if w10 else None,
+                  "wind_speed_max_850hpa_kmh":max(w850) if w850 else None,
+              })
+
+          first = points[0] if points else {}
+          root = Path(os.environ["RUNNER_TEMP"]) / "istanbul-gfs"
+          root.mkdir(parents=True, exist_ok=True)
+          base = {
+              "model":"ncep_gfs_global",
+              "forecast_source":"meteopt",
+              "run_id_utc":run_iso,
+              "location":{"name":"Istanbul","latitude":41.014,"longitude":28.950,"nearest_gfs_grid_latitude":41.0,"nearest_gfs_grid_longitude":29.0},
+              "sources":{"forecast":"MeteoPT GFS 3 saatlik nokta (Istanbul, TR); hedef 41.014N, 28.950E","model_initial_conditions":"MeteoPT GFS noktası +3 saatten başlar; ayrı analiz saati yok"},
+              "noaa_source_file":{"f180_available":180 in steps,"f180_source_name":"MeteoPT","f180_source_url":source_url,"global_grib2_size_bytes":None},
+              "current_conditions":{"temperature_2m_c":first.get("temperature_2m_c"),"precipitation_mm":first.get("precipitation_6h_mm"),"wind_speed_10m_kmh":first.get("wind_speed_10m_kmh"),"mean_sea_level_pressure_hpa":None},
+              "daily_summary":daily,
+              "regional_pressure_analysis":{"valid_time_utc":run_iso,"diameter_km":2500.0,"findings":[]},
+              "forecast_6_hourly":points,
+          }
+          latest={**base,"schema":"gfs-watch.forecast.v1","forecast_valid_until_utc":points[-1]["valid_time_utc"] if points else None,"published_at_utc":now.isoformat(timespec="seconds"),"forecast_horizon_hours":max((p["forecast_hour"] for p in points),default=0)}
+          (root/"latest.json").write_text(json.dumps(latest,ensure_ascii=False,indent=2),encoding="utf-8")
+          first72={**base,"schema":"istanbul-gfs.first72.v1","published_at_utc":now.isoformat(timespec="seconds"),"forecast_6_hourly":[p for p in points if 0 < p["forecast_hour"] <= 72]}
+          (root/"f72.json").write_text(json.dumps(first72,ensure_ascii=False,indent=2),encoding="utf-8")
+          print(f"Istanbul GFS cycle {run_iso}; max forecast hour {max(steps)}; points {len(points)}")
+          PY
+
+      - name: Publish only a new cycle to the isolated Istanbul GFS branch
+        run: |
+          set -euo pipefail
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git fetch origin +refs/heads/istanbul-gfs-data:refs/remotes/origin/istanbul-gfs-data || true
+          if git show-ref --verify --quiet refs/remotes/origin/istanbul-gfs-data; then
+            git checkout -B istanbul-gfs-data origin/istanbul-gfs-data
+          else
+            git checkout --orphan istanbul-gfs-data
+            git rm -rf . >/dev/null 2>&1 || true
+          fi
+          mkdir -p gfs/f72 gfs/runs
+          new_run="$(python -c 'import json,sys; print(json.load(open(sys.argv[1]))["run_id_utc"])' "$RUNNER_TEMP/istanbul-gfs/latest.json")"
+          old_run=""
+          if [ -s gfs/latest.json ]; then
+            old_run="$(python -c 'import json; print(json.load(open("gfs/latest.json")).get("run_id_utc",""))')"
+          fi
+          changed=0
+          if [ "$new_run" != "$old_run" ]; then
+            cp "$RUNNER_TEMP/istanbul-gfs/latest.json" gfs/latest.json
+            cp "$RUNNER_TEMP/istanbul-gfs/f72.json" gfs/f72/latest.json
+            cp "$RUNNER_TEMP/istanbul-gfs/latest.json" gfs/runs/$new_run.json
+            changed=1
+            echo "New Istanbul GFS cycle published: $new_run"
+          else
+            echo "Istanbul GFS cycle $new_run already published."
+          fi
+          if [ "$changed" = "1" ]; then
+            python - <<'PY'
+          import json
+          from pathlib import Path
+          runs=[]
+          for path in sorted(Path("gfs/runs").glob("*.json"),reverse=True)[:4]:
+              try: runs.append(json.loads(path.read_text(encoding="utf-8")))
+              except Exception: pass
+          if runs:
+              Path("gfs/comparison.json").write_text(json.dumps({
+                  "schema":"istanbul-gfs.comparison.v1",
+                  "location":{"name":"Istanbul","latitude":41.014,"longitude":28.950},
+                  "updated_at_utc":runs[0].get("published_at_utc"),
+                  "runs":runs
+              },ensure_ascii=False,indent=2),encoding="utf-8")
+          PY
+            git add gfs
+            git commit -m "Publish Istanbul GFS cycle $new_run"
+            git push origin istanbul-gfs-data
+          else
+            echo "No new Istanbul GFS cycle; nothing to commit."
+          fi
+          find gfs/runs -type f -name '*.json' -mtime +45 -delete
