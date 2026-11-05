@@ -90,7 +90,7 @@ def main():
             for p in s["points"]:
                 if p.get("precipitation_6h_mm") is not None:x.append(dt(p["valid_time_utc"]).replace(tzinfo=timezone.utc));y.append(max(0,float(p["precipitation_6h_mm"])))
             if x:ax.plot(x,y,color=C[si],lw=2.4,marker="o",markersize=3.4)
-        ax.set_ylim(bottom=0);ax.xaxis.set_major_locator(mdates.HourLocator(interval=24,tz=TZ));ax.xaxis.set_major_formatter(mdates.DateFormatter("%d.%m\n%H:%M",tz=timezone.utc));ax.tick_params(axis="x",labelsize=11);ax.grid(axis="x",color=GRID,alpha=.25)
+        ax.set_ylim(bottom=0);ax.xaxis.set_major_locator(mdates.HourLocator(interval=24,tz=timezone.utc));ax.xaxis.set_major_formatter(mdates.DateFormatter("%d.%m\n%H:%M",tz=timezone.utc));ax.tick_params(axis="x",labelsize=11);ax.grid(axis="x",color=GRID,alpha=.25)
     def wind(ax):
         for si,s in enumerate(series):
             for di,d in enumerate(dates):
