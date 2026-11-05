@@ -24,6 +24,7 @@ permissions:
 # Pages is the only shared publication resource.
 # Collectors never deploy Pages; this workflow always assembles the latest
 # available data from all source branches and publishes one coherent site.
+# Station data is verified from the dedicated MGM branch on every publication.
 concurrency:
   group: live-pages-publisher
   cancel-in-progress: false
