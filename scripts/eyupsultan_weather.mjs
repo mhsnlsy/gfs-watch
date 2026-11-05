@@ -6,6 +6,7 @@ const MGM_CITY_URL = "https://servis.mgm.gov.tr/web/sondurumlar/ilTumSondurum?il
 const STATION_ID = "18101";
 const STALE_AFTER_MINUTES = 30;
 const HISTORY_SCHEMA = "gfs-watch.station-temperature-history.v1";
+const RAIN_HISTORY_SCHEMA = "gfs-watch.station-rain-history.v1";
 
 const directions = [
   ["Kuzey", "N"], ["Kuzey-kuzeydoğu", "NNE"], ["Kuzeydoğu", "NE"],
@@ -201,6 +202,28 @@ async function main() {
     rolling_hour_precipitation_window_minutes: 60,
     updated_at_utc: now.toISOString(),
     samples: retained
+  });
+  // Keep a dedicated rainfall archive so the station rain chart reads only rainfall history.
+  const rainHistoryPath = process.env.EYUPSULTAN_RAIN_HISTORY_PATH || path.join(outDir, "eyupsultan-station-rain-history.json");
+  writeJsonAtomic(rainHistoryPath, {
+    schema: RAIN_HISTORY_SCHEMA,
+    station_id: STATION_ID,
+    station_name: "Eyüpsultan",
+    retention_hours: retentionHours,
+    source_interval_minutes: 10,
+    chart_window_minutes: 60,
+    chart_step_minutes: 60,
+    updated_at_utc: now.toISOString(),
+    samples: retained.map(item => ({
+      logged_at_utc: item.logged_at_utc,
+      observed_at_utc: item.observed_at_utc,
+      precipitation_1h_mm: item.precipitation_1h_mm,
+      precipitation_10m_mm: item.precipitation_10m_mm,
+      precipitation_6h_mm: item.precipitation_6h_mm,
+      precipitation_12h_mm: item.precipitation_12h_mm,
+      precipitation_24h_mm: item.precipitation_24h_mm,
+      precipitation_daily_mm: item.precipitation_daily_mm
+    }))
   });
   console.log("[DONE]", observation.temperature_2m_c + "°C", "age", observation.age_minutes, "min", observation.source);
 }
