@@ -66,9 +66,71 @@ jobs:
           if [ -d koy-data/gfs ]; then
             cp -a koy-data/gfs _site/koy-data/
           else
-            mkdir -p _site/koy-data/gfs/f72
-            printf '{"schema":"koy-gfs.first72.v1","forecast_source":"meteopt","forecast_6_hourly":[]}' > _site/koy-data/gfs/f72/latest.json
-            printf '{"schema":"koy-gfs.comparison.v1","runs":[]}' > _site/koy-data/gfs/comparison.json
+            echo "Köy GFS veri dalı bulunamadı; MeteoPT canlı yedek verisi hazırlanıyor."
+            mkdir -p _site/koy-data/gfs/f72 _site/koy-data/gfs
+            python - <<'PY'
+          import json, urllib.request, urllib.parse
+          from datetime import datetime, timezone, timedelta
+          from pathlib import Path
+
+          base = "https://api.meteopt.com/gfs/json?"
+          candidates = []
+          for run in (18, 12, 6, 0):
+              try:
+                  q = urllib.parse.urlencode({"lat":"40.9557","lon":"39.0065","run":f"{run:02d}","lang":"en"})
+                  req = urllib.request.Request(base+q, headers={"User-Agent":"IstanbulHava-Koy/1.0","Cache-Control":"no-cache"})
+                  with urllib.request.urlopen(req, timeout=30) as r:
+                      d = json.load(r)
+                  if d.get("steps") and d.get("data"):
+                      candidates.append((str(d.get("run") or ""), d, base+q))
+              except Exception as e:
+                  print(f"MeteoPT run {run:02d} failed: {e}")
+
+          if candidates:
+              candidates.sort(key=lambda x: "".join(c for c in x[0] if c.isdigit()), reverse=True)
+              run_id, doc, source_url = candidates[0]
+              digits = "".join(c for c in run_id if c.isdigit())
+              if len(digits) >= 10:
+                  cycle = datetime.strptime(digits[:10], "%Y%m%d%H").replace(tzinfo=timezone.utc)
+              else:
+                  cycle = datetime.now(timezone.utc)
+              steps = []
+              for x in (doc.get("steps") or {}).get("values") or []:
+                  try: steps.append(int(x))
+                  except: pass
+              data = doc.get("data") or {}
+              def series(k): return ((data.get(k) or {}).get("values") or [])
+              def val(arr,i):
+                  try:
+                      v=float(arr[i]); return v if v == v else None
+                  except: return None
+              points=[]
+              for i,lead in enumerate(steps):
+                  if lead <= 0 or lead > 72: continue
+                  points.append({
+                    "forecast_hour":lead,
+                    "valid_time_utc":(cycle+timedelta(hours=lead)).isoformat(timespec="minutes"),
+                    "temperature_2m_c":val(series("tmp2m"),i),
+                    "temperature_850hpa_c":val(series("tmp850mb"),i),
+                    "wind_speed_10m_kmh":val(series("wind10m"),i),
+                    "wind_speed_850hpa_kmh":val(series("wind850"),i),
+                    "precipitation_6h_mm":val(series("apcp"),i)
+                  })
+              payload={"schema":"koy-gfs.first72.v1","forecast_source":"meteopt","source_url":source_url,
+                       "location":{"name":"Giresun / Çanakçı","latitude":40.9557,"longitude":39.0065},
+                       "run_id_utc":cycle.isoformat(timespec="seconds"),
+                       "published_at_utc":datetime.now(timezone.utc).isoformat(timespec="seconds"),
+                       "forecast_6_hourly":points}
+              Path("_site/koy-data/gfs/f72/latest.json").write_text(json.dumps(payload,ensure_ascii=False,indent=2),encoding="utf-8")
+              Path("_site/koy-data/gfs/comparison.json").write_text(json.dumps({
+                "schema":"koy-gfs.comparison.v1","location":payload["location"],
+                "updated_at_utc":payload["published_at_utc"],"runs":[payload]},ensure_ascii=False,indent=2),encoding="utf-8")
+              print(f"Köy GFS live fallback hazır: {run_id}, {len(points)} adım")
+          else:
+              Path("_site/koy-data/gfs/f72/latest.json").write_text('{"schema":"koy-gfs.first72.v1","forecast_source":"meteopt","forecast_6_hourly":[]}',encoding="utf-8")
+              Path("_site/koy-data/gfs/comparison.json").write_text('{"schema":"koy-gfs.comparison.v1","runs":[]}',encoding="utf-8")
+              raise SystemExit("MeteoPT canlı yedek verisi alınamadı")
+          PY
           fi
           if [ -d koy-mgm-data/mgm ]; then
             mkdir -p _site/koy-data/mgm
