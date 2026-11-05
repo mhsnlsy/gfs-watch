@@ -1897,30 +1897,6 @@
         return;
       }
 
-      // The ENKA panel uses the rolling 30-minute chart, but the compact badge below
-      // reports the separate maximum completed 1-hour MGM accumulation.
-      const hourlyBadgeRows=rows.slice();
-      const hourlyByTime=new Map();
-      hourlyBadgeRows.forEach(sample=>{
-        const time=Date.parse(sample.observed_at_utc||sample.logged_at_utc||"");
-        const mm=sample.precipitation_1h_mm==null?NaN:Number(sample.precipitation_1h_mm);
-        if(Number.isFinite(time)&&time>=start-hourMs&&time<Math.floor(now/hourMs)*hourMs&&Number.isFinite(mm)&&mm>=0){
-          hourlyByTime.set(time,{time,mm});
-        }
-      });
-      const hourlyBadgePoints=new Map();
-      [...hourlyByTime.values()].sort((a,b)=>a.time-b.time).forEach(point=>{
-        const slot=Math.floor(point.time/hourMs),slotEnd=(slot+1)*hourMs;
-        if(slotEnd>now)return;
-        const previous=hourlyBadgePoints.get(slot);
-        if(!previous||point.time>previous.time)hourlyBadgePoints.set(slot,point);
-      });
-      const hourlyPeak=[...hourlyBadgePoints.values()].reduce((best,p)=>!best||p.mm>best.mm?p:best,null);
-      const rainMaxBadge=$("station-rain-max");
-      if(rainMaxBadge){
-        if(hourlyPeak){rainMaxBadge.hidden=false;rainMaxBadge.textContent="Saatlik maks "+fmt(hourlyPeak.mm,1)+" mm · "+timeTR(hourlyPeak.time);}
-        else{rainMaxBadge.hidden=true;rainMaxBadge.textContent="";}
-      }
       const width=560,height=160,left=42,right=12,top=14,bottom=27,pw=width-left-right,ph=height-top-bottom;
       const max=Math.max(.5,...points.map(point=>point.mm))*1.15;
       const x=t=>left+(t-start)/windowMs*pw,y=v=>top+ph-v/max*ph;
