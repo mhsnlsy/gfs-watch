@@ -1945,35 +1945,31 @@ def scheduled_istanbul_gfs_run(now=None):
 
 
 async def stage_open_meteopt_cycle(processed_run_ids):
-    """Package only the GFS cycle assigned to the current Istanbul time slot. Publish only after +180.
+    """Track the active MeteoPT cycle on each poll; publish its f72 as soon as available.
 
-    Returns False while the open cycle is still short of f180, True when the
-    cached package is ready to become the report, and None when there is nothing
-    to stage.
+    Full report/Telegram publication is still gated on f180 and is handled by
+    process_gfs_update once the active cycle reaches that threshold.
     """
     if os.getenv("GFS_SOURCE", "meteopt").strip().lower() == "noaa":
         return None
-    now = datetime.now(timezone.utc)
-    configured_target = os.getenv("GFS_WATCH_TARGET_RUN_ID", "").strip()
-    run_dt = (
-        _parse_utc_datetime(configured_target)
-        if configured_target
-        else scheduled_istanbul_gfs_run()
-    )
+    try:
+        document = await asyncio.to_thread(fetch_meteopt_document)
+    except Exception as exc:
+        print(f"[METEOPT STAGE ERROR] {type(exc).__name__}: {exc}")
+        return False
+
+    token = str(document.get("run") or "").strip()
+    run_dt = datetime.strptime(token, "%Y%m%d%H").replace(tzinfo=timezone.utc)
     run_id = run_dt.isoformat(timespec="seconds")
     if run_id in processed_run_ids:
+        print(f"[METEOPT STAGE] {run_id} was already published.")
         return None
-    try:
-        document = await asyncio.to_thread(fetch_meteopt_document, run_dt)
-    except Exception as exc:
-        print(f"[PAKET] {run_dt:%H}Z alınamadı: {type(exc).__name__}: {exc}")
-        return False
+
     rows = _meteopt_rows_through_f180(document)
-    max_hour = max(rows) if rows else 0
+    max_hour = max(rows) if rows else _meteopt_max_step(document)
     stage = _load_stage(run_id)
     previous = int(stage.get("max_hour") or 0)
     milestones = [int(hour) for hour in stage.get("milestones") or []]
-    label = f"{run_dt:%H}Z"
     if max_hour > previous:
         crossed = [
             hour for hour in METEOPT_PACKAGE_HOURS
@@ -1983,50 +1979,34 @@ async def stage_open_meteopt_cycle(processed_run_ids):
             "run_id": run_id,
             "max_hour": max_hour,
             "row_count": len(rows),
-            "updated_at": now.isoformat(timespec="seconds"),
+            "updated_at": datetime.now(timezone.utc).isoformat(timespec="seconds"),
         })
-        for hour in crossed:
-            milestones.append(hour)
-            if hour < MIN_FORECAST_HOURS:
-                print(
-                    f"[PAKET] {label}: +{hour} saat yüklendi, {len(rows)} satır paketlendi. "
-                    "Rapor önbelleğine işlendi. +180 bekleniyor; sıfırdan işlenmeyecek."
-                )
-            else:
-                print(
-                    f"[PAKET] {label}: +180 tamam, {len(rows)} satır. "
-                    "Önbellekteki paket toparlanıyor, rapor sunuluyor."
-                )
-        stage["milestones"] = milestones
+        stage["milestones"] = milestones + crossed
         _save_stage(run_id, stage)
-    elif max_hour:
-        print(f"[PAKET] {label}: hâlâ +{max_hour}, {len(rows)} satır. Yeni saat yok.")
+        for hour in crossed:
+            print(f"[METEOPT STAGE] {run_id}: +{hour}h reached; {len(rows)} steps cached.")
     else:
-        print(f"[PAKET] {label}: MeteoPT henüz satır vermedi.")
-        return False
+        print(f"[METEOPT STAGE] {run_id}: latest step +{max_hour}h; {len(rows)} usable steps.")
 
-    # Publish the first-72-hour table as soon as MeteoPT exposes f72.
-    # This is independent of the full f180 report/Telegram publication gate.
+    # The first-72-hour data table is a separate, early product. Refresh it
+    # every time the active cycle advances beyond f72.
     if max_hour >= 72:
         data = document.get("data") or {}
-        steps = []
-        for raw_step in (document.get("steps") or {}).get("values") or []:
-            try:
-                steps.append(int(raw_step))
-            except (TypeError, ValueError):
-                steps.append(None)
-        def table_series(name):
-            return ((data.get(name) or {}).get("values") or [])
+        raw_steps = (document.get("steps") or {}).get("values") or []
         fields = {
-            "temperature_2m_c": table_series("tmp2m"),
-            "temperature_850hpa_c": table_series("tmp850mb"),
-            "wind_speed_10m_kmh": table_series("wind10m"),
-            "wind_speed_850hpa_kmh": table_series("wind850"),
-            "precipitation_6h_mm": table_series("apcp"),
+            "temperature_2m_c": ((data.get("tmp2m") or {}).get("values") or []),
+            "temperature_850hpa_c": ((data.get("tmp850mb") or {}).get("values") or []),
+            "wind_speed_10m_kmh": ((data.get("wind10m") or {}).get("values") or []),
+            "wind_speed_850hpa_kmh": ((data.get("wind850") or {}).get("values") or []),
+            "precipitation_6h_mm": ((data.get("apcp") or {}).get("values") or []),
         }
         table_points = []
-        for index, lead in enumerate(steps):
-            if lead is None or lead <= 0 or lead > 72:
+        for index, raw_step in enumerate(raw_steps):
+            try:
+                lead = int(raw_step)
+            except (TypeError, ValueError):
+                continue
+            if lead <= 0 or lead > 72:
                 continue
             valid = run_dt + timedelta(hours=lead)
             point = {
@@ -2038,24 +2018,25 @@ async def stage_open_meteopt_cycle(processed_run_ids):
             if point["temperature_2m_c"] is not None:
                 table_points.append(point)
         if table_points and max(p["forecast_hour"] for p in table_points) >= 72:
-            table_path = os.path.join(PUBLIC_DATA_DIR, "meteopt-gfs-first72.json")
-            _write_json_atomically(table_path, {
-                "schema": "gfs-watch.meteopt-first72.v1",
-                "forecast_source": "meteopt",
-                "run_id_utc": run_id,
-                "published_at_utc": datetime.now(timezone.utc).isoformat(timespec="seconds"),
-                "forecast_6_hourly": table_points,
-            })
-            print(f"[PAKET] {label}: f72 tablosu yayınlandı ({len(table_points)} adım).")
+            _write_json_atomically(
+                os.path.join(PUBLIC_DATA_DIR, "meteopt-gfs-first72.json"),
+                {
+                    "schema": "gfs-watch.meteopt-first72.v1",
+                    "forecast_source": "meteopt",
+                    "run_id_utc": run_id,
+                    "published_at_utc": datetime.now(timezone.utc).isoformat(timespec="seconds"),
+                    "forecast_6_hourly": table_points,
+                },
+            )
+            print(f"[METEOPT STAGE] {run_id}: first 72-hour table refreshed.")
 
     if max_hour >= 40 and max_hour < MIN_FORECAST_HOURS and not stage.get("comparison_ready"):
         try:
             await load_previous_three_runs_for_comparison(run_id)
             stage["comparison_ready"] = True
             _save_stage(run_id, stage)
-            print(f"[PAKET] {label}: önceki üç çıktı önbelleğe alındı. +180'de yeniden indirilmeyecek.")
         except Exception as exc:
-            print(f"[PAKET] {label}: önceki çıktılar henüz paketlenemedi: {exc}")
+            print(f"[METEOPT STAGE] Comparison warm-up deferred: {exc}")
 
     return _meteopt_f180_ready(document)
 
