@@ -10,6 +10,7 @@ on:
       - "Main Station Data Refresh"
       - "Eyüpsultan MGM Independent Refresh"
       - "Şişli MGM Independent Refresh"
+      - "İstanbul GFS Independent"
     types:
       - completed
 
@@ -46,6 +47,13 @@ jobs:
           path: forecast-data
           fetch-depth: 1
 
+      - name: Check out Istanbul GFS data
+        uses: actions/checkout@v5
+        with:
+          ref: istanbul-gfs-data
+          path: istanbul-gfs-data
+          fetch-depth: 1
+
       - name: Check out Köy GFS data
         uses: actions/checkout@v5
         with:
@@ -68,9 +76,12 @@ jobs:
           mkdir -p _site/data
           cp -a source/site/. _site/
 
-          if [ -s forecast-data/public/latest.json ]; then
-            cp -a forecast-data/public/. _site/data/
-            echo "GFS payload present."
+          if [ -s "istanbul-gfs-data/gfs/latest.json" ]; then
+            cp "istanbul-gfs-data/gfs/latest.json" "_site/data/istanbul-gfs-latest.json"
+            echo "Independent Istanbul GFS payload present."
+          elif [ -s forecast-data/public/latest.json ]; then
+            cp "forecast-data/public/latest.json" "_site/data/istanbul-gfs-latest.json"
+            echo "Fallback GFS payload present."
           else
             echo "GFS payload unavailable; publishing latest station data."
           fi
