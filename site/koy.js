@@ -145,5 +145,5 @@ function refresh(){if(busy)return;busy=true;
  if(results[3].status==="fulfilled"){renderMgmObservation(results[3].value,stationHistory,f72); const o=results[3].value; $("mgm-status-date").textContent=ts(o.observed_at_utc); $("mgm-rain-rate").innerHTML=fmt(num(o.precipitation_1h_mm))+"<small> mm</small>"; $("mgm-status-text").textContent="Son 1 saat yağış · "+fmt(num(o.precipitation_24h_mm))+" mm / 24 saat"; $("mgm-rain-fill").style.width=Math.min(100,Math.max(0,(num(o.precipitation_1h_mm)||0)*8))+"%"} renderRuns(comparison,f72);
  busy=false;
 }
-$("refresh").addEventListener("click",refresh);refresh();setInterval(()=>{if(document.visibilityState!=="hidden")refresh()},60000);
+refresh();setInterval(()=>{if(document.visibilityState!=="hidden")refresh()},60000);
 })();
