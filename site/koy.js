@@ -212,7 +212,77 @@ function svgStationHistory(samples,metric,title,unit){
  const ranges=data.map(p=>{const xx=xb(p),a=y(p.max),b=y(p.min),c=4.5;return '<path d="M'+xx+' '+a+'V'+b+' M'+(xx-c)+' '+a+'h'+(2*c)+' M'+(xx-c)+' '+b+'h'+(2*c)+'" stroke="rgba(125,211,215,.78)" stroke-width="1.7" fill="none"/>'}).join("");
  s+='<path d="'+area+'" fill="rgba(125,211,215,.10)" stroke="none"/>'+ranges+'<path d="'+line+'" fill="none" stroke="#8edbd2" stroke-width="3.2" stroke-linecap="round" stroke-linejoin="round"/>';
  const last=data[data.length-1];s+='<circle cx="'+xb(last)+'" cy="'+y(last.mean)+'" r="6" fill="#f1fff9" stroke="#a4e7d5" stroke-width="1.5"/>';
+ data.forEach(p=>{
+  const period=new Intl.DateTimeFormat("tr-TR",{timeZone:"Europe/Istanbul",hour:"2-digit",minute:"2-digit"}).format(new Date(p.start))+"–"+new Intl.DateTimeFormat("tr-TR",{timeZone:"Europe/Istanbul",hour:"2-digit",minute:"2-digit"}).format(new Date(p.start+step))+" TSİ";
+  const detail=hourly?"Kayan 1 saatlik toplam · "+p.count+" kayıt":"30 dk ortalama · min "+fmt(p.min)+" / maks "+fmt(p.max)+" °C · "+p.count+" kayıt";
+  s+='<circle class="station-point-target" cx="'+xb(p)+'" cy="'+y(p.mean)+'" r="0" data-period="'+esc(period)+'" data-value="'+esc(fmt(p.mean))+'" data-unit="'+esc(unit)+'" data-detail="'+esc(detail)+'" data-color="#8edbd2" aria-hidden="true"/>';
+ });
  s+='</svg>';return s;
+}
+let activeStationTooltip=null;
+document.addEventListener("pointerdown",event=>{
+ if(activeStationTooltip&&!activeStationTooltip.host.contains(event.target))activeStationTooltip.hide();
+},true);
+function bindStationHistoryTooltip(containerId){
+ const host=$(containerId),svg=host?.querySelector("svg");
+ if(!host||!svg)return;
+ const targets=[...svg.querySelectorAll(".station-point-target")];
+ if(!targets.length)return;
+ const tooltip=document.createElement("div");
+ tooltip.className="station-history-tooltip";
+ tooltip.hidden=true;
+ tooltip.setAttribute("role","status");
+ tooltip.setAttribute("aria-live","polite");
+ host.appendChild(tooltip);
+ let pinned=false;
+ function nearestByTime(event,maxDistance){
+  const matrix=svg.getScreenCTM();
+  if(!matrix)return null;
+  let nearest=null,best=maxDistance;
+  const point=svg.createSVGPoint();
+  for(const target of targets){
+   point.x=Number(target.getAttribute("cx"));
+   point.y=Number(target.getAttribute("cy"));
+   const screen=point.matrixTransform(matrix);
+   const distance=Math.abs(event.clientX-screen.x);
+   if(distance<best){best=distance;nearest=target}
+  }
+  return nearest;
+ }
+ function hide(){
+  tooltip.hidden=true;
+  pinned=false;
+  if(activeStationTooltip?.tooltip===tooltip)activeStationTooltip=null;
+ }
+ function show(target,event,lock=false){
+  if(!target)return;
+  tooltip.innerHTML='<div class="station-history-tooltip-time">MGM Çanakçı · Gerçek ölçüm<br>'+esc(target.dataset.period||"—")+'</div><div class="station-history-tooltip-value">'+esc(target.dataset.value||"—")+' <small>'+esc(target.dataset.unit||"")+'</small></div><div class="station-history-tooltip-detail">'+esc(target.dataset.detail||"")+'</div>';
+  tooltip.hidden=false;
+  pinned=lock;
+  const box=host.getBoundingClientRect();
+  const tx=event.clientX-box.left,ty=event.clientY-box.top;
+  const tw=tooltip.offsetWidth,th=tooltip.offsetHeight;
+  const left=Math.max(5,Math.min(host.clientWidth-tw-5,tx+12));
+  let top=ty-th-12;
+  if(top<5)top=ty+14;
+  top=Math.max(5,Math.min(host.clientHeight-th-5,top));
+  tooltip.style.left=left+"px";
+  tooltip.style.top=top+"px";
+  if(lock)activeStationTooltip={host,tooltip,hide};
+ }
+ svg.addEventListener("pointermove",event=>{
+  if(event.pointerType==="touch"||pinned)return;
+  const target=nearestByTime(event,48);
+  if(target)show(target,event,false);
+  else hide();
+ });
+ svg.addEventListener("pointerleave",()=>{if(!pinned)hide()});
+ svg.addEventListener("pointerdown",event=>{
+  if(event.pointerType!=="touch"&&event.pointerType!=="pen")return;
+  const target=nearestByTime(event,54);
+  if(target){event.preventDefault();show(target,event,true)}
+  else hide();
+ });
 }
 function renderStationHistory(doc){
  const samples=Array.isArray(doc?.samples)?doc.samples:[];
@@ -221,6 +291,8 @@ function renderStationHistory(doc){
  $("history-source-note").textContent="Sıcaklık ve yağış: MGM Çanakçı gerçek istasyon ölçümleri.";
  $("station-temperature-trend").innerHTML=svgStationHistory(samples,"temperature_2m_c","Çanakçı sıcaklık","°C");
  $("station-rain-trend").innerHTML=svgStationHistory(samples,"precipitation_1h_mm","Çanakçı yağış","mm");
+ bindStationHistoryTooltip("station-temperature-trend");
+ bindStationHistoryTooltip("station-rain-trend");
 }
 function gfsRunLabel(run){
  const date=new Date(run?.run_id_utc||"");
