@@ -224,6 +224,29 @@ jobs:
           python -m json.tool _site/koy-data/mgm/observation.json > /dev/null
           test -s _site/koy-data/mgm/history.json
           python -m json.tool _site/koy-data/mgm/history.json > /dev/null
+          test -s _site/koy-data/mgm/rain-history-72h.json
+          python -m json.tool _site/koy-data/mgm/rain-history-72h.json > /dev/null
+          python - <<'PY'
+          import json
+          from datetime import datetime, timezone, timedelta
+          path="_site/koy-data/mgm/rain-history-72h.json"
+          doc=json.load(open(path,encoding="utf-8"))
+          assert doc.get("schema") == "koy-mgm.rain-history.v1", "Köy rainfall archive schema mismatch"
+          assert doc.get("retention_hours") == 72, "Köy rainfall archive retention must be 72 hours"
+          samples=doc.get("samples")
+          assert isinstance(samples,list), "Köy rainfall archive samples missing"
+          cutoff=datetime.now(timezone.utc)-timedelta(hours=72)
+          valid=[]
+          for sample in samples:
+              stamp=sample.get("observed_at_utc") or sample.get("logged_at_utc")
+              try:
+                  when=datetime.fromisoformat(str(stamp).replace("Z","+00:00"))
+              except Exception:
+                  continue
+              assert when >= cutoff-timedelta(minutes=5), "Expired rainfall sample in 72-hour archive"
+              valid.append(sample)
+          print(f"Köy 72-hour rainfall archive verified: {len(valid)} observations")
+          PY
           echo "Website bundle prepared with the latest GFS forecast and independent Köy MGM station data."
 
       - name: Validate Köy website JavaScript syntax
