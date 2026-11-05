@@ -2911,9 +2911,12 @@
         renderStationHistory();
         renderStationCard(activeStation==="enka"?enkaStationObservation:activeStation==="eyupsultan"?eyupsultanStationObservation:sisliStationObservation);
       }catch(error){
-        $("freshness").textContent="Veriye ulaşılamadı";$("temperature").textContent="—°";
+        // Forecast/model data may fail independently. Never erase live station
+        // observations or their history charts because GFS is temporarily unavailable.
         $("daily-grid").innerHTML='<div class="error">'+esc(error.message)+'</div>';
-        $("forecast-chart").innerHTML='<div class="chart-empty">Veri kaynağına şu anda ulaşılamıyor. Sayfa otomatik olarak yeniden deneyecek.</div>';
+        $("forecast-chart").innerHTML='<div class="chart-empty">Tahmin verisi şu anda alınamıyor. İstasyon ölçümleri bağımsız olarak çalışmaya devam ediyor.</div>';
+        renderStationCard(activeStation==="enka"?enkaStationObservation:activeStation==="eyupsultan"?eyupsultanStationObservation:sisliStationObservation);
+        renderStationHistory();
       }
     }
     let notificationRegistration=null;
@@ -3174,9 +3177,18 @@
       await registerAppWorker();
       await loadPushConfig();
       await refreshPushStatus();
-      await Promise.all([loadForecast(),loadNotifications(),refreshStationObservations(),loadVerification()]);
+      await Promise.allSettled([
+        loadForecast(),
+        loadNotifications(),
+        refreshStationObservations(),
+        refreshSelectedStation(),
+        loadVerification()
+      ]);
+      // Forecast, station observations, and station history are independent.
+      // A failure in one chain must not prevent the others from refreshing.
       window.setInterval(()=>{loadForecast();loadNotifications();loadVerification();loadRadarGfsComparison();},300000);
       window.setInterval(refreshStationObservations,60000);
+      window.setInterval(refreshSelectedStation,300000);
     }
 
     let ecmwfForecast=null,ecmwfLoading=false,ecmwfLastFetch=0;
