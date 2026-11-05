@@ -89,8 +89,3 @@ jobs:
           git push origin gfs-watch-state
           echo "changed=true" >> "$GITHUB_OUTPUT"
 
-  deploy-pages:
-    name: Deploy shared GitHub Pages site
-    needs: monitor
-    uses: ./.github/workflows/pages-live.yml
-    secrets: inherit
