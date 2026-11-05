@@ -1,6 +1,10 @@
 name: MeteoPT GFS Live Monitor
 
 on:
+  push:
+    branches: [main]
+    paths:
+      - ".github/workflows/meteopt-gfs-live.yml"
   schedule:
     - cron: "*/10 * * * *"
   workflow_dispatch:
@@ -24,36 +28,19 @@ jobs:
         uses: actions/checkout@v4
         with:
           fetch-depth: 0
-
       - name: Python
         uses: actions/setup-python@v5
         with:
           python-version: "3.12"
           cache: pip
           cache-dependency-path: requirements.txt
-
       - name: Dependencies
         run: python -m pip install -r requirements.txt
-
       - name: Restore GFS state
         run: |
           git fetch origin gfs-watch-state
-          if git cat-file -e origin/gfs-watch-state:gfs_watch.db 2>/dev/null; then
-            git show origin/gfs-watch-state:gfs_watch.db > gfs_watch.db
-          fi
-          if git cat-file -e origin/gfs-watch-state:public/latest.json 2>/dev/null; then
-            git archive origin/gfs-watch-state public | tar -x -C .
-          else
-            mkdir -p public
-          fi
-
-      - name: Verify MeteoPT source
-        run: |
-          echo "SOURCE=MeteoPT"
-          echo "CHECK_INTERVAL=10 minutes"
-          echo "TARGET=F180"
-          echo "PUBLICATION=Pages + Telegram"
-
+          if git cat-file -e origin/gfs-watch-state:gfs_watch.db 2>/dev/null; then git show origin/gfs-watch-state:gfs_watch.db > gfs_watch.db; fi
+          if git cat-file -e origin/gfs-watch-state:public/latest.json 2>/dev/null; then git archive origin/gfs-watch-state public | tar -x -C .; else mkdir -p public; fi
       - name: Poll MeteoPT and publish completed F180
         env:
           GFS_SOURCE: meteopt
@@ -67,33 +54,20 @@ jobs:
           PUBLIC_DATA_DIR: public
           TELEGRAM_TOKEN: ${{ secrets.TELEGRAM_TOKEN }}
           CHAT_ID: ${{ secrets.CHAT_ID }}
-          GCP_SA_KEY: ${{ secrets.GCP_SA_KEY }}
         run: python -u main.py
-
       - name: Publish state
         if: always()
         run: |
-          if [ ! -f gfs_watch.db ]; then
-            echo "No database generated."
-            exit 0
-          fi
+          if [ ! -f gfs_watch.db ]; then exit 0; fi
           cp gfs_watch.db /tmp/gfs_watch.db
           mkdir -p /tmp/public
-          if [ -d public ]; then
-            cp -a public/. /tmp/public/
-          fi
+          if [ -d public ]; then cp -a public/. /tmp/public/; fi
           git checkout -B gfs-watch-state origin/gfs-watch-state
           cp /tmp/gfs_watch.db gfs_watch.db
-          if [ -d /tmp/public ]; then
-            rm -rf public
-            mkdir -p public
-            cp -a /tmp/public/. public/
-          fi
+          rm -rf public && mkdir -p public
+          if [ -d /tmp/public ]; then cp -a /tmp/public/. public/; fi
           git add -f gfs_watch.db public
-          if git diff --cached --quiet; then
-            echo "No state/public change."
-            exit 0
-          fi
+          if git diff --cached --quiet; then exit 0; fi
           git config user.name "github-actions[bot]"
           git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
           git commit -m "Update MeteoPT GFS live state"
