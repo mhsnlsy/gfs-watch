@@ -9,61 +9,111 @@
 
 ## Veri kaynakları
 
-- **GFS:** MeteoPT GFS — [İstanbul, 41.014°N / 28.950°E](https://www.meteopt.com/modelos/gfs?lat=41.014&lon=28.950&lang=en).
+- **GFS:** MeteoPT GFS — İstanbul, 41.014°N / 28.950°E.
 - **ECMWF IFS:** GFS'den ayrı tutulan tahmin akışı.
-- **ENKA Balmumcu:** Canlı kamera görüntüsünden OCR ile okunan istasyon ölçümleri.
-- **MGM Eyüpsultan:** MGM 18101 istasyonunun son durum ölçümleri.
-- **MGM Şişli:** MGM 18401 istasyonunun son durum ölçümleri.
+- **ENKA Balmumcu:** ENKA currentvalues.html canlı istasyon verisi.
+- **MGM Eyüpsultan:** MGM 18101 son durum ölçümleri.
+- **MGM Şişli:** MGM 18401 son durum ölçümleri.
 - **Yağış radarı:** RainViewer.
-
-GFS ve ECMWF verileri birbirinden bağımsızdır; arayüzde model seçimiyle görüntülenir. MGM istasyonları her toplama turunda MGM'nin yayımladığı en son gözlemi alır. Kaynağın ölçüm zamanı değişmediyse yeni bir ölçüm zamanı üretilmez.
 
 ## Otomatik işleyiş
 
 ### İstanbul istasyonları
 
-Üç istasyonun her biri kendi GitHub Actions iş akışında **5 dakikalık kendini yeniden kuyruğa alma döngüsü** kullanır. Her çalışmanın başında başlangıç zamanı kaydedilir; istasyon verisi toplanıp yayımlandıktan sonra aynı workflow, başlangıçtan itibaren 300 saniye dolunca kendi `workflow_dispatch` çağrısını gönderir. Toplama beş dakikadan uzun sürerse sonraki tur tamamlanınca hemen kuyruğa alınır.
+ENKA Balmumcu, MGM Eyüpsultan ve MGM Şişli **birbirinden bağımsız** GitHub Actions workflow'larıdır.
 
-Bu düzen ortak saat workflow'una, Cloudflare sırrına veya GitHub'ın zamanlanmış `schedule` olaylarına bağımlı değildir. Her istasyonun ayrı concurrency kilidi vardır. Bir toplayıcının hatası diğer iki istasyonun döngüsünü durdurmaz; iptal edilmemiş başarısız bir tur da kendi sonraki denemesini planlar.
+Her biri:
 
-Çanakçı MGM'deki gibi, `main` dalındaki normal bir kod/yapılandırma değişikliği de üç toplayıcıyı uyandırır. İstasyonların kendi çıktı dosyaları `paths-ignore` kapsamındadır; böylece bir istasyonun kendi commit'i tekrar tetiklenip döngü oluşturmaz. Her workflow'un `actions: write` izni yalnızca kendi bir sonraki çalışmasını `GITHUB_TOKEN` ile kuyruğa alması için kullanılır.
+1. 5 dakikada bir çalışır.
+2. Kendi kaynağından güncel ölçümü alır.
+3. Ölçümü doğrular; 20 dakikadan eski veriyi güncel kabul etmez.
+4. Kendi 72 saatlik sıcaklık/yağış arşivini günceller.
+5. Yalnızca kendi dosyalarını `main/site/data/` altında yayımlar.
+6. Başarılı veri güncellemesinden sonra ortak Pages publisher'ı tetikler.
 
-| İstasyon | İş akışı | Güncel veri | Arşiv |
+Bir istasyonun başarısız olması diğer iki istasyonu durdurmaz.
+
+| İstasyon | Workflow | Güncel veri | Arşiv |
 |---|---|---|---|
-| ENKA Balmumcu | `.github/workflows/main-station-refresh.yml` | WeatherLink currentvalues.html | 72 saatlik sıcaklık |
-| MGM Eyüpsultan | `.github/workflows/eyupsultan-mgm-refresh.yml` | MGM 18101 | 72 saatlik sıcaklık ve yağış |
-| MGM Şişli | `.github/workflows/sisli-mgm-refresh.yml` | MGM 18401 | 72 saatlik sıcaklık ve yağış |
+| ENKA Balmumcu | `.github/workflows/main-station-refresh.yml` | ENKA currentvalues.html | 72 saat sıcaklık |
+| MGM Eyüpsultan | `.github/workflows/eyupsultan-mgm-refresh.yml` | MGM 18101 | 72 saat sıcaklık + yağış |
+| MGM Şişli | `.github/workflows/sisli-mgm-refresh.yml` | MGM 18401 | 72 saat sıcaklık + yağış |
 
-Her toplayıcı yalnızca kendi istasyon dosyalarını günceller. Bir istasyondaki hata diğer istasyonların çalışmasını durdurmaz. İstasyon gözlemleri ve arşivleri `main/site/data/` altında saklanır.
+### GFS
 
-### Tahminler, radar ve yayın
+`.github/workflows/meteopt-gfs-live.yml` ana GFS akışıdır.
 
-- **MeteoPT GFS:** `.github/workflows/meteopt-gfs-monitor.yml` ana izleyicisi 10 dakikada bir kontrol yapar.
-- **GFS yedek kontrolü:** `.github/workflows/meteopt-gfs-monitor-backup.yml`, ana izleyicide beklenen zaman aralığında çalışma yoksa onu yeniden tetikler. Bu yedek kontrol yalnızca GFS içindir; İstanbul istasyonları bu mekanizmaya bağlı değildir.
-- **ECMWF:** Kendi ayrı iş akışıyla alınır ve GFS geçmişinden ayrı saklanır.
-- **Yağış radarı:** Kendi izleme iş akışını kullanır.
-- **GitHub Pages:** `.github/workflows/publish-live-site.yml`, tüm istasyon ve GFS veri dallarının en güncel durumunu her 5 dakikada bir birleştirip tek bir Pages deployment'ı yapar. Veri toplayıcıları artık Pages deploy etmez; böylece istasyon güncellemeleri birbirinin deployment'ını iptal etmez.
+- 10 dakikada bir kontrol eder.
+- MeteoPT GFS döngüsünü takip eder.
+- Tamamlanan döngünün verisini `gfs-watch-state` dalına kaydeder.
+- GFS verisi değiştiğinde ortak Pages publisher'ı tetikler.
+- Telegram raporu mevcut GFS bildirim akışından gönderilir.
+
+GFS verisi istasyon verilerinden bağımsız saklanır.
+
+### GitHub Pages
+
+`.github/workflows/publish-live-site.yml` **tek Pages deployment noktasıdır**.
+
+Publisher:
+
+- GFS verisini `gfs-watch-state` dalından,
+- Köy GFS verisini `koy-gfs-data` dalından,
+- Köy MGM verisini `koy-mgm-data` dalından,
+- İstanbul istasyonlarını `main/site/data/` altından
+
+alarak tek bir site paketi oluşturur ve GitHub Pages'e yayımlar.
+
+İstasyon veya GFS toplayıcıları doğrudan Pages deploy etmez. Böylece aynı anda birden fazla workflow'un Pages deployment'ı üzerinde yarışması engellenir.
+
+Publisher ayrıca 5 dakikalık zamanlanmış çalışmaya sahiptir; veri güncellendiğinde toplayıcı tarafından da doğrudan tetiklenir.
 
 ## Veri saklama
 
-- `main/site/data/`: ENKA, Eyüpsultan ve Şişli'nin güncel gözlemleri ile istasyon arşivleri.
-- `gfs-watch-state`: GFS işleme geçmişi, veritabanı ve yayıma hazırlanan GFS verileri.
+- `main/site/data/`: İstanbul istasyonlarının güncel gözlemleri ve arşivleri.
+- `gfs-watch-state`: GFS veritabanı, run geçmişi ve yayıma hazırlanan GFS verileri.
 - `koy-mgm-data`: Çanakçı MGM gözlem ve arşiv verileri.
 - `koy-gfs-data`: Çanakçı GFS verileri.
 
 ## Telegram bildirimleri
 
-Tamamlanan GFS çevrimleri için rapor ve karşılaştırma görselleri Telegram üzerinden gönderilir. Depo ayarlarında şu GitHub Actions secrets tanımlı olmalıdır:
+Tamamlanan GFS çevrimleri için rapor ve karşılaştırma görselleri Telegram üzerinden gönderilir.
+
+Gerekli GitHub Actions secrets:
 
 - `TELEGRAM_TOKEN`
 - `CHAT_ID`
 
+## Mimari ilkesi
+
+Bu projede canlı veri toplama ile Pages deployment'ı birbirinden ayrıdır:
+
+```
+ENKA ────────┐
+Eyüpsultan ──┤
+Şişli ───────┤
+GFS ─────────┤
+Köy GFS ─────┤
+Köy MGM ─────┘
+       │
+       ▼
+  Veri dalları
+       │
+       ▼
+Tek Pages Publisher
+       │
+       ▼
+GitHub Pages
+```
+
+Amaç basit: **veri toplayıcıları birbirini beklemez; yalnızca ortak yayın noktası Pages'tir.**
+
 ## Sürüm yönetimi
 
-Resmî sürümün tek kaynağı `site/version.json` dosyasıdır. Web arayüzü ve bildirimler sürüm bilgisini buradan alır.
+Resmî sürümün tek kaynağı `site/version.json` dosyasıdır.
 
-- **PATCH:** Hata düzeltmesi veya küçük iyileştirme (ör. 1.4.3 → 1.4.4).
-- **MINOR:** Geriye uyumlu yeni özellik (ör. 1.4.3 → 1.5.0).
-- **MAJOR:** Büyük mimari değişiklik veya uyumsuzluk (ör. 1.4.3 → 2.0.0).
+- **PATCH:** hata düzeltmesi veya küçük iyileştirme.
+- **MINOR:** geriye uyumlu yeni özellik.
+- **MAJOR:** büyük mimari değişiklik veya uyumsuzluk.
 
 Yalnızca dokümantasyon değişiklikleri uygulama sürümünü artırmaz.
