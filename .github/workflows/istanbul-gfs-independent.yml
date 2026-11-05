@@ -164,13 +164,17 @@ jobs:
           fi
 
           if [ "$new_run" = "$old_run" ]; then
-            echo "Istanbul GFS cycle $new_run already published; no rebuild needed."
-            exit 0
+            run_count="$(find state/gfs/runs -type f -name '*.json' | wc -l | tr -d ' ')"
+            if [ "$run_count" -ge 4 ]; then
+              echo "Istanbul GFS cycle $new_run already published; history complete; no rebuild needed."
+              exit 0
+            fi
+            echo "Current cycle already exists but four-cycle history is incomplete; rebuilding publication bundle."
+          else
+            cp "$RUNNER_TEMP/istanbul-gfs/latest.json" state/gfs/latest.json
+            cp "$RUNNER_TEMP/istanbul-gfs/f72.json" state/gfs/f72/latest.json
+            cp "$RUNNER_TEMP/istanbul-gfs/latest.json" "state/gfs/runs/$new_run.json"
           fi
-
-          cp "$RUNNER_TEMP/istanbul-gfs/latest.json" state/gfs/latest.json
-          cp "$RUNNER_TEMP/istanbul-gfs/f72.json" state/gfs/f72/latest.json
-          cp "$RUNNER_TEMP/istanbul-gfs/latest.json" "state/gfs/runs/$new_run.json"
 
           # One-time migration: seed missing historical MeteoPT cycles from the
           # existing MeteoPT archive so the new canonical branch can immediately
