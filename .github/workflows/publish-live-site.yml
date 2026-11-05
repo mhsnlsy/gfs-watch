@@ -1,0 +1,111 @@
+name: Publish Live Website
+
+on:
+  schedule:
+    - cron: "*/5 * * * *"
+  workflow_dispatch:
+
+permissions:
+  contents: read
+  pages: write
+  id-token: write
+
+# Pages is the only shared publication resource.
+# Collectors never deploy Pages; this workflow always assembles the latest
+# available data from all source branches and publishes one coherent site.
+concurrency:
+  group: live-pages-publisher
+  cancel-in-progress: false
+
+jobs:
+  publish:
+    name: Assemble and deploy latest live data
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - name: Check out website source and live station data
+        uses: actions/checkout@v5
+        with:
+          ref: main
+          path: source
+          fetch-depth: 1
+
+      - name: Check out GFS forecast data
+        uses: actions/checkout@v5
+        with:
+          ref: gfs-watch-state
+          path: forecast-data
+          fetch-depth: 1
+
+      - name: Check out Köy GFS data
+        uses: actions/checkout@v5
+        with:
+          ref: koy-gfs-data
+          path: koy-data
+          fetch-depth: 1
+
+      - name: Check out Köy MGM data
+        uses: actions/checkout@v5
+        with:
+          ref: koy-mgm-data
+          path: koy-mgm-data
+          fetch-depth: 1
+
+      - name: Assemble live website
+        env:
+          PUSH_API_URL: ${{ vars.PUSH_API_URL }}
+        run: |
+          set -euo pipefail
+          mkdir -p _site/data
+          cp -a source/site/. _site/
+
+          if [ -s forecast-data/public/latest.json ]; then
+            cp -a forecast-data/public/. _site/data/
+            echo "GFS payload present."
+          else
+            echo "GFS payload unavailable; publishing latest station data."
+          fi
+
+          for file in \
+            station-observation.json \
+            station-temperature-history.json \
+            eyupsultan-station-observation.json \
+            eyupsultan-station-temperature-history.json \
+            eyupsultan-station-rain-history.json \
+            sisli-station-observation.json \
+            sisli-station-temperature-history.json \
+            sisli-station-rain-history.json
+          do
+            if [ -s "source/site/data/$file" ]; then
+              cp "source/site/data/$file" "_site/data/$file"
+            fi
+          done
+
+          printf '{"apiBaseUrl":"%s"}' "$PUSH_API_URL" > _site/push-config.json
+
+          mkdir -p _site/koy-data
+          if [ -d koy-data/gfs ]; then
+            cp -a koy-data/gfs _site/koy-data/
+          fi
+          if [ -d koy-mgm-data/mgm ]; then
+            mkdir -p _site/koy-data/mgm
+            cp -a koy-mgm-data/mgm/. _site/koy-data/mgm/
+          fi
+
+          touch _site/.nojekyll
+          test -s _site/index.html
+          test -s _site/data/station-observation.json
+          test -s _site/data/eyupsultan-station-observation.json
+          test -s _site/data/sisli-station-observation.json
+
+      - name: Configure GitHub Pages
+        uses: actions/configure-pages@v6
+
+      - name: Upload website artifact
+        uses: actions/upload-pages-artifact@v4
+        with:
+          path: _site
+
+      - name: Deploy website
+        id: deployment
+        uses: actions/deploy-pages@v4
