@@ -6,7 +6,7 @@ import math
 import os
 import re
 import time
-from datetime import datetime, timezone
+from datetime import datetime, timedelta, timezone
 from html import unescape
 from pathlib import Path
 from zoneinfo import ZoneInfo
@@ -18,6 +18,7 @@ from PIL import Image, ImageEnhance, ImageFilter
 TR_TZ = ZoneInfo("Europe/Istanbul")
 CURRENT_URL = "https://w.enka.com/camhd/cam1/c.jpg"
 HOME_URL = "https://w.enka.com/camhd/cam1/index.html"
+HISTORY_URL = "https://w.enka.com/weather/downld02.txt"
 POLL_STALE_MINUTES = 15
 
 WIND_DIRECTIONS_TR = {
@@ -212,6 +213,56 @@ def _reject_older_observation(observation):
         )
 
 
+def _fetch_enka_history_samples():
+    """Fetch ENKA WeatherLink's exported 48-hour archive and return the latest 24 hours."""
+    headers = {
+        "User-Agent": "Mozilla/5.0 (compatible; GFS-Watch/4.1)",
+        "Cache-Control": "no-cache, no-store, max-age=0",
+        "Pragma": "no-cache",
+        "Referer": "https://w.enka.com/weather/",
+    }
+    response = requests.get(
+        HISTORY_URL,
+        params={"_gfs_watch": int(time.time() * 1000)},
+        headers=headers,
+        timeout=25,
+    )
+    response.raise_for_status()
+    now_local = datetime.now(TR_TZ)
+    cutoff = now_local - timedelta(hours=24)
+    samples = []
+    pattern = re.compile(r"^\\s*(\\d{2}/\\d{2}/\\d{2})\\s+(\\d{1,2}:\\d{2})\\s+([-+]?\\d+(?:[.,]\\d+)?)\\s+")
+    for line in response.text.splitlines():
+        match = pattern.match(line)
+        if not match:
+            continue
+        try:
+            local_dt = datetime.strptime(
+                f"{match.group(1)} {match.group(2)}", "%d/%m/%y %H:%M"
+            ).replace(tzinfo=TR_TZ)
+            temperature = float(match.group(3).replace(",", "."))
+        except (ValueError, TypeError):
+            continue
+        if not math.isfinite(temperature) or not (cutoff <= local_dt <= now_local + timedelta(minutes=5)):
+            continue
+        observed_utc = local_dt.astimezone(timezone.utc).isoformat(timespec="seconds")
+        samples.append({
+            "logged_at_utc": observed_utc,
+            "observed_at_utc": observed_utc,
+            "temperature_2m_c": temperature,
+            "station_pressure_hpa": None,
+            "humidity_percent": None,
+            "wind_speed_10m_kmh": None,
+            "wind_direction_cardinal": None,
+            "wind_direction_tr": None,
+        })
+    samples.sort(key=lambda sample: sample["observed_at_utc"])
+    if not samples:
+        raise ValueError("ENKA downld02.txt içinde son 24 saate ait sıcaklık kaydı bulunamadı.")
+    print(f"[ENKA HISTORY] WeatherLink downld02: {len(samples)} sıcaklık kaydı / son 24 saat.")
+    return samples
+
+
 def update_temperature_history(observation):
     """Append distinct fresh ENKA measurements to a rolling 72-hour archive."""
     history_path = Path(
@@ -232,6 +283,18 @@ def update_temperature_history(observation):
             raise ValueError("İstasyon sıcaklık geçmişi samples alanı liste değil.")
     else:
         samples = []
+
+    # ENKA's WeatherLink export is the authoritative source for the 24-hour
+    # temperature curve. Keep OCR as a live fallback/current-point source.
+    try:
+        source_samples = _fetch_enka_history_samples()
+        merged = {sample.get("observed_at_utc"): sample for sample in samples if sample.get("observed_at_utc")}
+        for sample in source_samples:
+            merged[sample["observed_at_utc"]] = sample
+        samples = list(merged.values())
+        print("[TEMPERATURE LOG] ENKA 24 saat geçmişi WeatherLink downld02.txt ile güncellendi.")
+    except Exception as error:
+        print(f"[ENKA HISTORY] WeatherLink geçmişi alınamadı; yerel OCR arşivi korunuyor: {error}")
 
     logged_at = datetime.now(timezone.utc)
     observed_at = observation["observed_at_utc"]
