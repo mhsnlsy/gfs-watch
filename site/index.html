@@ -2904,15 +2904,6 @@
             }
           }catch(_){sisliStationHistorySamples=[];}
         }
-        if(rainHistoryResponse&&rainHistoryResponse.ok){
-          try{
-            const rainDocument=await rainHistoryResponse.json();
-            if(rainDocument&&rainDocument.schema==="gfs-watch.station-rain-history.v1"&&Array.isArray(rainDocument.samples)){
-              if(stationKey==="eyupsultan"&&String(rainDocument.station_id)==="18101")eyupsultanStationRainHistorySamples=rainDocument.samples;
-              if(stationKey==="sisli"&&String(rainDocument.station_id)==="18401")sisliStationRainHistorySamples=rainDocument.samples;
-            }
-          }catch(_){}
-        }
         renderStationHistory();
         renderStationCard(activeStation==="enka"?enkaStationObservation:activeStation==="eyupsultan"?eyupsultanStationObservation:sisliStationObservation);
       }catch(error){
