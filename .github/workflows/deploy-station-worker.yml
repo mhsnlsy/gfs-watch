@@ -18,22 +18,62 @@ concurrency:
 jobs:
   deploy:
     runs-on: ubuntu-latest
-    timeout-minutes: 10
+    timeout-minutes: 15
     steps:
       - uses: actions/checkout@v4
+
       - uses: actions/setup-node@v4
         with:
           node-version: 22
-      - run: npm install --global wrangler@4
+
+      - name: Install Wrangler
+        run: npm install --global wrangler@4
+
+      - name: Ensure D1 database exists
+        working-directory: cloudflare/stations
+        env:
+          CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+          CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
+        shell: bash
+        run: |
+          set -euo pipefail
+          DB_JSON="$(wrangler d1 list --json)"
+          DB_ID="$(node -e '
+            const fs=require("fs");
+            const a=JSON.parse(fs.readFileSync(0,"utf8"));
+            const x=(Array.isArray(a)?a:[]).find(d=>d.name==="gfs-watch-stations");
+            process.stdout.write(x?.uuid || x?.id || "");
+          ' <<< "$DB_JSON")"
+
+          if [ -z "$DB_ID" ]; then
+            echo "D1 database gfs-watch-stations bulunamadı; oluşturuluyor."
+            CREATE_JSON="$(wrangler d1 create gfs-watch-stations --location=weur --json)"
+            DB_ID="$(node -e '
+              const fs=require("fs");
+              const a=JSON.parse(fs.readFileSync(0,"utf8"));
+              process.stdout.write(a?.uuid || a?.id || a?.database_id || "");
+            ' <<< "$CREATE_JSON")"
+          fi
+
+          if [ -z "$DB_ID" ]; then
+            echo "D1 database ID alınamadı."
+            exit 1
+          fi
+
+          echo "D1 database ID: $DB_ID"
+          sed -i "s/REPLACE_WITH_CLOUDFLARE_D1_DATABASE_ID/$DB_ID/" wrangler.toml
+          grep -q "database_id = \"$DB_ID\"" wrangler.toml
+
       - name: Apply D1 schema
         working-directory: cloudflare/stations
         run: wrangler d1 execute gfs-watch-stations --remote --file=schema.sql
         env:
-          CLOUDFLARE_API_TOKEN: \${{ secrets.CLOUDFLARE_API_TOKEN }}
-          CLOUDFLARE_ACCOUNT_ID: \${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
+          CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+          CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
+
       - name: Deploy Worker
         working-directory: cloudflare/stations
         run: wrangler deploy
         env:
-          CLOUDFLARE_API_TOKEN: \${{ secrets.CLOUDFLARE_API_TOKEN }}
-          CLOUDFLARE_ACCOUNT_ID: \${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
+          CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+          CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
