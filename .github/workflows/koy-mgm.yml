@@ -138,6 +138,7 @@ jobs:
               "observed_at_utc":obs.get("observed_at_utc"),
               "logged_at_utc":obs.get("fetched_at_utc"),
               "temperature_2m_c":obs.get("temperature_2m_c"),
+              "precipitation_10m_mm":obs.get("precipitation_10m_mm"),
               "precipitation_1h_mm":obs.get("precipitation_1h_mm"),
               "precipitation_6h_mm":obs.get("precipitation_6h_mm"),
               "humidity_percent":obs.get("humidity_percent"),
@@ -175,6 +176,16 @@ jobs:
           else:
               archive={}
           samples=archive.get("samples",[]) if isinstance(archive.get("samples"),list) else []
+          # Bootstrap the dedicated rainfall database from the already stored
+          # seven-day station history, so the initial archive is backfilled.
+          history_path=pathlib.Path("output/history.json")
+          legacy=[]
+          if history_path.exists():
+              try:
+                  legacy_doc=json.loads(history_path.read_text(encoding="utf-8"))
+                  legacy=legacy_doc.get("samples",[]) if isinstance(legacy_doc.get("samples"),list) else []
+              except Exception:
+                  legacy=[]
           observed=obs.get("observed_at_utc")
           logged=obs.get("fetched_at_utc") or datetime.now(timezone.utc).isoformat()
           sample={
@@ -188,10 +199,11 @@ jobs:
           }
           # One row per MGM observation timestamp; retries update rather than duplicate.
           by_time={}
-          for item in samples:
+          for item in legacy+samples:
               key=item.get("observed_at_utc") or item.get("logged_at_utc")
               if key:
-                  by_time[key]=item
+                  merged=by_time.setdefault(key,{})
+                  merged.update({k:v for k,v in item.items() if v is not None})
           key=observed or logged
           if key in by_time:
               old=by_time[key]
