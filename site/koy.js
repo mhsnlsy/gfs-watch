@@ -12,7 +12,7 @@ let busy=false, f72=null, comparison=null, stationHistory=null;
 async function get(path){const url=path.startsWith("./")?path:BASE+path;const r=await fetch(url+"?v="+Date.now(),{cache:"no-store"});if(!r.ok)throw Error("HTTP "+r.status+" · "+url);return r.json()}
 function pointsOf(run,max=180){return (run?.forecast_6_hourly||[]).filter(p=>Number(p.forecast_hour)>0&&Number(p.forecast_hour)<=max).sort((a,b)=>Number(a.forecast_hour)-Number(b.forecast_hour))}
 function svgLine(runs,metric,title,unit,maxHour=72){
- const usable=runs.map(r=>({run:r,points:pointsOf(r,maxHour).map(p=>({h:Number(p.forecast_hour),v:num(p[metric])})).filter(p=>p.v!=null)})).filter(x=>x.points.length);
+ const usable=runs.map((r,runIndex)=>({run:r,runIndex,points:pointsOf(r,maxHour).map(p=>({h:Number(p.forecast_hour),v:num(p[metric])})).filter(p=>p.v!=null)})).filter(x=>x.points.length);
  if(!usable.length)return '<div class="chart-empty">Tahmin verisi bekleniyor…</div>';
  const hours=[...new Set(usable.flatMap(x=>x.points.map(p=>p.h)))].sort((a,b)=>a-b);
  const values=usable.flatMap(x=>x.points.map(p=>p.v));let lo=Math.min(...values),hi=Math.max(...values);
@@ -28,7 +28,14 @@ function svgLine(runs,metric,title,unit,maxHour=72){
  const upper=[],lower=[];
  hours.forEach((h,i)=>{const vals=lookup.map(m=>m.get(h)).filter(v=>v!=null);if(vals.length){upper.push([x(h),y(Math.max(...vals))]);lower.push([x(h),y(Math.min(...vals))])}});
  if(upper.length>1){const band=upper.concat(lower.reverse()).map(p=>p.join(",")).join(" ");s+='<polygon points="'+band+'" fill="#75b9c8" opacity=".16"/>'}
- usable.forEach((item,i)=>{const path=item.points.map((p,j)=>(j?"L":"M")+x(p.h)+" "+y(p.v)).join(" ");s+='<path d="'+path+'" fill="none" stroke="'+COLORS[i]+'" stroke-width="'+(i===0?3:1.8)+'" '+(i===0?'':'stroke-dasharray="5 4"')+' stroke-linecap="round" stroke-linejoin="round"/>';if(i===0)item.points.forEach(p=>{s+='<circle cx="'+x(p.h)+'" cy="'+y(p.v)+'" r="2.5" fill="'+COLORS[i]+'"><title>F'+p.h+' · '+fmt(p.v)+' '+unit+'</title></circle>'})});
+ usable.forEach(item=>{
+  const i=item.runIndex,color=COLORS[i%COLORS.length],latest=i===0;
+  const path=item.points.map((p,j)=>(j?"L":"M")+x(p.h)+" "+y(p.v)).join(" ");
+  s+='<path d="'+path+'" fill="none" stroke="'+color+'" stroke-width="'+(latest?3:1.8)+'" '+(latest?'':'stroke-dasharray="5 4"')+' stroke-linecap="round" stroke-linejoin="round"/>';
+  if(latest)item.points.forEach(p=>{
+   s+='<circle cx="'+x(p.h)+'" cy="'+y(p.v)+'" r="2.5" fill="'+color+'"><title>F'+p.h+' · '+fmt(p.v)+' '+unit+'</title></circle>';
+  });
+ });
  s+='</svg>';return s;
 }
 function svgDaily(runs,metric,title,unit,mode){
@@ -125,6 +132,24 @@ function renderStationHistory(doc){
  $("station-temperature-trend").innerHTML=svgStationHistory(samples,"temperature_2m_c","Çanakçı sıcaklık","°C");
  $("station-rain-trend").innerHTML=svgStationHistory(samples,"precipitation_1h_mm","Çanakçı yağış","mm");
 }
+function gfsRunLabel(run){
+ const date=new Date(run?.run_id_utc||"");
+ if(!Number.isFinite(date.getTime()))return "GFS döngüsü";
+ const day=new Intl.DateTimeFormat("tr-TR",{timeZone:"UTC",day:"2-digit",month:"short"}).format(date).replace(/\./g,"");
+ return day+" · "+String(date.getUTCHours()).padStart(2,"0")+"Z";
+}
+function renderRunLegend(source){
+ const host=$("next-72h-legend");
+ if(!host)return;
+ if(!source.length){
+  host.innerHTML='<span class="next-72h-legend-loading">GFS döngü bilgisi bekleniyor…</span>';
+  return;
+ }
+ host.innerHTML=source.slice(0,4).map((run,index)=>{
+  const latest=index===0,color=COLORS[index%COLORS.length];
+  return '<span class="next-72h-legend-item'+(latest?' is-latest':'')+'" role="listitem"><i class="next-72h-legend-line" style="--run-color:'+color+'" aria-hidden="true"></i><span>'+esc(gfsRunLabel(run))+'</span>'+(latest?'<b class="next-72h-legend-tag">EN GÜNCEL</b>':'')+'</span>';
+ }).join("");
+}
 function renderRuns(d,f72){
  const runs=(d?.runs||[]).slice(0,4);
  $("report-meta").textContent=runs.length?"Son döngü: "+ts(runs[0].run_id_utc)+" · "+runs.length+" çıktı hazır":"Son model döngüsü bekleniyor";
@@ -143,6 +168,7 @@ function renderRuns(d,f72){
   holder.innerHTML='<a class="notification-image-link" href="'+src+'" target="_blank" rel="noopener"><img class="notification-image" src="'+src+'" alt="'+esc(alt)+'"></a>';
  });
  const source=runs.length?runs:(f72?[f72]:[]);
+ renderRunLegend(source);
  $("next-72h-meta").textContent=source.length?source.length+" GFS döngüsü karşılaştırılıyor":"Model verisi bekleniyor";
  $("next72-temperature").innerHTML=svgLine(source,"temperature_2m_c","2 m sıcaklık","°C",72);
  $("next72-precipitation").innerHTML=svgLine(source,"precipitation_6h_mm","6 saatlik yağış","mm",72);
