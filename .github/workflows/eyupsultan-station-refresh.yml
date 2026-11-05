@@ -66,8 +66,9 @@ jobs:
         run: |
           mkdir -p forecast-data/public
           cp -f public/eyupsultan-station-observation.json forecast-data/public/
-          cp -f public/eyupsultan-station-temperature-history.json forecast-data/public/ || true
-          cp -f public/eyupsultan-station-rain-history.json forecast-data/public/ || true
+          # History files are written directly into forecast-data/public by the scraper.
+          test -s forecast-data/public/eyupsultan-station-temperature-history.json
+          test -s forecast-data/public/eyupsultan-station-rain-history.json
           cd forecast-data
           git config user.name "github-actions[bot]"
           git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
