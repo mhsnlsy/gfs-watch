@@ -2155,7 +2155,7 @@
       const observed=hasStation&&station.observed_at_utc?new Date(station.observed_at_utc):null;
       const observedValid=observed&&!Number.isNaN(observed.getTime());
       const ageMinutes=observedValid?Math.max(0,(Date.now()-observed.getTime())/60000):null;
-      const staleAfter=hasStation&&Number.isFinite(station.stale_after_minutes)?station.stale_after_minutes:(station&&station.station_id==="18101"?15:15);
+      const staleAfter=hasStation&&Number.isFinite(station.stale_after_minutes)?station.stale_after_minutes:(station&&station.station_id==="18101"?20:20);
       const isFresh=stationObservationIsFresh(station);
       $("temperature").textContent=isFresh&&numeric(station.temperature_2m_c)?fmt(station.temperature_2m_c,1)+"°":"—°";
       $("wind").innerHTML=isFresh&&numeric(station.wind_speed_10m_kmh)?fmt(station.wind_speed_10m_kmh,1)+'<span class="unit">km/sa</span>':'—<span class="unit">km/sa</span>';
