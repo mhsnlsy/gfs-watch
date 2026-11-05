@@ -1,0 +1,189 @@
+<!doctype html>
+<html lang="tr">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>GFS · İstanbul · Önümüzdeki 72 saat</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;500;600;700&family=Manrope:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+<style>
+:root{color-scheme:dark;--line:rgba(204,225,239,.11);--text:#edf5f8;--muted:#9bb1bf;--cyan:#7dd3d7}
+*{box-sizing:border-box}
+html,body{margin:0;padding:0;background:transparent;color:var(--text);font-family:"DM Sans",sans-serif}
+.next-72h-head{display:flex;justify-content:space-between;align-items:flex-start;gap:10px;margin-bottom:12px}
+.next-72h-head h2{font:700 20px/1.2 Manrope,sans-serif;letter-spacing:-.045em;margin:5px 0 0}
+.next-72h-head p{font-size:9px;color:var(--muted);margin:5px 0 0;line-height:1.45}
+.section-kicker{font-size:10px;text-transform:uppercase;letter-spacing:.15em;color:var(--cyan);font-weight:700}
+.next-72h-badge{font-size:9px;color:#b8d7df;border:1px solid var(--line);padding:6px 8px;border-radius:8px;white-space:nowrap;max-width:42%}
+.next-72h-grid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:16px 20px}
+.next-72h-card{position:relative;min-width:0;padding:12px 10px 9px;border:1px solid rgba(204,225,239,.08);border-radius:14px;background:rgba(4,19,29,.17)}
+.next-72h-card-head{display:flex;align-items:center;justify-content:space-between;gap:8px}
+.next-72h-card-head h3{font:700 14px Manrope,sans-serif;margin:0}
+.next-72h-card-head span{font-size:8px;color:var(--muted);white-space:nowrap}
+.next-72h-chart{height:190px;width:100%;margin-top:8px;min-width:0;position:relative}
+.next-72h-chart svg{display:block;width:100%;height:100%;overflow:visible}
+.chart-empty{color:var(--muted);font-size:12px;padding:28px 0}
+.next-72h-legend{display:flex;flex-wrap:wrap;align-items:center;gap:9px 20px;margin:6px 2px 0;padding:11px 2px 7px;border-top:1px solid rgba(204,225,239,.10)}
+.next-72h-legend-item{display:inline-flex;align-items:center;gap:8px;color:#c2d3dc;font-size:11px;line-height:1.35;white-space:nowrap}
+.next-72h-legend-line{display:inline-block;width:30px;flex:none;border-top:2px dashed var(--run-color)}
+.next-72h-legend-item.is-latest .next-72h-legend-line{border-top:3px solid var(--run-color)}
+.next-72h-legend-tag{color:#8fd7ba;background:rgba(39,166,105,.13);border:1px solid rgba(143,215,186,.22);border-radius:999px;padding:2px 6px;font-size:8px;font-weight:800;letter-spacing:.04em}
+.next-72h-legend-loading{color:var(--muted);font-size:10px}
+.next-72h-legend-note{margin:2px 2px 0;color:#8fa7b5;font-size:10px;line-height:1.45}
+.gfs-point-tooltip{position:absolute;z-index:40;min-width:166px;max-width:min(220px,calc(100% - 12px));padding:8px 10px;border:1px solid rgba(125,211,215,.38);border-radius:10px;background:rgba(4,18,29,.97);box-shadow:0 9px 25px rgba(0,0,0,.42);color:#eaf5f8;font-size:10px;line-height:1.4;pointer-events:none;backdrop-filter:blur(8px)}
+.gfs-point-tooltip[hidden]{display:none}
+.gfs-point-tooltip-head{display:flex;align-items:center;gap:7px;color:#d8f4f0;font-size:10px}
+.gfs-point-tooltip-head i{width:8px;height:8px;flex:none;border-radius:50%}
+.gfs-point-tooltip-time{margin-top:5px;color:#a9bfca;font-size:9px}
+.gfs-point-tooltip-value{margin-top:3px;color:#fff;font:700 16px/1.2 Manrope,sans-serif}
+.gfs-point-tooltip-value small{font:500 9px "DM Sans",sans-serif;color:#a9bfca}
+.gfs-point-tooltip-meta{margin-top:4px;color:#8fa7b5;font-size:9px}
+@media(max-width:700px){.next-72h-grid{grid-template-columns:minmax(0,1fr)}.next-72h-chart{height:190px}}
+@media(max-width:560px){.next-72h-head h2{font-size:18px}.next-72h-grid{gap:7px}.next-72h-card{padding:8px 6px 6px}.next-72h-card-head h3{font-size:13px}.next-72h-legend{gap:8px 13px;margin-top:3px;padding-top:9px}.next-72h-legend-item{font-size:10px;white-space:normal}.next-72h-legend-line{width:23px}.next-72h-legend-note{font-size:9px}.gfs-point-tooltip{min-width:150px;max-width:min(200px,calc(100% - 12px));padding:7px 9px}.gfs-point-tooltip-value{font-size:14px}}
+</style>
+</head>
+<body>
+<div class="next-72h-head">
+ <div><div class="section-kicker">GFS · İSTANBUL</div><h2>Önümüzdeki 72 saat</h2><p>Son dört GFS döngüsünün aynı tahmin saatlerindeki aralığı ve güncel İstanbul tahmini.</p></div>
+ <span class="next-72h-badge" id="next-72h-meta">Model verisi bekleniyor</span>
+</div>
+<div class="next-72h-grid">
+ <article class="next-72h-card"><div class="next-72h-card-head"><h3>Sıcaklık</h3><span>°C</span></div><div class="next-72h-chart" id="next72-temperature"><div class="chart-empty">Tahmin bekleniyor…</div></div></article>
+ <article class="next-72h-card"><div class="next-72h-card-head"><h3>Yağış</h3><span>mm / 3 saat</span></div><div class="next-72h-chart" id="next72-precipitation"><div class="chart-empty">Tahmin bekleniyor…</div></div></article>
+</div>
+<div class="next-72h-legend" id="next-72h-legend" role="list" aria-label="Çizgi renkleri ve GFS döngüleri"><span class="next-72h-legend-loading">GFS döngüleri yükleniyor…</span></div>
+<p class="next-72h-legend-note">Turkuaz düz çizgi en güncel çıktıyı, kesikli çizgiler önceki GFS döngülerini gösterir. Renkler iki grafikte de aynı döngüye karşılık gelir.</p>
+<script>
+(()=>{"use strict";
+const COLORS=["#7dd3d7","#8abce8","#f1c98b","#b38be8"];
+const $=id=>document.getElementById(id);
+const num=v=>v==null||v===""||!Number.isFinite(Number(v))?null:Number(v);
+const fmt=(v,d=1)=>v==null?"—":Number(v).toLocaleString("tr-TR",{minimumFractionDigits:d,maximumFractionDigits:d});
+const esc=s=>String(s??"").replace(/[&<>"]/g,c=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;"}[c]));
+const ts=v=>{if(!v)return "—";const d=new Date(v);return Number.isFinite(d.getTime())?new Intl.DateTimeFormat("tr-TR",{timeZone:"Europe/Istanbul",day:"2-digit",month:"2-digit",hour:"2-digit",minute:"2-digit"}).format(d)+" TSİ":"—"};
+const tsGfsValid=v=>{if(!v)return "—";const d=new Date(v);return Number.isFinite(d.getTime())?new Intl.DateTimeFormat("tr-TR",{timeZone:"UTC",day:"2-digit",month:"2-digit",hour:"2-digit",minute:"2-digit"}).format(d)+" TSİ":"—"};
+const pointsOf=(run,max=72)=>(run?.forecast_6_hourly||[]).filter(p=>{const h=Number(p.forecast_hour);return Number.isFinite(h)&&h>=3&&h<=max&&h%3===0}).sort((a,b)=>Number(a.forecast_hour)-Number(b.forecast_hour));
+function realizedErrorStats(runs,samples){
+ const obs=Array.isArray(samples?.samples)?samples.samples:[];
+ if(!obs.length)return null;
+ const errors=[],byHour=new Map(),now=Date.now();
+ for(const run of runs||[])for(const p of pointsOf(run,72)){
+  const t=Date.parse(p.valid_time_utc||"");
+  if(!Number.isFinite(t)||t>now)continue;
+  let best=null,bestGap=Infinity;
+  for(const s of obs){const st=Date.parse(s.observed_at_utc||s.logged_at_utc||"");if(!Number.isFinite(st))continue;const gap=Math.abs(st-t);if(gap<bestGap){best=s;bestGap=gap}}
+  if(!best||bestGap>45*60*1000)continue;
+  const forecast=num(p.temperature_2m_c),observed=num(best.temperature_2m_c);
+  if(forecast==null||observed==null)continue;
+  const error=forecast-observed,h=Number(p.forecast_hour);
+  errors.push(error);if(!byHour.has(h))byHour.set(h,[]);byHour.get(h).push(error);
+ }
+ if(errors.length<2)return null;
+ const mean=errors.reduce((a,v)=>a+v,0)/errors.length;
+ const sigma=Math.sqrt(errors.reduce((a,v)=>a+(v-mean)**2,0)/errors.length);
+ const sigmaByHour=new Map();
+ for(const [h,vals] of byHour){if(vals.length<2)continue;const m=vals.reduce((a,v)=>a+v,0)/vals.length;sigmaByHour.set(h,Math.sqrt(vals.reduce((a,v)=>a+(v-m)**2,0)/vals.length))}
+ return {sigma,count:errors.length,sigmaByHour};
+}
+function gfsRunLabel(run){
+ const date=new Date(run?.run_id_utc||"");
+ if(!Number.isFinite(date.getTime()))return "GFS döngüsü";
+ return ts(date.toISOString())+" · "+String(date.getUTCHours()).padStart(2,"0")+"Z";
+}
+function renderRunLegend(source){
+ const host=$("next-72h-legend");
+ if(!source.length){host.innerHTML='<span class="next-72h-legend-loading">GFS döngü bilgisi bekleniyor…</span>';return;}
+ host.innerHTML=source.slice(0,4).map((run,index)=>{
+  const latest=index===0,color=COLORS[index%COLORS.length];
+  return '<span class="next-72h-legend-item'+(latest?' is-latest':'')+'" role="listitem"><i class="next-72h-legend-line" style="--run-color:'+color+'" aria-hidden="true"></i><span>'+esc(gfsRunLabel(run))+'</span>'+(latest?'<b class="next-72h-legend-tag">EN GÜNCEL</b>':'')+'</span>';
+ }).join("");
+}
+function svgLine(runs,metric,title,unit,verification=null){
+ const usable=runs.map((run,runIndex)=>({run,runIndex,points:pointsOf(run,72).map(p=>({h:Number(p.forecast_hour),v:num(p[metric]),validTime:p.valid_time_utc})).filter(p=>p.v!=null)})).filter(item=>item.points.length);
+ if(!usable.length)return '<div class="chart-empty">Tahmin verisi bekleniyor…</div>';
+ const hours=Array.from(new Set(usable.flatMap(item=>item.points.map(p=>p.h)))).sort((a,b)=>a-b);
+ const values=usable.flatMap(item=>item.points.map(p=>p.v));let lo=Math.min(...values),hi=Math.max(...values);
+ if(metric==="temperature_2m_c"){lo=Math.floor((lo-2)/2)*2;hi=Math.ceil((hi+2)/2)*2;}
+ else{lo=Math.min(0,lo);hi=Math.max(1,Math.ceil(hi*1.15));}
+ if(hi===lo)hi=lo+1;
+ const sigma=verification?.sigma||null;
+ if(sigma&&metric==="temperature_2m_c"){lo=Math.min(lo,Math.min(...values)-sigma);hi=Math.max(hi,Math.max(...values)+sigma);}
+ const W=760,H=190,L=45,R=12,T=20,B=28,PW=W-L-R,PH=H-T-B;
+ const x=h=>L+(hours.length===1?PW/2:(h-hours[0])/(hours[hours.length-1]-hours[0]||1))*PW;
+ const y=v=>T+(hi-v)*PH/(hi-lo);
+ let out='<svg class="koy-svg" viewBox="0 0 '+W+' '+H+'" role="img" aria-label="'+esc(title)+'">';
+ for(let j=0;j<=3;j++){const v=lo+(hi-lo)*j/3,yy=y(v);out+='<line x1="'+L+'" y1="'+yy+'" x2="'+(W-R)+'" y2="'+yy+'" stroke="#294253" stroke-dasharray="3 5"/><text x="'+(L-7)+'" y="'+(yy+3)+'" text-anchor="end" fill="#91aab8" font-size="10">'+fmt(v,0)+'</text>';}
+ const axisPoint=usable.flatMap(item=>item.points).find(p=>p.h===hours[0]);
+ const axisLabel=v=>{if(!v)return "—";const d=new Date(v);if(!Number.isFinite(d.getTime()))return "—";d.setTime(d.getTime()-3*3600000);return new Intl.DateTimeFormat("tr-TR",{timeZone:"Europe/Istanbul",day:"numeric",month:"long",hour:"2-digit",minute:"2-digit",hourCycle:"h23"}).format(d)+" TSİ";};
+ hours.forEach(h=>{if(h!==hours[0]&&h%12!==0&&h!==hours[hours.length-1])return;const label=h===hours[0]?axisLabel(axisPoint?.validTime):"+"+h+"s";out+='<text x="'+x(h)+'" y="'+(H-7)+'" text-anchor="middle" fill="#91aab8" font-size="10">'+esc(label)+'</text>';});
+ const lookup=usable.map(item=>new Map(item.points.map(p=>[p.h,p.v])));
+ const upper=[],lower=[];
+ hours.forEach(h=>{const vals=lookup.map(map=>map.get(h)).filter(v=>v!=null);if(vals.length){upper.push([x(h),y(Math.max(...vals))]);lower.push([x(h),y(Math.min(...vals))]);}});
+ if(upper.length>1){const polygon=upper.concat(lower.slice().reverse()).map(p=>p.join(",")).join(" ");out+='<polygon points="'+polygon+'" fill="#75b9c8" opacity=".16"/>';}
+ if(sigma&&metric==="temperature_2m_c"){
+  const upperSigma=[],lowerSigma=[];
+  hours.forEach(h=>{const point=usable[0].points.find(p=>p.h===h);if(!point)return;const local=verification.sigmaByHour?.get(h),width=Number.isFinite(local)&&local>0?local:sigma;upperSigma.push([x(h),y(point.v+width)]);lowerSigma.push([x(h),y(point.v-width)]);});
+  if(upperSigma.length>1){const polygon=upperSigma.concat(lowerSigma.slice().reverse()).map(p=>p.join(",")).join(" ");out+='<polygon points="'+polygon+'" fill="#7dd3d7" opacity=".13"/>';}
+  out+='<text x="'+(W-R-4)+'" y="'+(T+12)+'" text-anchor="end" fill="#91aab8" font-size="10">Gerçekleşen hata σ ±'+fmt(sigma,1)+'°C · '+verification.count+' doğrulama</text>';
+ }
+ usable.forEach(item=>{
+  const index=item.runIndex,color=COLORS[index%COLORS.length],latest=index===0;
+  const path=item.points.map((p,j)=>(j?"L":"M")+x(p.h)+" "+y(p.v)).join(" ");
+  out+='<path d="'+path+'" fill="none" stroke="'+color+'" stroke-width="'+(latest?3:1.8)+'" '+(latest?'':'stroke-dasharray="5 4"')+' stroke-linecap="round" stroke-linejoin="round"/>';
+  if(latest)item.points.forEach(p=>{out+='<circle cx="'+x(p.h)+'" cy="'+y(p.v)+'" r="2.5" fill="'+color+'"><title>F'+p.h+' · '+fmt(p.v)+' '+unit+'</title></circle>';});
+  item.points.forEach(p=>{out+='<circle class="gfs-point-target" cx="'+x(p.h)+'" cy="'+y(p.v)+'" r="0" data-run="'+esc(gfsRunLabel(item.run))+'" data-current="'+(latest?"true":"false")+'" data-valid="'+esc(tsGfsValid(p.validTime))+'" data-step="'+esc("F"+p.h+" saat")+'" data-value="'+esc(fmt(p.v,1))+'" data-unit="'+esc(unit)+'" data-color="'+color+'" aria-hidden="true"/>';});
+ });
+ out+='</svg>';return out;
+}
+let activeTooltip=null;
+function bindTooltip(containerId){
+ const host=$(containerId),svg=host?.querySelector("svg.koy-svg");if(!host||!svg)return;
+ const tooltip=document.createElement("div");tooltip.className="gfs-point-tooltip";tooltip.hidden=true;tooltip.setAttribute("role","status");host.appendChild(tooltip);
+ let pinned=false;const targets=[...svg.querySelectorAll(".gfs-point-target")],currentTargets=targets.filter(target=>target.dataset.current==="true");
+ function nearestPoint(event,maxDistance){const matrix=svg.getScreenCTM();if(!matrix)return null;let nearest=null,best=maxDistance;const point=svg.createSVGPoint();for(const target of targets){point.x=Number(target.getAttribute("cx"));point.y=Number(target.getAttribute("cy"));const screen=point.matrixTransform(matrix);const distance=Math.hypot(event.clientX-screen.x,event.clientY-screen.y);if(distance<best){best=distance;nearest=target;}}return nearest;}
+ function latestPointAtSameTime(hit){if(!hit||!currentTargets.length)return null;const hoveredX=Number(hit.getAttribute("cx"));let nearest=null,best=Infinity;for(const target of currentTargets){const distance=Math.abs(Number(target.getAttribute("cx"))-hoveredX);if(distance<best){best=distance;nearest=target;}}return nearest;}
+ function hide(){tooltip.hidden=true;pinned=false;if(activeTooltip?.tooltip===tooltip)activeTooltip=null;}
+ function show(target,event,lock=false){if(!target)return;const run=target.dataset.run||"GFS döngüsü",valid=target.dataset.valid||"—",step=target.dataset.step||"",value=target.dataset.value||"—",unit=target.dataset.unit||"",color=target.dataset.color||"#7dd3d7";tooltip.innerHTML='<div class="gfs-point-tooltip-head"><i style="background:'+color+'"></i><strong>Güncel GFS tahmini</strong></div><div class="gfs-point-tooltip-time">Döngü · '+esc(run)+'<br>Geçerlilik · '+esc(valid)+'</div><div class="gfs-point-tooltip-value">'+esc(value)+' <small>'+esc(unit)+'</small></div><div class="gfs-point-tooltip-meta">Tahmin adımı '+esc(step)+'</div>';tooltip.hidden=false;pinned=lock;const box=host.getBoundingClientRect(),tx=event.clientX-box.left,ty=event.clientY-box.top,tw=tooltip.offsetWidth,th=tooltip.offsetHeight;const left=Math.max(6,Math.min(host.clientWidth-tw-6,tx+14));let top=ty-th-13;if(top<6)top=ty+13;top=Math.max(6,Math.min(host.clientHeight-th-6,top));tooltip.style.left=left+"px";tooltip.style.top=top+"px";if(lock)activeTooltip={host,tooltip,hide};}
+ svg.addEventListener("pointermove",event=>{if(event.pointerType==="touch"||pinned)return;const hit=nearestPoint(event,28),target=latestPointAtSameTime(hit);if(target)show(target,event,false);else hide();});
+ svg.addEventListener("pointerleave",()=>{if(!pinned)hide();});
+ svg.addEventListener("pointerdown",event=>{if(event.pointerType!=="touch"&&event.pointerType!=="pen")return;const hit=nearestPoint(event,44),target=latestPointAtSameTime(hit);if(target){event.preventDefault();show(target,event,true);}else hide();});
+}
+document.addEventListener("pointerdown",event=>{if(activeTooltip&&!activeTooltip.host.contains(event.target))activeTooltip.hide();},true);
+async function load(){
+ try{
+  const cache=Date.now();
+  const latestResponse=await fetch("./data/latest.json?v="+cache,{cache:"no-store"});
+  if(!latestResponse.ok)throw new Error("GFS latest.json HTTP "+latestResponse.status);
+  const document=await latestResponse.json();
+  const runs=Array.isArray(document.comparison_runs)?document.comparison_runs.slice():[];
+  if(document.run_id_utc&&Array.isArray(document.forecast_6_hourly)&&!runs.some(run=>run.run_id_utc===document.run_id_utc)){
+   runs.push({run_id_utc:document.run_id_utc,forecast_6_hourly:document.forecast_6_hourly});
+  }
+  runs.sort((a,b)=>Date.parse(b.run_id_utc||"")-Date.parse(a.run_id_utc||""));
+  const source=runs.slice(0,4);
+  $("next-72h-meta").textContent=source.length?source.length+" GFS döngüsü karşılaştırılıyor":"Model verisi bekleniyor";
+  renderRunLegend(source);
+  let historyPath="./data/station-temperature-history.json";
+  try{const selected=localStorage.getItem("istanbul-hava-station");if(selected==="eyupsultan")historyPath="./data/eyupsultan-station-temperature-history.json";else if(selected==="sisli")historyPath="./data/sisli-station-temperature-history.json";}catch(_){}
+  const historyResponse=await fetch(historyPath+"?v="+cache,{cache:"no-store"}).catch(()=>null);
+  const history=historyResponse&&historyResponse.ok?await historyResponse.json().catch(()=>null):null;
+  const verification=realizedErrorStats(source,history);
+  $("next72-temperature").innerHTML=svgLine(source,"temperature_2m_c","2 m sıcaklık","°C",verification);
+  $("next72-precipitation").innerHTML=svgLine(source,"precipitation_6h_mm","6 saatlik yağış","mm / 3 saat",null);
+  bindTooltip("next72-temperature");bindTooltip("next72-precipitation");
+  reportHeight();
+ }catch(error){
+  $("next-72h-meta").textContent="GFS verisi bekleniyor";
+  $("next-72h-legend").innerHTML='<span class="next-72h-legend-loading">'+esc(error.message||"GFS karşılaştırması yüklenemedi")+'</span>';
+  reportHeight();
+ }
+}
+function reportHeight(){if(window.parent===window)return;const height=Math.ceil(document.documentElement.scrollHeight);window.parent.postMessage({type:"gfs-cycle-widget-height",height},"*");}
+if("ResizeObserver"in window){new ResizeObserver(reportHeight).observe(document.documentElement);}
+window.addEventListener("load",reportHeight);
+load();window.setInterval(load,300000);
+})();
+</script>
+</body>
+</html>
