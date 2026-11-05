@@ -59,6 +59,13 @@ jobs:
           path: istanbul-gfs-data
           fetch-depth: 1
 
+      - name: Check out Istanbul MGM data
+        uses: actions/checkout@v5
+        with:
+          ref: istanbul-mgm-data
+          path: istanbul-mgm-data
+          fetch-depth: 1
+
       - name: Check out Köy GFS data
         uses: actions/checkout@v5
         with:
@@ -113,7 +120,9 @@ jobs:
             sisli-station-temperature-history.json \
             sisli-station-rain-history.json
           do
-            if [ -s "source/site/data/$file" ]; then
+            if [ -s "istanbul-mgm-data/site/data/$file" ]; then
+              cp "istanbul-mgm-data/site/data/$file" "_site/data/$file"
+            elif [ -s "source/site/data/$file" ]; then
               cp "source/site/data/$file" "_site/data/$file"
             fi
           done
