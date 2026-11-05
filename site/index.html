@@ -2720,6 +2720,33 @@
     }
     // Station observations refresh independently from forecast/model data.
     // A delayed GFS/ECMWF payload must never block live station readings.
+    async function refreshStationHealth(){
+      const url=STATION_HEALTH_URLS[activeStation];
+      const box=$("station-health"),node=$("station-health-text");
+      if(!box||!node||!url)return;
+      try{
+        const response=await fetch(url+"?t="+Date.now(),{cache:"no-store"});
+        if(!response.ok)throw new Error("health");
+        const health=await response.json();
+        const age=Number(health.data_age_minutes);
+        const checked=Date.parse(health.checked_at_utc||"");
+        const watchdogAge=Number.isFinite(checked)?Math.max(0,(Date.now()-checked)/60000):999;
+        const healthy=health.status==="active"&&Number.isFinite(age)&&age<10&&watchdogAge<12;
+        box.hidden=false;
+        box.classList.toggle("recovery",health.status==="recovery"||(!healthy&&age<20));
+        box.classList.toggle("stale",Number.isFinite(age)&&age>=20);
+        const ageText=Number.isFinite(age)?Math.round(age)+" dk":"—";
+        if(health.status==="recovery")node.textContent="Veri akışı yavaşladı · watchdog recovery tetikledi · son veri "+ageText+" önce";
+        else if(Number.isFinite(age)&&age>=20)node.textContent="Veri akışı eski · son veri "+ageText+" önce";
+        else if(healthy)node.textContent="Veri akışı aktif · watchdog kontrolü güncel";
+        else node.textContent="Veri akışı izleniyor · son veri "+ageText+" önce";
+      }catch(_){
+        box.hidden=false;
+        box.classList.add("recovery");
+        node.textContent="Watchdog sağlık kaydı henüz alınamadı";
+      }
+    }
+
     async function refreshStationObservations(){
       const cacheKey=Date.now();
       const requests=[
