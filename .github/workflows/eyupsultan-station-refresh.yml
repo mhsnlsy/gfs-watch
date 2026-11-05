@@ -1,8 +1,7 @@
 name: Eyüpsultan Station Refresh
 
-# Do not use schedule:. GitHub cron does not run reliably on this repository,
-# which is why the station repeatedly went stale. This workflow queues its own
-# next run, and the ENKA workflow restarts the chain if it ever stops.
+# Independent five-minute polling. This workflow reads and writes only
+# the Eyüpsultan station branch; it does not depend on other station workflows.
 
 on:
   push:
@@ -17,7 +16,6 @@ on:
 
 permissions:
   contents: write
-  actions: write
 
 concurrency:
   group: eyupsultan-weather-refresh
@@ -47,15 +45,16 @@ jobs:
       - name: Fetch Eyüpsultan observation
         id: scrape
         run: |
-          set -e
+          set -euo pipefail
           node scripts/eyupsultan_weather.mjs
           test -s public/eyupsultan-station-observation.json
           AGE=$(jq -r '.station_observation.age_minutes // 999' public/eyupsultan-station-observation.json)
           TEMP=$(jq -r '.station_observation.temperature_2m_c' public/eyupsultan-station-observation.json)
           SOURCE=$(jq -r '.station_observation.source' public/eyupsultan-station-observation.json)
           echo "Age: $AGE minutes · $TEMP C · MGM $SOURCE"
-          if [ "$AGE" -gt 20 ]; then
-            echo "Observation is older than 30 minutes."
+          STALE=$(jq -r '.station_observation.is_stale // false' public/eyupsultan-station-observation.json)
+          if [ "$AGE" -gt 20 ] || [ "$STALE" = "true" ]; then
+            echo "Eyüpsultan observation is stale (limit 20 minutes); preserving the last published data."
             exit 1
           fi
         env:
@@ -66,6 +65,7 @@ jobs:
         id: publish
         if: steps.scrape.outcome == 'success'
         run: |
+          set -euo pipefail
           mkdir -p forecast-data/public
           cp -f public/eyupsultan-station-observation.json forecast-data/public/
           # History files are written directly into forecast-data/public by the scraper.
@@ -79,6 +79,15 @@ jobs:
             echo "No station changes to publish."
             echo "changed=false" >> "$GITHUB_OUTPUT"
             exit 0
+          fi
+          unexpected="$(git diff --cached --name-only | grep -Ev '^(public/eyupsultan-station-observation\.json|public/eyupsultan-station-temperature-history\.json|public/eyupsultan-station-rain-history\.json)
+          git push origin HEAD:eyupsultan-state
+          echo "Station data pushed to dedicated eyupsultan-state."
+ || true)"
+          if [ -n "$unexpected" ]; then
+            echo "Eyüpsultan publication contains files outside its allowlist:"
+            printf '%s\n' "$unexpected"
+            exit 1
           fi
           git commit -m "Refresh MGM Eyüpsultan station observation [$(date -u +%H:%M)]"
           git push origin HEAD:eyupsultan-state
