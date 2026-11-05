@@ -12,6 +12,7 @@ import os
 from pathlib import Path
 
 from telegram import Bot
+from telegram import InputMediaPhoto
 
 
 def main() -> None:
@@ -56,9 +57,25 @@ def main() -> None:
                 text=report,
                 disable_web_page_preview=True,
             )
-            for path in paths:
-                with path.open("rb") as photo:
-                    await bot.send_photo(chat_id=chat_id, photo=photo)
+            media = []
+            handles = []
+            try:
+                for index, path in enumerate(paths):
+                    handle = path.open("rb")
+                    handles.append(handle)
+                    media.append(
+                        InputMediaPhoto(
+                            media=handle,
+                            caption=(
+                                "📊 İstanbul GFS · 4'lü döngü karşılaştırması"
+                                if index == 0 else None
+                            ),
+                        )
+                    )
+                await bot.send_media_group(chat_id=chat_id, media=media)
+            finally:
+                for handle in handles:
+                    handle.close()
 
     asyncio.run(send())
     print(f"[TELEGRAM CANONICAL] run={run_id}; report=1; pngs={len(paths)}")
