@@ -69,11 +69,17 @@ async function requestMgm(url) {
 async function fetchFromMgm() {
   let row, firstError;
   try {
-    row = await requestMgm(MGM_STATION_URL);
+    row = await requestMgm(MGM_STATION_API_URL);
   } catch (error) {
     firstError = error;
-    console.warn("[MGM] İstasyon uç noktası başarısız; İstanbul listesi deneniyor:", error.message);
-    row = await requestMgm(MGM_CITY_URL);
+    console.warn("[MGM] Şişli API başarısız; web istasyon uç noktası deneniyor:", error.message);
+    try {
+      row = await requestMgm(MGM_STATION_URL);
+    } catch (webError) {
+      firstError = webError;
+      console.warn("[MGM] Şişli web istasyon uç noktası başarısız; İstanbul listesi deneniyor:", webError.message);
+      row = await requestMgm(MGM_CITY_URL);
+    }
   }
   if (!row.veriZamani) throw new Error("MGM 18401 ölçüm zamanı yok");
   const observedAt = new Date(row.veriZamani);
