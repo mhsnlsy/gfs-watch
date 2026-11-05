@@ -51,8 +51,36 @@ function renderF72(d){
  if(pts.length){const p=pts[0];$("current-temp").textContent=fmt(num(p.temperature_2m_c))+"°";$("current-t850").innerHTML=fmt(num(p.temperature_850hpa_c))+'<span class="unit">°C</span>';$("current-wind").innerHTML=fmt(num(p.wind_speed_10m_kmh),0)+'<span class="unit">km/sa</span>';$("current-wind850").innerHTML=fmt(num(p.wind_speed_850hpa_kmh),0)+'<span class="unit">km/sa</span>';$("current-rain").innerHTML=fmt(num(p.precipitation_6h_mm))+'<span class="unit">mm</span>';$("current-meta").textContent="İlk tahmin adımı · "+ts(p.valid_time_utc)+" · model tahmini, canlı ölçüm değil"}
  const rainy=pts.filter(p=>num(p.precipitation_6h_mm)>0.1);$("rain-times").textContent=rainy.length?rainy.slice(0,6).map(p=>ts(p.valid_time_utc)+" · "+fmt(num(p.precipitation_6h_mm))+" mm / 6 saat").join("  |  "):"İlk 72 saatlik model adımlarında anlamlı yağış görünmüyor.";
 }
+function svgHistory24(runs,metric,title,unit){
+ const now=Date.now(),from=now-24*3600000,byTime=new Map();
+ (runs||[]).forEach((run,ri)=>{
+   pointsOf(run,180).forEach(p=>{
+     const t=new Date(p.valid_time_utc).getTime(),v=num(p[metric]);
+     if(!Number.isFinite(t)||t<from||t>now||v==null)return;
+     const key=new Date(t).toISOString();
+     const old=byTime.get(key);
+     if(!old||ri<old.ri)byTime.set(key,{t,v,ri,run});
+   });
+ });
+ const pts=[...byTime.values()].sort((a,b)=>a.t-b.t);
+ if(pts.length<2)return '<div class="chart-empty">Son 24 saate ait veri yok.</div>';
+ let lo=Math.min(...pts.map(p=>p.v)),hi=Math.max(...pts.map(p=>p.v));
+ if(metric.includes("temperature")){lo=Math.floor((lo-1)/2)*2;hi=Math.ceil((hi+1)/2)*2}
+ else {lo=0;hi=Math.max(1,Math.ceil(hi*1.15))}
+ if(hi===lo)hi=lo+1;
+ const W=760,H=150,L=34,R=8,T=14,B=25,PW=W-L-R,PH=H-T-B;
+ const x=t=>L+(t-pts[0].t)/(pts[pts.length-1].t-pts[0].t||1)*PW;
+ const y=v=>T+(hi-v)*PH/(hi-lo);
+ let s='<svg class="koy-svg" viewBox="0 0 '+W+' '+H+'" role="img" aria-label="'+esc(title)+'">';
+ for(let j=0;j<=2;j++){const v=lo+(hi-lo)*j/2,yy=y(v);s+='<line x1="'+L+'" y1="'+yy+'" x2="'+(W-R)+'" y2="'+yy+'" stroke="#294253" stroke-dasharray="3 5"/><text x="'+(L-5)+'" y="'+(yy+3)+'" text-anchor="end" fill="#91aab8" font-size="9">'+fmt(v,0)+'</text>'}
+ pts.forEach((p,i)=>{if(i===0||i===pts.length-1||new Date(p.t).getHours()%6===0){const d=new Date(p.t);const label=d.toLocaleTimeString("tr-TR",{timeZone:"Europe/Istanbul",hour:"2-digit",minute:"2-digit"});s+='<text x="'+x(p.t)+'" y="'+(H-7)+'" text-anchor="middle" fill="#91aab8" font-size="9">'+label+'</text>'}});
+ const path=pts.map((p,i)=>(i?"L":"M")+x(p.t)+" "+y(p.v)).join(" ");
+ s+='<path d="'+path+'" fill="none" stroke="#7dd3d7" stroke-width="2.6" stroke-linecap="round" stroke-linejoin="round"/>';
+ pts.forEach(p=>{s+='<circle cx="'+x(p.t)+'" cy="'+y(p.v)+'" r="2.7" fill="#7dd3d7"><title>'+new Date(p.t).toLocaleString("tr-TR",{timeZone:"Europe/Istanbul"})+' · '+fmt(p.v)+' '+unit+'</title></circle>'});
+ s+='</svg>';return s;
+}
 function renderRuns(d,f72){
- const runs=(d?.runs||[]).slice(0,4);$("report-meta").textContent=runs.length?"Son döngü: "+ts(runs[0].run_id_utc)+" · "+runs.length+" çıktı hazır":"Son model döngüsü bekleniyor";
+ const runs=(d?.runs||[]).slice(0,4);$("history24-meta").textContent=runs.length+" GFS döngüsünden geçmiş veriler";$("history24-temperature").innerHTML=svgHistory24(runs,"temperature_2m_c","Son 24 saat sıcaklık","°C");$("history24-precipitation").innerHTML=svgHistory24(runs,"precipitation_6h_mm","Son 24 saat yağış","mm");$("report-meta").textContent=runs.length?"Son döngü: "+ts(runs[0].run_id_utc)+" · "+runs.length+" çıktı hazır":"Son model döngüsü bekleniyor";
  $("run-list").textContent=runs.length?runs.map((r,i)=>(i+1)+". "+ts(r.run_id_utc)+" · "+pointsOf(r).length+" adım").join("   |   "):"Son dört döngü verisi bekleniyor…";
  $("chart-legend").innerHTML=runs.map((r,i)=>'<span><i style="background:'+COLORS[i]+'"></i>'+esc(ts(r.run_id_utc))+'</span>').join("");
  $("chart-temp").innerHTML=svgDaily(runs,"temperature_2m_c","2 m sıcaklık","°C","candle");
