@@ -86,9 +86,6 @@
   #meteopt-gfs-table .meteopt-data-table td:nth-child(n+3){width:48px!important;min-width:48px!important}
 }
 
-.water-gfs-layout{display:grid;grid-template-columns:minmax(0,1fr) minmax(230px,280px);gap:16px;align-items:start}.water-gfs-layout>#meteopt-gfs-table{width:max-content!important;max-width:100%!important}.water-gfs-layout>#iski-water-card{padding-top:29px;min-width:0}.iski-mini-card{background:linear-gradient(145deg,rgba(18,43,61,.94),rgba(12,31,46,.96));border:1px solid var(--line);border-radius:15px;padding:14px;min-width:0}.iski-mini-top,.iski-mini-bottom{display:flex;justify-content:space-between;align-items:center;gap:8px;color:var(--muted);font-size:10px}.iski-mini-top span:first-child{color:#c8d9e1;font-weight:700}.iski-mini-value{font:800 clamp(32px,4vw,43px)/1.1 Manrope,sans-serif;letter-spacing:-.06em;margin:17px 0 12px;color:var(--cyan);font-variant-numeric:tabular-nums}.iski-mini-value small{font:600 15px 'DM Sans',sans-serif;margin-left:3px;color:#9bb1bf}.iski-mini-track{height:7px;background:rgba(255,255,255,.09);border-radius:99px;overflow:hidden}.iski-mini-track span{display:block;width:0;height:100%;border-radius:99px;background:linear-gradient(90deg,#63b8c2,#8fd7ba)}.iski-mini-bottom{margin-top:12px;flex-wrap:wrap}@media(max-width:850px){.water-gfs-layout{grid-template-columns:minmax(0,1fr)}.water-gfs-layout>#meteopt-gfs-table{width:100%!important}.water-gfs-layout>#iski-water-card{padding-top:0}.water-gfs-layout>#iski-water-card .section-head{margin-bottom:10px}}
-
-
 /* Mobile: show all seven columns at once; no horizontal slider. */
 @media(max-width:560px){
   #meteopt-gfs-table .meteopt-table-scroll{
@@ -264,7 +261,6 @@
 /* Android WebView: the GFS table is content, never a vertical scroll container. */
 @media (max-width: 850px), (pointer: coarse) {
   #meteopt-gfs-table,
-  .water-gfs-layout,
   #meteopt-gfs-table .meteopt-table-card,
   #meteopt-gfs-table .meteopt-table-scroll {
     position: relative !important;
