@@ -1,0 +1,63 @@
+name: Station Data Watchdog
+
+on:
+  schedule:
+    - cron: "3-58/5 * * * *"
+  workflow_dispatch:
+
+permissions:
+  contents: read
+  actions: write
+
+concurrency:
+  group: station-data-watchdog
+  cancel-in-progress: false
+
+jobs:
+  watchdog:
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - name: Check station freshness and recover stale workflows
+        env:
+          GH_TOKEN: ${{ github.token }}
+          REPO: ${{ github.repository }}
+        run: |
+          set -euo pipefail
+
+          check_station() {
+            local name="$1"
+            local branch="$2"
+            local file="$3"
+            local workflow="$4"
+
+            echo "=== $name ==="
+
+            json="$(curl -fsSL "https://raw.githubusercontent.com/$REPO/$branch/$file")"
+            age="$(printf '%s' "$json" | jq -r '.station_observation.age_minutes // 9999')"
+            stale="$(printf '%s' "$json" | jq -r '.station_observation.is_stale // false')"
+
+            echo "Published age: $age minutes; stale=$stale"
+
+            if awk "BEGIN { exit !($age < 10) }" && [ "$stale" != "true" ]; then
+              echo "$name is healthy."
+              return 0
+            fi
+
+            echo "$name is older than 10 minutes or marked stale. Checking active workflow runs..."
+
+            active="$(gh api "repos/$REPO/actions/workflows/$workflow/runs?branch=main&per_page=10"               --jq '[.workflow_runs[] | select(.status == "queued" or .status == "in_progress")] | length')"
+
+            if [ "$active" -gt 0 ]; then
+              echo "$name already has an active recovery/run; no duplicate dispatch."
+              return 0
+            fi
+
+            echo "Dispatching recovery run for $name..."
+            gh workflow run "$workflow" --repo "$REPO" --ref main
+            echo "$name recovery dispatched."
+          }
+
+          check_station "ENKA Balmumcu" "enka-state" "public/station-observation.json" "enka-station-refresh.yml"
+          check_station "Eyüpsultan" "eyupsultan-state" "public/eyupsultan-station-observation.json" "eyupsultan-station-refresh.yml"
+          check_station "Şişli" "sisli-state" "public/sisli-station-observation.json" "sisli-station-refresh.yml"
