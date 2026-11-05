@@ -34,7 +34,7 @@ jobs:
             local branch="$2"
             local file="$3"
             local workflow="$4"
-            local key="$5"
+            local key="${5:-sisli}"
 
             echo "=== $name ==="
 
