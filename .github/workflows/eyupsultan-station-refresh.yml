@@ -36,7 +36,7 @@ jobs:
       - name: Check out published station data
         uses: actions/checkout@v4
         with:
-          ref: gfs-watch-state
+          ref: eyupsultan-state
           path: forecast-data
 
       - name: Set up Node.js
@@ -80,18 +80,9 @@ jobs:
             echo "changed=false" >> "$GITHUB_OUTPUT"
             exit 0
           fi
-          git commit -m "Refresh MGM Eyüpsultan station observation [$(date -u +%H:%M)]"
-          for attempt in 1 2 3 4 5; do
-            git pull --rebase origin gfs-watch-state
-            if git push origin gfs-watch-state; then
-              echo "Station data pushed."
-              echo "changed=true" >> "$GITHUB_OUTPUT"
-              exit 0
-            fi
-            sleep $((attempt * 2))
-          done
-          echo "Could not publish Eyüpsultan data."
-          exit 1
+          git commit -m "Refresh MGM Şişli station observation [$(date -u +%H:%M)]"
+          git push origin HEAD:sisli-state
+          echo "Station data pushed to dedicated sisli-state."
 
       - name: Deploy changed station data to GitHub Pages (throttled)
         if: steps.publish.outputs.changed == 'true'
@@ -116,100 +107,3 @@ jobs:
           fi
           gh workflow run pages-live.yml --ref main --repo "$GITHUB_REPOSITORY"
           echo "Throttled Pages deployment dispatched for changed station data."
-
-      - name: Trigger MeteoPT GFS monitor on every five-minute cycle
-        if: always() && !cancelled()
-        env:
-          GH_TOKEN: ${{ github.token }}
-        run: |
-          active=$(gh run list --workflow=meteopt-gfs-monitor.yml --limit 20 --json status --jq '[.[] | select(.status=="queued" or .status=="in_progress" or .status=="pending" or .status=="waiting" or .status=="requested")] | length')
-          if [ "$active" = "0" ]; then
-            gh workflow run meteopt-gfs-monitor.yml --ref main --repo "$GITHUB_REPOSITORY"
-            echo "MeteoPT GFS monitor dispatched."
-          else
-            echo "MeteoPT GFS monitor already active ($active); skipping duplicate dispatch."
-          fi
-
-      # Run radar on alternating five-minute station cycles: one scan every ten minutes.
-      # Always load the last committed radar history before running a scan.
-      # Do not let the older main-branch copies roll the radar history backwards.
-      - name: Restore radar history from dedicated branch
-        id: restore-radar-state
-        if: always() && !cancelled()
-        env:
-          GITHUB_TOKEN: ${{ github.token }}
-        run: |
-          set -euo pipefail
-          git clone --quiet --depth 1 --branch radar-state "https://x-access-token:${GITHUB_TOKEN}@github.com/${GITHUB_REPOSITORY}.git" "$RUNNER_TEMP/radar-state-restore"
-          for file in radar_checks.jsonl radar_state.json radar_alert_state.json; do
-            if [ -f "$RUNNER_TEMP/radar-state-restore/$file" ]; then
-              cp "$RUNNER_TEMP/radar-state-restore/$file" "$GITHUB_WORKSPACE/$file"
-              echo "Restored $file from radar-state."
-            else
-              rm -f "$GITHUB_WORKSPACE/$file"
-              echo "No $file exists on radar-state yet."
-            fi
-          done
-
-      - name: Set up Python 3.12 for radar monitor
-        if: always() && !cancelled()
-        uses: actions/setup-python@v5
-        with:
-          python-version: "3.12"
-
-      - name: Install radar monitor dependencies
-        id: install-radar-deps
-        if: always() && !cancelled()
-        run: python -m pip install --disable-pip-version-check requests pillow numpy
-
-      - name: Run RainViewer radar scan every ten minutes
-        if: always() && !cancelled() && steps.restore-radar-state.outcome == 'success' && steps.install-radar-deps.outcome == 'success'
-        run: |
-          now=$(date -u +%s)
-          minute=$(( (now / 300) % 2 ))
-          if [ "$minute" -ne 0 ]; then
-            echo "This is the five-minute midpoint; next radar scan is in five minutes."
-            exit 0
-          fi
-          echo "Running the ten-minute RainViewer scan."
-          python -u radar_monitor.py
-        env:
-          TELEGRAM_TOKEN: ${{ secrets.TELEGRAM_TOKEN }}
-          CHAT_ID: ${{ secrets.CHAT_ID }}
-          RADAR_STATE_PATH: ${{ github.workspace }}/radar_state.json
-          RADAR_ALERT_STATE_PATH: ${{ github.workspace }}/radar_alert_state.json
-          RADAR_CHECK_LOG_PATH: ${{ github.workspace }}/radar_checks.jsonl
-
-      - name: Persist radar history on dedicated branch
-        if: always() && !cancelled() && steps.restore-radar-state.outcome == 'success'
-        run: |
-          if [ ! -f radar_checks.jsonl ] && [ ! -f radar_state.json ] && [ ! -f radar_alert_state.json ]; then
-            echo "No radar data created on this five-minute tick."
-            exit 0
-          fi
-          cd "$GITHUB_WORKSPACE"
-          git clone --quiet --branch radar-state "https://x-access-token:${GITHUB_TOKEN}@github.com/${GITHUB_REPOSITORY}.git" "$RUNNER_TEMP/radar-state"
-          cd "$RUNNER_TEMP/radar-state"
-          cp "$GITHUB_WORKSPACE/radar_checks.jsonl" . 2>/dev/null || true
-          cp "$GITHUB_WORKSPACE/radar_state.json" . 2>/dev/null || true
-          cp "$GITHUB_WORKSPACE/radar_alert_state.json" . 2>/dev/null || true
-          git config user.name "github-actions[bot]"
-          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
-          git add radar_checks.jsonl radar_state.json radar_alert_state.json
-          if git diff --cached --quiet; then
-            echo "Radar state is already current."
-            exit 0
-          fi
-          git commit -m "Persist radar check"
-          for attempt in 1 2 3 4 5; do
-            git pull --rebase origin radar-state
-            if git push origin HEAD:radar-state; then
-              echo "Radar data persisted to radar-state."
-              exit 0
-            fi
-            sleep $((attempt * 2))
-          done
-          echo "Radar-state persistence failed after five attempts."
-          exit 1
-        env:
-          GITHUB_TOKEN: ${{ github.token }}
