@@ -1,0 +1,83 @@
+name: Deploy İstanbul'un Havası Live
+
+on:
+  push:
+    branches: [main]
+  workflow_dispatch:
+
+permissions:
+  contents: read
+  pages: write
+  id-token: write
+
+concurrency:
+  group: github-pages-live
+  cancel-in-progress: false
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+    environment:
+      name: github-pages
+      url: ${{ steps.deployment.outputs.page_url }}
+    steps:
+      - name: Check out website source
+        uses: actions/checkout@v4
+        with:
+          ref: main
+          path: source
+
+      - name: Check out published station and forecast data
+        uses: actions/checkout@v4
+        with:
+          ref: gfs-watch-state
+          path: forecast-data
+
+      - name: Check out Köy GFS data
+        uses: actions/checkout@v4
+        with:
+          ref: koy-gfs-data
+          path: koy-data
+
+      - name: Check out Köy MGM data
+        uses: actions/checkout@v4
+        with:
+          ref: koy-mgm-data
+          path: koy-mgm-data
+
+      - name: Assemble live website
+        env:
+          PUSH_API_URL: ${{ vars.PUSH_API_URL }}
+        run: |
+          set -euo pipefail
+          test -s forecast-data/public/latest.json
+          mkdir -p _site/data
+          cp -a source/site/. _site/
+          cp -a forecast-data/public/. _site/data/
+          printf '{"apiBaseUrl":"%s"}' "$PUSH_API_URL" > _site/push-config.json
+
+          mkdir -p _site/koy-data
+          if [ -d koy-data/gfs ]; then cp -a koy-data/gfs _site/koy-data/; fi
+          if [ -d koy-mgm-data/mgm ]; then
+            mkdir -p _site/koy-data/mgm
+            cp -a koy-mgm-data/mgm/. _site/koy-data/mgm/
+          fi
+
+          touch _site/.nojekyll
+          test -s _site/index.html
+          test -s _site/data/latest.json
+          test -s _site/data/station-observation.json
+          test -s _site/data/eyupsultan-station-observation.json
+          test -s _site/data/sisli-station-observation.json
+
+      - name: Configure GitHub Pages
+        uses: actions/configure-pages@v5
+
+      - name: Upload website artifact
+        uses: actions/upload-pages-artifact@v4
+        with:
+          path: _site
+
+      - name: Deploy website
+        id: deployment
+        uses: actions/deploy-pages@v4
