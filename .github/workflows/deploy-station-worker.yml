@@ -85,3 +85,13 @@ jobs:
         env:
           CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
           CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
+
+      - name: Smoke test station API
+        run: |
+          set -euo pipefail
+          curl --fail --silent --show-error --retry 5 --retry-delay 2 \
+            https://gfs-watch-stations.muhsin-ulusoy.workers.dev/api/health
+          echo
+          curl --fail --silent --show-error --retry 5 --retry-delay 2 \
+            https://gfs-watch-stations.muhsin-ulusoy.workers.dev/api/stations
+          echo
