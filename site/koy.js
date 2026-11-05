@@ -102,7 +102,8 @@ let f72=null,comparison=null,stationHistory=null,busy=false;
 async function refresh(){if(busy)return;busy=true;const button=$("refresh");button.disabled=true;button.textContent="Yükleniyor…";
  const results=await Promise.allSettled([get("f72/latest.json"),get("comparison.json"),get(MGM_BASE+"history.json")]);
  if(results[0].status==="fulfilled"){f72=results[0].value;renderF72(f72)}else{$("f72-chip").textContent="Veri bekleniyor";$("table-status").textContent="F72 bekleniyor"}
- if(results[1].status==="fulfilled")comparison=results[1].value;else comparison=null;\n if(results[2].status==="fulfilled"){stationHistory=results[2].value;renderStationHistory(stationHistory)}else{stationHistory=null;$("station-temperature-trend").innerHTML="<div class=\"station-trend-empty\">MGM istasyon geçmişi bekleniyor…</div>";$("station-rain-trend").innerHTML="<div class=\"station-trend-empty\">MGM istasyon geçmişi bekleniyor…</div>"}
+ if(results[1].status==="fulfilled")comparison=results[1].value;else comparison=null;
+ if(results[2].status==="fulfilled"){stationHistory=results[2].value;renderStationHistory(stationHistory)}else{stationHistory=null;$("station-temperature-trend").innerHTML="<div class=\"station-trend-empty\">MGM istasyon geçmişi bekleniyor…</div>";$("station-rain-trend").innerHTML="<div class=\"station-trend-empty\">MGM istasyon geçmişi bekleniyor…</div>"}
  renderRuns(comparison,f72);$("updated").textContent="Son kontrol: "+ts(new Date().toISOString());
  button.disabled=false;button.textContent="Verileri yenile";busy=false;
 }
