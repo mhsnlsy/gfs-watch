@@ -9,20 +9,19 @@ on:
       - "scripts/eyupsultan_weather.mjs"
       - "scripts/sisli_weather.mjs"
   schedule:
-    - cron: "*/5 * * * *"
+    - cron: "2-59/5 * * * *"
   workflow_dispatch:
 
 permissions:
   contents: write
 
-concurrency:
-  group: istanbul-stations-independent
-  cancel-in-progress: false
-
 jobs:
   enka:
     name: ENKA Balmumcu
     runs-on: ubuntu-latest
+    concurrency:
+      group: istanbul-enka-refresh
+      cancel-in-progress: true
     timeout-minutes: 5
     steps:
       - name: Checkout ENKA data branch
@@ -93,6 +92,9 @@ jobs:
   eyupsultan:
     name: MGM Eyüpsultan
     runs-on: ubuntu-latest
+    concurrency:
+      group: istanbul-eyupsultan-refresh
+      cancel-in-progress: true
     timeout-minutes: 5
     steps:
       - name: Checkout Eyüpsultan data branch
@@ -159,6 +161,9 @@ jobs:
   sisli:
     name: MGM Şişli
     runs-on: ubuntu-latest
+    concurrency:
+      group: istanbul-sisli-refresh
+      cancel-in-progress: true
     timeout-minutes: 5
     steps:
       - name: Checkout Şişli data branch
