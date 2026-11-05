@@ -1232,7 +1232,7 @@
     </div>
 
   </main>
-  <footer class="shell footer"><span><strong data-app-name>İstanbul'un Havası</strong> <span data-app-version>4.0</span></span><span>Veri kaynakları: ENKA Balmumcu Vantage PRO · MGM Eyüpsultan 18101 · MeteoPT GFS · MeteoPT ECMWF · Otomatik yenileme: 5 dakika</span></footer>
+  <footer class="shell footer"><span><strong data-app-name>İstanbul'un Havası</strong> <span data-app-version>4.0</span></span><span>Veri kaynakları: ENKA Balmumcu kamera OCR · MGM Eyüpsultan 18101 · MGM Şişli 18401 · MeteoPT GFS · ECMWF · Otomatik kontrol: 5 dakika</span></footer>
   <script>
     const DATA_URL="./data/latest.json";
     const ECMWF_DATA_URL="./data/ecmwf/latest.json";
@@ -1244,8 +1244,6 @@
     fetch("./version.json",{cache:"no-store"}).then(response=>response.ok?response.json():null).then(applyAppVersion).catch(()=>{});
     const STATION_URL="./data/station-observation.json";
     const STATION_HISTORY_URL="./data/station-temperature-history.json";
-    const STATION_CAMERA_BACKUP_URL="./data/station-camera-backup.json";
-    const STATION_CAMERA_BACKUP_HISTORY_URL="./data/station-camera-backup-history.json";
     const EYUPSULTAN_STATION_URL="./data/eyupsultan-station-observation.json";
     const EYUPSULTAN_STATION_HISTORY_URL="./data/eyupsultan-station-temperature-history.json";
     const SISLI_STATION_URL="./data/sisli-station-observation.json";
@@ -2754,27 +2752,16 @@
 
     async function refreshStationObservations(){
       const cacheKey=Date.now();
-      const requests=[
+      const [enkaResponse,eyupsultanResponse,sisliResponse]=await Promise.all([
         fetch(STATION_URL+"?t="+cacheKey,{cache:"no-store"}).catch(()=>null),
         fetch(EYUPSULTAN_STATION_URL+"?t="+cacheKey,{cache:"no-store"}).catch(()=>null),
-        fetch(SISLI_STATION_URL+"?t="+cacheKey,{cache:"no-store"}).catch(()=>null),
-        fetch(STATION_CAMERA_BACKUP_URL+"?t="+cacheKey,{cache:"no-store"}).catch(()=>null)
-      ];
-      const [enkaResponse,eyupsultanResponse,sisliResponse,cameraBackupResponse]=await Promise.all(requests);
+        fetch(SISLI_STATION_URL+"?t="+cacheKey,{cache:"no-store"}).catch(()=>null)
+      ]);
       if(enkaResponse&&enkaResponse.ok){
         try{
           const document=await enkaResponse.json();
           if(document?.schema==="gfs-watch.station-observation.v1"&&document.station_observation?.station_id==="ENKA-BALMUMCU-CAMERA-OCR"){
             enkaStationObservation=document.station_observation;
-          }
-        }catch(_){}
-      }
-      if(cameraBackupResponse&&cameraBackupResponse.ok){
-        try{
-          const document=await cameraBackupResponse.json();
-          const candidate=document?.station_observation;
-          if(document?.schema==="gfs-watch.station-observation.v1"&&candidate?.station_id==="ENKA-BALMUMCU-CAMERA-OCR"&&!stationObservationIsFresh(enkaStationObservation)&&stationObservationIsFresh(candidate)){
-            enkaStationObservation=candidate;
           }
         }catch(_){}
       }
@@ -2797,15 +2784,13 @@
       const cacheKey=Date.now();
       const observationUrl=stationKey==="eyupsultan"?EYUPSULTAN_STATION_URL:stationKey==="sisli"?SISLI_STATION_URL:STATION_URL;
       const historyUrl=stationKey==="eyupsultan"?EYUPSULTAN_STATION_HISTORY_URL:stationKey==="sisli"?SISLI_STATION_HISTORY_URL:STATION_HISTORY_URL;
-      const [observationResponse,historyResponse,eyupObservationResponse,eyupHistoryResponse,sisliObservationResponse,sisliHistoryResponse,cameraBackupResponse,cameraBackupHistoryResponse]=await Promise.all([
+      const [observationResponse,historyResponse,eyupObservationResponse,eyupHistoryResponse,sisliObservationResponse,sisliHistoryResponse]=await Promise.all([
         fetch(observationUrl+"?t="+cacheKey,{cache:"no-store"}).catch(()=>null),
         fetch(historyUrl+"?t="+cacheKey,{cache:"no-store"}).catch(()=>null),
         stationKey!=="eyupsultan"?fetch(EYUPSULTAN_STATION_URL+"?t="+cacheKey,{cache:"no-store"}).catch(()=>null):Promise.resolve(null),
         stationKey!=="eyupsultan"?fetch(EYUPSULTAN_STATION_HISTORY_URL+"?t="+cacheKey,{cache:"no-store"}).catch(()=>null):Promise.resolve(null),
         stationKey!=="sisli"?fetch(SISLI_STATION_URL+"?t="+cacheKey,{cache:"no-store"}).catch(()=>null):Promise.resolve(null),
-        stationKey!=="sisli"?fetch(SISLI_STATION_HISTORY_URL+"?t="+cacheKey,{cache:"no-store"}).catch(()=>null):Promise.resolve(null),
-        stationKey==="enka"?fetch(STATION_CAMERA_BACKUP_URL+"?t="+cacheKey,{cache:"no-store"}).catch(()=>null):Promise.resolve(null),
-        stationKey==="enka"?fetch(STATION_CAMERA_BACKUP_HISTORY_URL+"?t="+cacheKey,{cache:"no-store"}).catch(()=>null):Promise.resolve(null)
+        stationKey!=="sisli"?fetch(SISLI_STATION_HISTORY_URL+"?t="+cacheKey,{cache:"no-store"}).catch(()=>null):Promise.resolve(null)
       ]);
       const rainHistoryUrl=stationKey==="eyupsultan"?EYUPSULTAN_RAIN_HISTORY_URL:SISLI_RAIN_HISTORY_URL;
       const rainHistoryResponse=await fetch(rainHistoryUrl+"?t="+cacheKey,{cache:"no-store"}).catch(()=>null);
@@ -2817,15 +2802,6 @@
             if(stationKey==="eyupsultan"&&String(candidate.station_id)==="18101")eyupsultanStationObservation=candidate;
             if(stationKey==="sisli"&&String(candidate.station_id)==="18401")sisliStationObservation=candidate;
             if(stationKey==="enka"&&candidate.station_id==="ENKA-BALMUMCU-CAMERA-OCR")enkaStationObservation=candidate;
-          }
-        }catch(_){}
-      }
-      if(stationKey==="enka"&&cameraBackupResponse&&cameraBackupResponse.ok){
-        try{
-          const document=await cameraBackupResponse.json();
-          const candidate=document?.station_observation;
-          if(document?.schema==="gfs-watch.station-observation.v1"&&candidate?.station_id==="ENKA-BALMUMCU-CAMERA-OCR"&&!stationObservationIsFresh(enkaStationObservation)&&stationObservationIsFresh(candidate)){
-            enkaStationObservation=candidate;
           }
         }catch(_){}
       }
@@ -2863,16 +2839,14 @@
     async function loadForecast(){
       try{
         const cacheKey=Date.now();
-        const [response,stationResponse,historyResponse,eyupsultanResponse,eyupsultanHistoryResponse,sisliResponse,sisliHistoryResponse,cameraBackupResponse,cameraBackupHistoryResponse]=await Promise.all([
+        const [response,stationResponse,historyResponse,eyupsultanResponse,eyupsultanHistoryResponse,sisliResponse,sisliHistoryResponse]=await Promise.all([
           fetch(DATA_URL+"?t="+cacheKey,{cache:"no-store"}),
           fetch(STATION_URL+"?t="+cacheKey,{cache:"no-store"}).catch(()=>null),
           fetch(STATION_HISTORY_URL+"?t="+cacheKey,{cache:"no-store"}).catch(()=>null),
           fetch(EYUPSULTAN_STATION_URL+"?t="+cacheKey,{cache:"no-store"}).catch(()=>null),
           fetch(EYUPSULTAN_STATION_HISTORY_URL+"?t="+cacheKey,{cache:"no-store"}).catch(()=>null),
           fetch(SISLI_STATION_URL+"?t="+cacheKey,{cache:"no-store"}).catch(()=>null),
-          fetch(SISLI_STATION_HISTORY_URL+"?t="+cacheKey,{cache:"no-store"}).catch(()=>null),
-          fetch(STATION_CAMERA_BACKUP_URL+"?t="+cacheKey,{cache:"no-store"}).catch(()=>null),
-          fetch(STATION_CAMERA_BACKUP_HISTORY_URL+"?t="+cacheKey,{cache:"no-store"}).catch(()=>null)
+          fetch(SISLI_STATION_HISTORY_URL+"?t="+cacheKey,{cache:"no-store"}).catch(()=>null)
         ]);
         if(!response.ok)throw new Error("Tahmin verisi şu anda alınamıyor.");
         const data=await response.json();
@@ -2885,15 +2859,6 @@
           if(stationDocument&&stationDocument.schema==="gfs-watch.station-observation.v1"){
             enkaStationObservation=stationDocument.station_observation||null;
           }
-        }
-        if(cameraBackupResponse&&cameraBackupResponse.ok){
-          try{
-            const backupDocument=await cameraBackupResponse.json();
-            const candidate=backupDocument?.station_observation;
-            if(backupDocument?.schema==="gfs-watch.station-observation.v1"&&candidate?.station_id==="ENKA-BALMUMCU-CAMERA-OCR"&&!stationObservationIsFresh(enkaStationObservation)&&stationObservationIsFresh(candidate)){
-              enkaStationObservation=candidate;
-            }
-          }catch(_){}
         }
         if(eyupsultanResponse&&eyupsultanResponse.ok){
           try{
