@@ -11,11 +11,8 @@ on:
   workflow_dispatch:
   workflow_run:
     workflows:
-      - "MeteoPT GFS Live Monitor"
-      - "Main Station Data Refresh"
-      - "Eyüpsultan MGM Independent Refresh"
-      - "Şişli MGM Independent Refresh"
       - "İstanbul GFS Independent"
+      - "İstanbul MGM Independent"
     types:
       - completed
 
