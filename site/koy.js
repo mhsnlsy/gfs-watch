@@ -185,7 +185,7 @@ function meteoptTableValue(value,field,digits=1){
 function renderF72(d){
  const pts=pointsOf(d,72);
  const body=$("meteopt-table-body");
- body.innerHTML=pts.length?pts.map(p=>'<tr><td>F'+p.forecast_hour+'</td><td>'+ts(p.valid_time_utc)+'</td><td>'+meteoptTableValue(num(p.wind_speed_10m_kmh),"wind",0)+'</td><td>'+meteoptTableValue(num(p.wind_speed_850hpa_kmh),"wind",0)+'</td><td>'+meteoptTableValue(num(p.precipitation_6h_mm),"precip")+'</td><td>'+meteoptTableValue(num(p.temperature_2m_c),"t2m")+'</td><td>'+meteoptTableValue(num(p.temperature_850hpa_c),"t850")+'</td></tr>').join(""):'<tr><td colspan="7" class="meteopt-table-empty">F72 adımları henüz yok.</td></tr>';
+ body.innerHTML=pts.length?pts.map(p=>'<tr><td>F'+p.forecast_hour+'</td><td>'+ts(p.valid_time_utc)+'</td><td>'+meteoptTableValue(num(p.temperature_2m_c),"t2m")+'</td><td>'+meteoptTableValue(num(p.precipitation_6h_mm),"precip")+'</td><td>'+meteoptTableValue(num(p.wind_speed_10m_kmh),"wind",0)+'</td><td>'+meteoptTableValue(num(p.wind_speed_850hpa_kmh),"wind",0)+'</td><td>'+meteoptTableValue(num(p.temperature_850hpa_c),"t850")+'</td></tr>').join(""):'<tr><td colspan="7" class="meteopt-table-empty">F72 adımları henüz yok.</td></tr>';
  $("meteopt-table-status").textContent=pts.length+" / 24 adım";
  $("meteopt-table-run").textContent="Model döngüsü: "+ts(d.run_id_utc);
  $("meteopt-table-updated").textContent="Yayın: "+ts(d.published_at_utc);
