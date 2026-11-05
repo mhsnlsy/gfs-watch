@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
 import json, os
-from datetime import datetime
+from datetime import datetime, timezone
 from pathlib import Path
 from zoneinfo import ZoneInfo
 import matplotlib
@@ -15,11 +15,16 @@ C=["#55D6D2","#7EB8FF","#FFC66D","#C3A5FF"]
 BG="#071826"; AX="#102A3A"; TXT="#F2F7FA"; MUT="#9FB5C1"; GRID="#294253"; LEG="#16384A"; EDGE="#2B5369"
 
 def dt(v): return datetime.fromisoformat(str(v).replace("Z","+00:00"))
-def day(v): return dt(v).astimezone(TZ).date().isoformat()
+def day(v): return dt(v).date().isoformat()  # MeteoPT valid_time clock is already TSİ
 def runlabel(v):
     d=dt(v)
     local=d.astimezone(TZ)
     return f"{d:%H}Z | {local:%d.%m %H:%M} TSİ"
+
+def validlabel(v):
+    # MeteoPT already supplies the local valid-time clock; do not add UTC+3 again.
+    d=dt(v)
+    return f"{d:%d.%m %H:%M} TSİ"
 
 def prep(runs):
     runs=sorted(runs,key=lambda r:dt(r["run_id_utc"]))
@@ -55,7 +60,7 @@ def save(path,title,ylabel,draw,series,dates,precip=False):
     fig,ax=base(title,ylabel,dates,precip); draw(ax)
     hs=[Line2D([0],[0],color=C[i],lw=3,label=("YENİ · " if i==len(series)-1 else "")+runlabel(s["run"]["run_id_utc"])) for i,s in enumerate(series)]
     fig.legend(handles=hs,loc="upper center",bbox_to_anchor=(.5,.925),ncol=2,fontsize=12,frameon=True,facecolor=LEG,edgecolor=EDGE,framealpha=.98,labelcolor=TXT,borderpad=.75,handlelength=2,columnspacing=3)
-    fig.text(.01,.012,"Renkler her panelde aynı GFS döngüsünü gösterir | Saatler TSİ (UTC+3) | Kaynak: MeteoPT GFS",fontsize=10.5,color=MUT)
+    fig.text(.01,.012,"Renkler her panelde aynı GFS döngüsünü gösterir | Döngü saati UTC+3; geçerlilik saatleri MeteoPT yerel TSİ | Kaynak: MeteoPT GFS",fontsize=10.5,color=MUT)
     fig.subplots_adjust(left=.085,right=.985,bottom=.19,top=.59)
     fig.savefig(path,dpi=150,facecolor=BG,edgecolor=BG);plt.close(fig)
 
@@ -83,9 +88,9 @@ def main():
         for si,s in enumerate(series):
             x=[];y=[]
             for p in s["points"]:
-                if p.get("precipitation_6h_mm") is not None:x.append(dt(p["valid_time_utc"]).astimezone(TZ));y.append(max(0,float(p["precipitation_6h_mm"])))
+                if p.get("precipitation_6h_mm") is not None:x.append(dt(p["valid_time_utc"]).replace(tzinfo=timezone.utc));y.append(max(0,float(p["precipitation_6h_mm"])))
             if x:ax.plot(x,y,color=C[si],lw=2.4,marker="o",markersize=3.4)
-        ax.set_ylim(bottom=0);ax.xaxis.set_major_locator(mdates.HourLocator(interval=24,tz=TZ));ax.xaxis.set_major_formatter(mdates.DateFormatter("%d.%m\n%H:%M",tz=TZ));ax.tick_params(axis="x",labelsize=11);ax.grid(axis="x",color=GRID,alpha=.25)
+        ax.set_ylim(bottom=0);ax.xaxis.set_major_locator(mdates.HourLocator(interval=24,tz=TZ));ax.xaxis.set_major_formatter(mdates.DateFormatter("%d.%m\n%H:%M",tz=timezone.utc));ax.tick_params(axis="x",labelsize=11);ax.grid(axis="x",color=GRID,alpha=.25)
     def wind(ax):
         for si,s in enumerate(series):
             for di,d in enumerate(dates):
