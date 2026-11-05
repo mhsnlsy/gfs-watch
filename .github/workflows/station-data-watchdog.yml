@@ -34,6 +34,7 @@ jobs:
             local branch="$2"
             local file="$3"
             local workflow="$4"
+            local key="$5"
 
             echo "=== $name ==="
 
@@ -65,7 +66,8 @@ jobs:
             checked_at="$(date -u +"%Y-%m-%dT%H:%M:%SZ")"
             payload="$(jq -cn --arg station "$name" --arg checked "$checked_at" --arg status "$status" --argjson age "$age" --argjson recovery "$recovery" '{schema:"gfs-watch.station-health.v1",station:$station,checked_at_utc:$checked,data_age_minutes:$age,status:$status,recovery_triggered:$recovery}')"
             encoded="$(printf '%s' "$payload" | base64 -w 0)"
-            target="public/station-health.json"
+            target="site/data/station-health-$key.json"
+            branch="main"
             current_sha="$(gh api "repos/$REPO/contents/$target?ref=$branch" --jq '.sha' 2>/dev/null || true)"
 
             if [ -n "$current_sha" ]; then
@@ -76,6 +78,6 @@ jobs:
             echo "$name health published to $branch/$target."
           }
 
-          check_station "ENKA Balmumcu" "enka-state" "public/station-observation.json" "enka-station-refresh.yml"
-          check_station "Eyüpsultan" "eyupsultan-state" "public/eyupsultan-station-observation.json" "eyupsultan-station-refresh.yml"
+          check_station "ENKA Balmumcu" "enka-state" "public/station-observation.json" "enka-station-refresh.yml" "enka"
+          check_station "Eyüpsultan" "eyupsultan-state" "public/eyupsultan-station-observation.json" "eyupsultan-station-refresh.yml" "eyupsultan"
           check_station "Şişli" "sisli-state" "public/sisli-station-observation.json" "sisli-station-refresh.yml"
