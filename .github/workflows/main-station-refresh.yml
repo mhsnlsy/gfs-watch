@@ -55,9 +55,15 @@ jobs:
 
       - name: Install ENKA OCR dependencies
         run: |
-          sudo apt-get update
-          sudo apt-get install -y --no-install-recommends tesseract-ocr
+          set -euo pipefail
+          if ! command -v tesseract >/dev/null 2>&1; then
+            if ! sudo apt-get install -y --no-install-recommends tesseract-ocr; then
+              sudo apt-get update
+              sudo apt-get install -y --no-install-recommends tesseract-ocr
+            fi
+          fi
           python -m pip install --disable-pip-version-check requests pillow pytesseract
+          tesseract --version
 
       - name: Prepare ENKA-only workspace
         run: |
