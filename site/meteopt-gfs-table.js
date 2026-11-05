@@ -135,7 +135,7 @@
         }).format(new Date(document.published_at_utc)) + " TSİ"
       : "Yayın zamanı bilinmiyor";
 
-    $("meteopt-table-status").textContent = rows.length + " / 24 adım · 72. saate kadar";
+    $("meteopt-table-status").textContent = rows.length + " / 24 adım · 3 saatlik · 72. saate kadar";
   }
 
   async function refresh() {
