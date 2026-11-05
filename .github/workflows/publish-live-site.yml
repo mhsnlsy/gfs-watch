@@ -12,7 +12,7 @@ on:
   workflow_run:
     workflows:
       - "İstanbul GFS Independent"
-      - "İstanbul MGM Independent"
+      - "İstanbul Stations Independent"
     types:
       - completed
 
@@ -21,10 +21,6 @@ permissions:
   pages: write
   id-token: write
 
-# Pages is the only shared publication resource.
-# Collectors never deploy Pages; this workflow always assembles the latest
-# available data from all source branches and publishes one coherent site.
-# Station data is verified from the dedicated MGM branch on every publication.
 concurrency:
   group: live-pages-publisher
   cancel-in-progress: false
@@ -36,7 +32,7 @@ jobs:
     runs-on: ubuntu-latest
     timeout-minutes: 10
     steps:
-      - name: Check out website source and live station data
+      - name: Check out website source
         uses: actions/checkout@v5
         with:
           ref: main
@@ -57,11 +53,25 @@ jobs:
           path: istanbul-gfs-data
           fetch-depth: 1
 
-      - name: Check out Istanbul MGM data
+      - name: Check out ENKA Balmumcu data
         uses: actions/checkout@v5
         with:
-          ref: istanbul-mgm-data
-          path: istanbul-mgm-data
+          ref: istanbul-enka-data
+          path: istanbul-enka-data
+          fetch-depth: 1
+
+      - name: Check out MGM Eyüpsultan data
+        uses: actions/checkout@v5
+        with:
+          ref: istanbul-eyupsultan-data
+          path: istanbul-eyupsultan-data
+          fetch-depth: 1
+
+      - name: Check out MGM Şişli data
+        uses: actions/checkout@v5
+        with:
+          ref: istanbul-sisli-data
+          path: istanbul-sisli-data
           fetch-depth: 1
 
       - name: Check out Köy GFS data
@@ -113,22 +123,16 @@ jobs:
             echo "GFS payload unavailable; publishing latest station data."
           fi
 
-          for file in \
-            station-observation.json \
-            station-temperature-history.json \
-            eyupsultan-station-observation.json \
-            eyupsultan-station-temperature-history.json \
-            eyupsultan-station-rain-history.json \
-            sisli-station-observation.json \
-            sisli-station-temperature-history.json \
-            sisli-station-rain-history.json
-          do
-            if [ -s "istanbul-mgm-data/site/data/$file" ]; then
-              cp "istanbul-mgm-data/site/data/$file" "_site/data/$file"
-            elif [ -s "source/site/data/$file" ]; then
-              cp "source/site/data/$file" "_site/data/$file"
-            fi
-          done
+          cp "istanbul-enka-data/site/data/station-observation.json" "_site/data/station-observation.json"
+          cp "istanbul-enka-data/site/data/station-temperature-history.json" "_site/data/station-temperature-history.json"
+
+          cp "istanbul-eyupsultan-data/site/data/eyupsultan-station-observation.json" "_site/data/eyupsultan-station-observation.json"
+          cp "istanbul-eyupsultan-data/site/data/eyupsultan-station-temperature-history.json" "_site/data/eyupsultan-station-temperature-history.json"
+          cp "istanbul-eyupsultan-data/site/data/eyupsultan-station-rain-history.json" "_site/data/eyupsultan-station-rain-history.json"
+
+          cp "istanbul-sisli-data/site/data/sisli-station-observation.json" "_site/data/sisli-station-observation.json"
+          cp "istanbul-sisli-data/site/data/sisli-station-temperature-history.json" "_site/data/sisli-station-temperature-history.json"
+          cp "istanbul-sisli-data/site/data/sisli-station-rain-history.json" "_site/data/sisli-station-rain-history.json"
 
           printf '{"apiBaseUrl":"%s"}' "$PUSH_API_URL" > _site/push-config.json
 
