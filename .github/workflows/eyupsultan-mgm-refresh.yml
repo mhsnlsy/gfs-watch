@@ -1,10 +1,10 @@
 name: Eyüpsultan MGM Independent Refresh
 
 on:
+  # Match the proven MGM Çanakçı model: this station wakes itself every five minutes.
+  schedule:
+    - cron: "*/5 * * * *"
   workflow_dispatch:
-  # Dedicated signal from the five-minute Cloudflare clock.
-  repository_dispatch:
-    types: [eyupsultan-mgm-clock]
   push:
     branches: [main]
     paths:
