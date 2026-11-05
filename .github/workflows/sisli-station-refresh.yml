@@ -20,6 +20,8 @@ concurrency:
 
 jobs:
   refresh:
+    outputs:
+      changed: ${{ steps.publish.outputs.changed }}
     runs-on: ubuntu-latest
     timeout-minutes: 8
     steps:
@@ -89,3 +91,12 @@ jobs:
           git push origin HEAD:sisli-state
           echo "Şişli data pushed to dedicated sisli-state."
           echo "changed=true" >> "$GITHUB_OUTPUT"
+
+  deploy-pages:
+    needs: refresh
+    if: needs.refresh.outputs.changed == 'true'
+    uses: ./.github/workflows/pages-live.yml
+    permissions:
+      contents: read
+      pages: write
+      id-token: write
