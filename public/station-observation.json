@@ -10,7 +10,7 @@
     "longitude": 28.9,
     "elevation_m": 107,
     "observed_at_utc": "2026-11-05T00:29:24+00:00",
-    "age_minutes": 10.5,
+    "age_minutes": 11.1,
     "is_stale": false,
     "temperature_2m_c": 11.2,
     "wind_speed_10m_kmh": 13.0,
@@ -27,7 +27,7 @@
       "timestamp_overlay": ": 05-11-2026 03:29:24"
     }
   },
-  "updated_at_utc": "2026-11-05T00:39:55+00:00",
+  "updated_at_utc": "2026-11-05T00:40:27+00:00",
   "role": "primary",
   "source_priority": 1
 }
