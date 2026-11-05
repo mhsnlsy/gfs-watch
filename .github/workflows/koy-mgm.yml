@@ -99,6 +99,7 @@ jobs:
             "wind_direction_deg":obs.get("ruzgarYon"),
             "pressure_hpa":obs.get("aktuelBasinc"),
             "sea_level_pressure_hpa":obs.get("denizeIndirgenmisBasinc"),
+            "precipitation_10m_mm":obs.get("yagis10Dk"),
             "precipitation_1h_mm":obs.get("yagis1Saat"),
             "precipitation_6h_mm":obs.get("yagis6Saat"),
             "precipitation_12h_mm":obs.get("yagis12Saat"),
@@ -116,6 +117,7 @@ jobs:
           git fetch origin koy-mgm-data || true
           if git show-ref --verify --quiet refs/remotes/origin/koy-mgm-data; then
             git show origin/koy-mgm-data:mgm/history.json > output/history.json || true
+            git show origin/koy-mgm-data:mgm/rain-history-72h.json > output/rain-history-72h.json || true
           fi
 
       - name: Build independent MGM station history
@@ -156,6 +158,82 @@ jobs:
           print(f"MGM Çanakçı history: {len(kept)} samples")
           PY
 
+      - name: Build dedicated 72-hour rainfall archive
+        run: |
+          set -euo pipefail
+          python - <<'PY'
+          import json, pathlib
+          from datetime import datetime, timezone, timedelta
+
+          obs=json.loads(pathlib.Path("output/observation.json").read_text(encoding="utf-8"))
+          archive_path=pathlib.Path("output/rain-history-72h.json")
+          if archive_path.exists():
+              try:
+                  archive=json.loads(archive_path.read_text(encoding="utf-8"))
+              except Exception:
+                  archive={}
+          else:
+              archive={}
+          samples=archive.get("samples",[]) if isinstance(archive.get("samples"),list) else []
+          observed=obs.get("observed_at_utc")
+          logged=obs.get("fetched_at_utc") or datetime.now(timezone.utc).isoformat()
+          sample={
+              "observed_at_utc":observed,
+              "logged_at_utc":logged,
+              "precipitation_10m_mm":obs.get("precipitation_10m_mm"),
+              "precipitation_1h_mm":obs.get("precipitation_1h_mm"),
+              "precipitation_6h_mm":obs.get("precipitation_6h_mm"),
+              "precipitation_12h_mm":obs.get("precipitation_12h_mm"),
+              "precipitation_24h_mm":obs.get("precipitation_24h_mm")
+          }
+          # One row per MGM observation timestamp; retries update rather than duplicate.
+          by_time={}
+          for item in samples:
+              key=item.get("observed_at_utc") or item.get("logged_at_utc")
+              if key:
+                  by_time[key]=item
+          key=observed or logged
+          if key in by_time:
+              old=by_time[key]
+              old.update({k:v for k,v in sample.items() if v is not None})
+              old["logged_at_utc"]=logged
+              by_time[key]=old
+          else:
+              by_time[key]=sample
+          now=datetime.now(timezone.utc)
+          cutoff=now-timedelta(hours=72)
+          kept=[]
+          for item in by_time.values():
+              stamp=item.get("observed_at_utc") or item.get("logged_at_utc")
+              try:
+                  when=datetime.fromisoformat(str(stamp).replace("Z","+00:00"))
+                  if cutoff<=when<=now+timedelta(minutes=5):
+                      kept.append(item)
+              except Exception:
+                  continue
+          kept.sort(key=lambda x:x.get("observed_at_utc") or x.get("logged_at_utc") or "")
+          kept=kept[-900:]
+          document={
+              "schema":"koy-mgm.rain-history.v1",
+              "station_id":str(obs.get("station_id")),
+              "station_name":"Çanakçı",
+              "source":"MGM Giresun / Çanakçı",
+              "retention_hours":72,
+              "sampling_interval_minutes":5,
+              "rainfall_fields":{
+                  "precipitation_10m_mm":"MGM trailing 10-minute amount",
+                  "precipitation_1h_mm":"MGM trailing 1-hour accumulation",
+                  "precipitation_6h_mm":"MGM trailing 6-hour accumulation",
+                  "precipitation_12h_mm":"MGM trailing 12-hour accumulation",
+                  "precipitation_24h_mm":"MGM trailing 24-hour accumulation"
+              },
+              "updated_at_utc":logged,
+              "samples":kept
+          }
+          archive_path.write_text(json.dumps(document,ensure_ascii=False,indent=2),encoding="utf-8")
+          print(f"MGM Çanakçı rainfall archive: {len(kept)} samples · 72 h retention")
+          PY
+
       - name: Publish to the dedicated koy-mgm-data branch
         env:
           GH_TOKEN: ${{ github.token }}
@@ -174,6 +252,7 @@ jobs:
           cp "$GITHUB_WORKSPACE/output/latest.json" mgm/latest.json
           cp "$GITHUB_WORKSPACE/output/observation.json" mgm/observation.json
           cp "$GITHUB_WORKSPACE/output/history.json" mgm/history.json
+          cp "$GITHUB_WORKSPACE/output/rain-history-72h.json" mgm/rain-history-72h.json
           cp mgm/latest.json "mgm/$(date -u +%Y%m%dT%H%M%SZ).json"
           find mgm -type f -name '*.json' -mtime +14 -delete
           git add mgm
