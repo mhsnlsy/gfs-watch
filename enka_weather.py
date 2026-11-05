@@ -202,7 +202,7 @@ def _reject_older_observation(observation):
 
 
 def update_temperature_history(observation):
-    """Append one point per distinct fresh ENKA measurement to the 14-day log."""
+    """Append distinct fresh ENKA measurements to a rolling 72-hour archive."""
     history_path = Path(
         os.getenv(
             "STATION_TEMPERATURE_HISTORY_PATH",
@@ -244,6 +244,8 @@ def update_temperature_history(observation):
             "station_pressure_hpa": float(observation["station_pressure_hpa"]) if observation.get("station_pressure_hpa") is not None else None,
             "humidity_percent": float(observation["humidity_percent"]) if observation.get("humidity_percent") is not None else None,
             "wind_speed_10m_kmh": float(observation["wind_speed_10m_kmh"]) if observation.get("wind_speed_10m_kmh") is not None else None,
+            "wind_direction_cardinal": observation.get("wind_direction_cardinal"),
+            "wind_direction_tr": observation.get("wind_direction_tr"),
             "precipitation_daily_mm": (
                 float(observation["precipitation_daily_mm"])
                 if observation.get("precipitation_daily_mm") is not None
@@ -251,16 +253,24 @@ def update_temperature_history(observation):
             ),
         })
 
-    cutoff = logged_at.timestamp() - 14 * 24 * 60 * 60
+    retention_hours = 72
+    cutoff = logged_at.timestamp() - retention_hours * 60 * 60
     retained = []
     for sample in samples:
         try:
+            # Retention follows the actual camera measurement timestamp, not the
+            # time this workflow happened to collect it.
+            source_time = sample.get("observed_at_utc") or sample["logged_at_utc"]
             timestamp = datetime.fromisoformat(
-                str(sample["logged_at_utc"]).replace("Z", "+00:00")
+                str(source_time).replace("Z", "+00:00")
             ).timestamp()
             temperature = float(sample["temperature_2m_c"])
-            if math.isfinite(temperature) and timestamp >= cutoff:
-                for field in ("station_pressure_hpa", "humidity_percent", "wind_speed_10m_kmh"):
+            if math.isfinite(temperature) and cutoff <= timestamp <= logged_at.timestamp() + 5 * 60:
+                for field in (
+                    "station_pressure_hpa",
+                    "humidity_percent",
+                    "wind_speed_10m_kmh",
+                ):
                     value = sample.get(field)
                     if value is not None and not math.isfinite(float(value)):
                         sample[field] = None
@@ -270,7 +280,8 @@ def update_temperature_history(observation):
                 retained.append(sample)
         except (KeyError, TypeError, ValueError, OverflowError):
             continue
-    retained = retained[-4500:]
+    # Five-minute sampling yields at most 864 observations in 72 hours.
+    retained = retained[-900:]
 
     document = {
         "schema": "gfs-watch.station-temperature-history.v1",
@@ -278,7 +289,7 @@ def update_temperature_history(observation):
         "station_name": observation["station_name"],
         "sampling_interval_minutes": 5,
         "aggregation_interval_minutes": 30,
-        "retention_days": 14,
+        "retention_hours": retention_hours,
         "updated_at_utc": logged_at.isoformat(timespec="seconds"),
         "samples": retained,
     }
@@ -288,7 +299,7 @@ def update_temperature_history(observation):
         encoding="utf-8",
     )
     temporary_path.replace(history_path)
-    print(f"[TEMPERATURE LOG] {len(retained)} kayıt tutuluyor; 14 günlük kayan arşiv.")
+    print(f"[TEMPERATURE LOG] {len(retained)} kayıt tutuluyor; 72 saatlik kayan arşiv.")
     return len(retained)
 
 
