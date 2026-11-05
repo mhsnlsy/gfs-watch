@@ -1,0 +1,56 @@
+name: Station Refresh Clock
+
+on:
+  # One scheduler dispatches three independent station collectors every five minutes.
+  schedule:
+    - cron: "2-59/5 * * * *"
+  workflow_dispatch:
+  push:
+    branches: [main]
+    paths:
+      - ".github/workflows/station-refresh-clock.yml"
+
+permissions:
+  contents: write
+
+concurrency:
+  group: station-refresh-clock
+  cancel-in-progress: false
+
+jobs:
+  dispatch-stations:
+    name: Wake ENKA, Eyüpsultan and Şişli independently
+    runs-on: ubuntu-latest
+    timeout-minutes: 2
+    steps:
+      - name: Send independent station refresh events
+        env:
+          GH_TOKEN: ${{ github.token }}
+          GH_REPOSITORY: ${{ github.repository }}
+          SCHEDULED_AT: ${{ github.event.schedule || 'manual-or-push' }}
+        run: |
+          set -euo pipefail
+          api="https://api.github.com/repos/$GH_REPOSITORY/dispatches"
+
+          send_event() {
+            event_type="$1"
+            payload="$(python -c 'import json,os; print(json.dumps({"event_type":os.environ["EVENT_TYPE"],"client_payload":{"source":"station-refresh-clock","scheduled_at":os.environ["SCHEDULED_AT"]}}))' EVENT_TYPE="$event_type")"
+            status="$(curl --silent --show-error --output "$RUNNER_TEMP/dispatch-response.json" --write-out "%{http_code}" \
+              --request POST "$api" \
+              --header "Authorization: Bearer $GH_TOKEN" \
+              --header "Accept: application/vnd.github+json" \
+              --header "X-GitHub-Api-Version: 2022-11-28" \
+              --header "Content-Type: application/json" \
+              --data "$payload")"
+            if [ "$status" != "204" ]; then
+              echo "Dispatch $event_type failed with HTTP $status"
+              cat "$RUNNER_TEMP/dispatch-response.json"
+              exit 1
+            fi
+            echo "Dispatched $event_type"
+          }
+
+          send_event "station-refresh-clock"
+          send_event "eyupsultan-mgm-clock"
+          send_event "sisli-mgm-clock"
+          echo "All three independent station workflows have been queued."
