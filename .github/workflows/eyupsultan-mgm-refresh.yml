@@ -141,15 +141,6 @@ jobs:
           echo "Could not publish Eyüpsultan data to main after five attempts."
           exit 1
 
-  deploy-live-site:
-    name: Deploy refreshed station data to GitHub Pages
-    needs: collect-and-publish
-    uses: ./.github/workflows/pages-live.yml
-    permissions:
-      contents: read
-      pages: write
-      id-token: write
-
   rearm-next-cycle:
     name: Queue next Eyüpsultan cycle
     needs: [cycle-start, collect-and-publish]
