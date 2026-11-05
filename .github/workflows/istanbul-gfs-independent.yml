@@ -158,6 +158,7 @@ jobs:
           set -euo pipefail
           mkdir -p state/gfs/f72 state/gfs/runs
           new_run="$(python -c 'import json,sys; print(json.load(open(sys.argv[1]))["run_id_utc"])' "$RUNNER_TEMP/istanbul-gfs/latest.json")"
+          export NEW_RUN_ID="$new_run"
           old_run=""
           if [ -s state/gfs/latest.json ]; then
             old_run="$(python -c 'import json; print(json.load(open("state/gfs/latest.json")).get("run_id_utc",""))')"
@@ -224,6 +225,28 @@ jobs:
 
           python -m pip install -r source/requirements.txt
           (cd state && GFS_SOURCE_ROOT="$GITHUB_WORKSPACE/source" python ../source/scripts/build_istanbul_gfs_publication.py)
+
+          # Telegram uses the exact canonical report + four PNGs just written.
+          # A per-cycle marker makes failed sends retryable on the next 5-minute poll
+          # without rebuilding the weather data or charts.
+          if [ ! -f "state/gfs/notifications/telegram-sent/$new_run.json" ]; then
+            python -m pip install -r source/requirements.txt
+            (cd state && python ../source/scripts/send_canonical_istanbul_gfs_telegram.py)
+            mkdir -p "state/gfs/notifications/telegram-sent"
+            python - <<'PY'
+          import json, os
+          from datetime import datetime, timezone
+          from pathlib import Path
+          run_id = os.environ["NEW_RUN_ID"]
+          path = Path("state/gfs/notifications/telegram-sent") / f"{run_id}.json"
+          path.write_text(json.dumps({
+              "run_id_utc": run_id,
+              "sent_at_utc": datetime.now(timezone.utc).isoformat(timespec="seconds"),
+          }, ensure_ascii=False, indent=2) + "\n", encoding="utf-8")
+          PY
+          else
+            echo "Telegram already sent for $new_run; no duplicate delivery."
+          fi
 
           cd state
           git config user.name "github-actions[bot]"
