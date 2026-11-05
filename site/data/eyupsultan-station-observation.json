@@ -6,20 +6,20 @@
     "source": "MGM İstanbul-Eyüpsultan · anlık son-durum ölçümü",
     "source_url": "https://www.mgm.gov.tr/tahmin/il-ve-ilceler.aspx?il=%C4%B0stanbul&ilce=Ey%C3%BCpsultan",
     "measurement_source_url": "https://servis.mgm.gov.tr/web/sondurumlar/ilTumSondurum?ilPlaka=34",
-    "source_page_checked_at_utc": "2026-11-05T16:42:05.389Z",
+    "source_page_checked_at_utc": "2026-11-05T16:47:22.917Z",
     "source_page_http_status": 200,
     "source_fallback_used": false,
     "latitude": 41.102778,
     "longitude": 28.924167,
     "elevation_m": 54,
-    "observed_at_utc": "2026-11-05T16:39:00.000Z",
-    "fetched_at_utc": "2026-11-05T16:42:06.914Z",
+    "observed_at_utc": "2026-11-05T16:44:00.000Z",
+    "fetched_at_utc": "2026-11-05T16:47:24.341Z",
     "age_minutes": 3,
     "stale_after_minutes": 20,
     "is_stale": false,
     "temperature_2m_c": 9.6,
-    "wind_speed_10m_kmh": 8.6,
-    "wind_direction_degrees": 1,
+    "wind_speed_10m_kmh": 5.4,
+    "wind_direction_degrees": 6,
     "wind_direction_cardinal": "N",
     "wind_direction_tr": "Kuzey",
     "precipitation_1h_mm": 0.3,
@@ -35,8 +35,8 @@
     "actual_station_pressure_hpa": 1020.4,
     "pressure_type": "station",
     "pressure_source": "MGM 18101",
-    "pressure_observed_at_utc": "2026-11-05T16:39:00.000Z",
-    "pressure_age_minutes": 3.1
+    "pressure_observed_at_utc": "2026-11-05T16:44:00.000Z",
+    "pressure_age_minutes": 3.4
   },
-  "updated_at_utc": "2026-11-05T16:42:04.178Z"
+  "updated_at_utc": "2026-11-05T16:47:21.257Z"
 }
