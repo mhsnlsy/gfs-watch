@@ -182,16 +182,16 @@ jobs:
             if [ "$stored_renderer_version" != "$renderer_version" ] || [ ! -s "gfs/media/koy-gfs-${stamp}-temperature.png" ] || [ ! -s "gfs/media/koy-gfs-${stamp}-temperature_850.png" ] || [ ! -s "gfs/media/koy-gfs-${stamp}-precipitation.png" ] || [ ! -s "gfs/media/koy-gfs-${stamp}-wind_10m.png" ]; then
               python -m pip install -q matplotlib
               python - <<'PY'
-            import importlib.util
-            spec = importlib.util.spec_from_file_location("koy_renderer", "scripts/render_koy_gfs_charts.py")
-            module = importlib.util.module_from_spec(spec)
-            spec.loader.exec_module(module)
-            assert module.runlabel("2026-11-05T00:00:00+00:00") == "00Z | 05.11 03:00 TSİ"
-            assert module.runlabel("2026-11-05T12:00:00+00:00") == "12Z | 05.11 15:00 TSİ"
-            print("Köy GFS timezone checks passed: 00Z=03:00 TSİ, 12Z=15:00 TSİ.")
-            PY
+          import importlib.util
+          spec = importlib.util.spec_from_file_location("koy_renderer", "scripts/render_koy_gfs_charts.py")
+          module = importlib.util.module_from_spec(spec)
+          spec.loader.exec_module(module)
+          assert module.runlabel("2026-11-05T00:00:00+00:00") == "00Z | 05.11 03:00 TSİ"
+          assert module.runlabel("2026-11-05T12:00:00+00:00") == "12Z | 05.11 15:00 TSİ"
+          print("Köy GFS timezone checks passed: 00Z=03:00 TSİ, 12Z=15:00 TSİ.")
+          PY
               KOY_GFS_DIR="$PWD/gfs" python "$RUNNER_TEMP/render_koy_gfs_charts.py"
-              printf '%s\\n' "$renderer_version" > gfs/media/.koy-renderer-version
+              printf '%s\n' "$renderer_version" > gfs/media/.koy-renderer-version
               git add gfs
               if git diff --cached --quiet; then
                 git reset
