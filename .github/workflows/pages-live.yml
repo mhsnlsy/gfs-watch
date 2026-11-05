@@ -53,10 +53,16 @@ jobs:
           PUSH_API_URL: ${{ vars.PUSH_API_URL }}
         run: |
           set -euo pipefail
-          test -s forecast-data/public/latest.json
           mkdir -p _site/data
           cp -a source/site/. _site/
-          cp -a forecast-data/public/. _site/data/
+          # GFS and station collectors are independent. A temporary GFS
+          # outage must not prevent fresh station observations from reaching Pages.
+          if [ -s forecast-data/public/latest.json ]; then
+            cp -a forecast-data/public/. _site/data/
+            echo "GFS forecast payload present; publishing it."
+          else
+            echo "GFS forecast payload unavailable; publishing station data independently."
+          fi
           for file in station-observation.json station-temperature-history.json eyupsultan-station-observation.json eyupsultan-station-temperature-history.json eyupsultan-station-rain-history.json sisli-station-observation.json sisli-station-temperature-history.json sisli-station-rain-history.json; do
             if [ -s "source/site/data/$file" ]; then cp "source/site/data/$file" "_site/data/$file"; fi
           done
