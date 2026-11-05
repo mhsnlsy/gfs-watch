@@ -10,7 +10,6 @@ on:
       - ".github/workflows/enka-station-refresh.yml"
       - "scripts/update_station_observation.py"
       - "enka_weather.py"
-      - "scripts/probe_enka_history.py"
       - "site/index.html"
   workflow_dispatch:
 
@@ -48,9 +47,6 @@ jobs:
           sudo apt-get update
           sudo apt-get install -y --no-install-recommends tesseract-ocr
           python -m pip install --disable-pip-version-check requests pillow pytesseract
-
-      - name: Inspect ENKA public history exports
-        run: python -u scripts/probe_enka_history.py
 
       - name: Read ENKA camera overlay as the only Balmumcu data source
         run: |
