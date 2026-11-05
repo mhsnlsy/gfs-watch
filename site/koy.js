@@ -128,6 +128,13 @@ function renderRuns(d,f72){
  $("next72-precipitation").innerHTML=svgLine(source,"precipitation_6h_mm","6 saatlik yağış","mm",72);
  const first=source[0],p=first?pointsOf(first,180):[];
  if(p.length){
+   $("gfs-daily-cycle-chip").textContent="GFS döngüsü: "+ts(first.run_id_utc);
+   $("gfs-daily-updated-chip").textContent="Yayın: "+ts(first.published_at_utc);
+ } else {
+   $("gfs-daily-cycle-chip").textContent="GFS döngüsü bekleniyor";
+   $("gfs-daily-updated-chip").textContent="Yayın zamanı bekleniyor";
+ }
+ if(p.length){
    const daily=new Map();
    p.forEach(x=>{const k=dayKey(x.valid_time_utc);if(!daily.has(k))daily.set(k,[]);const v=num(x.temperature_2m_c);if(v!=null)daily.get(k).push(v)});
    $("brief-temperature-trend").textContent=[...daily.entries()].slice(0,5).map(([k,v])=>dayLabel(k)+": "+fmt(Math.min(...v))+"–"+fmt(Math.max(...v))+"°C").join(" · ");
@@ -142,7 +149,7 @@ async function refresh(){if(busy)return;busy=true;
  if(results[0].status==="fulfilled"){f72=results[0].value;renderF72(f72)}else{}
  if(results[1].status==="fulfilled")comparison=results[1].value;else comparison=null;
  if(results[2].status==="fulfilled"){stationHistory=results[2].value;renderStationHistory(stationHistory)}else{stationHistory=null;$("station-temperature-trend").innerHTML="<div class=\"station-trend-empty\">MGM istasyon geçmişi bekleniyor…</div>";$("station-rain-trend").innerHTML="<div class=\"station-trend-empty\">MGM istasyon geçmişi bekleniyor…</div>"}
- if(results[3].status==="fulfilled"){renderMgmObservation(results[3].value,stationHistory,f72); const o=results[3].value; $("mgm-status-date").textContent=ts(o.observed_at_utc); $("mgm-rain-rate").innerHTML=fmt(num(o.precipitation_1h_mm))+"<small> mm</small>"; $("mgm-status-text").textContent="Son 1 saat yağış · "+fmt(num(o.precipitation_24h_mm))+" mm / 24 saat"; $("mgm-rain-fill").style.width=Math.min(100,Math.max(0,(num(o.precipitation_1h_mm)||0)*8))+"%"} renderRuns(comparison,f72);
+ if(results[3].status==="fulfilled"){renderMgmObservation(results[3].value,stationHistory,f72); const o=results[3].value; $("mgm-status-date").textContent=ts(o.observed_at_utc); $("mgm-source-temp").innerHTML=fmt(t)+"<small>°C</small>"; $("mgm-source-status").textContent="Canlı MGM ölçümü · son 1 saat yağış "+fmt(rain)+" mm"; $("mgm-source-fill").style.width=Math.min(100,Math.max(0,(num(rain)||0)*8))+"%"} renderRuns(comparison,f72);
  busy=false;
 }
 refresh();setInterval(()=>{if(document.visibilityState!=="hidden")refresh()},60000);
