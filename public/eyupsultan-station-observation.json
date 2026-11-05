@@ -10,7 +10,7 @@
     "longitude": 28.924167,
     "elevation_m": 54,
     "observed_at_utc": "2026-11-05T04:34:00.000Z",
-    "fetched_at_utc": "2026-11-05T04:35:58.396Z",
+    "fetched_at_utc": "2026-11-05T04:36:29.112Z",
     "age_minutes": 2,
     "stale_after_minutes": 30,
     "is_stale": false,
@@ -33,7 +33,7 @@
     "pressure_type": "mean_sea_level",
     "pressure_source": "MGM 18101",
     "pressure_observed_at_utc": "2026-11-05T04:34:00.000Z",
-    "pressure_age_minutes": 2
+    "pressure_age_minutes": 2.5
   },
-  "updated_at_utc": "2026-11-05T04:35:55.047Z"
+  "updated_at_utc": "2026-11-05T04:36:25.682Z"
 }
