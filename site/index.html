@@ -1060,14 +1060,14 @@
 </head>
 <body>
   <header class="shell topbar">
-    <a class="brand" href="#" aria-label="İstanbul'un Havası ana sayfa"><span class="brand-mark">☀</span><span>İstanbul'un Havası<small>Şehir için hava tahmini</small></span></a>
+    <a class="brand" href="./#balmumcu" aria-label="İstanbul anasayfası · Balmumcu istasyon gözlemi"><span class="brand-mark">☀</span><span>İstanbul'un Havası<small>Şehir için hava tahmini</small></span></a>
     <nav aria-label="Ana gezinme"><a href="#bildirimler">Raporlar</a><a href="#basinc">Basınç analizi</a><a href="./koy.html">Köy</a></nav>
     <div class="top-right"><div class="model-picker" role="group" aria-label="Tahmin modeli"><button type="button" id="model-gfs-button" class="active" aria-pressed="true">GFS</button><button type="button" id="model-ecmwf-button" aria-pressed="false">ECMWF IFS</button></div><span class="version"><span data-app-name>İstanbul'un Havası</span> <span data-app-version>4.0</span></span></div>
   </header>
   <main class="shell" data-ui-build="responsive-2026-11-01">
     <section class="dashboard-top" aria-label="İstanbul anlık gözlem, geçmiş ve 72 saatlik tahmin">
       <div class="dashboard-left">
-      <article class="weather-card station-card" role="region" aria-labelledby="station-card-title">
+      <article class="weather-card station-card" id="balmumcu" role="region" aria-labelledby="station-card-title">
         <div class="weather-top"><div><div class="label">GERÇEK İSTASYON GÖZLEMİ</div><div class="place" id="station-card-title">ENKA Balmumcu · İstanbul</div></div><span class="model-state" id="freshness">Veri bekleniyor</span></div>
         <div class="station-switch" role="group" aria-label="İstasyon seçimi">
           <button type="button" id="station-enka-button" class="active" aria-pressed="true">ENKA Balmumcu</button>
@@ -1076,7 +1076,7 @@
         </div>
         <script>
           try{
-            if(["eyupsultan","sisli"].includes(localStorage.getItem("istanbul-hava-station"))){
+            if(location.hash!=="#balmumcu"&&["eyupsultan","sisli"].includes(localStorage.getItem("istanbul-hava-station"))){
               const saved=localStorage.getItem("istanbul-hava-station");
               const selected=document.getElementById(saved==="sisli"?"station-sisli-button":"station-eyupsultan-button");
               selected.classList.add("active"); selected.setAttribute("aria-pressed","true");
@@ -1214,7 +1214,15 @@
     const SISLI_STATION_HISTORY_URL="./data/sisli-station-temperature-history.json";
     const VERIFY_URL="./data/forecast-verification.json";
     let enkaStationObservation=null,eyupsultanStationObservation=null,sisliStationObservation=null,activeStation="enka";
-    try{const savedStation=localStorage.getItem("istanbul-hava-station");if(["enka","eyupsultan","sisli"].includes(savedStation))activeStation=savedStation;}catch(_){}
+    try{
+      if(location.hash==="#balmumcu"){
+        activeStation="enka";
+        localStorage.setItem("istanbul-hava-station","enka");
+      }else{
+        const savedStation=localStorage.getItem("istanbul-hava-station");
+        if(["enka","eyupsultan","sisli"].includes(savedStation))activeStation=savedStation;
+      }
+    }catch(_){}
     let enkaStationHistorySamples=[],eyupsultanStationHistorySamples=[],sisliStationHistorySamples=[];
     let verificationDoc=null;
     let forecastData=null;
@@ -2494,6 +2502,8 @@
     $("station-enka-button").addEventListener("click",()=>selectStation("enka"));
     $("station-eyupsultan-button").addEventListener("click",()=>selectStation("eyupsultan"));
     $("station-sisli-button").addEventListener("click",()=>selectStation("sisli"));
+    document.querySelector(".topbar .brand")?.addEventListener("click",()=>selectStation("enka"));
+    window.addEventListener("hashchange",()=>{if(location.hash==="#balmumcu")selectStation("enka");});
 
     function render(data){
       forecastData=data;
