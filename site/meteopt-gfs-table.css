@@ -292,3 +292,54 @@
     zoom: 1.2;
   }
 }
+
+
+/* Put the GFS pressure analysis into the unused space beside the table.
+   The table's existing desktop zoom is compensated so it fits its grid track. */
+@media (min-width: 901px) and (pointer: fine) {
+  .gfs-table-pressure-layout {
+    display: grid;
+    grid-template-columns: minmax(0, 1.55fr) minmax(300px, 1fr);
+    gap: 22px;
+    align-items: start;
+  }
+  .gfs-table-pressure-layout > #meteopt-gfs-table {
+    width: 83.3333% !important;
+    max-width: 83.3333% !important;
+    min-width: 0 !important;
+    margin: 0 !important;
+  }
+  .gfs-table-pressure-layout > #meteopt-gfs-table .meteopt-table-card,
+  .gfs-table-pressure-layout > #meteopt-gfs-table .meteopt-table-scroll,
+  .gfs-table-pressure-layout > #meteopt-gfs-table .meteopt-data-table {
+    width: 100% !important;
+    max-width: 100% !important;
+    min-width: 0 !important;
+  }
+  .gfs-table-pressure-layout > #meteopt-gfs-table .meteopt-data-table {
+    table-layout: fixed !important;
+  }
+  .gfs-table-pressure-layout > #basinc {
+    min-width: 0;
+    margin: 0;
+    padding-top: 29px;
+  }
+  .gfs-table-pressure-layout > #basinc .pressure-card {
+    min-height: 150px;
+  }
+}
+@media (max-width: 900px), (pointer: coarse) {
+  .gfs-table-pressure-layout {
+    display: block;
+  }
+  .gfs-table-pressure-layout > #meteopt-gfs-table {
+    width: 100% !important;
+    max-width: 100% !important;
+    margin: 0 !important;
+  }
+  .gfs-table-pressure-layout > #basinc {
+    width: 100%;
+    margin: 0;
+    padding-top: 8px;
+  }
+}
