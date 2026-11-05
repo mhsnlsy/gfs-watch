@@ -2061,29 +2061,24 @@ async def stage_open_meteopt_cycle(processed_run_ids):
 
 
 def fetch_meteopt_available_runs():
-    """Check only the GFS cycle assigned to the current Istanbul time slot."""
-    configured_target = os.getenv("GFS_WATCH_TARGET_RUN_ID", "").strip()
-    run_dt = (
-        _parse_utc_datetime(configured_target)
-        if configured_target
-        else scheduled_istanbul_gfs_run()
-    )
-    run_id = run_dt.isoformat(timespec="seconds")
-
-    # One slot has exactly one target cycle; never fall through to another run.
+    """Discover the active MeteoPT run and publish it only once its f180 exists."""
     try:
-        document = fetch_meteopt_document(run_dt)
+        document = fetch_meteopt_document()
     except Exception as exc:
-        print(f"[METEOPT MISS] {run_id}: {type(exc).__name__}: {exc}")
+        print(f"[METEOPT DISCOVERY ERROR] {type(exc).__name__}: {exc}")
         return []
 
+    token = str(document.get("run") or "").strip()
+    run_dt = datetime.strptime(token, "%Y%m%d%H").replace(tzinfo=timezone.utc)
+    run_id = run_dt.isoformat(timespec="seconds")
     rows = _meteopt_rows_through_f180(document)
+    max_step = max(rows) if rows else _meteopt_max_step(document)
+
     if not _meteopt_f180_ready(document):
-        last_step = max(rows) if rows else _meteopt_max_step(document)
         print(
-            f"[METEOPT PENDING] {run_id}: f180'e kadar {len(rows)} satır; "
-            f"son +{last_step}. 60 satır dolunca Telegram ve sayfa aynı paketten gider. "
-            "Serinin geri kalanı beklenmez."
+            f"[METEOPT PENDING] Aktif döngü {run_id}; "
+            f"son adım +{max_step} saat, f180 için 60 adım bekleniyor. "
+            "On dakika sonraki taramada aynı kaynak yeniden sorgulanacak."
         )
         return []
 
@@ -2109,10 +2104,11 @@ def fetch_meteopt_available_runs():
         "meteopt_steps": len(rows),
     }
     print(
-        f"[METEOPT READY] {run_id}: f180 dahil {len(rows)} satır hazır. "
-        "Devamı beklenmeden Telegram ve sayfa basılacak."
+        f"[METEOPT F180 READY] {run_id}: +180 dahil {len(rows)} satır hazır. "
+        "Aynı paket Pages ve Telegram raporuna aktarılacak."
     )
     return [candidate]
+
 
 def fetch_meteopt_weather_data(run_id):
     """Build the forecast payload from MeteoPT's native 3-hour GFS point."""
