@@ -2161,7 +2161,9 @@
       $("wind").innerHTML=isFresh&&numeric(station.wind_speed_10m_kmh)?fmt(station.wind_speed_10m_kmh,1)+'<span class="unit">km/sa</span>':'—<span class="unit">km/sa</span>';
       const direction=hasStation?(station.wind_direction_tr||windDirectionTr[station.wind_direction_cardinal]||station.wind_direction_cardinal):null;
       $("wind-direction").textContent=isFresh&&direction?direction:"Yön —";
-      const rainSource=typeof eyupsultanStationObservation!=="undefined"?eyupsultanStationObservation:null;
+      // Rainfall source follows the selected station. Balmumcu intentionally
+      // mirrors Eyüpsultan MGM for its rainfall graph/card.
+      const rainSource=activeStation==="sisli"?sisliStationObservation:eyupsultanStationObservation;
       const rain1h=rainSource&&typeof rainSource.precipitation_1h_mm==="number"?rainSource.precipitation_1h_mm:null;
       $("rain").innerHTML=numeric(rain1h)?fmt(rain1h,1)+'<span class="unit">mm</span>':'—<span class="unit">mm</span>';
       const rainDetail=$("rain-detail");
