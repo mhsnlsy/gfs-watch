@@ -194,14 +194,18 @@ function renderF72(d){
  if(first) $("report-summary").textContent="MGM Çanakçı gerçek istasyon ölçümü ile MeteoPT GFS model tahmini ayrı kaynaklardır. İlk GFS tahmin adımı: "+tsGfsValid(first.valid_time_utc)+" · "+fmt(num(first.temperature_2m_c))+" °C · yağış "+fmt(num(first.precipitation_6h_mm))+" mm / 6 saat.";
 }
 function svgStationHistory(samples,metric,title,unit){
- const now=Date.now(),from=now-24*3600000;
+ const now=Date.now();
  const hourly=metric==="precipitation_1h_mm";
  const step=hourly?3600000:1800000;
+ // Rainfall uses completed, Istanbul-hour-aligned bins. The 24-hour
+ // window therefore advances only at HH:00 rather than following refresh minute.
+ const chartEnd=hourly?Math.floor(now/step)*step:now;
+ const from=hourly?chartEnd-24*step:now-24*3600000;
  const bins=[];
- for(let t=from;t<now;t+=step)bins.push({start:t,values:[]});
+ for(let t=from;t<chartEnd;t+=step)bins.push({start:t,values:[]});
  (Array.isArray(samples)?samples:[]).forEach(s=>{
    const t=Date.parse(s.observed_at_utc||s.logged_at_utc||""),v=num(s[metric]);
-   if(!Number.isFinite(t)||t<from||t>now||v==null)return;
+   if(!Number.isFinite(t)||t<from||t>=chartEnd||v==null)return;
    const i=Math.floor((t-from)/step);if(i>=0&&i<bins.length)bins[i].values.push({t,v});
  });
  const data=bins.map((b,i)=>{
@@ -218,7 +222,7 @@ function svgStationHistory(samples,metric,title,unit){
  if(metric==="temperature_2m_c"){lo=Math.floor(lo-.5);hi=Math.ceil(hi+.5)}else{lo=0;hi=Math.max(1,Math.ceil(hi+1))}
  if(hi<=lo)hi=lo+1;
  const W=560,H=200,L=44,R=14,T=15,B=29,PW=W-L-R,PH=H-T-B;
- const x=t=>L+(t-from)/86400000*PW,y=v=>T+(hi-v)*PH/(hi-lo),xb=p=>x(p.start+900000);
+ const x=t=>L+(t-from)/86400000*PW,y=v=>T+(hi-v)*PH/(hi-lo),xb=p=>x(p.start+step/2);
  let s='<svg viewBox="0 0 '+W+' '+H+'" preserveAspectRatio="none" role="img" aria-label="'+esc(title)+'">';
  for(let j=0;j<=4;j++){const v=lo+(hi-lo)*j/4,yy=y(v);s+='<line x1="'+L+'" y1="'+yy+'" x2="'+(W-R)+'" y2="'+yy+'" stroke="rgba(190,218,228,.17)" stroke-dasharray="3 5"/><text x="'+(L-9)+'" y="'+(yy+3.5)+'" fill="#a8bfca" font-size="10" text-anchor="end">'+fmt(v,metric==="temperature_2m_c"?1:1)+'</text>'}
  bins.forEach((b,i)=>{if(i%4&&i!==bins.length-1)return;s+='<text x="'+x(b.start)+'" y="'+(H-8)+'" fill="#a8bfca" font-size="10" text-anchor="middle">'+new Intl.DateTimeFormat("tr-TR",{timeZone:"Europe/Istanbul",hour:"2-digit",minute:"2-digit"}).format(new Date(b.start))+'</text>'});
