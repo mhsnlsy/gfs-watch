@@ -1074,14 +1074,35 @@
 <div class="dashboard-left">
 <article class="weather-card station-card" role="region" aria-labelledby="station-card-title">
 <div class="weather-top"><div><div class="label">METEOPT GFS · KÖY TAHMİNİ</div><div class="place" id="station-card-title">Giresun · Çanakçı</div></div><span class="model-state" id="f72-chip">GFS · hazır</span></div>
-<div class="station-overview"><div class="station-current">
+
+<div class="station-overview">
+<div class="station-current">
 <div class="temp-row"><div class="temperature" id="current-temp">—°</div><div class="weather-symbol" id="current-symbol">🌦️</div></div>
-<div class="temp-meta"><div class="temp-caption" id="current-meta">İlk tahmin adımı bekleniyor</div><div class="koy-location-tag">40.9557° N · 39.0065° E</div></div>
-</div></div>
+<div class="temp-meta">
+<div class="temp-caption" id="current-meta">İlk tahmin adımı bekleniyor</div>
+<div class="koy-location-tag">40.9557° N · 39.0065° E</div>
+</div>
+</div>
+</div>
+
+<div class="weather-stats">
+<div class="stat"><div class="name">Model adımı</div><div class="value" id="current-step">—</div><div class="detail">F tahmin</div></div>
+<div class="stat"><div class="name">850 hPa</div><div class="value" id="current-t850">—<span class="unit">°C</span></div></div>
+<div class="stat"><div class="name">Rüzgâr</div><div class="value" id="current-wind">—<span class="unit">km/sa</span></div></div>
+<div class="stat"><div class="name">850 hPa rüzgâr</div><div class="value" id="current-wind850">—<span class="unit">km/sa</span></div></div>
+<div class="stat"><div class="name">Yağış</div><div class="value" id="current-rain">—<span class="unit">mm</span></div><div class="detail">6 saatlik birikim</div></div>
+<div class="stat"><div class="name">Geçerlilik</div><div class="value" id="current-valid">—</div><div class="detail">TSİ</div></div>
+</div>
+
 <section class="station-history-inline history-panel" id="station-history-panel" aria-label="Çanakçı MGM son 24 saat gerçek ölçümleri">
 <div class="history-panel-head"><div><div class="section-kicker" id="history-station-source">ÇANAKÇI · GERÇEK ÖLÇÜMLER</div><h2>Son 24 saat</h2></div></div>
 <div class="history-charts">
-<article class="history-chart-card"><div class="history-chart-head"><div><h3>Sıcaklık</h3><p>°C · 30 dk ortalama, min–maks</p></div><span class="history-chart-icon">℃</span></div><div class="history-chart" id="station-temperature-trend"><div class="station-trend-empty">Sıcaklık geçmişi bekleniyor…</div></div><div class="history-chart-meta" id="station-trend-meta">Çanakçı · MGM · son 24 saat</div></article>
+<article class="history-chart-card"><div class="history-chart-head"><div><h3>Sıcaklık</h3><p>°C · 30 dk ortalama, min–maks</p></div><span class="history-chart-icon">℃</span></div><div class="history-chart" id="station-temperature-trend"><div class="station-trend-empty">Sıcaklık kayıtları bekleniyor…</div></div><div class="history-chart-meta" id="station-trend-meta">Çanakçı · MGM · 24 saat</div></article>
+<article class="history-chart-card"><div class="history-chart-head"><div><h3 id="station-rain-title">Yağış</h3><p id="station-rain-caption">mm · kayan 1 saatlik toplam</p></div><span class="history-chart-icon">☂</span></div><div class="history-chart" id="station-rain-trend"><div class="station-trend-empty">Yağış geçmişi oluşturuluyor…</div></div><div class="history-chart-meta" id="station-rain-meta">Çanakçı · MGM · son ölçüm</div></article>
+</div>
+<div class="history-source-note" id="history-source-note">Sıcaklık ve yağış: MGM Çanakçı gerçek istasyon ölçümleri.</div>
+</section>
+</article>
 <article class="history-chart-card"><div class="history-chart-head"><div><h3 id="station-rain-title">Yağış</h3><p id="station-rain-caption">mm · kayan 1 saatlik toplam</p></div><span class="history-chart-icon">☂</span></div><div class="history-chart" id="station-rain-trend"><div class="station-trend-empty">Yağış geçmişi bekleniyor…</div></div><div class="history-chart-meta" id="station-rain-meta">Çanakçı · MGM · son 1 saat</div></article>
 </div>
 <div class="history-source-note" id="history-source-note">Sıcaklık ve yağış: MGM Çanakçı gerçek istasyon ölçümleri.</div>
