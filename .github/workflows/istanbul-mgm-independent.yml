@@ -1,0 +1,131 @@
+name: İstanbul MGM Independent
+
+on:
+  schedule:
+    - cron: "*/5 * * * *"
+  workflow_dispatch:
+
+permissions:
+  contents: write
+  actions: write
+
+concurrency:
+  group: istanbul-mgm-independent
+  cancel-in-progress: false
+
+jobs:
+  collect:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - name: Check out Istanbul MGM data branch
+        uses: actions/checkout@v5
+        with:
+          ref: istanbul-mgm-data
+          fetch-depth: 0
+
+      - name: Set up Python
+        uses: actions/setup-python@v6
+        with:
+          python-version: "3.12"
+
+      - name: Set up Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: "22"
+
+      - name: Install ENKA dependency
+        run: python -m pip install --disable-pip-version-check requests
+
+      - name: Prepare archive workspace
+        run: |
+          set -euo pipefail
+          mkdir -p public site/data .station-work/enka .station-work/eyupsultan .station-work/sisli
+          for f in station-temperature-history.json; do
+            [ -s "site/data/$f" ] && cp "site/data/$f" ".station-work/enka/$f" || true
+          done
+          for f in eyupsultan-station-temperature-history.json eyupsultan-station-rain-history.json; do
+            [ -s "site/data/$f" ] && cp "site/data/$f" ".station-work/eyupsultan/$f" || true
+          done
+          for f in sisli-station-temperature-history.json sisli-station-rain-history.json; do
+            [ -s "site/data/$f" ] && cp "site/data/$f" ".station-work/sisli/$f" || true
+          done
+
+      - name: Collect ENKA Balmumcu
+        env:
+          STATION_PREVIOUS_OBSERVATION_PATH: site/data/station-observation.json
+          STATION_TEMPERATURE_HISTORY_PATH: .station-work/enka/station-temperature-history.json
+        run: |
+          set -euo pipefail
+          python -u enka_weather.py
+          test -s public/station-observation.json
+          test -s .station-work/enka/station-temperature-history.json
+
+      - name: Collect MGM Eyüpsultan
+        env:
+          EYUPSULTAN_TEMPERATURE_HISTORY_PATH: .station-work/eyupsultan/eyupsultan-station-temperature-history.json
+          EYUPSULTAN_RAIN_HISTORY_PATH: .station-work/eyupsultan/eyupsultan-station-rain-history.json
+        run: |
+          set -euo pipefail
+          node scripts/eyupsultan_weather.mjs
+          test -s public/eyupsultan-station-observation.json
+          test -s .station-work/eyupsultan/eyupsultan-station-temperature-history.json
+          test -s .station-work/eyupsultan/eyupsultan-station-rain-history.json
+
+      - name: Collect MGM Şişli
+        env:
+          SISLI_TEMPERATURE_HISTORY_PATH: .station-work/sisli/sisli-station-temperature-history.json
+          SISLI_RAIN_HISTORY_PATH: .station-work/sisli/sisli-station-rain-history.json
+        run: |
+          set -euo pipefail
+          node scripts/sisli_weather.mjs
+          test -s public/sisli-station-observation.json
+          test -s .station-work/sisli/sisli-station-temperature-history.json
+          test -s .station-work/sisli/sisli-station-rain-history.json
+
+      - name: Validate all three stations
+        run: |
+          python - <<'PY'
+          import json
+          from pathlib import Path
+          files = [
+            ("station-observation.json", "ENKA"),
+            ("eyupsultan-station-observation.json", "Eyüpsultan"),
+            ("sisli-station-observation.json", "Şişli"),
+          ]
+          for name, label in files:
+              doc=json.loads(Path("public",name).read_text(encoding="utf-8"))
+              s=doc.get("station_observation") or {}
+              age=float(s.get("age_minutes",9999))
+              if s.get("temperature_2m_c") is None or s.get("is_stale") or age > 20:
+                  raise SystemExit(f"{label} stale/invalid: age={age}")
+              print(f"{label}: {s.get('temperature_2m_c')} °C | age {age:.1f} min")
+          PY
+
+      - name: Publish Istanbul MGM branch
+        run: |
+          set -euo pipefail
+          mkdir -p site/data
+          cp public/station-observation.json site/data/station-observation.json
+          cp .station-work/enka/station-temperature-history.json site/data/station-temperature-history.json
+          cp public/eyupsultan-station-observation.json site/data/eyupsultan-station-observation.json
+          cp .station-work/eyupsultan/eyupsultan-station-temperature-history.json site/data/eyupsultan-station-temperature-history.json
+          cp .station-work/eyupsultan/eyupsultan-station-rain-history.json site/data/eyupsultan-station-rain-history.json
+          cp public/sisli-station-observation.json site/data/sisli-station-observation.json
+          cp .station-work/sisli/sisli-station-temperature-history.json site/data/sisli-station-temperature-history.json
+          cp .station-work/sisli/sisli-station-rain-history.json site/data/sisli-station-rain-history.json
+
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add site/data
+          if git diff --cached --quiet; then
+            echo "No Istanbul MGM changes."
+          else
+            git commit -m "Update Istanbul MGM station data"
+            git push origin HEAD:istanbul-mgm-data
+          fi
+
+      - name: Trigger central Pages publisher
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: gh workflow run publish-live-site.yml --repo "${{ github.repository }}" --ref main
