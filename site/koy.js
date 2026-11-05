@@ -468,7 +468,7 @@ async function refresh(){if(busy)return;busy=true;
  }
  if(results[5].status==="fulfilled"){
   renderMgmObservation(results[5].value,stationHistory,f72);
-  const o=results[4].value;
+  const o=results[5].value;
   $("mgm-status-date").textContent=ts(o.observed_at_utc);
   $("mgm-source-temp").innerHTML=fmt(o.temperature_2m_c)+"<small>°C</small>";
   $("mgm-source-status").textContent="Canlı MGM ölçümü · son 1 saat yağış "+fmt(o.precipitation_1h_mm)+" mm";
