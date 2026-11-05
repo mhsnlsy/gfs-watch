@@ -3,6 +3,8 @@ import path from "node:path";
 
 const MGM_STATION_URL = "https://servis.mgm.gov.tr/web/sondurumlar?merkezid=18401";
 const MGM_CITY_URL = "https://servis.mgm.gov.tr/web/sondurumlar/ilTumSondurum?ilPlaka=34";
+const MGM_STATION_API_URL = "https://servis.mgm.gov.tr/api/sondurumlar?merkezid=18401";
+const MGM_CITY_API_URL = "https://servis.mgm.gov.tr/api/sondurumlar/ilTumSondurum?ilPlaka=34";
 const STATION_ID = "18401";
 const STALE_AFTER_MINUTES = 20;
 const HISTORY_SCHEMA = "gfs-watch.station-temperature-history.v1";
@@ -85,8 +87,31 @@ async function fetchFromMgm() {
   const windSpeed = mgmNumber(row.ruzgarHiz);
   const windDir = mgmNumber(row.ruzgarYon);
   const wind = windFromDegrees(windDir);
-  const seaLevel = mgmNumber(row.denizeIndirgenmisBasinc);
-  const stationP = mgmNumber(row.aktuelBasinc);
+  let seaLevel = mgmNumber(row.denizeIndirgenmisBasinc);
+  let stationP = mgmNumber(row.aktuelBasinc);
+
+  // MGM sometimes serves the Şişli observation with pressure fields missing
+  // on the /web endpoint while the legacy /api endpoint still has aktuelBasinc.
+  // Pressure is fetched independently so a missing pressure field cannot block
+  // the rest of the Şişli observation.
+  if (stationP == null) {
+    const pressureEndpoints = [MGM_STATION_API_URL, MGM_CITY_API_URL];
+    for (const pressureUrl of pressureEndpoints) {
+      try {
+        const pressurePayload = await requestMgm(pressureUrl);
+        const apiStationP = mgmNumber(pressurePayload.aktuelBasinc);
+        const apiSeaLevel = mgmNumber(pressurePayload.denizeIndirgenmisBasinc);
+        if (apiStationP != null) stationP = apiStationP;
+        if (seaLevel == null && apiSeaLevel != null) seaLevel = apiSeaLevel;
+        if (stationP != null || seaLevel != null) {
+          console.log("[MGM] Şişli basınç /api kaynağından alındı:", stationP, "hPa");
+          break;
+        }
+      } catch (error) {
+        console.warn("[MGM] Şişli basınç alternatif uç noktası başarısız:", pressureUrl, error.message);
+      }
+    }
+  }
   return {
     station_name: "Şişli",
     station_id: STATION_ID,
