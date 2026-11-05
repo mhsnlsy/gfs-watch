@@ -1027,7 +1027,7 @@
       .briefing-row { padding:4px 6px!important; }
     }
 </style>
-  <link rel="stylesheet" href="./meteopt-gfs-table.css?v=20261105-desktop-120">
+  <link rel="stylesheet" href="./meteopt-gfs-table.css?v=20261105-pressure-side-1">
 
   <style id="mobile-scroll-recovery">
     /* Keep the document itself as the vertical scroll container on Android WebView. */
@@ -1151,7 +1151,6 @@
       </div>
       <div id="notifications-list" class="notification-list" aria-live="polite"><div class="chart-empty">Son raporlar yükleniyor…</div></div>
     </section>
-    <section class="section" id="basinc"><div class="section-head"><div><div class="section-kicker">GFS · DENİZ SEVİYESİ</div><h2>Basınç merkezleri</h2></div></div><div class="lower-grid"><article class="pressure-card"><div class="label">Bölgesel basınç merkezleri ve İstanbul'a etkisi</div><ul class="pressure-list" id="pressure-findings"><li class="loading">Analiz yükleniyor…</li></ul></article></div></section>
     </div>
     <div id="ecmwf-model-view" hidden aria-label="ECMWF tahmin görünümü">
       <div class="section-head" style="padding-top:30px"><div><div class="section-kicker">ECMWF IFS · HRES + ENS</div><h2>ECMWF IFS · İstanbul</h2></div><div class="section-note"><span id="ecmwf-run-meta">ECMWF döngüsü bekleniyor</span><br><span id="ecmwf-updated-chip">Yayın zamanı</span><br>Günlük en düşük / en yüksek sıcaklık</div></div>
@@ -1168,6 +1167,7 @@
       <section class="section" aria-label="ECMWF veri kaynağı ve lisans"><p class="ecmwf-source-note">Kaynak: <a href="https://www.meteopt.com/modelos/ecmwf?lat=41.014&lon=28.950" target="_blank" rel="noopener">MeteoPT ECMWF</a> · İstanbul noktası 41.014°N 28.950°E · 3 saatlik sıcaklık, yağış, rüzgâr, 850 hPa ve basınç. Ensemble sapması bu kaynakta yok.</p></section>
 <section class="section" id="ecmwf-tahmin"><div class="section-head"><div><div class="section-kicker">ECMWF IFS · MODEL TAHMİNİ</div><h2>8 günlük tahmin</h2></div><div class="section-note"><span id="ecmwf-daily-cycle-chip">ECMWF döngüsü yükleniyor</span><br><span id="ecmwf-daily-updated-chip">Yayın zamanı bekleniyor</span><br>Günlük en düşük / en yüksek sıcaklık · HRES yüzey tahmini</div></div><div class="daily-grid" id="ecmwf-daily-grid"><div class="loading">ECMWF tahmini yükleniyor…</div></div></section>
     </div>
+    <div class="gfs-table-pressure-layout">
     <section class="section" id="meteopt-gfs-table" aria-label="MeteoPT GFS ham model tablosu">
       <div class="section-head">
         <div>
@@ -1192,6 +1192,19 @@
 
       </article>
     </section>
+      <aside class="section gfs-pressure-panel" id="basinc">
+        <div class="section-head">
+          <div>
+            <div class="section-kicker">GFS · DENİZ SEVİYESİ</div>
+            <h2>Basınç merkezleri</h2>
+          </div>
+        </div>
+        <article class="pressure-card">
+          <div class="label">Bölgesel basınç merkezleri ve İstanbul'a etkisi</div>
+          <ul class="pressure-list" id="pressure-findings"><li class="loading">Analiz yükleniyor…</li></ul>
+        </article>
+      </aside>
+    </div>
 
   </main>
   <footer class="shell footer"><span><strong data-app-name>İstanbul'un Havası</strong> <span data-app-version>4.0</span></span><span>Veri kaynakları: ENKA Balmumcu Vantage PRO · MGM Eyüpsultan 18101 · MeteoPT GFS · MeteoPT ECMWF · Otomatik yenileme: 5 dakika</span></footer>
