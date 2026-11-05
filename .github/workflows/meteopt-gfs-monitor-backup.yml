@@ -2,7 +2,7 @@ name: MeteoPT GFS Monitor Backup Trigger
 
 on:
   schedule:
-    - cron: "5,15,25,35,45,55 * * * *"
+    - cron: "*/5 * * * *"
   workflow_dispatch:
 
 permissions:
