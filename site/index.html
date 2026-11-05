@@ -1239,7 +1239,6 @@
     const SISLI_STATION_HISTORY_URL="./data/sisli-station-temperature-history.json";
     const EYUPSULTAN_RAIN_HISTORY_URL="./data/eyupsultan-station-rain-history.json";
     const SISLI_RAIN_HISTORY_URL="./data/sisli-station-rain-history.json";
-    const STATION_HEALTH_URLS={enka:"./data/station-health-enka.json",eyupsultan:"./data/station-health-eyupsultan.json",sisli:"./data/station-health-sisli.json"};
     const VERIFY_URL="./data/forecast-verification.json";
     let enkaStationObservation=null,eyupsultanStationObservation=null,sisliStationObservation=null,activeStation="enka";
     try{
@@ -2721,29 +2720,22 @@
     // Station observations refresh independently from forecast/model data.
     // A delayed GFS/ECMWF payload must never block live station readings.
     async function refreshStationHealth(){
-      const url=STATION_HEALTH_URLS[activeStation];
+      const observation=activeStation==="enka"?enkaStationObservation:activeStation==="eyupsultan"?eyupsultanStationObservation:sisliStationObservation;
       const box=$("station-health"),node=$("station-health-text");
-      if(!box||!node||!url)return;
-      try{
-        const response=await fetch(url+"?t="+Date.now(),{cache:"no-store"});
-        if(!response.ok)throw new Error("health");
-        const health=await response.json();
-        const age=Number(health.data_age_minutes);
-        const checked=Date.parse(health.checked_at_utc||"");
-        const watchdogAge=Number.isFinite(checked)?Math.max(0,(Date.now()-checked)/60000):999;
-        const healthy=health.status==="active"&&Number.isFinite(age)&&age<10&&watchdogAge<12;
-        box.hidden=false;
-        box.classList.toggle("recovery",health.status==="recovery"||(!healthy&&age<20));
-        box.classList.toggle("stale",Number.isFinite(age)&&age>=20);
-        const ageText=Number.isFinite(age)?Math.round(age)+" dk":"—";
-        if(health.status==="recovery")node.textContent="Veri akışı yavaşladı · watchdog recovery tetikledi · son veri "+ageText+" önce";
-        else if(Number.isFinite(age)&&age>=20)node.textContent="Veri akışı eski · son veri "+ageText+" önce";
-        else if(healthy)node.textContent="Veri akışı aktif · watchdog kontrolü güncel";
-        else node.textContent="Veri akışı izleniyor · son veri "+ageText+" önce";
-      }catch(_){
-        box.hidden=false;
+      if(!box||!node)return;
+      box.hidden=false;
+      box.classList.remove("recovery","stale");
+      const observedAt=Date.parse(observation?.observed_at_utc||"");
+      const age=Number.isFinite(observedAt)?Math.max(0,(Date.now()-observedAt)/60000):9999;
+      const ageText=Number.isFinite(age)&&age<9999?Math.round(age)+" dk":"—";
+      if(age>=20){
+        box.classList.add("stale");
+        node.textContent="Ölçüm eski · son veri "+ageText+" önce";
+      }else if(age>=10){
         box.classList.add("recovery");
-        node.textContent="Watchdog sağlık kaydı henüz alınamadı";
+        node.textContent="Veri akışı yavaşladı · son veri "+ageText+" önce";
+      }else{
+        node.textContent="Veri akışı aktif · son veri "+ageText+" önce";
       }
     }
 
