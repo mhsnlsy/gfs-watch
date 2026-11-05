@@ -37,22 +37,30 @@ jobs:
         shell: bash
         run: |
           set -euo pipefail
-          DB_JSON="$(wrangler d1 list --json)"
+
+          DB_LIST="$(curl --fail-with-body -sS \
+            -H "Authorization: Bearer $CLOUDFLARE_API_TOKEN" \
+            -H "Content-Type: application/json" \
+            "https://api.cloudflare.com/client/v4/accounts/$CLOUDFLARE_ACCOUNT_ID/d1/database")"
+
           DB_ID="$(node -e '
-            const fs=require("fs");
-            const a=JSON.parse(fs.readFileSync(0,"utf8"));
-            const x=(Array.isArray(a)?a:[]).find(d=>d.name==="gfs-watch-stations");
+            const a=JSON.parse(process.argv[1]);
+            const x=(a.result||[]).find(d=>d.name==="gfs-watch-stations");
             process.stdout.write(x?.uuid || x?.id || "");
-          ' <<< "$DB_JSON")"
+          ' "$DB_LIST")"
 
           if [ -z "$DB_ID" ]; then
             echo "D1 database gfs-watch-stations bulunamadı; oluşturuluyor."
-            CREATE_JSON="$(wrangler d1 create gfs-watch-stations --location=weur --json)"
+            CREATE_JSON="$(curl --fail-with-body -sS -X POST \
+              -H "Authorization: Bearer $CLOUDFLARE_API_TOKEN" \
+              -H "Content-Type: application/json" \
+              -d '{"name":"gfs-watch-stations","primary_location_hint":"weur"}' \
+              "https://api.cloudflare.com/client/v4/accounts/$CLOUDFLARE_ACCOUNT_ID/d1/database")"
+
             DB_ID="$(node -e '
-              const fs=require("fs");
-              const a=JSON.parse(fs.readFileSync(0,"utf8"));
-              process.stdout.write(a?.uuid || a?.id || a?.database_id || "");
-            ' <<< "$CREATE_JSON")"
+              const a=JSON.parse(process.argv[1]);
+              process.stdout.write(a.result?.uuid || a.result?.id || "");
+            ' "$CREATE_JSON")"
           fi
 
           if [ -z "$DB_ID" ]; then
@@ -60,7 +68,7 @@ jobs:
             exit 1
           fi
 
-          echo "D1 database ID: $DB_ID"
+          echo "D1 database hazır: $DB_ID"
           sed -i "s/REPLACE_WITH_CLOUDFLARE_D1_DATABASE_ID/$DB_ID/" wrangler.toml
           grep -q "database_id = \"$DB_ID\"" wrangler.toml
 
