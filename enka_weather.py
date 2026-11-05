@@ -1,4 +1,4 @@
-"""Fetch and publish the live ENKA Balmumcu camera OCR observation."""
+"""Fetch and publish live ENKA Balmumcu WeatherLink observations."""
 
 import json
 import io
@@ -253,8 +253,7 @@ def update_temperature_history(observation):
     else:
         samples = []
 
-    # ENKA's WeatherLink export is the authoritative source for the 24-hour
-    # temperature curve. Keep OCR as a live fallback/current-point source.
+    # ENKA WeatherLink export is the authoritative source for the 24-hour temperature curve.
     try:
         source_samples = _fetch_enka_history_samples()
         merged = {sample.get("observed_at_utc"): sample for sample in samples if sample.get("observed_at_utc")}
@@ -263,7 +262,7 @@ def update_temperature_history(observation):
         samples = list(merged.values())
         print("[TEMPERATURE LOG] ENKA 24 saat geçmişi WeatherLink downld02.txt ile güncellendi.")
     except Exception as error:
-        print(f"[ENKA HISTORY] WeatherLink geçmişi alınamadı; yerel OCR arşivi korunuyor: {error}")
+        print(f"[ENKA HISTORY] WeatherLink geçmişi alınamadı; mevcut arşiv korunuyor: {error}")
 
     logged_at = datetime.now(timezone.utc)
     observed_at = observation["observed_at_utc"]
@@ -350,7 +349,7 @@ def main():
     observation = fetch_enka_station_observation()
     if observation.get("is_stale") or observation.get("temperature_2m_c") is None:
         raise ValueError(
-            f"ENKA kamera OCR ölçümü güncel değil veya sıcaklık eksik "
+            f"ENKA WeatherLink ölçümü güncel değil veya sıcaklık eksik "
             f"(yaş: {observation.get('age_minutes')} dk); eski veri yayımlanmadı."
         )
     now = datetime.now(timezone.utc).isoformat(timespec="seconds")
@@ -368,7 +367,7 @@ def main():
     )
     update_temperature_history(observation)
     print(
-        f"[ENKA OCR PRIMARY] {observation['station_name']} | "
+        f"[ENKA WEATHERLINK PRIMARY] {observation['station_name']} | "
         f"{observation['temperature_2m_c']}°C | "
         f"{observation['wind_speed_10m_kmh']} km/sa | "
         f"ölçüm zamanı {observation['observed_at_utc']} | "
