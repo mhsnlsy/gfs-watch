@@ -1,6 +1,6 @@
 {
   "schema": "gfs-watch.station-temperature-history.v1",
-  "station_id": "ENKA-BALMUMCU-CAMERA-OCR",
+  "station_id": "ENKA-BALMUMCU-WEATHERLINK",
   "station_name": "ENKA Balmumcu",
   "sampling_interval_minutes": 5,
   "aggregation_interval_minutes": 30,
