@@ -78,6 +78,18 @@ jobs:
 
           if [ -s "istanbul-gfs-data/gfs/latest.json" ]; then
             cp "istanbul-gfs-data/gfs/latest.json" "_site/data/istanbul-gfs-latest.json"
+            if [ -s "istanbul-gfs-data/gfs/comparison.json" ]; then
+              python - <<'PY'
+          import json
+          from pathlib import Path
+          latest=Path("_site/data/istanbul-gfs-latest.json")
+          comparison=Path("istanbul-gfs-data/gfs/comparison.json")
+          doc=json.loads(latest.read_text(encoding="utf-8"))
+          cmp=json.loads(comparison.read_text(encoding="utf-8"))
+          doc["comparison_runs"]=cmp.get("runs",[])
+          latest.write_text(json.dumps(doc,ensure_ascii=False,indent=2),encoding="utf-8")
+          PY
+            fi
             echo "Independent Istanbul GFS payload present."
           elif [ -s forecast-data/public/latest.json ]; then
             cp "forecast-data/public/latest.json" "_site/data/istanbul-gfs-latest.json"
