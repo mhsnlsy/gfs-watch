@@ -109,7 +109,18 @@ def fetch_enka_station_observation():
     print("[ENKA OCR] Weather overlay:", repr(right))
     print("[ENKA OCR] Timestamp overlay:", repr(bottom))
 
-    temperature = _parse_decimal(r"([-+]?\d{1,2}[.,]\d)\s*°?\s*C", right, "sıcaklık")
+    temperature_match = re.search(r"([-+]?\d{1,2}[.,]\d)\s*°?\s*C", right, flags=re.I)
+    if not temperature_match:
+        # ENKA camera OCR can occasionally drop the decimal point and unit.
+        # Accept a standalone 3- or 4-digit token only when it is followed by
+        # the known humidity/pressure structure, then normalize it as 10.x–99.x.
+        compact = re.search(r"(?m)^\s*(\d{2})(\d)\s*$", right)
+        if compact:
+            temperature = float(f"{compact.group(1)}.{compact.group(2)}")
+        else:
+            temperature = _parse_decimal(r"([-+]?\d{1,2}[.,]\d)\s*°?\s*C", right, "sıcaklık")
+    else:
+        temperature = float(temperature_match.group(1).replace(",", "."))
     humidity = _parse_decimal(r"(\d{1,3})\s*%", right, "nem")
     pressure = _parse_decimal(r"(\d{3,4}[.,]\d)\s*hPa", right, "basınç")
     wind_match = re.search(
