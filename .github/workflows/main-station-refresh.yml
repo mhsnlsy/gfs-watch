@@ -265,3 +265,12 @@ jobs:
           done
           echo "Could not publish station data to main."
           exit 1
+
+  deploy-live-site:
+    name: Deploy refreshed station data to GitHub Pages
+    needs: publish
+    uses: ./.github/workflows/pages-live.yml
+    permissions:
+      contents: read
+      pages: write
+      id-token: write
