@@ -1085,20 +1085,21 @@
       <article class="weather-card station-card" id="balmumcu" role="region" aria-labelledby="station-card-title">
         <div class="weather-top"><div><div class="label">GERÇEK İSTASYON GÖZLEMİ</div><div class="place" id="station-card-title">ENKA Balmumcu · İstanbul</div></div><span class="model-state" id="freshness">Veri bekleniyor</span></div>
         <div class="station-switch" role="group" aria-label="İstasyon seçimi">
-          <button type="button" id="station-enka-button" class="active" aria-pressed="true">ENKA Balmumcu</button>
-          <button type="button" id="station-eyupsultan-button" aria-pressed="false">Eyüpsultan</button>
-          <button type="button" id="station-sisli-button" aria-pressed="false">Şişli</button>
+          <button type="button" id="station-enka-button" data-station="enka">ENKA Balmumcu</button>
+          <button type="button" id="station-eyupsultan-button" data-station="eyupsultan">Eyüpsultan</button>
+          <button type="button" id="station-sisli-button" data-station="sisli">Şişli</button>
         </div>
         <script>
+          // Restore the last selected station before the dashboard renders.
+          // This keeps a manual page refresh on the same station tab.
           try{
             const saved=localStorage.getItem("istanbul-hava-station");
-            const station=saved==="eyupsultan"||saved==="sisli"||saved==="enka"?saved:"enka";
-            document.getElementById("station-enka-button").classList.toggle("active",station==="enka");
-            document.getElementById("station-eyupsultan-button").classList.toggle("active",station==="eyupsultan");
-            document.getElementById("station-sisli-button").classList.toggle("active",station==="sisli");
-            document.getElementById("station-enka-button").setAttribute("aria-pressed",String(station==="enka"));
-            document.getElementById("station-eyupsultan-button").setAttribute("aria-pressed",String(station==="eyupsultan"));
-            document.getElementById("station-sisli-button").setAttribute("aria-pressed",String(station==="sisli"));
+            const station=["enka","eyupsultan","sisli"].includes(saved)?saved:"enka";
+            document.querySelectorAll(".station-switch button[data-station]").forEach(button=>{
+              const active=button.dataset.station===station;
+              button.classList.toggle("active",active);
+              button.setAttribute("aria-pressed",String(active));
+            });
           }catch(_){}
         </script>
         <div class="station-overview">
