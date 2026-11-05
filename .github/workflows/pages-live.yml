@@ -81,6 +81,17 @@ jobs:
         with:
           path: _site
 
+      - name: Cancel stale Pages deployment
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          set -euo pipefail
+          gh api --method POST \
+            -H "Accept: application/vnd.github+json" \
+            -H "X-GitHub-Api-Version: 2026-03-10" \
+            "/repos/${{ github.repository }}/pages/deployments/a82071517c4e8c11310b2ba7cca3d51a64746ac3/cancel" \
+            >/dev/null 2>&1 || true
+
       - name: Deploy website
         id: deployment
         uses: actions/deploy-pages@v4
