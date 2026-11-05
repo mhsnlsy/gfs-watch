@@ -169,6 +169,8 @@ jobs:
                       "updated_at_utc":runs[0].get("published_at_utc"),"runs":runs}
               Path("gfs/comparison.json").write_text(json.dumps(bundle,ensure_ascii=False,indent=2),encoding="utf-8")
           PY
+            python -m pip install -q matplotlib
+            KOY_GFS_DIR="$PWD/gfs" python scripts/render_koy_gfs_charts.py
             find gfs/runs -type f -name '*.json' -mtime +45 -delete
             git add gfs
             git commit -m "Publish Köy GFS forecast milestone"
