@@ -35,7 +35,7 @@ jobs:
       - name: Check out published station data
         uses: actions/checkout@v7
         with:
-          ref: gfs-watch-state
+          ref: enka-state
           path: forecast-data
 
       - name: Set up Python
@@ -85,22 +85,14 @@ jobs:
           git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
           git add public/station-observation.json public/station-temperature-history.json
           if git diff --cached --quiet; then
-            echo "No station data changes to publish."
+            echo "No ENKA station data changes to publish."
             echo "changed=false" >> "$GITHUB_OUTPUT"
             exit 0
           fi
           git commit -m "Refresh ENKA Balmumcu camera OCR observation"
-          for attempt in 1 2 3 4 5; do
-            git pull --rebase origin gfs-watch-state
-            if git push origin gfs-watch-state; then
-              echo "Station data pushed to gfs-watch-state."
-              echo "changed=true" >> "$GITHUB_OUTPUT"
-              exit 0
-            fi
-            sleep $((attempt * 2))
-          done
-          echo "Could not publish station data after five attempts."
-          exit 1
+          git push origin HEAD:enka-state
+          echo "ENKA data pushed to dedicated enka-state."
+          echo "changed=true" >> "$GITHUB_OUTPUT"
 
       # A push made with GITHUB_TOKEN does not start another workflow.
       - name: Deploy refreshed station data to GitHub Pages (throttled)
@@ -127,67 +119,3 @@ jobs:
           gh workflow run pages-live.yml --ref main --repo "$GITHUB_REPOSITORY"
           echo "Throttled GitHub Pages deployment requested."
 
-      # GitHub cron does not run here. ECMWF is refreshed from this living chain
-      # only when the published cycle is stale and no fetch is already running.
-      - name: Refresh ECMWF when its published cycle is stale
-        if: always() && !cancelled()
-        env:
-          GH_TOKEN: ${{ github.token }}
-        run: |
-          active=$(gh run list --workflow=ecmwf-eps.yml --limit 6 --json status --jq '[.[] | select(.status=="queued" or .status=="in_progress" or .status=="pending" or .status=="waiting" or .status=="requested")] | length')
-          if [ "$active" != "0" ]; then
-            echo "ECMWF fetch already running ($active)."
-            exit 0
-          fi
-          latest=$(gh run list --workflow=ecmwf-eps.yml --limit 1 --json createdAt,headSha --jq '.[0] // empty')
-          if [ -n "$latest" ]; then
-            latest_sha=$(printf '%s' "$latest" | jq -r '.headSha // empty')
-            latest_created=$(printf '%s' "$latest" | jq -r '.createdAt // empty')
-            if [ "$latest_sha" = "$GITHUB_SHA" ] && [ -n "$latest_created" ]; then
-              latest_epoch=$(date -u -d "$latest_created" +%s)
-              now_epoch=$(date -u +%s)
-              age=$((now_epoch - latest_epoch))
-              if [ "$age" -lt 21600 ]; then
-                echo "ECMWF was already attempted $age seconds ago on this exact code revision; six-hour retry cooldown prevents repeated failures."
-                exit 0
-              fi
-            fi
-          fi
-          state=$(python3 - << 'PY'
-          import json
-          from datetime import datetime, timezone
-          from pathlib import Path
-          path = Path("forecast-data/public/ecmwf/latest.json")
-          stale = True
-          if path.is_file():
-              try:
-                  doc = json.loads(path.read_text())
-                  updated = datetime.fromisoformat(doc["updated_at_utc"])
-                  age_h = (datetime.now(timezone.utc) - updated).total_seconds() / 3600
-                  runs = doc.get("comparison_runs") or []
-                  print(f"ECMWF updated {age_h:.1f}h ago, comparison cycles {len(runs)}", flush=True)
-                  stale = age_h > 3 or len(runs) < 4
-              except Exception as exc:
-                  print(f"ECMWF cache unreadable: {exc}", flush=True)
-          else:
-              print("ECMWF cache missing", flush=True)
-          print("STALE" if stale else "FRESH")
-          PY
-          )
-          echo "$state"
-          if ! printf '%s\n' "$state" | grep -q '^STALE$'; then
-            echo "ECMWF cache is fresh."
-            exit 0
-          fi
-          gh workflow run ecmwf-eps.yml --ref main --repo "$GITHUB_REPOSITORY"
-          echo "ECMWF refresh requested."
-
-      # Queue the next poll on the next five-minute UTC boundary. This uses
-      # workflow_dispatch, which GITHUB_TOKEN is explicitly allowed to trigger.
-      - name: Queue next five-minute ENKA refresh
-        if: always() && !cancelled()
-        env:
-          GH_TOKEN: ${{ github.token }}
-        run: |
-          gh workflow run enka-station-refresh.yml --ref main --repo "$GITHUB_REPOSITORY"
-          echo "Next ENKA refresh queued immediately; no runner is held idle."
