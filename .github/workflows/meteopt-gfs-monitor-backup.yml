@@ -38,9 +38,11 @@ jobs:
               created = datetime.fromisoformat(run["created_at"].replace("Z", "+00:00"))
               age = now - created
               status = run.get("status", "")
-              if age <= timedelta(minutes=12):
+              # Only an active run suppresses the backup dispatch. A recently
+              # completed run must not prevent the next 10-minute scan.
+              if status in {"queued", "in_progress", "waiting", "pending"} and age <= timedelta(minutes=12):
                   recent = True
-                  print(f"Primary monitor found: {run['id']} ({status}, {run.get('conclusion')})")
+                  print(f"Primary monitor is active: {run['id']} ({status})")
                   break
 
           if recent:
