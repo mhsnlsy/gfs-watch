@@ -1956,7 +1956,7 @@
       }
     }
     function renderEyupsultanRolling30mRain(samples,stationName,holder,meta,currentObservation){
-      const now=Date.now(),start=now-86400000,tenMinutes=10*60000,tolerance=150000;
+      const now=Date.now(),start=now-86400000,tenMinutes=10*60000,hourMs=3600000,tolerance=150000;
       const rows=Array.isArray(samples)?samples.slice():[];
       if(currentObservation&&numeric(currentObservation.precipitation_10m_mm)){
         rows.push({
@@ -1994,9 +1994,35 @@
         points.push({time:sample.time,mm,count:windows.length});
       });
       if(!points.length){
+        const rainMaxBadge=$("station-rain-max");
+        if(rainMaxBadge){rainMaxBadge.hidden=true;rainMaxBadge.textContent="";}
         holder.innerHTML='<div class="station-trend-empty">Kayan 30 dk yağış grafiği hazırlanıyor. Üç ardışık MGM 10 dk ölçümü tamamlanınca çizgi oluşacak; eski arşivde 10 dk alanı bulunmuyor.</div>';
         if(meta)meta.textContent=stationName+" · MGM · kayan 30 dk toplam için yeni 10 dk kayıtları bekleniyor";
         return;
+      }
+
+      // ENKA'nın yağış grafiği 30 dk kayandır; rozet ise tamamlanmış saatlik
+      // MGM birikimleri içindeki maksimum değeri gösterir.
+      const hourlyByTime=new Map();
+      rows.forEach(sample=>{
+        const time=Date.parse(sample.observed_at_utc||sample.logged_at_utc||"");
+        const mm=sample.precipitation_1h_mm==null?NaN:Number(sample.precipitation_1h_mm);
+        if(Number.isFinite(time)&&time>=start-hourMs&&time<Math.floor(now/hourMs)*hourMs&&Number.isFinite(mm)&&mm>=0){
+          hourlyByTime.set(time,{time,mm});
+        }
+      });
+      const hourlyBadgePoints=new Map();
+      [...hourlyByTime.values()].sort((a,b)=>a.time-b.time).forEach(point=>{
+        const slot=Math.floor(point.time/hourMs),slotEnd=(slot+1)*hourMs;
+        if(slotEnd>now)return;
+        const previous=hourlyBadgePoints.get(slot);
+        if(!previous||point.time>previous.time)hourlyBadgePoints.set(slot,point);
+      });
+      const hourlyPeak=[...hourlyBadgePoints.values()].reduce((best,p)=>!best||p.mm>best.mm?p:best,null);
+      const rainMaxBadge=$("station-rain-max");
+      if(rainMaxBadge){
+        if(hourlyPeak){rainMaxBadge.hidden=false;rainMaxBadge.textContent="Saatlik maks "+fmt(hourlyPeak.mm,1)+" mm · "+timeTR(hourlyPeak.time);}
+        else{rainMaxBadge.hidden=true;rainMaxBadge.textContent="";}
       }
       const width=560,height=160,left=42,right=12,top=14,bottom=27,pw=width-left-right,ph=height-top-bottom;
       const max=Math.max(.5,...points.map(point=>point.mm))*1.15;
