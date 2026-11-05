@@ -134,7 +134,7 @@ function renderRuns(d,f72){
   ["chart-rain","precipitation","6 saatlik yağış · son 4 GFS döngüsü"],
   ["chart-wind","wind_10m","10 m rüzgâr · son 4 GFS döngüsü"]
  ];
- const runStamp=runs[0]?.run_id_utc?new Date(runs[0].run_id_utc).toISOString().replace(/[-:]/g,"").replace(/\.000Z$/,"Z"):null;
+ const runStamp=runs[0]?.run_id_utc?(()=>{const d=new Date(runs[0].run_id_utc);return d.getUTCFullYear()+String(d.getUTCMonth()+1).padStart(2,"0")+String(d.getUTCDate()).padStart(2,"0")+"T"+String(d.getUTCHours()).padStart(2,"0")+"Z";})():null;
  pngMetrics.forEach(([id,metric,alt])=>{
   const holder=$(id);
   if(!holder)return;
