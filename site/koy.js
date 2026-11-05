@@ -70,10 +70,14 @@ function renderMgmObservation(o,history,f72){
  $("rain-brief-forecast").textContent=future.length?"MeteoPT GFS tahminine göre ilk anlamlı yağış: "+ts(future[0].valid_time_utc)+" TSİ.":"MeteoPT GFS tahmininde önümüzdeki 72 saatte anlamlı yağış görünmüyor.";
 }
 function renderF72(d){
- const pts=pointsOf(d,72);$("rows").innerHTML=pts.length?pts.map(p=>'<tr><td>F'+p.forecast_hour+'</td><td>'+ts(p.valid_time_utc)+'</td><td>'+fmt(num(p.wind_speed_10m_kmh),0)+'</td><td>'+fmt(num(p.wind_speed_850hpa_kmh),0)+'</td><td>'+fmt(num(p.precipitation_6h_mm))+'</td><td>'+fmt(num(p.temperature_2m_c))+'</td><td>'+fmt(num(p.temperature_850hpa_c))+'</td></tr>').join(""):'<tr><td colspan="7" class="meteopt-table-empty">F72 adımları henüz yok.</td></tr>';
- $("f72-chip").textContent="GFS · hazır";$("table-status").textContent=pts.length+" / 24 adım";$("table-run").textContent="Run: "+ts(d.run_id_utc);$("table-updated").textContent="Yayın: "+ts(d.published_at_utc);
- if(pts.length){const p=pts[0];$("current-temp").textContent=fmt(num(p.temperature_2m_c))+"°";$("current-step").textContent="F"+p.forecast_hour;$("current-valid").textContent=ts(p.valid_time_utc).replace(" TSİ","");$("current-t850").innerHTML=fmt(num(p.temperature_850hpa_c))+'<span class="unit">°C</span>';$("current-wind").innerHTML=fmt(num(p.wind_speed_10m_kmh),0)+'<span class="unit">km/sa</span>';$("current-wind850").innerHTML=fmt(num(p.wind_speed_850hpa_kmh),0)+'<span class="unit">km/sa</span>';$("current-rain").innerHTML=fmt(num(p.precipitation_6h_mm))+'<span class="unit">mm</span>';$("current-meta").textContent="İlk tahmin adımı · "+ts(p.valid_time_utc)+" · model tahmini, canlı ölçüm değil"}
- const rainy=pts.filter(p=>num(p.precipitation_6h_mm)>0.1);$("rain-times").textContent=rainy.length?rainy.slice(0,6).map(p=>ts(p.valid_time_utc)+" · "+fmt(num(p.precipitation_6h_mm))+" mm / 6 saat").join("  |  "):"İlk 72 saatlik model adımlarında anlamlı yağış görünmüyor.";
+ const pts=pointsOf(d,72);
+ const body=$("meteopt-table-body");
+ body.innerHTML=pts.length?pts.map(p=>'<tr><td>F'+p.forecast_hour+'</td><td>'+ts(p.valid_time_utc)+'</td><td>'+fmt(num(p.wind_speed_10m_kmh),0)+'</td><td>'+fmt(num(p.wind_speed_850hpa_kmh),0)+'</td><td>'+fmt(num(p.precipitation_6h_mm))+'</td><td>'+fmt(num(p.temperature_2m_c))+'</td><td>'+fmt(num(p.temperature_850hpa_c))+'</td></tr>').join(""):'<tr><td colspan="7" class="meteopt-table-empty">F72 adımları henüz yok.</td></tr>';
+ $("meteopt-table-status").textContent=pts.length+" / 24 adım";
+ $("meteopt-table-run").textContent="Model döngüsü: "+ts(d.run_id_utc);
+ $("meteopt-table-updated").textContent="Yayın: "+ts(d.published_at_utc);
+ const first=pts[0];
+ if(first) $("report-summary").textContent="MGM Çanakçı gerçek istasyon ölçümü ile MeteoPT GFS model tahmini ayrı kaynaklardır. İlk GFS tahmin adımı: "+ts(first.valid_time_utc)+" · "+fmt(num(first.temperature_2m_c))+" °C · yağış "+fmt(num(first.precipitation_6h_mm))+" mm / 6 saat.";
 }
 function svgStationHistory(samples,metric,title,unit){
  const now=Date.now(),from=now-24*3600000,bins=[];
@@ -111,26 +115,34 @@ function renderStationHistory(doc){
  $("station-rain-trend").innerHTML=svgStationHistory(samples,"precipitation_1h_mm","Çanakçı yağış","mm");
 }
 function renderRuns(d,f72){
- const runs=(d?.runs||[]).slice(0,4);$("report-meta").textContent=runs.length?"Son döngü: "+ts(runs[0].run_id_utc)+" · "+runs.length+" çıktı hazır":"Son model döngüsü bekleniyor";
- $("run-list").textContent=runs.length?runs.map((r,i)=>(i+1)+". "+ts(r.run_id_utc)+" · "+pointsOf(r).length+" adım").join("   |   "):"Son dört döngü verisi bekleniyor…";
- $("chart-legend").innerHTML=runs.map((r,i)=>'<span><i style="background:'+COLORS[i]+'"></i>'+esc(ts(r.run_id_utc))+'</span>').join("");
+ const runs=(d?.runs||[]).slice(0,4);
+ $("report-meta").textContent=runs.length?"Son döngü: "+ts(runs[0].run_id_utc)+" · "+runs.length+" çıktı hazır":"Son model döngüsü bekleniyor";
+ $("run-list").textContent=runs.length?runs.map((r,i)=>(i+1)+". "+ts(r.run_id_utc)+" · "+pointsOf(r).length+" adım").join("\n"):"Son dört döngü verisi bekleniyor…";
  $("chart-temp").innerHTML=svgDaily(runs,"temperature_2m_c","2 m sıcaklık","°C","candle");
  $("chart-t850").innerHTML=svgDaily(runs,"temperature_850hpa_c","850 hPa sıcaklık","°C","range");
  $("chart-rain").innerHTML=svgLine(runs,"precipitation_6h_mm","6 saatlik yağış","mm",180);
  $("chart-wind").innerHTML=svgDaily(runs,"wind_speed_10m_kmh","10 m rüzgâr","km/sa","range");
- const source=runs.length?runs:f72?[f72]:[];
- $("next72-meta").textContent=source.length?source.length+" GFS döngüsü karşılaştırılıyor":"Model verisi bekleniyor";
+ const source=runs.length?runs:(f72?[f72]:[]);
+ $("next-72h-meta").textContent=source.length?source.length+" GFS döngüsü karşılaştırılıyor":"Model verisi bekleniyor";
  $("next72-temperature").innerHTML=svgLine(source,"temperature_2m_c","2 m sıcaklık","°C",72);
  $("next72-precipitation").innerHTML=svgLine(source,"precipitation_6h_mm","6 saatlik yağış","mm",72);
- if(source.length){const p=pointsOf(source[0],180),daily=new Map();p.forEach(x=>{const k=dayKey(x.valid_time_utc);if(!daily.has(k))daily.set(k,[]);if(num(x.temperature_2m_c)!=null)daily.get(k).push(num(x.temperature_2m_c))});const days=[...daily.entries()].slice(0,5);$("five-day-summary").textContent=days.map(([k,v])=>dayLabel(k)+": "+fmt(Math.min(...v))+"–"+fmt(Math.max(...v))+"°C").join(" · ")}
+ const first=source[0],p=first?pointsOf(first,180):[];
+ if(p.length){
+   const daily=new Map();
+   p.forEach(x=>{const k=dayKey(x.valid_time_utc);if(!daily.has(k))daily.set(k,[]);const v=num(x.temperature_2m_c);if(v!=null)daily.get(k).push(v)});
+   $("brief-temperature-trend").textContent=[...daily.entries()].slice(0,5).map(([k,v])=>dayLabel(k)+": "+fmt(Math.min(...v))+"–"+fmt(Math.max(...v))+"°C").join(" · ");
+   const rainy=p.filter(x=>num(x.precipitation_6h_mm)>0.1);
+   $("brief-rain-lines").textContent=rainy.length?rainy.slice(0,6).map(x=>ts(x.valid_time_utc)+" · "+fmt(num(x.precipitation_6h_mm))+" mm / 6 saat").join("  |  "):"Modelde anlamlı yağış görünmüyor.";
+   const dailyItems=[...daily.entries()].slice(0,8).map(([k,v])=>({date_istanbul:k,temperature_min_c:Math.min(...v),temperature_max_c:Math.max(...v),precipitation_total_mm:p.filter(x=>dayKey(x.valid_time_utc)===k).reduce((a,x)=>a+(num(x.precipitation_6h_mm)||0),0),wind_speed_max_10m_kmh:Math.max(...p.filter(x=>dayKey(x.valid_time_utc)===k).map(x=>num(x.wind_speed_10m_kmh)||0)}));
+   $("daily-grid").innerHTML=dailyItems.map(item=>'<article class="day"><div class="day-name">'+dayLabel(item.date_istanbul)+'</div><div class="day-icon">'+(item.precipitation_total_mm>=5?"🌧️":item.precipitation_total_mm>=1?"🌦️":"⛅")+'</div><div class="day-range">'+fmt(item.temperature_max_c,0)+'° <span>'+fmt(item.temperature_min_c,0)+'°</span></div><div class="day-rain">☂ '+fmt(item.precipitation_total_mm,1)+' mm</div><div class="day-wind">↗ '+fmt(item.wind_speed_max_10m_kmh,0)+' km/sa</div></article>').join("");
+ }
 }
-let f72=null,comparison=null,stationHistory=null,busy=false;
-async function refresh(){if(busy)return;busy=true;const button=$("refresh");button.disabled=true;button.textContent="Yükleniyor…";
+function refresh(){if(busy)return;busy=true;const button=$("refresh");button.disabled=true;button.textContent="Yükleniyor…";
  const results=await Promise.allSettled([get("f72/latest.json"),get("comparison.json"),get(MGM_BASE+"history.json"),get(MGM_BASE+"observation.json")]);
  if(results[0].status==="fulfilled"){f72=results[0].value;renderF72(f72)}else{$("f72-chip").textContent="Veri bekleniyor";$("table-status").textContent="F72 bekleniyor"}
  if(results[1].status==="fulfilled")comparison=results[1].value;else comparison=null;
  if(results[2].status==="fulfilled"){stationHistory=results[2].value;renderStationHistory(stationHistory)}else{stationHistory=null;$("station-temperature-trend").innerHTML="<div class=\"station-trend-empty\">MGM istasyon geçmişi bekleniyor…</div>";$("station-rain-trend").innerHTML="<div class=\"station-trend-empty\">MGM istasyon geçmişi bekleniyor…</div>"}
- if(results[3].status==="fulfilled"){renderMgmObservation(results[3].value,stationHistory,f72)} renderRuns(comparison,f72);$("updated").textContent="Son kontrol: "+ts(new Date().toISOString());
+ if(results[3].status==="fulfilled"){renderMgmObservation(results[3].value,stationHistory,f72); const o=results[3].value; $("mgm-status-date").textContent=ts(o.observed_at_utc); $("mgm-rain-rate").innerHTML=fmt(num(o.precipitation_1h_mm))+"<small> mm</small>"; $("mgm-status-text").textContent="Son 1 saat yağış · "+fmt(num(o.precipitation_24h_mm))+" mm / 24 saat"; $("mgm-rain-fill").style.width=Math.min(100,Math.max(0,(num(o.precipitation_1h_mm)||0)*8))+"%"} renderRuns(comparison,f72);$("updated").textContent="Son kontrol: "+ts(new Date().toISOString());
  button.disabled=false;button.textContent="Verileri yenile";busy=false;
 }
 $("refresh").addEventListener("click",refresh);refresh();setInterval(()=>{if(document.visibilityState!=="hidden")refresh()},60000);
