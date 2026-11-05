@@ -107,8 +107,8 @@ jobs:
           GFS_SOURCE: meteopt
           GFS_TELEGRAM: "1"
           GFS_WATCH_ONCE: "1"
-          GFS_WATCH_CONTINUOUS: "1"
-          GFS_WATCH_WINDOW_MINUTES: "10"
+          GFS_WATCH_CONTINUOUS: "0"
+          GFS_WATCH_WINDOW_MINUTES: "1"
           GFS_WATCH_POLL_SECONDS: "600"
           GFS_WATCH_TARGET_RUN_ID: ""
           GFS_WATCH_RESEND_CHARTS: ${{ github.event_name == 'workflow_dispatch' && inputs.resend_charts && '1' || '0' }}
