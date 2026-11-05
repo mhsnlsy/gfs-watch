@@ -1,9 +1,7 @@
 name: Main Station Data Refresh
 
 on:
-  # Match the proven MGM Çanakçı model: this station wakes itself every five minutes.
-  schedule:
-    - cron: "1-59/5 * * * *"
+  # Each collector re-arms its next five-minute run through workflow_dispatch.
   workflow_dispatch:
   push:
     branches: [main]
@@ -19,6 +17,7 @@ on:
       - "site/data/sisli-station-rain-history.json"
 
 permissions:
+  actions: write
   contents: write
 
 # Do not cancel an active collection. Keep cycles serialized so history
@@ -28,7 +27,18 @@ concurrency:
   cancel-in-progress: false
 
 jobs:
+  cycle-start:
+    name: Stamp this independent five-minute cycle
+    runs-on: ubuntu-latest
+    outputs:
+      started_epoch: ${{ steps.stamp.outputs.started_epoch }}
+    steps:
+      - name: Record cycle start time
+        id: stamp
+        run: echo "started_epoch=$(date +%s)" >> "$GITHUB_OUTPUT"
+
   enka:
+    needs: cycle-start
     name: ENKA Balmumcu
     runs-on: ubuntu-latest
     timeout-minutes: 8
@@ -89,7 +99,7 @@ jobs:
   publish:
     name: Publish successful station results
     runs-on: ubuntu-latest
-    needs: [enka]
+    needs: [cycle-start, enka]
     if: always()
     timeout-minutes: 5
     steps:
@@ -136,6 +146,7 @@ jobs:
           exit 1
 
   deploy-live-site:
+    if: ${{ always() && needs.publish.result == 'success' }}
     name: Deploy refreshed station data to GitHub Pages
     needs: publish
     uses: ./.github/workflows/pages-live.yml
@@ -143,3 +154,51 @@ jobs:
       contents: read
       pages: write
       id-token: write
+
+  rearm-next-cycle:
+    name: Queue next ENKA cycle
+    needs: [cycle-start, publish]
+    if: ${{ always() && needs.cycle-start.result == 'success' && needs['publish'].result != 'cancelled' }}
+    runs-on: ubuntu-latest
+    timeout-minutes: 6
+    steps:
+      - name: Wait until the next five-minute interval
+        env:
+          CYCLE_STARTED_EPOCH: ${{ needs.cycle-start.outputs.started_epoch }}
+        run: |
+          set -euo pipefail
+          now="$(date +%s)"
+          elapsed=$((now - CYCLE_STARTED_EPOCH))
+          wait_seconds=$((300 - elapsed))
+          if [ "$wait_seconds" -gt 0 ]; then
+            echo "Waiting ${wait_seconds}s to maintain a five-minute cadence."
+            sleep "$wait_seconds"
+          else
+            echo "Collection took five minutes or longer; rearming immediately."
+          fi
+
+      - name: Dispatch the next ENKA cycle
+        env:
+          GH_TOKEN: ${{ github.token }}
+          GH_REPOSITORY: ${{ github.repository }}
+        run: |
+          set -euo pipefail
+          url="https://api.github.com/repos/$GH_REPOSITORY/actions/workflows/408118151/dispatches"
+          for attempt in 1 2 3; do
+            status="$(curl --silent --show-error --output "$RUNNER_TEMP/dispatch-response.json" --write-out "%{http_code}" \
+              --request POST "$url" \
+              --header "Authorization: Bearer $GH_TOKEN" \
+              --header "Accept: application/vnd.github+json" \
+              --header "X-GitHub-Api-Version: 2022-11-28" \
+              --header "Content-Type: application/json" \
+              --data '{"ref":"main"}')"
+            if [ "$status" = "204" ]; then
+              echo "Next ENKA cycle successfully queued."
+              exit 0
+            fi
+            echo "Dispatch attempt $attempt failed with HTTP $status."
+            cat "$RUNNER_TEMP/dispatch-response.json"
+            sleep 5
+          done
+          echo "Could not queue the next ENKA cycle."
+          exit 1
