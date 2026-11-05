@@ -47,6 +47,13 @@ jobs:
           ref: koy-gfs-data
           path: koy-data
 
+      - name: Check out independent Köy MGM station data
+        uses: actions/checkout@v7
+        continue-on-error: true
+        with:
+          ref: koy-mgm-data
+          path: koy-mgm-data
+
       - name: Prepare website files
         env:
           PUSH_API_URL: ${{ vars.PUSH_API_URL }}
