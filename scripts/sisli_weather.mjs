@@ -160,7 +160,17 @@ function writeJsonAtomic(filePath, data) {
 }
 
 function readJsonIfExists(filePath) {
-  try { return JSON.parse(fs.readFileSync(filePath, "utf8")); } catch { return null; }
+  if (!fs.existsSync(filePath)) return null;
+  let document;
+  try {
+    document = JSON.parse(fs.readFileSync(filePath, "utf8"));
+  } catch (error) {
+    throw new Error(`Stored station history is unreadable; refusing to reset it: ${error.message}`);
+  }
+  if (!document || document.schema !== HISTORY_SCHEMA || !Array.isArray(document.samples)) {
+    throw new Error("Stored station history has an invalid schema or samples list; refusing to reset it.");
+  }
+  return document;
 }
 
 async function main() {
