@@ -232,6 +232,9 @@ jobs:
           if [ ! -f "state/gfs/notifications/telegram-sent/$new_run.json" ]; then
             python -m pip install -r source/requirements.txt
             (cd state && python ../source/scripts/send_canonical_istanbul_gfs_telegram.py)
+          env:
+            TELEGRAM_TOKEN: ${{ secrets.TELEGRAM_TOKEN }}
+            CHAT_ID: ${{ secrets.CHAT_ID }}
             mkdir -p "state/gfs/notifications/telegram-sent"
             python - <<'PY'
           import json, os
