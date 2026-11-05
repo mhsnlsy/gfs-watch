@@ -169,12 +169,27 @@ jobs:
                       "updated_at_utc":runs[0].get("published_at_utc"),"runs":runs}
               Path("gfs/comparison.json").write_text(json.dumps(bundle,ensure_ascii=False,indent=2),encoding="utf-8")
           PY
-            python -m pip install -q matplotlib
-            KOY_GFS_DIR="$PWD/gfs" python scripts/render_koy_gfs_charts.py
-            find gfs/runs -type f -name '*.json' -mtime +45 -delete
-            git add gfs
-            git commit -m "Publish Köy GFS forecast milestone"
-            git push origin koy-gfs-data
           else
-            echo "No new F72/F180 data; no commit needed."
+            echo "No new F72/F180 data; checking Köy GFS PNG assets."
           fi
+
+          if [ -s gfs/comparison.json ]; then
+            current_run="$(python -c 'import json; print(json.load(open("gfs/comparison.json"))["runs"][0]["run_id_utc"])')"
+            stamp="$(python -c 'from datetime import datetime; import sys; print(datetime.fromisoformat(sys.argv[1].replace("Z","+00:00")).strftime("%Y%m%dT%HZ"))' "$current_run")"
+            if [ ! -s "gfs/media/koy-gfs-${stamp}-temperature.png" ] || [ ! -s "gfs/media/koy-gfs-${stamp}-temperature_850.png" ] || [ ! -s "gfs/media/koy-gfs-${stamp}-precipitation.png" ] || [ ! -s "gfs/media/koy-gfs-${stamp}-wind_10m.png" ]; then
+              python -m pip install -q matplotlib
+              KOY_GFS_DIR="$PWD/gfs" python scripts/render_koy_gfs_charts.py
+              git add gfs
+              if git diff --cached --quiet; then
+                git reset
+                echo "Köy GFS PNG assets already synchronized."
+              else
+                git commit -m "Publish Köy GFS PNG comparison charts"
+                git push origin koy-gfs-data
+              fi
+            else
+              echo "Köy GFS PNG assets already present for $current_run."
+            fi
+          fi
+
+          find gfs/runs -type f -name '*.json' -mtime +45 -delete
