@@ -137,13 +137,13 @@ function renderRuns(d,f72){
    $("daily-grid").innerHTML=dailyItems.map(item=>'<article class="day"><div class="day-name">'+dayLabel(item.date_istanbul)+'</div><div class="day-icon">'+(item.precipitation_total_mm>=5?"🌧️":item.precipitation_total_mm>=1?"🌦️":"⛅")+'</div><div class="day-range">'+fmt(item.temperature_max_c,0)+'° <span>'+fmt(item.temperature_min_c,0)+'°</span></div><div class="day-rain">☂ '+fmt(item.precipitation_total_mm,1)+' mm</div><div class="day-wind">↗ '+fmt(item.wind_speed_max_10m_kmh,0)+' km/sa</div></article>').join("");
  }
 }
-function refresh(){if(busy)return;busy=true;const button=$("refresh");button.disabled=true;button.textContent="Yükleniyor…";
+function refresh(){if(busy)return;busy=true;
  const results=await Promise.allSettled([get("f72/latest.json"),get("comparison.json"),get(MGM_BASE+"history.json"),get(MGM_BASE+"observation.json")]);
- if(results[0].status==="fulfilled"){f72=results[0].value;renderF72(f72)}else{$("f72-chip").textContent="Veri bekleniyor";$("table-status").textContent="F72 bekleniyor"}
+ if(results[0].status==="fulfilled"){f72=results[0].value;renderF72(f72)}else{}
  if(results[1].status==="fulfilled")comparison=results[1].value;else comparison=null;
  if(results[2].status==="fulfilled"){stationHistory=results[2].value;renderStationHistory(stationHistory)}else{stationHistory=null;$("station-temperature-trend").innerHTML="<div class=\"station-trend-empty\">MGM istasyon geçmişi bekleniyor…</div>";$("station-rain-trend").innerHTML="<div class=\"station-trend-empty\">MGM istasyon geçmişi bekleniyor…</div>"}
- if(results[3].status==="fulfilled"){renderMgmObservation(results[3].value,stationHistory,f72); const o=results[3].value; $("mgm-status-date").textContent=ts(o.observed_at_utc); $("mgm-rain-rate").innerHTML=fmt(num(o.precipitation_1h_mm))+"<small> mm</small>"; $("mgm-status-text").textContent="Son 1 saat yağış · "+fmt(num(o.precipitation_24h_mm))+" mm / 24 saat"; $("mgm-rain-fill").style.width=Math.min(100,Math.max(0,(num(o.precipitation_1h_mm)||0)*8))+"%"} renderRuns(comparison,f72);$("updated").textContent="Son kontrol: "+ts(new Date().toISOString());
- button.disabled=false;button.textContent="Verileri yenile";busy=false;
+ if(results[3].status==="fulfilled"){renderMgmObservation(results[3].value,stationHistory,f72); const o=results[3].value; $("mgm-status-date").textContent=ts(o.observed_at_utc); $("mgm-rain-rate").innerHTML=fmt(num(o.precipitation_1h_mm))+"<small> mm</small>"; $("mgm-status-text").textContent="Son 1 saat yağış · "+fmt(num(o.precipitation_24h_mm))+" mm / 24 saat"; $("mgm-rain-fill").style.width=Math.min(100,Math.max(0,(num(o.precipitation_1h_mm)||0)*8))+"%"} renderRuns(comparison,f72);
+ busy=false;
 }
 $("refresh").addEventListener("click",refresh);refresh();setInterval(()=>{if(document.visibilityState!=="hidden")refresh()},60000);
 })();
