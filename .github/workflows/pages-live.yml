@@ -1,6 +1,8 @@
 name: Deploy İstanbul'un Havası Live
 
 on:
+  schedule:
+    - cron: "*/5 * * * *"
   push:
     branches: [main]
   workflow_dispatch:
@@ -33,6 +35,24 @@ jobs:
           ref: gfs-watch-state
           path: forecast-data
 
+      - name: Check out independent ENKA station data
+        uses: actions/checkout@v4
+        with:
+          ref: enka-state
+          path: enka-data
+
+      - name: Check out independent Eyüpsultan station data
+        uses: actions/checkout@v4
+        with:
+          ref: eyupsultan-state
+          path: eyupsultan-data
+
+      - name: Check out independent Şişli station data
+        uses: actions/checkout@v4
+        with:
+          ref: sisli-state
+          path: sisli-data
+
       - name: Check out Köy GFS data
         uses: actions/checkout@v4
         with:
@@ -53,7 +73,18 @@ jobs:
           test -s forecast-data/public/latest.json
           mkdir -p _site/data
           cp -a source/site/. _site/
+          # GFS/forecast payloads come only from gfs-watch-state.
           cp -a forecast-data/public/. _site/data/
+          # Station payloads come from their own branches and overwrite only
+          # their own files. A station can never replace another station's data.
+          cp enka-data/public/station-observation.json _site/data/station-observation.json
+          cp enka-data/public/station-temperature-history.json _site/data/station-temperature-history.json
+          cp eyupsultan-data/public/eyupsultan-station-observation.json _site/data/eyupsultan-station-observation.json
+          cp eyupsultan-data/public/eyupsultan-station-temperature-history.json _site/data/eyupsultan-station-temperature-history.json
+          cp eyupsultan-data/public/eyupsultan-station-rain-history.json _site/data/eyupsultan-station-rain-history.json
+          cp sisli-data/public/sisli-station-observation.json _site/data/sisli-station-observation.json
+          cp sisli-data/public/sisli-station-temperature-history.json _site/data/sisli-station-temperature-history.json
+          cp sisli-data/public/sisli-station-rain-history.json _site/data/sisli-station-rain-history.json
           printf '{"apiBaseUrl":"%s"}' "$PUSH_API_URL" > _site/push-config.json
 
           mkdir -p _site/koy-data
