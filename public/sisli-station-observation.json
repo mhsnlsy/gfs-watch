@@ -7,7 +7,7 @@
     "source_url": "https://servis.mgm.gov.tr/web/sondurumlar?merkezid=18401",
     "source_fallback_used": true,
     "observed_at_utc": "2026-11-05T00:04:00.000Z",
-    "fetched_at_utc": "2026-11-05T00:05:51.056Z",
+    "fetched_at_utc": "2026-11-05T00:06:08.606Z",
     "age_minutes": 2,
     "stale_after_minutes": 30,
     "is_stale": false,
@@ -30,7 +30,7 @@
     "pressure_type": "station",
     "pressure_source": "MGM 18401",
     "pressure_observed_at_utc": "2026-11-05T00:04:00.000Z",
-    "pressure_age_minutes": 1.9
+    "pressure_age_minutes": 2.1
   },
-  "updated_at_utc": "2026-11-05T00:05:48.206Z"
+  "updated_at_utc": "2026-11-05T00:06:05.740Z"
 }
