@@ -1841,7 +1841,10 @@
       attachStationHistoryTooltip(holder,holder.querySelector("svg"),data.map(p=>({x:xb(p),y:yv(p.mean),time:p.start+bucketMs/2,valueLabel:fmt(p.mean,1)+" hPa",detail:"Min "+fmt(p.min,1)+" · Maks "+fmt(p.max,1)+" hPa · "+p.count+" kayıt"})),width,height,top,bottom,"#8abce8");
     }
     function renderEyupsultanHourlyRain(samples,stationName,holder,meta,currentObservation){
-      const now=Date.now(),windowMs=86400000,start=now-windowMs,hourMs=3600000;
+      const now=Date.now(),windowMs=86400000,hourMs=3600000;
+      // Anchor the 24-hour chart window to the current hour boundary.
+      // Its plotted data and visible window therefore advance once per hour.
+      const chartEnd=Math.floor(now/hourMs)*hourMs,start=chartEnd-windowMs;
       const rows=Array.isArray(samples)?samples.slice():[];
       if(currentObservation&&numeric(currentObservation.precipitation_1h_mm)){
         rows.push({
@@ -1857,13 +1860,13 @@
       rows.forEach(sample=>{
         const time=Date.parse(sample.observed_at_utc||sample.logged_at_utc||"");
         const mm=sample.precipitation_1h_mm==null?NaN:Number(sample.precipitation_1h_mm);
-        if(Number.isFinite(time)&&time>=start-hourMs&&time<=now+60000&&Number.isFinite(mm)&&mm>=0){
+        if(Number.isFinite(time)&&time>=start-hourMs&&time<chartEnd&&Number.isFinite(mm)&&mm>=0){
           rawByTime.set(time,{time,mm});
         }
       });
       const hourlyPoints=new Map();
       [...rawByTime.values()].sort((a,b)=>a.time-b.time).forEach(point=>{
-        if(point.time<start||point.time>now+60000)return;
+        if(point.time<start||point.time>=chartEnd)return;
         const slot=Math.floor(point.time/hourMs);
         const slotEnd=(slot+1)*hourMs;
         // Only publish a point after its one-hour bucket is complete.
