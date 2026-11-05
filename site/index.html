@@ -2174,7 +2174,7 @@
       if (feelsEl) {
         feelsEl.innerHTML = (feels !== null) ? fmt(feels, 1) + '<span class="unit">°</span>' : '—<span class="unit">°</span>';
       }
-      const livePressure=isFresh?(numeric(station.station_pressure_hpa)?Number(station.station_pressure_hpa):numeric(station.actual_station_pressure_hpa)?Number(station.actual_station_pressure_hpa):null):null;
+      const livePressure=isFresh?(numeric(station.actual_station_pressure_hpa)?Number(station.actual_station_pressure_hpa):numeric(station.station_pressure_hpa)?Number(station.station_pressure_hpa):null):null;
       $("pressure").innerHTML=livePressure!==null?fmt(livePressure,1)+'<span class="unit">hPa</span>':'—<span class="unit">hPa</span>';
       $("pressure-detail").textContent="";
       $("pressure-detail").hidden=true;
