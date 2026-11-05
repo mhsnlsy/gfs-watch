@@ -53,6 +53,21 @@ jobs:
           cache-dependency-path: requirements.txt
       - name: Install dependencies
         run: python -m pip install -r requirements.txt
+      - name: Install GRIB2 runtime dependencies
+        run: |
+          sudo apt-get update -qq
+          sudo apt-get install -y -qq libeccodes-dev
+      - name: Prepare NOAA forecast cache
+        run: mkdir -p noaa_cache_v2
+      - name: Restore partial NOAA forecast cache
+        id: noaa-cache-restore
+        uses: actions/cache/restore@v6
+        with:
+          path: noaa_cache_v2
+          key: gfs-noaa-cache-v5-${{ github.run_id }}-${{ github.run_attempt }}
+          restore-keys: |
+            gfs-noaa-cache-v5-
+            gfs-noaa-cache-v4-
       - name: Restore GFS run and Pages notification history
         run: |
           git fetch origin gfs-watch-state
@@ -118,12 +133,16 @@ jobs:
         id: check-gfs
         env:
           GFS_WATCH_TARGET_RUN_ID: ${{ env.GFS_WATCH_TARGET_RUN_ID }}
-          GFS_SOURCE: meteopt
+          GFS_SOURCE: noaa
           GFS_TELEGRAM: "1"
           GFS_WATCH_ONCE: "1"
           GFS_WATCH_CONTINUOUS: "1"
           GFS_WATCH_WINDOW_MINUTES: "10"
           GFS_WATCH_POLL_SECONDS: "60"
+          NOAA_CACHE_DIR: noaa_cache_v2
+          NOAA_PREFETCH_FILES_PER_CHECK: "141"
+          NOAA_PREFETCH_INTERVAL_SECONDS: "60"
+          NOAA_RANGE_DOWNLOAD_WORKERS: "8"
           GFS_WATCH_RESEND_CHARTS: ${{ github.event_name == 'workflow_dispatch' && inputs.resend_charts && '1' || '0' }}
           GFS_WATCH_MANUAL_RUN_ID: ${{ github.event_name == 'workflow_dispatch' && inputs.manual_run_id || '' }}
           GFS_WATCH_MANUAL_MEDIA_ONLY: ${{ github.event_name == 'workflow_dispatch' && inputs.manual_media_only || false }}
@@ -206,6 +225,14 @@ jobs:
             echo "gfs_updated=false" >> "$GITHUB_OUTPUT"
             echo "No new GFS cycle or public forecast payload was generated in this session."
           fi
+      - name: Save partial NOAA forecast cache
+        if: always() && steps.check-gfs.outputs.noaa_cache_updated == 'true'
+        continue-on-error: true
+        uses: actions/cache/save@v6
+        with:
+          path: noaa_cache_v2
+          key: gfs-noaa-cache-v5-${{ github.run_id }}-${{ github.run_attempt }}
+
       - name: Save GFS run history
         if: always()
         run: |
