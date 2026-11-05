@@ -35,15 +35,36 @@ export default {
     const now = new Date();
     const p = istanbulParts(now);
     const minute = Number(p.minute);
-    // Give the normal GitHub schedule 10 minutes to start before backup.
-    if (minute < 40 || minute > 59) return;
-
-    const slot = latestSlotUtc(now);
     const headers = {
       Authorization: `Bearer ${env.GH_TOKEN}`,
       Accept: "application/vnd.github+json",
       "X-GitHub-Api-Version": "2022-11-28"
     };
+
+    // The Cloudflare Cron is the reliable clock for the main station collector.
+    // It only dispatches the existing workflow; ENKA, Eyüpsultan and Şişli
+    // are still collected and published by main-station-refresh.yml.
+    const stationTick = await fetch(`https://api.github.com/repos/${OWNER}/${REPO}/dispatches`, {
+      method: "POST",
+      headers: { ...headers, "Content-Type": "application/json" },
+      body: JSON.stringify({
+        event_type: "station-refresh-clock",
+        client_payload: {
+          source: "cloudflare-cron",
+          scheduled_at_utc: new Date(controller.scheduledTime).toISOString()
+        }
+      })
+    });
+    if (stationTick.status !== 204) {
+      throw new Error(`Station refresh dispatch failed ${stationTick.status}: ${await stationTick.text()}`);
+    }
+    console.log(`Main station workflow tick dispatched for ${new Date(controller.scheduledTime).toISOString()}`);
+
+    // Keep the existing GFS backup check unchanged; it only applies during
+    // the Istanbul time-slot window below.
+    if (minute < 40 || minute > 59) return;
+
+    const slot = latestSlotUtc(now);
     const runsUrl = `https://api.github.com/repos/${OWNER}/${REPO}/actions/workflows/${WORKFLOW_ID}/runs?per_page=20`;
     const response = await fetch(runsUrl, { headers });
     if (!response.ok) throw new Error(`GitHub runs API ${response.status}: ${await response.text()}`);
