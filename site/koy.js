@@ -83,6 +83,8 @@ function renderStationHistory(doc){
  $("station-trend-meta").textContent="Çanakçı · MGM · "+samples.length+" kayıt · 30 dk ortalama / min–maks";
  $("station-rain-meta").textContent="Çanakçı · MGM · son ölçüm · kayan 1 saatlik toplam";
  $("history-source-note").textContent="Sıcaklık ve yağış: MGM Çanakçı gerçek istasyon ölçümleri.";
+ $("station-temperature-trend").innerHTML=svgStationHistory(samples,"temperature_2m_c","Çanakçı sıcaklık","°C");
+ $("station-rain-trend").innerHTML=svgStationHistory(samples,"precipitation_1h_mm","Çanakçı yağış","mm");
 }
 function renderRuns(d,f72){
  const runs=(d?.runs||[]).slice(0,4);$("report-meta").textContent=runs.length?"Son döngü: "+ts(runs[0].run_id_utc)+" · "+runs.length+" çıktı hazır":"Son model döngüsü bekleniyor";
