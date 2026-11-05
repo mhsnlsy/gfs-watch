@@ -5,11 +5,11 @@
   "sampling_interval_minutes": 5,
   "aggregation_interval_minutes": 30,
   "retention_days": 14,
-  "updated_at_utc": "2026-11-05T05:54:49+00:00",
+  "updated_at_utc": "2026-11-05T05:55:19+00:00",
   "samples": [
     {
-      "logged_at_utc": "2026-11-05T05:54:49+00:00",
-      "observed_at_utc": "2026-11-05T05:53:24+00:00",
+      "logged_at_utc": "2026-11-05T05:55:19+00:00",
+      "observed_at_utc": "2026-11-05T05:54:24+00:00",
       "temperature_2m_c": 10.3,
       "station_pressure_hpa": 1026.2,
       "humidity_percent": 88.0,
