@@ -6,7 +6,7 @@ name: Deploy İstanbul'un Havası
 
 on:
   push:
-    branches: [main, koy-gfs-data]
+    branches: [main, koy-gfs-data, koy-mgm-data]
   workflow_call:
   workflow_dispatch:
   schedule:
