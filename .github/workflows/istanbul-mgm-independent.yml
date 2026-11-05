@@ -21,7 +21,7 @@ jobs:
     runs-on: ubuntu-latest
     concurrency:
       group: istanbul-enka-refresh
-      cancel-in-progress: true
+      cancel-in-progress: false
     timeout-minutes: 5
     steps:
       - name: Checkout ENKA data branch
@@ -94,7 +94,7 @@ jobs:
     runs-on: ubuntu-latest
     concurrency:
       group: istanbul-eyupsultan-refresh
-      cancel-in-progress: true
+      cancel-in-progress: false
     timeout-minutes: 5
     steps:
       - name: Checkout Eyüpsultan data branch
@@ -163,7 +163,7 @@ jobs:
     runs-on: ubuntu-latest
     concurrency:
       group: istanbul-sisli-refresh
-      cancel-in-progress: true
+      cancel-in-progress: false
     timeout-minutes: 5
     steps:
       - name: Checkout Şişli data branch
