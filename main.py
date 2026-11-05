@@ -1,4 +1,9 @@
-"""GFS Watch: native NOAA GFS GRIB2 forecasts and Telegram reporting."""
+"""Shared publication helpers for the MeteoPT-canonical GFS site.
+
+The live Istanbul GFS workflow does not use main.py as a collector or Telegram
+poller. This module is retained as a compatibility library for report/chart
+rendering used by the canonical publisher.
+"""
 import os
 import json
 import sqlite3
@@ -4139,146 +4144,19 @@ async def run_manual_report(run_id, media_only=False, image_only=False):
     )
 
 
-async def main():
-    """Disable the legacy in-process polling mode."""
+def main():
+    """Compatibility library entrypoint; live Istanbul GFS is MeteoPT-canonical.
+
+    The legacy NOAA polling, in-process Telegram delivery, and manual resend
+    modes remain only as inert compatibility functions for historical tooling.
+    They are not part of the live Istanbul GFS workflow and are never invoked
+    by GitHub Actions.
+    """
     print(
-        "[STOP] Eski sürekli çalışma modu devre dışı. "
-        "GFS Watch yalnızca GFS_WATCH_ONCE=1 ile tek-seferlik "
-        "GitHub Actions kontrolü olarak çalıştırılır."
+        "[INERT] Legacy main.py runtime is disabled. "
+        "Live Istanbul GFS is produced only by the MeteoPT canonical bundle."
     )
-
-
-async def run_scheduled_watch():
-    """Poll MeteoPT's active GFS run every configured interval for the full window."""
-    init_db()
-    window_minutes = max(10, int(os.getenv("GFS_WATCH_WINDOW_MINUTES", "10")))
-    poll_seconds = max(60, int(os.getenv("GFS_WATCH_POLL_SECONDS", "600")))
-    deadline = time.monotonic() + window_minutes * 60
-    next_poll_at = time.monotonic()
-    print(
-        f"[WATCH START] MeteoPT active-run discovery; "
-        f"window={window_minutes} min, poll={poll_seconds} sec. "
-        "Every poll reads the source's own run token; no fixed Istanbul slot."
-    )
-
-    while time.monotonic() < deadline:
-        processed_before = await asyncio.to_thread(get_processed_run_ids)
-        try:
-            staged = await stage_open_meteopt_cycle(processed_before)
-        except Exception as exc:
-            staged = False
-            print(f"[METEOPT STAGE ERROR] {type(exc).__name__}: {exc}")
-
-        # Do not pass a stale target run into the processing path. It discovers
-        # the active cycle directly from MeteoPT and only emits after f180.
-        try:
-            await process_gfs_update(strict=False, target_run_id=None)
-        except Exception as exc:
-            print(f"[WATCH RETRY] GFS processing error: {type(exc).__name__}: {exc}")
-
-        processed_after = await asyncio.to_thread(get_processed_run_ids)
-        newly_processed = sorted(processed_after - processed_before)
-        if newly_processed:
-            print(
-                "[WATCH CYCLE PUBLISHED] "
-                + ", ".join(newly_processed)
-                + "; Pages payload and Telegram notification steps were attempted."
-            )
-
-        if staged is True:
-            print("[WATCH F180 READY] Active MeteoPT cycle reached f180; publish path completed.")
-            return
-
-        next_poll_at += poll_seconds
-        now_mono = time.monotonic()
-        if next_poll_at <= now_mono:
-            missed = int((now_mono - next_poll_at) // poll_seconds) + 1
-            next_poll_at += missed * poll_seconds
-        remaining = deadline - now_mono
-        if remaining <= 0:
-            break
-        await asyncio.sleep(min(next_poll_at - now_mono, remaining))
-
-    print(
-        f"[WATCH WINDOW COMPLETE] {window_minutes} min watch ended. "
-        "The next scheduled 10-minute Actions invocation will query MeteoPT again."
-    )
-
-
-async def run_once():
-    """Run a one-off check, GRIB2 smoke test, or continuous scheduled watch."""
-    if os.getenv("GFS_WATCH_CONTINUOUS", "").strip().lower() in {"1", "true", "yes"}:
-        await run_scheduled_watch()
-        return
-
-    init_db()
-    print(f"[START] GFS Watch tek kontrol modunda çalışıyor; model: {MODEL_NAME}.")
-    # Scheduled five-minute polls are expected to find incomplete cycles.
-    # Persist partial prefetch work and resume on the next invocation.
-    await process_gfs_update(strict=False)
-
-async def run_resend_latest_charts():
-    """Redraw the latest four-cycle charts with the current theme and send Telegram."""
-    init_db()
-    conn = sqlite3.connect(DB_PATH)
-    try:
-        rows = conn.execute(
-            "SELECT run_name, forecast_json FROM gfs_runs_v3"
-        ).fetchall()
-    finally:
-        conn.close()
-    loaded = sorted(rows, key=lambda row: _parse_utc_datetime(row[0]))[-4:]
-    if len(loaded) < 2:
-        raise RuntimeError("Grafik için en az iki kayıtlı GFS döngüsü gerekli.")
-    previous_runs = [(run_id, forecast_json) for run_id, forecast_json in loaded[:-1]]
-    current_run_id = loaded[-1][0]
-    current_payload = json.loads(loaded[-1][1])
-    chart = create_comparison_chart(current_run_id, current_payload, previous_runs)
-    pages = create_pages_comparison_charts(current_run_id, current_payload, previous_runs)
-    if pages:
-        save_public_notification_images(current_run_id, pages)
-        for image_buffer in pages.values():
-            image_buffer.close()
-    if not chart:
-        raise RuntimeError("Telegram karşılaştırma görseli üretilemedi.")
-    try:
-        labels = []
-        for run_id, _forecast_json in loaded:
-            run_utc = _parse_utc_datetime(run_id)
-            run_local = run_utc.astimezone(TR_TZ)
-            labels.append(f"{run_utc:%H}Z ({run_local:%d.%m} TSİ)")
-        caption = (
-            "📊 İstanbul GFS | Dört döngü karşılaştırması\n"
-            "Eski → yeni: " + " → ".join(labels)
-        )
-        await send_telegram_photo(chart, caption)
-    finally:
-        chart.close()
-    print(f"[CHART RESEND] {current_run_id} grafikleri beyaz yazıyla yeniden gönderildi.")
 
 
 if __name__ == "__main__":
-    try:
-        compare_run_ids = os.getenv("GFS_WATCH_COMPARE_RUN_IDS", "").strip()
-        compare_previous = os.getenv("GFS_WATCH_COMPARE_PREVIOUS_RUN_ID", "").strip()
-        compare_current = os.getenv("GFS_WATCH_COMPARE_CURRENT_RUN_ID", "").strip()
-        resend_charts = os.getenv("GFS_WATCH_RESEND_CHARTS", "").strip().lower() in {"1", "true", "yes"}
-        if resend_charts:
-            asyncio.run(run_resend_latest_charts())
-        elif compare_run_ids:
-            run_ids = [item.strip() for item in compare_run_ids.split(",") if item.strip()]
-            asyncio.run(run_manual_multi_comparison(run_ids))
-        elif compare_previous and compare_current:
-            asyncio.run(run_manual_comparison(compare_previous, compare_current))
-        else:
-            manual_run_id = os.getenv("GFS_WATCH_MANUAL_RUN_ID", "").strip()
-            manual_media_only = os.getenv("GFS_WATCH_MANUAL_MEDIA_ONLY", "").strip().lower() in {"1", "true", "yes"}
-            manual_image_only = os.getenv("GFS_WATCH_MANUAL_IMAGE_ONLY", "").strip().lower() in {"1", "true", "yes"}
-            if manual_run_id:
-                asyncio.run(run_manual_report(manual_run_id, media_only=manual_media_only, image_only=manual_image_only))
-            elif os.getenv("GFS_WATCH_ONCE", "").strip().lower() in {"1", "true", "yes"}:
-                asyncio.run(run_once())
-            else:
-                asyncio.run(main())
-    except KeyboardInterrupt:
-        print("[STOP] GFS Watch kontrollü şekilde durduruldu.")
+    main()
