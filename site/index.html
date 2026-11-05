@@ -1841,7 +1841,7 @@
       attachStationHistoryTooltip(holder,holder.querySelector("svg"),data.map(p=>({x:xb(p),y:yv(p.mean),time:p.start+bucketMs/2,valueLabel:fmt(p.mean,1)+" hPa",detail:"Min "+fmt(p.min,1)+" · Maks "+fmt(p.max,1)+" hPa · "+p.count+" kayıt"})),width,height,top,bottom,"#8abce8");
     }
     function renderEyupsultanHourlyRain(samples,stationName,holder,meta,currentObservation){
-      const now=Date.now(),windowMs=86400000,start=now-windowMs,bucketMs=30*60000;
+      const now=Date.now(),windowMs=86400000,start=now-windowMs,hourMs=3600000;
       const rows=Array.isArray(samples)?samples.slice():[];
       if(currentObservation&&numeric(currentObservation.precipitation_1h_mm)){
         rows.push({
@@ -1850,30 +1850,32 @@
         });
       }
 
-      // precipitation_1h_mm is already a trailing one-hour accumulation.
-      // Do not add or average these rolling totals. Select only the latest
-      // observation in each fixed 30-minute slot: at most 48 distinct points
-      // in the 24-hour chart, with no duplicate/overplotted 5-minute samples.
-      const byTime=new Map();
+      // Each source value is already a trailing one-hour rainfall accumulation.
+      // Preserve all five-minute measurements in the archive, but plot only the
+      // latest observed value from each completed UTC hour: one point per hour.
+      const rawByTime=new Map();
       rows.forEach(sample=>{
         const time=Date.parse(sample.observed_at_utc||sample.logged_at_utc||"");
         const mm=sample.precipitation_1h_mm==null?NaN:Number(sample.precipitation_1h_mm);
-        if(Number.isFinite(time)&&time>=start-bucketMs&&time<=now+60000&&Number.isFinite(mm)&&mm>=0){
-          byTime.set(time,{time,mm});
+        if(Number.isFinite(time)&&time>=start-hourMs&&time<=now+60000&&Number.isFinite(mm)&&mm>=0){
+          rawByTime.set(time,{time,mm});
         }
       });
-      const buckets=new Map();
-      [...byTime.values()].sort((a,b)=>a.time-b.time).forEach(point=>{
+      const hourlyPoints=new Map();
+      [...rawByTime.values()].sort((a,b)=>a.time-b.time).forEach(point=>{
         if(point.time<start||point.time>now+60000)return;
-        const slot=Math.floor(point.time/bucketMs);
-        const previous=buckets.get(slot);
-        if(!previous||point.time>previous.time)buckets.set(slot,point);
+        const slot=Math.floor(point.time/hourMs);
+        const slotEnd=(slot+1)*hourMs;
+        // Only publish a point after its one-hour bucket is complete.
+        if(slotEnd>now)return;
+        const previous=hourlyPoints.get(slot);
+        if(!previous||point.time>previous.time)hourlyPoints.set(slot,point);
       });
-      const points=[...buckets.values()].sort((a,b)=>a.time-b.time);
+      const points=[...hourlyPoints.values()].sort((a,b)=>a.time-b.time);
 
       if(!points.length){
-        holder.innerHTML='<div class="station-trend-empty">MGM kayan 1 saatlik yağış ölçümleri bekleniyor. Yeni kayıtlar geldikçe yarım saatlik grafik oluşacak.</div>';
-        if(meta)meta.textContent=stationName+" · MGM · kayan 1 saatlik yağış için yeni ölçüm bekleniyor";
+        holder.innerHTML='<div class="station-trend-empty">Tamamlanmış saatlik MGM yağış ölçümü bekleniyor. Her saat bir yeni nokta eklenecek.</div>';
+        if(meta)meta.textContent=stationName+" · MGM · saatlik arşiv noktası bekleniyor";
         return;
       }
 
@@ -1885,23 +1887,23 @@
       const groups=[];
       points.forEach(point=>{
         const group=groups[groups.length-1];
-        if(!group||point.time-group[group.length-1].time>45*60000)groups.push([point]);
+        if(!group||point.time-group[group.length-1].time>90*60000)groups.push([point]);
         else group.push(point);
       });
       const line=groups.map(group=>group.map((point,index)=>(index?"L":"M")+x(point.time).toFixed(1)+" "+y(point.mm).toFixed(1)).join(" ")).join(" ");
-      const dots=points.map(point=>'<circle cx="'+x(point.time).toFixed(1)+'" cy="'+y(point.mm).toFixed(1)+'" r="3" fill="'+(point.mm>0?"#83c9eb":"rgba(131,201,235,.4)")+'"><title>'+esc(timeTR(point.time))+' · '+fmt(point.mm,1)+' mm / 1 saat · 30 dk örnek</title></circle>').join("");
-      holder.innerHTML='<svg viewBox="0 0 '+width+' '+height+'" role="img" aria-label="'+esc(stationName)+' son 24 saatteki kayan bir saatlik yağış toplamı; her yarım saatte tek ölçüm">'+grid+'<path d="'+line+'" fill="none" stroke="#83c9eb" stroke-width="1.9" stroke-linejoin="round"/>'+dots+labels+'</svg>';
+      const dots=points.map(point=>'<circle cx="'+x(point.time).toFixed(1)+'" cy="'+y(point.mm).toFixed(1)+'" r="3" fill="'+(point.mm>0?"#83c9eb":"rgba(131,201,235,.4)")+'"><title>'+esc(timeTR(point.time))+' · '+fmt(point.mm,1)+' mm / 1 saat · saatlik adım</title></circle>').join("");
+      holder.innerHTML='<svg viewBox="0 0 '+width+' '+height+'" role="img" aria-label="'+esc(stationName)+' son 24 saatteki kayan bir saatlik yağış toplamı; tamamlanan her saatten bir ölçüm">'+grid+'<path d="'+line+'" fill="none" stroke="#83c9eb" stroke-width="1.9" stroke-linejoin="round"/>'+dots+labels+'</svg>';
 
       const latest=points[points.length-1];
       const coverageHours=Math.max(0,(latest.time-points[0].time)/3600000);
-      const coverageNote=coverageHours<23.9?" · arşiv "+fmt(coverageHours,1)+" saattir birikiyor":" · 24 saatlik arşiv";
-      if(meta)meta.textContent=stationName+" · MGM 18401 · son ölçüm: "+fmt(latest.mm,1)+" mm / 1 saat · 30 dk aralık"+coverageNote;
+      const coverageNote=coverageHours<22.9?" · arşiv "+fmt(coverageHours,1)+" saattir birikiyor":" · 24 saatlik arşiv";
+      if(meta)meta.textContent=stationName+" · MGM · son tamamlanan saat: "+fmt(latest.mm,1)+" mm / 1 saat · 1 saatlik adım"+coverageNote;
       if(typeof document!=="undefined"){
         const svg=holder.querySelector("svg");
         attachStationHistoryTooltip(holder,svg,points.map(point=>({
           x:x(point.time),y:y(point.mm),time:point.time,
           valueLabel:fmt(point.mm,1)+" mm / 1 saat",
-          detail:"Kayan son 1 saatlik toplam · her 30 dakikalık dilimden tek MGM ölçümü"
+          detail:"Kayan son 1 saatlik toplam · tamamlanan saat başına tek ölçüm"
         })),width,height,top,bottom,"#83c9eb");
       }
     }
@@ -1980,14 +1982,14 @@
       const holder=$("station-rain-trend"),meta=$("station-rain-meta");if(!holder)return;
       const caption=$("station-rain-caption"),title=$("station-rain-title");
       if(title)title.textContent="Yağış";
-      if(activeStation==="sisli"){
-        if(caption)caption.textContent="mm · kayan 1 saatlik toplam";
-        return renderEyupsultanHourlyRain(samples,stationName,holder,meta,sisliStationObservation);
+      if(activeStation==="eyupsultan"||activeStation==="sisli"){
+        if(caption)caption.textContent="mm · kayan 1 saatlik toplam · saatlik adım";
+        const observation=activeStation==="sisli"?sisliStationObservation:eyupsultanStationObservation;
+        return renderEyupsultanHourlyRain(samples,stationName,holder,meta,observation);
       }
       if(caption)caption.textContent="mm · kayan 30 dk toplam";
-      const rainSamples=activeStation==="enka"?eyupsultanStationHistorySamples:samples;
-      const rainStationName=activeStation==="enka"?"ENKA Balmumcu":stationName;
-      return renderEyupsultanRolling30mRain(rainSamples,rainStationName,holder,meta,eyupsultanStationObservation);
+      const rainSamples=eyupsultanStationHistorySamples;
+      return renderEyupsultanRolling30mRain(rainSamples,"ENKA Balmumcu",holder,meta,eyupsultanStationObservation);
     }
     function renderStationHistory(){
       const stationName=activeStation==="eyupsultan"?"Eyüpsultan":activeStation==="sisli"?"Şişli":"ENKA Balmumcu";
