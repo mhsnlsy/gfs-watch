@@ -2047,14 +2047,12 @@
       const holder=$("station-rain-trend"),meta=$("station-rain-meta");if(!holder)return;
       const caption=$("station-rain-caption"),title=$("station-rain-title");
       if(title)title.textContent="Yağış";
-      if(activeStation==="eyupsultan"||activeStation==="sisli"){
+      if(activeStation==="eyupsultan"||activeStation==="sisli"||activeStation==="enka"){
         if(caption)caption.textContent="mm · kayan 1 saatlik toplam · saatlik adım";
         const observation=activeStation==="sisli"?sisliStationObservation:eyupsultanStationObservation;
         return renderEyupsultanHourlyRain(samples,stationName,holder,meta,observation);
       }
-      if(caption)caption.textContent="mm · kayan 30 dk toplam";
-      const rainSamples=eyupsultanStationHistorySamples;
-      return renderEyupsultanRolling30mRain(rainSamples,"ENKA Balmumcu",holder,meta,eyupsultanStationObservation);
+      return;
     }
     function renderStationHistory(){
       const stationName=activeStation==="eyupsultan"?"Eyüpsultan":activeStation==="sisli"?"Şişli":"ENKA Balmumcu";
@@ -2064,8 +2062,10 @@
       $("history-source-note").hidden=false;
       $("history-source-note").textContent=activeStation==="enka"?"Sıcaklık: ENKA kamera OCR ölçümleri. Yağış: MGM Eyüpsultan ölçümleri.":activeStation==="eyupsultan"?"Sıcaklık ve yağış: MGM Eyüpsultan ölçümleri.":"Sıcaklık ve yağış: MGM Şişli ölçümleri.";
       renderStationTemperatureTrend(samples,stationName);
-      const dedicatedRainSamples=activeStation==="eyupsultan"?eyupsultanStationRainHistorySamples:activeStation==="sisli"?sisliStationRainHistorySamples:[];
-      // Backward-compatible fallback: the existing station database also carries rainfall fields.
+      // Balmumcu rainfall is intentionally a carbon copy of the Eyüpsultan MGM rainfall graph:
+      // same source archive, same hourly aggregation, same chart design.
+      const dedicatedRainSamples=activeStation==="eyupsultan"?eyupsultanStationRainHistorySamples:activeStation==="sisli"?sisliStationRainHistorySamples:eyupsultanStationRainHistorySamples;
+      // Backward-compatible fallback to the existing station history archive.
       const rainSamples=dedicatedRainSamples.length?dedicatedRainSamples:(activeStation==="eyupsultan"?eyupsultanStationHistorySamples:activeStation==="sisli"?sisliStationHistorySamples:eyupsultanStationHistorySamples);
       renderStationRainTrend(rainSamples,stationName);
     }
