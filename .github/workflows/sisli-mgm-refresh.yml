@@ -1,20 +1,9 @@
 name: Şişli MGM Independent Refresh
 
 on:
-  # Each collector re-arms its next five-minute run through workflow_dispatch.
+  schedule:
+    - cron: "*/5 * * * *"
   workflow_dispatch:
-  push:
-    branches: [main]
-    # Wake on ordinary main-branch changes like Köy MGM, but never on station-output commits.
-    paths-ignore:
-      - "site/data/station-observation.json"
-      - "site/data/station-temperature-history.json"
-      - "site/data/eyupsultan-station-observation.json"
-      - "site/data/eyupsultan-station-temperature-history.json"
-      - "site/data/eyupsultan-station-rain-history.json"
-      - "site/data/sisli-station-observation.json"
-      - "site/data/sisli-station-temperature-history.json"
-      - "site/data/sisli-station-rain-history.json"
 
 permissions:
   actions: write
@@ -139,52 +128,4 @@ jobs:
             sleep $((attempt * 2))
           done
           echo "Could not publish Şişli data to main after five attempts."
-          exit 1
-
-  rearm-next-cycle:
-    name: Queue next Şişli cycle
-    needs: [cycle-start, collect-and-publish]
-    if: ${{ always() && needs.cycle-start.result == 'success' && needs['collect-and-publish'].result != 'cancelled' }}
-    runs-on: ubuntu-latest
-    timeout-minutes: 6
-    steps:
-      - name: Wait until the next five-minute interval
-        env:
-          CYCLE_STARTED_EPOCH: ${{ needs.cycle-start.outputs.started_epoch }}
-        run: |
-          set -euo pipefail
-          now="$(date +%s)"
-          elapsed=$((now - CYCLE_STARTED_EPOCH))
-          wait_seconds=$((300 - elapsed))
-          if [ "$wait_seconds" -gt 0 ]; then
-            echo "Waiting ${wait_seconds}s to maintain a five-minute cadence."
-            sleep "$wait_seconds"
-          else
-            echo "Collection took five minutes or longer; rearming immediately."
-          fi
-
-      - name: Dispatch the next Şişli cycle
-        env:
-          GH_TOKEN: ${{ github.token }}
-          GH_REPOSITORY: ${{ github.repository }}
-        run: |
-          set -euo pipefail
-          url="https://api.github.com/repos/$GH_REPOSITORY/actions/workflows/408243875/dispatches"
-          for attempt in 1 2 3; do
-            status="$(curl --silent --show-error --output "$RUNNER_TEMP/dispatch-response.json" --write-out "%{http_code}" \
-              --request POST "$url" \
-              --header "Authorization: Bearer $GH_TOKEN" \
-              --header "Accept: application/vnd.github+json" \
-              --header "X-GitHub-Api-Version: 2022-11-28" \
-              --header "Content-Type: application/json" \
-              --data '{"ref":"main"}')"
-            if [ "$status" = "204" ]; then
-              echo "Next Şişli cycle successfully queued."
-              exit 0
-            fi
-            echo "Dispatch attempt $attempt failed with HTTP $status."
-            cat "$RUNNER_TEMP/dispatch-response.json"
-            sleep 5
-          done
-          echo "Could not queue the next Şişli cycle."
           exit 1
