@@ -39,7 +39,7 @@ jobs:
 
   enka:
     needs: cycle-start
-    name: ENKA Balmumcu
+    name: ENKA Balmumcu WeatherLink
     runs-on: ubuntu-latest
     timeout-minutes: 8
     steps:
@@ -53,19 +53,11 @@ jobs:
         with:
           python-version: "3.12"
 
-      - name: Install ENKA OCR dependencies
+      - name: Install ENKA WeatherLink dependencies
         run: |
-          set -euo pipefail
-          if ! command -v tesseract >/dev/null 2>&1; then
-            if ! sudo apt-get install -y --no-install-recommends tesseract-ocr; then
-              sudo apt-get update
-              sudo apt-get install -y --no-install-recommends tesseract-ocr
-            fi
-          fi
-          python -m pip install --disable-pip-version-check requests pillow pytesseract
-          tesseract --version
+          python -m pip install --disable-pip-version-check requests
 
-      - name: Prepare ENKA-only workspace
+      - name: Prepare ENKA WeatherLink workspace
         run: |
           set -euo pipefail
           mkdir -p site/data public .station-work/enka
@@ -73,7 +65,7 @@ jobs:
             cp site/data/station-temperature-history.json .station-work/enka/station-temperature-history.json
           fi
 
-      - name: Collect and validate ENKA Balmumcu
+      - name: Collect and validate ENKA Balmumcu WeatherLink
         env:
           PYTHONPATH: .
           PYTHONUNBUFFERED: "1"
@@ -94,7 +86,7 @@ jobs:
           PY
           cp public/station-observation.json .station-work/enka/station-observation.json
 
-      - name: Upload ENKA data
+      - name: Upload ENKA WeatherLink data
         uses: actions/upload-artifact@v4
         with:
           name: enka-station-data
@@ -162,7 +154,7 @@ jobs:
       id-token: write
 
   rearm-next-cycle:
-    name: Queue next ENKA cycle
+    name: Queue next ENKA WeatherLink cycle
     needs: [cycle-start, publish]
     if: ${{ always() && needs.cycle-start.result == 'success' && needs['publish'].result != 'cancelled' }}
     runs-on: ubuntu-latest
@@ -199,12 +191,12 @@ jobs:
               --header "Content-Type: application/json" \
               --data '{"ref":"main"}')"
             if [ "$status" = "204" ]; then
-              echo "Next ENKA cycle successfully queued."
+              echo "Next ENKA WeatherLink cycle successfully queued."
               exit 0
             fi
             echo "Dispatch attempt $attempt failed with HTTP $status."
             cat "$RUNNER_TEMP/dispatch-response.json"
             sleep 5
           done
-          echo "Could not queue the next ENKA cycle."
+          echo "Could not queue the next ENKA WeatherLink cycle."
           exit 1
