@@ -153,8 +153,8 @@ document.addEventListener("pointerdown",event=>{if(activeTooltip&&!activeTooltip
 async function load(){
  try{
   const cache=Date.now();
-  const latestResponse=await fetch("./data/latest.json?v="+cache,{cache:"no-store"});
-  if(!latestResponse.ok)throw new Error("GFS latest.json HTTP "+latestResponse.status);
+  const latestResponse=await fetch("./data/istanbul-gfs-latest.json?v="+cache,{cache:"no-store"});
+  if(!latestResponse.ok)throw new Error("İstanbul GFS verisi HTTP "+latestResponse.status);
   const document=await latestResponse.json();
   const runs=Array.isArray(document.comparison_runs)?document.comparison_runs.slice():[];
   if(document.run_id_utc&&Array.isArray(document.forecast_6_hourly)&&!runs.some(run=>run.run_id_utc===document.run_id_utc)){
@@ -170,7 +170,7 @@ async function load(){
   const history=historyResponse&&historyResponse.ok?await historyResponse.json().catch(()=>null):null;
   const verification=realizedErrorStats(source,history);
   $("next72-temperature").innerHTML=svgLine(source,"temperature_2m_c","2 m sıcaklık","°C",verification);
-  $("next72-precipitation").innerHTML=svgLine(source,"precipitation_6h_mm","6 saatlik yağış","mm / 3 saat",null);
+  $("next72-precipitation").innerHTML=svgLine(source,"precipitation_6h_mm","3 saatlik yağış","mm / 3 saat",null);
   bindTooltip("next72-temperature");bindTooltip("next72-precipitation");
   reportHeight();
  }catch(error){
