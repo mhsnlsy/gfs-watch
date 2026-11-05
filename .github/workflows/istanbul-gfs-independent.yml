@@ -157,7 +157,7 @@ jobs:
         run: |
           set -euo pipefail
           mkdir -p state/gfs/f72 state/gfs/runs
-          new_run="$(python -c 'import json; print(json.load(open("'$RUNNER_TEMP'/istanbul-gfs/latest.json"))["run_id_utc"])')"
+          new_run="$(python -c 'import json,sys; print(json.load(open(sys.argv[1]))["run_id_utc"])' "$RUNNER_TEMP/istanbul-gfs/latest.json")"
           old_run=""
           if [ -s state/gfs/latest.json ]; then
             old_run="$(python -c 'import json; print(json.load(open("state/gfs/latest.json")).get("run_id_utc",""))')"
