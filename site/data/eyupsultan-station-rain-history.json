@@ -6,14 +6,8 @@
   "source_interval_minutes": 10,
   "chart_window_minutes": 60,
   "chart_step_minutes": 60,
-  "updated_at_utc": "2026-11-05T18:28:50.301Z",
+  "updated_at_utc": "2026-11-05T18:33:58.184Z",
   "samples": [
-    {
-      "logged_at_utc": "2026-11-02T18:30:38.144Z",
-      "observed_at_utc": "2026-11-02T18:29:00.000Z",
-      "precipitation_1h_mm": null,
-      "precipitation_daily_mm": 1.9
-    },
     {
       "logged_at_utc": "2026-11-02T18:40:23.028Z",
       "observed_at_utc": "2026-11-02T18:34:00.000Z",
@@ -6579,6 +6573,16 @@
     {
       "logged_at_utc": "2026-11-05T18:28:50.301Z",
       "observed_at_utc": "2026-11-05T18:24:00.000Z",
+      "precipitation_1h_mm": 0.3,
+      "precipitation_10m_mm": 0,
+      "precipitation_6h_mm": 0.9,
+      "precipitation_12h_mm": 0.9,
+      "precipitation_24h_mm": 1.7,
+      "precipitation_daily_mm": 1.5
+    },
+    {
+      "logged_at_utc": "2026-11-05T18:33:58.184Z",
+      "observed_at_utc": "2026-11-05T18:29:00.000Z",
       "precipitation_1h_mm": 0.3,
       "precipitation_10m_mm": 0,
       "precipitation_6h_mm": 0.9,
