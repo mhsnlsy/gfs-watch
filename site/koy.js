@@ -55,28 +55,30 @@ function svgHistory24(runs,metric,title,unit){
  const now=Date.now(),from=now-24*3600000,byTime=new Map();
  (runs||[]).forEach((run,ri)=>{
    pointsOf(run,180).forEach(p=>{
-     const t=new Date(p.valid_time_utc).getTime(),v=num(p[metric]);
+     const t=Date.parse(p.valid_time_utc||"");const v=num(p[metric]);
      if(!Number.isFinite(t)||t<from||t>now||v==null)return;
      const key=new Date(t).toISOString();
-     const old=byTime.get(key);
-     if(!old||ri<old.ri)byTime.set(key,{t,v,ri,run});
+     if(!byTime.has(key)||ri<byTime.get(key).ri)byTime.set(key,{t,v,ri});
    });
  });
  const pts=[...byTime.values()].sort((a,b)=>a.t-b.t);
- if(pts.length<2)return '<div class="chart-empty">Son 24 saate ait veri yok.</div>';
+ const holderClass="history-svg";
+ if(pts.length<2)return '<div class="station-trend-empty">Son 24 saatte yeterli GFS geçmiş verisi yok.</div>';
  let lo=Math.min(...pts.map(p=>p.v)),hi=Math.max(...pts.map(p=>p.v));
- if(metric.includes("temperature")){lo=Math.floor((lo-1)/2)*2;hi=Math.ceil((hi+1)/2)*2}
- else {lo=0;hi=Math.max(1,Math.ceil(hi*1.15))}
- if(hi===lo)hi=lo+1;
- const W=760,H=150,L=34,R=8,T=14,B=25,PW=W-L-R,PH=H-T-B;
- const x=t=>L+(t-pts[0].t)/(pts[pts.length-1].t-pts[0].t||1)*PW;
- const y=v=>T+(hi-v)*PH/(hi-lo);
- let s='<svg class="koy-svg" viewBox="0 0 '+W+' '+H+'" role="img" aria-label="'+esc(title)+'">';
- for(let j=0;j<=2;j++){const v=lo+(hi-lo)*j/2,yy=y(v);s+='<line x1="'+L+'" y1="'+yy+'" x2="'+(W-R)+'" y2="'+yy+'" stroke="#294253" stroke-dasharray="3 5"/><text x="'+(L-5)+'" y="'+(yy+3)+'" text-anchor="end" fill="#91aab8" font-size="9">'+fmt(v,0)+'</text>'}
- pts.forEach((p,i)=>{if(i===0||i===pts.length-1||new Date(p.t).getHours()%6===0){const d=new Date(p.t);const label=d.toLocaleTimeString("tr-TR",{timeZone:"Europe/Istanbul",hour:"2-digit",minute:"2-digit"});s+='<text x="'+x(p.t)+'" y="'+(H-7)+'" text-anchor="middle" fill="#91aab8" font-size="9">'+label+'</text>'}});
- const path=pts.map((p,i)=>(i?"L":"M")+x(p.t)+" "+y(p.v)).join(" ");
- s+='<path d="'+path+'" fill="none" stroke="#7dd3d7" stroke-width="2.6" stroke-linecap="round" stroke-linejoin="round"/>';
- pts.forEach(p=>{s+='<circle cx="'+x(p.t)+'" cy="'+y(p.v)+'" r="2.7" fill="#7dd3d7"><title>'+new Date(p.t).toLocaleString("tr-TR",{timeZone:"Europe/Istanbul"})+' · '+fmt(p.v)+' '+unit+'</title></circle>'});
+ if(metric==="temperature_2m_c"){lo=Math.floor(lo-1);hi=Math.ceil(hi+1)}
+ else {lo=0;hi=Math.max(1,Math.ceil(hi+1))}
+ if(hi<=lo)hi=lo+1;
+ const width=560,height=200,left=44,right=14,top=15,bottom=29,pw=width-left-right,ph=height-top-bottom;
+ const x=t=>left+(t-pts[0].t)/(pts[pts.length-1].t-pts[0].t||1)*pw;
+ const y=v=>top+(hi-v)*ph/(hi-lo);
+ let s='<svg class="'+holderClass+'" viewBox="0 0 '+width+' '+height+'" preserveAspectRatio="none">';
+ const ticks=[];for(let v=Math.ceil(lo);v<=Math.floor(hi);v+=(metric==="temperature_2m_c"?2:Math.max(1,(hi-lo)/3)))ticks.push(v);
+ ticks.forEach(v=>{const yy=y(v);s+='<line x1="'+left+'" y1="'+yy+'" x2="'+(width-right)+'" y2="'+yy+'" stroke="rgba(190,218,228,.17)" stroke-dasharray="3 5"/><text x="'+(left-9)+'" y="'+(yy+3.5)+'" fill="#a8bfca" font-size="10" text-anchor="end">'+fmt(v,metric==="temperature_2m_c"?0:1)+'</text>'});
+ pts.forEach((p,i)=>{const d=new Date(p.t);const h=d.toLocaleTimeString("tr-TR",{timeZone:"Europe/Istanbul",hour:"2-digit",minute:"2-digit"});if(i===0||i===pts.length-1||d.getHours()%4===0)s+='<text x="'+x(p.t)+'" y="'+(height-8)+'" fill="#a8bfca" font-size="10" text-anchor="middle">'+h+'</text>'});
+ const path=pts.map((p,i)=>(i?"L":"M")+x(p.t).toFixed(1)+" "+y(p.v).toFixed(1)).join(" ");
+ const area=path+" L "+x(pts[pts.length-1].t)+" "+(height-bottom)+" L "+x(pts[0].t)+" "+(height-bottom)+" Z";
+ s+='<path d="'+area+'" fill="rgba(125,211,215,.10)" stroke="none"/><path d="'+path+'" fill="none" stroke="#7dd3d7" stroke-width="2.7" stroke-linecap="round" stroke-linejoin="round"/>';
+ pts.forEach(p=>{s+='<circle cx="'+x(p.t)+'" cy="'+y(p.v)+'" r="2.4" fill="#7dd3d7"><title>'+new Date(p.t).toLocaleString("tr-TR",{timeZone:"Europe/Istanbul"})+' · '+fmt(p.v)+' '+unit+'</title></circle>'});
  s+='</svg>';return s;
 }
 function renderRuns(d,f72){
