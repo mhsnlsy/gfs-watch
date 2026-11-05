@@ -1,6 +1,7 @@
 import fs from "node:fs";
 import path from "node:path";
 
+const MGM_PAGE_URL = "https://www.mgm.gov.tr/tahmin/il-ve-ilceler.aspx?il=%C4%B0stanbul&ilce=%C5%9Ei%C5%9Fli";
 const MGM_STATION_URL = "https://servis.mgm.gov.tr/web/sondurumlar?merkezid=18401";
 const MGM_CITY_URL = "https://servis.mgm.gov.tr/web/sondurumlar/ilTumSondurum?ilPlaka=34";
 const MGM_STATION_API_URL = "https://servis.mgm.gov.tr/api/sondurumlar?merkezid=18401";
@@ -66,19 +67,55 @@ async function requestMgm(url) {
   }
 }
 
+async function verifyMgmPage() {
+  const controller = new AbortController();
+  const timeout = setTimeout(() => controller.abort(), 20000);
+  try {
+    const url = MGM_PAGE_URL + (MGM_PAGE_URL.includes("?") ? "&" : "?") + "_gfs_watch=" + Date.now();
+    const response = await fetch(url, {
+      signal: controller.signal,
+      cache: "no-store",
+      headers: {
+        "User-Agent": "Mozilla/5.0 (compatible; GFS-Watch/1.0)",
+        "Accept": "text/html,application/xhtml+xml",
+        "Cache-Control": "no-cache, no-store, max-age=0",
+        "Pragma": "no-cache"
+      }
+    });
+    if (!response.ok) throw new Error("MGM Şişli sayfası HTTP " + response.status);
+    const html = await response.text();
+    if (!/Şişli|Sisli/i.test(html)) throw new Error("MGM sayfası içeriğinde Şişli doğrulanamadı");
+    return { status: response.status, checkedAt: new Date().toISOString() };
+  } finally {
+    clearTimeout(timeout);
+  }
+}
+
 async function fetchFromMgm() {
-  let row, firstError;
+  let pageCheck = null;
+  try {
+    pageCheck = await verifyMgmPage();
+    console.log("[MGM PAGE] İstanbul-Şişli sayfası doğrulandı:", pageCheck.status);
+  } catch (error) {
+    // The live observation endpoint remains usable if the presentation page is unavailable.
+    console.warn("[MGM PAGE] Şişli sayfası doğrulanamadı; son-durum servisi yine deneniyor:", error.message);
+  }
+
+  let row, firstError, measurementSourceUrl;
   try {
     row = await requestMgm(MGM_STATION_API_URL);
+    measurementSourceUrl = MGM_STATION_API_URL;
   } catch (error) {
     firstError = error;
     console.warn("[MGM] Şişli API başarısız; web istasyon uç noktası deneniyor:", error.message);
     try {
       row = await requestMgm(MGM_STATION_URL);
+      measurementSourceUrl = MGM_STATION_URL;
     } catch (webError) {
       firstError = webError;
       console.warn("[MGM] Şişli web istasyon uç noktası başarısız; İstanbul listesi deneniyor:", webError.message);
       row = await requestMgm(MGM_CITY_URL);
+      measurementSourceUrl = MGM_CITY_URL;
     }
   }
   if (!row.veriZamani) throw new Error("MGM 18401 ölçüm zamanı yok");
@@ -121,8 +158,11 @@ async function fetchFromMgm() {
   return {
     station_name: "Şişli",
     station_id: STATION_ID,
-    source: "MGM 18401",
-    source_url: MGM_STATION_URL,
+    source: "MGM İstanbul-Şişli · anlık son-durum ölçümü",
+    source_url: MGM_PAGE_URL,
+    measurement_source_url: measurementSourceUrl,
+    source_page_checked_at_utc: pageCheck?.checkedAt || null,
+    source_page_http_status: pageCheck?.status || null,
     source_fallback_used: Boolean(firstError),
     observed_at_utc: observedAt.toISOString(),
     fetched_at_utc: new Date().toISOString(),
