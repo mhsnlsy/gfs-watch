@@ -96,6 +96,11 @@ jobs:
       - name: Announce source-discovery cadence
         run: |
           echo "MeteoPT is queried for its active GFS run on every 10-minute scheduled invocation."
+      - name: Confirm this is a scheduled or watchdog dispatch
+        run: |
+          echo "Trigger event: ${{ github.event_name }}"
+          echo "Workflow ref: ${{ github.ref }}"
+          echo "Workflow SHA: ${{ github.sha }}"
       - name: Watch active MeteoPT cycle; publish f180 to Pages and Telegram
         id: check-gfs
         env:
