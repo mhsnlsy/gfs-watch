@@ -3,6 +3,7 @@ import fs from "node:fs";
 import vm from "node:vm";
 
 const html = fs.readFileSync("site/index.html", "utf8");
+const eyupsultanCollector = fs.readFileSync("scripts/eyupsultan_weather.mjs", "utf8");
 const functionStart = html.indexOf("function renderStationTemperatureTrend");
 const functionEnd = html.indexOf("function render(data)", functionStart);
 assert.ok(functionStart >= 0 && functionEnd > functionStart, "Station history/switch functions must exist.");
@@ -157,4 +158,6 @@ assert.match(html, /bucketMs=1800000/);
 assert.match(html, /EYUPSULTAN_STATION_HISTORY_URL/);
 assert.match(html, /fetch\(EYUPSULTAN_STATION_HISTORY_URL/);
 assert.match(html, /String\(historyDocument\.station_id\)==="18101"/);
+assert.match(eyupsultanCollector, /precipitation_10m_mm: observation\.precipitation_10m_mm/);
+assert.match(eyupsultanCollector, /last\.precipitation_10m_mm = sample\.precipitation_10m_mm/);
 console.log("Station history switch smoke tests passed: card, temperature trend, rainfall trend, source labels, and station isolation.");
