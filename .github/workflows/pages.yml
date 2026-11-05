@@ -42,14 +42,12 @@ jobs:
 
       - name: Check out independent Köy forecast data
         uses: actions/checkout@v7
-        continue-on-error: true
         with:
           ref: koy-gfs-data
           path: koy-data
 
       - name: Check out independent Köy MGM station data
         uses: actions/checkout@v7
-        continue-on-error: true
         with:
           ref: koy-mgm-data
           path: koy-mgm-data
@@ -218,7 +216,18 @@ jobs:
             printf '{"schema":"gfs-watch.ecmwf-eps.v1","status":"pending","model":"ECMWF IFS ENS (EPS)","forecasts":[]}' > _site/data/ecmwf/latest.json
           fi
           touch _site/.nojekyll
+          test -s _site/koy-data/gfs/f72/latest.json
+          python -m json.tool _site/koy-data/gfs/f72/latest.json > /dev/null
+          test -s _site/koy-data/gfs/comparison.json
+          python -m json.tool _site/koy-data/gfs/comparison.json > /dev/null
+          test -s _site/koy-data/mgm/observation.json
+          python -m json.tool _site/koy-data/mgm/observation.json > /dev/null
+          test -s _site/koy-data/mgm/history.json
+          python -m json.tool _site/koy-data/mgm/history.json > /dev/null
           echo "Website bundle prepared with the latest GFS forecast and independent Köy MGM station data."
+
+      - name: Validate Köy website JavaScript syntax
+        run: node --check source/site/koy.js
 
       - name: Validate inline website JavaScript syntax
         run: |
