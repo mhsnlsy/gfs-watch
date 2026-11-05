@@ -10,7 +10,7 @@
     "longitude": 28.924167,
     "elevation_m": 54,
     "observed_at_utc": "2026-11-05T02:04:00.000Z",
-    "fetched_at_utc": "2026-11-05T02:08:30.037Z",
+    "fetched_at_utc": "2026-11-05T02:09:01.145Z",
     "age_minutes": 5,
     "stale_after_minutes": 30,
     "is_stale": false,
@@ -23,7 +23,7 @@
     "precipitation_10m_mm": 0,
     "precipitation_6h_mm": 0,
     "precipitation_12h_mm": 5.6,
-    "precipitation_24h_mm": 30.3,
+    "precipitation_24h_mm": 30.2,
     "precipitation_daily_mm": 0,
     "precipitation_source": "MGM 18101",
     "humidity_percent": 90,
@@ -33,7 +33,7 @@
     "pressure_type": "mean_sea_level",
     "pressure_source": "MGM 18101",
     "pressure_observed_at_utc": "2026-11-05T02:04:00.000Z",
-    "pressure_age_minutes": 4.5
+    "pressure_age_minutes": 5
   },
-  "updated_at_utc": "2026-11-05T02:08:27.191Z"
+  "updated_at_utc": "2026-11-05T02:08:58.898Z"
 }
