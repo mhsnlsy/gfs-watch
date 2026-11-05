@@ -9,7 +9,7 @@ const ts=v=>{if(!v)return "—";const d=new Date(v);return Number.isFinite(d.get
 const tsGfsValid=v=>{if(!v)return "—";const d=new Date(v);return Number.isFinite(d.getTime())?new Intl.DateTimeFormat("tr-TR",{timeZone:"UTC",day:"2-digit",month:"2-digit",hour:"2-digit",minute:"2-digit"}).format(d)+" TSİ":"—"};
 const dayKey=v=>{const d=new Date(v);return Number.isFinite(d.getTime())?new Intl.DateTimeFormat("en-CA",{timeZone:"UTC",year:"numeric",month:"2-digit",day:"2-digit"}).format(d):"—"};
 const dayLabel=k=>{const p=k.split("-");return p[2]+"."+p[1]};
-let busy=false, f72=null, comparison=null, stationHistory=null;
+let busy=false, f72=null, comparison=null, stationHistory=null, rainHistory=null;
 async function get(path){const url=path.startsWith("./")?path:BASE+path;const r=await fetch(url+"?v="+Date.now(),{cache:"no-store"});if(!r.ok)throw Error("HTTP "+r.status+" · "+url);return r.json()}
 function pointsOf(run,max=180){return (run?.forecast_6_hourly||[]).filter(p=>Number(p.forecast_hour)>0&&Number(p.forecast_hour)<=max).sort((a,b)=>Number(a.forecast_hour)-Number(b.forecast_hour))}
 function svgLine(runs,metric,title,unit,maxHour=72){
@@ -225,7 +225,11 @@ function svgStationHistory(samples,metric,title,unit){
  const x=t=>L+(t-from)/86400000*PW,y=v=>T+(hi-v)*PH/(hi-lo),xb=p=>x(p.start+step/2);
  let s='<svg viewBox="0 0 '+W+' '+H+'" preserveAspectRatio="none" role="img" aria-label="'+esc(title)+'">';
  for(let j=0;j<=4;j++){const v=lo+(hi-lo)*j/4,yy=y(v);s+='<line x1="'+L+'" y1="'+yy+'" x2="'+(W-R)+'" y2="'+yy+'" stroke="rgba(190,218,228,.17)" stroke-dasharray="3 5"/><text x="'+(L-9)+'" y="'+(yy+3.5)+'" fill="#a8bfca" font-size="10" text-anchor="end">'+fmt(v,metric==="temperature_2m_c"?1:1)+'</text>'}
- bins.forEach((b,i)=>{if(i%4&&i!==bins.length-1)return;s+='<text x="'+x(b.start)+'" y="'+(H-8)+'" fill="#a8bfca" font-size="10" text-anchor="middle">'+new Intl.DateTimeFormat("tr-TR",{timeZone:"Europe/Istanbul",hour:"2-digit",minute:"2-digit"}).format(new Date(b.start))+'</text>'});
+ bins.forEach((b,i)=>{
+  if(hourly){const hh=new Intl.DateTimeFormat("tr-TR",{timeZone:"Europe/Istanbul",hour:"2-digit",minute:"2-digit",hourCycle:"h23"}).format(new Date(b.start));s+='<text x="'+x(b.start)+'" y="'+(H-8)+'" fill="#a8bfca" font-size="8" text-anchor="middle"><title>'+hh+' TSİ</title>'+hh+'</text>';return}
+  if(i%4&&i!==bins.length-1)return;
+  s+='<text x="'+x(b.start)+'" y="'+(H-8)+'" fill="#a8bfca" font-size="10" text-anchor="middle">'+new Intl.DateTimeFormat("tr-TR",{timeZone:"Europe/Istanbul",hour:"2-digit",minute:"2-digit"}).format(new Date(b.start))+'</text>';
+ });
  const groups=[];data.forEach(p=>{const g=groups[groups.length-1];if(!g||p.index!==g[g.length-1].index+1)groups.push([p]);else g.push(p)});
  const line=groups.map(g=>g.map((p,i)=>(i?"L":"M")+xb(p).toFixed(1)+" "+y(p.mean).toFixed(1)).join(" ")).join(" ");
  const area=groups.filter(g=>g.length>1).map(g=>g.map((p,i)=>(i?"L":"M")+xb(p).toFixed(1)+" "+y(p.mean).toFixed(1)).join(" ")+" L "+xb(g[g.length-1])+" "+(H-B)+" L "+xb(g[0])+" "+(H-B)+" Z").join(" ");
@@ -304,13 +308,36 @@ function bindStationHistoryTooltip(containerId){
   else hide();
  });
 }
-function renderStationHistory(doc){
+function renderStationHistory(doc,rainDoc){
  const samples=Array.isArray(doc?.samples)?doc.samples:[];
+ const rainSamples=Array.isArray(rainDoc?.samples)?rainDoc.samples:samples;
  $("station-trend-meta").textContent="Çanakçı · MGM · "+samples.length+" kayıt · 30 dk ortalama / min–maks";
- $("station-rain-meta").textContent="Çanakçı · MGM · saatlik gösterim · kayan 1 saatlik toplam";
- $("history-source-note").textContent="Sıcaklık ve yağış: MGM Çanakçı gerçek istasyon ölçümleri.";
+ $("station-rain-meta").textContent="Çanakçı · MGM · "+rainSamples.length+" kayıt · 72 saatlik ayrı yağış arşivi · saatlik kayan 1 saat toplam";
+ $("history-source-note").textContent="Sıcaklık: MGM Çanakçı gözlem geçmişi. Yağış: bağımsız 72 saatlik MGM yağış arşivi.";
  $("station-temperature-trend").innerHTML=svgStationHistory(samples,"temperature_2m_c","Çanakçı sıcaklık","°C");
- $("station-rain-trend").innerHTML=svgStationHistory(samples,"precipitation_1h_mm","Çanakçı yağış","mm");
+ $("station-rain-trend").innerHTML=svgStationHistory(rainSamples,"precipitation_1h_mm","Çanakçı yağış","mm");
+ const now=Date.now(),hour=3600000,end=Math.floor(now/hour)*hour,start=end-24*hour;
+ const byHour=new Map();
+ rainSamples.forEach(sample=>{
+  const time=Date.parse(sample.observed_at_utc||sample.logged_at_utc||""),value=num(sample.precipitation_1h_mm);
+  if(!Number.isFinite(time)||time<start||time>=end||value==null)return;
+  const bucket=Math.floor(time/hour),previous=byHour.get(bucket);
+  if(!previous||time>previous.time)byHour.set(bucket,{time,value});
+ });
+ const hourlyRain=[...byHour.values()].sort((a,b)=>a.time-b.time);
+ const maxPoint=hourlyRain.reduce((best,p)=>!best||p.value>best.value?p:best,null);
+ const maxBadge=$("station-rain-max");
+ if(maxBadge){
+  if(maxPoint){
+   maxBadge.hidden=false;
+   maxBadge.textContent="24 saatte max "+fmt(maxPoint.value)+" mm / 1 sa";
+   maxBadge.title="En yüksek kayan 1 saatlik yağış · "+ts(maxPoint.time);
+  }else{
+   maxBadge.hidden=true;
+   maxBadge.textContent="";
+   maxBadge.removeAttribute("title");
+  }
+ }
  bindStationHistoryTooltip("station-temperature-trend");
  bindStationHistoryTooltip("station-rain-trend");
 }
@@ -375,11 +402,29 @@ function renderRuns(d,f72){
  }
 }
 async function refresh(){if(busy)return;busy=true;
- const results=await Promise.allSettled([get("f72/latest.json"),get("comparison.json"),get(MGM_BASE+"history.json"),get(MGM_BASE+"observation.json")]);
+ const results=await Promise.allSettled([
+  get("f72/latest.json"),get("comparison.json"),get(MGM_BASE+"history.json"),
+  get(MGM_BASE+"rain-history-72h.json"),get(MGM_BASE+"observation.json")
+ ]);
  if(results[0].status==="fulfilled"){f72=results[0].value;renderF72(f72)}else{}
  if(results[1].status==="fulfilled")comparison=results[1].value;else comparison=null;
- if(results[2].status==="fulfilled"){stationHistory=results[2].value;renderStationHistory(stationHistory)}else{stationHistory=null;$("station-temperature-trend").innerHTML="<div class=\"station-trend-empty\">MGM istasyon geçmişi bekleniyor…</div>";$("station-rain-trend").innerHTML="<div class=\"station-trend-empty\">MGM istasyon geçmişi bekleniyor…</div>"}
- if(results[3].status==="fulfilled"){renderMgmObservation(results[3].value,stationHistory,f72); const o=results[3].value; $("mgm-status-date").textContent=ts(o.observed_at_utc); $("mgm-source-temp").innerHTML=fmt(o.temperature_2m_c)+"<small>°C</small>"; $("mgm-source-status").textContent="Canlı MGM ölçümü · son 1 saat yağış "+fmt(o.precipitation_1h_mm)+" mm"; $("mgm-source-fill").style.width=Math.min(100,Math.max(0,(num(o.precipitation_1h_mm)||0)*8))+"%"} renderRuns(comparison,f72);
+ if(results[2].status==="fulfilled")stationHistory=results[2].value;else stationHistory=null;
+ if(results[3].status==="fulfilled")rainHistory=results[3].value;else rainHistory=null;
+ if(stationHistory){
+  renderStationHistory(stationHistory,rainHistory);
+ }else{
+  $("station-temperature-trend").innerHTML="<div class=\"station-trend-empty\">MGM istasyon geçmişi bekleniyor…</div>";
+  $("station-rain-trend").innerHTML="<div class=\"station-trend-empty\">MGM yağış arşivi bekleniyor…</div>";
+ }
+ if(results[4].status==="fulfilled"){
+  renderMgmObservation(results[4].value,stationHistory,f72);
+  const o=results[4].value;
+  $("mgm-status-date").textContent=ts(o.observed_at_utc);
+  $("mgm-source-temp").innerHTML=fmt(o.temperature_2m_c)+"<small>°C</small>";
+  $("mgm-source-status").textContent="Canlı MGM ölçümü · son 1 saat yağış "+fmt(o.precipitation_1h_mm)+" mm";
+  $("mgm-source-fill").style.width=Math.min(100,Math.max(0,(num(o.precipitation_1h_mm)||0)*8))+"%";
+ }
+ renderRuns(comparison,f72);
  busy=false;
 }
 refresh();setInterval(()=>{if(document.visibilityState!=="hidden")refresh()},60000);
