@@ -92,6 +92,23 @@ export default {
     }
     console.log(`Eyüpsultan MGM workflow tick dispatched for ${new Date(controller.scheduledTime).toISOString()}`);
 
+    // Şişli has a dedicated collector, archive and concurrency group.
+    const sisliTick = await fetch(`https://api.github.com/repos/${OWNER}/${REPO}/dispatches`, {
+      method: "POST",
+      headers: { ...headers, "Content-Type": "application/json" },
+      body: JSON.stringify({
+        event_type: "sisli-mgm-clock",
+        client_payload: {
+          source: "cloudflare-cron",
+          scheduled_at_utc: new Date(controller.scheduledTime).toISOString()
+        }
+      })
+    });
+    if (sisliTick.status !== 204) {
+      throw new Error(`Şişli MGM dispatch failed ${sisliTick.status}: ${await sisliTick.text()}`);
+    }
+    console.log(`Şişli MGM workflow tick dispatched for ${new Date(controller.scheduledTime).toISOString()}`);
+
     // Keep the existing GFS backup check unchanged; it only applies during
     // the Istanbul time-slot window below.
     if (minute < 40 || minute > 59) return;
