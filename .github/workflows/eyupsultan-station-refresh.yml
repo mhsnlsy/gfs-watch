@@ -92,15 +92,3 @@ jobs:
           git push origin HEAD:eyupsultan-state
           echo "Station data pushed to dedicated eyupsultan-state."
           echo "changed=true" >> "$GITHUB_OUTPUT"
-
-  deploy-pages:
-    needs: refresh
-    if: needs.refresh.outputs.changed == 'true'
-    concurrency:
-      group: github-pages-live
-      cancel-in-progress: false
-    uses: ./.github/workflows/pages-live.yml
-    permissions:
-      contents: read
-      pages: write
-      id-token: write
