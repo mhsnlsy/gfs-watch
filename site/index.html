@@ -2798,7 +2798,7 @@
           if(document&&document.schema==="gfs-watch.station-observation.v1"&&candidate){
             if(stationKey==="eyupsultan"&&String(candidate.station_id)==="18101")eyupsultanStationObservation=candidate;
             if(stationKey==="sisli"&&String(candidate.station_id)==="18401")sisliStationObservation=candidate;
-            if(stationKey==="enka"&&candidate.station_id==="ENKA-BALMUMCU-CAMERA-OCR")enkaStationObservation=candidate;
+            if(stationKey==="enka"&&candidate.station_id==="ENKA-BALMUMCU-WEATHERLINK")enkaStationObservation=candidate;
           }
         }catch(_){}
       }
@@ -2867,7 +2867,7 @@
           }catch(_){eyupsultanStationObservation=null;}
         }
         if(sisliResponse&&sisliResponse.ok){try{const d=await sisliResponse.json();const s=d&&d.station_observation;if(d&&d.schema==="gfs-watch.station-observation.v1"&&s&&String(s.station_id)==="18401")sisliStationObservation=s;}catch(_){sisliStationObservation=null;}}
-        // Keep the user's selected station. ENKA Balmumcu is always fed by camera OCR.
+        // Keep the user's selected station. ENKA Balmumcu is always fed by WeatherLink current values.
         $("station-enka-button").classList.toggle("active",activeStation==="enka");
         $("station-eyupsultan-button").classList.toggle("active",activeStation==="eyupsultan");
         $("station-sisli-button").classList.toggle("active",activeStation==="sisli");
