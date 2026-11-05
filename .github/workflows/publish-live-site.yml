@@ -7,7 +7,7 @@ on:
       - ".github/workflows/publish-live-site.yml"
       - "site/**"
   schedule:
-    - cron: "*/5 * * * *"
+    - cron: "3-59/5 * * * *"
   workflow_dispatch:
   workflow_run:
     workflows:
@@ -23,12 +23,12 @@ permissions:
 
 concurrency:
   group: live-pages-publisher
-  cancel-in-progress: false
+  cancel-in-progress: true
 
 jobs:
   publish:
     name: Assemble and deploy latest live data
-    if: github.event_name != 'workflow_run' || github.event.workflow_run.conclusion == 'success'
+    if: always()
     runs-on: ubuntu-latest
     timeout-minutes: 10
     steps:
