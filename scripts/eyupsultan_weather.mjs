@@ -4,7 +4,7 @@ import path from "node:path";
 const MGM_STATION_URL = "https://servis.mgm.gov.tr/web/sondurumlar?merkezid=18101";
 const MGM_CITY_URL = "https://servis.mgm.gov.tr/web/sondurumlar/ilTumSondurum?ilPlaka=34";
 const STATION_ID = "18101";
-const STALE_AFTER_MINUTES = 30;
+const STALE_AFTER_MINUTES = 20;
 const HISTORY_SCHEMA = "gfs-watch.station-temperature-history.v1";
 const RAIN_HISTORY_SCHEMA = "gfs-watch.station-rain-history.v1";
 
