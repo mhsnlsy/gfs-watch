@@ -117,7 +117,6 @@ function renderStationHistory(doc){
 function renderRuns(d,f72){
  const runs=(d?.runs||[]).slice(0,4);
  $("report-meta").textContent=runs.length?"Son döngü: "+ts(runs[0].run_id_utc)+" · "+runs.length+" çıktı hazır":"Son model döngüsü bekleniyor";
- $("run-list").textContent=runs.length?runs.map((r,i)=>(i+1)+". "+ts(r.run_id_utc)+" · "+pointsOf(r).length+" adım").join("\n"):"Son dört döngü verisi bekleniyor…";
  $("chart-temp").innerHTML=svgDaily(runs,"temperature_2m_c","2 m sıcaklık","°C","candle");
  $("chart-t850").innerHTML=svgDaily(runs,"temperature_850hpa_c","850 hPa sıcaklık","°C","range");
  $("chart-rain").innerHTML=svgLine(runs,"precipitation_6h_mm","6 saatlik yağış","mm",180);
