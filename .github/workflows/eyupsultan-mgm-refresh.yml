@@ -1,0 +1,128 @@
+name: Eyüpsultan MGM Independent Refresh
+
+on:
+  # Independent five-minute cadence for the MGM Eyüpsultan station.
+  schedule:
+    - cron: "*/5 * * * *"
+  workflow_dispatch:
+  # Dedicated signal from the five-minute Cloudflare clock.
+  repository_dispatch:
+    types: [eyupsultan-mgm-clock]
+  push:
+    branches: [main]
+    paths:
+      - ".github/workflows/eyupsultan-mgm-refresh.yml"
+      - "scripts/eyupsultan_weather.mjs"
+
+permissions:
+  contents: write
+
+concurrency:
+  group: eyupsultan-mgm-independent
+  cancel-in-progress: false
+
+jobs:
+  collect-and-publish:
+    name: Fetch MGM Eyüpsultan and publish its own archive
+    runs-on: ubuntu-latest
+    timeout-minutes: 6
+    steps:
+      - name: Check out latest main
+        uses: actions/checkout@v4
+        with:
+          ref: main
+          fetch-depth: 0
+
+      - name: Set up Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: "22"
+
+      - name: Prepare Eyüpsultan-only workspace and restore its archive
+        run: |
+          set -euo pipefail
+          mkdir -p public site/data .station-work/eyupsultan
+          for f in eyupsultan-station-temperature-history.json eyupsultan-station-rain-history.json; do
+            if [ -s "site/data/$f" ]; then
+              cp "site/data/$f" ".station-work/eyupsultan/$f"
+            fi
+          done
+
+      - name: Fetch current MGM Eyüpsultan observation and update 72-hour archive
+        env:
+          EYUPSULTAN_TEMPERATURE_HISTORY_PATH: .station-work/eyupsultan/eyupsultan-station-temperature-history.json
+          EYUPSULTAN_RAIN_HISTORY_PATH: .station-work/eyupsultan/eyupsultan-station-rain-history.json
+        run: |
+          set -euo pipefail
+          node scripts/eyupsultan_weather.mjs
+          test -s public/eyupsultan-station-observation.json
+          test -s .station-work/eyupsultan/eyupsultan-station-temperature-history.json
+          test -s .station-work/eyupsultan/eyupsultan-station-rain-history.json
+
+      - name: Validate fresh observation and prevent timestamp regression
+        run: |
+          set -euo pipefail
+          python - <<'PY'
+          import json
+          from datetime import datetime, timezone
+          from pathlib import Path
+
+          new_doc = json.loads(Path("public/eyupsultan-station-observation.json").read_text(encoding="utf-8"))
+          new = new_doc.get("station_observation") or {}
+          age = float(new.get("age_minutes", 9999))
+          if new.get("temperature_2m_c") is None or new.get("is_stale") or age > 20:
+              raise SystemExit(f"MGM Eyüpsultan observation is missing or stale: age={age} min")
+          if str(new.get("station_id")) != "18101":
+              raise SystemExit(f"Unexpected MGM station id: {new.get('station_id')}")
+          observed = new.get("observed_at_utc")
+          if not observed:
+              raise SystemExit("MGM observation timestamp is missing")
+
+          previous_path = Path("site/data/eyupsultan-station-observation.json")
+          if previous_path.is_file():
+              previous_doc = json.loads(previous_path.read_text(encoding="utf-8"))
+              previous = previous_doc.get("station_observation") or {}
+              previous_time = previous.get("observed_at_utc")
+              if previous_time:
+                  old_dt = datetime.fromisoformat(previous_time.replace("Z", "+00:00"))
+                  new_dt = datetime.fromisoformat(observed.replace("Z", "+00:00"))
+                  if new_dt < old_dt:
+                      raise SystemExit(
+                          f"MGM timestamp regressed: new={observed}, published={previous_time}"
+                      )
+
+          print(
+              "Eyüpsultan verified:",
+              new.get("temperature_2m_c"), "°C |",
+              new.get("observed_at_utc"), "| age", age, "min |",
+              "source", new.get("source_url")
+          )
+          PY
+
+      - name: Publish only Eyüpsultan station files to main
+        run: |
+          set -euo pipefail
+          cp public/eyupsultan-station-observation.json site/data/eyupsultan-station-observation.json
+          cp .station-work/eyupsultan/eyupsultan-station-temperature-history.json site/data/eyupsultan-station-temperature-history.json
+          cp .station-work/eyupsultan/eyupsultan-station-rain-history.json site/data/eyupsultan-station-rain-history.json
+
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add site/data/eyupsultan-station-observation.json site/data/eyupsultan-station-temperature-history.json site/data/eyupsultan-station-rain-history.json
+
+          if git diff --cached --quiet; then
+            echo "Eyüpsultan data has not changed; no commit is required."
+            exit 0
+          fi
+
+          git commit -m "Update independent MGM Eyüpsultan observations"
+          for attempt in 1 2 3 4 5; do
+            git pull --rebase origin main
+            if git push origin HEAD:main; then
+              echo "Eyüpsultan observation and archives published."
+              exit 0
+            fi
+            sleep $((attempt * 2))
+          done
+          echo "Could not publish Eyüpsultan data to main after five attempts."
+          exit 1
