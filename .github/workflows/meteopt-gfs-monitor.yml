@@ -1,6 +1,8 @@
 name: MeteoPT GFS Cycle Monitor
 
 on:
+  schedule:
+    - cron: "*/10 * * * *"
   workflow_dispatch:
     inputs:
       resend_charts:
@@ -265,7 +267,7 @@ jobs:
       contents: read
       pages: write
       id-token: write
-    uses: ./.github/workflows/pages.yml
+    uses: ./.github/workflows/pages-live.yml
 
   send-web-push:
     name: Send device notification after Pages deployment
