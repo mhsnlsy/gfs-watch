@@ -70,7 +70,8 @@ const sandbox = {
   esc: value => String(value).replace(/[&<>"']/g, character => ({
     "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;"
   })[character]),
-  symbolFor: () => "☁"
+  symbolFor: () => "☁",
+  timeTR: value => new Date(value).toISOString()
 };
 
 function sample(hoursAgo, temperature, dailyRain, rain10m = null) {
