@@ -44,12 +44,12 @@ jobs:
     timeout-minutes: 8
     steps:
       - name: Check out main
-        uses: actions/checkout@v4
+        uses: actions/checkout@v5
         with:
           ref: main
 
       - name: Set up Python
-        uses: actions/setup-python@v5
+        uses: actions/setup-python@v6
         with:
           python-version: "3.12"
 
@@ -110,7 +110,7 @@ jobs:
     timeout-minutes: 5
     steps:
       - name: Check out latest main
-        uses: actions/checkout@v4
+        uses: actions/checkout@v5
         with:
           ref: main
           fetch-depth: 0
@@ -189,7 +189,7 @@ jobs:
           GH_REPOSITORY: ${{ github.repository }}
         run: |
           set -euo pipefail
-          url="https://api.github.com/repos/$GH_REPOSITORY/actions/workflows/408118151/dispatches"
+          url="https://api.github.com/repos/$GH_REPOSITORY/actions/workflows/main-station-refresh.yml/dispatches"
           for attempt in 1 2 3; do
             status="$(curl --silent --show-error --output "$RUNNER_TEMP/dispatch-response.json" --write-out "%{http_code}" \
               --request POST "$url" \
