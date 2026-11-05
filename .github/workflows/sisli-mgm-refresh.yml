@@ -1,7 +1,7 @@
 name: Şişli MGM Independent Refresh
 
 on:
-    workflow_dispatch:
+  workflow_dispatch:
   # Dedicated signal from the five-minute Cloudflare clock.
   repository_dispatch:
     types: [sisli-mgm-clock]
