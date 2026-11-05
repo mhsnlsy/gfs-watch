@@ -1,10 +1,10 @@
 name: Main Station Data Refresh
 
 on:
+  # Match the proven MGM Çanakçı model: this station wakes itself every five minutes.
+  schedule:
+    - cron: "*/5 * * * *"
   workflow_dispatch:
-  # External Cloudflare Cron only wakes this main collector; it does not collect data.
-  repository_dispatch:
-    types: [station-refresh-clock]
   push:
     branches: [main]
     # Run only when ENKA collector code or this workflow changes.
