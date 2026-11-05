@@ -1049,7 +1049,20 @@
 @media(max-width:900px){.koy-chart-grid{grid-template-columns:minmax(0,1fr)}.koy-chart-grid .chart-card:last-child{grid-column:auto}}
 @media(max-width:700px){.koy-chart-card{padding:10px}.koy-brief-row{grid-template-columns:85px minmax(0,1fr)}}
 </style>
-<link rel="stylesheet" href="./meteopt-gfs-table.css?v=20261104-3">\n</head>
+<link rel="stylesheet" href="./meteopt-gfs-table.css?v=20261104-3">\n<style>
+.koy-history-panel{margin-top:12px;padding:12px 0 0;border-top:1px solid rgba(213,237,240,.13)}
+.koy-history-head{display:flex;align-items:center;justify-content:space-between;gap:8px;margin-bottom:8px}
+.koy-history-head h3{margin:2px 0 0;font:700 14px Manrope,sans-serif;color:#e8f5f8}
+.koy-history-head span{font-size:8px;color:#91aab8;border:1px solid rgba(204,225,239,.12);padding:5px 7px;border-radius:999px;white-space:nowrap}
+.koy-history-grid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:8px}
+.koy-history-card{min-width:0;padding:8px;border:1px solid rgba(204,225,239,.08);border-radius:12px;background:rgba(4,19,29,.16)}
+.koy-history-card-head{display:flex;justify-content:space-between;align-items:center;gap:5px}
+.koy-history-card-head strong{font:700 11px Manrope,sans-serif;color:#e7f2f6}
+.koy-history-card-head span{font-size:8px;color:#91aab8}
+.koy-history-chart{height:105px;margin-top:4px}
+.koy-history-chart svg{display:block;width:100%;height:100%;overflow:visible}
+@media(max-width:560px){.koy-history-panel{margin-top:10px;padding-top:10px}.koy-history-grid{gap:6px}.koy-history-card{padding:6px}.koy-history-chart{height:92px}}
+</style></head>
 <body>
 <header class="shell topbar">
 <a class="brand" href="./index.html" aria-label="İstanbul'un Havası ana sayfa"><span class="brand-mark">☀</span><span>İstanbul'un Havası<small>Şehir için hava tahmini</small></span></a>
@@ -1073,6 +1086,22 @@
 <div class="stat"><div class="name">Yağış</div><div class="value" id="current-rain">—<span class="unit">mm</span></div><div class="detail">6 saatlik birikim</div></div>
 </div>
 <div class="station-alert" id="f72status" role="status">F72 verisi bekleniyor.</div>
+<div class="koy-history-panel" aria-label="Son 24 saat GFS geçmişi">
+  <div class="koy-history-head">
+    <div><div class="section-kicker">SON 24 SAAT</div><h3>Model geçmişi</h3></div>
+    <span id="history24-meta">GFS geçmiş tahmini</span>
+  </div>
+  <div class="koy-history-grid">
+    <article class="koy-history-card">
+      <div class="koy-history-card-head"><strong>Sıcaklık</strong><span>°C</span></div>
+      <div class="koy-history-chart" id="history24-temperature"><div class="chart-empty">Geçmiş veri bekleniyor…</div></div>
+    </article>
+    <article class="koy-history-card">
+      <div class="koy-history-card-head"><strong>Yağış</strong><span>mm / 6 saat</span></div>
+      <div class="koy-history-chart" id="history24-precipitation"><div class="chart-empty">Geçmiş veri bekleniyor…</div></div>
+    </article>
+  </div>
+</div>
 </article>
 </div>
 <section class="next-72h-panel" aria-label="Önümüzdeki 72 saat">
