@@ -22,9 +22,11 @@ GFS ve ECMWF verileri birbirinden bağımsızdır; arayüzde model seçimiyle g�
 
 ### İstanbul istasyonları
 
-Üç istasyonun her biri kendi GitHub Actions zamanlayıcısıyla **5 dakikada bir** kontrol edilir. Çakışan `main` dalı yazımlarını azaltmak için zamanlar birer dakika kaydırılmıştır: ENKA :01, :06, :11…; Eyüpsultan :02, :07, :12…; Şişli :03, :08, :13…. Ortak bir istasyon veri toplayıcısı yoktur.
+Üç istasyonun her biri kendi GitHub Actions iş akışında **5 dakikalık kendini yeniden kuyruğa alma döngüsü** kullanır. Her çalışmanın başında başlangıç zamanı kaydedilir; istasyon verisi toplanıp yayımlandıktan sonra aynı workflow, başlangıçtan itibaren 300 saniye dolunca kendi `workflow_dispatch` çağrısını gönderir. Toplama beş dakikadan uzun sürerse sonraki tur tamamlanınca hemen kuyruğa alınır.
 
-Çanakçı MGM'deki gibi, `main` dalındaki normal bir kod/yapılandırma değişikliği de üç toplayıcıyı uyandırır. İstasyonların kendi çıktı dosyaları `paths-ignore` kapsamındadır; böylece bir istasyonun kendi commit'i tekrar tetiklenip döngü oluşturmaz.
+Bu düzen ortak saat workflow'una, Cloudflare sırrına veya GitHub'ın zamanlanmış `schedule` olaylarına bağımlı değildir. Her istasyonun ayrı concurrency kilidi vardır. Bir toplayıcının hatası diğer iki istasyonun döngüsünü durdurmaz; iptal edilmemiş başarısız bir tur da kendi sonraki denemesini planlar.
+
+Çanakçı MGM'deki gibi, `main` dalındaki normal bir kod/yapılandırma değişikliği de üç toplayıcıyı uyandırır. İstasyonların kendi çıktı dosyaları `paths-ignore` kapsamındadır; böylece bir istasyonun kendi commit'i tekrar tetiklenip döngü oluşturmaz. Her workflow'un `actions: write` izni yalnızca kendi bir sonraki çalışmasını `GITHUB_TOKEN` ile kuyruğa alması için kullanılır.
 
 | İstasyon | İş akışı | Güncel veri | Arşiv |
 |---|---|---|---|
