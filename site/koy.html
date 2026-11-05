@@ -1065,6 +1065,39 @@
     }
   </style>
 
+  <style id="next-72h-legend-styles">
+    .next-72h-legend{
+      display:flex;flex-wrap:wrap;align-items:center;gap:9px 20px;
+      margin:6px 2px 0;padding:11px 2px 7px;
+      border-top:1px solid rgba(204,225,239,.10);
+    }
+    .next-72h-legend-item{
+      display:inline-flex;align-items:center;gap:8px;
+      color:#c2d3dc;font-size:11px;line-height:1.35;white-space:nowrap;
+    }
+    .next-72h-legend-line{
+      display:inline-block;width:30px;flex:none;
+      border-top:2px dashed var(--run-color);
+    }
+    .next-72h-legend-item.is-latest .next-72h-legend-line{
+      border-top:3px solid var(--run-color);
+    }
+    .next-72h-legend-tag{
+      color:#8fd7ba;background:rgba(39,166,105,.13);
+      border:1px solid rgba(143,215,186,.22);
+      border-radius:999px;padding:2px 6px;
+      font-size:8px;font-weight:800;letter-spacing:.04em;
+    }
+    .next-72h-legend-note{
+      margin:2px 2px 0;color:#8fa7b5;font-size:10px;line-height:1.45;
+    }
+    @media(max-width:560px){
+      .next-72h-legend{gap:8px 13px;margin-top:3px;padding-top:9px}
+      .next-72h-legend-item{font-size:10px;white-space:normal}
+      .next-72h-legend-line{width:23px}
+      .next-72h-legend-note{font-size:9px}
+    }
+  </style>
 </head>
 <body>
   <header class="shell topbar">
@@ -1126,6 +1159,10 @@
           <article class="next-72h-card"><div class="next-72h-card-head"><h3>Yağış</h3><span>mm / 3 saat</span></div><div class="next-72h-chart" id="next72-precipitation"><div class="chart-empty">Tahmin bekleniyor…</div></div></article>
 
         </div>
+        <div class="next-72h-legend" id="next-72h-legend" role="list" aria-label="Çizgi renkleri ve GFS döngüleri">
+          <span class="next-72h-legend-loading">GFS döngüleri yükleniyor…</span>
+        </div>
+        <p class="next-72h-legend-note">Turkuaz düz çizgi en güncel çıktıyı, kesikli çizgiler önceki GFS döngülerini gösterir. Renkler iki grafikte de aynı döngüye karşılık gelir.</p>
         <div class="briefing" id="briefing" aria-live="polite">
         <div class="briefing-row" id="brief-rain">
           <div class="briefing-k">Yağış saatleri</div>
