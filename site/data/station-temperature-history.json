@@ -5,7 +5,7 @@
   "sampling_interval_minutes": 5,
   "aggregation_interval_minutes": 30,
   "retention_hours": 72,
-  "updated_at_utc": "2026-11-05T15:58:08+00:00",
+  "updated_at_utc": "2026-11-05T16:03:32+00:00",
   "samples": [
     {
       "logged_at_utc": "2026-11-05T12:34:08+00:00",
@@ -324,6 +324,17 @@
       "wind_speed_10m_kmh": 14.4,
       "wind_direction_cardinal": "N",
       "wind_direction_tr": "Kuzey",
+      "precipitation_daily_mm": 0.6
+    },
+    {
+      "logged_at_utc": "2026-11-05T16:03:32+00:00",
+      "observed_at_utc": "2026-11-05T16:02:24+00:00",
+      "temperature_2m_c": 10.3,
+      "station_pressure_hpa": 1025.7,
+      "humidity_percent": 83.0,
+      "wind_speed_10m_kmh": 13.0,
+      "wind_direction_cardinal": "NNE",
+      "wind_direction_tr": "Kuzey-kuzeydoğu",
       "precipitation_daily_mm": 0.6
     }
   ]
