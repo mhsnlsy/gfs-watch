@@ -1,0 +1,9 @@
+{
+  "$schema": "node_modules/wrangler/config-schema.json",
+  "name": "gfs-watch-backup-worker",
+  "main": "gfs-watch-backup-worker.js",
+  "compatibility_date": "2026-11-05",
+  "triggers": {
+    "crons": ["*/5 * * * *"]
+  }
+}
