@@ -1091,13 +1091,14 @@
         </div>
         <script>
           try{
-            if(location.hash!=="#balmumcu"&&["eyupsultan","sisli"].includes(localStorage.getItem("istanbul-hava-station"))){
-              const saved=localStorage.getItem("istanbul-hava-station");
-              const selected=document.getElementById(saved==="sisli"?"station-sisli-button":"station-eyupsultan-button");
-              selected.classList.add("active"); selected.setAttribute("aria-pressed","true");
-              document.getElementById("station-enka-button").classList.remove("active");
-              document.getElementById("station-enka-button").setAttribute("aria-pressed","false");
-            }
+            const saved=localStorage.getItem("istanbul-hava-station");
+            const station=saved==="eyupsultan"||saved==="sisli"||saved==="enka"?saved:"enka";
+            document.getElementById("station-enka-button").classList.toggle("active",station==="enka");
+            document.getElementById("station-eyupsultan-button").classList.toggle("active",station==="eyupsultan");
+            document.getElementById("station-sisli-button").classList.toggle("active",station==="sisli");
+            document.getElementById("station-enka-button").setAttribute("aria-pressed",String(station==="enka"));
+            document.getElementById("station-eyupsultan-button").setAttribute("aria-pressed",String(station==="eyupsultan"));
+            document.getElementById("station-sisli-button").setAttribute("aria-pressed",String(station==="sisli"));
           }catch(_){}
         </script>
         <div class="station-overview">
@@ -1253,13 +1254,8 @@
     const VERIFY_URL="./data/forecast-verification.json";
     let enkaStationObservation=null,eyupsultanStationObservation=null,sisliStationObservation=null,activeStation="enka";
     try{
-      if(location.hash==="#balmumcu"){
-        activeStation="enka";
-        localStorage.setItem("istanbul-hava-station","enka");
-      }else{
-        const savedStation=localStorage.getItem("istanbul-hava-station");
-        if(["enka","eyupsultan","sisli"].includes(savedStation))activeStation=savedStation;
-      }
+      const savedStation=localStorage.getItem("istanbul-hava-station");
+      if(["enka","eyupsultan","sisli"].includes(savedStation))activeStation=savedStation;
     }catch(_){}
     let enkaStationHistorySamples=[],eyupsultanStationHistorySamples=[],sisliStationHistorySamples=[];
     let eyupsultanStationRainHistorySamples=[],sisliStationRainHistorySamples=[];
@@ -2712,7 +2708,7 @@
     $("station-eyupsultan-button").addEventListener("click",()=>selectStation("eyupsultan"));
     $("station-sisli-button").addEventListener("click",()=>selectStation("sisli"));
     document.querySelector(".topbar .brand")?.addEventListener("click",()=>selectStation("enka"));
-    window.addEventListener("hashchange",()=>{if(location.hash==="#balmumcu")selectStation("enka");});
+    window.addEventListener("hashchange",()=>{
 
     function render(data){
       forecastData=data;
