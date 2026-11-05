@@ -59,6 +59,20 @@ jobs:
         if: steps.check.outputs.dispatch == 'true'
         env:
           GH_TOKEN: ${{ github.token }}
+          GH_REPOSITORY: ${{ github.repository }}
         run: |
-          gh api --method POST repos/${{ github.repository }}/dispatches -f event_type=gfs-watch-backup
-          echo "Primary MeteoPT GFS monitor dispatched by backup trigger."
+          set -euo pipefail
+          url="https://api.github.com/repos/$GH_REPOSITORY/actions/workflows/405215968/dispatches"
+          status="$(curl --silent --show-error --output "$RUNNER_TEMP/dispatch-response.json" --write-out "%{http_code}" \
+            --request POST "$url" \
+            --header "Authorization: Bearer $GH_TOKEN" \
+            --header "Accept: application/vnd.github+json" \
+            --header "X-GitHub-Api-Version: 2022-11-28" \
+            --header "Content-Type: application/json" \
+            --data '{"ref":"main"}')"
+          if [ "$status" != "204" ]; then
+            echo "Primary monitor dispatch failed with HTTP $status."
+            cat "$RUNNER_TEMP/dispatch-response.json"
+            exit 1
+          fi
+          echo "Primary MeteoPT monitor successfully dispatched."
