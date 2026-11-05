@@ -5,6 +5,9 @@ on:
   schedule:
     - cron: "2-59/5 * * * *"
   workflow_dispatch:
+  # External Cloudflare Cron only wakes this main collector; it does not collect data.
+  repository_dispatch:
+    types: [station-refresh-clock]
   push:
     branches: [main]
     # Station results are committed to site/data by this workflow.
