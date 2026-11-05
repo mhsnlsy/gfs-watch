@@ -130,3 +130,9 @@ jobs:
           done
           echo "Could not publish station data to main."
           exit 1
+
+      - name: Trigger central Pages publisher
+        if: success()
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: gh workflow run publish-live-site.yml --repo "$GITHUB_REPOSITORY" --ref main
