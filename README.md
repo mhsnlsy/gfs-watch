@@ -30,7 +30,7 @@ Bu düzen ortak saat workflow'una, Cloudflare sırrına veya GitHub'ın zamanlan
 
 | İstasyon | İş akışı | Güncel veri | Arşiv |
 |---|---|---|---|
-| ENKA Balmumcu | `.github/workflows/main-station-refresh.yml` | Kamera OCR | 72 saatlik sıcaklık |
+| ENKA Balmumcu | `.github/workflows/main-station-refresh.yml` | WeatherLink currentvalues.html | 72 saatlik sıcaklık |
 | MGM Eyüpsultan | `.github/workflows/eyupsultan-mgm-refresh.yml` | MGM 18101 | 72 saatlik sıcaklık ve yağış |
 | MGM Şişli | `.github/workflows/sisli-mgm-refresh.yml` | MGM 18401 | 72 saatlik sıcaklık ve yağış |
 
