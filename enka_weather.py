@@ -1,7 +1,6 @@
 """Fetch and publish live ENKA Balmumcu WeatherLink observations."""
 
 import json
-import io
 import math
 import os
 import re
@@ -12,12 +11,8 @@ from pathlib import Path
 from zoneinfo import ZoneInfo
 
 import requests
-import pytesseract
-from PIL import Image, ImageEnhance, ImageFilter
 
 TR_TZ = ZoneInfo("Europe/Istanbul")
-CURRENT_URL = "https://w.enka.com/camhd/cam1/c.jpg"
-HOME_URL = "https://w.enka.com/camhd/cam1/index.html"
 HISTORY_URL = "https://w.enka.com/weather/downld02.txt"
 POLL_STALE_MINUTES = 15
 
@@ -39,7 +34,6 @@ WIND_DIRECTIONS_TR = {
     "NW": "Kuzeybatı",
     "NNW": "Kuzey-kuzeybatı",
 }
-WIND_PATTERN = r"NNE|ENE|ESE|SSE|SSW|WSW|WNW|NNW|N|NE|E|SE|S|SW|W|NW"
 
 
 def _fetch_current_values_page():
