@@ -42,187 +42,92 @@ WIND_DIRECTIONS_TR = {
 WIND_PATTERN = r"NNE|ENE|ESE|SSE|SSW|WSW|WNW|NNW|N|NE|E|SE|S|SW|W|NW"
 
 
-def _fetch_camera():
-    """Fetch the latest ENKA camera frame without relying on browser cache."""
+def _fetch_current_values_page():
+    """Fetch ENKA WeatherLink's live Balmumcu values from currentvalues.html."""
     headers = {
         "User-Agent": "Mozilla/5.0 (compatible; GFS-Watch/4.1)",
-        "Accept": "image/avif,image/webp,image/apng,image/*,*/*;q=0.8",
+        "Accept": "text/html,application/xhtml+xml",
         "Cache-Control": "no-cache, no-store, max-age=0",
         "Pragma": "no-cache",
-        "Referer": HOME_URL,
     }
-    last_error = None
-    for attempt in range(3):
-        try:
-            response = requests.get(
-                CURRENT_URL,
-                params={"_gfs_watch": int(time.time() * 1000)},
-                headers=headers,
-                timeout=25,
-            )
-            response.raise_for_status()
-            if not response.headers.get("Content-Type", "").lower().startswith("image/"):
-                raise ValueError("ENKA kamera adresi görsel yerine farklı içerik döndürdü.")
-            image = Image.open(io.BytesIO(response.content)).convert("RGB")
-            if image.width < 300 or image.height < 200:
-                raise ValueError(f"ENKA kamera görseli beklenenden küçük: {image.size}")
-            return image
-        except Exception as error:
-            last_error = error
-            print(f"[ENKA CAMERA] Deneme {attempt + 1}/3 başarısız: {error}")
-            if attempt < 2:
-                time.sleep(2 * (attempt + 1))
-    raise RuntimeError(f"ENKA kamera karesi üç denemede alınamadı: {last_error}")
-
-
-def _ocr_region(image, box, psm=6):
-    crop = image.crop(box).resize(
-        ((box[2] - box[0]) * 3, (box[3] - box[1]) * 3)
-    ).convert("L")
-    crop = ImageEnhance.Contrast(crop).enhance(2.2)
-    crop = ImageEnhance.Sharpness(crop).enhance(2.0)
-    crop = crop.filter(ImageFilter.MedianFilter(size=3))
-    return pytesseract.image_to_string(
-        crop,
-        config=f"--oem 3 --psm {psm}",
-        lang="eng",
+    response = requests.get(
+        "https://w.enka.com/weather/currentvalues.html",
+        params={"_gfs_watch": int(time.time() * 1000)},
+        headers=headers,
+        timeout=25,
     )
+    response.raise_for_status()
+    response.encoding = response.apparent_encoding or "utf-8"
+    html = response.text
+    # Keep the parser dependency-free. Strip tags/entities and normalize whitespace.
+    text = unescape(re.sub(r"<[^>]+>", " ", html))
+    text = re.sub(r"\s+", " ", text).strip()
+    return text
 
 
-def _parse_decimal(pattern, text, field):
-    match = re.search(pattern, text, flags=re.I)
-    if not match:
-        raise ValueError(f"OCR {field} alanını okuyamadı. Okunan metin: {text!r}")
-    value = float(match.group(1).replace(",", "."))
-    if not math.isfinite(value):
-        raise ValueError(f"OCR {field} değeri geçersiz.")
-    return value
+def _parse_current_values(text):
+    """Parse the values table published by ENKA WeatherLink."""
+    as_of = re.search(
+        r"As of:\s*(\d{2}/\d{2}/\d{2})\s+(\d{1,2}:\d{2})\s*\(UTC\s+\d{1,2}:\d{2}\)",
+        text,
+        flags=re.I,
+    )
+    if not as_of:
+        raise ValueError("ENKA currentvalues.html ölçüm zamanı okunamadı.")
 
+    local_dt = datetime.strptime(
+        f"{as_of.group(1)} {as_of.group(2)}", "%d/%m/%y %H:%M"
+    ).replace(tzinfo=TR_TZ)
 
-def fetch_enka_station_observation():
-    image = _fetch_camera()
-    width, height = image.size
+    def number_after(label, pattern):
+        match = re.search(
+            rf"{re.escape(label)}\\s+{pattern}",
+            text,
+            flags=re.I,
+        )
+        if not match:
+            raise ValueError(f"ENKA currentvalues.html {label} değeri okunamadı.")
+        return float(match.group(1).replace(",", "."))
 
-    # ENKA overlays the weather values at the lower-right and timestamp
-    # at the bottom-centre. Read these areas separately to reduce OCR noise.
-    right = _ocr_region(image, (int(width * 0.82), int(height * 0.78), width, height - 2), 6)
-    bottom = _ocr_region(image, (int(width * 0.30), int(height * 0.91), int(width * 0.72), height), 7)
-    print("[ENKA OCR] Weather overlay:", repr(right))
-    print("[ENKA OCR] Timestamp overlay:", repr(bottom))
+    temperature = number_after("Day Temperature", r"([-+]?\d+(?:[.,]\d+)?)°C")
+    pressure = number_after("Barometer \(hPa\)", r"(\d+(?:[.,]\d+)?)")
+    humidity = number_after("Humidity", r"(\d+(?:[.,]\d+)?)%")
+    daily_rain = number_after("Daily Rain", r"(\d+(?:[.,]\d+)?)\s*mm")
 
-    temperature_match = re.search(r"([-+]?\d{1,2}[.,]\d)\s*°?\s*C", right, flags=re.I)
-    if not temperature_match:
-        # ENKA camera OCR can occasionally drop the decimal point and unit.
-        # Accept a standalone 3- or 4-digit token only when it is followed by
-        # the known humidity/pressure structure, then normalize it as 10.x–99.x.
-        compact = re.search(r"(?m)^\s*(\d{2})(\d)\s*$", right)
-        if compact:
-            temperature = float(f"{compact.group(1)}.{compact.group(2)}")
-        else:
-            temperature = _parse_decimal(r"([-+]?\d{1,2}[.,]\d)\s*°?\s*C", right, "sıcaklık")
-    else:
-        temperature = float(temperature_match.group(1).replace(",", "."))
-    humidity = _parse_decimal(r"(\d{1,3})\s*%", right, "nem")
-    pressure = _parse_decimal(r"(\d{3,4}[.,]\d)\s*hPa", right, "basınç")
     wind_match = re.search(
-        r"(\d{1,2}[.,]\d)\s*(?:kt|kts)\s*([NSEW]{1,3})\b",
-        right,
+        r"Wind\\s+([A-Z]{1,3})\\s+(\d+(?:[.,]\d+)?)\\s*kt",
+        text,
         flags=re.I,
     )
     if not wind_match:
-        raise ValueError(f"OCR rüzgâr hız/yön alanını okuyamadı: {right!r}")
-    wind_knots = float(wind_match.group(1).replace(",", "."))
-    wind_direction = wind_match.group(2).upper()
-    daily_rain = _parse_decimal(r"(\d{1,3}[.,]\d)\s*mm", right, "yağış")
+        raise ValueError("ENKA currentvalues.html rüzgâr değeri okunamadı.")
+    wind_direction = wind_match.group(1).upper()
+    wind_knots = float(wind_match.group(2).replace(",", "."))
 
-    # ENKA's camera overlay can be noisy: dots, spaces and dashes are
-    # sometimes substituted for one another, and a leading digit can be lost.
-    # Accept the common separator variants, then validate the resulting date
-    # against the live camera clock before using it.
-    timestamp_pattern = re.compile(
-        r"(?<!\d)(\d{1,2})\s*[./-]\s*(\d{1,2})\s*[./-]\s*(\d{4})\D+"
-        r"(\d{1,2}):(\d{2}):(\d{2})"
-    )
-    timestamp_text = bottom
-    timestamp_match = timestamp_pattern.search(timestamp_text)
-    if not timestamp_match:
-        # Tesseract may place the date outside the narrow bottom-centre crop.
-        timestamp_text = _ocr_region(image, (0, int(height * 0.91), width, height), 7)
-        print("[ENKA OCR] Full-width timestamp overlay:", repr(timestamp_text))
-        timestamp_match = timestamp_pattern.search(timestamp_text)
-    if not timestamp_match:
-        raise ValueError(
-            "OCR kamera zaman damgasını okuyamadı. "
-            f"Alt alan: {bottom!r}; geniş alan: {timestamp_text!r}"
-        )
-
-    day, month, year, hour, minute, second = map(int, timestamp_match.groups())
-    now_local = datetime.now(TR_TZ)
-    timestamp_date_inferred = False
-    try:
-        observed_local = datetime(year, month, day, hour, minute, second, tzinfo=TR_TZ)
-    except ValueError:
-        observed_local = None
-
-    # If OCR mangled the date but retained a clock time matching the freshly
-    # fetched camera frame, use the nearest Istanbul calendar date. Never do
-    # this for a clock time that is not within five minutes of the live fetch.
-    clock_seconds = hour * 3600 + minute * 60 + second
-    now_seconds = now_local.hour * 3600 + now_local.minute * 60 + now_local.second
-    clock_delta = abs(clock_seconds - now_seconds)
-    clock_delta = min(clock_delta, 86400 - clock_delta)
-    date_needs_recovery = (
-        observed_local is None
-        or abs((now_local - observed_local).total_seconds()) > POLL_STALE_MINUTES * 60
-    )
-    if date_needs_recovery and clock_delta <= 5 * 60:
-        candidate_dates = [
-            now_local.date() + timedelta(days=offset) for offset in (-1, 0, 1)
-        ]
-        candidates = [
-            datetime(
-                candidate_date.year, candidate_date.month, candidate_date.day,
-                hour, minute, second, tzinfo=TR_TZ
-            )
-            for candidate_date in candidate_dates
-        ]
-        nearest = min(candidates, key=lambda value: abs((now_local - value).total_seconds()))
-        if abs((now_local - nearest).total_seconds()) <= 5 * 60:
-            observed_local = nearest
-            timestamp_date_inferred = True
-
-    if observed_local is None:
-        raise ValueError(f"OCR kamera tarihi geçersiz: {timestamp_text!r}")
-    if timestamp_date_inferred:
-        print(
-            "[ENKA OCR] Tarih kısmı OCR tarafından hatalı okundu; "
-            "kamera saati canlı çekimle eşleştiği için İstanbul tarihi düzeltildi."
-        )
-
-    observed_utc = observed_local.astimezone(timezone.utc)
-
-    if not 0 <= humidity <= 100:
-        raise ValueError(f"OCR nem değeri aralık dışında: {humidity}")
-    if not 800 <= pressure <= 1100:
-        raise ValueError(f"OCR basınç değeri aralık dışında: {pressure}")
-    if not 0 <= wind_knots <= 150 or not 0 <= daily_rain <= 500:
-        raise ValueError("OCR rüzgâr/yağış değeri aralık dışında.")
-
+    observed_utc = local_dt.astimezone(timezone.utc)
     age_minutes = max(
         0.0,
         (datetime.now(timezone.utc) - observed_utc).total_seconds() / 60,
     )
+
+    if not 0 <= humidity <= 100:
+        raise ValueError(f"ENKA nem değeri aralık dışında: {humidity}")
+    if not 800 <= pressure <= 1100:
+        raise ValueError(f"ENKA basınç değeri aralık dışında: {pressure}")
+    if not 0 <= wind_knots <= 150 or not 0 <= daily_rain <= 500:
+        raise ValueError("ENKA rüzgâr/yağış değeri aralık dışında.")
+
     return {
         "station_name": "ENKA Balmumcu",
-        "station_id": "ENKA-BALMUMCU-CAMERA-OCR",
-        "source": "ENKA Balmumcu live camera image OCR",
-        "source_url": HOME_URL,
-        "image_url": CURRENT_URL,
+        "station_id": "ENKA-BALMUMCU-WEATHERLINK",
+        "source": "ENKA Balmumcu WeatherLink current values",
+        "source_url": "https://w.enka.com/weather/currentvalues.html",
+        "image_url": None,
         "latitude": 41.1,
         "longitude": 28.9,
         "elevation_m": 107,
         "observed_at_utc": observed_utc.isoformat(timespec="seconds"),
-        "timestamp_date_inferred": timestamp_date_inferred,
+        "timestamp_date_inferred": False,
         "age_minutes": round(age_minutes, 1),
         "is_stale": age_minutes > POLL_STALE_MINUTES,
         "temperature_2m_c": temperature,
@@ -234,9 +139,23 @@ def fetch_enka_station_observation():
         "precipitation_daily_mm": daily_rain,
         "humidity_percent": humidity,
         "station_pressure_hpa": pressure,
-        "observation_method": "tesseract-ocr",
-        "ocr_regions": {"weather_overlay": right.strip(), "timestamp_overlay": bottom.strip()},
+        "observation_method": "weatherlink-currentvalues-html",
     }
+
+
+def fetch_enka_station_observation():
+    text = _fetch_current_values_page()
+    print("[ENKA CURRENT VALUES] WeatherLink:", repr(text[:1200]))
+    observation = _parse_current_values(text)
+    print(
+        "[ENKA CURRENT VALUES] "
+        f"{observation['temperature_2m_c']}°C | "
+        f"{observation['humidity_percent']}% | "
+        f"{observation['station_pressure_hpa']} hPa | "
+        f"{observation['wind_speed_10m_knots']} kt {observation['wind_direction_cardinal']} | "
+        f"{observation['precipitation_daily_mm']} mm"
+    )
+    return observation
 
 
 def _reject_older_observation(observation):
