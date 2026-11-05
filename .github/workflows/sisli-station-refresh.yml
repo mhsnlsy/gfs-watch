@@ -13,7 +13,6 @@ on:
 
 permissions:
   contents: write
-  actions: write
 
 concurrency:
   group: sisli-weather-refresh
@@ -79,6 +78,16 @@ jobs:
             echo "No Şişli data changes."
             echo "changed=false" >> "$GITHUB_OUTPUT"
             exit 0
+          fi
+          unexpected="$(git diff --cached --name-only | grep -Ev '^(public/sisli-station-observation\.json|public/sisli-station-temperature-history\.json|public/sisli-station-rain-history\.json)
+          git push origin HEAD:sisli-state
+          echo "Şişli data pushed to dedicated sisli-state."
+          echo "changed=true" >> "$GITHUB_OUTPUT"
+ || true)"
+          if [ -n "$unexpected" ]; then
+            echo "Şişli publication contains files outside its allowlist:"
+            printf '%s\n' "$unexpected"
+            exit 1
           fi
           git commit -m "Refresh MGM Şişli station observation [$(date -u +%H:%M)]"
           git push origin HEAD:sisli-state
