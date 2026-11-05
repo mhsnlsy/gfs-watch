@@ -258,37 +258,3 @@ jobs:
           done
           echo "Could not publish GFS run history after five attempts."
           exit 1
-
-  deploy-pages:
-    name: Publish latest report to GitHub Pages
-    needs: check-gfs
-    if: needs.check-gfs.result == 'success' && needs.check-gfs.outputs.gfs_updated == 'true'
-    permissions:
-      contents: read
-      pages: write
-      id-token: write
-    uses: ./.github/workflows/pages-live.yml
-
-  send-web-push:
-    name: Send device notification after Pages deployment
-    needs: deploy-pages
-    if: needs.deploy-pages.result == 'success'
-    permissions:
-      contents: read
-    uses: ./.github/workflows/web-push-notify.yml
-    secrets: inherit
-
-  notify-failure:
-    needs: [check-gfs, deploy-pages, send-web-push]
-    if: false
-    runs-on: ubuntu-latest
-    steps:
-      - name: Send failure alert to Telegram
-        env:
-          TELEGRAM_TOKEN: ${{ secrets.TELEGRAM_TOKEN }}
-          CHAT_ID: ${{ secrets.CHAT_ID }}
-        run: |
-          curl -s -X POST "https://api.telegram.org/bot${TELEGRAM_TOKEN}/sendMessage" \
-            -d chat_id="${CHAT_ID}" \
-            -d text="GFS Watch workflow failed. Details: https://github.com/${{ github.repository }}/actions/runs/${{ github.run_id }}" \
-            -d parse_mode="HTML"
