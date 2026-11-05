@@ -22,7 +22,9 @@ GFS ve ECMWF verileri birbirinden bağımsızdır; arayüzde model seçimiyle g�
 
 ### İstanbul istasyonları
 
-Üç istasyonun her biri kendi GitHub Actions zamanlayıcısıyla **5 dakikada bir** kontrol edilir. Ortak bir istasyon zamanlayıcısı veya istasyonlar arasında bağımlılık yoktur.
+Üç istasyonun her biri kendi GitHub Actions zamanlayıcısıyla **5 dakikada bir** kontrol edilir. Çakışan `main` dalı yazımlarını azaltmak için zamanlar birer dakika kaydırılmıştır: ENKA :01, :06, :11…; Eyüpsultan :02, :07, :12…; Şişli :03, :08, :13…. Ortak bir istasyon veri toplayıcısı yoktur.
+
+Çanakçı MGM'deki gibi, `main` dalındaki normal bir kod/yapılandırma değişikliği de üç toplayıcıyı uyandırır. İstasyonların kendi çıktı dosyaları `paths-ignore` kapsamındadır; böylece bir istasyonun kendi commit'i tekrar tetiklenip döngü oluşturmaz.
 
 | İstasyon | İş akışı | Güncel veri | Arşiv |
 |---|---|---|---|
@@ -38,7 +40,7 @@ Her toplayıcı yalnızca kendi istasyon dosyalarını günceller. Bir istasyond
 - **GFS yedek kontrolü:** `.github/workflows/meteopt-gfs-monitor-backup.yml`, ana izleyicide beklenen zaman aralığında çalışma yoksa onu yeniden tetikler. Bu yedek kontrol yalnızca GFS içindir; İstanbul istasyonları bu mekanizmaya bağlı değildir.
 - **ECMWF:** Kendi ayrı iş akışıyla alınır ve GFS geçmişinden ayrı saklanır.
 - **Yağış radarı:** Kendi izleme iş akışını kullanır.
-- **GitHub Pages:** `.github/workflows/pages-live.yml`, site dosyalarını ve ilgili veri dallarını birleştirerek yayına alır. `main` dalındaki yeni istasyon verisi yayımlandığında site dağıtımı tetiklenir.
+- **GitHub Pages:** `.github/workflows/pages-live.yml`, site dosyalarını ve ilgili veri dallarını birleştirerek yayına alır. Her istasyon toplayıcısı kendi dosyalarını `main/site/data/` altına yayımladıktan sonra bu yeniden kullanılabilir Pages iş akışını açıkça çağırır. Böylece Actions'ın `GITHUB_TOKEN` ile yapılan commit'lerinin başka bir `push` iş akışını otomatik başlatmaması sorun yaratmaz.
 
 ## Veri saklama
 
