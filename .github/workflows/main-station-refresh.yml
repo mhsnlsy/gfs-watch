@@ -83,62 +83,6 @@ jobs:
           if-no-files-found: error
           retention-days: 1
 
-  eyupsultan:
-    name: Eyüpsultan
-    runs-on: ubuntu-latest
-    timeout-minutes: 5
-    steps:
-      - name: Check out main
-        uses: actions/checkout@v4
-        with:
-          ref: main
-
-      - name: Set up Node.js
-        uses: actions/setup-node@v4
-        with:
-          node-version: "22"
-
-      - name: Set up Python for validation
-        uses: actions/setup-python@v5
-        with:
-          python-version: "3.12"
-
-      - name: Prepare Eyüpsultan-only workspace
-        run: |
-          set -euo pipefail
-          mkdir -p site/data public .station-work/eyupsultan
-          for f in eyupsultan-station-temperature-history.json eyupsultan-station-rain-history.json; do
-            if [ -s "site/data/$f" ]; then cp "site/data/$f" ".station-work/eyupsultan/$f"; fi
-          done
-
-      - name: Collect and validate Eyüpsultan
-        env:
-          EYUPSULTAN_TEMPERATURE_HISTORY_PATH: .station-work/eyupsultan/eyupsultan-station-temperature-history.json
-          EYUPSULTAN_RAIN_HISTORY_PATH: .station-work/eyupsultan/eyupsultan-station-rain-history.json
-        run: |
-          set -euo pipefail
-          node scripts/eyupsultan_weather.mjs
-          test -s public/eyupsultan-station-observation.json
-          test -s .station-work/eyupsultan/eyupsultan-station-temperature-history.json
-          test -s .station-work/eyupsultan/eyupsultan-station-rain-history.json
-          python - <<'PY'
-          import json
-          from pathlib import Path
-          s = json.loads(Path("public/eyupsultan-station-observation.json").read_text())["station_observation"]
-          age = float(s.get("age_minutes", 9999))
-          if age > 20 or s.get("is_stale") or s.get("temperature_2m_c") is None:
-              raise SystemExit(f"Eyüpsultan observation invalid/stale: age={age}")
-          PY
-          cp public/eyupsultan-station-observation.json .station-work/eyupsultan/eyupsultan-station-observation.json
-
-      - name: Upload Eyüpsultan data
-        uses: actions/upload-artifact@v4
-        with:
-          name: eyupsultan-station-data
-          path: .station-work/eyupsultan/*
-          if-no-files-found: error
-          retention-days: 1
-
   sisli:
     name: Şişli
     runs-on: ubuntu-latest
@@ -198,7 +142,7 @@ jobs:
   publish:
     name: Publish successful station results
     runs-on: ubuntu-latest
-    needs: [enka, eyupsultan, sisli]
+    needs: [enka, sisli]
     if: always()
     timeout-minutes: 5
     steps:
@@ -209,7 +153,7 @@ jobs:
           fetch-depth: 0
 
       - name: Prepare publication folders
-        run: mkdir -p site/data .station-work/enka .station-work/eyupsultan .station-work/sisli
+        run: mkdir -p site/data .station-work/enka .station-work/sisli
 
       - name: Download ENKA result
         if: needs.enka.result == 'success'
@@ -217,13 +161,6 @@ jobs:
         with:
           name: enka-station-data
           path: .station-work/enka
-
-      - name: Download Eyüpsultan result
-        if: needs.eyupsultan.result == 'success'
-        uses: actions/download-artifact@v4
-        with:
-          name: eyupsultan-station-data
-          path: .station-work/eyupsultan
 
       - name: Download Şişli result
         if: needs.sisli.result == 'success'
@@ -238,11 +175,6 @@ jobs:
           if [ -s .station-work/enka/station-observation.json ]; then
             cp .station-work/enka/station-observation.json site/data/station-observation.json
             cp .station-work/enka/station-temperature-history.json site/data/station-temperature-history.json
-          fi
-          if [ -s .station-work/eyupsultan/eyupsultan-station-observation.json ]; then
-            cp .station-work/eyupsultan/eyupsultan-station-observation.json site/data/eyupsultan-station-observation.json
-            cp .station-work/eyupsultan/eyupsultan-station-temperature-history.json site/data/eyupsultan-station-temperature-history.json
-            cp .station-work/eyupsultan/eyupsultan-station-rain-history.json site/data/eyupsultan-station-rain-history.json
           fi
           if [ -s .station-work/sisli/sisli-station-observation.json ]; then
             cp .station-work/sisli/sisli-station-observation.json site/data/sisli-station-observation.json
