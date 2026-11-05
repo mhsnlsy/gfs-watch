@@ -158,6 +158,7 @@ async function main() {
     observed_at_utc: observation.observed_at_utc,
     temperature_2m_c: observation.temperature_2m_c,
     precipitation_1h_mm: observation.precipitation_1h_mm,
+    precipitation_10m_mm: observation.precipitation_10m_mm,
     precipitation_6h_mm: observation.precipitation_6h_mm,
     precipitation_12h_mm: observation.precipitation_12h_mm,
     precipitation_24h_mm: observation.precipitation_24h_mm,
@@ -167,6 +168,7 @@ async function main() {
   if (last && lastTime === curTime) {
     last.temperature_2m_c = sample.temperature_2m_c;
     last.precipitation_1h_mm = sample.precipitation_1h_mm;
+    last.precipitation_10m_mm = sample.precipitation_10m_mm;
     last.precipitation_6h_mm = sample.precipitation_6h_mm;
     last.precipitation_12h_mm = sample.precipitation_12h_mm;
     last.precipitation_24h_mm = sample.precipitation_24h_mm;
@@ -182,6 +184,9 @@ async function main() {
     schema: HISTORY_SCHEMA,
     station_id: STATION_ID,
     station_name: "Eyüpsultan",
+    sampling_interval_minutes: 5,
+    rainfall_source_interval_minutes: 10,
+    rainfall_chart_window_minutes: 30,
     updated_at_utc: now.toISOString(),
     samples: retained
   });
