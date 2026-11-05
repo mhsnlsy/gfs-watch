@@ -1,6 +1,10 @@
 name: Station Data Watchdog
 
 on:
+  push:
+    branches: [main]
+    paths:
+      - ".github/workflows/station-data-watchdog.yml"
   schedule:
     - cron: "3-58/5 * * * *"
   workflow_dispatch:
