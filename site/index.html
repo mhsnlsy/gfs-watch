@@ -1928,9 +1928,12 @@
       });
       const line=groups.map(group=>group.map((point,index)=>(index?"L":"M")+x(point.time).toFixed(1)+" "+y(point.mm).toFixed(1)).join(" ")).join(" ");
       const dots=points.map(point=>'<circle cx="'+x(point.time).toFixed(1)+'" cy="'+y(point.mm).toFixed(1)+'" r="2.7" fill="'+(point.mm>0?"#83c9eb":"rgba(131,201,235,.4)")+'"><title>'+esc(timeTR(point.time))+' · '+fmt(point.mm,1)+' mm / 30 dk</title></circle>').join("");
-      holder.innerHTML='<svg viewBox="0 0 '+width+' '+height+'" role="img" aria-label="'+esc(stationName)+' son 24 saatteki kayan 30 dakika yağış toplamı">'+grid+'<path d="'+line+'" fill="none" stroke="#83c9eb" stroke-width="1.9" stroke-linejoin="round"/>'+dots+labels+'</svg>';
+      holder.innerHTML='<svg viewBox="0 0 '+width+' '+height+'" role="img" aria-label="'+esc(stationName)+' son 24 saatteki kayan 30 dakika yağış toplamı · MGM Eyüpsultan kaynağı">'+grid+'<path d="'+line+'" fill="none" stroke="#83c9eb" stroke-width="1.9" stroke-linejoin="round"/>'+dots+labels+'</svg>';
       const latest=points[points.length-1];
-      if(meta)meta.textContent=stationName+" · MGM · son ölçüm: "+fmt(latest.mm,1)+" mm / 30 dk · üç çakışmayan 10 dk ölçüm";
+      const sourceLabel=stationName==="ENKA Balmumcu"?"MGM Eyüpsultan":"MGM 18101";
+      const coverageHours=Math.max(0,(latest.time-points[0].time)/3600000);
+      const coverageNote=coverageHours<23.9?" · 30 dk arşivi "+fmt(coverageHours,1)+" saattir birikiyor":" · 24 saatlik 30 dk arşivi";
+      if(meta)meta.textContent=stationName+" · "+sourceLabel+" · son ölçüm: "+fmt(latest.mm,1)+" mm / 30 dk · üç çakışmayan 10 dk ölçüm"+coverageNote;
       if(typeof document!=="undefined"){
         const svg=holder.querySelector("svg");
         attachStationHistoryTooltip(holder,svg,points.map(point=>({
@@ -1950,7 +1953,7 @@
       }
       if(caption)caption.textContent="mm · kayan 30 dk toplam";
       const rainSamples=activeStation==="enka"?eyupsultanStationHistorySamples:samples;
-      const rainStationName=activeStation==="enka"?"Eyüpsultan":stationName;
+      const rainStationName=activeStation==="enka"?"ENKA Balmumcu":stationName;
       return renderEyupsultanRolling30mRain(rainSamples,rainStationName,holder,meta,eyupsultanStationObservation);
     }
     function renderStationHistory(){
