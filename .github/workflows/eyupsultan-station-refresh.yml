@@ -12,6 +12,8 @@ on:
       - ".github/workflows/eyupsultan-station-refresh.yml"
       - "scripts/eyupsultan_weather.mjs"
   workflow_dispatch:
+  schedule:
+    - cron: "*/5 * * * *"
 
 permissions:
   contents: write
@@ -52,7 +54,7 @@ jobs:
           TEMP=$(jq -r '.station_observation.temperature_2m_c' public/eyupsultan-station-observation.json)
           SOURCE=$(jq -r '.station_observation.source' public/eyupsultan-station-observation.json)
           echo "Age: $AGE minutes · $TEMP C · MGM $SOURCE"
-          if [ "$AGE" -gt 30 ]; then
+          if [ "$AGE" -gt 20 ]; then
             echo "Observation is older than 30 minutes."
             exit 1
           fi
@@ -211,11 +213,3 @@ jobs:
           exit 1
         env:
           GITHUB_TOKEN: ${{ github.token }}
-
-      - name: Queue next five-minute Eyüpsultan refresh
-        if: always() && !cancelled()
-        env:
-          GH_TOKEN: ${{ github.token }}
-        run: |
-          gh workflow run eyupsultan-station-refresh.yml --ref main --repo "$GITHUB_REPOSITORY"
-          echo "Next Eyüpsultan refresh queued immediately; no runner is held idle."
