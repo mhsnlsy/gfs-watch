@@ -128,10 +128,20 @@ function renderStationHistory(doc){
 function renderRuns(d,f72){
  const runs=(d?.runs||[]).slice(0,4);
  $("report-meta").textContent=runs.length?"Son döngü: "+ts(runs[0].run_id_utc)+" · "+runs.length+" çıktı hazır":"Son model döngüsü bekleniyor";
- $("chart-temp").innerHTML=svgDaily(runs,"temperature_2m_c","2 m sıcaklık","°C","candle");
- $("chart-t850").innerHTML=svgDaily(runs,"temperature_850hpa_c","850 hPa sıcaklık","°C","range");
- $("chart-rain").innerHTML=svgLine(runs,"precipitation_6h_mm","6 saatlik yağış","mm",180);
- $("chart-wind").innerHTML=svgDaily(runs,"wind_speed_10m_kmh","10 m rüzgâr","km/sa","range");
+ const pngMetrics=[
+  ["chart-temp","temperature","2 m sıcaklık · son 4 GFS döngüsü"],
+  ["chart-t850","temperature_850","850 hPa sıcaklık · son 4 GFS döngüsü"],
+  ["chart-rain","precipitation","6 saatlik yağış · son 4 GFS döngüsü"],
+  ["chart-wind","wind_10m","10 m rüzgâr · son 4 GFS döngüsü"]
+ ];
+ const runStamp=runs[0]?.run_id_utc?new Date(runs[0].run_id_utc).toISOString().replace(/[-:]/g,"").replace(/\.000Z$/,"Z"):null;
+ pngMetrics.forEach(([id,metric,alt])=>{
+  const holder=$(id);
+  if(!holder)return;
+  if(!runStamp){holder.innerHTML='<div class="chart-empty">PNG raporu bekleniyor…</div>';return;}
+  const src=`./koy-data/gfs/media/koy-gfs-${runStamp}-${metric}.png?v=${encodeURIComponent(runs[0].run_id_utc||"")}`;
+  holder.innerHTML='<a class="notification-image-link" href="'+src+'" target="_blank" rel="noopener"><img class="notification-image" src="'+src+'" alt="'+esc(alt)+'"></a>';
+ });
  const source=runs.length?runs:(f72?[f72]:[]);
  $("next-72h-meta").textContent=source.length?source.length+" GFS döngüsü karşılaştırılıyor":"Model verisi bekleniyor";
  $("next72-temperature").innerHTML=svgLine(source,"temperature_2m_c","2 m sıcaklık","°C",72);
