@@ -34,7 +34,7 @@ jobs:
 
           send_event() {
             event_type="$1"
-            payload="$(python -c 'import json,os; print(json.dumps({"event_type":os.environ["EVENT_TYPE"],"client_payload":{"source":"station-refresh-clock","scheduled_at":os.environ["SCHEDULED_AT"]}}))' EVENT_TYPE="$event_type")"
+            payload="$(printf '{"event_type":"%s","client_payload":{"source":"station-refresh-clock","scheduled_at":"%s"}}' "$event_type" "$SCHEDULED_AT")"
             status="$(curl --silent --show-error --output "$RUNNER_TEMP/dispatch-response.json" --write-out "%{http_code}" \
               --request POST "$api" \
               --header "Authorization: Bearer $GH_TOKEN" \
