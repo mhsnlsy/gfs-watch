@@ -18,6 +18,7 @@ LON = 28.9438
 RADIUS_KM = 25.0
 THRESHOLD_DBZ = 10
 THRESHOLD_DBZ_STRONG = 30
+MIN_ALERT_PIXELS = 15
 ZOOM = 7
 TILE_SIZE = 256
 PIXEL_KM = 0.55  # approx km per pixel at zoom 7
@@ -249,7 +250,9 @@ def main():
 
     approaching = is_approaching(prev, curr, THRESHOLD_DBZ)
     centroid_dist = curr.get("centroid_dist")
-    has_rain_echo = centroid_dist is not None and curr.get("count", 0) > 0
+    pixel_count = curr.get("count", 0)
+    has_rain_echo = centroid_dist is not None and pixel_count > 0
+    pixel_threshold_met = pixel_count >= MIN_ALERT_PIXELS
     max_dbz = curr.get("max_dbz", 0)
 
     # No detected echo means no on-site alert. Avoid comparing None with a number.
@@ -262,7 +265,8 @@ def main():
     if towards and has_rain_echo and centroid_dist < RADIUS_KM:
         approaching = approaching or (max_dbz >= THRESHOLD_DBZ)
 
-    alert = approaching or on_site
+    # Require at least 15 detected rain pixels AND the existing approach/on-site logic.
+    alert = pixel_threshold_met and (approaching or on_site)
 
     if max_dbz <= 10:
         intensity = "DÜŞÜK"
@@ -290,7 +294,7 @@ def main():
         f"merkez uzaklığı: {centroid_dist if centroid_dist is not None else '—'} km, "
         f"{curr.get('count', 0)} yağış pikseli"
     )
-    print(f"[RADAR] {summary} | alert={alert} | {motion_txt}")
+    print(f"[RADAR] {summary} | pixel_gate={pixel_count}/{MIN_ALERT_PIXELS} ({pixel_threshold_met}) | alert={alert} | {motion_txt}")
     append_check_log(
         "ok",
         frame_path=path,
@@ -306,6 +310,8 @@ def main():
         speed_kmh=speed,
         heading_deg=heading,
         eta_min=eta,
+        pixel_threshold=MIN_ALERT_PIXELS,
+        pixel_threshold_met=bool(pixel_threshold_met),
     )
 
     if alert:
