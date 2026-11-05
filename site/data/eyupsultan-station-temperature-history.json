@@ -8,57 +8,8 @@
   "rainfall_chart_window_minutes": 60,
   "rainfall_chart_step_minutes": 60,
   "rolling_hour_precipitation_window_minutes": 60,
-  "updated_at_utc": "2026-11-05T19:53:37.777Z",
+  "updated_at_utc": "2026-11-05T20:30:45.658Z",
   "samples": [
-    {
-      "logged_at_utc": "2026-11-02T20:05:17.809Z",
-      "observed_at_utc": "2026-11-02T19:59:00.000Z",
-      "temperature_2m_c": 15.8,
-      "precipitation_daily_mm": 14.9,
-      "precipitation_1h_mm": 5.5,
-      "precipitation_10m_mm": 2.3,
-      "station_pressure_hpa": 1018.6
-    },
-    {
-      "logged_at_utc": "2026-11-02T20:15:14.889Z",
-      "observed_at_utc": "2026-11-02T20:09:00.000Z",
-      "temperature_2m_c": 15.7,
-      "precipitation_daily_mm": 15.6,
-      "precipitation_1h_mm": 4.5,
-      "station_pressure_hpa": 1018.3
-    },
-    {
-      "logged_at_utc": "2026-11-02T20:20:13.480Z",
-      "observed_at_utc": "2026-11-02T20:14:00.000Z",
-      "temperature_2m_c": 15.7,
-      "precipitation_daily_mm": 15.9,
-      "precipitation_1h_mm": 4.6,
-      "station_pressure_hpa": 1018.2
-    },
-    {
-      "logged_at_utc": "2026-11-02T20:25:14.734Z",
-      "observed_at_utc": "2026-11-02T20:19:00.000Z",
-      "temperature_2m_c": 15.7,
-      "precipitation_daily_mm": 16,
-      "precipitation_1h_mm": 4.5,
-      "station_pressure_hpa": 1018.1
-    },
-    {
-      "logged_at_utc": "2026-11-02T20:30:19.246Z",
-      "observed_at_utc": "2026-11-02T20:24:00.000Z",
-      "temperature_2m_c": 15.6,
-      "precipitation_daily_mm": 16.4,
-      "precipitation_1h_mm": 4.6,
-      "station_pressure_hpa": 1018
-    },
-    {
-      "logged_at_utc": "2026-11-02T20:35:12.914Z",
-      "observed_at_utc": "2026-11-02T20:29:00.000Z",
-      "temperature_2m_c": 15.6,
-      "precipitation_daily_mm": 16.8,
-      "precipitation_1h_mm": 4.9,
-      "station_pressure_hpa": 1017.9
-    },
     {
       "logged_at_utc": "2026-11-02T20:40:15.088Z",
       "observed_at_utc": "2026-11-02T20:34:00.000Z",
@@ -8079,6 +8030,18 @@
       "precipitation_24h_mm": 2.2,
       "precipitation_daily_mm": 2.2,
       "station_pressure_hpa": 1020.1
+    },
+    {
+      "logged_at_utc": "2026-11-05T20:30:45.658Z",
+      "observed_at_utc": "2026-11-05T20:29:00.000Z",
+      "temperature_2m_c": 9.1,
+      "precipitation_1h_mm": 0.1,
+      "precipitation_10m_mm": 0,
+      "precipitation_6h_mm": 1.7,
+      "precipitation_12h_mm": 1.7,
+      "precipitation_24h_mm": 2.3,
+      "precipitation_daily_mm": 2.3,
+      "station_pressure_hpa": 1019.9
     }
   ]
 }
