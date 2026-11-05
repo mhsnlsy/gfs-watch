@@ -1,0 +1,60 @@
+name: MeteoPT GFS Monitor Backup Trigger
+
+on:
+  schedule:
+    - cron: "5,15,25,35,45,55 * * * *"
+  workflow_dispatch:
+
+permissions:
+  actions: write
+  contents: read
+
+jobs:
+  ensure-primary-run:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Check whether the primary monitor ran recently
+        id: check
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          python - <<'PY'
+          import json
+          import os
+          import subprocess
+          from datetime import datetime, timezone, timedelta
+
+          data = subprocess.check_output([
+              "gh", "api",
+              "repos/${{ github.repository }}/actions/workflows/meteopt-gfs-monitor.yml/runs",
+              "-f", "per_page=5",
+          ], text=True)
+
+          runs = json.loads(data).get("workflow_runs", [])
+          now = datetime.now(timezone.utc)
+          recent = False
+
+          for run in runs:
+              created = datetime.fromisoformat(run["created_at"].replace("Z", "+00:00"))
+              if now - created <= timedelta(minutes=12):
+                  recent = True
+                  print(f"Primary monitor found: {run['id']} ({run['status']}, {run.get('conclusion')})")
+                  break
+
+          if recent:
+              print("Primary monitor is active/recent; backup dispatch is not needed.")
+              with open(os.environ["GITHUB_OUTPUT"], "w") as f:
+                  f.write("dispatch=false\n")
+          else:
+              print("No recent primary monitor run found; backup dispatch is required.")
+              with open(os.environ["GITHUB_OUTPUT"], "w") as f:
+                  f.write("dispatch=true\n")
+          PY
+
+      - name: Dispatch primary monitor
+        if: steps.check.outputs.dispatch == 'true'
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          gh api --method POST repos/${{ github.repository }}/dispatches -f event_type=gfs-watch-backup
+          echo "Primary MeteoPT GFS monitor dispatched by backup trigger."
