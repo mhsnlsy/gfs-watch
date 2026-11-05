@@ -1,11 +1,12 @@
 (() => {
   "use strict";
   const ROOT = "meteopt-gfs-table";
-  // The table is populated from the independent f72 publication, not the f180 report bundle.
-  const DATA_URL = "./data/meteopt-gfs-first72.json";
+  // Homepage table reads the same independent Istanbul GFS payload used by the live homepage.
+  const DATA_URL = "./data/istanbul-gfs-latest.json";
   const $ = (id) => document.getElementById(id);
   const finite = (value) => value !== null && value !== undefined && value !== "" && Number.isFinite(Number(value));
   const number = (value) => finite(value) ? Number(value) : null;
+
   function colour(field, value) {
     if (value === null) return "";
     const v = value;
@@ -21,41 +22,75 @@
     else if (field === "snowln") band = v < 1000 ? "mt-blue" : v < 1500 ? "mt-green" : v < 2000 ? "mt-yellow" : v < 2500 ? "mt-orange" : v < 3000 ? "mt-red" : "mt-purple";
     return band;
   }
+
   function display(value, digits = 1) {
     return value === null ? "—" : value.toLocaleString("en-GB", { minimumFractionDigits: digits, maximumFractionDigits: digits });
   }
+
   function valueCell(value, field, digits = 1) {
     if (value === null) return '<span class="meteopt-value">—</span>';
     const cls = colour(field, value);
     return '<span class="meteopt-value ' + cls + '">' + display(value, digits) + '</span>';
   }
+
   function dateLabel(point, runId, step) {
-    let date = point && point.valid_time_utc ? new Date(point.valid_time_utc) : new Date(new Date(runId).getTime() + step * 3600000);
+    let date = point && point.valid_time_utc
+      ? new Date(point.valid_time_utc)
+      : new Date(new Date(runId).getTime() + step * 3600000);
+
     if (!Number.isFinite(date.getTime())) return "—";
-    // MeteoPT panel convention: the forecast step is displayed on the Istanbul
-    // clock with the feed's 3-hour UTC/TSI alignment corrected here. This keeps
-    // Step 3 of the 12Z run at 15 TSİ (not 18 TSİ), while preserving the data values.
+
+    // MeteoPT panel convention: Step 3 of the 12Z run is displayed as 15 TSİ,
+    // not 18 TSİ. The published forecast values themselves are not changed.
     date = new Date(date.getTime() - 3 * 3600000);
-    const datePart = new Intl.DateTimeFormat("en-GB", { timeZone: "Europe/Istanbul", weekday: "short", day: "numeric", month: "short" }).format(date);
-    const hour = new Intl.DateTimeFormat("en-GB", { timeZone: "Europe/Istanbul", hour: "2-digit", hourCycle: "h23" }).format(date);
+
+    const datePart = new Intl.DateTimeFormat("en-GB", {
+      timeZone: "Europe/Istanbul",
+      weekday: "short",
+      day: "numeric",
+      month: "short"
+    }).format(date);
+
+    const hour = new Intl.DateTimeFormat("en-GB", {
+      timeZone: "Europe/Istanbul",
+      hour: "2-digit",
+      hourCycle: "h23"
+    }).format(date);
+
     return datePart + " " + hour + " TSİ";
   }
+
   function render(document) {
     const body = $("meteopt-table-body");
     if (!body) return;
-    const points = Array.isArray(document.forecast_6_hourly) ? document.forecast_6_hourly : [];
-    const pointsThrough72h = points.filter(point => Number(point.forecast_hour) > 0 && Number(point.forecast_hour) <= 72);
+
+    const points = Array.isArray(document.forecast_6_hourly)
+      ? document.forecast_6_hourly
+      : [];
+
+    // The independent Istanbul feed is 3-hourly. The homepage MeteoPT table
+    // intentionally shows 6-hourly steps: 6, 12, ... 72.
+    const pointsThrough72h = points.filter(point => {
+      const step = Number(point.forecast_hour);
+      return Number.isFinite(step) && step > 0 && step <= 72 && step % 6 === 0;
+    });
+
     const pointByHour = new Map(points.map(point => [Number(point.forecast_hour), point]));
     const rows = [];
-    const hours = pointsThrough72h.map(point => ({ step: Number(point.forecast_hour), point })).sort((a, b) => a.step - b.step);
+    const hours = pointsThrough72h
+      .map(point => ({ step: Number(point.forecast_hour), point }))
+      .sort((a, b) => a.step - b.step);
+
     for (const item of hours) {
       if (!Number.isFinite(item.step) || item.step <= 0 || item.step > 72) continue;
+
       const point = item.point || pointByHour.get(item.step) || null;
       const wind10 = point ? number(point.wind_speed_10m_kmh) : null;
       const wind850 = point ? number(point.wind_speed_850hpa_kmh) : null;
       const precip = point ? number(point.precipitation_6h_mm) : null;
       const temp2 = point ? number(point.temperature_2m_c) : null;
       const temp850 = point ? number(point.temperature_850hpa_c) : null;
+
       const values = [
         valueCell(temp2, "t2m"),
         valueCell(precip, "precip"),
@@ -63,41 +98,84 @@
         valueCell(wind850, "wind", 0),
         valueCell(temp850, "t850")
       ];
-      rows.push('<tr><td>' + item.step + '</td><td>' + dateLabel(point, document.run_id_utc, item.step) + '</td>' + values.map(value => '<td>' + value + '</td>').join("") + '</tr>');
+
+      rows.push(
+        '<tr><td>' + item.step + '</td><td>' + dateLabel(point, document.run_id_utc, item.step) +
+        '</td>' + values.map(value => '<td>' + value + '</td>').join("") + '</tr>'
+      );
     }
+
     if (!rows.length) {
       body.innerHTML = '<tr><td colspan="7" class="meteopt-table-empty">Bu GFS çıktısında tablo satırı bulunamadı.</td></tr>';
       $("meteopt-table-status").textContent = "Tahmin adımı bulunamadı";
       return;
     }
+
     body.innerHTML = rows.join("");
+
     const run = document.run_id_utc ? new Date(document.run_id_utc) : null;
     $("meteopt-table-run").textContent = run && Number.isFinite(run.getTime())
-      ? "Run: " + new Intl.DateTimeFormat("en-GB", { timeZone: "UTC", weekday: "short", day: "numeric", month: "short", year: "numeric", hour: "2-digit", hourCycle: "h23" }).format(run) + "Z"
+      ? "Run: " + new Intl.DateTimeFormat("en-GB", {
+          timeZone: "UTC",
+          weekday: "short",
+          day: "numeric",
+          month: "short",
+          year: "numeric",
+          hour: "2-digit",
+          hourCycle: "h23"
+        }).format(run) + "Z"
       : "GFS döngüsü";
+
     $("meteopt-table-updated").textContent = document.published_at_utc
-      ? "Yayın: " + new Intl.DateTimeFormat("tr-TR", { timeZone: "Europe/Istanbul", day: "2-digit", month: "2-digit", hour: "2-digit", minute: "2-digit" }).format(new Date(document.published_at_utc)) + " TSİ"
+      ? "Yayın: " + new Intl.DateTimeFormat("tr-TR", {
+          timeZone: "Europe/Istanbul",
+          day: "2-digit",
+          month: "2-digit",
+          hour: "2-digit",
+          minute: "2-digit"
+        }).format(new Date(document.published_at_utc)) + " TSİ"
       : "Yayın zamanı bilinmiyor";
-    $("meteopt-table-status").textContent = rows.length + " / 24 adım · 72. saate kadar";
+
+    $("meteopt-table-status").textContent = rows.length + " / 12 adım · 72. saate kadar";
   }
+
   async function refresh() {
     const status = $("meteopt-table-status");
+
     try {
-      const response = await fetch(DATA_URL + "?meteopt-table=" + Date.now(), { cache: "no-store" });
+      const response = await fetch(DATA_URL + "?meteopt-table=" + Date.now(), {
+        cache: "no-store"
+      });
+
       if (!response.ok) throw new Error("HTTP " + response.status);
+
       const document = await response.json();
-      if (!document || document.forecast_source !== "meteopt" || !Array.isArray(document.forecast_6_hourly)) {
-        throw new Error("MeteoPT GFS f72 tablosu henüz yayınlanmadı; f72 bekleniyor.");
+
+      if (
+        !document ||
+        document.forecast_source !== "meteopt" ||
+        !Array.isArray(document.forecast_6_hourly)
+      ) {
+        throw new Error("MeteoPT GFS verisi henüz yayınlanmadı.");
       }
+
       render(document);
     } catch (error) {
       if (status) status.textContent = "MeteoPT tablosu yüklenemedi: " + error.message;
+
       const body = $("meteopt-table-body");
-      if (body && !body.querySelector("tr")) body.innerHTML = '<tr><td colspan="12" class="meteopt-table-empty">Veri bekleniyor…</td></tr>';
+      if (body && !body.querySelector("tr")) {
+        body.innerHTML = '<tr><td colspan="12" class="meteopt-table-empty">Veri bekleniyor…</td></tr>';
+      }
     }
   }
-  if (document.readyState === "loading") document.addEventListener("DOMContentLoaded", refresh, { once: true });
-  else refresh();
+
+  if (document.readyState === "loading") {
+    document.addEventListener("DOMContentLoaded", refresh, { once: true });
+  } else {
+    refresh();
+  }
+
   window.setInterval(() => {
     if (document.visibilityState !== "hidden") refresh();
   }, 300000);
