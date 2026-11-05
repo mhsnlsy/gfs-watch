@@ -36,7 +36,7 @@ function svgLine(runs,metric,title,unit,maxHour=72){
    s+='<circle cx="'+x(p.h)+'" cy="'+y(p.v)+'" r="2.5" fill="'+color+'"><title>F'+p.h+' · '+fmt(p.v)+' '+unit+'</title></circle>';
   });
   item.points.forEach(p=>{
-   s+='<circle class="gfs-point-target" cx="'+x(p.h)+'" cy="'+y(p.v)+'" r="0" data-run="'+esc(gfsRunLabel(item.run))+'" data-valid="'+esc(ts(p.validTime))+'" data-step="'+esc("+"+p.h+" saat")+'" data-value="'+esc(fmt(p.v,1))+'" data-unit="'+esc(unit)+'" data-color="'+color+'" aria-hidden="true"/>';
+   s+='<circle class="gfs-point-target" cx="'+x(p.h)+'" cy="'+y(p.v)+'" r="0" data-run="'+esc(gfsRunLabel(item.run))+'" data-current="'+(latest?"true":"false")+'" data-valid="'+esc(ts(p.validTime))+'" data-step="'+esc("+"+p.h+" saat")+'" data-value="'+esc(fmt(p.v,1))+'" data-unit="'+esc(unit)+'" data-color="'+color+'" aria-hidden="true"/>';
   });
  });
  s+='</svg>';return s;
@@ -56,6 +56,7 @@ function bindGfsChartTooltip(containerId){
  host.appendChild(tooltip);
  let pinned=false;
  const targets=[...svg.querySelectorAll(".gfs-point-target")];
+ const currentTargets=targets.filter(target=>target.dataset.current==="true");
  function nearestPoint(event,maxDistance){
   const matrix=svg.getScreenCTM();
   if(!matrix)return null;
@@ -66,6 +67,16 @@ function bindGfsChartTooltip(containerId){
    point.y=Number(target.getAttribute("cy"));
    const screen=point.matrixTransform(matrix);
    const distance=Math.hypot(event.clientX-screen.x,event.clientY-screen.y);
+   if(distance<best){best=distance;nearest=target}
+  }
+  return nearest;
+ }
+ function latestPointAtSameTime(hit){
+  if(!hit||!currentTargets.length)return null;
+  const hoveredX=Number(hit.getAttribute("cx"));
+  let nearest=null,best=Infinity;
+  for(const target of currentTargets){
+   const distance=Math.abs(Number(target.getAttribute("cx"))-hoveredX);
    if(distance<best){best=distance;nearest=target}
   }
   return nearest;
@@ -83,7 +94,7 @@ function bindGfsChartTooltip(containerId){
   const value=target.dataset.value||"—";
   const unit=target.dataset.unit||"";
   const color=target.dataset.color||"#7dd3d7";
-  tooltip.innerHTML='<div class="gfs-point-tooltip-head"><i style="background:'+color+'"></i><strong>'+esc(run)+'</strong></div><div class="gfs-point-tooltip-time">Geçerlilik · '+esc(valid)+'</div><div class="gfs-point-tooltip-value">'+esc(value)+' <small>'+esc(unit)+'</small></div><div class="gfs-point-tooltip-meta">Tahmin adımı '+esc(step)+'</div>';
+  tooltip.innerHTML='<div class="gfs-point-tooltip-head"><i style="background:'+color+'"></i><strong>Güncel GFS tahmini</strong></div><div class="gfs-point-tooltip-time">Döngü · '+esc(run)+'<br>Geçerlilik · '+esc(valid)+'</div><div class="gfs-point-tooltip-value">'+esc(value)+' <small>'+esc(unit)+'</small></div><div class="gfs-point-tooltip-meta">Tahmin adımı '+esc(step)+'</div>';
   tooltip.hidden=false;
   pinned=lock;
   const box=host.getBoundingClientRect();
@@ -100,7 +111,8 @@ function bindGfsChartTooltip(containerId){
  }
  svg.addEventListener("pointermove",event=>{
   if(event.pointerType==="touch"||pinned)return;
-  const target=nearestPoint(event,28);
+  const hit=nearestPoint(event,28);
+  const target=latestPointAtSameTime(hit);
   if(target)show(target,event,false);
   else hide();
  });
@@ -109,7 +121,8 @@ function bindGfsChartTooltip(containerId){
  });
  svg.addEventListener("pointerdown",event=>{
   if(event.pointerType!=="touch"&&event.pointerType!=="pen")return;
-  const target=nearestPoint(event,44);
+  const hit=nearestPoint(event,44);
+  const target=latestPointAtSameTime(hit);
   if(target){event.preventDefault();show(target,event,true)}
   else hide();
  });
