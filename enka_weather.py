@@ -90,12 +90,12 @@ def _parse_current_values(text):
         return float(match.group(1).replace(",", "."))
 
     temperature = number_after("Day Temperature", r"([-+]?\d+(?:[.,]\d+)?)°C")
-    pressure = number_after("Barometer \(hPa\)", r"(\d+(?:[.,]\d+)?)")
+    pressure = number_after("Barometer (hPa)", r"(\d+(?:[.,]\d+)?)")
     humidity = number_after("Humidity", r"(\d+(?:[.,]\d+)?)%")
     daily_rain = number_after("Daily Rain", r"(\d+(?:[.,]\d+)?)\s*mm")
 
     wind_match = re.search(
-        r"Wind\\s+([A-Z]{1,3})\\s+(\d+(?:[.,]\d+)?)\\s*kt",
+        r"Wind\s+([A-Z]{1,3})\s+(\d+(?:[.,]\d+)?)\s*kt",
         text,
         flags=re.I,
     )
