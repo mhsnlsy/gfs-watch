@@ -7,8 +7,8 @@
     "source_url": "https://servis.mgm.gov.tr/web/sondurumlar?merkezid=18401",
     "source_fallback_used": true,
     "observed_at_utc": "2026-11-05T05:04:00.000Z",
-    "fetched_at_utc": "2026-11-05T05:07:29.199Z",
-    "age_minutes": 3,
+    "fetched_at_utc": "2026-11-05T05:07:55.593Z",
+    "age_minutes": 4,
     "stale_after_minutes": 30,
     "is_stale": false,
     "temperature_2m_c": 10.2,
@@ -20,7 +20,7 @@
     "precipitation_10m_mm": 0.58,
     "precipitation_6h_mm": 1.27,
     "precipitation_12h_mm": 3.55,
-    "precipitation_24h_mm": 22.94,
+    "precipitation_24h_mm": 22.87,
     "precipitation_daily_mm": 1.27,
     "precipitation_source": "MGM 18401",
     "humidity_percent": 99,
@@ -30,7 +30,7 @@
     "pressure_type": "station",
     "pressure_source": "MGM 18401",
     "pressure_observed_at_utc": "2026-11-05T05:04:00.000Z",
-    "pressure_age_minutes": 3.5
+    "pressure_age_minutes": 3.9
   },
-  "updated_at_utc": "2026-11-05T05:07:25.058Z"
+  "updated_at_utc": "2026-11-05T05:07:52.869Z"
 }
