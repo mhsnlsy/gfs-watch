@@ -58,6 +58,7 @@ jobs:
           fi
         env:
           SISLI_TEMPERATURE_HISTORY_PATH: forecast-data/public/sisli-station-temperature-history.json
+          SISLI_RAIN_HISTORY_PATH: forecast-data/public/sisli-station-rain-history.json
 
       - name: Publish only Şişli observation and history
         id: publish
@@ -65,11 +66,12 @@ jobs:
         run: |
           set -euo pipefail
           cp -f public/sisli-station-observation.json forecast-data/public/
-          cp -f public/sisli-station-temperature-history.json forecast-data/public/ || true
+          cp -f public/sisli-station-temperature-history.json forecast-data/public/
+          cp -f public/sisli-station-rain-history.json forecast-data/public/ || true
           cd forecast-data
           git config user.name "github-actions[bot]"
           git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
-          git add public/sisli-station-observation.json public/sisli-station-temperature-history.json
+          git add public/sisli-station-observation.json public/sisli-station-temperature-history.json public/sisli-station-rain-history.json
           if git diff --cached --quiet; then
             echo "No Şişli data changes."
             echo "changed=false" >> "$GITHUB_OUTPUT"
