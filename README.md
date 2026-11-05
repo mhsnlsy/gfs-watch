@@ -42,7 +42,7 @@ Her toplayıcı yalnızca kendi istasyon dosyalarını günceller. Bir istasyond
 - **GFS yedek kontrolü:** `.github/workflows/meteopt-gfs-monitor-backup.yml`, ana izleyicide beklenen zaman aralığında çalışma yoksa onu yeniden tetikler. Bu yedek kontrol yalnızca GFS içindir; İstanbul istasyonları bu mekanizmaya bağlı değildir.
 - **ECMWF:** Kendi ayrı iş akışıyla alınır ve GFS geçmişinden ayrı saklanır.
 - **Yağış radarı:** Kendi izleme iş akışını kullanır.
-- **GitHub Pages:** `.github/workflows/pages-live.yml`, site dosyalarını ve ilgili veri dallarını birleştirerek yayına alır. Her istasyon toplayıcısı kendi dosyalarını `main/site/data/` altına yayımladıktan sonra bu yeniden kullanılabilir Pages iş akışını açıkça çağırır. Böylece Actions'ın `GITHUB_TOKEN` ile yapılan commit'lerinin başka bir `push` iş akışını otomatik başlatmaması sorun yaratmaz.
+- **GitHub Pages:** `.github/workflows/publish-live-site.yml`, tüm istasyon ve GFS veri dallarının en güncel durumunu her 5 dakikada bir birleştirip tek bir Pages deployment'ı yapar. Veri toplayıcıları artık Pages deploy etmez; böylece istasyon güncellemeleri birbirinin deployment'ını iptal etmez.
 
 ## Veri saklama
 
