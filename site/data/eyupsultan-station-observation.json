@@ -6,15 +6,15 @@
     "source": "MGM İstanbul-Eyüpsultan · anlık son-durum ölçümü",
     "source_url": "https://www.mgm.gov.tr/tahmin/il-ve-ilceler.aspx?il=%C4%B0stanbul&ilce=Ey%C3%BCpsultan",
     "measurement_source_url": "https://servis.mgm.gov.tr/web/sondurumlar/ilTumSondurum?ilPlaka=34",
-    "source_page_checked_at_utc": "2026-11-05T15:36:45.671Z",
+    "source_page_checked_at_utc": "2026-11-05T15:40:32.877Z",
     "source_page_http_status": 200,
     "source_fallback_used": false,
     "latitude": 41.102778,
     "longitude": 28.924167,
     "elevation_m": 54,
     "observed_at_utc": "2026-11-05T15:34:00.000Z",
-    "fetched_at_utc": "2026-11-05T15:36:47.113Z",
-    "age_minutes": 3,
+    "fetched_at_utc": "2026-11-05T15:40:34.692Z",
+    "age_minutes": 7,
     "stale_after_minutes": 20,
     "is_stale": false,
     "temperature_2m_c": 9.6,
@@ -36,7 +36,7 @@
     "pressure_type": "station",
     "pressure_source": "MGM 18101",
     "pressure_observed_at_utc": "2026-11-05T15:34:00.000Z",
-    "pressure_age_minutes": 2.8
+    "pressure_age_minutes": 6.6
   },
-  "updated_at_utc": "2026-11-05T15:36:44.534Z"
+  "updated_at_utc": "2026-11-05T15:40:31.427Z"
 }
