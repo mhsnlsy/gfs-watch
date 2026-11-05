@@ -85,7 +85,7 @@ function renderStationHistory(doc){
  $("history-source-note").textContent="Sıcaklık ve yağış: MGM Çanakçı gerçek istasyon ölçümleri.";
 }
 function renderRuns(d,f72){
- const runs=(d?.runs||[]).slice(0,4);$("history24-meta").textContent=runs.length+" GFS döngüsünden geçmiş veriler";$("history24-temperature").innerHTML=svgHistory24(runs,"temperature_2m_c","Son 24 saat sıcaklık","°C");$("history24-precipitation").innerHTML=svgHistory24(runs,"precipitation_6h_mm","Son 24 saat yağış","mm");$("report-meta").textContent=runs.length?"Son döngü: "+ts(runs[0].run_id_utc)+" · "+runs.length+" çıktı hazır":"Son model döngüsü bekleniyor";
+ const runs=(d?.runs||[]).slice(0,4);$("report-meta").textContent=runs.length?"Son döngü: "+ts(runs[0].run_id_utc)+" · "+runs.length+" çıktı hazır":"Son model döngüsü bekleniyor";
  $("run-list").textContent=runs.length?runs.map((r,i)=>(i+1)+". "+ts(r.run_id_utc)+" · "+pointsOf(r).length+" adım").join("   |   "):"Son dört döngü verisi bekleniyor…";
  $("chart-legend").innerHTML=runs.map((r,i)=>'<span><i style="background:'+COLORS[i]+'"></i>'+esc(ts(r.run_id_utc))+'</span>').join("");
  $("chart-temp").innerHTML=svgDaily(runs,"temperature_2m_c","2 m sıcaklık","°C","candle");
