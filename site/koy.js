@@ -11,7 +11,7 @@ const dayKey=v=>{const d=new Date(v);return Number.isFinite(d.getTime())?new Int
 const dayLabel=k=>{const p=k.split("-");return p[2]+"."+p[1]};
 let busy=false, f72=null, comparison=null, stationHistory=null, rainHistory=null;
 async function get(path){const url=path.startsWith("./")?path:BASE+path;const r=await fetch(url+"?v="+Date.now(),{cache:"no-store"});if(!r.ok)throw Error("HTTP "+r.status+" · "+url);return r.json()}
-function pointsOf(run,max=180){return (run?.forecast_6_hourly||[]).filter(p=>Number(p.forecast_hour)>0&&Number(p.forecast_hour)<=max).sort((a,b)=>Number(a.forecast_hour)-Number(b.forecast_hour))}
+function pointsOf(run,max=180){return (run?.forecast_6_hourly||[]).filter(p=>{const h=Number(p.forecast_hour);return Number.isFinite(h)&&h>=3&&h<=max&&h%3===0}).sort((a,b)=>Number(a.forecast_hour)-Number(b.forecast_hour))}
 function svgLine(runs,metric,title,unit,maxHour=72){
  const usable=runs.map((r,runIndex)=>({run:r,runIndex,points:pointsOf(r,maxHour).map(p=>({h:Number(p.forecast_hour),v:num(p[metric]),validTime:p.valid_time_utc})).filter(p=>p.v!=null)})).filter(x=>x.points.length);
  if(!usable.length)return '<div class="chart-empty">Tahmin verisi bekleniyor…</div>';
@@ -24,7 +24,7 @@ function svgLine(runs,metric,title,unit,maxHour=72){
  const y=v=>T+(hi-v)*PH/(hi-lo);
  let s='<svg class="koy-svg" viewBox="0 0 '+W+' '+H+'" role="img" aria-label="'+esc(title)+'">';
  for(let j=0;j<=3;j++){const v=lo+(hi-lo)*j/3,yy=y(v);s+='<line x1="'+L+'" y1="'+yy+'" x2="'+(W-R)+'" y2="'+yy+'" stroke="#294253" stroke-dasharray="3 5"/><text x="'+(L-7)+'" y="'+(yy+3)+'" text-anchor="end" fill="#91aab8" font-size="10">'+fmt(v,0)+'</text>'}
- hours.forEach(h=>{if(h%12!==0&&h!==hours[hours.length-1])return;s+='<text x="'+x(h)+'" y="'+(H-7)+'" text-anchor="middle" fill="#91aab8" font-size="10">'+(h===hours[0]?"Şimdi":"+"+h+"s")+'</text>'});
+ const axisPoint=usable.flatMap(x=>x.points).find(p=>p.h===hours[0]); const axisLabel=v=>{if(!v)return "—";const d=new Date(v);if(!Number.isFinite(d.getTime()))return "—";return new Intl.DateTimeFormat("tr-TR",{timeZone:"Europe/Istanbul",day:"numeric",month:"long",hour:"2-digit",minute:"2-digit",hourCycle:"h23"}).format(d)+" TSİ"}; hours.forEach(h=>{if(h!==hours[0]&&h%12!==0&&h!==hours[hours.length-1])return;const label=h===hours[0]?axisLabel(axisPoint?.validTime):"+"+h+"s";s+='<text x="'+x(h)+'" y="'+(H-7)+'" text-anchor="middle" fill="#91aab8" font-size="10">'+esc(label)+'</text>'});
  const lookup=usable.map(x=>new Map(x.points.map(p=>[p.h,p.v])));
  const upper=[],lower=[];
  hours.forEach((h,i)=>{const vals=lookup.map(m=>m.get(h)).filter(v=>v!=null);if(vals.length){upper.push([x(h),y(Math.max(...vals))]);lower.push([x(h),y(Math.min(...vals))])}});
