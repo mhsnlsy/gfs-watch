@@ -172,6 +172,50 @@ jobs:
           cp "$RUNNER_TEMP/istanbul-gfs/f72.json" state/gfs/f72/latest.json
           cp "$RUNNER_TEMP/istanbul-gfs/latest.json" "state/gfs/runs/$new_run.json"
 
+          # One-time migration: seed missing historical MeteoPT cycles from the
+          # existing MeteoPT archive so the new canonical branch can immediately
+          # build the four-cycle comparison. No new weather source is introduced.
+          git -C state fetch origin gfs-watch-state --depth=1
+          python - <<'PY'
+          import json, subprocess
+          from pathlib import Path
+
+          runs_dir = Path("state/gfs/runs")
+          existing = set()
+          for path in runs_dir.glob("*.json"):
+              try:
+                  existing.add(json.loads(path.read_text(encoding="utf-8")).get("run_id_utc"))
+              except Exception:
+                  pass
+
+          files = subprocess.check_output(
+              ["git", "-C", "state", "ls-tree", "-r", "--name-only",
+               "origin/gfs-watch-state", "public/runs"],
+              text=True,
+          ).splitlines()
+          files = sorted(files, reverse=True)
+
+          for source_path in files:
+              if len(existing) >= 4:
+                  break
+              try:
+                  raw = subprocess.check_output(
+                      ["git", "-C", "state", "show", f"origin/gfs-watch-state:{source_path}"]
+                  )
+                  doc = json.loads(raw)
+                  run_id = doc.get("run_id_utc")
+                  if not run_id or run_id in existing:
+                      continue
+                  target = runs_dir / f"{run_id}.json"
+                  target.write_text(json.dumps(doc, ensure_ascii=False, indent=2) + "\n", encoding="utf-8")
+                  existing.add(run_id)
+                  print(f"Seeded historical MeteoPT cycle: {run_id}")
+              except Exception as exc:
+                  print(f"Historical cycle skipped: {source_path}: {exc}")
+
+          print(f"Canonical Istanbul GFS history now contains {len(existing)} cycles.")
+          PY
+
           find state/gfs/runs -type f -name '*.json' -mtime +45 -delete
 
           python -m pip install -r source/requirements.txt
