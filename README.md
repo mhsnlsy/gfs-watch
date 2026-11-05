@@ -9,7 +9,7 @@
 
 ## Veri kaynakları
 
-- **GFS:** MeteoPT GFS — İstanbul, 41.014°N / 28.950°E.
+- **GFS:** MeteoPT GFS — İstanbul, 41.014°N / 28.950°E (tek canonical kaynak).
 - **ECMWF IFS:** GFS'den ayrı tutulan tahmin akışı.
 - **ENKA Balmumcu:** ENKA currentvalues.html canlı istasyon verisi.
 - **MGM Eyüpsultan:** MGM 18101 son durum ölçümleri.
@@ -41,15 +41,17 @@ Bir istasyonun başarısız olması diğer iki istasyonu durdurmaz.
 
 ### GFS
 
-`.github/workflows/meteopt-gfs-live.yml` ana GFS akışıdır.
+`.github/workflows/istanbul-gfs-independent.yml` İstanbul GFS'nin **tek canlı toplama ve yayın hazırlama akışıdır**.
 
-- 10 dakikada bir kontrol eder.
-- MeteoPT GFS döngüsünü takip eder.
-- Tamamlanan döngünün verisini `gfs-watch-state` dalına kaydeder.
-- GFS verisi değiştiğinde ortak Pages publisher'ı tetikler.
-- Telegram raporu mevcut GFS bildirim akışından gönderilir.
+- 5 dakikada bir MeteoPT GFS'yi kontrol eder.
+- Yeni döngüyü tek canonical paket olarak üretir.
+- Aynı paketten raporu, dört Pages PNG'sini ve dört döngü karşılaştırmasını üretir.
+- Canonical paket `istanbul-gfs-data` dalında saklanır.
+- Telegram, aynı canonical rapor ve dört PNG'den oluşan tek medya albümünü gönderir.
+- Aynı döngü için `telegram-sent` marker'ı tutulur; başarısız gönderim sonraki poll'da yeniden denenir.
+- Pages deployment'ı ayrı ortak publisher tarafından yapılır; GFS workflow'u doğrudan Pages deploy etmez.
 
-GFS verisi istasyon verilerinden bağımsız saklanır.
+İstanbul GFS'nin veri kaynağı **yalnızca MeteoPT'dir**. Eski NOAA/Telegram polling yolu canlı akışın parçası değildir.
 
 ### GitHub Pages
 
