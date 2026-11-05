@@ -390,3 +390,83 @@
     min-width: 64px !important;
   }
 }
+
+
+/* FINAL: 3-hour GFS table must fit the available screen width. */
+#meteopt-gfs-table,
+#meteopt-gfs-table .meteopt-table-card,
+#meteopt-gfs-table .meteopt-table-scroll {
+  width: 100% !important;
+  max-width: 100% !important;
+  min-width: 0 !important;
+  box-sizing: border-box !important;
+}
+#meteopt-gfs-table .meteopt-table-scroll {
+  overflow-x: hidden !important;
+  overflow-y: visible !important;
+}
+#meteopt-gfs-table .meteopt-data-table {
+  width: 100% !important;
+  min-width: 0 !important;
+  max-width: 100% !important;
+  table-layout: fixed !important;
+  font-variant-numeric: tabular-nums;
+}
+#meteopt-gfs-table .meteopt-data-table th,
+#meteopt-gfs-table .meteopt-data-table td {
+  box-sizing: border-box !important;
+  padding: 5px 2px !important;
+  min-width: 0 !important;
+  white-space: nowrap !important;
+  overflow: hidden !important;
+  text-overflow: clip !important;
+  text-align: center !important;
+}
+#meteopt-gfs-table .meteopt-data-table th:first-child,
+#meteopt-gfs-table .meteopt-data-table td:first-child {
+  width: 6% !important;
+  min-width: 0 !important;
+  position: sticky;
+  left: 0;
+}
+#meteopt-gfs-table .meteopt-data-table th:nth-child(2),
+#meteopt-gfs-table .meteopt-data-table td:nth-child(2) {
+  width: 22% !important;
+  min-width: 0 !important;
+  padding-left: 2px !important;
+  padding-right: 2px !important;
+  text-align: center !important;
+}
+#meteopt-gfs-table .meteopt-data-table th:nth-child(n+3),
+#meteopt-gfs-table .meteopt-data-table td:nth-child(n+3) {
+  width: 14.4% !important;
+  min-width: 0 !important;
+}
+#meteopt-gfs-table .meteopt-value {
+  min-width: 0 !important;
+  max-width: 100% !important;
+  padding: 2px 1px !important;
+}
+@media (max-width: 560px) {
+  #meteopt-gfs-table .meteopt-table-card { padding: 6px !important; }
+  #meteopt-gfs-table .meteopt-table-toolbar {
+    font-size: 8px !important;
+    margin-bottom: 5px !important;
+  }
+  #meteopt-gfs-table .meteopt-data-table {
+    font-size: 7.5px !important;
+  }
+  #meteopt-gfs-table .meteopt-data-table th {
+    font-size: 7.5px !important;
+    line-height: 1.05 !important;
+  }
+  #meteopt-gfs-table .meteopt-data-table td {
+    line-height: 1.05 !important;
+  }
+  #meteopt-gfs-table .meteopt-value {
+    font-size: 7.5px !important;
+    line-height: 1 !important;
+    background: transparent !important;
+    padding: 1px 0 !important;
+  }
+}
