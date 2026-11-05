@@ -167,10 +167,25 @@ function renderMgmObservation(o,history,f72){
  const pts=pointsOf(f72||{},72),future=pts.filter(p=>num(p.precipitation_6h_mm)>0.1);
  $("rain-brief-forecast").textContent=future.length?"MeteoPT GFS tahminine göre ilk anlamlı yağış: "+ts(future[0].valid_time_utc)+" TSİ.":"MeteoPT GFS tahmininde önümüzdeki 72 saatte anlamlı yağış görünmüyor.";
 }
+function meteoptTableBand(field,value){
+ if(value==null)return "";
+ const v=Number(value);
+ if(!Number.isFinite(v))return "";
+ if(field==="wind")return v<10?"mt-blue":v<20?"mt-green":v<30?"mt-yellow":v<45?"mt-orange":v<60?"mt-red":"mt-purple";
+ if(field==="precip")return Number(v.toFixed(1))===0?"mt-gray":v<.1?"mt-blue":v<1?"mt-green":v<2.5?"mt-yellow":v<5?"mt-orange":v<10?"mt-red":"mt-purple";
+ if(field==="t2m")return v<0?"mt-blue":v<8?"mt-green":v<16?"mt-yellow":v<24?"mt-orange":v<32?"mt-red":"mt-purple";
+ if(field==="t850")return v< -10?"mt-blue":v< -2?"mt-green":v<6?"mt-yellow":v<14?"mt-orange":v<22?"mt-red":"mt-purple";
+ return "";
+}
+function meteoptTableValue(value,field,digits=1){
+ if(value==null)return '<span class="meteopt-value">—</span>';
+ const band=meteoptTableBand(field,value);
+ return '<span class="meteopt-value '+band+'">'+fmt(value,digits)+'</span>';
+}
 function renderF72(d){
  const pts=pointsOf(d,72);
  const body=$("meteopt-table-body");
- body.innerHTML=pts.length?pts.map(p=>'<tr><td>F'+p.forecast_hour+'</td><td>'+ts(p.valid_time_utc)+'</td><td>'+fmt(num(p.wind_speed_10m_kmh),0)+'</td><td>'+fmt(num(p.wind_speed_850hpa_kmh),0)+'</td><td>'+fmt(num(p.precipitation_6h_mm))+'</td><td>'+fmt(num(p.temperature_2m_c))+'</td><td>'+fmt(num(p.temperature_850hpa_c))+'</td></tr>').join(""):'<tr><td colspan="7" class="meteopt-table-empty">F72 adımları henüz yok.</td></tr>';
+ body.innerHTML=pts.length?pts.map(p=>'<tr><td>F'+p.forecast_hour+'</td><td>'+ts(p.valid_time_utc)+'</td><td>'+meteoptTableValue(num(p.wind_speed_10m_kmh),"wind",0)+'</td><td>'+meteoptTableValue(num(p.wind_speed_850hpa_kmh),"wind",0)+'</td><td>'+meteoptTableValue(num(p.precipitation_6h_mm),"precip")+'</td><td>'+meteoptTableValue(num(p.temperature_2m_c),"t2m")+'</td><td>'+meteoptTableValue(num(p.temperature_850hpa_c),"t850")+'</td></tr>').join(""):'<tr><td colspan="7" class="meteopt-table-empty">F72 adımları henüz yok.</td></tr>';
  $("meteopt-table-status").textContent=pts.length+" / 24 adım";
  $("meteopt-table-run").textContent="Model döngüsü: "+ts(d.run_id_utc);
  $("meteopt-table-updated").textContent="Yayın: "+ts(d.published_at_utc);
