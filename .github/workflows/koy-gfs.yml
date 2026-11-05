@@ -177,7 +177,7 @@ jobs:
           if [ -s gfs/comparison.json ]; then
             current_run="$(python -c 'import json; print(json.load(open("gfs/comparison.json"))["runs"][0]["run_id_utc"])')"
             stamp="$(python -c 'from datetime import datetime; import sys; print(datetime.fromisoformat(sys.argv[1].replace("Z","+00:00")).strftime("%Y%m%dT%HZ"))' "$current_run")"
-            renderer_version="tsi-utc-plus-3-v1"
+            renderer_version="tsi-cycle-plus-3-valid-local-v2"
             stored_renderer_version="$(cat gfs/media/.koy-renderer-version 2>/dev/null || true)"
             if [ "$stored_renderer_version" != "$renderer_version" ] || [ ! -s "gfs/media/koy-gfs-${stamp}-temperature.png" ] || [ ! -s "gfs/media/koy-gfs-${stamp}-temperature_850.png" ] || [ ! -s "gfs/media/koy-gfs-${stamp}-precipitation.png" ] || [ ! -s "gfs/media/koy-gfs-${stamp}-wind_10m.png" ]; then
               python -m pip install -q matplotlib
@@ -190,7 +190,9 @@ jobs:
           spec.loader.exec_module(module)
           assert module.runlabel("2026-11-05T00:00:00+00:00") == "00Z | 05.11 03:00 TSİ"
           assert module.runlabel("2026-11-05T12:00:00+00:00") == "12Z | 05.11 15:00 TSİ"
-          print("Köy GFS timezone checks passed: 00Z=03:00 TSİ, 12Z=15:00 TSİ.")
+          assert module.validlabel("2026-11-05T03:00+00:00") == "05.11 03:00 TSİ"
+          assert module.validlabel("2026-11-06T00:00+00:00") == "06.11 00:00 TSİ"
+          print("Köy GFS timezone checks passed: cycle 00Z=03:00 TSİ; first valid time remains 03:00 TSİ.")
           PY
               KOY_GFS_DIR="$PWD/gfs" python "$RUNNER_TEMP/render_koy_gfs_charts.py"
               printf '%s\n' "$renderer_version" > gfs/media/.koy-renderer-version
