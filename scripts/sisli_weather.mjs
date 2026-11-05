@@ -155,6 +155,7 @@ async function main() {
     observed_at_utc: observation.observed_at_utc,
     temperature_2m_c: observation.temperature_2m_c,
     precipitation_1h_mm: observation.precipitation_1h_mm,
+    precipitation_10m_mm: observation.precipitation_10m_mm,
     precipitation_6h_mm: observation.precipitation_6h_mm,
     precipitation_12h_mm: observation.precipitation_12h_mm,
     precipitation_24h_mm: observation.precipitation_24h_mm,
@@ -164,6 +165,7 @@ async function main() {
   if (last && lastTime === curTime) {
     last.temperature_2m_c = sample.temperature_2m_c;
     last.precipitation_1h_mm = sample.precipitation_1h_mm;
+    last.precipitation_10m_mm = sample.precipitation_10m_mm;
     last.precipitation_6h_mm = sample.precipitation_6h_mm;
     last.precipitation_12h_mm = sample.precipitation_12h_mm;
     last.precipitation_24h_mm = sample.precipitation_24h_mm;
@@ -173,12 +175,26 @@ async function main() {
   } else if (!last || Math.abs(curTime - lastTime) > 60000) {
     samples.push(sample);
   }
-  const cutoff = now.getTime() - 14 * 24 * 60 * 60 * 1000;
-  const retained = samples.filter(item => Date.parse(item.logged_at_utc || item.observed_at_utc) >= cutoff).slice(-4500);
+  // Persistent 72-hour station time-series archive for retrospective chart work.
+  // Keep the observed timestamp as the archive clock; logged_at is only fetch metadata.
+  const retentionHours = 72;
+  const cutoff = now.getTime() - retentionHours * 60 * 60 * 1000;
+  const retained = samples
+    .filter(item => {
+      const observed = Date.parse(item.observed_at_utc || item.logged_at_utc || "");
+      return Number.isFinite(observed) && observed >= cutoff && observed <= now.getTime() + 5 * 60 * 1000;
+    })
+    .sort((a, b) => Date.parse(a.observed_at_utc || a.logged_at_utc) - Date.parse(b.observed_at_utc || b.logged_at_utc))
+    .slice(-900);
   writeJsonAtomic(historyPath, {
     schema: HISTORY_SCHEMA,
     station_id: STATION_ID,
     station_name: "Şişli",
+    retention_hours: retentionHours,
+    sampling_interval_minutes: 5,
+    rainfall_source_interval_minutes: 10,
+    rainfall_chart_window_minutes: 60,
+    rolling_hour_precipitation_window_minutes: 60,
     updated_at_utc: now.toISOString(),
     samples: retained
   });
