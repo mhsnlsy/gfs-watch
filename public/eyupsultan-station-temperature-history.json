@@ -8,43 +8,8 @@
   "rainfall_chart_window_minutes": 60,
   "rainfall_chart_step_minutes": 60,
   "rolling_hour_precipitation_window_minutes": 60,
-  "updated_at_utc": "2026-11-05T11:50:05.312Z",
+  "updated_at_utc": "2026-11-05T12:15:11.863Z",
   "samples": [
-    {
-      "logged_at_utc": "2026-11-02T12:00:20.778Z",
-      "observed_at_utc": "2026-11-02T11:54:00.000Z",
-      "temperature_2m_c": 21.6,
-      "precipitation_daily_mm": 1,
-      "station_pressure_hpa": 1017.4
-    },
-    {
-      "logged_at_utc": "2026-11-02T12:05:16.023Z",
-      "observed_at_utc": "2026-11-02T11:59:00.000Z",
-      "temperature_2m_c": 21.6,
-      "precipitation_daily_mm": 1,
-      "station_pressure_hpa": 1017.4
-    },
-    {
-      "logged_at_utc": "2026-11-02T12:10:14.635Z",
-      "observed_at_utc": "2026-11-02T12:04:00.000Z",
-      "temperature_2m_c": 21.4,
-      "precipitation_daily_mm": 1,
-      "station_pressure_hpa": 1017.4
-    },
-    {
-      "logged_at_utc": "2026-11-02T12:15:13.652Z",
-      "observed_at_utc": "2026-11-02T12:09:00.000Z",
-      "temperature_2m_c": 21.4,
-      "precipitation_daily_mm": 1,
-      "station_pressure_hpa": 1017.4
-    },
-    {
-      "logged_at_utc": "2026-11-02T12:20:19.121Z",
-      "observed_at_utc": "2026-11-02T12:14:00.000Z",
-      "temperature_2m_c": 21.3,
-      "precipitation_daily_mm": 1,
-      "station_pressure_hpa": 1017.4
-    },
     {
       "logged_at_utc": "2026-11-02T12:25:19.557Z",
       "observed_at_utc": "2026-11-02T12:19:00.000Z",
@@ -8113,6 +8078,18 @@
       "precipitation_1h_mm": 0,
       "precipitation_10m_mm": 0,
       "precipitation_6h_mm": 0.4,
+      "precipitation_12h_mm": 0.6,
+      "precipitation_24h_mm": 19.5,
+      "precipitation_daily_mm": 0.6,
+      "station_pressure_hpa": 1020.8
+    },
+    {
+      "logged_at_utc": "2026-11-05T12:15:11.863Z",
+      "observed_at_utc": "2026-11-05T12:09:00.000Z",
+      "temperature_2m_c": 11.2,
+      "precipitation_1h_mm": 0,
+      "precipitation_10m_mm": 0,
+      "precipitation_6h_mm": 0,
       "precipitation_12h_mm": 0.6,
       "precipitation_24h_mm": 19.5,
       "precipitation_daily_mm": 0.6,
