@@ -4119,98 +4119,59 @@ async def main():
 
 
 async def run_scheduled_watch():
-    """Watch and process every newly completed six-hour GFS cycle."""
+    """Poll MeteoPT's active GFS run every configured interval for the full window."""
     init_db()
-    window_minutes = max(10, int(os.getenv("GFS_WATCH_WINDOW_MINUTES", "330")))
-    poll_seconds = max(60, int(os.getenv("GFS_WATCH_POLL_SECONDS", "300")))
-    configured_target = os.getenv("GFS_WATCH_TARGET_RUN_ID", "").strip()
-    target_run_id = (
-        _parse_utc_datetime(configured_target).isoformat(timespec="seconds")
-        if configured_target
-        else None
-    )
+    window_minutes = max(10, int(os.getenv("GFS_WATCH_WINDOW_MINUTES", "10")))
+    poll_seconds = max(60, int(os.getenv("GFS_WATCH_POLL_SECONDS", "600")))
     deadline = time.monotonic() + window_minutes * 60
     next_poll_at = time.monotonic()
-
-    if target_run_id:
-        print(
-            f"[WATCH START] Açıkça seçilmiş GFS döngüsü: {target_run_id}; "
-            f"izleme {window_minutes} dakika, kontrol aralığı {poll_seconds} saniye."
-        )
-    else:
-        print(
-            "[WATCH START] MeteoPT açık döngüsü +40, +120 ve +170'te paketlenir. "
-            "+180 satırı düşünce önbellek toparlanır; Telegram ve sayfa aynı paketten gider. "
-            f"Kontrol {poll_seconds} saniye, oturum {window_minutes} dakika."
-        )
-
-    if not target_run_id:
-        target_run_id = scheduled_istanbul_gfs_run().isoformat(timespec="seconds")
-        os.environ["GFS_WATCH_TARGET_RUN_ID"] = target_run_id
-    print(f"[ISTANBUL SLOT LOCK] Bu oturum yalnızca {target_run_id} döngüsünü tarayacak.")
-    existing_runs = await asyncio.to_thread(get_processed_run_ids)
-    if target_run_id and target_run_id in existing_runs:
-        print(f"[WATCH SKIP] {target_run_id} daha önce işlendi.")
-        return
+    print(
+        f"[WATCH START] MeteoPT active-run discovery; "
+        f"window={window_minutes} min, poll={poll_seconds} sec. "
+        "Every poll reads the source's own run token; no fixed Istanbul slot."
+    )
 
     while time.monotonic() < deadline:
         processed_before = await asyncio.to_thread(get_processed_run_ids)
         try:
             staged = await stage_open_meteopt_cycle(processed_before)
         except Exception as exc:
-            staged = None
-            print(f"[PAKET HATA] {type(exc).__name__}: {exc}")
-        if staged is False:
-            print("[PAKET] +180 henüz yok. Hazır saatler diskte. Rapor başlatılmadı.")
-        else:
-            try:
-                await process_gfs_update(strict=False, target_run_id=target_run_id)
-            except Exception as exc:
-                print(
-                    f"[WATCH RETRY] Rapor işlemi sırasında hata: "
-                    f"{type(exc).__name__}: {exc}"
-                )
-            if staged is True:
-                print("[WATCH COMPLETE] +180 hazırdı. Bir kez işlendi, 80 dakika beklenmiyor.")
-                return
-            if staged is None:
-                print("[WATCH COMPLETE] Açık döngü yok. İzleme kapanıyor.")
-                return
+            staged = False
+            print(f"[METEOPT STAGE ERROR] {type(exc).__name__}: {exc}")
 
-        # process_gfs_update handles one eligible cycle at a time. If it saved
-        # a new cycle, immediately call it again so multiple ready cycles are
-        # caught up chronologically without waiting another five minutes.
+        # Do not pass a stale target run into the processing path. It discovers
+        # the active cycle directly from MeteoPT and only emits after f180.
+        try:
+            await process_gfs_update(strict=False, target_run_id=None)
+        except Exception as exc:
+            print(f"[WATCH RETRY] GFS processing error: {type(exc).__name__}: {exc}")
+
         processed_after = await asyncio.to_thread(get_processed_run_ids)
         newly_processed = sorted(processed_after - processed_before)
-        if target_run_id and target_run_id in processed_after:
-            print(
-                f"[WATCH COMPLETE] {target_run_id} işlendi ve rapor süreci tamamlandı."
-            )
-            return
         if newly_processed:
             print(
-                "[WATCH CATCH-UP] Yeni işlenen döngü(ler): "
+                "[WATCH CYCLE PUBLISHED] "
                 + ", ".join(newly_processed)
-                + ". Rapor çıktı; sayfa yayını beklememesi için izleme kapanıyor."
+                + "; Pages payload and Telegram notification steps were attempted."
             )
+
+        if staged is True:
+            print("[WATCH F180 READY] Active MeteoPT cycle reached f180; publish path completed.")
             return
 
         next_poll_at += poll_seconds
-        current_monotonic = time.monotonic()
-        if next_poll_at <= current_monotonic:
-            missed_intervals = (
-                int((current_monotonic - next_poll_at) // poll_seconds) + 1
-            )
-            next_poll_at += missed_intervals * poll_seconds
-
-        remaining_window = deadline - current_monotonic
-        if remaining_window <= 0:
+        now_mono = time.monotonic()
+        if next_poll_at <= now_mono:
+            missed = int((now_mono - next_poll_at) // poll_seconds) + 1
+            next_poll_at += missed * poll_seconds
+        remaining = deadline - now_mono
+        if remaining <= 0:
             break
-        await asyncio.sleep(min(next_poll_at - current_monotonic, remaining_window))
+        await asyncio.sleep(min(next_poll_at - now_mono, remaining))
 
     print(
-        f"[WATCH WINDOW COMPLETE] {window_minutes} dakikalık izleme oturumu tamamlandı. "
-        "Kısmi NOAA önbelleği Actions Cache'e kaydedilecek; workflow yeni oturum açacak."
+        f"[WATCH WINDOW COMPLETE] {window_minutes} min watch ended. "
+        "The next scheduled 10-minute Actions invocation will query MeteoPT again."
     )
 
 
