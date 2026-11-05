@@ -57,10 +57,10 @@
       const temp2 = point ? number(point.temperature_2m_c) : null;
       const temp850 = point ? number(point.temperature_850hpa_c) : null;
       const values = [
+        valueCell(temp2, "t2m"),
+        valueCell(precip, "precip"),
         valueCell(wind10, "wind", 0),
         valueCell(wind850, "wind", 0),
-        valueCell(precip, "precip"),
-        valueCell(temp2, "t2m"),
         valueCell(temp850, "t850")
       ];
       rows.push('<tr><td>' + item.step + '</td><td>' + dateLabel(point, document.run_id_utc, item.step) + '</td>' + values.map(value => '<td>' + value + '</td>').join("") + '</tr>');
