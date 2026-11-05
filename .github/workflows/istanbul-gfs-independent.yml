@@ -223,7 +223,7 @@ jobs:
           find state/gfs/runs -type f -name '*.json' -mtime +45 -delete
 
           python -m pip install -r source/requirements.txt
-          GFS_SOURCE_ROOT="$GITHUB_WORKSPACE/source" python source/scripts/build_istanbul_gfs_publication.py
+          (cd state && GFS_SOURCE_ROOT="$GITHUB_WORKSPACE/source" python ../source/scripts/build_istanbul_gfs_publication.py)
 
           cd state
           git config user.name "github-actions[bot]"
