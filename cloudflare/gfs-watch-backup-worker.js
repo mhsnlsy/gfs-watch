@@ -74,6 +74,24 @@ export default {
     }
     console.log(`Main station workflow tick dispatched for ${new Date(controller.scheduledTime).toISOString()}`);
 
+    // Eyüpsultan has its own workflow and concurrency lock. It receives a
+    // separate event so ENKA/Şişli collection and publication cannot block it.
+    const eyupsultanTick = await fetch(`https://api.github.com/repos/${OWNER}/${REPO}/dispatches`, {
+      method: "POST",
+      headers: { ...headers, "Content-Type": "application/json" },
+      body: JSON.stringify({
+        event_type: "eyupsultan-mgm-clock",
+        client_payload: {
+          source: "cloudflare-cron",
+          scheduled_at_utc: new Date(controller.scheduledTime).toISOString()
+        }
+      })
+    });
+    if (eyupsultanTick.status !== 204) {
+      throw new Error(`Eyüpsultan MGM dispatch failed ${eyupsultanTick.status}: ${await eyupsultanTick.text()}`);
+    }
+    console.log(`Eyüpsultan MGM workflow tick dispatched for ${new Date(controller.scheduledTime).toISOString()}`);
+
     // Keep the existing GFS backup check unchanged; it only applies during
     // the Istanbul time-slot window below.
     if (minute < 40 || minute > 59) return;
