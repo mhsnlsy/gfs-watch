@@ -1,18 +1,16 @@
 name: Main Station Data Refresh
 
 on:
-  # Primary five-minute station collection schedule.
+  # Same main-branch push trigger used by Köy MGM, plus the five-minute schedule.
   schedule:
     - cron: "*/5 * * * *"
   workflow_dispatch:
   push:
     branches: [main]
-    paths:
-      - ".github/workflows/main-station-refresh.yml"
-      - "scripts/eyupsultan_weather.mjs"
-      - "scripts/sisli_weather.mjs"
-      - "scripts/update_station_observation.py"
-      - "enka_weather.py"
+    # Station results are committed to site/data by this workflow.
+    # Ignore those commits to prevent a self-triggering publication loop.
+    paths-ignore:
+      - "site/data/**"
 
 permissions:
   contents: write
