@@ -1124,6 +1124,24 @@
       .gfs-point-tooltip-value{font-size:14px}
     }
   </style>
+  <style id="koy-fullframe-png-styles">
+    /* Match İstanbul's report cards: one image frame, no nested card or inset padding. */
+    .koy-fullframe-images{grid-template-columns:repeat(2,minmax(0,1fr));align-items:start}
+    .koy-fullframe-images .notification-image-item{min-width:0}
+    .koy-fullframe-images .chart-wrap{width:100%;margin:0;overflow:visible}
+    .koy-fullframe-images .notification-image-link{
+      display:block;width:100%;margin:0;border:1px solid var(--line);
+      border-radius:12px;overflow:hidden;background:#0b1c29;
+    }
+    .koy-fullframe-images .notification-image{
+      display:block;width:100%;height:auto;max-width:100%;max-height:none;
+      object-fit:contain;margin:0;
+    }
+    @media(max-width:560px){
+      .koy-fullframe-images{grid-template-columns:minmax(0,1fr);gap:10px}
+      .koy-fullframe-images .notification-image-caption{margin-bottom:5px}
+    }
+  </style>
 </head>
 <body>
   <header class="shell topbar">
@@ -1219,11 +1237,11 @@
     </div>
     <div class="notification-summary" id="report-summary">Çanakçı MGM gerçek istasyon ölçümü ile MeteoPT GFS model tahmini ayrı kaynaklardır.</div>
     <div class="comparison-heading">SON 4 GFS DÖNGÜSÜ · KIYASLAMA</div>
-    <div class="notification-images">
-      <div class="notification-image-item"><div class="notification-image-caption">Sıcaklık · 2 m</div><div class="chart-card"><div id="chart-temp" class="chart-wrap"></div></div></div>
-      <div class="notification-image-item"><div class="notification-image-caption">Sıcaklık · 850 hPa</div><div class="chart-card"><div id="chart-t850" class="chart-wrap"></div></div></div>
-      <div class="notification-image-item"><div class="notification-image-caption">Yağış · 6 saatlik</div><div class="chart-card"><div id="chart-rain" class="chart-wrap"></div></div></div>
-      <div class="notification-image-item"><div class="notification-image-caption">Rüzgâr hızı · 10 m</div><div class="chart-card"><div id="chart-wind" class="chart-wrap"></div></div></div>
+    <div class="notification-images koy-fullframe-images">
+      <div class="notification-image-item"><div class="notification-image-caption">Sıcaklık · 2 m</div><div id="chart-temp" class="chart-wrap"></div></div>
+      <div class="notification-image-item"><div class="notification-image-caption">Sıcaklık · 850 hPa</div><div id="chart-t850" class="chart-wrap"></div></div>
+      <div class="notification-image-item"><div class="notification-image-caption">Yağış · 6 saatlik</div><div id="chart-rain" class="chart-wrap"></div></div>
+      <div class="notification-image-item"><div class="notification-image-caption">Rüzgâr hızı · 10 m</div><div id="chart-wind" class="chart-wrap"></div></div>
     </div>
   </article>
 </div>
