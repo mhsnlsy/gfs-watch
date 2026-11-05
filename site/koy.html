@@ -1067,17 +1067,16 @@
 <header class="shell topbar">
 <a class="brand" href="./index.html" aria-label="İstanbul'un Havası ana sayfa"><span class="brand-mark">☀</span><span>İstanbul'un Havası<small>Şehir için hava tahmini</small></span></a>
 <nav aria-label="Ana gezinme"><a href="./index.html">Ana sayfa</a><a href="#koy-tahmin">72 saat</a><a href="#koy-rapor">GFS raporu</a><a href="#koy-tablosu">Model tablosu</a></nav>
-<div class="top-right"><span class="version">KÖY · ÇANAKÇI</span></div>
+<div class="top-right"><div class="model-picker" role="group" aria-label="Tahmin modeli"><button type="button" class="active" aria-pressed="true">GFS</button><button type="button" aria-pressed="false">ECMWF IFS</button></div><span class="version">KÖY · ÇANAKÇI</span></div>
 </header>
-<main class="shell">
-<section class="dashboard-top koy-dashboard" id="koy-tahmin" aria-label="Giresun Çanakçı Köy GFS tahmini">
+<main class="shell" data-ui-build="koy-carbon-copy-2026-11-05">
+<section class="dashboard-top" id="koy-tahmin" aria-label="Giresun Çanakçı GFS tahmini ve son 24 saat MGM ölçümleri">
 <div class="dashboard-left">
-<article class="weather-card station-card">
-<div class="weather-top"><div><div class="label">METEOPT GFS · KÖY TAHMİNİ</div><div class="place">Giresun · Çanakçı</div></div><span class="model-state" id="f72-chip">Veri bekleniyor</span></div>
+<article class="weather-card station-card" role="region" aria-labelledby="station-card-title">
+<div class="weather-top"><div><div class="label">METEOPT GFS · KÖY TAHMİNİ</div><div class="place" id="station-card-title">Giresun · Çanakçı</div></div><span class="model-state" id="f72-chip">GFS · hazır</span></div>
 <div class="station-overview"><div class="station-current">
 <div class="temp-row"><div class="temperature" id="current-temp">—°</div><div class="weather-symbol" id="current-symbol">🌦️</div></div>
-<div class="koy-current-meta" id="current-meta">En yakın tahmin adımı bekleniyor.</div>
-<div class="koy-location-tag">40.9557° N · 39.0065° E</div>
+<div class="temp-meta"><div class="temp-caption" id="current-meta">İlk tahmin adımı bekleniyor</div><div class="koy-location-tag">40.9557° N · 39.0065° E</div></div>
 </div></div>
 <div class="weather-stats">
 <div class="stat"><div class="name">Model adımı</div><div class="value" id="current-step">—</div><div class="detail">F tahmin</div></div>
@@ -1087,24 +1086,14 @@
 <div class="stat"><div class="name">Yağış</div><div class="value" id="current-rain">—<span class="unit">mm</span></div><div class="detail">6 saatlik birikim</div></div>
 <div class="stat"><div class="name">Geçerlilik</div><div class="value" id="current-valid">—</div><div class="detail">TSİ</div></div>
 </div>
-<section class="station-history-inline history-panel" id="station-history-panel" aria-label="Çanakçı GFS son 24 saat geçmişi">
-  <div class="history-panel-head">
-    <div><div class="section-kicker" id="history-station-source">ÇANAKÇI · GERÇEK ÖLÇÜMLER</div><h2>Son 24 saat</h2></div>
-  </div>
-  <div class="history-charts">
-    <article class="history-chart-card">
-      <div class="history-chart-head"><div><h3>Sıcaklık</h3><p>°C · 30 dk ortalama, min–maks</p></div><span class="history-chart-icon">℃</span></div>
-      <div class="history-chart" id="station-temperature-trend"><div class="station-trend-empty">Sıcaklık geçmişi bekleniyor…</div></div>
-      <div class="history-chart-meta" id="station-trend-meta">Çanakçı · MGM · son 24 saat</div>
-    </article>
-    <article class="history-chart-card">
-      <div class="history-chart-head"><div><h3 id="station-rain-title">Yağış</h3><p id="station-rain-caption">mm · kayan 1 saatlik toplam</p></div><span class="history-chart-icon">☂</span></div>
-      <div class="history-chart" id="station-rain-trend"><div class="station-trend-empty">Yağış geçmişi bekleniyor…</div></div>
-      <div class="history-chart-meta" id="station-rain-meta">Çanakçı · MGM · son 1 saat</div>
-    </article>
-  </div>
-  <div class="history-source-note" id="history-source-note">Sıcaklık ve yağış: MGM Çanakçı gerçek istasyon ölçümleri.</div>
-</section></div>
+<section class="station-history-inline history-panel" id="station-history-panel" aria-label="Çanakçı MGM son 24 saat gerçek ölçümleri">
+<div class="history-panel-head"><div><div class="section-kicker" id="history-station-source">ÇANAKÇI · GERÇEK ÖLÇÜMLER</div><h2>Son 24 saat</h2></div></div>
+<div class="history-charts">
+<article class="history-chart-card"><div class="history-chart-head"><div><h3>Sıcaklık</h3><p>°C · 30 dk ortalama, min–maks</p></div><span class="history-chart-icon">℃</span></div><div class="history-chart" id="station-temperature-trend"><div class="station-trend-empty">Sıcaklık geçmişi bekleniyor…</div></div><div class="history-chart-meta" id="station-trend-meta">Çanakçı · MGM · son 24 saat</div></article>
+<article class="history-chart-card"><div class="history-chart-head"><div><h3 id="station-rain-title">Yağış</h3><p id="station-rain-caption">mm · kayan 1 saatlik toplam</p></div><span class="history-chart-icon">☂</span></div><div class="history-chart" id="station-rain-trend"><div class="station-trend-empty">Yağış geçmişi bekleniyor…</div></div><div class="history-chart-meta" id="station-rain-meta">Çanakçı · MGM · son 1 saat</div></article>
+</div>
+<div class="history-source-note" id="history-source-note">Sıcaklık ve yağış: MGM Çanakçı gerçek istasyon ölçümleri.</div>
+</section>
 </article>
 </div>
 <section class="next-72h-panel" aria-label="Önümüzdeki 72 saat">
@@ -1113,42 +1102,43 @@
 <article class="next-72h-card"><div class="next-72h-card-head"><h3>Sıcaklık</h3><span>°C</span></div><div class="next-72h-chart" id="next72-temperature"><div class="chart-empty">Tahmin bekleniyor…</div></div></article>
 <article class="next-72h-card"><div class="next-72h-card-head"><h3>Yağış</h3><span>mm / 6 saat</span></div><div class="next-72h-chart" id="next72-precipitation"><div class="chart-empty">Tahmin bekleniyor…</div></div></article>
 </div>
-<div class="koy-rain-times"><strong>Yağış saatleri</strong><div id="rain-times">Tahmin verisi bekleniyor…</div></div>
-<div class="koy-briefing"><div class="koy-brief-row"><b>5 günlük sıcaklık</b><span id="five-day-summary">GFS verisi bekleniyor…</span></div></div>
+<div class="briefing" id="briefing">
+<div class="briefing-row" id="brief-rain"><div class="briefing-k">Yağış saatleri</div><div class="briefing-v" id="rain-times">Tahmin verisi bekleniyor…</div></div>
+<div class="briefing-row" id="brief-temperature-trend-row"><div class="briefing-k">5 günlük sıcaklık</div><div class="briefing-v" id="five-day-summary">GFS verisi bekleniyor…</div></div>
+</div>
 </section>
 </section>
-
-<div id="koy-rapor">
-<section class="section">
-<div class="section-head report-head"><div><div class="section-kicker">SON KÖY GFS RAPORU</div><h2>Son model raporu</h2><p class="section-description">MeteoPT GFS · Son dört yayımlanmış döngü</p></div><div class="notification-controls"><button class="notification-button" id="refresh" type="button">Verileri yenile</button><span class="notification-status" id="updated">Son kontrol bekleniyor</span></div></div>
+<div id="gfs-model-view">
+<section class="section" id="koy-rapor">
+<div class="section-head report-head">
+<div><div class="section-kicker">SON GFS RAPORU</div><h2>Son hava raporu</h2><p class="section-description">MeteoPT GFS · Son dört yayımlanmış döngü</p></div>
+<div class="notification-controls"><button class="notification-button" id="refresh" type="button">Verileri yenile</button><span class="notification-status" id="updated">Son kontrol bekleniyor</span></div>
+</div>
 <article class="notification-card">
-<div class="notification-card-top"><div><div class="notification-kicker">GFS MODEL BİLDİRİMİ</div><h3>Giresun Çanakçı GFS tahmin raporu</h3><div class="notification-meta" id="report-meta">Son model döngüsü bekleniyor</div></div><span class="notification-dot"></span></div>
+<div class="notification-card-top"><div><div class="notification-kicker">GFS MODEL BİLDİRİMİ</div><h3>Giresun · Çanakçı GFS tahmin raporu</h3><div class="notification-meta" id="report-meta">Son model döngüsü bekleniyor</div></div><span class="notification-dot"></span></div>
 <div class="comparison-heading">SON 4 GFS DÖNGÜSÜ · KIYASLAMA</div>
 <div class="koy-run-legend" id="chart-legend"></div>
 <div class="koy-chart-grid">
 <article class="koy-chart-card"><h3>Sıcaklık</h3><p>2 m · Günlük min–maks aralığı</p><div class="koy-chart" id="chart-temp"><div class="chart-empty">Grafik verisi bekleniyor…</div></div></article>
 <article class="koy-chart-card"><h3>Sıcaklık · 850 hPa</h3><p>Günlük min–maks aralığı</p><div class="koy-chart" id="chart-t850"><div class="chart-empty">Grafik verisi bekleniyor…</div></div></article>
 <article class="koy-chart-card"><h3>Yağış</h3><p>6 saatlik birikim · çizgi eğilimi</p><div class="koy-chart" id="chart-rain"><div class="chart-empty">Grafik verisi bekleniyor…</div></div></article>
-<article class="koy-chart-card"><h3>Rüzgâr hızı · 10 m</h3><p>Günlük maksimum hız</p><div class="koy-chart" id="chart-wind"><div class="chart-empty">Grafik verisi bekleniyor…</div></div></article>
+<article class="koy-chart-card"><h3>Rüzgâr hızı · 10 m</h3><p>Günlük maksimum hız</p><div class="koy-chart" id="chart-wind"><div class="koy-chart" id="chart-wind"><div class="chart-empty">Grafik verisi bekleniyor…</div></div></article>
 </div>
-<div class="report-text" style="margin-top:16px"><div id="run-list">Son dört döngü verisi bekleniyor…</div></div>
+<div class="report-text"><div id="run-list">Son dört döngü verisi bekleniyor…</div></div>
 </article>
 </section>
-</div>
-
-<div class="water-gfs-layout">
 <section class="section" id="koy-tablosu" aria-label="MeteoPT GFS ham model tablosu">
 <div class="section-head"><div><div class="section-kicker">METEOPT GFS</div><h2>GFS · İlk 72 saat</h2></div><div class="section-note"><span id="table-run">Model döngüsü bekleniyor</span><br><span id="table-updated">Veri bekleniyor</span></div></div>
 <article class="meteopt-table-card">
 <div class="meteopt-table-toolbar"><span class="meteopt-table-source"><span class="meteopt-table-dot"></span> Kaynak: MeteoPT GFS</span><span id="table-status" role="status">Veri yükleniyor…</span></div>
-<div class="koy-table-scroll"><table class="meteopt-data-table"><thead><tr><th>Steps</th><th>Date/Hour (TSİ)</th><th>W.10m</th><th>W.850</th><th>Prec.</th><th>T.2m</th><th>T.850</th></tr></thead><tbody id="rows"><tr><td colspan="7" class="meteopt-table-empty">MeteoPT verisi bekleniyor…</td></tr></tbody></table></div>
+<div class="meteopt-table-scroll"><table class="meteopt-data-table"><thead><tr><th>Steps</th><th>Date/Hour (TSİ)</th><th>W.10m</th><th>W.850</th><th>Prec.</th><th>T.2m</th><th>T.850</th></tr></thead><tbody id="rows"><tr><td colspan="7" class="meteopt-table-empty">MeteoPT verisi bekleniyor…</td></tr></tbody></table></div>
 </article>
 </section>
-<aside class="section"><div class="section-head"><div><div class="section-kicker">MGM · ÇANAKÇI</div><h2>İlçe tahmini</h2></div></div><article class="iski-mini-card">
-<div class="koy-source-card"><div class="label">AYRI MGM VERİ AKIŞI</div><p>Çanakçı ilçe tahmini, Köy GFS akışından bağımsız olarak ayrı MGM iş akışında arşivlenir. Bu kart MGM kaynağına doğrudan erişim sağlar.</p><p><a href="https://mgm.gov.tr/tahmin/il-ve-ilceler.aspx?il=Giresun&amp;ilce=%C3%87anak%C3%A7%C4%B1" target="_blank" rel="noopener">MGM · Giresun / Çanakçı tahminini aç</a></p></div>
-</article></aside>
+</div>
+<div class="water-gfs-layout">
+<aside class="section" id="koy-mgm-card"><div class="section-head"><div><div class="section-kicker">MGM · ÇANAKÇI</div><h2>İlçe tahmini</h2></div></div><article class="iski-mini-card"><div class="koy-source-card"><div class="label">AYRI MGM VERİ AKIŞI</div><p>Çanakçı ilçe tahmini, Köy GFS akışından bağımsız olarak ayrı MGM iş akışında arşivlenir.</p><p><a href="https://mgm.gov.tr/tahmin/il-ve-ilceler.aspx?il=Giresun&amp;ilce=%C3%87anak%C3%A7%C4%B1" target="_blank" rel="noopener">MGM · Giresun / Çanakçı tahminini aç</a></p></div></article></aside>
 </div>
 </main>
 <footer class="shell footer"><span><strong>İstanbul'un Havası</strong> · Köy modülü</span><span>Kaynak: MeteoPT GFS · MGM Çanakçı · Bağımsız veri akışları</span></footer>
-<script src="./koy.js?v=20261105-homepage-layout-2" defer></script>
+<script src="./koy.js?v=20261105-carbon-copy-1" defer></script>
 </body></html>
