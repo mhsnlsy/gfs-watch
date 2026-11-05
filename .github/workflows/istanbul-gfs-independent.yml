@@ -1,6 +1,10 @@
 name: İstanbul GFS Independent
 
 on:
+  push:
+    branches: [main]
+    paths:
+      - ".github/workflows/istanbul-gfs-independent.yml"
   schedule:
     - cron: "*/5 * * * *"
   workflow_dispatch:
