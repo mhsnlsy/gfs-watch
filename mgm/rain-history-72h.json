@@ -12,11 +12,11 @@
     "precipitation_12h_mm": "MGM trailing 12-hour accumulation",
     "precipitation_24h_mm": "MGM trailing 24-hour accumulation"
   },
-  "updated_at_utc": "2026-11-05T08:55:11.001056+00:00",
+  "updated_at_utc": "2026-11-05T08:55:27.648321+00:00",
   "samples": [
     {
       "observed_at_utc": "2026-11-05T08:49:00.000Z",
-      "logged_at_utc": "2026-11-05T08:55:11.001056+00:00",
+      "logged_at_utc": "2026-11-05T08:55:27.648321+00:00",
       "precipitation_10m_mm": 2.2,
       "precipitation_1h_mm": 10.4,
       "precipitation_6h_mm": 104.6,
