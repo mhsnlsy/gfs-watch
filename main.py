@@ -1928,20 +1928,34 @@ def _payload_reaches_f180(payload):
 
 
 def scheduled_istanbul_gfs_run(now=None):
-    """Return the single GFS cycle assigned to the current Istanbul half-day slot."""
-    local_now = now or datetime.now(TR_TZ)
+    """Return the GFS cycle whose f180 publication window is currently active.
+
+    MeteoPT's four daily GFS outputs are published on the Istanbul schedule:
+    00Z -> 07:20, 06Z -> 13:20, 12Z -> 19:20, 18Z -> 01:20.
+    The monitor therefore checks the cycle assigned to the current window on
+    every 10-minute invocation instead of trusting MeteoPT's generic 'active'
+    run token, which may remain on an older cycle while the next run is updating.
+    """
+    local_now = (now or datetime.now(TR_TZ)).astimezone(TR_TZ)
     minute = local_now.hour * 60 + local_now.minute
-    if 30 <= minute < 390:       # 00:30–06:30 TSİ -> previous day's 18Z
-        day, hour = local_now.date() - timedelta(days=1), 18
-    elif 390 <= minute < 750:    # 06:30–12:30 TSİ -> today's 00Z
+
+    if minute >= 7 * 60 + 20 and minute < 13 * 60 + 20:
         day, hour = local_now.date(), 0
-    elif 750 <= minute < 1110:   # 12:30–18:30 TSİ -> today's 06Z
+    elif minute >= 13 * 60 + 20 and minute < 19 * 60 + 20:
         day, hour = local_now.date(), 6
-    else:                        # 18:30–00:30 TSİ -> today's 12Z
+    elif minute >= 19 * 60 + 20:
         day, hour = local_now.date(), 12
-        if minute < 30:
-            day -= timedelta(days=1)
+    elif minute < 1 * 60 + 20:
+        day, hour = local_now.date() - timedelta(days=1), 12
+    else:
+        day, hour = local_now.date() - timedelta(days=1), 18
+
     return datetime(day.year, day.month, day.day, hour, tzinfo=timezone.utc)
+
+
+def meteopt_expected_cycle(now=None):
+    """Return the cycle that should be checked at this Istanbul time."""
+    return scheduled_istanbul_gfs_run(now)
 
 
 async def stage_open_meteopt_cycle(processed_run_ids):
@@ -1952,10 +1966,18 @@ async def stage_open_meteopt_cycle(processed_run_ids):
     """
     if os.getenv("GFS_SOURCE", "meteopt").strip().lower() == "noaa":
         return None
+    expected_run_dt = meteopt_expected_cycle()
+    print(
+        f"[METEOPT WINDOW] İstanbul {datetime.now(TR_TZ):%H:%M} TSİ -> "
+        f"{expected_run_dt:%Y-%m-%d %HZ} döngüsü kontrol ediliyor."
+    )
     try:
-        document = await asyncio.to_thread(fetch_meteopt_document)
+        document = await asyncio.to_thread(fetch_meteopt_document, expected_run_dt)
     except Exception as exc:
-        print(f"[METEOPT STAGE ERROR] {type(exc).__name__}: {exc}")
+        print(
+            f"[METEOPT STAGE ERROR] Beklenen {expected_run_dt:%Y%m%d%H} döngüsü "
+            f"henüz kaynaktan doğrulanamadı: {type(exc).__name__}: {exc}"
+        )
         return False
 
     token = str(document.get("run") or "").strip()
@@ -2043,10 +2065,18 @@ async def stage_open_meteopt_cycle(processed_run_ids):
 
 def fetch_meteopt_available_runs():
     """Discover the active MeteoPT run and publish it only once its f180 exists."""
+    expected_run_dt = meteopt_expected_cycle()
+    print(
+        f"[METEOPT DISCOVERY] İstanbul {datetime.now(TR_TZ):%H:%M} TSİ -> "
+        f"{expected_run_dt:%Y-%m-%d %HZ} döngüsü için f180 kontrolü."
+    )
     try:
-        document = fetch_meteopt_document()
+        document = fetch_meteopt_document(expected_run_dt)
     except Exception as exc:
-        print(f"[METEOPT DISCOVERY ERROR] {type(exc).__name__}: {exc}")
+        print(
+            f"[METEOPT DISCOVERY ERROR] Beklenen {expected_run_dt:%Y%m%d%H} "
+            f"döngüsü henüz doğrulanamadı: {type(exc).__name__}: {exc}"
+        )
         return []
 
     token = str(document.get("run") or "").strip()
