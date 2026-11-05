@@ -1,11 +1,6 @@
 name: Deploy İstanbul'un Havası Live
 
 on:
-  workflow_call:
-  schedule:
-    - cron: "*/5 * * * *"
-  push:
-    branches: [main]
   workflow_dispatch:
 
 permissions:
@@ -25,7 +20,7 @@ jobs:
       url: ${{ steps.deployment.outputs.page_url }}
     steps:
       - name: Check out website source and live station data
-        uses: actions/checkout@v4
+        uses: actions/checkout@v5
         with:
           ref: main
           path: source
