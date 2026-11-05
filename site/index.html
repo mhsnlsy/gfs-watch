@@ -2166,7 +2166,7 @@
       const stationName=station&&station.station_name?station.station_name:(activeStation==="enka"?"ENKA Balmumcu":activeStation==="sisli"?"Şişli":"Eyüpsultan");
       $("station-card-title").textContent=stationName+" · İstanbul";
       const fallbackLabel=$("station-source-fallback");
-      if(fallbackLabel)fallbackLabel.hidden=!(activeStation==="enka"&&hasStation&&(station.station_id==="ENKA-BALMUMCU-CAMERA-OCR"||station.observation_method==="tesseract-ocr"));
+      if(fallbackLabel)fallbackLabel.hidden=!(activeStation==="enka"&&hasStation&&(station.station_id==="ENKA-BALMUMCU-WEATHERLINK"||station.observation_method==="tesseract-ocr"));
       const observed=hasStation&&station.observed_at_utc?new Date(station.observed_at_utc):null;
       const observedValid=observed&&!Number.isNaN(observed.getTime());
       const ageMinutes=observedValid?Math.max(0,(Date.now()-observed.getTime())/60000):null;
@@ -2198,7 +2198,7 @@
         const stale=!isFresh;
         const observedText=observedValid?new Intl.DateTimeFormat("tr-TR",{timeZone:"Europe/Istanbul",dateStyle:"short",timeStyle:"short"}).format(observed):"zaman bilinmiyor";
         const ageText=ageMinutes===null?"":ageMinutes<60?Math.round(ageMinutes)+" dk önce":(ageMinutes/60).toFixed(1).replace(".",",")+" saat önce";
-        const sourceLabel=station.station_id==="18101"?"MGM 18101":station.station_id==="18401"?"MGM 18401":station.station_id==="ENKA-BALMUMCU-CAMERA-OCR"||station.observation_method==="tesseract-ocr"?"ENKA kamera OCR":(station.source||"İstasyon");
+        const sourceLabel=station.station_id==="18101"?"MGM 18101":station.station_id==="18401"?"MGM 18401":station.station_id==="ENKA-BALMUMCU-WEATHERLINK"||station.observation_method==="weatherlink-currentvalues-html"?"ENKA WeatherLink":(station.source||"İstasyon");
         $("station-observation-meta").textContent=(stale?"Gecikmeli ölçüm":"Son ölçüm")+" · "+observedText+" TSİ · "+ageText+" · "+sourceLabel;
         updateStation24hDiff(isFresh?station:null);
         $("freshness").textContent=stale?"ÖLÇÜM ESKİ":"CANLI ÖLÇÜM";
@@ -2757,7 +2757,7 @@
       if(enkaResponse&&enkaResponse.ok){
         try{
           const document=await enkaResponse.json();
-          if(document?.schema==="gfs-watch.station-observation.v1"&&document.station_observation?.station_id==="ENKA-BALMUMCU-CAMERA-OCR"){
+          if(document?.schema==="gfs-watch.station-observation.v1"&&document.station_observation?.station_id==="ENKA-BALMUMCU-WEATHERLINK"){
             enkaStationObservation=document.station_observation;
           }
         }catch(_){}
