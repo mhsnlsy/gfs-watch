@@ -55,60 +55,6 @@ export default {
       "X-GitHub-Api-Version": "2022-11-28"
     };
 
-    // The Cloudflare Cron is the reliable clock for the main station collector.
-    // It only dispatches the existing workflow; ENKA, Eyüpsultan and Şişli
-    // are still collected and published by main-station-refresh.yml.
-    const stationTick = await fetch(`https://api.github.com/repos/${OWNER}/${REPO}/dispatches`, {
-      method: "POST",
-      headers: { ...headers, "Content-Type": "application/json" },
-      body: JSON.stringify({
-        event_type: "station-refresh-clock",
-        client_payload: {
-          source: "cloudflare-cron",
-          scheduled_at_utc: new Date(controller.scheduledTime).toISOString()
-        }
-      })
-    });
-    if (stationTick.status !== 204) {
-      throw new Error(`Station refresh dispatch failed ${stationTick.status}: ${await stationTick.text()}`);
-    }
-    console.log(`Main station workflow tick dispatched for ${new Date(controller.scheduledTime).toISOString()}`);
-
-    // Eyüpsultan has its own workflow and concurrency lock. It receives a
-    // separate event so ENKA/Şişli collection and publication cannot block it.
-    const eyupsultanTick = await fetch(`https://api.github.com/repos/${OWNER}/${REPO}/dispatches`, {
-      method: "POST",
-      headers: { ...headers, "Content-Type": "application/json" },
-      body: JSON.stringify({
-        event_type: "eyupsultan-mgm-clock",
-        client_payload: {
-          source: "cloudflare-cron",
-          scheduled_at_utc: new Date(controller.scheduledTime).toISOString()
-        }
-      })
-    });
-    if (eyupsultanTick.status !== 204) {
-      throw new Error(`Eyüpsultan MGM dispatch failed ${eyupsultanTick.status}: ${await eyupsultanTick.text()}`);
-    }
-    console.log(`Eyüpsultan MGM workflow tick dispatched for ${new Date(controller.scheduledTime).toISOString()}`);
-
-    // Şişli has a dedicated collector, archive and concurrency group.
-    const sisliTick = await fetch(`https://api.github.com/repos/${OWNER}/${REPO}/dispatches`, {
-      method: "POST",
-      headers: { ...headers, "Content-Type": "application/json" },
-      body: JSON.stringify({
-        event_type: "sisli-mgm-clock",
-        client_payload: {
-          source: "cloudflare-cron",
-          scheduled_at_utc: new Date(controller.scheduledTime).toISOString()
-        }
-      })
-    });
-    if (sisliTick.status !== 204) {
-      throw new Error(`Şişli MGM dispatch failed ${sisliTick.status}: ${await sisliTick.text()}`);
-    }
-    console.log(`Şişli MGM workflow tick dispatched for ${new Date(controller.scheduledTime).toISOString()}`);
-
     // Keep the existing GFS backup check unchanged; it only applies during
     // the Istanbul time-slot window below.
     if (minute < 40 || minute > 59) return;
