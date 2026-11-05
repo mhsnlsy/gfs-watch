@@ -1,0 +1,27 @@
+{
+  "schema": "koy-mgm.rain-history.v1",
+  "station_id": "18223",
+  "station_name": "Çanakçı",
+  "source": "MGM Giresun / Çanakçı",
+  "retention_hours": 72,
+  "sampling_interval_minutes": 5,
+  "rainfall_fields": {
+    "precipitation_10m_mm": "MGM trailing 10-minute amount",
+    "precipitation_1h_mm": "MGM trailing 1-hour accumulation",
+    "precipitation_6h_mm": "MGM trailing 6-hour accumulation",
+    "precipitation_12h_mm": "MGM trailing 12-hour accumulation",
+    "precipitation_24h_mm": "MGM trailing 24-hour accumulation"
+  },
+  "updated_at_utc": "2026-11-05T08:53:11.015190+00:00",
+  "samples": [
+    {
+      "observed_at_utc": "2026-11-05T08:49:00.000Z",
+      "logged_at_utc": "2026-11-05T08:53:11.015190+00:00",
+      "precipitation_10m_mm": 2.8,
+      "precipitation_1h_mm": 10.8,
+      "precipitation_6h_mm": 104.6,
+      "precipitation_12h_mm": 108.4,
+      "precipitation_24h_mm": 116.8
+    }
+  ]
+}
