@@ -96,7 +96,7 @@ jobs:
       - name: Announce source-discovery cadence
         run: |
           echo "MeteoPT is queried for its active GFS run on every 10-minute scheduled invocation."
-      - name: Watch only the GFS cycle assigned to this Istanbul time slot
+      - name: Watch active MeteoPT cycle; publish f180 to Pages and Telegram
         id: check-gfs
         env:
           GFS_SOURCE: meteopt
