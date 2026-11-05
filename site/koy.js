@@ -45,6 +45,30 @@ function svgDaily(runs,metric,title,unit,mode){
  keys.forEach((k,i)=>rows.forEach((r)=>{const vals=r.points.filter(p=>p.day===k).map(p=>p.v);if(!vals.length)return;const a=Math.min(...vals),b=Math.max(...vals),xx=x(i)+(r.ri-(runs.length-1)/2)*slot,c=COLORS[r.ri];s+='<line x1="'+xx+'" y1="'+y(b)+'" x2="'+xx+'" y2="'+y(a)+'" stroke="'+c+'" stroke-width="2"/><line x1="'+(xx-2)+'" y1="'+y(b)+'" x2="'+(xx+2)+'" y2="'+y(b)+'" stroke="'+c+'" stroke-width="2"/><line x1="'+(xx-2)+'" y1="'+y(a)+'" x2="'+(xx+2)+'" y2="'+y(a)+'" stroke="'+c+'" stroke-width="2"/>';if(mode==="candle"){const valsByTime=r.points.filter(p=>p.day===k).sort((a,b)=>a.forecast_hour-b.forecast_hour),first=valsByTime[0].v,last=valsByTime[valsByTime.length-1].v,top=Math.min(y(first),y(last)),height=Math.max(3,Math.abs(y(first)-y(last)));s+='<rect x="'+(xx-Math.max(2,slot*.28))+'" y="'+top+'" width="'+Math.max(4,slot*.56)+'" height="'+height+'" fill="'+c+'" opacity=".88"><title>'+esc(r.run.run_id_utc)+' · '+k+' · min '+fmt(a)+' / max '+fmt(b)+'</title></rect>'}else s+='<circle cx="'+xx+'" cy="'+y((a+b)/2)+'" r="2.2" fill="'+c+'"><title>'+esc(r.run.run_id_utc)+' · min '+fmt(a)+' / max '+fmt(b)+'</title></circle>'}));
  s+='</svg>';return s;
 }
+function windDir(deg){const n=Number(deg);if(!Number.isFinite(n))return "—";const dirs=["K","KKD","KD","DKD","D","DGD","GD","GBD","B","GBB","KB","KKB"];return dirs[Math.round(n/30)%12]||"—"}
+function feelsLike(t,rh,wind){const T=Number(t),H=Number(rh),W=Number(wind);if(!Number.isFinite(T)||!Number.isFinite(H))return null;if(T>=20)return -8.784+1.611*T+2.338*H-0.146*T*H-0.0123*T*T-0.0164*H*H+0.00221*T*T*H+0.000725*T*H*H-0.00000358*T*T*H*H;if(T<=10&&Number.isFinite(W))return 13.12+0.6215*T-11.37*Math.pow(W,0.16)+0.3965*T*Math.pow(W,0.16);return T}
+function dewpoint(t,rh){const T=Number(t),H=Number(rh);if(!Number.isFinite(T)||!Number.isFinite(H)||H<=0)return null;const a=17.62,b=243.12,g=Math.log(H/100)+a*T/(b+T);return b*g/(a-g)}
+function renderMgmObservation(o,history,f72){
+ if(!o)return;
+ const t=num(o.temperature_2m_c),rh=num(o.humidity_percent),wind=num(o.wind_speed_10m_kmh),rain=num(o.precipitation_1h_mm),press=num(o.pressure_hpa);
+ $("temperature").textContent=fmt(t)+"°";
+ $("station-observation-meta").textContent="Son ölçüm · "+ts(o.observed_at_utc)+" · MGM Çanakçı";
+ $("freshness").textContent="CANLI ÖLÇÜM";
+ $("feels-like").innerHTML=fmt(feelsLike(t,rh,wind))+'<span class="unit">°</span>';
+ $("wind").innerHTML=fmt(wind,1)+'<span class="unit">km/sa</span>';
+ $("wind-direction").textContent=windDir(o.wind_direction_deg);
+ $("humidity").innerHTML=fmt(rh,0)+'<span class="unit">%</span>';
+ $("dewpoint-value").innerHTML=fmt(dewpoint(t,rh))+'<span class="unit">°</span>';
+ $("rain").innerHTML=fmt(rain)+'<span class="unit">mm</span>';
+ $("rain-detail").textContent="Son 1 saat";
+ $("pressure").innerHTML=fmt(press,1)+'<span class="unit">hPa</span>';
+ const samples=Array.isArray(history?.samples)?history.samples:[];
+ const temps=samples.map(x=>num(x.temperature_2m_c)).filter(v=>v!=null);
+ if(temps.length){const min=Math.min(...temps),max=Math.max(...temps),d=t!=null?t-temps[0]:null;const diff=t!=null?t-min:null;$("station-24h-diff").textContent="Son 24 saatte "+(diff>=0?fmt(diff)+"° daha sıcak":fmt(Math.abs(diff))+"° daha soğuk");}
+ if(rain!=null&&rain>0)$("rain-brief-current").textContent="MGM Çanakçı ölçümüne göre şu anda yağış var ("+fmt(rain)+" mm/son 1 saat).";else $("rain-brief-current").textContent="MGM Çanakçı ölçümüne göre şu anda anlamlı yağış yok.";
+ const pts=pointsOf(f72||{},72),future=pts.filter(p=>num(p.precipitation_6h_mm)>0.1);
+ $("rain-brief-forecast").textContent=future.length?"MeteoPT GFS tahminine göre ilk anlamlı yağış: "+ts(future[0].valid_time_utc)+" TSİ.":"MeteoPT GFS tahmininde önümüzdeki 72 saatte anlamlı yağış görünmüyor.";
+}
 function renderF72(d){
  const pts=pointsOf(d,72);$("rows").innerHTML=pts.length?pts.map(p=>'<tr><td>F'+p.forecast_hour+'</td><td>'+ts(p.valid_time_utc)+'</td><td>'+fmt(num(p.wind_speed_10m_kmh),0)+'</td><td>'+fmt(num(p.wind_speed_850hpa_kmh),0)+'</td><td>'+fmt(num(p.precipitation_6h_mm))+'</td><td>'+fmt(num(p.temperature_2m_c))+'</td><td>'+fmt(num(p.temperature_850hpa_c))+'</td></tr>').join(""):'<tr><td colspan="7" class="meteopt-table-empty">F72 adımları henüz yok.</td></tr>';
  $("f72-chip").textContent="GFS · hazır";$("table-status").textContent=pts.length+" / 24 adım";$("table-run").textContent="Run: "+ts(d.run_id_utc);$("table-updated").textContent="Yayın: "+ts(d.published_at_utc);
@@ -102,11 +126,11 @@ function renderRuns(d,f72){
 }
 let f72=null,comparison=null,stationHistory=null,busy=false;
 async function refresh(){if(busy)return;busy=true;const button=$("refresh");button.disabled=true;button.textContent="Yükleniyor…";
- const results=await Promise.allSettled([get("f72/latest.json"),get("comparison.json"),get(MGM_BASE+"history.json")]);
+ const results=await Promise.allSettled([get("f72/latest.json"),get("comparison.json"),get(MGM_BASE+"history.json"),get(MGM_BASE+"observation.json")]);
  if(results[0].status==="fulfilled"){f72=results[0].value;renderF72(f72)}else{$("f72-chip").textContent="Veri bekleniyor";$("table-status").textContent="F72 bekleniyor"}
  if(results[1].status==="fulfilled")comparison=results[1].value;else comparison=null;
  if(results[2].status==="fulfilled"){stationHistory=results[2].value;renderStationHistory(stationHistory)}else{stationHistory=null;$("station-temperature-trend").innerHTML="<div class=\"station-trend-empty\">MGM istasyon geçmişi bekleniyor…</div>";$("station-rain-trend").innerHTML="<div class=\"station-trend-empty\">MGM istasyon geçmişi bekleniyor…</div>"}
- renderRuns(comparison,f72);$("updated").textContent="Son kontrol: "+ts(new Date().toISOString());
+ if(results[3].status==="fulfilled"){renderMgmObservation(results[3].value,stationHistory,f72)} renderRuns(comparison,f72);$("updated").textContent="Son kontrol: "+ts(new Date().toISOString());
  button.disabled=false;button.textContent="Verileri yenile";busy=false;
 }
 $("refresh").addEventListener("click",refresh);refresh();setInterval(()=>{if(document.visibilityState!=="hidden")refresh()},60000);
