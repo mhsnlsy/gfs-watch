@@ -2,7 +2,6 @@ import fs from "node:fs";
 import path from "node:path";
 
 const MGM_PAGE_URL = "https://www.mgm.gov.tr/tahmin/il-ve-ilceler.aspx?il=%C4%B0stanbul&ilce=Ey%C3%BCpsultan";
-const MGM_STATION_URL = "https://servis.mgm.gov.tr/web/sondurumlar?merkezid=18101";
 const MGM_CITY_URL = "https://servis.mgm.gov.tr/web/sondurumlar/ilTumSondurum?ilPlaka=34";
 const STATION_ID = "18101";
 const STALE_AFTER_MINUTES = 20;
@@ -101,14 +100,9 @@ async function fetchFromMgm() {
     console.warn("[MGM PAGE] İlçe sayfası doğrulanamadı; son-durum servisi yine deneniyor:", error.message);
   }
 
-  let row, firstError;
-  try {
-    row = await requestMgm(MGM_STATION_URL);
-  } catch (error) {
-    firstError = error;
-    console.warn("[MGM] İstasyon uç noktası başarısız; İstanbul listesi deneniyor:", error.message);
-    row = await requestMgm(MGM_CITY_URL);
-  }
+  // MGM's Istanbul live-observation list returns the verified 18101
+  // Eyüpsultan station row; the station-specific merkezid URL can be empty.
+  const row = await requestMgm(MGM_CITY_URL);
   if (!row.veriZamani) throw new Error("MGM 18101 ölçüm zamanı yok");
   const observedAt = new Date(row.veriZamani);
   if (!Number.isFinite(observedAt.getTime())) throw new Error("MGM ölçüm zamanı geçersiz");
@@ -128,10 +122,10 @@ async function fetchFromMgm() {
     station_id: STATION_ID,
     source: "MGM İstanbul-Eyüpsultan · anlık son-durum ölçümü",
     source_url: MGM_PAGE_URL,
-    measurement_source_url: MGM_STATION_URL,
+    measurement_source_url: MGM_CITY_URL,
     source_page_checked_at_utc: pageCheck?.checkedAt || null,
     source_page_http_status: pageCheck?.status || null,
-    source_fallback_used: Boolean(firstError),
+    source_fallback_used: false,
     latitude: 41.102778,
     longitude: 28.924167,
     elevation_m: 54,
