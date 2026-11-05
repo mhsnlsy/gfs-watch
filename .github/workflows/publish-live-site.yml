@@ -4,6 +4,14 @@ on:
   schedule:
     - cron: "*/5 * * * *"
   workflow_dispatch:
+  workflow_run:
+    workflows:
+      - "MeteoPT GFS Live Monitor"
+      - "Main Station Data Refresh"
+      - "Eyüpsultan MGM Independent Refresh"
+      - "Şişli MGM Independent Refresh"
+    types:
+      - completed
 
 permissions:
   contents: read
@@ -20,6 +28,7 @@ concurrency:
 jobs:
   publish:
     name: Assemble and deploy latest live data
+    if: github.event_name != 'workflow_run' || github.event.workflow_run.conclusion == 'success'
     runs-on: ubuntu-latest
     timeout-minutes: 10
     steps:
