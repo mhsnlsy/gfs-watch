@@ -1,6 +1,7 @@
 import fs from "node:fs";
 import path from "node:path";
 
+const MGM_PAGE_URL = "https://www.mgm.gov.tr/tahmin/il-ve-ilceler.aspx?il=%C4%B0stanbul&ilce=Ey%C3%BCpsultan";
 const MGM_STATION_URL = "https://servis.mgm.gov.tr/web/sondurumlar?merkezid=18101";
 const MGM_CITY_URL = "https://servis.mgm.gov.tr/web/sondurumlar/ilTumSondurum?ilPlaka=34";
 const STATION_ID = "18101";
@@ -64,7 +65,42 @@ async function requestMgm(url) {
   }
 }
 
+async function verifyMgmPage() {
+  const controller = new AbortController();
+  const timeout = setTimeout(() => controller.abort(), 20000);
+  try {
+    const response = await fetch(MGM_PAGE_URL + (MGM_PAGE_URL.includes("?") ? "&" : "?") + "_gfs_watch=" + Date.now(), {
+      signal: controller.signal,
+      cache: "no-store",
+      headers: {
+        "User-Agent": "Mozilla/5.0 (compatible; GFS-Watch/1.0)",
+        "Accept": "text/html,application/xhtml+xml",
+        "Cache-Control": "no-cache, no-store, max-age=0",
+        "Pragma": "no-cache"
+      }
+    });
+    if (!response.ok) throw new Error("MGM Eyüpsultan sayfası HTTP " + response.status);
+    const html = await response.text();
+    if (!/Ey[uü]psultan/i.test(html)) {
+      throw new Error("MGM sayfa içeriğinde Eyüpsultan doğrulanamadı");
+    }
+    return { status: response.status, checkedAt: new Date().toISOString() };
+  } finally {
+    clearTimeout(timeout);
+  }
+}
+
 async function fetchFromMgm() {
+  let pageCheck = null;
+  try {
+    pageCheck = await verifyMgmPage();
+    console.log("[MGM PAGE] İstanbul-Eyüpsultan sayfası doğrulandı:", pageCheck.status);
+  } catch (error) {
+    // The live observation endpoint remains the measurement source if the
+    // presentation page is temporarily unavailable.
+    console.warn("[MGM PAGE] İlçe sayfası doğrulanamadı; son-durum servisi yine deneniyor:", error.message);
+  }
+
   let row, firstError;
   try {
     row = await requestMgm(MGM_STATION_URL);
@@ -90,8 +126,11 @@ async function fetchFromMgm() {
   return {
     station_name: "Eyüpsultan",
     station_id: STATION_ID,
-    source: "MGM 18101",
-    source_url: MGM_STATION_URL,
+    source: "MGM İstanbul-Eyüpsultan · anlık son-durum ölçümü",
+    source_url: MGM_PAGE_URL,
+    measurement_source_url: MGM_STATION_URL,
+    source_page_checked_at_utc: pageCheck?.checkedAt || null,
+    source_page_http_status: pageCheck?.status || null,
     source_fallback_used: Boolean(firstError),
     latitude: 41.102778,
     longitude: 28.924167,
