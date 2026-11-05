@@ -96,6 +96,9 @@ jobs:
   deploy-pages:
     needs: refresh
     if: needs.refresh.outputs.changed == 'true'
+    concurrency:
+      group: github-pages-live
+      cancel-in-progress: false
     uses: ./.github/workflows/pages-live.yml
     permissions:
       contents: read
