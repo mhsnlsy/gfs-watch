@@ -27,6 +27,7 @@ jobs:
         run: |
           set -euo pipefail
           mkdir -p "$RUNNER_TEMP/koy-output"
+          cp scripts/render_koy_gfs_charts.py "$RUNNER_TEMP/render_koy_gfs_charts.py"
           python - <<'PY'
           import json, os
           from datetime import datetime, timezone
@@ -178,7 +179,7 @@ jobs:
             stamp="$(python -c 'from datetime import datetime; import sys; print(datetime.fromisoformat(sys.argv[1].replace("Z","+00:00")).strftime("%Y%m%dT%HZ"))' "$current_run")"
             if [ ! -s "gfs/media/koy-gfs-${stamp}-temperature.png" ] || [ ! -s "gfs/media/koy-gfs-${stamp}-temperature_850.png" ] || [ ! -s "gfs/media/koy-gfs-${stamp}-precipitation.png" ] || [ ! -s "gfs/media/koy-gfs-${stamp}-wind_10m.png" ]; then
               python -m pip install -q matplotlib
-              KOY_GFS_DIR="$PWD/gfs" python scripts/render_koy_gfs_charts.py
+              KOY_GFS_DIR="$PWD/gfs" python "$RUNNER_TEMP/render_koy_gfs_charts.py"
               git add gfs
               if git diff --cached --quiet; then
                 git reset
