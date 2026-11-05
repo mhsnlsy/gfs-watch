@@ -1098,6 +1098,11 @@
       .next-72h-legend-note{font-size:9px}
     }
   </style>
+  <style id="station-history-tooltip-position">
+    /* Anchor station measurement popups to their own chart, not the chart card. */
+    .history-chart{position:relative;overflow:visible}
+    .history-chart .station-history-tooltip{z-index:30}
+  </style>
   <style id="gfs-chart-hover-tooltip-styles">
     .next-72h-chart{position:relative}
     .gfs-point-tooltip{
@@ -1272,7 +1277,7 @@
     @media(prefers-reduced-motion:reduce){#pull-refresh-indicator{transition:none}#pull-refresh-indicator.loading .pull-refresh-icon{animation:none}}
   </style>
   <div id="pull-refresh-indicator" role="status" aria-live="polite"><span class="pull-refresh-icon">↓</span><span class="pull-refresh-label">Yenilemek için aşağı çek</span></div>
-    <script src="./koy.js?v=20261105-station-history-popup-1" defer></script>
+    <script src="./koy.js?v=20261105-station-history-popup-2" defer></script>
 </body>
 </html>
 
