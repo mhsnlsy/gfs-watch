@@ -1,6 +1,11 @@
 name: Publish Live Website
 
 on:
+  push:
+    branches: [main]
+    paths:
+      - ".github/workflows/publish-live-site.yml"
+      - "site/**"
   schedule:
     - cron: "*/5 * * * *"
   workflow_dispatch:
