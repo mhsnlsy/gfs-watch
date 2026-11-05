@@ -1,6 +1,7 @@
 name: Main Station Data Refresh
 
 on:
+  # Primary five-minute station collection schedule.
   schedule:
     - cron: "*/5 * * * *"
   workflow_dispatch:
@@ -16,8 +17,8 @@ on:
 permissions:
   contents: write
 
-# Keep each 5-minute collection cycle atomic, but run the three collectors
-# in parallel. A single station failure must never stop another station.
+# Do not cancel an active collection. Keep cycles serialized so history
+# files cannot be overwritten by overlapping runs.
 concurrency:
   group: main-station-refresh
   cancel-in-progress: false
