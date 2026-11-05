@@ -1,0 +1,128 @@
+name: Şişli MGM Independent Refresh
+
+on:
+  # Independent five-minute cadence for the MGM Şişli station.
+  schedule:
+    - cron: "*/5 * * * *"
+  workflow_dispatch:
+  # Dedicated signal from the five-minute Cloudflare clock.
+  repository_dispatch:
+    types: [sisli-mgm-clock]
+  push:
+    branches: [main]
+    paths:
+      - ".github/workflows/sisli-mgm-refresh.yml"
+      - "scripts/sisli_weather.mjs"
+
+permissions:
+  contents: write
+
+concurrency:
+  group: sisli-mgm-independent
+  cancel-in-progress: false
+
+jobs:
+  collect-and-publish:
+    name: Fetch MGM Şişli and publish its own archive
+    runs-on: ubuntu-latest
+    timeout-minutes: 6
+    steps:
+      - name: Check out latest main
+        uses: actions/checkout@v4
+        with:
+          ref: main
+          fetch-depth: 0
+
+      - name: Set up Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: "22"
+
+      - name: Prepare Şişli-only workspace and restore its archive
+        run: |
+          set -euo pipefail
+          mkdir -p public site/data .station-work/sisli
+          for f in sisli-station-temperature-history.json sisli-station-rain-history.json; do
+            if [ -s "site/data/$f" ]; then
+              cp "site/data/$f" ".station-work/sisli/$f"
+            fi
+          done
+
+      - name: Fetch current MGM Şişli observation and update 72-hour archive
+        env:
+          SISLI_TEMPERATURE_HISTORY_PATH: .station-work/sisli/sisli-station-temperature-history.json
+          SISLI_RAIN_HISTORY_PATH: .station-work/sisli/sisli-station-rain-history.json
+        run: |
+          set -euo pipefail
+          node scripts/sisli_weather.mjs
+          test -s public/sisli-station-observation.json
+          test -s .station-work/sisli/sisli-station-temperature-history.json
+          test -s .station-work/sisli/sisli-station-rain-history.json
+
+      - name: Validate fresh observation and prevent timestamp regression
+        run: |
+          set -euo pipefail
+          python - <<'PY'
+          import json
+          from datetime import datetime
+          from pathlib import Path
+
+          new_doc = json.loads(Path("public/sisli-station-observation.json").read_text(encoding="utf-8"))
+          new = new_doc.get("station_observation") or {}
+          age = float(new.get("age_minutes", 9999))
+          if new.get("temperature_2m_c") is None or new.get("is_stale") or age > 20:
+              raise SystemExit(f"MGM Şişli observation is missing or stale: age={age} min")
+          if str(new.get("station_id")) != "18401":
+              raise SystemExit(f"Unexpected MGM station id: {new.get('station_id')}")
+          observed = new.get("observed_at_utc")
+          if not observed:
+              raise SystemExit("MGM observation timestamp is missing")
+
+          previous_path = Path("site/data/sisli-station-observation.json")
+          if previous_path.is_file():
+              previous_doc = json.loads(previous_path.read_text(encoding="utf-8"))
+              previous = previous_doc.get("station_observation") or {}
+              previous_time = previous.get("observed_at_utc")
+              if previous_time:
+                  old_dt = datetime.fromisoformat(previous_time.replace("Z", "+00:00"))
+                  new_dt = datetime.fromisoformat(observed.replace("Z", "+00:00"))
+                  if new_dt < old_dt:
+                      raise SystemExit(
+                          f"MGM timestamp regressed: new={observed}, published={previous_time}"
+                      )
+
+          print(
+              "Şişli verified:",
+              new.get("temperature_2m_c"), "°C |",
+              new.get("observed_at_utc"), "| age", age, "min |",
+              "source", new.get("source_url")
+          )
+          PY
+
+      - name: Publish only Şişli station files to main
+        run: |
+          set -euo pipefail
+          cp public/sisli-station-observation.json site/data/sisli-station-observation.json
+          cp .station-work/sisli/sisli-station-temperature-history.json site/data/sisli-station-temperature-history.json
+          cp .station-work/sisli/sisli-station-rain-history.json site/data/sisli-station-rain-history.json
+
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add site/data/sisli-station-observation.json site/data/sisli-station-temperature-history.json site/data/sisli-station-rain-history.json
+
+          if git diff --cached --quiet; then
+            echo "Şişli data has not changed; no commit is required."
+            exit 0
+          fi
+
+          git commit -m "Update independent MGM Şişli observations"
+          for attempt in 1 2 3 4 5; do
+            git pull --rebase origin main
+            if git push origin HEAD:main; then
+              echo "Şişli observation and archives published."
+              exit 0
+            fi
+            sleep $((attempt * 2))
+          done
+          echo "Could not publish Şişli data to main after five attempts."
+          exit 1
