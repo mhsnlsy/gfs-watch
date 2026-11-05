@@ -12,7 +12,7 @@
     "precipitation_12h_mm": "MGM trailing 12-hour accumulation",
     "precipitation_24h_mm": "MGM trailing 24-hour accumulation"
   },
-  "updated_at_utc": "2026-11-05T15:36:47.803118+00:00",
+  "updated_at_utc": "2026-11-05T15:40:35.932525+00:00",
   "samples": [
     {
       "observed_at_utc": "2026-11-05T06:04:00.000Z",
@@ -831,15 +831,15 @@
     },
     {
       "observed_at_utc": "2026-11-05T15:34:00.000Z",
-      "logged_at_utc": "2026-11-05T15:36:47.803118+00:00",
+      "logged_at_utc": "2026-11-05T15:40:35.932525+00:00",
       "temperature_2m_c": 11.2,
-      "precipitation_10m_mm": 0.8,
+      "precipitation_10m_mm": 0.6,
       "precipitation_1h_mm": 3.2,
       "precipitation_6h_mm": 13.4,
       "humidity_percent": 100,
       "pressure_hpa": 1007.2,
       "wind_speed_10m_kmh": 0,
-      "precipitation_12h_mm": 104.4,
+      "precipitation_12h_mm": 103.2,
       "precipitation_24h_mm": 123.4
     }
   ]
