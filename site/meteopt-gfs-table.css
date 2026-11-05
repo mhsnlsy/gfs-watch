@@ -343,3 +343,50 @@
     padding-top: 8px;
   }
 }
+
+
+/* Zero precipitation: quiet, neutral grey instead of a wet-weather colour. */
+#meteopt-gfs-table .mt-gray {
+  color: #b7c2ca;
+  background: rgba(145, 158, 168, .16);
+}
+
+/* Desktop: use compact intrinsic column widths; keep the mobile table rules intact. */
+@media (min-width: 851px) and (pointer: fine) {
+  .gfs-table-pressure-layout {
+    grid-template-columns: max-content minmax(300px, 1fr);
+  }
+  .gfs-table-pressure-layout > #meteopt-gfs-table {
+    width: max-content !important;
+    max-width: max-content !important;
+    justify-self: start;
+  }
+  .gfs-table-pressure-layout > #meteopt-gfs-table .meteopt-table-card,
+  .gfs-table-pressure-layout > #meteopt-gfs-table .meteopt-table-scroll {
+    width: max-content !important;
+    max-width: 100% !important;
+  }
+  .gfs-table-pressure-layout > #meteopt-gfs-table .meteopt-data-table {
+    width: max-content !important;
+    min-width: 0 !important;
+    max-width: none !important;
+    table-layout: auto !important;
+  }
+  #meteopt-gfs-table .meteopt-data-table th:first-child,
+  #meteopt-gfs-table .meteopt-data-table td:first-child {
+    width: 44px !important;
+    min-width: 44px !important;
+  }
+  #meteopt-gfs-table .meteopt-data-table th:nth-child(2),
+  #meteopt-gfs-table .meteopt-data-table td:nth-child(2) {
+    width: 138px !important;
+    min-width: 138px !important;
+    padding-left: 6px !important;
+    padding-right: 6px !important;
+  }
+  #meteopt-gfs-table .meteopt-data-table th:nth-child(n+3),
+  #meteopt-gfs-table .meteopt-data-table td:nth-child(n+3) {
+    width: 64px !important;
+    min-width: 64px !important;
+  }
+}
