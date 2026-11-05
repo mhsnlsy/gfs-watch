@@ -11,6 +11,7 @@ on:
 
 permissions:
   contents: write
+  actions: write
   pages: write
   id-token: write
 
@@ -66,6 +67,7 @@ jobs:
         run: python -u main.py
 
       - name: Publish state
+        id: publish
         if: always()
         run: |
           if [ ! -f gfs_watch.db ]; then exit 0; fi
@@ -80,8 +82,15 @@ jobs:
 
           cd /tmp/gfs-state
           git add -A gfs_watch.db public
-          if git diff --cached --quiet; then exit 0; fi
+          if git diff --cached --quiet; then echo "changed=false" >> "$GITHUB_OUTPUT"; exit 0; fi
           git config user.name "github-actions[bot]"
           git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
           git commit -m "Update MeteoPT GFS live state"
           git push origin gfs-watch-state
+          echo "changed=true" >> "$GITHUB_OUTPUT"
+
+      - name: Refresh GitHub Pages immediately
+        if: steps.publish.outputs.changed == 'true'
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: gh workflow run pages-live.yml --ref main
