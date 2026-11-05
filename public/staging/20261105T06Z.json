@@ -1,0 +1,13 @@
+{
+  "run_id": "2026-11-05T06:00:00+00:00",
+  "max_hour": 180,
+  "row_count": 60,
+  "milestones": [
+    40,
+    120,
+    170,
+    180
+  ],
+  "comparison_ready": false,
+  "updated_at": "2026-11-05T12:04:32+00:00"
+}
