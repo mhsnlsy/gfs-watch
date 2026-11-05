@@ -1,0 +1,136 @@
+name: Main Station Data Refresh
+
+on:
+  schedule:
+    - cron: "*/5 * * * *"
+  workflow_dispatch:
+  push:
+    branches: [main]
+    paths:
+      - ".github/workflows/main-station-refresh.yml"
+      - "scripts/eyupsultan_weather.mjs"
+      - "scripts/sisli_weather.mjs"
+      - "scripts/update_station_observation.py"
+      - "enka_weather.py"
+
+permissions:
+  contents: write
+
+concurrency:
+  group: main-station-refresh
+  cancel-in-progress: false
+
+jobs:
+  refresh:
+    runs-on: ubuntu-latest
+    timeout-minutes: 12
+    steps:
+      - name: Check out main
+        uses: actions/checkout@v4
+        with:
+          ref: main
+          fetch-depth: 1
+
+      - name: Set up Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: "22"
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+
+      - name: Install ENKA OCR dependencies
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y --no-install-recommends tesseract-ocr
+          python -m pip install --disable-pip-version-check requests pillow pytesseract
+
+      - name: Prepare main data directory
+        run: mkdir -p site/data public
+
+      - name: Update ENKA Balmumcu
+        id: enka
+        continue-on-error: true
+        env:
+          PYTHONPATH: .
+          PYTHONUNBUFFERED: "1"
+          STATION_PREVIOUS_OBSERVATION_PATH: site/data/station-observation.json
+          STATION_TEMPERATURE_HISTORY_PATH: site/data/station-temperature-history.json
+        run: |
+          set -euo pipefail
+          python -u enka_weather.py
+          test -s public/station-observation.json
+          python - <<'PY'
+          import json
+          from pathlib import Path
+          s=json.loads(Path("public/station-observation.json").read_text())["station_observation"]
+          if float(s.get("age_minutes",9999)) > 20 or s.get("is_stale") or s.get("temperature_2m_c") is None:
+              raise SystemExit("ENKA observation is stale or invalid.")
+          PY
+          cp public/station-observation.json site/data/station-observation.json
+          test -s site/data/station-temperature-history.json
+
+      - name: Update Eyüpsultan
+        id: eyupsultan
+        continue-on-error: true
+        env:
+          EYUPSULTAN_TEMPERATURE_HISTORY_PATH: site/data/eyupsultan-station-temperature-history.json
+          EYUPSULTAN_RAIN_HISTORY_PATH: site/data/eyupsultan-station-rain-history.json
+        run: |
+          set -euo pipefail
+          rm -f public/eyupsultan-station-observation.json
+          node scripts/eyupsultan_weather.mjs
+          test -s public/eyupsultan-station-observation.json
+          python - <<'PY'
+          import json
+          from pathlib import Path
+          s=json.loads(Path("public/eyupsultan-station-observation.json").read_text())["station_observation"]
+          if float(s.get("age_minutes",9999)) > 20 or s.get("is_stale") or s.get("temperature_2m_c") is None:
+              raise SystemExit("Eyüpsultan observation is stale or invalid.")
+          PY
+          cp public/eyupsultan-station-observation.json site/data/eyupsultan-station-observation.json
+          test -s site/data/eyupsultan-station-temperature-history.json
+          test -s site/data/eyupsultan-station-rain-history.json
+
+      - name: Update Şişli
+        id: sisli
+        continue-on-error: true
+        env:
+          SISLI_TEMPERATURE_HISTORY_PATH: site/data/sisli-station-temperature-history.json
+          SISLI_RAIN_HISTORY_PATH: site/data/sisli-station-rain-history.json
+        run: |
+          set -euo pipefail
+          rm -f public/sisli-station-observation.json
+          node scripts/sisli_weather.mjs
+          test -s public/sisli-station-observation.json
+          python - <<'PY'
+          import json
+          from pathlib import Path
+          s=json.loads(Path("public/sisli-station-observation.json").read_text())["station_observation"]
+          if float(s.get("age_minutes",9999)) > 20 or s.get("is_stale") or s.get("temperature_2m_c") is None:
+              raise SystemExit("Şişli observation is stale or invalid.")
+          PY
+          cp public/sisli-station-observation.json site/data/sisli-station-observation.json
+          test -s site/data/sisli-station-temperature-history.json
+          test -s site/data/sisli-station-rain-history.json
+
+      - name: Publish successful station updates to main
+        run: |
+          set -euo pipefail
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add site/data
+          if git diff --cached --quiet; then
+            echo "No station data changes to publish."
+            exit 0
+          fi
+          git commit -m "Update live station observations"
+          for attempt in 1 2 3; do
+            git pull --rebase origin main
+            if git push origin HEAD:main; then exit 0; fi
+            sleep $((attempt * 2))
+          done
+          echo "Could not publish station data to main."
+          exit 1
