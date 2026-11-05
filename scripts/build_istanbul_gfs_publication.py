@@ -9,14 +9,17 @@ from __future__ import annotations
 
 import json
 import os
+import sys
 from datetime import datetime, timedelta, timezone
 from pathlib import Path
 
 # main.py uses PUBLIC_DATA_DIR at import time. Point it at the isolated GFS
 # publication tree before importing it.
 ROOT = Path.cwd()
+SOURCE_ROOT = Path(os.environ.get("GFS_SOURCE_ROOT", ROOT)).resolve()
 GFS_DIR = ROOT / "gfs"
 os.environ["PUBLIC_DATA_DIR"] = str(GFS_DIR)
+sys.path.insert(0, str(SOURCE_ROOT))
 
 import main  # noqa: E402
 
