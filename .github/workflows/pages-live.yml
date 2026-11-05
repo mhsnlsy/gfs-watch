@@ -36,18 +36,24 @@ jobs:
           path: forecast-data
 
       - name: Check out independent ENKA station data
+        id: enka_data
+        continue-on-error: true
         uses: actions/checkout@v4
         with:
           ref: enka-state
           path: enka-data
 
       - name: Check out independent Eyüpsultan station data
+        id: eyupsultan_data
+        continue-on-error: true
         uses: actions/checkout@v4
         with:
           ref: eyupsultan-state
           path: eyupsultan-data
 
       - name: Check out independent Şişli station data
+        id: sisli_data
+        continue-on-error: true
         uses: actions/checkout@v4
         with:
           ref: sisli-state
@@ -77,14 +83,29 @@ jobs:
           cp -a forecast-data/public/. _site/data/
           # Station payloads come from their own branches and overwrite only
           # their own files. A station can never replace another station's data.
-          cp enka-data/public/station-observation.json _site/data/station-observation.json
-          cp enka-data/public/station-temperature-history.json _site/data/station-temperature-history.json
-          cp eyupsultan-data/public/eyupsultan-station-observation.json _site/data/eyupsultan-station-observation.json
-          cp eyupsultan-data/public/eyupsultan-station-temperature-history.json _site/data/eyupsultan-station-temperature-history.json
-          cp eyupsultan-data/public/eyupsultan-station-rain-history.json _site/data/eyupsultan-station-rain-history.json
-          cp sisli-data/public/sisli-station-observation.json _site/data/sisli-station-observation.json
-          cp sisli-data/public/sisli-station-temperature-history.json _site/data/sisli-station-temperature-history.json
-          cp sisli-data/public/sisli-station-rain-history.json _site/data/sisli-station-rain-history.json
+          if [ -s enka-data/public/station-observation.json ] && [ -s enka-data/public/station-temperature-history.json ]; then
+            cp enka-data/public/station-observation.json _site/data/station-observation.json
+            cp enka-data/public/station-temperature-history.json _site/data/station-temperature-history.json
+            echo "ENKA dedicated payload applied."
+          else
+            echo "ENKA dedicated branch unavailable; retaining last GFS-state copy."
+          fi
+          if [ -s eyupsultan-data/public/eyupsultan-station-observation.json ] && [ -s eyupsultan-data/public/eyupsultan-station-temperature-history.json ] && [ -s eyupsultan-data/public/eyupsultan-station-rain-history.json ]; then
+            cp eyupsultan-data/public/eyupsultan-station-observation.json _site/data/eyupsultan-station-observation.json
+            cp eyupsultan-data/public/eyupsultan-station-temperature-history.json _site/data/eyupsultan-station-temperature-history.json
+            cp eyupsultan-data/public/eyupsultan-station-rain-history.json _site/data/eyupsultan-station-rain-history.json
+            echo "Eyüpsultan dedicated payload applied."
+          else
+            echo "Eyüpsultan dedicated branch unavailable; retaining last GFS-state copy."
+          fi
+          if [ -s sisli-data/public/sisli-station-observation.json ] && [ -s sisli-data/public/sisli-station-temperature-history.json ] && [ -s sisli-data/public/sisli-station-rain-history.json ]; then
+            cp sisli-data/public/sisli-station-observation.json _site/data/sisli-station-observation.json
+            cp sisli-data/public/sisli-station-temperature-history.json _site/data/sisli-station-temperature-history.json
+            cp sisli-data/public/sisli-station-rain-history.json _site/data/sisli-station-rain-history.json
+            echo "Şişli dedicated payload applied."
+          else
+            echo "Şişli dedicated branch unavailable; retaining last GFS-state copy."
+          fi
           printf '{"apiBaseUrl":"%s"}' "$PUSH_API_URL" > _site/push-config.json
 
           mkdir -p _site/koy-data
