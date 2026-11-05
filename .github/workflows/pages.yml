@@ -63,6 +63,14 @@ jobs:
             printf '{"schema":"koy-gfs.first72.v1","forecast_source":"meteopt","forecast_6_hourly":[]}' > _site/koy-data/gfs/f72/latest.json
             printf '{"schema":"koy-gfs.comparison.v1","runs":[]}' > _site/koy-data/gfs/comparison.json
           fi
+          if [ -d koy-mgm-data/mgm ]; then
+            mkdir -p _site/koy-data/mgm
+            cp -a koy-mgm-data/mgm/. _site/koy-data/mgm/
+          else
+            mkdir -p _site/koy-data/mgm
+            printf '{"schema":"koy-mgm.station-observation.v1","station_observation":null}\n' > _site/koy-data/mgm/observation.json
+            printf '{"schema":"koy-mgm.station-history.v1","samples":[]}\n' > _site/koy-data/mgm/history.json
+          fi
           cp forecast-data/public/latest.json _site/data/latest.json
           if [ -s forecast-data/public/meteopt-gfs-first72.json ]; then
             python -m json.tool forecast-data/public/meteopt-gfs-first72.json > /dev/null
@@ -141,7 +149,7 @@ jobs:
             printf '{"schema":"gfs-watch.ecmwf-eps.v1","status":"pending","model":"ECMWF IFS ENS (EPS)","forecasts":[]}' > _site/data/ecmwf/latest.json
           fi
           touch _site/.nojekyll
-          echo "Website bundle prepared with the latest GFS forecast."
+          echo "Website bundle prepared with the latest GFS forecast and independent Köy MGM station data."
 
       - name: Validate inline website JavaScript syntax
         run: |
