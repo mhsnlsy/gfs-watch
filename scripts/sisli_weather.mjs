@@ -112,9 +112,9 @@ async function fetchFromMgm() {
     precipitation_source: "MGM 18401",
     humidity_percent: humidity,
     dew_point_c: dewPoint(temp, humidity),
-    station_pressure_hpa: seaLevel != null && seaLevel > 850 ? seaLevel : (stationP != null && stationP > 850 ? stationP : null),
+    station_pressure_hpa: stationP,
     actual_station_pressure_hpa: stationP,
-    pressure_type: seaLevel != null ? "mean_sea_level" : "station",
+    pressure_type: "station",
     pressure_source: "MGM 18401",
     pressure_observed_at_utc: observedAt.toISOString(),
     pressure_age_minutes: Math.round(ageMinutes * 10) / 10
