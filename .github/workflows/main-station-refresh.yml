@@ -47,8 +47,19 @@ jobs:
           sudo apt-get install -y --no-install-recommends tesseract-ocr
           python -m pip install --disable-pip-version-check requests pillow pytesseract
 
-      - name: Prepare main data directory
-        run: mkdir -p site/data public
+      - name: Prepare isolated station workspaces
+        run: |
+          set -euo pipefail
+          mkdir -p site/data public .station-work/enka .station-work/eyupsultan .station-work/sisli
+          for f in station-observation.json station-temperature-history.json; do
+            if [ -s "site/data/$f" ]; then cp "site/data/$f" ".station-work/enka/$f"; fi
+          done
+          for f in eyupsultan-station-temperature-history.json eyupsultan-station-rain-history.json; do
+            if [ -s "site/data/$f" ]; then cp "site/data/$f" ".station-work/eyupsultan/$f"; fi
+          done
+          for f in sisli-station-temperature-history.json sisli-station-rain-history.json; do
+            if [ -s "site/data/$f" ]; then cp "site/data/$f" ".station-work/sisli/$f"; fi
+          done
 
       - name: Update ENKA Balmumcu
         id: enka
@@ -57,7 +68,7 @@ jobs:
           PYTHONPATH: .
           PYTHONUNBUFFERED: "1"
           STATION_PREVIOUS_OBSERVATION_PATH: site/data/station-observation.json
-          STATION_TEMPERATURE_HISTORY_PATH: site/data/station-temperature-history.json
+          STATION_TEMPERATURE_HISTORY_PATH: .station-work/enka/station-temperature-history.json
         run: |
           set -euo pipefail
           python -u enka_weather.py
@@ -66,18 +77,19 @@ jobs:
           import json
           from pathlib import Path
           s=json.loads(Path("public/station-observation.json").read_text())["station_observation"]
-          if float(s.get("age_minutes",9999)) > 20 or s.get("is_stale") or s.get("temperature_2m_c") is None:
-              raise SystemExit("ENKA observation is stale or invalid.")
+          age=float(s.get("age_minutes",9999))
+          if age > 20 or s.get("is_stale") or s.get("temperature_2m_c") is None:
+              raise SystemExit(f"ENKA observation invalid/stale: age={age}")
           PY
-          cp public/station-observation.json site/data/station-observation.json
-          test -s site/data/station-temperature-history.json
+          cp public/station-observation.json .station-work/enka/station-observation.json
+          test -s .station-work/enka/station-temperature-history.json
 
       - name: Update Eyüpsultan
         id: eyupsultan
         continue-on-error: true
         env:
-          EYUPSULTAN_TEMPERATURE_HISTORY_PATH: site/data/eyupsultan-station-temperature-history.json
-          EYUPSULTAN_RAIN_HISTORY_PATH: site/data/eyupsultan-station-rain-history.json
+          EYUPSULTAN_TEMPERATURE_HISTORY_PATH: .station-work/eyupsultan/eyupsultan-station-temperature-history.json
+          EYUPSULTAN_RAIN_HISTORY_PATH: .station-work/eyupsultan/eyupsultan-station-rain-history.json
         run: |
           set -euo pipefail
           rm -f public/eyupsultan-station-observation.json
@@ -87,19 +99,20 @@ jobs:
           import json
           from pathlib import Path
           s=json.loads(Path("public/eyupsultan-station-observation.json").read_text())["station_observation"]
-          if float(s.get("age_minutes",9999)) > 20 or s.get("is_stale") or s.get("temperature_2m_c") is None:
-              raise SystemExit("Eyüpsultan observation is stale or invalid.")
+          age=float(s.get("age_minutes",9999))
+          if age > 20 or s.get("is_stale") or s.get("temperature_2m_c") is None:
+              raise SystemExit(f"Eyüpsultan observation invalid/stale: age={age}")
           PY
-          cp public/eyupsultan-station-observation.json site/data/eyupsultan-station-observation.json
-          test -s site/data/eyupsultan-station-temperature-history.json
-          test -s site/data/eyupsultan-station-rain-history.json
+          cp public/eyupsultan-station-observation.json .station-work/eyupsultan/eyupsultan-station-observation.json
+          test -s .station-work/eyupsultan/eyupsultan-station-temperature-history.json
+          test -s .station-work/eyupsultan/eyupsultan-station-rain-history.json
 
       - name: Update Şişli
         id: sisli
         continue-on-error: true
         env:
-          SISLI_TEMPERATURE_HISTORY_PATH: site/data/sisli-station-temperature-history.json
-          SISLI_RAIN_HISTORY_PATH: site/data/sisli-station-rain-history.json
+          SISLI_TEMPERATURE_HISTORY_PATH: .station-work/sisli/sisli-station-temperature-history.json
+          SISLI_RAIN_HISTORY_PATH: .station-work/sisli/sisli-station-rain-history.json
         run: |
           set -euo pipefail
           rm -f public/sisli-station-observation.json
@@ -109,16 +122,33 @@ jobs:
           import json
           from pathlib import Path
           s=json.loads(Path("public/sisli-station-observation.json").read_text())["station_observation"]
-          if float(s.get("age_minutes",9999)) > 20 or s.get("is_stale") or s.get("temperature_2m_c") is None:
-              raise SystemExit("Şişli observation is stale or invalid.")
+          age=float(s.get("age_minutes",9999))
+          if age > 20 or s.get("is_stale") or s.get("temperature_2m_c") is None:
+              raise SystemExit(f"Şişli observation invalid/stale: age={age}")
           PY
-          cp public/sisli-station-observation.json site/data/sisli-station-observation.json
-          test -s site/data/sisli-station-temperature-history.json
-          test -s site/data/sisli-station-rain-history.json
+          cp public/sisli-station-observation.json .station-work/sisli/sisli-station-observation.json
+          test -s .station-work/sisli/sisli-station-temperature-history.json
+          test -s .station-work/sisli/sisli-station-rain-history.json
 
-      - name: Publish successful station updates to main
+      - name: Publish only successful station results to main
         run: |
           set -euo pipefail
+          # A failed station leaves its existing main data untouched.
+          if [ -s ".station-work/enka/station-observation.json" ]; then
+            cp ".station-work/enka/station-observation.json" site/data/station-observation.json
+            cp ".station-work/enka/station-temperature-history.json" site/data/station-temperature-history.json
+          fi
+          if [ -s ".station-work/eyupsultan/eyupsultan-station-observation.json" ]; then
+            cp ".station-work/eyupsultan/eyupsultan-station-observation.json" site/data/eyupsultan-station-observation.json
+            cp ".station-work/eyupsultan/eyupsultan-station-temperature-history.json" site/data/eyupsultan-station-temperature-history.json
+            cp ".station-work/eyupsultan/eyupsultan-station-rain-history.json" site/data/eyupsultan-station-rain-history.json
+          fi
+          if [ -s ".station-work/sisli/sisli-station-observation.json" ]; then
+            cp ".station-work/sisli/sisli-station-observation.json" site/data/sisli-station-observation.json
+            cp ".station-work/sisli/sisli-station-temperature-history.json" site/data/sisli-station-temperature-history.json
+            cp ".station-work/sisli/sisli-station-rain-history.json" site/data/sisli-station-rain-history.json
+          fi
+
           git config user.name "github-actions[bot]"
           git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
           git add site/data
@@ -129,7 +159,9 @@ jobs:
           git commit -m "Update live station observations"
           for attempt in 1 2 3; do
             git pull --rebase origin main
-            if git push origin HEAD:main; then exit 0; fi
+            if git push origin HEAD:main; then
+              exit 0
+            fi
             sleep $((attempt * 2))
           done
           echo "Could not publish station data to main."
