@@ -137,7 +137,7 @@ function renderRuns(d,f72){
    $("daily-grid").innerHTML=dailyItems.map(item=>'<article class="day"><div class="day-name">'+dayLabel(item.date_istanbul)+'</div><div class="day-icon">'+(item.precipitation_total_mm>=5?"🌧️":item.precipitation_total_mm>=1?"🌦️":"⛅")+'</div><div class="day-range">'+fmt(item.temperature_max_c,0)+'° <span>'+fmt(item.temperature_min_c,0)+'°</span></div><div class="day-rain">☂ '+fmt(item.precipitation_total_mm,1)+' mm</div><div class="day-wind">↗ '+fmt(item.wind_speed_max_10m_kmh,0)+' km/sa</div></article>').join("");
  }
 }
-function refresh(){if(busy)return;busy=true;
+async function refresh(){if(busy)return;busy=true;
  const results=await Promise.allSettled([get("f72/latest.json"),get("comparison.json"),get(MGM_BASE+"history.json"),get(MGM_BASE+"observation.json")]);
  if(results[0].status==="fulfilled"){f72=results[0].value;renderF72(f72)}else{}
  if(results[1].status==="fulfilled")comparison=results[1].value;else comparison=null;
