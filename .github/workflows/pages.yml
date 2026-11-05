@@ -178,6 +178,13 @@ jobs:
           else
             printf '{"schema":"gfs-watch.station-temperature-history.v1","sampling_interval_minutes":5,"aggregation_interval_minutes":60,"samples":[]}\n' > _site/data/eyupsultan-station-temperature-history.json
           fi
+          if [ -s forecast-data/public/eyupsultan-station-rain-history.json ]; then
+            python -m json.tool forecast-data/public/eyupsultan-station-rain-history.json > /dev/null
+            cp forecast-data/public/eyupsultan-station-rain-history.json _site/data/eyupsultan-station-rain-history.json
+          else
+            printf '{"schema":"gfs-watch.station-rain-history.v1","station_id":"18101","station_name":"Eyüpsultan","retention_hours":72,"samples":[]}
+' > _site/data/eyupsultan-station-rain-history.json
+          fi
           if [ -s forecast-data/public/sisli-station-observation.json ]; then
             python -m json.tool forecast-data/public/sisli-station-observation.json > /dev/null
             cp forecast-data/public/sisli-station-observation.json _site/data/sisli-station-observation.json
@@ -189,6 +196,13 @@ jobs:
             cp forecast-data/public/sisli-station-temperature-history.json _site/data/sisli-station-temperature-history.json
           else
             printf '{"schema":"gfs-watch.station-temperature-history.v1","station_id":"18401","station_name":"Şişli","sampling_interval_minutes":5,"aggregation_interval_minutes":60,"samples":[]}\n' > _site/data/sisli-station-temperature-history.json
+          fi
+          if [ -s forecast-data/public/sisli-station-rain-history.json ]; then
+            python -m json.tool forecast-data/public/sisli-station-rain-history.json > /dev/null
+            cp forecast-data/public/sisli-station-rain-history.json _site/data/sisli-station-rain-history.json
+          else
+            printf '{"schema":"gfs-watch.station-rain-history.v1","station_id":"18401","station_name":"Şişli","retention_hours":72,"samples":[]}
+' > _site/data/sisli-station-rain-history.json
           fi
           if python source/scripts/build_forecast_verification.py \
               --runs-dir forecast-data/public/runs \
