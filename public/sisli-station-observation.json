@@ -7,8 +7,8 @@
     "source_url": "https://servis.mgm.gov.tr/web/sondurumlar?merkezid=18401",
     "source_fallback_used": true,
     "observed_at_utc": "2026-11-05T00:09:00.000Z",
-    "fetched_at_utc": "2026-11-05T00:14:13.833Z",
-    "age_minutes": 5,
+    "fetched_at_utc": "2026-11-05T00:14:30.875Z",
+    "age_minutes": 6,
     "stale_after_minutes": 30,
     "is_stale": false,
     "temperature_2m_c": 11.7,
@@ -18,7 +18,7 @@
     "wind_direction_tr": "Kuzeydoğu",
     "precipitation_1h_mm": 0,
     "precipitation_10m_mm": 0,
-    "precipitation_6h_mm": 0.92,
+    "precipitation_6h_mm": 0.9,
     "precipitation_12h_mm": 17.28,
     "precipitation_24h_mm": 28.09,
     "precipitation_daily_mm": 0,
@@ -30,7 +30,7 @@
     "pressure_type": "station",
     "pressure_source": "MGM 18401",
     "pressure_observed_at_utc": "2026-11-05T00:09:00.000Z",
-    "pressure_age_minutes": 5.2
+    "pressure_age_minutes": 5.5
   },
-  "updated_at_utc": "2026-11-05T00:14:11.180Z"
+  "updated_at_utc": "2026-11-05T00:14:28.471Z"
 }
