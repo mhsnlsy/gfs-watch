@@ -110,6 +110,14 @@ jobs:
           print("MGM Çanakçı station:",json.dumps(payload,ensure_ascii=False))
           PY
 
+      - name: Restore persistent MGM history from koy-mgm-data
+        run: |
+          set -euo pipefail
+          git fetch origin koy-mgm-data || true
+          if git show-ref --verify --quiet refs/remotes/origin/koy-mgm-data; then
+            git show origin/koy-mgm-data:mgm/history.json > output/history.json || true
+          fi
+
       - name: Build independent MGM station history
         run: |
           set -euo pipefail
