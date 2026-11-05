@@ -73,13 +73,25 @@ const sandbox = {
   symbolFor: () => "☁"
 };
 
-function sample(hoursAgo, temperature, dailyRain) {
+function sample(hoursAgo, temperature, dailyRain, rain10m = null) {
   const logged = new Date(Date.now() - hoursAgo * 3600000).toISOString();
   return {
     logged_at_utc: logged,
     observed_at_utc: logged,
     temperature_2m_c: temperature,
-    precipitation_daily_mm: dailyRain
+    precipitation_daily_mm: dailyRain,
+    precipitation_10m_mm: rain10m
+  };
+}
+const rainAnchor = Math.floor(Date.now() / 300000) * 300000;
+function rainSample(minutesAgo, rain10m) {
+  const stamp = new Date(rainAnchor - minutesAgo * 60000).toISOString();
+  return {
+    logged_at_utc: stamp,
+    observed_at_utc: stamp,
+    temperature_2m_c: 11,
+    precipitation_daily_mm: 0.8,
+    precipitation_10m_mm: rain10m
   };
 }
 
@@ -91,8 +103,13 @@ sandbox.enkaStationHistorySamples = [
 sandbox.eyupsultanStationHistorySamples = [
   sample(22, 18.2, 2.0),
   sample(12, 17.3, 2.6),
-  sample(0.3, 16.5, 3.7)
+  sample(0.3, 16.5, 3.7),
+  rainSample(20, 0.1),
+  rainSample(10, 0.2),
+  rainSample(0, 0.3)
 ];
+sandbox.eyupsultanStationObservation.observed_at_utc = new Date(rainAnchor).toISOString();
+sandbox.eyupsultanStationObservation.precipitation_10m_mm = 0.3;
 
 vm.createContext(sandbox);
 vm.runInContext(html.slice(functionStart, functionEnd), sandbox, {
@@ -108,10 +125,11 @@ assert.equal(node("station-history-panel").attributes["aria-label"], "Eyüpsulta
 assert.match(node("station-trend-meta").textContent, /Eyüpsultan/);
 assert.match(node("station-rain-meta").textContent, /Eyüpsultan/);
 assert.match(node("station-temperature-trend").innerHTML, /Eyüpsultan son 24 saat sıcaklık geçmişi/);
-assert.match(node("station-rain-trend").innerHTML, /Eyüpsultan son 24 saat yağış birikimi/);
-assert.match(node("station-rain-meta").textContent, /1,7 mm ölçülen artış/);
+assert.match(node("station-rain-trend").innerHTML, /Eyüpsultan son 24 saatteki kayan 30 dakika yağış toplamı/);
+assert.match(node("station-rain-trend").innerHTML, /0,6 mm \/ 30 dk/);
+assert.match(node("station-rain-meta").textContent, /0,6 mm \/ 30 dk/);
 assert.match(node("station-trend-meta").textContent, /30 dk ortalama/);
-assert.match(node("station-rain-meta").textContent, /30 dk örnek/);
+assert.match(node("station-rain-meta").textContent, /üç çakışmayan 10 dk ölçüm/);
 assert.doesNotMatch(node("station-trend-meta").textContent, /ENKA/);
 assert.doesNotMatch(node("station-rain-meta").textContent, /ENKA/);
 
@@ -124,10 +142,11 @@ assert.equal(node("station-history-panel").attributes["aria-label"], "ENKA Balmu
 assert.match(node("station-trend-meta").textContent, /ENKA Balmumcu/);
 assert.match(node("station-rain-meta").textContent, /ENKA Balmumcu/);
 assert.match(node("station-temperature-trend").innerHTML, /ENKA Balmumcu son 24 saat sıcaklık geçmişi/);
-assert.match(node("station-rain-trend").innerHTML, /ENKA Balmumcu son 24 saat yağış birikimi/);
-assert.match(node("station-rain-meta").textContent, /0,6 mm ölçülen artış/);
+assert.match(node("station-rain-trend").innerHTML, /Eyüpsultan son 24 saatteki kayan 30 dakika yağış toplamı/);
+assert.match(node("station-rain-trend").innerHTML, /0,6 mm \/ 30 dk/);
+assert.match(node("station-rain-meta").textContent, /0,6 mm \/ 30 dk/);
 assert.match(node("station-trend-meta").textContent, /30 dk ortalama/);
-assert.match(node("station-rain-meta").textContent, /30 dk örnek/);
+assert.match(node("station-rain-meta").textContent, /üç çakışmayan 10 dk ölçüm/);
 assert.doesNotMatch(node("station-trend-meta").textContent, /Eyüpsultan/);
 assert.doesNotMatch(node("station-rain-meta").textContent, /Eyüpsultan/);
 
