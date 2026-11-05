@@ -30,9 +30,9 @@ def main() -> None:
         assert "deploy-pages:" not in source, f"{name} still has a direct Pages deploy job."
         assert "deploy-live-site:" not in source, f"{name} still has a direct Pages deploy job."
 
-    for name in ("ecmwf-eps.yml", "render-pages-charts-from-saved-data.yml"):
-        source = (workflows / name).read_text(encoding="utf-8")
-        assert "gh workflow run pages.yml" not in source, f"{name} still dispatches Pages directly."
+    source = (workflows / "ecmwf-eps.yml").read_text(encoding="utf-8")
+    assert "gh workflow run pages.yml" not in source, "ecmwf-eps.yml still dispatches Pages directly."
+    assert not (workflows / "render-pages-charts-from-saved-data.yml").exists()
 
     assert not (workflows / "pages-live.yml").exists()
 
