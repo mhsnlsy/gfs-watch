@@ -10,6 +10,7 @@ on:
       - main
     paths:
       - ".github/workflows/eyupsultan-station-refresh.yml"
+      - "scripts/eyupsultan_weather.mjs"
   workflow_dispatch:
 
 permissions:
