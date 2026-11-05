@@ -1,94 +1,13 @@
-name: Eyüpsultan Station Refresh
-
-# Independent five-minute polling. This workflow reads and writes only
-# the Eyüpsultan station branch; it does not depend on other station workflows.
+name: Eyüpsultan Station Refresh (disabled - main workflow only)
 
 on:
-  push:
-    branches:
-      - main
-    paths:
-      - ".github/workflows/eyupsultan-station-refresh.yml"
-      - "scripts/eyupsultan_weather.mjs"
   workflow_dispatch:
-  schedule:
-    - cron: "1-59/5 * * * *"
 
 permissions:
-  contents: write
-
-concurrency:
-  group: eyupsultan-weather-refresh
-  cancel-in-progress: false
+  contents: read
 
 jobs:
-  refresh:
-    outputs:
-      changed: ${{ steps.publish.outputs.changed }}
+  disabled:
     runs-on: ubuntu-latest
-    timeout-minutes: 12
     steps:
-      - name: Check out application
-        uses: actions/checkout@v4
-        with:
-          ref: main
-
-      - name: Check out published station data
-        uses: actions/checkout@v4
-        with:
-          ref: eyupsultan-state
-          path: forecast-data
-
-      - name: Set up Node.js
-        uses: actions/setup-node@v4
-        with:
-          node-version: "22"
-
-      - name: Fetch Eyüpsultan observation
-        id: scrape
-        run: |
-          set -euo pipefail
-          node scripts/eyupsultan_weather.mjs
-          test -s public/eyupsultan-station-observation.json
-          AGE=$(jq -r '.station_observation.age_minutes // 999' public/eyupsultan-station-observation.json)
-          TEMP=$(jq -r '.station_observation.temperature_2m_c' public/eyupsultan-station-observation.json)
-          SOURCE=$(jq -r '.station_observation.source' public/eyupsultan-station-observation.json)
-          echo "Age: $AGE minutes · $TEMP C · MGM $SOURCE"
-          STALE=$(jq -r '.station_observation.is_stale // false' public/eyupsultan-station-observation.json)
-          if [ "$AGE" -gt 20 ] || [ "$STALE" = "true" ]; then
-            echo "Eyüpsultan observation is stale (limit 20 minutes); preserving the last published data."
-            exit 1
-          fi
-        env:
-          EYUPSULTAN_TEMPERATURE_HISTORY_PATH: forecast-data/public/eyupsultan-station-temperature-history.json
-          EYUPSULTAN_RAIN_HISTORY_PATH: forecast-data/public/eyupsultan-station-rain-history.json
-
-      - name: Publish data
-        id: publish
-        if: steps.scrape.outcome == 'success'
-        run: |
-          set -euo pipefail
-          mkdir -p forecast-data/public
-          cp -f public/eyupsultan-station-observation.json forecast-data/public/
-          # History files are written directly into forecast-data/public by the scraper.
-          test -s forecast-data/public/eyupsultan-station-temperature-history.json
-          test -s forecast-data/public/eyupsultan-station-rain-history.json
-          cd forecast-data
-          git config user.name "github-actions[bot]"
-          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
-          git add public/eyupsultan-station-observation.json public/eyupsultan-station-temperature-history.json public/eyupsultan-station-rain-history.json
-          if git diff --cached --quiet; then
-            echo "No station changes to publish."
-            echo "changed=false" >> "$GITHUB_OUTPUT"
-            exit 0
-          fi
-          for file in $(git diff --cached --name-only); do
-            case "$file" in
-              public/eyupsultan-station-observation.json|public/eyupsultan-station-temperature-history.json|public/eyupsultan-station-rain-history.json) ;;
-              *) echo "Blocked unexpected publication path: $file"; exit 1 ;;
-            esac
-          done
-          git commit -m "Refresh MGM Eyüpsultan station observation [$(date -u +%H:%M)]"
-          git push origin HEAD:eyupsultan-state
-          echo "Station data pushed to dedicated eyupsultan-state."
-          echo "changed=true" >> "$GITHUB_OUTPUT"
+      - run: echo "Disabled. Live station updates are handled only by main-station-refresh.yml."
