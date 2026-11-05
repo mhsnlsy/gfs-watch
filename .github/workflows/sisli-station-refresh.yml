@@ -8,6 +8,8 @@ on:
       - ".github/workflows/sisli-station-refresh.yml"
       - "scripts/sisli_weather.mjs"
   workflow_dispatch:
+  schedule:
+    - cron: "*/5 * * * *"
 
 permissions:
   contents: write
@@ -48,7 +50,7 @@ jobs:
           AGE=$(jq -r '.station_observation.age_minutes // 999' public/sisli-station-observation.json)
           TEMP=$(jq -r '.station_observation.temperature_2m_c' public/sisli-station-observation.json)
           echo "MGM Şişli 18401: $AGE min · $TEMP C"
-          if [ "$AGE" -gt 30 ]; then
+          if [ "$AGE" -gt 20 ]; then
             echo "Şişli observation stale; previous published data will be preserved."
             exit 1
           fi
@@ -114,12 +116,3 @@ jobs:
           fi
           gh workflow run pages.yml --ref main --repo "$GITHUB_REPOSITORY"
           echo "Pages deployment requested."
-
-      # The next poll is queued even if this station's fetch or publish failed.
-      - name: Queue next five-minute Şişli refresh
-        if: always() && !cancelled()
-        env:
-          GH_TOKEN: ${{ github.token }}
-        run: |
-          gh workflow run sisli-station-refresh.yml --ref main --repo "$GITHUB_REPOSITORY"
-          echo "Next independent Şişli poll queued."
