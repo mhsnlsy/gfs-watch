@@ -25,9 +25,9 @@ jobs:
           from datetime import datetime, timezone, timedelta
 
           data = subprocess.check_output([
-              "gh", "api",
+              "gh", "api", "--method", "GET",
               "repos/${{ github.repository }}/actions/workflows/meteopt-gfs-monitor.yml/runs",
-              "-f", "per_page=5",
+              "-f", "per_page=10",
           ], text=True)
 
           runs = json.loads(data).get("workflow_runs", [])
@@ -36,9 +36,11 @@ jobs:
 
           for run in runs:
               created = datetime.fromisoformat(run["created_at"].replace("Z", "+00:00"))
-              if now - created <= timedelta(minutes=12):
+              age = now - created
+              status = run.get("status", "")
+              if age <= timedelta(minutes=12):
                   recent = True
-                  print(f"Primary monitor found: {run['id']} ({run['status']}, {run.get('conclusion')})")
+                  print(f"Primary monitor found: {run['id']} ({status}, {run.get('conclusion')})")
                   break
 
           if recent:
