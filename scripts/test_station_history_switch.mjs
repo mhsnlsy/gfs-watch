@@ -125,7 +125,7 @@ assert.equal(node("station-history-panel").attributes["aria-label"], "Eyüpsulta
 assert.match(node("station-trend-meta").textContent, /Eyüpsultan/);
 assert.match(node("station-rain-meta").textContent, /Eyüpsultan/);
 assert.match(node("station-temperature-trend").innerHTML, /Eyüpsultan son 24 saat sıcaklık geçmişi/);
-assert.match(node("station-rain-trend").innerHTML, /Eyüpsultan son 24 saatteki kayan 30 dakika yağış toplamı/);
+assert.match(node("station-rain-trend").innerHTML, /ENKA Balmumcu son 24 saatteki kayan 30 dakika yağış toplamı/);
 assert.match(node("station-rain-trend").innerHTML, /0,6 mm \/ 30 dk/);
 assert.match(node("station-rain-meta").textContent, /0,6 mm \/ 30 dk/);
 assert.match(node("station-trend-meta").textContent, /30 dk ortalama/);
@@ -140,7 +140,7 @@ assert.equal(node("temperature").textContent, "8,4°");
 assert.equal(node("history-station-source").textContent, "ENKA BALMUMCU · GERÇEK ÖLÇÜMLER");
 assert.equal(node("station-history-panel").attributes["aria-label"], "ENKA Balmumcu son 24 saat geçmişi");
 assert.match(node("station-trend-meta").textContent, /ENKA Balmumcu/);
-assert.match(node("station-rain-meta").textContent, /ENKA Balmumcu/);
+assert.match(node("station-rain-meta").textContent, /ENKA Balmumcu · MGM Eyüpsultan/);
 assert.match(node("station-temperature-trend").innerHTML, /ENKA Balmumcu son 24 saat sıcaklık geçmişi/);
 assert.match(node("station-rain-trend").innerHTML, /Eyüpsultan son 24 saatteki kayan 30 dakika yağış toplamı/);
 assert.match(node("station-rain-trend").innerHTML, /0,6 mm \/ 30 dk/);
@@ -148,7 +148,7 @@ assert.match(node("station-rain-meta").textContent, /0,6 mm \/ 30 dk/);
 assert.match(node("station-trend-meta").textContent, /30 dk ortalama/);
 assert.match(node("station-rain-meta").textContent, /üç çakışmayan 10 dk ölçüm/);
 assert.doesNotMatch(node("station-trend-meta").textContent, /Eyüpsultan/);
-assert.doesNotMatch(node("station-rain-meta").textContent, /Eyüpsultan/);
+assert.match(node("station-rain-meta").textContent, /MGM Eyüpsultan/);
 
 assert.match(html, /function attachStationHistoryTooltip/);
 assert.match(html, /station-history-tooltip-value/);
