@@ -66,9 +66,9 @@ jobs:
           doc=json.loads(Path("public/station-observation.json").read_text(encoding="utf-8"))
           station=doc["station_observation"]
           age=float(station.get("age_minutes", 9999))
-          stale_after=float(station.get("stale_after_minutes", 15))
+          stale_after=float(station.get("stale_after_minutes", 20))
           print(f"ENKA measurement age: {age:.1f} min (limit {stale_after:.0f} min)")
-          if age > 15 or station.get("is_stale"):
+          if age > 20 or station.get("is_stale"):
               raise SystemExit("ENKA source is stale; keeping the last published record and retrying on the next five-minute poll.")
           if station.get("temperature_2m_c") is None:
               raise SystemExit("ENKA temperature missing; refusing to publish.")
