@@ -68,11 +68,10 @@
       ? document.forecast_6_hourly
       : [];
 
-    // The independent Istanbul feed is 3-hourly. The homepage MeteoPT table
-    // intentionally shows 6-hourly steps: 6, 12, ... 72.
+    // The homepage MeteoPT table shows every 3-hourly forecast step through 72h.
     const pointsThrough72h = points.filter(point => {
       const step = Number(point.forecast_hour);
-      return Number.isFinite(step) && step > 0 && step <= 72 && step % 6 === 0;
+      return Number.isFinite(step) && step > 0 && step <= 72 && step % 3 === 0;
     });
 
     const pointByHour = new Map(points.map(point => [Number(point.forecast_hour), point]));
@@ -136,7 +135,7 @@
         }).format(new Date(document.published_at_utc)) + " TSİ"
       : "Yayın zamanı bilinmiyor";
 
-    $("meteopt-table-status").textContent = rows.length + " / 12 adım · 72. saate kadar";
+    $("meteopt-table-status").textContent = rows.length + " / 24 adım · 72. saate kadar";
   }
 
   async function refresh() {
