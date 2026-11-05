@@ -1,12 +1,22 @@
 <!doctype html>
 <html lang="tr">
 <head>
-<meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
-<meta name="theme-color" content="#081827"><meta name="description" content="Giresun Çanakçı Köy için MeteoPT GFS tahmini ve son dört model döngüsünün karşılaştırması.">
-<title>İstanbul'un Havası · Köy GFS</title>
-<link rel="preconnect" href="https://fonts.googleapis.com"><link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-<link href="https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;500;600;700&family=Manrope:wght@400;500;600;700;800&display=swap" rel="stylesheet">
-<style>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+  <meta http-equiv="refresh" content="300">
+  <meta name="theme-color" content="#081827">
+  <meta name="apple-mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+  <meta name="apple-mobile-web-app-title" content="İstanbul Hava">
+  <link rel="manifest" href="./manifest.webmanifest">
+  <meta name="description" content="İstanbul için GFS ve ECMWF hava tahmini, 72 saatlik sıcaklık, yağış, rüzgâr ve bölgesel basınç analizi.">
+  <title>İstanbul'un Havası · Giresun Çanakçı</title>
+  <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css">
+  <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;500;600;700&family=Manrope:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+  <style>
     :root{color-scheme:dark;--bg:#071521;--panel:#102535;--panel2:#132d40;--line:rgba(204,225,239,.11);--text:#edf5f8;--muted:#9bb1bf;--cyan:#7dd3d7;--blue:#8abce8;--gold:#f1c98b;--green:#8fd7ba;--shadow:0 22px 70px rgba(0,0,0,.23)}
     *{box-sizing:border-box}html{scroll-behavior:smooth}body{margin:0;background:radial-gradient(ellipse at 82% 0%,rgba(46,103,128,.2),transparent 34rem),linear-gradient(180deg,#081927 0%,#071521 55%,#091a28 100%);color:var(--text);font-family:"DM Sans",sans-serif;min-height:100vh}a{color:inherit;text-decoration:none}
     .shell{width:min(1120px,calc(100% - 40px));margin:auto}.topbar{height:76px;border-bottom:1px solid var(--line);display:flex;align-items:center;justify-content:space-between}.brand{display:flex;align-items:center;gap:12px;font-family:Manrope,sans-serif;font-weight:800;letter-spacing:-.04em;font-size:18px}.brand-mark{width:38px;height:38px;border-radius:13px;background:linear-gradient(145deg,#b7e6dc,#6ba8bc);display:grid;place-items:center;color:#102c3b;font-size:21px;box-shadow:0 7px 25px rgba(109,193,191,.2)}.brand small{display:block;color:var(--muted);font:500 10px "DM Sans",sans-serif;letter-spacing:.12em;text-transform:uppercase;margin-top:2px}nav{display:flex;gap:25px;color:#b5c7d1;font-size:13px}nav a:hover{color:white}.top-right{display:flex;align-items:center;gap:10px}.version{font-size:11px;color:#b7cbd6;border:1px solid var(--line);padding:7px 10px;border-radius:999px}
@@ -1017,149 +1027,80 @@
       .briefing-row { padding:4px 6px!important; }
     }
 </style>
-<style>
-.koy-dashboard .station-card{border-color:rgba(125,211,215,.32)}
-.koy-current-meta{font-size:11px;color:#a9bdc9;line-height:1.5;margin-top:4px}
-.koy-location-tag{display:inline-flex;margin-top:7px;padding:5px 8px;border:1px solid var(--line);border-radius:8px;color:#b8d7df;font-size:9px}
-.koy-status-inline{font-size:10px;color:#a9bdc9}
-.koy-run-legend{display:flex;flex-wrap:wrap;gap:8px 14px;margin:8px 0 14px;font-size:9px;color:#a9bdc9}
-.koy-run-legend span{display:inline-flex;align-items:center;gap:6px}.koy-run-legend i{width:17px;height:3px;border-radius:3px;display:inline-block}
-.koy-chart-grid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:13px}
-.koy-chart-grid .chart-card:last-child{grid-column:1/-1}
-.koy-chart-card{min-width:0;padding:13px;border:1px solid rgba(204,225,239,.08);border-radius:14px;background:rgba(4,19,29,.16)}
-.koy-chart-card h3{font:700 14px Manrope,sans-serif;margin:0}.koy-chart-card p{font-size:9px;color:var(--muted);margin:3px 0 0}
-.koy-svg{width:100%;height:auto;display:block;overflow:visible}
-.koy-chart{min-width:0;margin-top:9px}
-.koy-forecast-table{width:100%;border-collapse:collapse;min-width:700px;font-size:11px;font-variant-numeric:tabular-nums}
-.koy-forecast-table th,.koy-forecast-table td{padding:9px 10px;border-bottom:1px solid var(--line);text-align:right;white-space:nowrap}
-.koy-forecast-table th{font-size:9px;color:#a9c4cf;text-transform:uppercase;letter-spacing:.05em;background:rgba(255,255,255,.025)}
-.koy-forecast-table th:first-child,.koy-forecast-table td:first-child{text-align:left}
-.koy-forecast-table td{color:#d8e7ed}
-.koy-table-scroll{width:100%;overflow-x:auto;-webkit-overflow-scrolling:touch}
-.koy-source-card{padding:17px;background:linear-gradient(145deg,rgba(18,43,61,.94),rgba(12,31,46,.96));border:1px solid var(--line);border-radius:18px}
-.koy-source-card a{color:#9ddbd9;text-decoration:underline;text-underline-offset:3px}
-.koy-source-card p{font-size:11px;line-height:1.6;color:#a9bdc9}
-.koy-rain-times{margin-top:13px;padding:12px;border:1px solid rgba(125,211,215,.17);border-radius:13px;background:rgba(3,16,26,.24)}
-.koy-rain-times strong{display:block;color:#8fd0c8;font-size:10px;letter-spacing:.08em;text-transform:uppercase;margin-bottom:5px}
-.koy-rain-times div{font-size:11px;line-height:1.55;color:#d8e7ed}
-.koy-briefing{display:grid;gap:7px;margin-top:12px}
-.koy-brief-row{display:grid;grid-template-columns:105px minmax(0,1fr);gap:8px;padding:9px 10px;border:1px solid rgba(143,184,196,.13);border-radius:11px;background:rgba(2,15,24,.22)}
-.koy-brief-row b{font-size:9px;letter-spacing:.06em;color:#8fd0c8;text-transform:uppercase}
-.koy-brief-row span{font-size:11px;line-height:1.45;color:#dcebf0}
-@media(max-width:900px){.koy-chart-grid{grid-template-columns:minmax(0,1fr)}.koy-chart-grid .chart-card:last-child{grid-column:auto}}
-@media(max-width:700px){.koy-chart-card{padding:10px}.koy-brief-row{grid-template-columns:85px minmax(0,1fr)}}
-</style>
-<link rel="stylesheet" href="./meteopt-gfs-table.css?v=20261104-3">\n<style>
-.koy-history-panel{margin-top:12px;padding:12px 0 0;border-top:1px solid rgba(213,237,240,.13)}
-.koy-history-head{display:flex;align-items:center;justify-content:space-between;gap:8px;margin-bottom:8px}
-.koy-history-head h3{margin:2px 0 0;font:700 14px Manrope,sans-serif;color:#e8f5f8}
-.koy-history-head span{font-size:8px;color:#91aab8;border:1px solid rgba(204,225,239,.12);padding:5px 7px;border-radius:999px;white-space:nowrap}
-.koy-history-grid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:8px}
-.koy-history-card{min-width:0;padding:8px;border:1px solid rgba(204,225,239,.08);border-radius:12px;background:rgba(4,19,29,.16)}
-.koy-history-card-head{display:flex;justify-content:space-between;align-items:center;gap:5px}
-.koy-history-card-head strong{font:700 11px Manrope,sans-serif;color:#e7f2f6}
-.koy-history-card-head span{font-size:8px;color:#91aab8}
-.koy-history-chart{height:105px;margin-top:4px}
-.koy-history-chart svg{display:block;width:100%;height:100%;overflow:visible}
-@media(max-width:560px){.koy-history-panel{margin-top:10px;padding-top:10px}.koy-history-grid{gap:6px}.koy-history-card{padding:6px}.koy-history-chart{height:92px}}
-</style></head>
-<body>
-<header class="shell topbar">
-<a class="brand" href="./index.html" aria-label="İstanbul'un Havası ana sayfa"><span class="brand-mark">☀</span><span>İstanbul'un Havası<small>Şehir için hava tahmini</small></span></a>
-<nav aria-label="Ana gezinme"><a href="./index.html">Ana sayfa</a><a href="#koy-tahmin">72 saat</a><a href="#koy-rapor">GFS raporu</a><a href="#koy-tablosu">Model tablosu</a></nav>
-<div class="top-right"><div class="model-picker" role="group" aria-label="Tahmin modeli"><button type="button" class="active" aria-pressed="true">GFS</button><button type="button" aria-pressed="false">ECMWF IFS</button></div><span class="version">KÖY · ÇANAKÇI</span></div>
-</header>
-<main class="shell" data-ui-build="koy-carbon-copy-2026-11-05">
-<section class="dashboard-top" id="koy-tahmin" aria-label="Giresun Çanakçı GFS tahmini ve son 24 saat MGM ölçümleri">
-<div class="dashboard-left">
-<article class="weather-card station-card" role="region" aria-labelledby="station-card-title">
-<div class="weather-top"><div><div class="label">GERÇEK İSTASYON GÖZLEMİ</div><div class="place" id="station-card-title">Çanakçı · Giresun</div></div><span class="model-state" id="freshness">CANLI ÖLÇÜM</span></div>
-<div class="station-overview"><div class="station-current"><div class="temp-row"><div class="temperature" id="temperature">—°</div><div class="weather-symbol" id="weather-symbol" aria-hidden="true">☁️</div></div><div class="temp-meta">
-<div class="temp-caption" id="station-observation-meta">Son istasyon ölçümü bekleniyor</div>
-<div class="delta-badge" id="station-24h-diff"></div>
-<div class="delta-badge" id="station-gap" hidden></div>
-<div class="rain-brief" id="rain-brief" aria-live="polite"><div class="delta-badge" id="rain-brief-current">MGM Çanakçı yağış ölçümü bekleniyor.</div><div class="delta-badge" id="rain-brief-forecast">MeteoPT GFS tahmini bekleniyor.</div></div>
-</div></div></div>
-<div class="weather-stats">
-<div class="stat"><div class="name">Hissedilen</div><div class="value" id="feels-like">—<span class="unit">°</span></div></div>
-<div class="stat"><div class="name">Rüzgâr</div><div class="value" id="wind">—<span class="unit">km/sa</span></div><div class="detail" id="wind-direction">—</div></div>
-<div class="stat"><div class="name">Nem</div><div class="value" id="humidity">—<span class="unit">%</span></div></div>
-<div class="stat"><div class="name">Çiğ Noktası</div><div class="value" id="dewpoint-value">—<span class="unit">°</span></div></div>
-<div class="stat"><div class="name">Yağış</div><div class="value" id="rain">—<span class="unit">mm</span></div><div class="detail" id="rain-detail">Son 1 saat</div></div>
-<div class="stat"><div class="name">Basınç</div><div class="value" id="pressure">—<span class="unit">hPa</span></div><div class="detail" id="pressure-detail"></div></div>
-</div>
-<section class="station-history-inline history-panel" id="station-history-panel" aria-label="Çanakçı son 24 saat gerçek ölçümleri">
-<div class="history-panel-head"><div><div class="section-kicker" id="history-station-source">ÇANAKÇI · GERÇEK ÖLÇÜMLER</div><h2>Son 24 saat</h2></div></div>
-<div class="history-charts">
-<article class="history-chart-card"><div class="history-chart-head"><div><h3>Sıcaklık</h3><p>°C · 30 dk ortalama, min–maks</p></div><span class="history-chart-icon">℃</span></div><div class="history-chart" id="station-temperature-trend"><div class="station-trend-empty">Sıcaklık geçmişi bekleniyor…</div></div><div class="history-chart-meta" id="station-trend-meta">Çanakçı · MGM · 24 saat</div></article>
-<article class="history-chart-card"><div class="history-chart-head"><div><h3 id="station-rain-title">Yağış</h3><p id="station-rain-caption">mm · kayan 1 saatlik toplam</p></div><span class="history-chart-icon">☂</span></div><div class="history-chart" id="station-rain-trend"><div class="station-trend-empty">Yağış geçmişi bekleniyor…</div></div><div class="history-chart-meta" id="station-rain-meta">Çanakçı · MGM · son ölçüm: — mm / 1 saat</div></article>
-</div>
-<div class="history-source-note" id="history-source-note">Sıcaklık ve yağış: MGM Çanakçı gerçek istasyon ölçümleri.</div>
-</section>
-</article>
-<article class="history-chart-card"><div class="history-chart-head"><div><h3 id="station-rain-title">Yağış</h3><p id="station-rain-caption">mm · kayan 1 saatlik toplam</p></div><span class="history-chart-icon">☂</span></div><div class="history-chart" id="station-rain-trend"><div class="station-trend-empty">Yağış geçmişi oluşturuluyor…</div></div><div class="history-chart-meta" id="station-rain-meta">Çanakçı · MGM · son ölçüm</div></article>
-</div>
-<div class="history-source-note" id="history-source-note">Sıcaklık ve yağış: MGM Çanakçı gerçek istasyon ölçümleri.</div>
-</section>
-</article>
-<article class="history-chart-card"><div class="history-chart-head"><div><h3 id="station-rain-title">Yağış</h3><p id="station-rain-caption">mm · kayan 1 saatlik toplam</p></div><span class="history-chart-icon">☂</span></div><div class="history-chart" id="station-rain-trend"><div class="station-trend-empty">Yağış geçmişi bekleniyor…</div></div><div class="history-chart-meta" id="station-rain-meta">Çanakçı · MGM · son 1 saat</div></article>
-</div>
-<div class="history-source-note" id="history-source-note">Sıcaklık ve yağış: MGM Çanakçı gerçek istasyon ölçümleri.</div>
-</section>
-<div class="weather-stats">
-<div class="stat"><div class="name">Model adımı</div><div class="value" id="current-step">—</div><div class="detail">F tahmin</div></div>
-<div class="stat"><div class="name">850 hPa</div><div class="value" id="current-t850">—<span class="unit">°C</span></div></div>
-<div class="stat"><div class="name">Rüzgâr</div><div class="value" id="current-wind">—<span class="unit">km/sa</span></div></div>
-<div class="stat"><div class="name">850 hPa rüzgâr</div><div class="value" id="current-wind850">—<span class="unit">km/sa</span></div></div>
-<div class="stat"><div class="name">Yağış</div><div class="value" id="current-rain">—<span class="unit">mm</span></div><div class="detail">6 saatlik birikim</div></div>
-<div class="stat"><div class="name">Geçerlilik</div><div class="value" id="current-valid">—</div><div class="detail">TSİ</div></div>
-</div>
+  <link rel="stylesheet" href="./meteopt-gfs-table.css?v=20261104-3">
 
-</article>
-</div>
-<section class="next-72h-panel" aria-label="Önümüzdeki 72 saat">
-<div class="next-72h-head"><div><div class="section-kicker">GFS · GİRESUN ÇANAKÇI</div><h2>Önümüzdeki 72 saat</h2><p>Dört son GFS döngüsünün aynı tahmin saatlerindeki aralığı ve güncel tahmini.</p></div><span class="next-72h-badge" id="next72-meta">Model verisi bekleniyor</span></div>
-<div class="next-72h-grid">
+  <style id="mobile-scroll-recovery">
+    /* Keep the document itself as the vertical scroll container on Android WebView. */
+    html, body {
+      height: auto !important;
+      min-height: 100% !important;
+      overflow-x: clip !important;
+      overflow-y: auto !important;
+      touch-action: pan-y pinch-zoom !important;
+    }
+    body, main, .shell, .water-gfs-layout, #meteopt-gfs-table, #iski-water-card {
+      position: relative;
+      overflow-y: visible !important;
+      touch-action: pan-y pinch-zoom !important;
+    }
+    .water-gfs-layout {
+      display: grid;
+      grid-template-columns: minmax(0, 1fr);
+      gap: 18px;
+      align-items: start;
+    }
+    .meteopt-table-card { min-width: 0; max-width: 100%; }
+    .meteopt-table-scroll {
+      display: block;
+      width: 100%;
+      max-width: 100%;
+      overflow-x: auto !important;
+      overflow-y: visible !important;
+      -webkit-overflow-scrolling: touch;
+      overscroll-behavior-x: contain;
+      touch-action: pan-x pan-y pinch-zoom !important;
+    }
+    .meteopt-data-table { min-width: 680px; }
+    @media (min-width: 900px) {
+      .water-gfs-layout { grid-template-columns: minmax(0, 1.55fr) minmax(280px, .75fr); }
+    }
+  </style>
+
+</head>
+<link rel="stylesheet" href="./meteopt-gfs-table.css?v=20261104-3">
+<body>
+<header class="shell topbar"><a class="brand" href="./index.html"><span class="brand-mark">☀</span><span>İstanbul'un Havası<small>Şehir için hava tahmini</small></span></a><nav aria-label="Ana gezinme"><a href="#bildirimler">Raporlar</a><a href="#basinc">Basınç analizi</a><a href="./koy.html">Köy</a></nav><div class="top-right"><div class="model-picker"><button type="button" class="active">GFS</button><button type="button" disabled>ECMWF IFS</button></div><span class="version">Giresun · Çanakçı</span></div></header>
+<main class="shell" data-ui-build="koy-carbon-copy-2026-11-05">
+<section class="dashboard-top">
+<div class="dashboard-left">
+<article class="weather-card station-card" role="region">
+<div class="weather-top"><div><div class="label">GERÇEK İSTASYON GÖZLEMİ</div><div class="place">Çanakçı · Giresun</div></div><span class="model-state" id="freshness">CANLI ÖLÇÜM</span></div>
+<div class="station-overview"><div class="station-current"><div class="temp-row"><div class="temperature" id="temperature">—°</div><div class="weather-symbol" id="weather-symbol">☁️</div></div><div class="temp-meta"><div class="temp-caption" id="station-observation-meta">Son istasyon ölçümü bekleniyor</div><div class="delta-badge" id="station-24h-diff"></div><div class="delta-badge" id="station-gap"></div><div class="rain-brief"><div class="delta-badge" id="rain-brief-current">MGM Çanakçı yağış ölçümü bekleniyor.</div><div class="delta-badge" id="rain-brief-forecast">MeteoPT GFS tahmini bekleniyor.</div></div></div></div></div>
+<div class="weather-stats"><div class="stat"><div class="name">Hissedilen</div><div class="value" id="feels-like">—<span class="unit">°</span></div></div><div class="stat"><div class="name">Rüzgâr</div><div class="value" id="wind">—<span class="unit">km/sa</span></div><div class="detail" id="wind-direction">—</div></div><div class="stat"><div class="name">Nem</div><div class="value" id="humidity">—<span class="unit">%</span></div></div><div class="stat"><div class="name">Çiğ Noktası</div><div class="value" id="dewpoint-value">—<span class="unit">°</span></div></div><div class="stat"><div class="name">Yağış</div><div class="value" id="rain">—<span class="unit">mm</span></div><div class="detail" id="rain-detail">Son 1 saat</div></div><div class="stat"><div class="name">Basınç</div><div class="value" id="pressure">—<span class="unit">hPa</span></div></div></div>
+<section class="station-history-inline history-panel"><div class="history-panel-head"><div><div class="section-kicker">ÇANAKÇI · GERÇEK ÖLÇÜMLER</div><h2>Son 24 saat</h2></div></div><div class="history-charts">
+<article class="history-chart-card"><div class="history-chart-head"><div><h3>Sıcaklık</h3><p>°C · 30 dk ortalama, min–maks</p></div><span class="history-chart-icon">℃</span></div><div class="history-chart" id="station-temperature-trend"><div class="station-trend-empty">Sıcaklık geçmişi bekleniyor…</div></div><div class="history-chart-meta" id="station-trend-meta">Çanakçı · MGM · 24 saat</div></article>
+<article class="history-chart-card"><div class="history-chart-head"><div><h3>Yağış</h3><p>mm · kayan 1 saatlik toplam</p></div><span class="history-chart-icon">☂</span></div><div class="history-chart" id="station-rain-trend"><div class="station-trend-empty">Yağış geçmişi bekleniyor…</div></div><div class="history-chart-meta" id="station-rain-meta">Çanakçı · MGM · son ölçüm: — mm / 1 saat</div></article>
+</div><div class="history-source-note" id="history-source-note">Sıcaklık ve yağış: MGM Çanakçı gerçek istasyon ölçümleri.</div></section>
+</article></div>
+<section class="next-72h-panel"><div class="next-72h-head"><div><div class="section-kicker">GFS · GİRESUN ÇANAKÇI</div><h2>Önümüzdeki 72 saat</h2><p>Son dört GFS döngüsünün aynı tahmin saatlerindeki aralığı ve güncel tahmini.</p></div><span class="next-72h-badge" id="next-72h-meta">Model verisi bekleniyor</span></div><div class="next-72h-grid">
 <article class="next-72h-card"><div class="next-72h-card-head"><h3>Sıcaklık</h3><span>°C</span></div><div class="next-72h-chart" id="next72-temperature"><div class="chart-empty">Tahmin bekleniyor…</div></div></article>
-<article class="next-72h-card"><div class="next-72h-card-head"><h3>Yağış</h3><span>mm / 6 saat</span></div><div class="next-72h-chart" id="next72-precipitation"><div class="chart-empty">Tahmin bekleniyor…</div></div></article>
-</div>
-<div class="briefing" id="briefing">
-<div class="briefing-row" id="brief-rain"><div class="briefing-k">Yağış saatleri</div><div class="briefing-v" id="rain-times">Tahmin verisi bekleniyor…</div></div>
-<div class="briefing-row" id="brief-temperature-trend-row"><div class="briefing-k">5 günlük sıcaklık</div><div class="briefing-v" id="five-day-summary">GFS verisi bekleniyor…</div></div>
-</div>
+<article class="next-72h-card"><div class="next-72h-card-head"><h3>Yağış</h3><span>mm / 6 saat</span></div><div class="next-72h-chart" id="next72-precipitation"><div class="chart-empty">Tahmin bekleniyor…</div></div></article></div>
+<div class="briefing"><div class="briefing-row"><div class="briefing-k">Yağış saatleri</div><div class="briefing-v" id="brief-rain-lines">Hesaplanıyor…</div></div><div class="briefing-row"><div class="briefing-k">5 günlük sıcaklık</div><div class="briefing-v" id="brief-temperature-trend">Model verisi bekleniyor…</div></div></div></section>
 </section>
-</section>
-<div id="gfs-model-view">
-<section class="section" id="koy-rapor">
-<div class="section-head report-head">
-<div><div class="section-kicker">SON GFS RAPORU</div><h2>Son hava raporu</h2><p class="section-description">MeteoPT GFS · Son dört yayımlanmış döngü</p></div>
-<div class="notification-controls"><button class="notification-button" id="refresh" type="button">Verileri yenile</button><span class="notification-status" id="updated">Son kontrol bekleniyor</span></div>
-</div>
-<article class="notification-card">
-<div class="notification-card-top"><div><div class="notification-kicker">GFS MODEL BİLDİRİMİ</div><h3>Giresun · Çanakçı GFS tahmin raporu</h3><div class="notification-meta" id="report-meta">Son model döngüsü bekleniyor</div></div><span class="notification-dot"></span></div>
-<div class="comparison-heading">SON 4 GFS DÖNGÜSÜ · KIYASLAMA</div>
-<div class="koy-run-legend" id="chart-legend"></div>
-<div class="koy-chart-grid">
-<article class="koy-chart-card"><h3>Sıcaklık</h3><p>2 m · Günlük min–maks aralığı</p><div class="koy-chart" id="chart-temp"><div class="chart-empty">Grafik verisi bekleniyor…</div></div></article>
-<article class="koy-chart-card"><h3>Sıcaklık · 850 hPa</h3><p>Günlük min–maks aralığı</p><div class="koy-chart" id="chart-t850"><div class="chart-empty">Grafik verisi bekleniyor…</div></div></article>
-<article class="koy-chart-card"><h3>Yağış</h3><p>6 saatlik birikim · çizgi eğilimi</p><div class="koy-chart" id="chart-rain"><div class="chart-empty">Grafik verisi bekleniyor…</div></div></article>
-<article class="koy-chart-card"><h3>Rüzgâr hızı · 10 m</h3><p>Günlük maksimum hız</p><div class="koy-chart" id="chart-wind"><div class="chart-empty">Grafik verisi bekleniyor…</div></div></article>
-</div>
-<div class="report-text"><div id="run-list">Son dört döngü verisi bekleniyor…</div></div>
-</article>
-</section>
-<section class="section" id="koy-tablosu" aria-label="MeteoPT GFS ham model tablosu">
-<div class="section-head"><div><div class="section-kicker">METEOPT GFS</div><h2>GFS · İlk 72 saat</h2></div><div class="section-note"><span id="table-run">Model döngüsü bekleniyor</span><br><span id="table-updated">Veri bekleniyor</span></div></div>
-<article class="meteopt-table-card">
-<div class="meteopt-table-toolbar"><span class="meteopt-table-source"><span class="meteopt-table-dot"></span> Kaynak: MeteoPT GFS</span><span id="table-status" role="status">Veri yükleniyor…</span></div>
-<div class="meteopt-table-scroll"><table class="meteopt-data-table"><thead><tr><th>Steps</th><th>Date/Hour (TSİ)</th><th>W.10m</th><th>W.850</th><th>Prec.</th><th>T.2m</th><th>T.850</th></tr></thead><tbody id="rows"><tr><td colspan="7" class="meteopt-table-empty">MeteoPT verisi bekleniyor…</td></tr></tbody></table></div>
-</article>
-</section>
-</div>
-<div class="water-gfs-layout">
-<aside class="section" id="koy-mgm-card"><div class="section-head"><div><div class="section-kicker">MGM · ÇANAKÇI</div><h2>İlçe tahmini</h2></div></div><article class="iski-mini-card"><div class="koy-source-card"><div class="label">AYRI MGM VERİ AKIŞI</div><p>Çanakçı ilçe tahmini, Köy GFS akışından bağımsız olarak ayrı MGM iş akışında arşivlenir.</p><p><a href="https://mgm.gov.tr/tahmin/il-ve-ilceler.aspx?il=Giresun&amp;ilce=%C3%87anak%C3%A7%C4%B1" target="_blank" rel="noopener">MGM · Giresun / Çanakçı tahminini aç</a></p></div></article></aside>
-</div>
+<section class="section" id="bildirimler"><div class="section-head report-head"><div><div class="section-kicker">SON GFS RAPORU</div><h2>Son hava raporu</h2></div><div class="notification-controls"><span class="notification-status">Otomatik yenileme: 5 dakika</span></div></div>
+<div class="notification-list"><article class="notification-card"><div class="notification-card-top"><div><div class="notification-kicker">GFS MODEL BİLDİRİMİ</div><h3>Giresun Çanakçı GFS tahmin raporu</h3><div class="notification-meta" id="report-meta">Son model döngüsü bekleniyor</div></div><span class="notification-dot"></span></div>
+<div class="notification-summary" id="report-summary">Çanakçı MGM gerçek istasyon ölçümü ile MeteoPT GFS model tahmini ayrı kaynaklardır.</div><div class="comparison-heading">SON 4 GFS DÖNGÜSÜ · KIYASLAMA</div>
+<div class="notification-images">
+<div class="notification-image-item"><p class="notification-image-caption">Sıcaklık</p><div class="notification-image-link"><div class="notification-image chart-wrap" id="chart-temp"><div class="chart-empty">Karşılaştırma verisi bekleniyor…</div></div></div></div>
+<div class="notification-image-item"><p class="notification-image-caption">Sıcaklık · 850 hPa</p><div class="notification-image-link"><div class="notification-image chart-wrap" id="chart-t850"><div class="chart-empty">Karşılaştırma verisi bekleniyor…</div></div></div></div>
+<div class="notification-image-item"><p class="notification-image-caption">Yağış</p><div class="notification-image-link"><div class="notification-image chart-wrap" id="chart-rain"><div class="chart-empty">Karşılaştırma verisi bekleniyor…</div></div></div></div>
+<div class="notification-image-item"><p class="notification-image-caption">Rüzgâr hızı · yönü · 10 m</p><div class="notification-image-link"><div class="notification-image chart-wrap" id="chart-wind"><div class="chart-empty">Karşılaştırma verisi bekleniyor…</div></div></div></div></div>
+<div class="report-text"><details><summary>GFS rapor özeti</summary><pre id="run-list">Son dört döngü verisi bekleniyor…</pre></details></div>
+</article></div></section>
+<section class="section" id="basinc"><div class="section-head"><div><div class="section-kicker">GFS · DENİZ SEVİYESİ</div><h2>Basınç merkezleri</h2></div></div><div class="lower-grid"><article class="pressure-card"><div class="label">Çanakçı çevresindeki bölgesel basınç merkezleri</div><ul class="pressure-list"><li><span class="pressure-icon">◈</span><span>Çanakçı için basınç analizi MeteoPT GFS modelinden türetilir.</span></li></ul></article></div></section>
+<section class="section" id="tahmin"><div class="section-head"><div><div class="section-kicker">METEOPT GFS · MODEL TAHMİNİ</div><h2>8 günlük tahmin</h2></div><div class="section-note"><span id="gfs-daily-cycle-chip">GFS döngüsü</span><br><span id="gfs-daily-updated-chip">Yayın zamanı</span><br>Günlük en düşük / en yüksek sıcaklık</div></div><div class="daily-grid" id="daily-grid"><div class="loading">GFS günlük tahmini yükleniyor…</div></div></section>
+<div class="water-gfs-layout"><section class="section" id="meteopt-gfs-table"><div class="section-head"><div><div class="section-kicker">METEOPT GFS</div><h2>GFS · İlk 72 saat</h2></div><div class="section-note"><span id="meteopt-table-run">Model döngüsü bekleniyor</span><br><span id="meteopt-table-updated">Veri bekleniyor</span></div></div><article class="meteopt-table-card"><div class="meteopt-table-toolbar"><span class="meteopt-table-source"><span class="meteopt-table-dot"></span> Kaynak: MeteoPT GFS</span><span id="meteopt-table-status">Veri yükleniyor…</span></div><div class="meteopt-table-scroll"><table class="meteopt-data-table"><thead><tr><th>Steps</th><th>Date/Hour (TSİ)</th><th>W.10m</th><th>W.850</th><th>Prec.</th><th>T.2m</th><th>T.850</th></tr></thead><tbody id="meteopt-table-body"><tr><td colspan="7" class="meteopt-table-empty">MeteoPT verisi yükleniyor…</td></tr></tbody></table></div></article></section>
+<aside class="section" id="koy-mgm-card"><div class="section-head"><div><div class="section-kicker">MGM · ÇANAKÇI</div><h2>İstasyon durumu</h2></div></div><article class="iski-mini-card"><div class="iski-mini-top"><span>Çanakçı MGM 18223</span><span id="mgm-status-date">Veri bekleniyor</span></div><div class="iski-mini-value" id="mgm-rain-rate">—<small> mm</small></div><div class="iski-mini-track"><span id="mgm-rain-fill"></span></div><div class="iski-mini-bottom"><span id="mgm-status-text">Son 1 saat yağış</span><span>Kaynak: MGM Çanakçı</span></div></article></aside></div>
 </main>
-<footer class="shell footer"><span><strong>İstanbul'un Havası</strong> · Köy modülü</span><span>Kaynak: MeteoPT GFS · MGM Çanakçı · Bağımsız veri akışları</span></footer>
-<script src="./koy.js?v=20261105-carbon-copy-1" defer></script>
-</body></html>
+<footer class="shell footer"><span><strong>İstanbul'un Havası</strong> · Köy</span><span>Veri kaynakları: MGM Çanakçı 18223 · MeteoPT GFS · Otomatik yenileme: 5 dakika</span></footer>
+<script src="./koy.js?v=20261105-carbon"></script></body>
