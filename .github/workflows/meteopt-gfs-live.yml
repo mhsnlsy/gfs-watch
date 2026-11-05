@@ -11,6 +11,7 @@ on:
 
 permissions:
   contents: write
+  actions: write
   pages: write
   id-token: write
 
@@ -87,4 +88,8 @@ jobs:
           git commit -m "Update MeteoPT GFS live state"
           git push origin gfs-watch-state
           echo "changed=true" >> "$GITHUB_OUTPUT"
-
+      - name: Refresh GitHub Pages immediately
+        if: steps.publish.outputs.changed == 'true'
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: gh workflow run pages-live.yml --repo "${{ github.repository }}" --ref main
