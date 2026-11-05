@@ -140,7 +140,7 @@ function renderRuns(d,f72){
    $("brief-temperature-trend").textContent=[...daily.entries()].slice(0,5).map(([k,v])=>dayLabel(k)+": "+fmt(Math.min(...v))+"–"+fmt(Math.max(...v))+"°C").join(" · ");
    const rainy=p.filter(x=>num(x.precipitation_6h_mm)>0.1);
    $("brief-rain-lines").textContent=rainy.length?rainy.slice(0,6).map(x=>ts(x.valid_time_utc)+" · "+fmt(num(x.precipitation_6h_mm))+" mm / 6 saat").join("  |  "):"Modelde anlamlı yağış görünmüyor.";
-   const dailyItems=[...daily.entries()].slice(0,8).map(([k,v])=>({date_istanbul:k,temperature_min_c:Math.min(...v),temperature_max_c:Math.max(...v),precipitation_total_mm:p.filter(x=>dayKey(x.valid_time_utc)===k).reduce((a,x)=>a+(num(x.precipitation_6h_mm)||0),0),wind_speed_max_10m_kmh:Math.max(...p.filter(x=>dayKey(x.valid_time_utc)===k).map(x=>num(x.wind_speed_10m_kmh)||0)}));
+   const dailyItems=[...daily.entries()].slice(0,8).map(([k,v])=>({date_istanbul:k,temperature_min_c:Math.min(...v),temperature_max_c:Math.max(...v),precipitation_total_mm:p.filter(x=>dayKey(x.valid_time_utc)===k).reduce((a,x)=>a+(num(x.precipitation_6h_mm)||0),0),wind_speed_max_10m_kmh:Math.max(...p.filter(x=>dayKey(x.valid_time_utc)===k).map(x=>num(x.wind_speed_10m_kmh)||0))}));
    $("daily-grid").innerHTML=dailyItems.map(item=>'<article class="day"><div class="day-name">'+dayLabel(item.date_istanbul)+'</div><div class="day-icon">'+(item.precipitation_total_mm>=5?"🌧️":item.precipitation_total_mm>=1?"🌦️":"⛅")+'</div><div class="day-range">'+fmt(item.temperature_max_c,0)+'° <span>'+fmt(item.temperature_min_c,0)+'°</span></div><div class="day-rain">☂ '+fmt(item.precipitation_total_mm,1)+' mm</div><div class="day-wind">↗ '+fmt(item.wind_speed_max_10m_kmh,0)+' km/sa</div></article>').join("");
  }
 }
