@@ -81,16 +81,26 @@ function renderF72(d){
  if(first) $("report-summary").textContent="MGM Çanakçı gerçek istasyon ölçümü ile MeteoPT GFS model tahmini ayrı kaynaklardır. İlk GFS tahmin adımı: "+ts(first.valid_time_utc)+" · "+fmt(num(first.temperature_2m_c))+" °C · yağış "+fmt(num(first.precipitation_6h_mm))+" mm / 6 saat.";
 }
 function svgStationHistory(samples,metric,title,unit){
- const now=Date.now(),from=now-24*3600000,bins=[];
- for(let t=from;t<now;t+=1800000)bins.push({start:t,values:[]});
+ const now=Date.now(),from=now-24*3600000;
+ const hourly=metric==="precipitation_1h_mm";
+ const step=hourly?3600000:1800000;
+ const bins=[];
+ for(let t=from;t<now;t+=step)bins.push({start:t,values:[]});
  (Array.isArray(samples)?samples:[]).forEach(s=>{
    const t=Date.parse(s.observed_at_utc||s.logged_at_utc||""),v=num(s[metric]);
    if(!Number.isFinite(t)||t<from||t>now||v==null)return;
-   const i=Math.floor((t-from)/1800000);if(i>=0&&i<bins.length)bins[i].values.push(v);
+   const i=Math.floor((t-from)/step);if(i>=0&&i<bins.length)bins[i].values.push({t,v});
  });
- const data=bins.map((b,i)=>({index:i,start:b.start,count:b.values.length,min:b.values.length?Math.min(...b.values):null,max:b.values.length?Math.max(...b.values):null,mean:b.values.length?b.values.reduce((a,v)=>a+v,0)/b.values.length:null})).filter(x=>x.count);
+ const data=bins.map((b,i)=>{
+   if(!b.values.length)return null;
+   if(hourly){
+     const latest=b.values.sort((a,z)=>a.t-z.t)[b.values.length-1];
+     return {index:i,start:b.start,count:b.values.length,min:latest.v,max:latest.v,mean:latest.v};
+   }
+   return {index:i,start:b.start,count:b.values.length,min:Math.min(...b.values.map(x=>x.v)),max:Math.max(...b.values.map(x=>x.v)),mean:b.values.reduce((a,x)=>a+x.v,0)/b.values.length};
+ }).filter(Boolean);
  const holder=metric==="temperature_2m_c"?"station-temperature-trend":"station-rain-trend";
- if(data.length<2)return '<div class="station-trend-empty">Son 24 saatte yeterli MGM istasyon verisi yok.</div>';
+ if(data.length<1)return '<div class="station-trend-empty">MGM Çanakçı istasyon verisi bekleniyor.</div>';
  let lo=Math.min(...data.map(p=>p.min)),hi=Math.max(...data.map(p=>p.max));
  if(metric==="temperature_2m_c"){lo=Math.floor(lo-.5);hi=Math.ceil(hi+.5)}else{lo=0;hi=Math.max(1,Math.ceil(hi+1))}
  if(hi<=lo)hi=lo+1;
@@ -110,7 +120,7 @@ function svgStationHistory(samples,metric,title,unit){
 function renderStationHistory(doc){
  const samples=Array.isArray(doc?.samples)?doc.samples:[];
  $("station-trend-meta").textContent="Çanakçı · MGM · "+samples.length+" kayıt · 30 dk ortalama / min–maks";
- $("station-rain-meta").textContent="Çanakçı · MGM · son ölçüm · kayan 1 saatlik toplam";
+ $("station-rain-meta").textContent="Çanakçı · MGM · saatlik gösterim · kayan 1 saatlik toplam";
  $("history-source-note").textContent="Sıcaklık ve yağış: MGM Çanakçı gerçek istasyon ölçümleri.";
  $("station-temperature-trend").innerHTML=svgStationHistory(samples,"temperature_2m_c","Çanakçı sıcaklık","°C");
  $("station-rain-trend").innerHTML=svgStationHistory(samples,"precipitation_1h_mm","Çanakçı yağış","mm");
