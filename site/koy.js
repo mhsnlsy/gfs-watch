@@ -226,7 +226,13 @@ function svgStationHistory(samples,metric,title,unit){
  let s='<svg viewBox="0 0 '+W+' '+H+'" preserveAspectRatio="none" role="img" aria-label="'+esc(title)+'">';
  for(let j=0;j<=4;j++){const v=lo+(hi-lo)*j/4,yy=y(v);s+='<line x1="'+L+'" y1="'+yy+'" x2="'+(W-R)+'" y2="'+yy+'" stroke="rgba(190,218,228,.17)" stroke-dasharray="3 5"/><text x="'+(L-9)+'" y="'+(yy+3.5)+'" fill="#a8bfca" font-size="10" text-anchor="end">'+fmt(v,metric==="temperature_2m_c"?1:1)+'</text>'}
  bins.forEach((b,i)=>{
-  if(hourly){const hh=new Intl.DateTimeFormat("tr-TR",{timeZone:"Europe/Istanbul",hour:"2-digit",minute:"2-digit",hourCycle:"h23"}).format(new Date(b.start));s+='<text x="'+x(b.start)+'" y="'+(H-8)+'" fill="#a8bfca" font-size="8" text-anchor="middle"><title>'+hh+' TSİ</title>'+hh+'</text>';return}
+  if(hourly){
+   // Match the temperature chart: one time label every 2 hours.
+   if(i%2&&i!==bins.length-1)return;
+   const hh=new Intl.DateTimeFormat("tr-TR",{timeZone:"Europe/Istanbul",hour:"2-digit",minute:"2-digit",hourCycle:"h23"}).format(new Date(b.start));
+   s+='<text x="'+x(b.start)+'" y="'+(H-8)+'" fill="#a8bfca" font-size="10" text-anchor="middle"><title>'+hh+' TSİ</title>'+hh+'</text>';
+   return;
+  }
   if(i%4&&i!==bins.length-1)return;
   s+='<text x="'+x(b.start)+'" y="'+(H-8)+'" fill="#a8bfca" font-size="10" text-anchor="middle">'+new Intl.DateTimeFormat("tr-TR",{timeZone:"Europe/Istanbul",hour:"2-digit",minute:"2-digit"}).format(new Date(b.start))+'</text>';
  });
