@@ -177,7 +177,7 @@ jobs:
           if [ -s gfs/comparison.json ]; then
             current_run="$(python -c 'import json; print(json.load(open("gfs/comparison.json"))["runs"][0]["run_id_utc"])')"
             stamp="$(python -c 'from datetime import datetime; import sys; print(datetime.fromisoformat(sys.argv[1].replace("Z","+00:00")).strftime("%Y%m%dT%HZ"))' "$current_run")"
-            renderer_version="tsi-cycle-plus-3-valid-local-v2"
+            renderer_version="tsi-cycle-plus-3-valid-local-v3"
             stored_renderer_version="$(cat gfs/media/.koy-renderer-version 2>/dev/null || true)"
             if [ "$stored_renderer_version" != "$renderer_version" ] || [ ! -s "gfs/media/koy-gfs-${stamp}-temperature.png" ] || [ ! -s "gfs/media/koy-gfs-${stamp}-temperature_850.png" ] || [ ! -s "gfs/media/koy-gfs-${stamp}-precipitation.png" ] || [ ! -s "gfs/media/koy-gfs-${stamp}-wind_10m.png" ]; then
               python -m pip install -q matplotlib
