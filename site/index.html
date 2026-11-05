@@ -2064,7 +2064,9 @@
       $("history-source-note").hidden=false;
       $("history-source-note").textContent=activeStation==="enka"?"Sıcaklık: ENKA kamera OCR ölçümleri. Yağış: MGM Eyüpsultan ölçümleri.":activeStation==="eyupsultan"?"Sıcaklık ve yağış: MGM Eyüpsultan ölçümleri.":"Sıcaklık ve yağış: MGM Şişli ölçümleri.";
       renderStationTemperatureTrend(samples,stationName);
-      const rainSamples=activeStation==="eyupsultan"?eyupsultanStationRainHistorySamples:activeStation==="sisli"?sisliStationRainHistorySamples:eyupsultanStationHistorySamples;
+      const dedicatedRainSamples=activeStation==="eyupsultan"?eyupsultanStationRainHistorySamples:activeStation==="sisli"?sisliStationRainHistorySamples:[];
+      // Backward-compatible fallback: the existing station database also carries rainfall fields.
+      const rainSamples=dedicatedRainSamples.length?dedicatedRainSamples:(activeStation==="eyupsultan"?eyupsultanStationHistorySamples:activeStation==="sisli"?sisliStationHistorySamples:eyupsultanStationHistorySamples);
       renderStationRainTrend(rainSamples,stationName);
     }
 
