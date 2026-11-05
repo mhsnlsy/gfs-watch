@@ -1086,22 +1086,24 @@
 <div class="stat"><div class="name">Yağış</div><div class="value" id="current-rain">—<span class="unit">mm</span></div><div class="detail">6 saatlik birikim</div></div>
 </div>
 <div class="station-alert" id="f72status" role="status">F72 verisi bekleniyor.</div>
-<div class="koy-history-panel" aria-label="Son 24 saat GFS geçmişi">
-  <div class="koy-history-head">
-    <div><div class="section-kicker">SON 24 SAAT</div><h3>Model geçmişi</h3></div>
-    <span id="history24-meta">GFS geçmiş tahmini</span>
+<section class="station-history-inline history-panel" id="station-history-panel" aria-label="Çanakçı GFS son 24 saat geçmişi">
+  <div class="history-panel-head">
+    <div><div class="section-kicker" id="history-station-source">METEOPT GFS · SON 24 SAAT</div><h2>Son 24 saat</h2></div>
   </div>
-  <div class="koy-history-grid">
-    <article class="koy-history-card">
-      <div class="koy-history-card-head"><strong>Sıcaklık</strong><span>°C</span></div>
-      <div class="koy-history-chart" id="history24-temperature"><div class="chart-empty">Geçmiş veri bekleniyor…</div></div>
+  <div class="history-charts">
+    <article class="history-chart-card">
+      <div class="history-chart-head"><div><h3>Sıcaklık</h3><p>°C · GFS geçmiş tahmini</p></div><span class="history-chart-icon">℃</span></div>
+      <div class="history-chart" id="station-temperature-trend"><div class="station-trend-empty">Sıcaklık geçmişi bekleniyor…</div></div>
+      <div class="history-chart-meta" id="station-trend-meta">Çanakçı · GFS geçmiş tahmini</div>
     </article>
-    <article class="koy-history-card">
-      <div class="koy-history-card-head"><strong>Yağış</strong><span>mm / 6 saat</span></div>
-      <div class="koy-history-chart" id="history24-precipitation"><div class="chart-empty">Geçmiş veri bekleniyor…</div></div>
+    <article class="history-chart-card">
+      <div class="history-chart-head"><div><h3 id="station-rain-title">Yağış</h3><p id="station-rain-caption">mm · 6 saatlik GFS birikimi</p></div><span class="history-chart-icon">☂</span></div>
+      <div class="history-chart" id="station-rain-trend"><div class="station-trend-empty">Yağış geçmişi bekleniyor…</div></div>
+      <div class="history-chart-meta" id="station-rain-meta">MeteoPT GFS · 6 saatlik birikim</div>
     </article>
   </div>
-</div>
+  <div class="history-source-note" id="history-source-note">Sıcaklık ve yağış MeteoPT GFS geçmiş tahminlerinden hesaplanır; gerçek istasyon ölçümü değildir.</div>
+</section></div>
 </article>
 </div>
 <section class="next-72h-panel" aria-label="Önümüzdeki 72 saat">
