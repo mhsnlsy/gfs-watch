@@ -2,6 +2,7 @@ name: Deploy İstanbul'un Havası
 
 # Station and notification data are read from gfs-watch-state.
 # Deployment refresh trigger: republish the current state-branch payload on demand.
+# Manual verification refresh: force a fresh Pages build from gfs-watch-state.
 # The ENKA Weather workflow explicitly dispatches this workflow after each fresh station publication.
 
 on:
