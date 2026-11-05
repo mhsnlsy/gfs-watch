@@ -426,7 +426,7 @@ function renderRuns(d,f72){
  const source=runs.length?runs:(f72?[f72]:[]);
  renderRunLegend(source);
  $("next-72h-meta").textContent=source.length?source.length+" GFS döngüsü karşılaştırılıyor":"Model verisi bekleniyor";
- const chartSource=meteopt72?[meteopt72]:[];
+ // Use the exact same GFS payload rendered by the 72-hour table.\n const chartSource=f72?[f72]:[];
  const realized=realizedErrorStats(runs,stationHistory,"temperature_2m_c");
  $("next72-temperature").innerHTML=svgLine(chartSource,"temperature_2m_c","2 m sıcaklık","°C",72,realized);
  $("next72-precipitation").innerHTML=svgLine(chartSource,"precipitation_6h_mm","6 saatlik yağış","mm / 6 saat",72);
