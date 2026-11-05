@@ -28,19 +28,28 @@ jobs:
         uses: actions/checkout@v4
         with:
           fetch-depth: 0
+
       - name: Python
         uses: actions/setup-python@v5
         with:
           python-version: "3.12"
           cache: pip
           cache-dependency-path: requirements.txt
+
       - name: Dependencies
         run: python -m pip install -r requirements.txt
+
       - name: Restore GFS state
         run: |
           git fetch origin gfs-watch-state
-          if git cat-file -e origin/gfs-watch-state:gfs_watch.db 2>/dev/null; then git show origin/gfs-watch-state:gfs_watch.db > gfs_watch.db; fi
-          if git cat-file -e origin/gfs-watch-state:public/latest.json 2>/dev/null; then git archive origin/gfs-watch-state public | tar -x -C .; else mkdir -p public; fi
+          if git cat-file -e origin/gfs-watch-state:gfs_watch.db 2>/dev/null; then
+            git show origin/gfs-watch-state:gfs_watch.db > gfs_watch.db
+          fi
+          mkdir -p public
+          if git cat-file -e origin/gfs-watch-state:public/latest.json 2>/dev/null; then
+            git archive origin/gfs-watch-state public | tar -x -C .
+          fi
+
       - name: Poll MeteoPT and publish completed F180
         env:
           GFS_SOURCE: meteopt
@@ -55,18 +64,22 @@ jobs:
           TELEGRAM_TOKEN: ${{ secrets.TELEGRAM_TOKEN }}
           CHAT_ID: ${{ secrets.CHAT_ID }}
         run: python -u main.py
+
       - name: Publish state
         if: always()
         run: |
           if [ ! -f gfs_watch.db ]; then exit 0; fi
-          cp gfs_watch.db /tmp/gfs_watch.db
-          mkdir -p /tmp/public
-          if [ -d public ]; then cp -a public/. /tmp/public/; fi
-          git checkout -B gfs-watch-state origin/gfs-watch-state
-          cp /tmp/gfs_watch.db gfs_watch.db
-          rm -rf public && mkdir -p public
-          if [ -d /tmp/public ]; then cp -a /tmp/public/. public/; fi
-          git add -f gfs_watch.db public
+
+          rm -rf /tmp/gfs-state
+          git clone --quiet --branch gfs-watch-state --single-branch "https://x-access-token:${{ github.token }}@github.com/${{ github.repository }}.git" /tmp/gfs-state
+
+          cp gfs_watch.db /tmp/gfs-state/gfs_watch.db
+          rm -rf /tmp/gfs-state/public
+          mkdir -p /tmp/gfs-state/public
+          if [ -d public ]; then cp -a public/. /tmp/gfs-state/public/; fi
+
+          cd /tmp/gfs-state
+          git add -A gfs_watch.db public
           if git diff --cached --quiet; then exit 0; fi
           git config user.name "github-actions[bot]"
           git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
