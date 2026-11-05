@@ -135,21 +135,70 @@ def fetch_enka_station_observation():
     wind_direction = wind_match.group(2).upper()
     daily_rain = _parse_decimal(r"(\d{1,3}[.,]\d)\s*mm", right, "yağış")
 
-    timestamp_match = re.search(
-        r"(\d{1,2})[-/](\d{1,2})[-/](\d{4})\s+(\d{1,2}):(\d{2}):(\d{2})",
-        bottom,
+    # ENKA's camera overlay can be noisy: dots, spaces and dashes are
+    # sometimes substituted for one another, and a leading digit can be lost.
+    # Accept the common separator variants, then validate the resulting date
+    # against the live camera clock before using it.
+    timestamp_pattern = re.compile(
+        r"(?<!\d)(\d{1,2})\s*[./-]\s*(\d{1,2})\s*[./-]\s*(\d{4})\D+"
+        r"(\d{1,2}):(\d{2}):(\d{2})"
     )
+    timestamp_text = bottom
+    timestamp_match = timestamp_pattern.search(timestamp_text)
     if not timestamp_match:
-        # Tesseract may place the date in the right-side crop on some frames.
-        timestamp_match = re.search(
-            r"(\d{1,2})[-/](\d{1,2})[-/](\d{4})\s+(\d{1,2}):(\d{2}):(\d{2})",
-            _ocr_region(image, (0, int(height * 0.91), width, height), 7),
+        # Tesseract may place the date outside the narrow bottom-centre crop.
+        timestamp_text = _ocr_region(image, (0, int(height * 0.91), width, height), 7)
+        print("[ENKA OCR] Full-width timestamp overlay:", repr(timestamp_text))
+        timestamp_match = timestamp_pattern.search(timestamp_text)
+    if not timestamp_match:
+        raise ValueError(
+            "OCR kamera zaman damgasını okuyamadı. "
+            f"Alt alan: {bottom!r}; geniş alan: {timestamp_text!r}"
         )
-    if not timestamp_match:
-        raise ValueError(f"OCR kamera zaman damgasını okuyamadı: {bottom!r}")
 
     day, month, year, hour, minute, second = map(int, timestamp_match.groups())
-    observed_local = datetime(year, month, day, hour, minute, second, tzinfo=TR_TZ)
+    now_local = datetime.now(TR_TZ)
+    timestamp_date_inferred = False
+    try:
+        observed_local = datetime(year, month, day, hour, minute, second, tzinfo=TR_TZ)
+    except ValueError:
+        observed_local = None
+
+    # If OCR mangled the date but retained a clock time matching the freshly
+    # fetched camera frame, use the nearest Istanbul calendar date. Never do
+    # this for a clock time that is not within five minutes of the live fetch.
+    clock_seconds = hour * 3600 + minute * 60 + second
+    now_seconds = now_local.hour * 3600 + now_local.minute * 60 + now_local.second
+    clock_delta = abs(clock_seconds - now_seconds)
+    clock_delta = min(clock_delta, 86400 - clock_delta)
+    date_needs_recovery = (
+        observed_local is None
+        or abs((now_local - observed_local).total_seconds()) > POLL_STALE_MINUTES * 60
+    )
+    if date_needs_recovery and clock_delta <= 5 * 60:
+        candidate_dates = [
+            now_local.date() + timedelta(days=offset) for offset in (-1, 0, 1)
+        ]
+        candidates = [
+            datetime(
+                candidate_date.year, candidate_date.month, candidate_date.day,
+                hour, minute, second, tzinfo=TR_TZ
+            )
+            for candidate_date in candidate_dates
+        ]
+        nearest = min(candidates, key=lambda value: abs((now_local - value).total_seconds()))
+        if abs((now_local - nearest).total_seconds()) <= 5 * 60:
+            observed_local = nearest
+            timestamp_date_inferred = True
+
+    if observed_local is None:
+        raise ValueError(f"OCR kamera tarihi geçersiz: {timestamp_text!r}")
+    if timestamp_date_inferred:
+        print(
+            "[ENKA OCR] Tarih kısmı OCR tarafından hatalı okundu; "
+            "kamera saati canlı çekimle eşleştiği için İstanbul tarihi düzeltildi."
+        )
+
     observed_utc = observed_local.astimezone(timezone.utc)
 
     if not 0 <= humidity <= 100:
@@ -173,6 +222,7 @@ def fetch_enka_station_observation():
         "longitude": 28.9,
         "elevation_m": 107,
         "observed_at_utc": observed_utc.isoformat(timespec="seconds"),
+        "timestamp_date_inferred": timestamp_date_inferred,
         "age_minutes": round(age_minutes, 1),
         "is_stale": age_minutes > POLL_STALE_MINUTES,
         "temperature_2m_c": temperature,
