@@ -8,15 +8,8 @@
   "rainfall_chart_window_minutes": 60,
   "rainfall_chart_step_minutes": 60,
   "rolling_hour_precipitation_window_minutes": 60,
-  "updated_at_utc": "2026-11-05T14:06:17.662Z",
+  "updated_at_utc": "2026-11-05T14:10:57.113Z",
   "samples": [
-    {
-      "logged_at_utc": "2026-11-02T14:15:28.490Z",
-      "observed_at_utc": "2026-11-02T14:09:00.000Z",
-      "temperature_2m_c": 20.1,
-      "precipitation_daily_mm": 1,
-      "station_pressure_hpa": 1017.1
-    },
     {
       "logged_at_utc": "2026-11-02T14:20:28.334Z",
       "observed_at_utc": "2026-11-02T14:14:00.000Z",
@@ -8077,6 +8070,18 @@
       "precipitation_6h_mm": 0,
       "precipitation_12h_mm": 0.6,
       "precipitation_24h_mm": 6.4,
+      "precipitation_daily_mm": 0.6,
+      "station_pressure_hpa": 1020.5
+    },
+    {
+      "logged_at_utc": "2026-11-05T14:10:57.113Z",
+      "observed_at_utc": "2026-11-05T14:09:00.000Z",
+      "temperature_2m_c": 10.3,
+      "precipitation_1h_mm": 0,
+      "precipitation_10m_mm": 0,
+      "precipitation_6h_mm": 0,
+      "precipitation_12h_mm": 0.6,
+      "precipitation_24h_mm": 6.2,
       "precipitation_daily_mm": 0.6,
       "station_pressure_hpa": 1020.5
     }
