@@ -106,6 +106,37 @@ jobs:
               print(f"{label}: {s.get('temperature_2m_c')} °C | age {age:.1f} min")
           PY
 
+      - name: Mirror fresh station data to main for immediate Pages publication
+        uses: actions/checkout@v5
+        with:
+          ref: main
+          path: main-site
+          fetch-depth: 1
+
+      - name: Publish fresh station payload to main
+        run: |
+          set -euo pipefail
+          mkdir -p main-site/site/data
+          cp public/station-observation.json main-site/site/data/station-observation.json
+          cp .station-work/enka/station-temperature-history.json main-site/site/data/station-temperature-history.json
+          cp public/eyupsultan-station-observation.json main-site/site/data/eyupsultan-station-observation.json
+          cp .station-work/eyupsultan/eyupsultan-station-temperature-history.json main-site/site/data/eyupsultan-station-temperature-history.json
+          cp .station-work/eyupsultan/eyupsultan-station-rain-history.json main-site/site/data/eyupsultan-station-rain-history.json
+          cp public/sisli-station-observation.json main-site/site/data/sisli-station-observation.json
+          cp .station-work/sisli/sisli-station-temperature-history.json main-site/site/data/sisli-station-temperature-history.json
+          cp .station-work/sisli/sisli-station-rain-history.json main-site/site/data/sisli-station-rain-history.json
+
+          cd main-site
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add site/data
+          if git diff --cached --quiet; then
+            echo "Main site station data already current."
+          else
+            git commit -m "Publish fresh Istanbul station data"
+            git push origin HEAD:main
+          fi
+
       - name: Publish Istanbul MGM branch
         run: |
           set -euo pipefail
