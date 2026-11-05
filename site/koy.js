@@ -165,7 +165,7 @@ function renderMgmObservation(o,history,f72){
  if(temps.length){const min=Math.min(...temps),max=Math.max(...temps),d=t!=null?t-temps[0]:null;const diff=t!=null?t-min:null;$("station-24h-diff").textContent="Son 24 saatte "+(diff>=0?fmt(diff)+"° daha sıcak":fmt(Math.abs(diff))+"° daha soğuk");}
  if(rain!=null&&rain>0)$("rain-brief-current").textContent="MGM Çanakçı ölçümüne göre şu anda yağış var ("+fmt(rain)+" mm/son 1 saat).";else $("rain-brief-current").textContent="MGM Çanakçı ölçümüne göre şu anda anlamlı yağış yok.";
  const pts=pointsOf(f72||{},72),future=pts.filter(p=>num(p.precipitation_6h_mm)>0.1);
- $("rain-brief-forecast").textContent=future.length?"MeteoPT GFS tahminine göre ilk anlamlı yağış: "+ts(future[0].valid_time_utc)+" TSİ.":"MeteoPT GFS tahmininde önümüzdeki 72 saatte anlamlı yağış görünmüyor.";
+ $("rain-brief-forecast").textContent=future.length?"MeteoPT GFS tahminine göre ilk anlamlı yağış: "+ts(future[0].valid_time_utc)+".":"MeteoPT GFS tahmininde önümüzdeki 72 saatte anlamlı yağış görünmüyor.";
 }
 function meteoptTableBand(field,value){
  if(value==null)return "";
@@ -312,8 +312,8 @@ function renderStationHistory(doc){
 function gfsRunLabel(run){
  const date=new Date(run?.run_id_utc||"");
  if(!Number.isFinite(date.getTime()))return "GFS döngüsü";
- const day=new Intl.DateTimeFormat("tr-TR",{timeZone:"UTC",day:"2-digit",month:"short"}).format(date).replace(/\./g,"");
- return day+" · "+String(date.getUTCHours()).padStart(2,"0")+"Z";
+ const utcHour=String(date.getUTCHours()).padStart(2,"0")+"Z";
+ return ts(date.toISOString())+" · "+utcHour;
 }
 function renderRunLegend(source){
  const host=$("next-72h-legend");
