@@ -5,6 +5,7 @@ on:
     branches: [main]
     paths:
       - ".github/workflows/istanbul-gfs-independent.yml"
+      - "scripts/build_istanbul_gfs_publication.py"
   schedule:
     - cron: "*/5 * * * *"
   workflow_dispatch:
@@ -19,11 +20,20 @@ concurrency:
 jobs:
   publish:
     runs-on: ubuntu-latest
-    timeout-minutes: 5
+    timeout-minutes: 8
     steps:
-      - uses: actions/checkout@v4
+      - name: Check out application source
+        uses: actions/checkout@v7
         with:
-          fetch-depth: 0
+          path: source
+          fetch-depth: 1
+
+      - name: Check out Istanbul GFS state
+        uses: actions/checkout@v7
+        with:
+          ref: istanbul-gfs-data
+          path: state
+          fetch-depth: 1
 
       - name: Poll MeteoPT and prepare Istanbul GFS
         run: |
@@ -101,7 +111,9 @@ jobs:
               })
 
           days = {}
-          for point in points: days.setdefault(point["valid_time_utc"][:10], []).append(point)
+          for point in points:
+              day = point["valid_time_istanbul"][:10]
+              days.setdefault(day, []).append(point)
           daily = []
           for day, vals in sorted(days.items()):
               def nums(key): return [p[key] for p in vals if p.get(key) is not None]
@@ -113,81 +125,66 @@ jobs:
                   "temperature_max_c":max(t2) if t2 else None,
                   "temperature_850hpa_min_c":min(t850) if t850 else None,
                   "temperature_850hpa_max_c":max(t850) if t850 else None,
-                  "precipitation_total_mm":sum(rain) if rain else 0,
+                  "precipitation_total_mm":sum(max(0.0,x) for x in rain),
                   "wind_speed_max_10m_kmh":max(w10) if w10 else None,
                   "wind_speed_max_850hpa_kmh":max(w850) if w850 else None,
               })
 
           first = points[0] if points else {}
-          root = Path(os.environ["RUNNER_TEMP"]) / "istanbul-gfs"
-          root.mkdir(parents=True, exist_ok=True)
-          base = {
+          latest={
               "model":"ncep_gfs_global",
               "forecast_source":"meteopt",
               "run_id_utc":run_iso,
               "location":{"name":"Istanbul","latitude":41.014,"longitude":28.950,"nearest_gfs_grid_latitude":41.0,"nearest_gfs_grid_longitude":29.0},
-              "sources":{"forecast":"MeteoPT GFS 3 saatlik nokta (Istanbul, TR); hedef 41.014N, 28.950E","model_initial_conditions":"MeteoPT GFS noktası +3 saatten başlar; ayrı analiz saati yok"},
+              "sources":{"forecast":"MeteoPT GFS 3 saatlik nokta (Istanbul, TR); hedef 41.014N, 28.950E"},
               "noaa_source_file":{"f180_available":180 in steps,"f180_source_name":"MeteoPT","f180_source_url":source_url,"global_grib2_size_bytes":None},
               "current_conditions":{"temperature_2m_c":first.get("temperature_2m_c"),"precipitation_mm":first.get("precipitation_6h_mm"),"wind_speed_10m_kmh":first.get("wind_speed_10m_kmh"),"mean_sea_level_pressure_hpa":None},
               "daily_summary":daily,
               "regional_pressure_analysis":{"valid_time_utc":run_iso,"diameter_km":2500.0,"findings":[]},
               "forecast_6_hourly":points,
+              "published_at_utc":now.isoformat(timespec="seconds"),
+              "forecast_valid_until_utc":points[-1]["valid_time_utc"] if points else None,
+              "forecast_horizon_hours":max((p["forecast_hour"] for p in points),default=0),
+              "schema":"gfs-watch.forecast.v1",
           }
-          latest={**base,"schema":"gfs-watch.forecast.v1","forecast_valid_until_utc":points[-1]["valid_time_utc"] if points else None,"published_at_utc":now.isoformat(timespec="seconds"),"forecast_horizon_hours":max((p["forecast_hour"] for p in points),default=0)}
+          root=Path(os.environ["RUNNER_TEMP"])/"istanbul-gfs"
           (root/"latest.json").write_text(json.dumps(latest,ensure_ascii=False,indent=2),encoding="utf-8")
-          first72={**base,"schema":"istanbul-gfs.first72.v1","published_at_utc":now.isoformat(timespec="seconds"),"forecast_6_hourly":[p for p in points if 0 < p["forecast_hour"] <= 72]}
-          (root/"f72.json").write_text(json.dumps(first72,ensure_ascii=False,indent=2),encoding="utf-8")
+          (root/"f72.json").write_text(json.dumps({**latest,"schema":"istanbul-gfs.first72.v1","forecast_6_hourly":[p for p in points if 0<p["forecast_hour"]<=72]},ensure_ascii=False,indent=2),encoding="utf-8")
           print(f"Istanbul GFS cycle {run_iso}; max forecast hour {max(steps)}; points {len(points)}")
           PY
 
-      - name: Publish only a new cycle to the isolated Istanbul GFS branch
+      - name: Publish one canonical GFS bundle
         run: |
           set -euo pipefail
+          mkdir -p state/gfs/f72 state/gfs/runs
+          new_run="$(python -c 'import json; print(json.load(open("'$RUNNER_TEMP'/istanbul-gfs/latest.json"))["run_id_utc"])')"
+          old_run=""
+          if [ -s state/gfs/latest.json ]; then
+            old_run="$(python -c 'import json; print(json.load(open("state/gfs/latest.json")).get("run_id_utc",""))')"
+          fi
+
+          if [ "$new_run" = "$old_run" ]; then
+            echo "Istanbul GFS cycle $new_run already published; no rebuild needed."
+            exit 0
+          fi
+
+          cp "$RUNNER_TEMP/istanbul-gfs/latest.json" state/gfs/latest.json
+          cp "$RUNNER_TEMP/istanbul-gfs/f72.json" state/gfs/f72/latest.json
+          cp "$RUNNER_TEMP/istanbul-gfs/latest.json" "state/gfs/runs/$new_run.json"
+
+          find state/gfs/runs -type f -name '*.json' -mtime +45 -delete
+
+          python -m pip install -r source/requirements.txt
+          GFS_SOURCE_ROOT="$GITHUB_WORKSPACE/source" python source/scripts/build_istanbul_gfs_publication.py
+
+          cd state
           git config user.name "github-actions[bot]"
           git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
-          git fetch origin +refs/heads/istanbul-gfs-data:refs/remotes/origin/istanbul-gfs-data || true
-          if git show-ref --verify --quiet refs/remotes/origin/istanbul-gfs-data; then
-            git checkout -B istanbul-gfs-data origin/istanbul-gfs-data
-          else
-            git checkout --orphan istanbul-gfs-data
-            git rm -rf . >/dev/null 2>&1 || true
+          git add gfs
+          if git diff --cached --quiet; then
+            echo "Canonical GFS bundle produced no file changes."
+            exit 0
           fi
-          mkdir -p gfs/f72 gfs/runs
-          new_run="$(python -c 'import json,sys; print(json.load(open(sys.argv[1]))["run_id_utc"])' "$RUNNER_TEMP/istanbul-gfs/latest.json")"
-          old_run=""
-          if [ -s gfs/latest.json ]; then
-            old_run="$(python -c 'import json; print(json.load(open("gfs/latest.json")).get("run_id_utc",""))')"
-          fi
-          changed=0
-          if [ "$new_run" != "$old_run" ]; then
-            cp "$RUNNER_TEMP/istanbul-gfs/latest.json" gfs/latest.json
-            cp "$RUNNER_TEMP/istanbul-gfs/f72.json" gfs/f72/latest.json
-            cp "$RUNNER_TEMP/istanbul-gfs/latest.json" gfs/runs/$new_run.json
-            changed=1
-            echo "New Istanbul GFS cycle published: $new_run"
-          else
-            echo "Istanbul GFS cycle $new_run already published."
-          fi
-          if [ "$changed" = "1" ]; then
-            python - <<'PY'
-          import json
-          from pathlib import Path
-          runs=[]
-          for path in sorted(Path("gfs/runs").glob("*.json"),reverse=True)[:4]:
-              try: runs.append(json.loads(path.read_text(encoding="utf-8")))
-              except Exception: pass
-          if runs:
-              Path("gfs/comparison.json").write_text(json.dumps({
-                  "schema":"istanbul-gfs.comparison.v1",
-                  "location":{"name":"Istanbul","latitude":41.014,"longitude":28.950},
-                  "updated_at_utc":runs[0].get("published_at_utc"),
-                  "runs":runs
-              },ensure_ascii=False,indent=2),encoding="utf-8")
-          PY
-            git add gfs
-            git commit -m "Publish Istanbul GFS cycle $new_run"
-            git push origin istanbul-gfs-data
-          else
-            echo "No new Istanbul GFS cycle; nothing to commit."
-          fi
-          find gfs/runs -type f -name '*.json' -mtime +45 -delete
+          git commit -m "Publish Istanbul GFS bundle $new_run"
+          git push origin HEAD:istanbul-gfs-data
+          echo "Published one source bundle: GFS JSON + comparison + report archive + 4 PNGs."
