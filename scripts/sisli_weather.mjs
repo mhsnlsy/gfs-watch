@@ -194,6 +194,7 @@ async function main() {
     sampling_interval_minutes: 5,
     rainfall_source_interval_minutes: 10,
     rainfall_chart_window_minutes: 60,
+    rainfall_chart_step_minutes: 60,
     rolling_hour_precipitation_window_minutes: 60,
     updated_at_utc: now.toISOString(),
     samples: retained
