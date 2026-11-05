@@ -7,10 +7,11 @@ on:
     types: [station-refresh-clock]
   push:
     branches: [main]
-    # Station results are committed to site/data by this workflow.
-    # Ignore those commits to prevent a self-triggering publication loop.
-    paths-ignore:
-      - "site/data/**"
+    # Run only when ENKA collector code or this workflow changes.
+    paths:
+      - ".github/workflows/main-station-refresh.yml"
+      - "enka_weather.py"
+      - "scripts/update_station_observation.py"
 
 permissions:
   contents: write
