@@ -1,6 +1,10 @@
 name: İstanbul MGM Independent
 
 on:
+  push:
+    branches: [main]
+    paths:
+      - ".github/workflows/istanbul-mgm-independent.yml"
   schedule:
     - cron: "*/5 * * * *"
   workflow_dispatch:
