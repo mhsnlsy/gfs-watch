@@ -63,7 +63,7 @@ function svgLine(runs,metric,title,unit,maxHour=72,verification=null){
  const y=v=>T+(hi-v)*PH/(hi-lo);
  let s='<svg class="koy-svg" viewBox="0 0 '+W+' '+H+'" role="img" aria-label="'+esc(title)+'">';
  for(let j=0;j<=3;j++){const v=lo+(hi-lo)*j/3,yy=y(v);s+='<line x1="'+L+'" y1="'+yy+'" x2="'+(W-R)+'" y2="'+yy+'" stroke="#294253" stroke-dasharray="3 5"/><text x="'+(L-7)+'" y="'+(yy+3)+'" text-anchor="end" fill="#91aab8" font-size="10">'+fmt(v,0)+'</text>'}
- const axisPoint=usable.flatMap(x=>x.points).find(p=>p.h===hours[0]); const axisLabel=v=>{if(!v)return "—";const d=new Date(v);if(!Number.isFinite(d.getTime()))return "—";return new Intl.DateTimeFormat("tr-TR",{timeZone:"Europe/Istanbul",day:"numeric",month:"long",hour:"2-digit",minute:"2-digit",hourCycle:"h23"}).format(d)+" TSİ"}; hours.forEach(h=>{if(h!==hours[0]&&h%12!==0&&h!==hours[hours.length-1])return;const label=h===hours[0]?axisLabel(axisPoint?.validTime):"+"+h+"s";s+='<text x="'+x(h)+'" y="'+(H-7)+'" text-anchor="middle" fill="#91aab8" font-size="10">'+esc(label)+'</text>'});
+ const axisPoint=usable.flatMap(x=>x.points).find(p=>p.h===hours[0]); const axisLabel=v=>{if(!v)return "—";const d=new Date(v);if(!Number.isFinite(d.getTime()))return "—";d.setTime(d.getTime()-3*3600000);return new Intl.DateTimeFormat("tr-TR",{timeZone:"Europe/Istanbul",day:"numeric",month:"long",hour:"2-digit",minute:"2-digit",hourCycle:"h23"}).format(d)+" TSİ"}; hours.forEach(h=>{if(h!==hours[0]&&h%12!==0&&h!==hours[hours.length-1])return;const label=h===hours[0]?axisLabel(axisPoint?.validTime):"+"+h+"s";s+='<text x="'+x(h)+'" y="'+(H-7)+'" text-anchor="middle" fill="#91aab8" font-size="10">'+esc(label)+'</text>'});
  if(sigma&&metric.includes("temperature")){
   const upper=[],lower=[];
   hours.forEach(h=>{const vals=usable[0].points.filter(p=>p.h===h).map(p=>p.v);if(!vals.length)return;const local=verification.sigmaByHour?.get(h);const bandSigma=Number.isFinite(local)&&local>0?local:sigma;upper.push([x(h),y(vals[0]+bandSigma)]);lower.push([x(h),y(vals[0]-bandSigma)])});
@@ -426,7 +426,7 @@ function renderRuns(d,f72){
  const source=runs.length?runs:(f72?[f72]:[]);
  renderRunLegend(source);
  $("next-72h-meta").textContent=source.length?source.length+" GFS döngüsü karşılaştırılıyor":"Model verisi bekleniyor";
- const chartSource=meteopt72?[meteopt72]:(f72?[f72]:source);
+ const chartSource=meteopt72?[meteopt72]:[];
  const realized=realizedErrorStats(runs,stationHistory,"temperature_2m_c");
  $("next72-temperature").innerHTML=svgLine(chartSource,"temperature_2m_c","2 m sıcaklık","°C",72,realized);
  $("next72-precipitation").innerHTML=svgLine(chartSource,"precipitation_6h_mm","6 saatlik yağış","mm / 6 saat",72);
