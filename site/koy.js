@@ -9,7 +9,7 @@ const ts=v=>{if(!v)return "—";const d=new Date(v);return Number.isFinite(d.get
 const tsGfsValid=v=>{if(!v)return "—";const d=new Date(v);return Number.isFinite(d.getTime())?new Intl.DateTimeFormat("tr-TR",{timeZone:"UTC",day:"2-digit",month:"2-digit",hour:"2-digit",minute:"2-digit"}).format(d)+" TSİ":"—"};
 const dayKey=v=>{const d=new Date(v);return Number.isFinite(d.getTime())?new Intl.DateTimeFormat("en-CA",{timeZone:"UTC",year:"numeric",month:"2-digit",day:"2-digit"}).format(d):"—"};
 const dayLabel=k=>{const p=k.split("-");return p[2]+"."+p[1]};
-let busy=false, f72=null, comparison=null, stationHistory=null, rainHistory=null;
+let busy=false, f72=null, meteopt72=null, comparison=null, stationHistory=null, rainHistory=null;
 async function get(path){const url=path.startsWith("./")?path:BASE+path;const r=await fetch(url+"?v="+Date.now(),{cache:"no-store"});if(!r.ok)throw Error("HTTP "+r.status+" · "+url);return r.json()}
 function pointsOf(run,max=180){return (run?.forecast_6_hourly||[]).filter(p=>{const h=Number(p.forecast_hour);return Number.isFinite(h)&&h>=3&&h<=max&&h%3===0}).sort((a,b)=>Number(a.forecast_hour)-Number(b.forecast_hour))}
 function realizedErrorStats(runs,samples,metric){
@@ -426,7 +426,7 @@ function renderRuns(d,f72){
  const source=runs.length?runs:(f72?[f72]:[]);
  renderRunLegend(source);
  $("next-72h-meta").textContent=source.length?source.length+" GFS döngüsü karşılaştırılıyor":"Model verisi bekleniyor";
- const chartSource=f72?[f72]:source;
+ const chartSource=meteopt72?[meteopt72]:(f72?[f72]:source);
  const realized=realizedErrorStats(runs,stationHistory,"temperature_2m_c");
  $("next72-temperature").innerHTML=svgLine(chartSource,"temperature_2m_c","2 m sıcaklık","°C",72,realized);
  $("next72-precipitation").innerHTML=svgLine(chartSource,"precipitation_6h_mm","6 saatlik yağış","mm / 6 saat",72);
@@ -452,21 +452,22 @@ function renderRuns(d,f72){
 }
 async function refresh(){if(busy)return;busy=true;
  const results=await Promise.allSettled([
-  get("f72/latest.json"),get("comparison.json"),get(MGM_BASE+"history.json"),
+  get("f72/latest.json"),get("comparison.json"),get("./data/meteopt-gfs-first72.json"),get(MGM_BASE+"history.json"),
   get(MGM_BASE+"rain-history-72h.json"),get(MGM_BASE+"observation.json")
  ]);
  if(results[0].status==="fulfilled"){f72=results[0].value;renderF72(f72)}else{}
  if(results[1].status==="fulfilled")comparison=results[1].value;else comparison=null;
- if(results[2].status==="fulfilled")stationHistory=results[2].value;else stationHistory=null;
- if(results[3].status==="fulfilled")rainHistory=results[3].value;else rainHistory=null;
+ if(results[2].status==="fulfilled")meteopt72=results[2].value;else meteopt72=null;
+ if(results[3].status==="fulfilled")stationHistory=results[3].value;else stationHistory=null;
+ if(results[4].status==="fulfilled")rainHistory=results[4].value;else rainHistory=null;
  if(stationHistory){
   renderStationHistory(stationHistory,rainHistory);
  }else{
   $("station-temperature-trend").innerHTML="<div class=\"station-trend-empty\">MGM istasyon geçmişi bekleniyor…</div>";
   $("station-rain-trend").innerHTML="<div class=\"station-trend-empty\">MGM yağış arşivi bekleniyor…</div>";
  }
- if(results[4].status==="fulfilled"){
-  renderMgmObservation(results[4].value,stationHistory,f72);
+ if(results[5].status==="fulfilled"){
+  renderMgmObservation(results[5].value,stationHistory,f72);
   const o=results[4].value;
   $("mgm-status-date").textContent=ts(o.observed_at_utc);
   $("mgm-source-temp").innerHTML=fmt(o.temperature_2m_c)+"<small>°C</small>";
