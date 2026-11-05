@@ -12,23 +12,64 @@ const dayLabel=k=>{const p=k.split("-");return p[2]+"."+p[1]};
 let busy=false, f72=null, comparison=null, stationHistory=null, rainHistory=null;
 async function get(path){const url=path.startsWith("./")?path:BASE+path;const r=await fetch(url+"?v="+Date.now(),{cache:"no-store"});if(!r.ok)throw Error("HTTP "+r.status+" · "+url);return r.json()}
 function pointsOf(run,max=180){return (run?.forecast_6_hourly||[]).filter(p=>{const h=Number(p.forecast_hour);return Number.isFinite(h)&&h>=3&&h<=max&&h%3===0}).sort((a,b)=>Number(a.forecast_hour)-Number(b.forecast_hour))}
-function svgLine(runs,metric,title,unit,maxHour=72){
+function realizedErrorStats(runs,samples,metric){
+ if(!samples||metric!=="temperature_2m_c")return null;
+ const obs=Array.isArray(samples.samples)?samples.samples:[];
+ if(!obs.length)return null;
+ const errors=[],byHour=new Map(),now=Date.now();
+ for(const run of runs||[]){
+  for(const p of pointsOf(run,72)){
+   const t=Date.parse(p.valid_time_utc||"");
+   if(!Number.isFinite(t)||t>now)continue;
+   let best=null,bestGap=Infinity;
+   for(const s of obs){
+    const st=Date.parse(s.observed_at_utc||s.logged_at_utc||"");
+    if(!Number.isFinite(st))continue;
+    const gap=Math.abs(st-t);
+    if(gap<bestGap){best=s;bestGap=gap}
+   }
+   if(!best||bestGap>45*60*1000)continue;
+   const forecast=num(p[metric]),observed=num(best.temperature_2m_c);
+   if(forecast==null||observed==null)continue;
+   const error=forecast-observed;
+   errors.push(error);
+   const h=Number(p.forecast_hour);
+   if(!byHour.has(h))byHour.set(h,[]);
+   byHour.get(h).push(error);
+  }
+ }
+ if(errors.length<2)return null;
+ const mean=errors.reduce((a,v)=>a+v,0)/errors.length;
+ const sigma=Math.sqrt(errors.reduce((a,v)=>a+(v-mean)**2,0)/errors.length);
+ const sigmaByHour=new Map();
+ for(const [h,vals] of byHour){
+  if(vals.length<2)continue;
+  const m=vals.reduce((a,v)=>a+v,0)/vals.length;
+  sigmaByHour.set(h,Math.sqrt(vals.reduce((a,v)=>a+(v-m)**2,0)/vals.length));
+ }
+ return {sigma, count:errors.length, sigmaByHour};
+}
+function svgLine(runs,metric,title,unit,maxHour=72,verification=null){
  const usable=runs.map((r,runIndex)=>({run:r,runIndex,points:pointsOf(r,maxHour).map(p=>({h:Number(p.forecast_hour),v:num(p[metric]),validTime:p.valid_time_utc})).filter(p=>p.v!=null)})).filter(x=>x.points.length);
  if(!usable.length)return '<div class="chart-empty">Tahmin verisi bekleniyor…</div>';
  const hours=[...new Set(usable.flatMap(x=>x.points.map(p=>p.h)))].sort((a,b)=>a-b);
  const values=usable.flatMap(x=>x.points.map(p=>p.v));let lo=Math.min(...values),hi=Math.max(...values);
  if(metric.includes("temperature")){lo=Math.floor((lo-2)/2)*2;hi=Math.ceil((hi+2)/2)*2}else{lo=Math.min(0,lo);hi=Math.max(1,Math.ceil(hi*1.15))}
  if(hi===lo)hi=lo+1;
+ const sigma=verification?.sigma||null;
+ if(sigma&&metric.includes("temperature")){lo=Math.min(lo,Math.min(...values)-sigma);hi=Math.max(hi,Math.max(...values)+sigma)}
  const W=760,H=190,L=45,R=12,T=20,B=28,PW=W-L-R,PH=H-T-B;
  const x=h=>L+(hours.length===1?PW/2:(h-hours[0])/(hours[hours.length-1]-hours[0]||1))*PW;
  const y=v=>T+(hi-v)*PH/(hi-lo);
  let s='<svg class="koy-svg" viewBox="0 0 '+W+' '+H+'" role="img" aria-label="'+esc(title)+'">';
  for(let j=0;j<=3;j++){const v=lo+(hi-lo)*j/3,yy=y(v);s+='<line x1="'+L+'" y1="'+yy+'" x2="'+(W-R)+'" y2="'+yy+'" stroke="#294253" stroke-dasharray="3 5"/><text x="'+(L-7)+'" y="'+(yy+3)+'" text-anchor="end" fill="#91aab8" font-size="10">'+fmt(v,0)+'</text>'}
  const axisPoint=usable.flatMap(x=>x.points).find(p=>p.h===hours[0]); const axisLabel=v=>{if(!v)return "—";const d=new Date(v);if(!Number.isFinite(d.getTime()))return "—";return new Intl.DateTimeFormat("tr-TR",{timeZone:"Europe/Istanbul",day:"numeric",month:"long",hour:"2-digit",minute:"2-digit",hourCycle:"h23"}).format(d)+" TSİ"}; hours.forEach(h=>{if(h!==hours[0]&&h%12!==0&&h!==hours[hours.length-1])return;const label=h===hours[0]?axisLabel(axisPoint?.validTime):"+"+h+"s";s+='<text x="'+x(h)+'" y="'+(H-7)+'" text-anchor="middle" fill="#91aab8" font-size="10">'+esc(label)+'</text>'});
- const lookup=usable.map(x=>new Map(x.points.map(p=>[p.h,p.v])));
- const upper=[],lower=[];
- hours.forEach((h,i)=>{const vals=lookup.map(m=>m.get(h)).filter(v=>v!=null);if(vals.length){upper.push([x(h),y(Math.max(...vals))]);lower.push([x(h),y(Math.min(...vals))])}});
- if(upper.length>1){const band=upper.concat(lower.reverse()).map(p=>p.join(",")).join(" ");s+='<polygon points="'+band+'" fill="#75b9c8" opacity=".16"/>'}
+ if(sigma&&metric.includes("temperature")){
+  const upper=[],lower=[];
+  hours.forEach(h=>{const vals=usable[0].points.filter(p=>p.h===h).map(p=>p.v);if(!vals.length)return;const local=verification.sigmaByHour?.get(h);const bandSigma=Number.isFinite(local)&&local>0?local:sigma;upper.push([x(h),y(vals[0]+bandSigma)]);lower.push([x(h),y(vals[0]-bandSigma)])});
+  if(upper.length>1){const band=upper.concat(lower.reverse()).map(p=>p.join(",")).join(" ");s+='<polygon points="'+band+'" fill="#75b9c8" opacity=".16"/>'}
+  s+='<text x="'+(W-R-4)+'" y="'+(T+12)+'" text-anchor="end" fill="#91aab8" font-size="10">Gerçekleşen hata σ ±'+fmt(sigma,1)+'°C · '+verification.count+' doğrulama</text>';
+ }
  usable.forEach(item=>{
   const i=item.runIndex,color=COLORS[i%COLORS.length],latest=i===0;
   const path=item.points.map((p,j)=>(j?"L":"M")+x(p.h)+" "+y(p.v)).join(" ");
@@ -37,7 +78,7 @@ function svgLine(runs,metric,title,unit,maxHour=72){
    s+='<circle cx="'+x(p.h)+'" cy="'+y(p.v)+'" r="2.5" fill="'+color+'"><title>F'+p.h+' · '+fmt(p.v)+' '+unit+'</title></circle>';
   });
   item.points.forEach(p=>{
-   s+='<circle class="gfs-point-target" cx="'+x(p.h)+'" cy="'+y(p.v)+'" r="0" data-run="'+esc(gfsRunLabel(item.run))+'" data-current="'+(latest?"true":"false")+'" data-valid="'+esc(tsGfsValid(p.validTime))+'" data-step="'+esc("+"+p.h+" saat")+'" data-value="'+esc(fmt(p.v,1))+'" data-unit="'+esc(unit)+'" data-color="'+color+'" aria-hidden="true"/>';
+   s+='<circle class="gfs-point-target" cx="'+x(p.h)+'" cy="'+y(p.v)+'" r="0" data-run="'+esc(gfsRunLabel(item.run))+'" data-current="'+(latest?"true":"false")+'" data-valid="'+esc(tsGfsValid(p.validTime))+'" data-step="'+esc("F"+p.h)+" saat")+'" data-value="'+esc(fmt(p.v,1))+'" data-unit="'+esc(unit)+'" data-color="'+color+'" aria-hidden="true"/>';
   });
  });
  s+='</svg>';return s;
@@ -385,8 +426,10 @@ function renderRuns(d,f72){
  const source=runs.length?runs:(f72?[f72]:[]);
  renderRunLegend(source);
  $("next-72h-meta").textContent=source.length?source.length+" GFS döngüsü karşılaştırılıyor":"Model verisi bekleniyor";
- $("next72-temperature").innerHTML=svgLine(source,"temperature_2m_c","2 m sıcaklık","°C",72);
- $("next72-precipitation").innerHTML=svgLine(source,"precipitation_6h_mm","6 saatlik yağış","mm / 6 saat",72);
+ const chartSource=f72?[f72]:source;
+ const realized=realizedErrorStats(runs,stationHistory,"temperature_2m_c");
+ $("next72-temperature").innerHTML=svgLine(chartSource,"temperature_2m_c","2 m sıcaklık","°C",72,realized);
+ $("next72-precipitation").innerHTML=svgLine(chartSource,"precipitation_6h_mm","6 saatlik yağış","mm / 6 saat",72);
  bindGfsChartTooltip("next72-temperature");
  bindGfsChartTooltip("next72-precipitation");
  const first=source[0],p=first?pointsOf(first,180):[];
