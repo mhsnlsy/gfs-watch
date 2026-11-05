@@ -44,6 +44,21 @@ jobs:
           CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
         run: wrangler deploy --config wrangler.jsonc
 
+      - name: Verify Worker health and GitHub dispatch credential
+        run: |
+          set -euo pipefail
+          response="$(curl --fail --silent --show-error https://gfs-watch-backup-worker.muhsin-ulusoy.workers.dev/healthz)"
+          echo "$response"
+          python - "$response" <<'PY'
+          import json, sys
+          data = json.loads(sys.argv[1])
+          if data.get("cron") != "*/5 * * * *":
+              raise SystemExit("Worker cron configuration is not the expected five-minute schedule.")
+          if not data.get("github_dispatch_credential_configured"):
+              raise SystemExit("Cloudflare Worker GH_TOKEN secret is missing. Add GH_TOKEN as a Worker secret before automatic dispatch can work.")
+          print("Worker health and GitHub dispatch credential verified.")
+          PY
+
       - name: Refresh Worker GitHub credential when a repository secret is available
         working-directory: cloudflare
         env:
