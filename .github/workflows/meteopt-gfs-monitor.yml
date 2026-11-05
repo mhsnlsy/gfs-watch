@@ -105,6 +105,7 @@ jobs:
           GFS_WATCH_CONTINUOUS: "1"
           GFS_WATCH_WINDOW_MINUTES: "10"
           GFS_WATCH_POLL_SECONDS: "60"
+          GFS_WATCH_TARGET_RUN_ID: ""
           GFS_WATCH_RESEND_CHARTS: ${{ github.event_name == 'workflow_dispatch' && inputs.resend_charts && '1' || '0' }}
           GFS_WATCH_MANUAL_RUN_ID: ${{ github.event_name == 'workflow_dispatch' && inputs.manual_run_id || '' }}
           GFS_WATCH_MANUAL_MEDIA_ONLY: ${{ github.event_name == 'workflow_dispatch' && inputs.manual_media_only || false }}
