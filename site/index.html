@@ -1038,16 +1038,10 @@
       overflow-y: auto !important;
       touch-action: pan-y pinch-zoom !important;
     }
-    body, main, .shell, .water-gfs-layout, #meteopt-gfs-table, #iski-water-card {
+    body, main, .shell, #meteopt-gfs-table {
       position: relative;
       overflow-y: visible !important;
       touch-action: pan-y pinch-zoom !important;
-    }
-    .water-gfs-layout {
-      display: grid;
-      grid-template-columns: minmax(0, 1fr);
-      gap: 18px;
-      align-items: start;
     }
     .meteopt-table-card { min-width: 0; max-width: 100%; }
     .meteopt-table-scroll {
@@ -1061,9 +1055,6 @@
       touch-action: pan-x pan-y pinch-zoom !important;
     }
     .meteopt-data-table { min-width: 680px; }
-    @media (min-width: 900px) {
-      .water-gfs-layout { grid-template-columns: minmax(0, 1.55fr) minmax(280px, .75fr); }
-    }
   </style>
 
 </head>
@@ -1161,7 +1152,6 @@
       <div id="notifications-list" class="notification-list" aria-live="polite"><div class="chart-empty">Son raporlar yükleniyor…</div></div>
     </section>
     <section class="section" id="basinc"><div class="section-head"><div><div class="section-kicker">GFS · DENİZ SEVİYESİ</div><h2>Basınç merkezleri</h2></div></div><div class="lower-grid"><article class="pressure-card"><div class="label">Bölgesel basınç merkezleri ve İstanbul'a etkisi</div><ul class="pressure-list" id="pressure-findings"><li class="loading">Analiz yükleniyor…</li></ul></article></div></section>
-    <section class="section" id="tahmin"><div class="section-head"><div><div class="section-kicker">METEOPT GFS · MODEL TAHMİNİ</div><h2>8 günlük tahmin</h2></div><div class="section-note"><span id="gfs-daily-cycle-chip">GFS döngüsü yükleniyor</span><br><span id="gfs-daily-updated-chip">Yayın zamanı bekleniyor</span><br>Günlük en düşük / en yüksek sıcaklık</div></div><div class="daily-grid" id="daily-grid"><div class="loading">GFS günlük tahmini yükleniyor…</div></div></section>
     </div>
     <div id="ecmwf-model-view" hidden aria-label="ECMWF tahmin görünümü">
       <div class="section-head" style="padding-top:30px"><div><div class="section-kicker">ECMWF IFS · HRES + ENS</div><h2>ECMWF IFS · İstanbul</h2></div><div class="section-note"><span id="ecmwf-run-meta">ECMWF döngüsü bekleniyor</span><br><span id="ecmwf-updated-chip">Yayın zamanı</span><br>Günlük en düşük / en yüksek sıcaklık</div></div>
@@ -1178,7 +1168,6 @@
       <section class="section" aria-label="ECMWF veri kaynağı ve lisans"><p class="ecmwf-source-note">Kaynak: <a href="https://www.meteopt.com/modelos/ecmwf?lat=41.014&lon=28.950" target="_blank" rel="noopener">MeteoPT ECMWF</a> · İstanbul noktası 41.014°N 28.950°E · 3 saatlik sıcaklık, yağış, rüzgâr, 850 hPa ve basınç. Ensemble sapması bu kaynakta yok.</p></section>
 <section class="section" id="ecmwf-tahmin"><div class="section-head"><div><div class="section-kicker">ECMWF IFS · MODEL TAHMİNİ</div><h2>8 günlük tahmin</h2></div><div class="section-note"><span id="ecmwf-daily-cycle-chip">ECMWF döngüsü yükleniyor</span><br><span id="ecmwf-daily-updated-chip">Yayın zamanı bekleniyor</span><br>Günlük en düşük / en yüksek sıcaklık · HRES yüzey tahmini</div></div><div class="daily-grid" id="ecmwf-daily-grid"><div class="loading">ECMWF tahmini yükleniyor…</div></div></section>
     </div>
-    <div class="water-gfs-layout">
     <section class="section" id="meteopt-gfs-table" aria-label="MeteoPT GFS ham model tablosu">
       <div class="section-head">
         <div>
@@ -1203,8 +1192,7 @@
 
       </article>
     </section>
-    <aside class="section" id="iski-water-card"><div class="section-head"><div><div class="section-kicker">İSKİ · SU DURUMU</div><h2>Baraj doluluğu</h2></div></div><article class="iski-mini-card"><div class="iski-mini-top"><span>İstanbul geneli</span><span id="iski-water-date">Veri bekleniyor</span></div><div class="iski-mini-value" id="iski-water-rate">—<small>%</small></div><div class="iski-mini-track"><span id="iski-water-fill"></span></div><div class="iski-mini-bottom"><span id="iski-water-delta">7 günlük değişim: —</span><span>Kaynak: <a href="https://www.dolulukorani.com/il/istanbul" target="_blank" rel="noopener">dolulukorani.com · İSKİ</a></span></div></article></aside>
-    </div>
+
   </main>
   <footer class="shell footer"><span><strong data-app-name>İstanbul'un Havası</strong> <span data-app-version>4.0</span></span><span>Veri kaynakları: ENKA Balmumcu Vantage PRO · MGM Eyüpsultan 18101 · MeteoPT GFS · MeteoPT ECMWF · Otomatik yenileme: 5 dakika</span></footer>
   <script>
@@ -2511,11 +2499,6 @@
       forecastData=data;
       renderNext72Hours();
       renderBriefing();
-      if(Array.isArray(data.daily_summary)&&data.daily_summary.length){
-        renderDaily(data.daily_summary,"daily-grid");
-        if($("gfs-daily-cycle-chip"))$("gfs-daily-cycle-chip").textContent="Döngü: "+timeUTC(data.run_id_utc)+" UTC";
-        if($("gfs-daily-updated-chip"))$("gfs-daily-updated-chip").textContent="Yayınlandı: "+timeTR(data.published_at_utc)+" TSİ";
-      }else if($("daily-grid"))$("daily-grid").innerHTML='<div class="chart-empty">GFS günlük tahmin özeti bulunamadı.</div>';
       if(data.report&&data.report.report_text){
         renderNotifications([data.report], data.published_at_utc||data.report.published_at_utc);
       }
@@ -3245,7 +3228,6 @@
   </script>
 
   <script src="./meteopt-gfs-table.js?v=20261105-tsi-step-fix-1" defer></script>
-  <script src="./iski-dams.js?v=20261104-2" defer></script>
 </body>
 </html>
 
