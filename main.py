@@ -3536,6 +3536,12 @@ async def process_gfs_update(strict=False, target_run_id=None):
         return
 
     use_meteopt = os.getenv("GFS_SOURCE", "meteopt").strip().lower() != "noaa"
+    # MeteoPT returns the active run itself. A slot-pinned target may point
+    # at an older cycle and silently prevent the currently updating run from
+    # ever reaching the F180 publisher.
+    if use_meteopt:
+        target_run_id = None
+        os.environ.pop("GFS_WATCH_TARGET_RUN_ID", None)
     candidates = await asyncio.to_thread(
         fetch_meteopt_available_runs if use_meteopt else fetch_noaa_available_runs
     )
