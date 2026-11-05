@@ -9,8 +9,8 @@
     "latitude": 41.1,
     "longitude": 28.9,
     "elevation_m": 107,
-    "observed_at_utc": "2026-11-05T00:32:24+00:00",
-    "age_minutes": 1.4,
+    "observed_at_utc": "2026-11-06T00:33:24+00:00",
+    "age_minutes": 0.0,
     "is_stale": false,
     "temperature_2m_c": 11.2,
     "wind_speed_10m_kmh": 6.5,
@@ -24,10 +24,10 @@
     "observation_method": "tesseract-ocr",
     "ocr_regions": {
       "weather_overlay": "11.2 °C\n87% ~\n1024.5 hPa\n3.5 kt NNE\n0.0 mm",
-      "timestamp_overlay": "(05-11-2026 03:32:24"
+      "timestamp_overlay": "| 06-11-2026 03:33:24"
     }
   },
-  "updated_at_utc": "2026-11-05T00:33:45+00:00",
+  "updated_at_utc": "2026-11-05T00:34:10+00:00",
   "role": "primary",
   "source_priority": 1
 }
