@@ -7,7 +7,7 @@
     "source_url": "https://servis.mgm.gov.tr/web/sondurumlar?merkezid=18401",
     "source_fallback_used": true,
     "observed_at_utc": "2026-11-05T05:49:00.000Z",
-    "fetched_at_utc": "2026-11-05T05:52:35.646Z",
+    "fetched_at_utc": "2026-11-05T05:52:57.770Z",
     "age_minutes": 4,
     "stale_after_minutes": 30,
     "is_stale": false,
@@ -16,7 +16,7 @@
     "wind_direction_degrees": 9,
     "wind_direction_cardinal": "N",
     "wind_direction_tr": "Kuzey",
-    "precipitation_1h_mm": 0.84,
+    "precipitation_1h_mm": 0.79,
     "precipitation_10m_mm": 0.04,
     "precipitation_6h_mm": 1.58,
     "precipitation_12h_mm": 2.9,
@@ -30,7 +30,7 @@
     "pressure_type": "station",
     "pressure_source": "MGM 18401",
     "pressure_observed_at_utc": "2026-11-05T05:49:00.000Z",
-    "pressure_age_minutes": 3.6
+    "pressure_age_minutes": 4
   },
-  "updated_at_utc": "2026-11-05T05:52:32.862Z"
+  "updated_at_utc": "2026-11-05T05:52:54.797Z"
 }
