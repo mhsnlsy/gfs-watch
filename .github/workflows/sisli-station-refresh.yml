@@ -66,8 +66,9 @@ jobs:
         run: |
           set -euo pipefail
           cp -f public/sisli-station-observation.json forecast-data/public/
-          cp -f public/sisli-station-temperature-history.json forecast-data/public/
-          cp -f public/sisli-station-rain-history.json forecast-data/public/ || true
+          # History files are written directly into forecast-data/public by the scraper.
+          test -s forecast-data/public/sisli-station-temperature-history.json
+          test -s forecast-data/public/sisli-station-rain-history.json
           cd forecast-data
           git config user.name "github-actions[bot]"
           git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
