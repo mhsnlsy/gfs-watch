@@ -83,66 +83,10 @@ jobs:
           if-no-files-found: error
           retention-days: 1
 
-  sisli:
-    name: Şişli
-    runs-on: ubuntu-latest
-    timeout-minutes: 5
-    steps:
-      - name: Check out main
-        uses: actions/checkout@v4
-        with:
-          ref: main
-
-      - name: Set up Node.js
-        uses: actions/setup-node@v4
-        with:
-          node-version: "22"
-
-      - name: Set up Python for validation
-        uses: actions/setup-python@v5
-        with:
-          python-version: "3.12"
-
-      - name: Prepare Şişli-only workspace
-        run: |
-          set -euo pipefail
-          mkdir -p site/data public .station-work/sisli
-          for f in sisli-station-temperature-history.json sisli-station-rain-history.json; do
-            if [ -s "site/data/$f" ]; then cp "site/data/$f" ".station-work/sisli/$f"; fi
-          done
-
-      - name: Collect and validate Şişli
-        env:
-          SISLI_TEMPERATURE_HISTORY_PATH: .station-work/sisli/sisli-station-temperature-history.json
-          SISLI_RAIN_HISTORY_PATH: .station-work/sisli/sisli-station-rain-history.json
-        run: |
-          set -euo pipefail
-          node scripts/sisli_weather.mjs
-          test -s public/sisli-station-observation.json
-          test -s .station-work/sisli/sisli-station-temperature-history.json
-          test -s .station-work/sisli/sisli-station-rain-history.json
-          python - <<'PY'
-          import json
-          from pathlib import Path
-          s = json.loads(Path("public/sisli-station-observation.json").read_text())["station_observation"]
-          age = float(s.get("age_minutes", 9999))
-          if age > 20 or s.get("is_stale") or s.get("temperature_2m_c") is None:
-              raise SystemExit(f"Şişli observation invalid/stale: age={age}")
-          PY
-          cp public/sisli-station-observation.json .station-work/sisli/sisli-station-observation.json
-
-      - name: Upload Şişli data
-        uses: actions/upload-artifact@v4
-        with:
-          name: sisli-station-data
-          path: .station-work/sisli/*
-          if-no-files-found: error
-          retention-days: 1
-
   publish:
     name: Publish successful station results
     runs-on: ubuntu-latest
-    needs: [enka, sisli]
+    needs: [enka]
     if: always()
     timeout-minutes: 5
     steps:
@@ -153,7 +97,7 @@ jobs:
           fetch-depth: 0
 
       - name: Prepare publication folders
-        run: mkdir -p site/data .station-work/enka .station-work/sisli
+        run: mkdir -p site/data .station-work/enka
 
       - name: Download ENKA result
         if: needs.enka.result == 'success'
@@ -162,24 +106,12 @@ jobs:
           name: enka-station-data
           path: .station-work/enka
 
-      - name: Download Şişli result
-        if: needs.sisli.result == 'success'
-        uses: actions/download-artifact@v4
-        with:
-          name: sisli-station-data
-          path: .station-work/sisli
-
       - name: Publish each successful station independently
         run: |
           set -euo pipefail
           if [ -s .station-work/enka/station-observation.json ]; then
             cp .station-work/enka/station-observation.json site/data/station-observation.json
             cp .station-work/enka/station-temperature-history.json site/data/station-temperature-history.json
-          fi
-          if [ -s .station-work/sisli/sisli-station-observation.json ]; then
-            cp .station-work/sisli/sisli-station-observation.json site/data/sisli-station-observation.json
-            cp .station-work/sisli/sisli-station-temperature-history.json site/data/sisli-station-temperature-history.json
-            cp .station-work/sisli/sisli-station-rain-history.json site/data/sisli-station-rain-history.json
           fi
 
           git config user.name "github-actions[bot]"
