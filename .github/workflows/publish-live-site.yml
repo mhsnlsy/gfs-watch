@@ -87,6 +87,11 @@ jobs:
 
           if [ -s "istanbul-gfs-data/gfs/latest.json" ]; then
             cp "istanbul-gfs-data/gfs/latest.json" "_site/data/istanbul-gfs-latest.json"
+            if [ -d "istanbul-gfs-data/gfs/notifications" ]; then
+              rm -rf "_site/data/notifications"
+              cp -a "istanbul-gfs-data/gfs/notifications" "_site/data/notifications"
+              echo "Independent Istanbul GFS report archive + PNGs present."
+            fi
             if [ -s "istanbul-gfs-data/gfs/comparison.json" ]; then
               python - <<'PY'
           import json
