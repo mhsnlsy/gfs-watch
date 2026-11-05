@@ -9,25 +9,25 @@
     "latitude": 41.1,
     "longitude": 28.9,
     "elevation_m": 107,
-    "observed_at_utc": "2026-11-05T07:44:24+00:00",
-    "age_minutes": 1.3,
+    "observed_at_utc": "2026-11-05T07:45:24+00:00",
+    "age_minutes": 1.0,
     "is_stale": false,
-    "temperature_2m_c": 12.0,
-    "wind_speed_10m_kmh": 20.9,
-    "wind_speed_10m_knots": 11.3,
-    "wind_direction_cardinal": "NNE",
-    "wind_direction_tr": "Kuzey-kuzeydoğu",
+    "temperature_2m_c": 12.2,
+    "wind_speed_10m_kmh": 17.8,
+    "wind_speed_10m_knots": 9.6,
+    "wind_direction_cardinal": "NE",
+    "wind_direction_tr": "Kuzeydoğu",
     "precipitation_1h_mm": null,
     "precipitation_daily_mm": 0.2,
     "humidity_percent": 77.0,
     "station_pressure_hpa": 1026.5,
     "observation_method": "tesseract-ocr",
     "ocr_regions": {
-      "weather_overlay": "12.0 °C\n77%\n1026.5 hPa\n11.3 kt NNE\n0.2mm",
-      "timestamp_overlay": "05-11-2026 10:44:24"
+      "weather_overlay": "12.2 °C\n77%\n1026.5 hPa\n9.6 kt NE\n0.2mm",
+      "timestamp_overlay": "05-11-2026 10:45:24"
     }
   },
-  "updated_at_utc": "2026-11-05T07:45:42+00:00",
+  "updated_at_utc": "2026-11-05T07:46:24+00:00",
   "role": "primary",
   "source_priority": 1
 }
