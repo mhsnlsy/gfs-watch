@@ -4,7 +4,7 @@
   "forecast_source": "meteopt",
   "run_id_utc": "2026-11-05T06:00:00+00:00",
   "forecast_valid_until_utc": "2026-11-12T18:00:00+00:00",
-  "published_at_utc": "2026-11-05T12:04:37+00:00",
+  "published_at_utc": "2026-11-05T17:18:58+00:00",
   "forecast_horizon_hours": 180,
   "location": {
     "name": "Istanbul",
@@ -18,10 +18,10 @@
     "model_initial_conditions": "MeteoPT GFS noktası +3 saatten başlar; ayrı analiz saati yok"
   },
   "noaa_source_file": {
-    "f180_available": false,
-    "f180_last_modified_utc": "2026-11-05T12:04:33+00:00",
-    "f180_source_name": "MeteoPT",
-    "f180_source_url": "https://api.meteopt.com/gfs/json?lat=41.0140&lon=28.9500&run=06",
+    "f180_available": true,
+    "f180_last_modified_utc": null,
+    "f180_source_name": null,
+    "f180_source_url": null,
     "global_grib2_size_bytes": null
   },
   "current_conditions": {
@@ -30,27 +30,7 @@
     "wind_speed_10m_kmh": 25.0,
     "mean_sea_level_pressure_hpa": 1027.0
   },
-  "station_observation": {
-    "station_name": "ENKA Balmumcu",
-    "station_id": "ENKA-BALMUMCU-VANTAGE-PRO",
-    "source": "ENKA Balmumcu Vantage PRO weather station",
-    "source_url": "https://w.enka.com/weather/currentvalues.html",
-    "station_home_url": "https://w.enka.com/weather/index.html",
-    "latitude": 41.1,
-    "longitude": 28.9,
-    "elevation_m": 107,
-    "observed_at_utc": "2026-11-05T11:55:00+00:00",
-    "age_minutes": 9.6,
-    "is_stale": false,
-    "temperature_2m_c": 11.2,
-    "wind_speed_10m_kmh": 20.9,
-    "wind_speed_10m_knots": 11.3,
-    "wind_direction_cardinal": "NE",
-    "precipitation_1h_mm": null,
-    "precipitation_daily_mm": 0.4,
-    "humidity_percent": 77.0,
-    "station_pressure_hpa": 1025.9
-  },
+  "station_observation": null,
   "daily_summary": [
     {
       "date_istanbul": "2026-11-05",
