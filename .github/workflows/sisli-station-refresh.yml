@@ -81,14 +81,6 @@ jobs:
             exit 0
           fi
           git commit -m "Refresh MGM Şişli station observation [$(date -u +%H:%M)]"
-          for attempt in 1 2 3 4 5; do
-            git pull --rebase origin gfs-watch-state
-            if git push origin gfs-watch-state; then
-              echo "Şişli data published without modifying other station files."
-              echo "changed=true" >> "$GITHUB_OUTPUT"
-              exit 0
-            fi
-            sleep $((attempt * 2))
-          done
-          echo "Could not publish Şişli data after five attempts."
-          exit 1
+          git push origin HEAD:sisli-state
+          echo "Şişli data pushed to dedicated sisli-state."
+          echo "changed=true" >> "$GITHUB_OUTPUT"
