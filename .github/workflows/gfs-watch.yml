@@ -240,16 +240,6 @@ jobs:
           echo "Could not publish GFS run history after five attempts."
           exit 1
 
-  deploy-pages:
-    name: Publish latest report to GitHub Pages
-    needs: check-gfs
-    if: needs.check-gfs.result == 'success' && needs.check-gfs.outputs.gfs_updated == 'true'
-    permissions:
-      contents: read
-      pages: write
-      id-token: write
-    uses: ./.github/workflows/pages.yml
-
   send-web-push:
     name: Send device notification after Pages deployment
     needs: deploy-pages
