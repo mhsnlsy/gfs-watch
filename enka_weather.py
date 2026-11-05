@@ -81,7 +81,7 @@ def _parse_current_values(text):
 
     def number_after(label, pattern):
         match = re.search(
-            rf"{re.escape(label)}\\s+{pattern}",
+            rf"{re.escape(label)}\s+{pattern}",
             text,
             flags=re.I,
         )
