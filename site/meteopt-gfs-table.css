@@ -283,3 +283,12 @@
     min-width: 0 !important;
   }
 }
+
+
+/* Desktop only: enlarge the complete MeteoPT GFS panel by 20%.
+   Mobile and touch layouts retain their existing dimensions. */
+@media (min-width: 851px) and (pointer: fine) {
+  #meteopt-gfs-table {
+    zoom: 1.2;
+  }
+}
