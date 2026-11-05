@@ -6,16 +6,16 @@
     "source": "MGM 18401",
     "source_url": "https://servis.mgm.gov.tr/web/sondurumlar?merkezid=18401",
     "source_fallback_used": true,
-    "observed_at_utc": "2026-11-05T01:49:00.000Z",
-    "fetched_at_utc": "2026-11-05T01:55:28.699Z",
-    "age_minutes": 6,
+    "observed_at_utc": "2026-11-05T01:54:00.000Z",
+    "fetched_at_utc": "2026-11-05T01:55:47.322Z",
+    "age_minutes": 2,
     "stale_after_minutes": 30,
     "is_stale": false,
     "temperature_2m_c": 10.7,
-    "wind_speed_10m_kmh": 2.9,
-    "wind_direction_degrees": 317,
-    "wind_direction_cardinal": "NW",
-    "wind_direction_tr": "Kuzeybatı",
+    "wind_speed_10m_kmh": 6.8,
+    "wind_direction_degrees": 16,
+    "wind_direction_cardinal": "NNE",
+    "wind_direction_tr": "Kuzey-kuzeydoğu",
     "precipitation_1h_mm": 0,
     "precipitation_10m_mm": 0,
     "precipitation_6h_mm": 0.08,
@@ -29,8 +29,8 @@
     "actual_station_pressure_hpa": null,
     "pressure_type": "station",
     "pressure_source": "MGM 18401",
-    "pressure_observed_at_utc": "2026-11-05T01:49:00.000Z",
-    "pressure_age_minutes": 6.5
+    "pressure_observed_at_utc": "2026-11-05T01:54:00.000Z",
+    "pressure_age_minutes": 1.8
   },
-  "updated_at_utc": "2026-11-05T01:55:25.128Z"
+  "updated_at_utc": "2026-11-05T01:55:44.312Z"
 }
