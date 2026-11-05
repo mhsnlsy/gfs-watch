@@ -30,6 +30,20 @@ function latestSlotUtc(now) {
 }
 
 export default {
+  async fetch(request, env) {
+    const url = new URL(request.url);
+    if (url.pathname === "/healthz") {
+      return new Response(JSON.stringify({
+        worker: "gfs-watch-backup-worker",
+        cron: "*/5 * * * *",
+        github_dispatch_credential_configured: Boolean(env.GH_TOKEN)
+      }), {
+        headers: { "content-type": "application/json; charset=utf-8", "cache-control": "no-store" }
+      });
+    }
+    return new Response("Not found", { status: 404 });
+  },
+
   async scheduled(controller, env, ctx) {
     if (!env.GH_TOKEN) throw new Error("Missing GH_TOKEN Worker secret");
     const now = new Date();
