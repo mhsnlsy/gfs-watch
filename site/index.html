@@ -1850,7 +1850,7 @@
       valid.forEach(s=>{const i=Math.floor((s.time-start)/bucketMs);if(i>=0&&i<bins.length)bins[i].values.push(s.pressure);});
       const data=bins.map((bin,index)=>({index,start:bin.start,count:bin.values.length,mean:bin.values.length?bin.values.reduce((a,v)=>a+v,0)/bin.values.length:null,min:bin.values.length?Math.min(...bin.values):null,max:bin.values.length?Math.max(...bin.values):null})).filter(p=>p.count);
       if(meta)meta.textContent=stationName+" · "+valid.length+" kayıt · "+(valid.length?fmt(valid[valid.length-1].pressure,1)+" hPa · 30 dk ortalama":"basınç kayıtları bekleniyor");
-      if(!data.length){holder.innerHTML='<div class="station-trend-empty">İlk basınç kaydı bekleniyor. OCR ölçümleri geldikçe grafik dolacak.</div>';return;}
+      if(!data.length){holder.innerHTML='<div class="station-trend-empty">İlk basınç kaydı bekleniyor. İstasyon ölçümleri geldikçe grafik dolacak.</div>';return;}
       let low=Math.floor(Math.min(...valid.map(p=>p.pressure))-1),high=Math.ceil(Math.max(...valid.map(p=>p.pressure))+1);if(high-low<3){low-=1;high+=1;}
       const width=560,height=160,left=44,right=14,top=13,bottom=27,pw=width-left-right,ph=height-top-bottom;
       const xt=t=>left+(t-start)/windowMs*pw,yv=v=>top+(high-v)/(high-low)*ph,xb=p=>xt(p.start+bucketMs/2);
@@ -2148,7 +2148,7 @@
     }
     function renderStationCard(station){
       const hasStation=!!station;
-      const stationName=station&&station.station_name?station.station_name:(activeStation==="enka"?"ENKA Balmumcu":"Eyüpsultan");
+      const stationName=station&&station.station_name?station.station_name:(activeStation==="enka"?"ENKA Balmumcu":activeStation==="sisli"?"Şişli":"Eyüpsultan");
       $("station-card-title").textContent=stationName+" · İstanbul";
       const fallbackLabel=$("station-source-fallback");
       if(fallbackLabel)fallbackLabel.hidden=!(activeStation==="enka"&&hasStation&&(station.station_id==="ENKA-BALMUMCU-CAMERA-OCR"||station.observation_method==="tesseract-ocr"));
@@ -2174,7 +2174,8 @@
       if (feelsEl) {
         feelsEl.innerHTML = (feels !== null) ? fmt(feels, 1) + '<span class="unit">°</span>' : '—<span class="unit">°</span>';
       }
-      $("pressure").innerHTML=isFresh&&numeric(station.station_pressure_hpa)?fmt(station.station_pressure_hpa,1)+'<span class="unit">hPa</span>':'—<span class="unit">hPa</span>';
+      const livePressure=isFresh?(numeric(station.station_pressure_hpa)?Number(station.station_pressure_hpa):numeric(station.actual_station_pressure_hpa)?Number(station.actual_station_pressure_hpa):null):null;
+      $("pressure").innerHTML=livePressure!==null?fmt(livePressure,1)+'<span class="unit">hPa</span>':'—<span class="unit">hPa</span>';
       $("pressure-detail").textContent="";
       $("pressure-detail").hidden=true;
       $("weather-symbol").textContent=symbolFor(numeric(rain1h)?rain1h:0);
@@ -2182,7 +2183,7 @@
         const stale=!isFresh;
         const observedText=observedValid?new Intl.DateTimeFormat("tr-TR",{timeZone:"Europe/Istanbul",dateStyle:"short",timeStyle:"short"}).format(observed):"zaman bilinmiyor";
         const ageText=ageMinutes===null?"":ageMinutes<60?Math.round(ageMinutes)+" dk önce":(ageMinutes/60).toFixed(1).replace(".",",")+" saat önce";
-        const sourceLabel=station.station_id==="18101"?"MGM 18101":station.station_id==="ENKA-BALMUMCU-CAMERA-OCR"||station.observation_method==="tesseract-ocr"?"ENKA kamera OCR":"ENKA kamera OCR";
+        const sourceLabel=station.station_id==="18101"?"MGM 18101":station.station_id==="18401"?"MGM 18401":station.station_id==="ENKA-BALMUMCU-CAMERA-OCR"||station.observation_method==="tesseract-ocr"?"ENKA kamera OCR":(station.source||"İstasyon");
         $("station-observation-meta").textContent=(stale?"Gecikmeli ölçüm":"Son ölçüm")+" · "+observedText+" TSİ · "+ageText+" · "+sourceLabel;
         updateStation24hDiff(isFresh?station:null);
         $("freshness").textContent=stale?"ÖLÇÜM ESKİ":"CANLI ÖLÇÜM";
