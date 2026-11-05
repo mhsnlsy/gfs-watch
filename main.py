@@ -1819,25 +1819,41 @@ def _meteopt_number(value):
     return number
 
 
-def fetch_meteopt_document(run_dt):
-    """Download one GFS cycle's 3-hour point series from MeteoPT."""
+def fetch_meteopt_document(run_dt=None):
+    """Fetch the newest GFS cycle exposed by MeteoPT, or an explicitly requested cycle.
+
+    The website's currently updating run is the source of truth. The API's run
+    token is checked against the requested hour when a fixed cycle is supplied.
+    """
+    params = {
+        "lat": f"{LAT:.4f}",
+        "lon": f"{LON:.4f}",
+        "lang": "en",
+    }
+    if run_dt is not None:
+        params["run"] = _parse_utc_datetime(run_dt).strftime("%H")
     response = requests.get(
         "https://api.meteopt.com/gfs/json",
-        params={
-            "lat": f"{LAT:.4f}",
-            "lon": f"{LON:.4f}",
-            "run": run_dt.strftime("%H"),
-            "lang": "en",
-        },
+        params=params,
         headers={"User-Agent": "GFS-Watch/1.0"},
         timeout=40,
     )
     response.raise_for_status()
     document = response.json()
-    expected = run_dt.strftime("%Y%m%d%H")
-    token = str(document.get("run") or "")
-    if token != expected:
-        raise ValueError(f"MeteoPT {token or 'boş'} döndü, istenen {expected}")
+    token = str(document.get("run") or "").strip()
+    if len(token) != 10 or not token.isdigit():
+        raise ValueError(f"MeteoPT geçerli run kimliği döndürmedi: {token or 'boş'}")
+    actual_run = datetime.strptime(token, "%Y%m%d%H").replace(tzinfo=timezone.utc)
+    if run_dt is not None:
+        expected = _parse_utc_datetime(run_dt)
+        if actual_run != expected:
+            raise ValueError(
+                f"MeteoPT {token} döndü, istenen {expected:%Y%m%d%H}"
+            )
+    print(
+        f"[METEOPT DISCOVERY] Kaynağın bildirdiği aktif döngü: "
+        f"{actual_run.isoformat(timespec='seconds')}"
+    )
     return document
 
 
