@@ -26,19 +26,19 @@ jobs:
           path: source
 
       - name: Check out GFS forecast data
-        uses: actions/checkout@v4
+        uses: actions/checkout@v5
         with:
           ref: gfs-watch-state
           path: forecast-data
 
       - name: Check out Köy GFS data
-        uses: actions/checkout@v4
+        uses: actions/checkout@v5
         with:
           ref: koy-gfs-data
           path: koy-data
 
       - name: Check out Köy MGM data
-        uses: actions/checkout@v4
+        uses: actions/checkout@v5
         with:
           ref: koy-mgm-data
           path: koy-mgm-data
@@ -73,7 +73,7 @@ jobs:
           test -s _site/data/sisli-station-observation.json
 
       - name: Configure GitHub Pages
-        uses: actions/configure-pages@v5
+        uses: actions/configure-pages@v6
 
       - name: Upload website artifact
         uses: actions/upload-pages-artifact@v4
