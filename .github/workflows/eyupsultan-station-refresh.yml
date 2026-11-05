@@ -12,7 +12,7 @@ on:
       - "scripts/eyupsultan_weather.mjs"
   workflow_dispatch:
   schedule:
-    - cron: "*/5 * * * *"
+    - cron: "1-59/5 * * * *"
 
 permissions:
   contents: write
