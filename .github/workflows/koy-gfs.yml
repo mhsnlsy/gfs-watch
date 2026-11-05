@@ -183,7 +183,9 @@ jobs:
               python -m pip install -q matplotlib
               python - <<'PY'
           import importlib.util
-          spec = importlib.util.spec_from_file_location("koy_renderer", "scripts/render_koy_gfs_charts.py")
+          import os
+          renderer_path = os.path.join(os.environ["RUNNER_TEMP"], "render_koy_gfs_charts.py")
+          spec = importlib.util.spec_from_file_location("koy_renderer", renderer_path)
           module = importlib.util.module_from_spec(spec)
           spec.loader.exec_module(module)
           assert module.runlabel("2026-11-05T00:00:00+00:00") == "00Z | 05.11 03:00 TSİ"
