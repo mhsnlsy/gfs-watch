@@ -44,8 +44,12 @@ def main() -> None:
     assert 'series["wind10mdir"]' in collector or 'values_for(document, key)' in collector
     assert "latest = dict(current_doc)" in builder
     assert 'latest["comparison_runs"] = list(reversed(docs))' in builder
+    assert "create_valid_time_comparison_assets" in builder
+    assert "save_public_notification_svg_image" in builder
+    assert "telegram_image_path" in builder
     assert "telegram-sent" in sender
-    assert "send_media_group" in sender
+    assert "send_photo" in sender
+    assert "send_media_group" in sender  # legacy notification fallback
 
     # Cloudflare is limited to station collection and the optional push API.
     station_deploy = (workflows / "deploy-stations-worker.yml").read_text(encoding="utf-8")
