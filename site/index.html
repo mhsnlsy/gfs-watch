@@ -2826,7 +2826,7 @@
       renderNext72Hours();
       renderBriefing();
       if(data.report&&data.report.report_text){
-        renderNotifications([data.report], (data.published_at_utc||data.report.published_at_utc)+"-svgfit2");
+        renderNotifications([data.report], (data.published_at_utc||data.report.published_at_utc)+"-svgcenter1");
       }
       renderStationCard(activeStation==="enka"?enkaStationObservation:activeStation==="eyupsultan"?eyupsultanStationObservation:sisliStationObservation);
       if(data.published_at_utc){
