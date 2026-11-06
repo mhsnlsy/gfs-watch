@@ -214,6 +214,19 @@ jobs:
             fi
           fi
 
+          # Build the same four-panel interactive SVG used by the Istanbul
+          # report, but exclusively from the Köy GFS canonical comparison bundle.
+          if [ -s gfs/comparison.json ]; then
+            python -m pip install -q matplotlib
+            KOY_GFS_DIR="$PWD/gfs" python scripts/build_koy_gfs_interactive_svg.py
+            git add gfs/media
+            if ! git diff --cached --quiet; then
+              git commit -m "Publish Köy GFS interactive SVG comparison"
+              git push origin koy-gfs-data
+              changed=1
+            fi
+          fi
+
           echo "changed=$changed" >> "$GITHUB_OUTPUT"
           find gfs/runs -type f -name '*.json' -mtime +45 -delete
 
