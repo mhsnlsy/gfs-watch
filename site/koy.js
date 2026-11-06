@@ -13,6 +13,35 @@ const dayLabel=k=>{const p=k.split("-");return p[2]+"."+p[1]};
 let busy=false, f72=null, comparison=null, stationHistory=null, rainHistory=null, evObservation=null, evHistory=null, stationMode="mgm";
 async function get(path){const url=path.startsWith("./")?path:BASE+path;const r=await fetch(url+"?v="+Date.now(),{cache:"no-store"});if(!r.ok)throw Error("HTTP "+r.status+" · "+url);return r.json()}
 function pointsOf(run,max=180){return (run?.forecast_6_hourly||[]).filter(p=>{const h=Number(p.forecast_hour);return Number.isFinite(h)&&h>=3&&h<=max&&h%3===0}).sort((a,b)=>Number(a.forecast_hour)-Number(b.forecast_hour))}
+const HOME_ELEVATION_M=363;
+const MGM_STATION_ELEVATION_M=146;
+const HOME_DELTA_M=HOME_ELEVATION_M-MGM_STATION_ELEVATION_M;
+const HOME_STANDARD_LAPSE_K_PER_KM=6.5;
+const HOME_GFS_TEMP_CORRECTION_C=HOME_DELTA_M/1000*HOME_STANDARD_LAPSE_K_PER_KM;
+function adjustGfsPointForHome(point){
+ const copy={...point};
+ const t=num(copy.temperature_2m_c);
+ if(t!=null)copy.temperature_2m_c=Number((t-HOME_GFS_TEMP_CORRECTION_C).toFixed(1));
+ copy.virtual_station="Köy Ev";
+ copy.elevation_m=HOME_ELEVATION_M;
+ copy.elevation_delta_m=HOME_DELTA_M;
+ copy.adjustment_method="6.5 K/km environmental lapse rate";
+ return copy;
+}
+function homeGfsDocument(doc){
+ if(!doc||!Array.isArray(doc.forecast_6_hourly))return doc;
+ return {...doc,location:{...(doc.location||{}),name:"Giresun / Çanakçı · Köy Ev 363 m"},
+   virtual_station:"Köy Ev",elevation_m:HOME_ELEVATION_M,elevation_delta_m:HOME_DELTA_M,
+   adjustment_method:"6.5 K/km environmental lapse rate",
+   forecast_6_hourly:doc.forecast_6_hourly.map(adjustGfsPointForHome)};
+}
+function homeGfsComparison(doc){
+ if(!doc||!Array.isArray(doc.runs))return doc;
+ return {...doc,location:{...(doc.location||{}),name:"Giresun / Çanakçı · Köy Ev 363 m"},
+   virtual_station:"Köy Ev",elevation_m:HOME_ELEVATION_M,elevation_delta_m:HOME_DELTA_M,
+   adjustment_method:"6.5 K/km environmental lapse rate",
+   runs:doc.runs.map(homeGfsDocument)};
+}
 function realizedErrorStats(runs,samples,metric){
  if(!samples||metric!=="temperature_2m_c")return null;
  const obs=Array.isArray(samples.samples)?samples.samples:[];
@@ -316,7 +345,7 @@ function renderF72(d){
  $("meteopt-table-run").textContent="Model döngüsü: "+ts(d.run_id_utc);
  $("meteopt-table-updated").textContent="Yayın: "+ts(d.published_at_utc);
  const first=pts[0];
- if(first) $("report-summary").textContent="MGM Çanakçı gerçek istasyon ölçümü ile MeteoPT GFS model tahmini ayrı kaynaklardır. İlk GFS tahmin adımı: "+tsGfsValid(first.valid_time_utc)+" · "+fmt(num(first.temperature_2m_c))+" °C · yağış "+fmt(num(first.precipitation_6h_mm))+" mm / 6 saat.";
+ if(first) $("report-summary").textContent=(stationMode==="home"?"Köy Ev 363 m için rakım düzeltilmiş MeteoPT GFS tahmini.":"MGM Çanakçı gerçek istasyon ölçümü ile MeteoPT GFS model tahmini ayrı kaynaklardır.")+" İlk GFS tahmin adımı: "+tsGfsValid(first.valid_time_utc)+" · "+fmt(num(first.temperature_2m_c))+" °C · yağış "+fmt(num(first.precipitation_6h_mm))+" mm / 6 saat.";
 }
 function svgStationHistory(samples,metric,title,unit){
  const now=Date.now();
@@ -612,7 +641,7 @@ async function refresh(){if(busy)return;busy=true;
   const archivedLatest=(comparison?.runs||[]).find(run=>run&&run.forecast_source==="meteopt"&&Array.isArray(run.forecast_6_hourly));
   if(archivedLatest)f72=archivedLatest;
  }
- if(f72)renderF72(f72);
+ if(f72)renderF72(stationMode==="home"?homeGfsDocument(f72):f72);
  if(results[2].status==="fulfilled")stationHistory=results[2].value;else stationHistory=null;
  if(results[3].status==="fulfilled")rainHistory=results[3].value;else rainHistory=null;
  if(results[5].status==="fulfilled")evHistory=results[5].value;else evHistory=null;
@@ -637,7 +666,7 @@ async function refresh(){if(busy)return;busy=true;
  const selectedObservation=stationMode==="home"?evObservation:window.__koyMgmObservation;
  const selectedHistory=stationMode==="home"?evHistory:stationHistory;
  if(selectedObservation)renderMgmObservation(selectedObservation,selectedHistory,f72);
- renderRuns(comparison,f72);
+ renderRuns(stationMode==="home"?homeGfsComparison(comparison):comparison,stationMode==="home"?homeGfsDocument(f72):f72);
  busy=false;
 }
 function setStationMode(mode){
@@ -649,7 +678,7 @@ function setStationMode(mode){
  const o=stationMode==="home"?evObservation:window.__koyMgmObservation;
  const h=stationMode==="home"?evHistory:stationHistory;
  if(h)renderStationHistory(h,stationMode==="home"?h:rainHistory);
- if(o)renderMgmObservation(o,h,f72);
+ if(o)renderMgmObservation(o,h,stationMode==="home"?homeGfsDocument(f72):f72);
 }
 $("station-enka-button")?.addEventListener("click",()=>setStationMode("mgm"));
 $("station-home-button")?.addEventListener("click",()=>setStationMode("home"));
