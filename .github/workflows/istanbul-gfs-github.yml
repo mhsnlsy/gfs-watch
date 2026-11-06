@@ -65,6 +65,7 @@ jobs:
             scripts/fetch_istanbul_gfs_meteopt.py \
             scripts/build_istanbul_gfs_publication.py \
             scripts/send_canonical_istanbul_gfs_telegram.py \
+            scripts/rebuild_istanbul_gfs_comparison_images.py \
             scripts/test_gfs_svg_comparison.py
           python scripts/test_notification_pipeline.py
           python scripts/test_gfs_report_chart_theme.py
