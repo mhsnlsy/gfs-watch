@@ -56,6 +56,16 @@ function windCardinal(degrees) {
   const dirs = ["N","NNE","NE","ENE","E","ESE","SE","SSE","S","SSW","SW","WSW","W","WNW","NW","NNW"];
   return dirs[Math.floor((((degrees % 360) + 360) % 360 + 11.25) / 22.5) % 16];
 }
+function feelsLike(tempC, humidity, windKmh) {
+  if (!Number.isFinite(tempC)) return null;
+  const rh = Number.isFinite(humidity) ? Math.max(0, Math.min(100, humidity)) : 50;
+  const windMs = Number.isFinite(windKmh) ? Math.max(0, windKmh / 3.6) : 0;
+  // Australian Apparent Temperature (Steadman, shade, Q=0).
+  const e = (rh / 100) * 6.105 * Math.exp((17.27 * tempC) / (237.7 + tempC));
+  const at = tempC + 0.348 * e - 0.7 * windMs - 4.25;
+  return Number.isFinite(at) ? round(at, 1) : null;
+}
+
 function dewPoint(temp, humidity) {
   if (temp === null || humidity === null || humidity <= 0 || humidity > 100) return null;
   const a = 17.27, b = 237.7;
@@ -204,6 +214,7 @@ async function fetchEnka() {
     wind_direction_degrees: null,
     wind_direction_tr: null,
     dew_point_c: dewPoint(temperature, humidity),
+    feels_like_c: feelsLike(temperature, humidity, round(knots * 1.852, 1)),
     precipitation_1h_mm: null,
     precipitation_10m_mm: null,
     precipitation_6h_mm: null,
@@ -313,6 +324,7 @@ async function fetchMgm(stationKey) {
     wind_direction_cardinal: windCardinal(windDegrees),
     wind_direction_tr: windCardinal(windDegrees),
     dew_point_c: dewPoint(temperature, humidity),
+    feels_like_c: feelsLike(temperature, humidity, windSpeed),
     precipitation_1h_mm: asNumber(row.yagis1Saat),
     precipitation_10m_mm: asNumber(row.yagis10Dk),
     precipitation_6h_mm: asNumber(row.yagis6Saat),
@@ -348,7 +360,9 @@ function apiStation(key, payload, status, lastError, lastSuccess, lastAttempt) {
     rain_12h_mm: payload.precipitation_12h_mm,
     rain_24h_mm: payload.precipitation_24h_mm,
     rain_00_now_mm: payload.precipitation_daily_mm,
+    feels_like_c: payload.feels_like_c,
     dew_point_c: payload.dew_point_c,
+    feels_like_c: payload.feels_like_c,
     status: status || payload.status || "unknown",
     is_stale: (status || payload.status) !== "live",
     age_minutes: payload.age_minutes,
@@ -382,7 +396,7 @@ async function persistSuccess(env, key, observation, rainSource) {
   const status = observation.status || "live";
   const payloadJson = JSON.stringify(observation);
   const history = env.STATIONS_DB.prepare(
-    "INSERT OR REPLACE INTO station_history (station_key, station_id, observed_at_utc, fetched_at_utc, temperature_c, humidity_percent, pressure_hpa, wind_speed_kmh, wind_direction, rain_1h_mm, rain_10m_mm, rain_6h_mm, rain_12h_mm, rain_24h_mm, rain_00_now_mm, payload_json) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)"
+    "INSERT OR REPLACE INTO station_history (station_key, station_id, observed_at_utc, fetched_at_utc, temperature_c, humidity_percent, pressure_hpa, wind_speed_kmh, wind_direction, rain_1h_mm, rain_10m_mm, rain_6h_mm, rain_12h_mm, rain_24h_mm, rain_00_now_mm, feels_like_c, payload_json) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)"
   ).bind(
     key, observation.station_id, observation.observed_at_utc, fetchedAt,
     observation.temperature_2m_c, observation.humidity_percent,
@@ -390,7 +404,7 @@ async function persistSuccess(env, key, observation, rainSource) {
     observation.wind_direction_degrees, observation.precipitation_1h_mm,
     observation.precipitation_10m_mm, observation.precipitation_6h_mm,
     observation.precipitation_12h_mm, observation.precipitation_24h_mm,
-    observation.precipitation_daily_mm, payloadJson
+    observation.precipitation_daily_mm, observation.feels_like_c, payloadJson
   );
   const current = env.STATIONS_DB.prepare(
     "INSERT INTO station_current (station_key, station_id, station_name, observed_at_utc, fetched_at_utc, status, payload_json, last_error, last_success_utc, last_attempt_utc) VALUES (?, ?, ?, ?, ?, ?, ?, NULL, ?, ?) ON CONFLICT(station_key) DO UPDATE SET station_id=excluded.station_id, station_name=excluded.station_name, observed_at_utc=excluded.observed_at_utc, fetched_at_utc=excluded.fetched_at_utc, status=excluded.status, payload_json=excluded.payload_json, last_error=NULL, last_success_utc=excluded.last_success_utc, last_attempt_utc=excluded.last_attempt_utc"
@@ -415,6 +429,7 @@ async function persistFailure(env, key, error) {
     status: "stale",
     is_stale: true,
     temperature_2m_c: null,
+    feels_like_c: null,
     humidity_percent: null,
     station_pressure_hpa: null,
     actual_station_pressure_hpa: null,
@@ -545,18 +560,27 @@ async function handleApi(request, env) {
       const hours = Math.max(1, Math.min(72, Number.isFinite(requested) ? requested : 72));
       const since = new Date(Date.now() - hours * 3600000).toISOString();
       const result = await env.STATIONS_DB.prepare(
-        "SELECT station_id, observed_at_utc AS source_observed_at_utc, fetched_at_utc, temperature_c, humidity_percent, pressure_hpa, wind_speed_kmh, wind_direction, rain_1h_mm, rain_10m_mm, rain_6h_mm, rain_12h_mm, rain_24h_mm, rain_00_now_mm FROM station_history WHERE station_key = ? AND fetched_at_utc >= ? ORDER BY fetched_at_utc ASC LIMIT 5000"
+        "SELECT station_id, observed_at_utc AS source_observed_at_utc, fetched_at_utc, temperature_c, humidity_percent, pressure_hpa, wind_speed_kmh, wind_direction, rain_1h_mm, rain_10m_mm, rain_6h_mm, rain_12h_mm, rain_24h_mm, rain_00_now_mm, feels_like_c FROM station_history WHERE station_key = ? AND fetched_at_utc >= ? ORDER BY fetched_at_utc ASC LIMIT 5000"
       ).bind(historyMatch[1], since).all();
       const samples = (result.results || []).map(row => ({
         ...row,
-        observed_at_utc: row.fetched_at_utc,
+        observed_at_utc: row.source_observed_at_utc || row.fetched_at_utc,
         station_key: historyMatch[1]
       }));
+      const feelsValues = samples
+        .map(sample => {
+          const stored = asNumber(sample.feels_like_c);
+          if (stored !== null) return stored;
+          return feelsLike(asNumber(sample.temperature_c), asNumber(sample.humidity_percent), asNumber(sample.wind_speed_kmh));
+        })
+        .filter(value => value !== null);
       return json({
         ok: true,
         station_key: historyMatch[1],
         hours,
         count: samples.length,
+        feels_like_24h_min_c: hours === 24 && feelsValues.length ? round(Math.min(...feelsValues), 1) : null,
+        feels_like_24h_max_c: hours === 24 && feelsValues.length ? round(Math.max(...feelsValues), 1) : null,
         samples,
         updated_at_utc: new Date().toISOString()
       });
