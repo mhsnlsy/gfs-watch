@@ -102,7 +102,7 @@ jobs:
           node - "$RUNNER_TEMP/health.json" <<'NODE'
           const fs = require("fs");
           const doc = JSON.parse(fs.readFileSync(process.argv[2], "utf8"));
-          console.log("Worker:", doc.service, "| storage:", doc.storage, "| cron:", doc.cron, "| checked:", new Date().toISOString());
+          console.log("Worker:", doc.service, "| storage:", doc.storage, "| cron:", doc.cron, "| pressure-fallback-check:", new Date().toISOString());
           for (const station of doc.stations || []) {
             console.log(station.key, "|", station.status, "| success:", station.last_success_utc,
               "| attempt:", station.last_attempt_utc, "| error:", station.last_error || "none");
