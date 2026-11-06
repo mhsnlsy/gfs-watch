@@ -12,8 +12,31 @@ permissions:
 jobs:
   diagnostic:
     runs-on: ubuntu-latest
-    timeout-minutes: 3
+    timeout-minutes: 5
     steps:
+      - name: Check out repository
+        uses: actions/checkout@v5
+
+      - name: Set up Node.js
+        uses: actions/setup-node@v5
+        with:
+          node-version: "22"
+
+      - name: Install Wrangler
+        run: npm install --global wrangler@4
+
+      - name: Inspect remote D1 table schemas
+        working-directory: station-worker
+        env:
+          CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+          CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
+        run: |
+          set -euo pipefail
+          echo "===== station_history schema ====="
+          wrangler d1 execute gfs-watch-stations --remote --command "PRAGMA table_info(station_history);" --json
+          echo "===== station_current schema ====="
+          wrangler d1 execute gfs-watch-stations --remote --command "PRAGMA table_info(station_current);" --json
+
       - name: Read Cloudflare station API health
         run: |
           set -euo pipefail
