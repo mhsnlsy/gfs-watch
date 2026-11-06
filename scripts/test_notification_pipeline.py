@@ -32,7 +32,8 @@ def main() -> None:
     assert "scripts/fetch_istanbul_gfs_meteopt.py" in gfs_workflow
     assert "scripts/build_istanbul_gfs_publication.py" in gfs_workflow
     assert "scripts/send_canonical_istanbul_gfs_telegram.py" in gfs_workflow
-    assert "gh workflow run publish-live-site.yml" in gfs_workflow
+    assert "publish-live-site.yml" in gfs_workflow
+    assert "uses: ./.github/workflows/publish-live-site.yml" in gfs_workflow
     assert "TELEGRAM_TOKEN" in gfs_workflow and "CHAT_ID" in gfs_workflow
 
     collector = (ROOT / "scripts" / "fetch_istanbul_gfs_meteopt.py").read_text(encoding="utf-8")
