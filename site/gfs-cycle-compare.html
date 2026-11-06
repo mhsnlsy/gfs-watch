@@ -166,10 +166,14 @@ async function load(){
   const source=runs.slice(0,4);
   $("next-72h-meta").textContent=source.length?source.length+" GFS döngüsü karşılaştırılıyor":"Model verisi bekleniyor";
   renderRunLegend(source);
-  let historyPath="./data/station-temperature-history.json";
-  try{const selected=localStorage.getItem("istanbul-hava-station");if(selected==="eyupsultan")historyPath="./data/eyupsultan-station-temperature-history.json";else if(selected==="sisli")historyPath="./data/sisli-station-temperature-history.json";}catch(_){}
-  const historyResponse=await fetch(historyPath+"?v="+cache,{cache:"no-store"}).catch(()=>null);
-  const history=historyResponse&&historyResponse.ok?await historyResponse.json().catch(()=>null):null;
+  let stationKey="enka";
+  try{const selected=localStorage.getItem("istanbul-hava-station");if(selected==="eyupsultan")stationKey="eyupsultan";else if(selected==="sisli")stationKey="sisli";}catch(_){}
+  const stationApi="https://gfs-watch-stations.muhsin-ulusoy.workers.dev/api/history/"+encodeURIComponent(stationKey)+"?hours=72&v="+cache;
+  const historyResponse=await fetch(stationApi,{cache:"no-store"}).catch(()=>null);
+  const historyDoc=historyResponse&&historyResponse.ok?await historyResponse.json().catch(()=>null):null;
+  const history=historyDoc&&Array.isArray(historyDoc.samples)?{
+   samples:historyDoc.samples.map(sample=>({...sample,temperature_2m_c:sample.temperature_c}))
+  }:null;
   const verification=realizedErrorStats(source,history);
   $("next72-temperature").innerHTML=svgLine(source,"temperature_2m_c","2 m sıcaklık","°C",verification);
   $("next72-precipitation").innerHTML=svgLine(source,"precipitation_6h_mm","3 saatlik yağış","mm / 3 saat",null);
