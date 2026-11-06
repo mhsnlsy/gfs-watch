@@ -229,54 +229,69 @@ def main() -> None:
         return
 
     candidates.sort(key=lambda item: item[0], reverse=True)
-    cycle, document, url, steps = candidates[0]
-    run_id = cycle.isoformat(timespec="seconds")
-    run_file = GFS_DIR / "runs" / f"{run_id}.json"
-    f72_marker = GFS_DIR / "milestones" / "f72" / f"{run_id}.json"
-    telegram_marker = GFS_DIR / "notifications" / "telegram-sent" / f"{run_id}.json"
+    # Process every returned cycle, not only the newest one. This mirrors the
+    # Köy poller and prevents a delayed cycle from being skipped when a newer
+    # cycle becomes available first.
+    selected_run = ""
+    f72_publish = False
+    f180_candidates = []
+    for cycle, document, url, steps in candidates:
+        run_id = cycle.isoformat(timespec="seconds")
+        run_file = GFS_DIR / "runs" / f"{run_id}.json"
+        f72_marker = GFS_DIR / "milestones" / "f72" / f"{run_id}.json"
+        telegram_marker = GFS_DIR / "notifications" / "telegram-sent" / f"{run_id}.json"
 
-    # Like the Köy workflow: F72 is an independently published milestone,
-    # not a substitute for the full F180 report/Telegram release.
-    f72_publish = 72 in steps and not f72_marker.exists()
-    if f72_publish:
-        normalized72 = normalize(document, url, cycle, require_f180=False)
-        normalized72["forecast_6_hourly"] = [
-            point for point in normalized72["forecast_6_hourly"]
-            if point.get("forecast_hour", 0) <= 72
-        ]
-        normalized72["forecast_horizon_hours"] = 72
-        normalized72["milestone"] = "F72"
-        f72_marker.parent.mkdir(parents=True, exist_ok=True)
-        f72_marker.write_text(
-            json.dumps(normalized72, ensure_ascii=False, indent=2) + "\n",
-            encoding="utf-8",
-        )
-        print(f"[GFS] New F72 milestone saved for {run_id}.")
+        if 72 in steps and not f72_marker.exists():
+            normalized72 = normalize(document, url, cycle, require_f180=False)
+            normalized72["forecast_6_hourly"] = [
+                point for point in normalized72["forecast_6_hourly"]
+                if point.get("forecast_hour", 0) <= 72
+            ]
+            normalized72["forecast_horizon_hours"] = 72
+            normalized72["milestone"] = "F72"
+            f72_marker.parent.mkdir(parents=True, exist_ok=True)
+            f72_marker.write_text(
+                json.dumps(normalized72, ensure_ascii=False, indent=2) + "\\n",
+                encoding="utf-8",
+            )
+            f72_publish = True
+            selected_run = run_id
+            print(f"[GFS] New F72 milestone saved for {run_id}.")
 
-    # F180 publication is deduplicated by the canonical sent marker, matching
-    # the milestone-based Köy pipeline. The F72 marker never blocks F180.
-    publish = 180 in steps and not telegram_marker.exists()
-    if publish:
+        if 180 in steps and not telegram_marker.exists():
+            f180_candidates.append((cycle, document, url))
+
+    publish = False
+    run_id = selected_run
+    if f180_candidates:
+        f180_candidates.sort(key=lambda item: item[0], reverse=True)
+        cycle, document, url = f180_candidates[0]
+        run_id = cycle.isoformat(timespec="seconds")
         normalized = normalize(document, url, cycle, require_f180=True)
+        run_file = GFS_DIR / "runs" / f"{run_id}.json"
         temporary = run_file.with_suffix(".json.tmp")
         temporary.write_text(
-            json.dumps(normalized, ensure_ascii=False, indent=2) + "\n",
+            json.dumps(normalized, ensure_ascii=False, indent=2) + "\\n",
             encoding="utf-8",
         )
         temporary.replace(run_file)
+        publish = True
         print(
             f"[GFS] Selected {run_id}; F180=true; "
             f"points={len(normalized['forecast_6_hourly'])}."
         )
-    else:
-        print(
-            f"[GFS] No new F180 publication for {run_id}; "
-            f"F72 milestone={'new' if f72_publish else 'already published/not ready'}."
-        )
+
+    if not publish and not f72_publish:
+        print("[GFS] No new F72/F180 milestone.")
 
     write_output("publish", "true" if publish else "false")
     write_output("f72_publish", "true" if f72_publish else "false")
-    write_output("reason", "new_f180_cycle" if publish else ("new_f72_milestone" if f72_publish else "no_new_milestone"))
+    write_output(
+        "reason",
+        "new_f180_cycle" if publish else (
+            "new_f72_milestone" if f72_publish else "no_new_milestone"
+        ),
+    )
     write_output("run_id", run_id)
 
 
