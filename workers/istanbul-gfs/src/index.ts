@@ -38,7 +38,9 @@ async function fetchRun(hour:number){
   const u=new URL(METEOPT);
   u.searchParams.set("lat",String(LAT)); u.searchParams.set("lon",String(LON));
   u.searchParams.set("run",String(hour).padStart(2,"0")); u.searchParams.set("lang","en");
-  const r=await fetch(u,{headers:{"user-agent":"Istanbul-GFS-Cloudflare/1.0","cache-control":"no-cache"}});
+  // Cache-bust the upstream request so a new GFS cycle cannot be hidden by an intermediary cache.
+  u.searchParams.set("_",String(Date.now()));
+  const r=await fetch(u,{cache:"no-store",headers:{"user-agent":"Istanbul-GFS-Cloudflare/1.0","cache-control":"no-cache"}});
   if(!r.ok) throw new Error("MeteoPT HTTP "+r.status);
   const doc:any=await r.json();
   return {doc,url:u.toString()};
@@ -182,48 +184,90 @@ async function publish(env:Env,doc:any,runs:any[]){
   await env.GFS_KV.put("published:"+runKey(doc.run_id_utc),JSON.stringify({run_id_utc:doc.run_id_utc,published_at_utc:new Date().toISOString()}));
 }
 async function process(env:Env){
-  await env.GFS_KV.put("gfs:last-check",JSON.stringify({started_at_utc:new Date().toISOString(),status:"running"}));
+  const startedAt=new Date().toISOString();
+  const checks:any[]=[];
+  await env.GFS_KV.put("gfs:last-check",JSON.stringify({
+    checked_at_utc:startedAt,
+    status:"running"
+  }));
 
-  // Check every available cycle. Do not stop at the first F180-ready run:
-  // the newest completed cycle must win (e.g. 00Z must beat 18Z).
-  const ready:any[]=[];
+  // Check every cycle independently. A failure in one cycle must not abort the others.
   for(const h of [18,12,6,0]){
     try{
       const x=await fetchRun(h);
-      const id=runKey(String(x.doc.run||""));
+      const returnedRun=String(x.doc.run||"").trim();
+      const id=runKey(returnedRun);
+
       if(!id){
-        console.log("MeteoPT run invalid for requested cycle",h);
+        checks.push({requested_cycle_utc:h,status:"invalid_run",returned_run:returnedRun});
         continue;
       }
 
       const doc=normalize(x.doc);
+      const returnedHour=new Date(doc.run_id_utc).getUTCHours();
       const ready180=doc.noaa_source_file.f180_available;
-      console.log("MeteoPT run check", doc.run_id_utc, "F180", ready180);
-      await env.GFS_KV.put("gfs:last-check",JSON.stringify({
-        checked_at_utc:new Date().toISOString(),
+
+      // The API can temporarily serve the newest run even when an older cycle was requested.
+      // Never mistake that response for the requested cycle.
+      if(returnedHour!==h){
+        console.log("MeteoPT returned a different cycle",{
+          requested_cycle_utc:h,
+          returned_run_id_utc:doc.run_id_utc
+        });
+        checks.push({
+          requested_cycle_utc:h,
+          returned_run_id_utc:doc.run_id_utc,
+          f180_available:ready180,
+          forecast_horizon_hours:doc.forecast_horizon_hours,
+          status:"different_cycle"
+        });
+        continue;
+      }
+
+      console.log("MeteoPT run check",doc.run_id_utc,"F180",ready180);
+      checks.push({
         requested_cycle_utc:h,
         run_id_utc:doc.run_id_utc,
         f180_available:ready180,
         forecast_horizon_hours:doc.forecast_horizon_hours,
         status:"checked"
-      }));
-
-      if(ready180) ready.push(doc);
+      });
     }catch(e){
       console.error("MeteoPT GFS cycle failed",h,e);
-      await env.GFS_KV.put("gfs:last-check",JSON.stringify({
-        checked_at_utc:new Date().toISOString(),
+      checks.push({
         requested_cycle_utc:h,
         status:"error",
         error:String(e)
-      }));
+      });
+    }
+  }
+
+  await env.GFS_KV.put("gfs:last-check",JSON.stringify({
+    checked_at_utc:new Date().toISOString(),
+    status:"checked",
+    checks
+  }));
+
+  const ready:any[]=[];
+  for(const c of checks){
+    if(c.status==="checked" && c.f180_available){
+      try{
+        const x=await fetchRun(c.requested_cycle_utc);
+        const doc=normalize(x.doc);
+        if(new Date(doc.run_id_utc).getUTCHours()===c.requested_cycle_utc && doc.noaa_source_file.f180_available){
+          ready.push(doc);
+        }
+      }catch(e){
+        console.error("MeteoPT ready-cycle recheck failed",c.requested_cycle_utc,e);
+      }
     }
   }
 
   if(!ready.length){
     await env.GFS_KV.put("gfs:last-check",JSON.stringify({
       checked_at_utc:new Date().toISOString(),
-      status:"no_f180_ready"
+      status:"no_f180_ready",
+      checks
     }));
     console.log("No MeteoPT GFS cycle with F180 ready");
     return;
@@ -241,14 +285,11 @@ async function process(env:Env){
       status:"already_published",
       run_id_utc:doc.run_id_utc,
       f180_available:true,
-      forecast_horizon_hours:doc.forecast_horizon_hours
+      forecast_horizon_hours:doc.forecast_horizon_hours,
+      checks
     }));
     console.log("Already published and latest payload exists",doc.run_id_utc);
     return;
-  }
-
-  if(publishedMarker && !latestExisting){
-    console.log("Published marker exists but latest payload is missing; rebuilding",doc.run_id_utc);
   }
 
   await storeRun(env,doc);
@@ -260,7 +301,8 @@ async function process(env:Env){
     status:"published",
     run_id_utc:doc.run_id_utc,
     f180_available:true,
-    forecast_horizon_hours:doc.forecast_horizon_hours
+    forecast_horizon_hours:doc.forecast_horizon_hours,
+    checks
   }));
   console.log("Published Istanbul GFS",doc.run_id_utc);
 }
@@ -272,8 +314,13 @@ export default {
       await process(env);
     } catch (e) {
       console.error("GFS CRON FAILED", e);
-      await env.GFS_KV.put("gfs:last-check",JSON.stringify({checked_at_utc:new Date().toISOString(),status:"fatal_error",error:String(e)}));
-      throw e;
+      await env.GFS_KV.put("gfs:last-check",JSON.stringify({
+        checked_at_utc:new Date().toISOString(),
+        status:"fatal_error",
+        error:String(e)
+      }));
+      // Keep the scheduled invocation green so one transient upstream/Telegram error
+      // does not make the cron itself appear broken. The next run retries automatically.
     }
   },
   async fetch(request:Request,env:Env):Promise<Response>{
