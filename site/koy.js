@@ -469,12 +469,13 @@ function renderRuns(d,f72){
     if(nowTemp!=null)tempSentence+=" Çanakçı şu an "+fmt(nowTemp,1)+"°C.";
    }
    $("brief-temperature-trend").textContent=tempSentence;
-   const sourceDate=first?.run_id_utc?new Date(first.run_id_utc):null;
+   const sourceRun=source.find(run=>run&&run.run_id_utc)||first;
+   const sourceDate=sourceRun?.run_id_utc?new Date(sourceRun.run_id_utc):null;
    const sourceStamp=sourceDate&&Number.isFinite(sourceDate.getTime())
     ?String(sourceDate.getUTCDate()).padStart(2,"0")+"/"+String(sourceDate.getUTCMonth()+1).padStart(2,"0")+" "+String(sourceDate.getUTCHours()).padStart(2,"0")+":"+String(sourceDate.getUTCMinutes()).padStart(2,"0")+" UTC"
-    :"GFS çıktısı bekleniyor";
+    :"";
    const sourceNode=$("brief-source");
-   if(sourceNode)sourceNode.textContent="Kaynak: GFS "+sourceStamp+" çıktısı";
+   if(sourceNode)sourceNode.textContent=sourceStamp?"Kaynak: GFS "+sourceStamp+" çıktısı":"Kaynak: GFS";
 
    const rainy=p.filter(x=>num(x.precipitation_6h_mm)>0.1);
    const rainGroups=[];
