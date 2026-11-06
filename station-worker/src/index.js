@@ -115,7 +115,7 @@ function cellRows(html) {
 }
 function parseEnkaTimestamp(html) {
   const text = stripHtml(html);
-  const match = text.match(/As\s+of\s*:?\s*(\d{1,2})\/(\d{1,2})\/(\d{2,4})\s+(\d{1,2}):(\d{2})\s*\(\s*UTC\s*([+-]?\d{1,2}:\d{2})?\s*\)/i)
+  const match = text.match(/As\s+of\s*:?\s*(\d{1,2})\/(\d{1,2})\/(\d{2,4})\s+(\d{1,2}):(\d{2})\s*\(\s*UTC\s*([+-]\d{1,2}:\d{2})?\s*\)/i)
     || text.match(/As\s+of\s*:?\s*(\d{1,2})\/(\d{1,2})\/(\d{2,4})\s+(\d{1,2}):(\d{2})/i);
   if (!match) throw new Error("ENKA ölçüm zaman damgası bulunamadı");
   const day = Number(match[1]), month = Number(match[2]);
