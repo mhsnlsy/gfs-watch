@@ -68,6 +68,25 @@ jobs:
         id: fetch
         run: python scripts/fetch_istanbul_gfs_meteopt.py
 
+      - name: Commit new F72 milestone independently
+        if: steps.fetch.outputs.f72_publish == 'true'
+        working-directory: gfs-state
+        env:
+          GFS_RUN_ID: ${{ steps.fetch.outputs.run_id }}
+        run: |
+          set -euo pipefail
+          mkdir -p gfs/milestones/f72
+          cp -a "${GITHUB_WORKSPACE}/gfs/milestones/f72/." gfs/milestones/f72/
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add gfs/milestones/f72
+          if git diff --cached --quiet; then
+            echo "F72 milestone already archived."
+          else
+            git commit -m "Publish Istanbul GFS F72 milestone ${GFS_RUN_ID}"
+            git push origin HEAD:istanbul-gfs-data
+          fi
+
       - name: Build report, four comparison PNGs and Pages bundle
         if: steps.fetch.outputs.publish == 'true'
         run: python scripts/build_istanbul_gfs_publication.py
@@ -123,8 +142,14 @@ jobs:
           GH_TOKEN: ${{ github.token }}
         run: gh workflow run publish-live-site.yml --ref main
 
+      - name: Trigger Pages for a new F72 milestone
+        if: steps.fetch.outputs.f72_publish == 'true' && steps.fetch.outputs.publish != 'true'
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: gh workflow run publish-live-site.yml --ref main
+
       - name: Report no-op poll
-        if: steps.fetch.outputs.publish != 'true'
+        if: steps.fetch.outputs.publish != 'true' && steps.fetch.outputs.f72_publish != 'true'
         run: |
-          echo "No new F180-ready GFS cycle. Existing Pages and Telegram publication remain unchanged."
+          echo "No new F72/F180 milestone. Existing Pages and Telegram publication remain unchanged."
           echo "Reason: ${{ steps.fetch.outputs.reason }}"
