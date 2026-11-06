@@ -1,0 +1,17 @@
+{
+  "$schema": "node_modules/wrangler/config-schema.json",
+  "name": "gfs-watch-stations",
+  "main": "src/index.js",
+  "compatibility_date": "2026-11-06",
+  "workers_dev": true,
+  "observability": { "enabled": true },
+  "triggers": { "crons": ["* * * * *"] },
+  "d1_databases": [
+    {
+      "binding": "STATIONS_DB",
+      "database_name": "gfs-watch-stations",
+      "database_id": "__D1_DATABASE_ID__",
+      "migrations_dir": "migrations"
+    }
+  ]
+}
