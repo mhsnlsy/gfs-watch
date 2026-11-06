@@ -17,11 +17,11 @@ html,body{margin:0;padding:0;background:transparent;color:var(--text);font-famil
 .section-kicker{font-size:11px;text-transform:uppercase;letter-spacing:.15em;color:var(--cyan);font-weight:700}
 .next-72h-badge{font-size:10px;color:#b8d7df;border:1px solid var(--line);padding:7px 10px;border-radius:9px;white-space:nowrap;max-width:42%}
 .next-72h-grid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:18px 20px}
-.next-72h-card{position:relative;min-width:0;padding:16px 14px 14px;border:1px solid rgba(204,225,239,.12);border-radius:16px;background:rgba(4,19,29,.17)}
-.next-72h-card-head{display:flex;align-items:center;justify-content:space-between;gap:8px}
+.next-72h-card{position:relative;min-width:0;padding:12px 0 12px;border:1px solid rgba(204,225,239,.12);border-radius:16px;background:rgba(4,19,29,.17);overflow:hidden}
+.next-72h-card-head{display:flex;align-items:center;justify-content:space-between;gap:8px;padding:0 14px}
 .next-72h-card-head h3{font:700 16px Manrope,sans-serif;margin:0}
 .next-72h-card-head span{font-size:10px;color:var(--muted);white-space:nowrap}
-.next-72h-chart{height:clamp(280px,25vw,340px);width:100%;margin-top:12px;min-width:0;position:relative}
+.next-72h-chart{height:clamp(220px,20vw,285px);width:100%;margin-top:10px;min-width:0;position:relative;overflow:hidden;padding:0}
 .next-72h-chart svg{display:block;width:100%;height:100%;overflow:visible}
 .chart-empty{color:var(--muted);font-size:13px;padding:32px 0}
 .next-72h-legend{display:flex;flex-wrap:wrap;align-items:center;gap:11px 22px;margin:10px 2px 0;padding:14px 2px 9px;border-top:1px solid rgba(204,225,239,.10)}
@@ -39,8 +39,8 @@ html,body{margin:0;padding:0;background:transparent;color:var(--text);font-famil
 .gfs-point-tooltip-value{margin-top:4px;color:#fff;font:700 18px/1.2 Manrope,sans-serif}
 .gfs-point-tooltip-value small{font:500 10px "DM Sans",sans-serif;color:#a9bfca}
 .gfs-point-tooltip-meta{margin-top:5px;color:#8fa7b5;font-size:10px}
-@media(max-width:700px){.next-72h-grid{grid-template-columns:minmax(0,1fr)}.next-72h-chart{height:280px}}
-@media(max-width:560px){.next-72h-head h2{font-size:20px}.next-72h-head p{font-size:10px}.next-72h-grid{gap:10px}.next-72h-card{padding:12px 10px 10px}.next-72h-card-head h3{font-size:15px}.next-72h-card-head span{font-size:10px}.next-72h-chart{height:250px}.next-72h-legend{gap:9px 14px;margin-top:6px;padding-top:11px}.next-72h-legend-item{font-size:11px;white-space:normal}.next-72h-legend-line{width:26px}.next-72h-legend-note{font-size:10px}.gfs-point-tooltip{min-width:160px;max-width:min(220px,calc(100% - 12px));padding:8px 10px}.gfs-point-tooltip-value{font-size:16px}}
+@media(max-width:700px){.next-72h-grid{grid-template-columns:minmax(0,1fr)}.next-72h-chart{height:230px}}
+@media(max-width:560px){.next-72h-head h2{font-size:20px}.next-72h-head p{font-size:10px}.next-72h-grid{gap:10px}.next-72h-card{padding:10px 0 10px}.next-72h-card-head h3{font-size:15px}.next-72h-card-head span{font-size:10px}.next-72h-chart{height:210px}.next-72h-legend{gap:9px 14px;margin-top:6px;padding-top:11px}.next-72h-legend-item{font-size:11px;white-space:normal}.next-72h-legend-line{width:26px}.next-72h-legend-note{font-size:10px}.gfs-point-tooltip{min-width:160px;max-width:min(220px,calc(100% - 12px));padding:8px 10px}.gfs-point-tooltip-value{font-size:16px}}
 </style>
 </head>
 <body>
@@ -130,14 +130,14 @@ function svgLine(runs,metric,title,unit,verification=null){
   hi=Math.max(1,Math.ceil(hi*1.15));
  }
  if(hi===lo)hi=lo+1;
- const W=800,H=320,L=58,R=18,T=30,B=48,PW=W-L-R,PH=H-T-B;
+ const W=1000,H=280,L=54,R=8,T=24,B=42,PW=W-L-R,PH=H-T-B;
  const x=h=>L+(hours.length===1?PW/2:(h-hours[0])/(hours[hours.length-1]-hours[0]||1))*PW;
  const y=v=>T+(hi-v)*PH/(hi-lo);
  let out='<svg class="koy-svg" viewBox="0 0 '+W+' '+H+'" preserveAspectRatio="none" role="img" aria-label="'+esc(title)+'">';
- for(let j=0;j<=3;j++){const v=lo+(hi-lo)*j/3,yy=y(v);out+='<line x1="'+L+'" y1="'+yy+'" x2="'+(W-R)+'" y2="'+yy+'" stroke="#294253" stroke-dasharray="3 5"/><text x="'+(L-7)+'" y="'+(yy+3)+'" text-anchor="end" fill="#91aab8" font-size="12">'+fmt(v,metric==="temperature_2m_c"?1:0)+'</text>';}
+ for(let j=0;j<=3;j++){const v=lo+(hi-lo)*j/3,yy=y(v);out+='<line x1="'+L+'" y1="'+yy+'" x2="'+(W-R)+'" y2="'+yy+'" stroke="#294253" stroke-dasharray="3 5"/><text x="'+(L-7)+'" y="'+(yy+3)+'" text-anchor="end" fill="#91aab8" font-size="11">'+fmt(v,metric==="temperature_2m_c"?1:0)+'</text>';}
  const axisPoint=usable.flatMap(item=>item.points).find(p=>p.h===hours[0]);
  const axisLabel=v=>{if(!v)return "—";const d=new Date(v);if(!Number.isFinite(d.getTime()))return "—";d.setTime(d.getTime()-3*3600000);return new Intl.DateTimeFormat("tr-TR",{timeZone:"Europe/Istanbul",day:"numeric",month:"long",hour:"2-digit",minute:"2-digit",hourCycle:"h23"}).format(d)+" TSİ";};
- hours.forEach(h=>{if(h!==hours[0]&&h%12!==0&&h!==hours[hours.length-1])return;const label=h===hours[0]?axisLabel(axisPoint?.validTime):"+"+h+"s";out+='<text x="'+x(h)+'" y="'+(H-7)+'" text-anchor="middle" fill="#91aab8" font-size="12">'+esc(label)+'</text>';});
+ hours.forEach(h=>{if(h!==hours[0]&&h%12!==0&&h!==hours[hours.length-1])return;const label=h===hours[0]?axisLabel(axisPoint?.validTime):"+"+h+"s";out+='<text x="'+x(h)+'" y="'+(H-7)+'" text-anchor="middle" fill="#91aab8" font-size="11">'+esc(label)+'</text>';});
  const lookup=usable.map(item=>new Map(item.points.map(p=>[p.h,p.v])));
  const upper=[],lower=[];
  hours.forEach(h=>{const vals=lookup.map(map=>map.get(h)).filter(v=>v!=null);if(vals.length){upper.push([x(h),y(Math.max(...vals))]);lower.push([x(h),y(Math.min(...vals))]);}});
