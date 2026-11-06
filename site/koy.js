@@ -673,7 +673,6 @@ async function refresh(){if(busy)return;busy=true;
  if(results[5].status==="fulfilled")evHistory=results[5].value;else evHistory=null;
  if(results[6].status==="fulfilled")evObservation=results[6].value;else evObservation=null;
  // During the publish gap, derive the same virtual station locally from the canonical MGM payload.
- if(!evObservation&&window.__koyMgmObservation)evObservation=buildVirtualHomeObservation(window.__koyMgmObservation);
  if(!evHistory&&stationHistory)evHistory=buildVirtualHomeHistory(stationHistory);
  const initialHistory=stationMode==="home"?evHistory:stationHistory;
  const initialRainHistory=stationMode==="home"?evHistory:rainHistory;
@@ -685,6 +684,7 @@ async function refresh(){if(busy)return;busy=true;
  }
  if(results[4].status==="fulfilled"){
   window.__koyMgmObservation=results[4].value;
+  if(!evObservation)evObservation=buildVirtualHomeObservation(window.__koyMgmObservation);
   window.__koyCurrentTemp=num(results[4].value.temperature_2m_c);
   const o=results[4].value;
   $("mgm-status-date").textContent=ts(o.observed_at_utc);
