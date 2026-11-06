@@ -32,10 +32,28 @@ jobs:
           CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
         run: |
           set -euo pipefail
+          wrangler d1 list --json > "$RUNNER_TEMP/d1-list.json"
+          D1_ID="$(node - "$RUNNER_TEMP/d1-list.json" <<'NODE'
+          const fs = require("fs");
+          const data = JSON.parse(fs.readFileSync(process.argv[2], "utf8"));
+          const entries = Array.isArray(data) ? data : (data.result || data.databases || []);
+          const row = entries.find(item => (item.name || item.database_name) === "gfs-watch-stations");
+          if (row) process.stdout.write(String(row.uuid || row.database_id || row.databaseId || ""));
+          NODE
+          )"
+          test -n "$D1_ID"
+          node - "$D1_ID" wrangler.jsonc <<'NODE'
+          const fs = require("fs");
+          const config = JSON.parse(fs.readFileSync(process.argv[3], "utf8"));
+          const binding = (config.d1_databases || []).find(item => item.database_name === "gfs-watch-stations");
+          if (!binding) throw new Error("STATIONS_DB binding not found");
+          binding.database_id = process.argv[2];
+          fs.writeFileSync(process.argv[3], JSON.stringify(config, null, 2) + "\\n");
+          NODE
           echo "===== station_history schema ====="
-          wrangler d1 execute gfs-watch-stations --remote --command "PRAGMA table_info(station_history);" --json
+          wrangler d1 execute gfs-watch-stations --remote --config wrangler.jsonc --command "PRAGMA table_info(station_history);" --json
           echo "===== station_current schema ====="
-          wrangler d1 execute gfs-watch-stations --remote --command "PRAGMA table_info(station_current);" --json
+          wrangler d1 execute gfs-watch-stations --remote --config wrangler.jsonc --command "PRAGMA table_info(station_current);" --json
 
       - name: Inspect ENKA WeatherLink Current Values HTML
         run: |
