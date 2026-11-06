@@ -74,6 +74,7 @@ jobs:
           python scripts/test_notification_pipeline.py
           python scripts/test_gfs_report_chart_theme.py
           python scripts/test_gfs_svg_comparison.py
+          node --check site/gfs-comparison-tooltip.js
 
       - name: Check MeteoPT cycles and apply F180 gate
         id: fetch
