@@ -86,7 +86,7 @@ jobs:
           test -n "$D1_ID" || { echo "::error::Could not resolve gfs-watch-stations D1 database ID"; exit 1; }
           echo "Using D1 database ID: $D1_ID"
 
-          node - "$D1_ID" station-worker/wrangler.jsonc <<'NODE'
+          node - "$D1_ID" wrangler.jsonc <<'NODE'
           const fs = require("fs");
           const id = process.argv[2];
           const file = process.argv[3];
