@@ -41,6 +41,7 @@ def to_main_payload(doc: dict) -> dict:
         local_key = local[:16]
         timeline[local_key] = {
             "step_hour": point.get("forecast_hour"),
+            "valid_time_utc": point.get("valid_time_utc"),
             "temp": point.get("temperature_2m_c"),
             "temp_850": point.get("temperature_850hpa_c"),
             "wind": point.get("wind_speed_10m_kmh"),
