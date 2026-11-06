@@ -20,24 +20,25 @@
 
 ### İstanbul istasyonları
 
-ENKA Balmumcu, MGM Eyüpsultan ve MGM Şişli **birbirinden bağımsız** GitHub Actions workflow'larıdır.
+ENKA Balmumcu, MGM Eyüpsultan ve MGM Şişli **birbirinden bağımsız** GitHub Actions job'larıdır.
 
-Her biri:
+Her 5 dakikalık çevrimde her istasyon:
 
-1. 5 dakikada bir çalışır.
-2. Kendi kaynağından güncel ölçümü alır.
-3. Ölçümü doğrular; 20 dakikadan eski veriyi güncel kabul etmez.
-4. Kendi 72 saatlik sıcaklık/yağış arşivini günceller.
-5. Yalnızca kendi dosyalarını `main/site/data/` altında yayımlar.
-6. Başarılı veri güncellemesinden sonra ortak Pages publisher'ı tetikler.
+1. Kendi kaynağından güncel ölçümü alır.
+2. Ölçümü doğrular; 20 dakikadan eski veriyi güncel kabul etmez.
+3. Kendi 72 saatlik sıcaklık/yağış arşivini günceller.
+4. Yalnızca kendi veri dalına yayın yapar.
+5. Tamamlanan istasyon akışı ortak Pages publisher'ını tetikler.
+
+İstasyon workflow'ları **uzun süre çalışan döngüler değildir**. Her workflow çalışması tek toplama/yayın çevrimidir. Böylece 5 dakikalık schedule yeni çalışmaları saatlerce kuyrukta bekletmez. GitHub'ın schedule tetiklemeleri yüksek yük altında gecikebilir; 5 dakika platformun desteklediği en kısa schedule aralığıdır.
 
 Bir istasyonun başarısız olması diğer iki istasyonu durdurmaz.
 
 | İstasyon | Workflow | Güncel veri | Arşiv |
 |---|---|---|---|
-| ENKA Balmumcu | `.github/workflows/main-station-refresh.yml` | ENKA currentvalues.html | 72 saat sıcaklık |
-| MGM Eyüpsultan | `.github/workflows/eyupsultan-mgm-refresh.yml` | MGM 18101 | 72 saat sıcaklık + yağış |
-| MGM Şişli | `.github/workflows/sisli-mgm-refresh.yml` | MGM 18401 | 72 saat sıcaklık + yağış |
+| ENKA Balmumcu | `.github/workflows/istanbul-mgm-independent.yml` | ENKA currentvalues.html | 72 saat sıcaklık |
+| MGM Eyüpsultan | `.github/workflows/istanbul-mgm-independent.yml` | MGM 18101 | 72 saat sıcaklık + yağış |
+| MGM Şişli | `.github/workflows/istanbul-mgm-independent.yml` | MGM 18401 | 72 saat sıcaklık + yağış |
 
 ### GFS
 
