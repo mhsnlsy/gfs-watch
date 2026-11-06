@@ -154,8 +154,16 @@ async function tg(env:Env,method:string,body:BodyInit){
   if(!r.ok)throw new Error("Telegram HTTP "+r.status+" "+await r.text());
 }
 async function notify(env:Env,text:string,images:Uint8Array[]){
-  const fd=new FormData();fd.set("chat_id",env.TELEGRAM_CHAT_ID);fd.set("text",text);await tg(env,"sendMessage",fd);
-  for(let i=0;i<images.length;i++){const f=new FormData();f.set("chat_id",env.TELEGRAM_CHAT_ID);f.set("caption",["🌡️ Sıcaklık","🌡️ 850 hPa sıcaklık","🌧️ Yağış","💨 10 m rüzgâr"][i]);f.append("photo",new File([images[i]],`istanbul-gfs-${i+1}.png`,{type:"image/png"}));await tg(env,"sendPhoto",f);}
+  const media:any[] = images.map((_,i)=>({
+    type:"photo",
+    media:`attach://gfs-${i}`,
+    caption:["🌡️ Sıcaklık","🌡️ 850 hPa sıcaklık","🌧️ Yağış","💨 10 m rüzgâr"][i]
+  }));
+  const fd=new FormData();
+  fd.set("chat_id",env.TELEGRAM_CHAT_ID);
+  fd.set("media",JSON.stringify(media));
+  for(let i=0;i<images.length;i++) fd.append("gfs-"+i,new File([images[i]],`istanbul-gfs-${i+1}.png`,{type:"image/png"}));
+  await tg(env,"sendMediaGroup",fd);
 }
 async function publish(env:Env,doc:any,runs:any[]){
   const images=[
@@ -174,14 +182,32 @@ async function publish(env:Env,doc:any,runs:any[]){
   await env.GFS_KV.put("published:"+runKey(doc.run_id_utc),JSON.stringify({run_id_utc:doc.run_id_utc,published_at_utc:new Date().toISOString()}));
 }
 async function process(env:Env){
-  const candidates:any[]=[];
-  for(const h of [18,12,6,0]){try{const x=await fetchRun(h);const id=runKey(String(x.doc.run||""));if(id)candidates.push({id,doc:x.doc});}catch(e){console.log("MeteoPT",h,e);}}
-  if(!candidates.length)throw new Error("MeteoPT returned no usable run");
-  candidates.sort((a,b)=>a.id.localeCompare(b.id));const selected=candidates.at(-1);
+  let selected:any=null;
+  for(const h of [18,12,6,0]){
+    try{
+      const x=await fetchRun(h);
+      const id=runKey(String(x.doc.run||""));
+      if(id && (!selected || id>selected.id)) selected={id,doc:x.doc};
+    }catch(e){
+      console.log("MeteoPT unavailable for run",h,e);
+    }
+  }
+  if(!selected){
+    console.log("MeteoPT unavailable; nothing published");
+    return;
+  }
   const doc=normalize(selected.doc);
-  if(doc.forecast_horizon_hours<180 || !doc.noaa_source_file.f180_available){console.log("F180 not ready",doc.run_id_utc,doc.forecast_horizon_hours);return;}
-  if(await env.GFS_KV.get("published:"+runKey(doc.run_id_utc))){console.log("Already published",doc.run_id_utc);return;}
-  await storeRun(env,doc);const runs=await lastRuns(env);await publish(env,doc,runs);
+  if(!doc.noaa_source_file.f180_available){
+    console.log("F180 not ready",doc.run_id_utc);
+    return;
+  }
+  if(await env.GFS_KV.get("published:"+runKey(doc.run_id_utc))){
+    console.log("Already published",doc.run_id_utc);
+    return;
+  }
+  await storeRun(env,doc);
+  const runs=await lastRuns(env);
+  await publish(env,doc,runs);
   console.log("Published Istanbul GFS",doc.run_id_utc);
 }
 
