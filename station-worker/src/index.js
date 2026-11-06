@@ -294,7 +294,7 @@ async function fetchMgm(stationKey) {
     precipitation_12h_mm: asNumber(row.yagis12Saat),
     precipitation_24h_mm: asNumber(row.yagis24Saat),
     precipitation_daily_mm: dailyRain,
-    precipitation_source: "MGM " + stationId,
+    precipitation_source: "MGM " + STATION_DEFS[stationKey].station_id,
     pressure_type: "station",
     pressure_observed_at_utc: observed.toISOString(),
     observation_method: "mgm-sondurum"
@@ -445,7 +445,7 @@ async function collectAll(env) {
   return {
     fetched_at_utc: new Date().toISOString(),
     succeeded: Object.keys(result),
-    failed: ["enka","eyupsultan","sisli"].filter(key => !result[key])
+    failed: ["enka","eyupsultan","sisli"].filter(key => !result[key] || result[key].status !== "live")
   };
 }
 async function getStationRows(env) {
