@@ -212,7 +212,10 @@ async function process(env:Env){
 }
 
 export default {
-  async scheduled(_controller:ScheduledController,env:Env,ctx:ExecutionContext){ctx.waitUntil(process(env));},
+  async scheduled(controller:ScheduledController,env:Env,ctx:ExecutionContext){
+    console.log("GFS CRON START", controller.cron, new Date(controller.scheduledTime).toISOString());
+    ctx.waitUntil(process(env).catch(e=>console.error("GFS CRON FAILED", e)));
+  },
   async fetch(request:Request,env:Env):Promise<Response>{
     const origin=env.ALLOWED_ORIGIN||"*";const u=new URL(request.url);
     if(request.method==="OPTIONS")return new Response(null,{headers:{"access-control-allow-origin":origin,"access-control-allow-methods":"GET,OPTIONS","access-control-allow-headers":"content-type"}});
