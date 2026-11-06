@@ -10,6 +10,7 @@ import asyncio
 import json
 import os
 from pathlib import Path
+from datetime import datetime, timezone
 
 from telegram import Bot
 from telegram import InputMediaPhoto
@@ -89,11 +90,9 @@ def main() -> None:
     marker_path.write_text(
         json.dumps({
             "run_id_utc": run_id,
-            "sent_at_utc": __import__("datetime").datetime.now(
-                __import__("datetime").timezone.utc
-            ).isoformat(timespec="seconds"),
+            "sent_at_utc": datetime.now(timezone.utc).isoformat(timespec="seconds"),
             "status": "sent",
-        }, ensure_ascii=False, indent=2) + "\\n",
+        }, ensure_ascii=False, indent=2) + "\n",
         encoding="utf-8",
     )
     print(f"[TELEGRAM CANONICAL] run={run_id}; report=1; pngs={len(paths)}; marker=written")
