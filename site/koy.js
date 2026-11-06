@@ -679,6 +679,7 @@ function setStationMode(mode){
  const h=stationMode==="home"?evHistory:stationHistory;
  if(h)renderStationHistory(h,stationMode==="home"?h:rainHistory);
  if(o)renderMgmObservation(o,h,stationMode==="home"?homeGfsDocument(f72):f72);
+ renderRuns(stationMode==="home"?homeGfsComparison(comparison):comparison,stationMode==="home"?homeGfsDocument(f72):f72);
 }
 $("station-enka-button")?.addEventListener("click",()=>setStationMode("mgm"));
 $("station-home-button")?.addEventListener("click",()=>setStationMode("home"));
