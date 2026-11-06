@@ -111,56 +111,14 @@ jobs:
           CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
         run: wrangler deploy --config wrangler.jsonc
 
-      - name: Configure secure first-run collection access
-        working-directory: station-worker
-        env:
-          CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
-          CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
-        run: |
-          set -euo pipefail
-          STATIONS_ADMIN_TOKEN="$(openssl rand -hex 32)"
-          echo "::add-mask::$STATIONS_ADMIN_TOKEN"
-          echo "STATIONS_ADMIN_TOKEN=$STATIONS_ADMIN_TOKEN" >> "$GITHUB_ENV"
-          printf '%s' "$STATIONS_ADMIN_TOKEN" | wrangler secret put STATIONS_ADMIN_TOKEN --config wrangler.jsonc
-
-      - name: Verify Worker collection, D1 history, and autonomous Cron
+      - name: Verify autonomous Cloudflare Cron and D1 history
         env:
           STATIONS_API: https://gfs-watch-stations.muhsin-ulusoy.workers.dev/api
         run: |
           set -euo pipefail
-
-          echo "Requesting one authenticated seed collection..."
-          http_code="$(curl --silent --show-error --max-time 90 --output "$RUNNER_TEMP/manual-collection.json" --write-out "%{http_code}" --request POST --header "Authorization: Bearer $STATIONS_ADMIN_TOKEN" "$STATIONS_API/admin/collect")" || true
-          cat "$RUNNER_TEMP/manual-collection.json"
-          test "$http_code" = "200" || { echo "::error::Manual Cloudflare collection failed with HTTP $http_code"; exit 1; }
-
-          node - "$RUNNER_TEMP/manual-collection.json" <<'NODE'
-          const fs = require("fs");
-          const doc = JSON.parse(fs.readFileSync(process.argv[2], "utf8"));
-          const required = ["enka", "eyupsultan", "sisli"];
-          const missing = required.filter(key => !(doc.succeeded || []).includes(key));
-          if (doc.ok !== true || missing.length) {
-            console.error("Cloudflare collection failures:", JSON.stringify(doc));
-            process.exit(1);
-          }
-          console.log("Manual Cloudflare collection succeeded for all three stations.");
-          NODE
-
           baseline="$(date -u +%s)"
-          for key in enka eyupsultan sisli; do
-            curl --silent --show-error --fail --max-time 12 "$STATIONS_API/history/$key?hours=72" -o "$RUNNER_TEMP/history-$key.json"
-            node - "$RUNNER_TEMP/history-$key.json" "$key" <<'NODE'
-          const fs = require("fs");
-          const doc = JSON.parse(fs.readFileSync(process.argv[2], "utf8"));
-          if (doc.ok !== true || !Array.isArray(doc.samples) || doc.samples.length < 1) {
-            throw new Error("D1 history missing for " + process.argv[3]);
-          }
-          console.log(process.argv[3] + ": " + doc.count + " archived samples");
-          NODE
-          done
-
-          echo "Waiting for an autonomous one-minute Cron collection after the manual seed..."
-          cron_verified=0
+          verified=0
+          echo "Waiting for the autonomous one-minute Cron to collect all three stations..."
           for attempt in $(seq 1 17); do
             if curl --silent --show-error --fail --max-time 12 "$STATIONS_API/health?check=$(date +%s)" -o "$RUNNER_TEMP/station-health.json"; then
               if node - "$RUNNER_TEMP/station-health.json" "$baseline" <<'NODE'
@@ -173,25 +131,40 @@ jobs:
             const row = rows.find(item => item.key === key);
             const success = Date.parse(row && row.last_success_utc || "");
             const attempt = Date.parse(row && row.last_attempt_utc || "");
-            return row && row.status === "live" && Number.isFinite(success) && success > baseline - 30000 &&
-              Number.isFinite(attempt) && attempt > baseline + 10000;
+            return row && row.status === "live" &&
+              Number.isFinite(success) && success >= baseline - 30000 &&
+              Number.isFinite(attempt) && attempt >= baseline - 30000 &&
+              !row.last_error;
           });
           if (!good) process.exit(1);
           NODE
               then
-                cron_verified=1
+                verified=1
                 break
               fi
             fi
             echo "Cron confirmation attempt $attempt/17..."
+            [ -s "$RUNNER_TEMP/station-health.json" ] && cat "$RUNNER_TEMP/station-health.json" || true
             sleep 60
           done
 
-          if [ "$cron_verified" -ne 1 ]; then
-            echo "::error::Worker manual collection worked but an autonomous Cron run was not confirmed within 17 minutes. The old collector remains enabled."
+          if [ "$verified" -ne 1 ]; then
+            echo "::error::Autonomous Cloudflare Cron did not collect all three fresh station readings into D1. The old collector remains enabled."
             [ -s "$RUNNER_TEMP/station-health.json" ] && cat "$RUNNER_TEMP/station-health.json" || true
             exit 1
           fi
+
+          for key in enka eyupsultan sisli; do
+            curl --silent --show-error --fail --max-time 12 "$STATIONS_API/history/$key?hours=72" -o "$RUNNER_TEMP/history-$key.json"
+            node - "$RUNNER_TEMP/history-$key.json" "$key" <<'NODE'
+          const fs = require("fs");
+          const doc = JSON.parse(fs.readFileSync(process.argv[2], "utf8"));
+          if (doc.ok !== true || !Array.isArray(doc.samples) || doc.samples.length < 1) {
+            throw new Error("D1 history missing for " + process.argv[3]);
+          }
+          console.log(process.argv[3] + ": " + doc.count + " archived samples");
+          NODE
+          done
 
           cat "$RUNNER_TEMP/station-health.json"
 
