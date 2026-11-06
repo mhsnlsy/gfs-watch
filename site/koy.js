@@ -10,7 +10,7 @@ const ts=v=>{if(!v)return "—";const d=new Date(v);return Number.isFinite(d.get
 const tsGfsValid=v=>{if(!v)return "—";const d=new Date(v);return Number.isFinite(d.getTime())?new Intl.DateTimeFormat("tr-TR",{timeZone:"Europe/Istanbul",day:"2-digit",month:"2-digit",hour:"2-digit",minute:"2-digit",hourCycle:"h23"}).format(d)+" TSİ":"—"};
 const dayKey=v=>{const d=new Date(v);return Number.isFinite(d.getTime())?new Intl.DateTimeFormat("en-CA",{timeZone:"UTC",year:"numeric",month:"2-digit",day:"2-digit"}).format(d):"—"};
 const dayLabel=k=>{const p=k.split("-");return p[2]+"."+p[1]};
-let busy=false, f72=null, comparison=null, stationHistory=null, rainHistory=null, evObservation=null, evHistory=null, stationMode=(window.__KOY_DEFAULT_STATION==="mgm"?"mgm":"home");
+let busy=false, f72=null, comparison=null, stationHistory=null, rainHistory=null, evObservation=null, evHistory=null, stationMode="home";
 async function get(path){const url=path.startsWith("./")?path:BASE+path;const r=await fetch(url+"?v="+Date.now(),{cache:"no-store"});if(!r.ok)throw Error("HTTP "+r.status+" · "+url);return r.json()}
 function pointsOf(run,max=180){return (run?.forecast_6_hourly||[]).filter(p=>{const h=Number(p.forecast_hour);return Number.isFinite(h)&&h>=3&&h<=max&&h%3===0}).sort((a,b)=>Number(a.forecast_hour)-Number(b.forecast_hour))}
 const HOME_ELEVATION_M=363;
@@ -729,5 +729,8 @@ function setStationMode(mode){
 }
 $("station-enka-button")?.addEventListener("click",()=>setStationMode("mgm"));
 $("station-home-button")?.addEventListener("click",()=>setStationMode("home"));
-// Köy Ev is the canonical default; only an explicit MGM selection may switch away from it.\nsetStationMode(stationMode);\nrefresh();setInterval(()=>{if(document.visibilityState!=="hidden")refresh()},60000);
+// Köy Ev is the canonical default; only an explicit MGM selection may switch away from it.
+setStationMode("home");
+refresh();
+setInterval(()=>{if(document.visibilityState!=="hidden")refresh()},60000);
 })();
