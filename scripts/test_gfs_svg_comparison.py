@@ -3,7 +3,12 @@ from __future__ import annotations
 
 import json
 import math
+import sys
 from datetime import datetime, timedelta, timezone
+from pathlib import Path
+
+ROOT = Path(__file__).resolve().parents[1]
+sys.path.insert(0, str(ROOT))
 
 import main
 
