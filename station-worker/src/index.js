@@ -239,18 +239,19 @@ async function fetchMgmStation(stationKey) {
         "https://servis.mgm.gov.tr/web/sondurumlar/ilTumSondurum?ilPlaka=34",
         "https://servis.mgm.gov.tr/api/sondurumlar/ilTumSondurum?ilPlaka=34"
       ];
-  let lastError = null;
-  for (const url of urls) {
-    try {
-      const rows = await fetchMgmArray(url);
-      const row = rows.find(item => Number(item.istNo) === Number(stationId));
-      if (row) return { row, url };
-      lastError = new Error("MGM " + stationId + " kaydı bulunamadı");
-    } catch (error) {
-      lastError = error;
-    }
+  const attempts = await Promise.allSettled(urls.map(async url => {
+    const rows = await fetchMgmArray(url);
+    const row = rows.find(item => Number(item.istNo) === Number(stationId));
+    if (!row) throw new Error("MGM " + stationId + " kaydı bu uç noktada bulunamadı");
+    return { row, url };
+  }));
+  // Preserve the preferred-source order, but do not let a slow/broken
+  // endpoint delay all fallback sources one after another.
+  for (const attempt of attempts) {
+    if (attempt.status === "fulfilled") return attempt.value;
   }
-  throw lastError || new Error("MGM " + stationId + " kaynağı yanıt vermedi");
+  const messages = attempts.map(item => item.status === "rejected" ? String(item.reason && item.reason.message || item.reason) : "").filter(Boolean);
+  throw new Error(messages.join(" | ") || ("MGM " + stationId + " kaynağı yanıt vermedi"));
 }
 async function fetchMgm(stationKey) {
   const result = await fetchMgmStation(stationKey);
@@ -394,7 +395,9 @@ async function collectAll(env) {
     const stored = await readCurrent(env, "sisli");
     sisliRain = stored ? stored.payload : null;
   }
-  for (const key of ["enka", "eyupsultan", "sisli"]) {
+  const keys = ["enka", "eyupsultan", "sisli"];
+  for (let i = 0; i < keys.length; i++) {
+    const key = keys[i];
     if (result[key]) {
       try {
         await persistSuccess(env, key, result[key], key === "enka" ? sisliRain : null);
@@ -403,7 +406,7 @@ async function collectAll(env) {
         await persistFailure(env, key, error);
       }
     } else {
-      const task = tasks.find(item => item.status === "rejected" || (item.status === "fulfilled" && item.value.key === key));
+      const task = tasks[i];
       const error = task && task.status === "rejected" ? task.reason : new Error("Unknown collection failure");
       await persistFailure(env, key, error);
     }
