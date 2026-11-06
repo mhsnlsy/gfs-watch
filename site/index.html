@@ -1072,6 +1072,10 @@
     .meteopt-data-table { min-width: 680px; }
   </style>
 
+  <style id="single-gfs-comparison-image">
+    .notification-images .notification-image-item:only-child{grid-column:1/-1}
+    .notification-images .notification-image-item:only-child .notification-image{max-height:none}
+  </style>
 </head>
 <body>
   <header class="shell topbar">
@@ -2900,9 +2904,9 @@ if(typeof renderBriefing==="function")renderBriefing();
       list.innerHTML=items.slice(0,1).map(item=>{
         const legacyImage=notificationAsset(item.image_path,cacheVersion);
         const imageItems=Array.isArray(item.images)
-          ? item.images.filter(image=>image&&typeof image.path==="string"&&/\.png$/i.test(image.path)).map(image=>({label:image.label||"GFS grafiği",url:notificationAsset(image.path,cacheVersion)}))
-          : legacyImage&&/\.png(?:[?#]|$)/i.test(item.image_path||"")?[{label:"Dört döngü karşılaştırması",url:legacyImage}]:[];
-        const imagesHtml=imageItems.length===4
+          ? item.images.filter(image=>image&&typeof image.path==="string"&&/\.(?:png|svg)$/i.test(image.path)).map(image=>({label:image.label||"GFS grafiği",url:notificationAsset(image.path,cacheVersion)}))
+          : legacyImage&&/\.(?:png|svg)(?:[?#]|$)/i.test(item.image_path||"")?[{label:"Dört döngü karşılaştırması",url:legacyImage}]:[];
+        const imagesHtml=imageItems.length>0
           ? '<div class="comparison-heading">SON 4 GFS DÖNGÜSÜ · KIYASLAMA</div><div class="notification-images">'+imageItems.map(image=>
               '<div class="notification-image-item"><div class="notification-image-caption">'+esc(image.label)+'</div><a class="notification-image-link" href="'+image.url+'" target="_blank" rel="noopener"><img class="notification-image" src="'+image.url+'" alt="'+esc(image.label)+' · son dört GFS döngüsü karşılaştırması" loading="eager" decoding="async" fetchpriority="high" onerror="this.style.display=\'none\';this.parentElement.insertAdjacentHTML(\'beforeend\',\'<span class=\\\'media-pending\\\'>Grafik yüklenemedi · yeniden denenecek</span>\')"></a></div>'
             ).join("")+'</div>'
