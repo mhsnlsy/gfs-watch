@@ -46,6 +46,38 @@ jobs:
           CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
         run: wrangler deploy --config wrangler.jsonc
 
+      - name: Explicitly clear and verify all legacy GFS Cron triggers
+        env:
+          CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+          CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
+        run: |
+          python - <<'PY'
+          import json
+          import os
+          import urllib.request
+
+          account = os.environ["CLOUDFLARE_ACCOUNT_ID"]
+          token = os.environ["CLOUDFLARE_API_TOKEN"]
+          url = f"https://api.cloudflare.com/client/v4/accounts/{account}/workers/scripts/gfs-watch-push/schedules"
+          headers = {"Authorization": f"Bearer {token}", "Content-Type": "application/json"}
+
+          def call(method, body=None):
+              data = None if body is None else json.dumps(body).encode("utf-8")
+              request = urllib.request.Request(url, data=data, headers=headers, method=method)
+              with urllib.request.urlopen(request, timeout=30) as response:
+                  payload = json.load(response)
+              if not payload.get("success"):
+                  raise RuntimeError("Cloudflare schedule API failed: " + json.dumps(payload))
+              return payload.get("result", {}).get("schedules", [])
+
+          # Replacing the schedule set with an empty array removes the former GFS poller Cron.
+          call("PUT", [])
+          remaining = call("GET")
+          if remaining:
+              raise RuntimeError("GFS Cron is still attached to gfs-watch-push: " + json.dumps(remaining))
+          print("Verified: gfs-watch-push has zero Cron Triggers.")
+          PY
+
       - name: Apply D1 schema
         working-directory: push-worker
         env:
@@ -63,4 +95,13 @@ jobs:
         run: |
           printf '%s' "$PUSH_ADMIN_TOKEN" | wrangler secret put PUSH_ADMIN_TOKEN --config wrangler.jsonc
           printf '%s' "$VAPID_PUBLIC_KEY" | wrangler secret put VAPID_PUBLIC_KEY --config wrangler.jsonc
+
+      - name: Remove retired GFS-only secrets from the push Worker
+        working-directory: push-worker
+        env:
+          CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+          CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
+        run: |
+          wrangler secret delete TELEGRAM_TOKEN --config wrangler.jsonc || true
+          wrangler secret delete TELEGRAM_CHAT_ID --config wrangler.jsonc || true
 
