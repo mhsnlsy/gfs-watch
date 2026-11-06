@@ -469,14 +469,6 @@ function renderRuns(d,f72){
     if(nowTemp!=null)tempSentence+=" Çanakçı şu an "+fmt(nowTemp,1)+"°C.";
    }
    $("brief-temperature-trend").textContent=tempSentence;
-   const sourceRun=source.find(run=>run&&run.run_id_utc)||first;
-   const sourceDate=sourceRun?.run_id_utc?new Date(sourceRun.run_id_utc):null;
-   const sourceStamp=sourceDate&&Number.isFinite(sourceDate.getTime())
-    ?String(sourceDate.getUTCDate()).padStart(2,"0")+"/"+String(sourceDate.getUTCMonth()+1).padStart(2,"0")+" "+String(sourceDate.getUTCHours()).padStart(2,"0")+":"+String(sourceDate.getUTCMinutes()).padStart(2,"0")+" UTC"
-    :"";
-   const sourceNode=$("brief-source");
-   if(sourceNode)sourceNode.textContent="";
-
    const rainy=p.filter(x=>num(x.precipitation_6h_mm)>0.1);
    const rainGroups=[];
    for(const point of rainy){
