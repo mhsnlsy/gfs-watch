@@ -2838,7 +2838,9 @@
           const document=await currentResponse.json();
           const candidate=workerStationToPageStation(document?.station);
           if(candidate){
-            currentLoaded=true;
+            const candidateAge=Date.parse(candidate.observed_at_utc||"");
+            const candidateFresh=Number.isFinite(candidateAge)&&((Date.now()-candidateAge)/60000)<20&&!candidate.is_stale;
+            currentLoaded=candidateFresh;
             if(stationKey==="enka")enkaStationObservation=candidate;
             if(stationKey==="eyupsultan")eyupsultanStationObservation=candidate;
             if(stationKey==="sisli")sisliStationObservation=candidate;
@@ -2864,7 +2866,8 @@
 
         // Worker is primary. GitHub Pages data is a hard fallback so a
         // Worker outage cannot blank a station that is still being collected.
-        if(!currentLoaded){
+        const selectedHistory=stationKey==="enka"?enkaStationHistorySamples:stationKey==="eyupsultan"?eyupsultanStationHistorySamples:sisliStationHistorySamples;
+        if(!currentLoaded || !selectedHistory.length){
           const staticFiles={
             enka:["./data/station-observation.json","./data/station-temperature-history.json"],
             eyupsultan:["./data/eyupsultan-station-observation.json","./data/eyupsultan-station-temperature-history.json"],
