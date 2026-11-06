@@ -8,6 +8,7 @@ on:
       - "scripts/fetch_istanbul_gfs_meteopt.py"
       - "scripts/build_istanbul_gfs_publication.py"
       - "scripts/send_canonical_istanbul_gfs_telegram.py"
+      - "scripts/test_notification_pipeline.py"
   # UTC schedule = 07:20, 13:20, 19:20 and 01:20 Istanbul time.
   # Each run checks all four model cycles and publishes only the newest F180-ready cycle.
   schedule:
@@ -62,12 +63,13 @@ jobs:
           fi
           mkdir -p gfs/runs gfs/notifications/telegram-sent
 
-      - name: Validate GFS publisher code
+      - name: Validate GFS publisher code and architecture contracts
         run: |
           python -m py_compile \
             scripts/fetch_istanbul_gfs_meteopt.py \
             scripts/build_istanbul_gfs_publication.py \
             scripts/send_canonical_istanbul_gfs_telegram.py
+          python scripts/test_notification_pipeline.py
 
       - name: Check MeteoPT cycles and apply F180 gate
         id: fetch
