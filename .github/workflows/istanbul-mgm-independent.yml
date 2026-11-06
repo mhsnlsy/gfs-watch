@@ -15,56 +15,43 @@ on:
 permissions:
   contents: write
 
-# GitHub's 5-minute scheduler is not a real-time timer and can be delayed.
-# Each scheduled run therefore keeps the three independent collectors alive
-# and performs a fetch/publish cycle every 5 minutes.
+# One run = one collection cycle.
+# The previous 65-cycle loop kept each scheduled run alive for ~5h and
+# caused new 5-minute schedules to queue behind it. That is removed here.
 jobs:
   enka:
     name: ENKA Balmumcu
     runs-on: ubuntu-latest
-    timeout-minutes: 350
+    timeout-minutes: 8
     concurrency:
       group: istanbul-enka-refresh
-      cancel-in-progress: false
+      cancel-in-progress: true
     steps:
       - name: Checkout ENKA data branch
         uses: actions/checkout@v5
         with:
           ref: istanbul-enka-data
           fetch-depth: 0
-
       - name: Set up Python
         uses: actions/setup-python@v6
         with:
           python-version: "3.12"
-
       - name: Install ENKA dependency
         run: python -m pip install --disable-pip-version-check requests
-
-      - name: Run ENKA collector continuously
+      - name: Collect ENKA Balmumcu
         env:
           STATION_PREVIOUS_OBSERVATION_PATH: public/station-observation.json
-          STATION_TEMPERATURE_HISTORY_PATH: .station-work/enka/station-temperature-history.json
+          STATION_TEMPERATURE_HISTORY_PATH: site/data/station-temperature-history.json
         run: |
           set -euo pipefail
-          mkdir -p public site/data .station-work/enka
-
-          for cycle in $(seq 1 65); do
-            cycle_start=$(date +%s)
-            echo "===== ENKA cycle $cycle/65 $(date -u '+%Y-%m-%dT%H:%M:%SZ') ====="
-
-            if [ -s "site/data/station-temperature-history.json" ]; then
-              cp "site/data/station-temperature-history.json" ".station-work/enka/station-temperature-history.json"
-            fi
-            if [ -s "site/data/station-observation.json" ]; then
-              cp "site/data/station-observation.json" "public/station-observation.json"
-            fi
-
-            python -u enka_weather.py
-            test -s public/station-observation.json
-            test -s .station-work/enka/station-temperature-history.json
-
-            python - <<'PY'
+          mkdir -p public site/data
+          if [ -s "site/data/station-observation.json" ]; then
+            cp "site/data/station-observation.json" "public/station-observation.json"
+          fi
+          python -u enka_weather.py
+          test -s public/station-observation.json
+          test -s site/data/station-temperature-history.json
+          python - <<'PY'
           import json
           from pathlib import Path
           doc=json.loads(Path("public/station-observation.json").read_text(encoding="utf-8"))
@@ -74,69 +61,49 @@ jobs:
               raise SystemExit(f"ENKA Balmumcu stale/invalid: age={age}")
           print(f"ENKA Balmumcu: {s.get('temperature_2m_c')} °C | {s.get('station_pressure_hpa')} hPa | age {age:.1f} min")
           PY
-
-            cp public/station-observation.json site/data/station-observation.json
-            cp .station-work/enka/station-temperature-history.json site/data/station-temperature-history.json
-
-            git config user.name "github-actions[bot]"
-            git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
-            git add site/data
-            if git diff --cached --quiet; then
-              echo "ENKA data unchanged."
-            else
-              git commit -m "Update ENKA Balmumcu station data"
-              git push origin HEAD:istanbul-enka-data
-            fi
-
-            elapsed=$(( $(date +%s) - cycle_start ))
-            sleep_for=$((300 - elapsed))
-            if [ "$sleep_for" -gt 0 ] && [ "$cycle" -lt 65 ]; then
-              echo "Next ENKA cycle in $sleep_for seconds."
-              sleep "$sleep_for"
-            fi
-          done
+      - name: Publish ENKA data
+        run: |
+          set -euo pipefail
+          cp public/station-observation.json site/data/station-observation.json
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add site/data
+          if git diff --cached --quiet; then
+            echo "ENKA data unchanged."
+          else
+            git commit -m "Update ENKA Balmumcu station data"
+            git push origin HEAD:istanbul-enka-data
+          fi
 
   eyupsultan:
     name: MGM Eyüpsultan
     runs-on: ubuntu-latest
-    timeout-minutes: 350
+    timeout-minutes: 8
     concurrency:
       group: istanbul-eyupsultan-refresh
-      cancel-in-progress: false
+      cancel-in-progress: true
     steps:
       - name: Checkout Eyüpsultan data branch
         uses: actions/checkout@v5
         with:
           ref: istanbul-eyupsultan-data
           fetch-depth: 0
-
       - name: Set up Node.js
         uses: actions/setup-node@v4
         with:
           node-version: "22"
-
-      - name: Run MGM Eyüpsultan collector continuously
+      - name: Collect MGM Eyüpsultan
         env:
-          EYUPSULTAN_TEMPERATURE_HISTORY_PATH: public/eyupsultan-station-temperature-history.json
-          EYUPSULTAN_RAIN_HISTORY_PATH: public/eyupsultan-station-rain-history.json
+          EYUPSULTAN_TEMPERATURE_HISTORY_PATH: site/data/eyupsultan-station-temperature-history.json
+          EYUPSULTAN_RAIN_HISTORY_PATH: site/data/eyupsultan-station-rain-history.json
         run: |
           set -euo pipefail
           mkdir -p public site/data
-
-          for cycle in $(seq 1 65); do
-            cycle_start=$(date +%s)
-            echo "===== Eyüpsultan cycle $cycle/65 $(date -u '+%Y-%m-%dT%H:%M:%SZ') ====="
-
-            for f in eyupsultan-station-temperature-history.json eyupsultan-station-rain-history.json; do
-              [ -s "site/data/$f" ] && cp "site/data/$f" "public/$f" || true
-            done
-
-            node scripts/eyupsultan_weather.mjs
-            test -s public/eyupsultan-station-observation.json
-            test -s public/eyupsultan-station-temperature-history.json
-            test -s public/eyupsultan-station-rain-history.json
-
-            node - <<'NODE'
+          node scripts/eyupsultan_weather.mjs
+          test -s public/eyupsultan-station-observation.json
+          test -s site/data/eyupsultan-station-temperature-history.json
+          test -s site/data/eyupsultan-station-rain-history.json
+          node - <<'NODE'
           const fs = require("fs");
           const doc = JSON.parse(fs.readFileSync("public/eyupsultan-station-observation.json","utf8"));
           const s = doc.station_observation || {};
@@ -146,70 +113,49 @@ jobs:
           }
           console.log("MGM Eyüpsultan:", s.temperature_2m_c, "°C |", s.actual_station_pressure_hpa, "hPa | age", age, "min");
           NODE
-
-            cp public/eyupsultan-station-observation.json site/data/eyupsultan-station-observation.json
-            cp public/eyupsultan-station-temperature-history.json site/data/eyupsultan-station-temperature-history.json
-            cp public/eyupsultan-station-rain-history.json site/data/eyupsultan-station-rain-history.json
-
-            git config user.name "github-actions[bot]"
-            git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
-            git add site/data
-            if git diff --cached --quiet; then
-              echo "Eyüpsultan data unchanged."
-            else
-              git commit -m "Update MGM Eyüpsultan station data"
-              git push origin HEAD:istanbul-eyupsultan-data
-            fi
-
-            elapsed=$(( $(date +%s) - cycle_start ))
-            sleep_for=$((300 - elapsed))
-            if [ "$sleep_for" -gt 0 ] && [ "$cycle" -lt 65 ]; then
-              echo "Next Eyüpsultan cycle in $sleep_for seconds."
-              sleep "$sleep_for"
-            fi
-          done
+      - name: Publish Eyüpsultan data
+        run: |
+          set -euo pipefail
+          cp public/eyupsultan-station-observation.json site/data/eyupsultan-station-observation.json
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add site/data
+          if git diff --cached --quiet; then
+            echo "Eyüpsultan data unchanged."
+          else
+            git commit -m "Update MGM Eyüpsultan station data"
+            git push origin HEAD:istanbul-eyupsultan-data
+          fi
 
   sisli:
     name: MGM Şişli
     runs-on: ubuntu-latest
-    timeout-minutes: 350
+    timeout-minutes: 8
     concurrency:
       group: istanbul-sisli-refresh
-      cancel-in-progress: false
+      cancel-in-progress: true
     steps:
       - name: Checkout Şişli data branch
         uses: actions/checkout@v5
         with:
           ref: istanbul-sisli-data
           fetch-depth: 0
-
       - name: Set up Node.js
         uses: actions/setup-node@v4
         with:
           node-version: "22"
-
-      - name: Run MGM Şişli collector continuously
+      - name: Collect MGM Şişli
         env:
-          SISLI_TEMPERATURE_HISTORY_PATH: public/sisli-station-temperature-history.json
-          SISLI_RAIN_HISTORY_PATH: public/sisli-station-rain-history.json
+          SISLI_TEMPERATURE_HISTORY_PATH: site/data/sisli-station-temperature-history.json
+          SISLI_RAIN_HISTORY_PATH: site/data/sisli-station-rain-history.json
         run: |
           set -euo pipefail
           mkdir -p public site/data
-
-          for cycle in $(seq 1 65); do
-            cycle_start=$(date +%s)
-            echo "===== Şişli cycle $cycle/65 $(date -u '+%Y-%m-%dT%H:%M:%SZ') ====="
-
-            for f in sisli-station-temperature-history.json sisli-station-rain-history.json; do
-              [ -s "site/data/$f" ] && cp "site/data/$f" "public/$f" || true
-            done
-
-            node scripts/sisli_weather.mjs
-            test -s public/sisli-station-observation.json
-            test -s public/sisli-station-temperature-history.json
-            test -s public/sisli-station-rain-history.json
-
-            node - <<'NODE'
+          node scripts/sisli_weather.mjs
+          test -s public/sisli-station-observation.json
+          test -s site/data/sisli-station-temperature-history.json
+          test -s site/data/sisli-station-rain-history.json
+          node - <<'NODE'
           const fs = require("fs");
           const doc = JSON.parse(fs.readFileSync("public/sisli-station-observation.json","utf8"));
           const s = doc.station_observation || {};
@@ -219,25 +165,16 @@ jobs:
           }
           console.log("MGM Şişli:", s.temperature_2m_c, "°C |", s.actual_station_pressure_hpa, "hPa | age", age, "min");
           NODE
-
-            cp public/sisli-station-observation.json site/data/sisli-station-observation.json
-            cp public/sisli-station-temperature-history.json site/data/sisli-station-temperature-history.json
-            cp public/sisli-station-rain-history.json site/data/sisli-station-rain-history.json
-
-            git config user.name "github-actions[bot]"
-            git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
-            git add site/data
-            if git diff --cached --quiet; then
-              echo "Şişli data unchanged."
-            else
-              git commit -m "Update MGM Şişli station data"
-              git push origin HEAD:istanbul-sisli-data
-            fi
-
-            elapsed=$(( $(date +%s) - cycle_start ))
-            sleep_for=$((300 - elapsed))
-            if [ "$sleep_for" -gt 0 ] && [ "$cycle" -lt 65 ]; then
-              echo "Next Şişli cycle in $sleep_for seconds."
-              sleep "$sleep_for"
-            fi
-          done
+      - name: Publish Şişli data
+        run: |
+          set -euo pipefail
+          cp public/sisli-station-observation.json site/data/sisli-station-observation.json
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add site/data
+          if git diff --cached --quiet; then
+            echo "Şişli data unchanged."
+          else
+            git commit -m "Update MGM Şişli station data"
+            git push origin HEAD:istanbul-sisli-data
+          fi
