@@ -148,12 +148,7 @@ function svgLine(runs,metric,title,unit,verification=null){
  const upper=[],lower=[];
  hours.forEach(h=>{const vals=lookup.map(map=>map.get(h)).filter(v=>v!=null);if(vals.length){upper.push([x(h),y(Math.max(...vals))]);lower.push([x(h),y(Math.min(...vals))]);}});
  if(upper.length>1){const polygon=upper.concat(lower.slice().reverse()).map(p=>p.join(",")).join(" ");out+='<polygon points="'+polygon+'" fill="#75b9c8" opacity=".16"/>';}
- if(sigma&&metric==="temperature_2m_c"){
-  const upperSigma=[],lowerSigma=[];
-  hours.forEach(h=>{const point=usable[0].points.find(p=>p.h===h);if(!point)return;const local=verification.sigmaByHour?.get(h),width=Number.isFinite(local)&&local>0?local:sigma;upperSigma.push([x(h),y(point.v+width)]);lowerSigma.push([x(h),y(point.v-width)]);});
-  if(upperSigma.length>1){const polygon=upperSigma.concat(lowerSigma.slice().reverse()).map(p=>p.join(",")).join(" ");out+='<polygon points="'+polygon+'" fill="#7dd3d7" opacity=".13"/>';}
-  out+='<text x="'+(W-R-4)+'" y="'+(T+16)+'" text-anchor="end" fill="#bdccd5" font-size="15" font-weight="500" font-family="system-ui, -apple-system, BlinkMacSystemFont, Segoe UI, sans-serif">Gerçekleşen hata σ ±'+fmt(sigma,1)+'°C · '+verification.count+' doğrulama</text>';
- }
+
  usable.forEach(item=>{
   const index=item.runIndex,color=COLORS[index%COLORS.length],latest=index===0;
   const path=item.points.map((p,j)=>(j?"L":"M")+x(p.h)+" "+y(p.v)).join(" ");
