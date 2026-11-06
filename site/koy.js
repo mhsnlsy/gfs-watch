@@ -9,7 +9,7 @@ const ts=v=>{if(!v)return "—";const d=new Date(v);return Number.isFinite(d.get
 const tsGfsValid=v=>{if(!v)return "—";const d=new Date(v);return Number.isFinite(d.getTime())?new Intl.DateTimeFormat("tr-TR",{timeZone:"UTC",day:"2-digit",month:"2-digit",hour:"2-digit",minute:"2-digit"}).format(d)+" TSİ":"—"};
 const dayKey=v=>{const d=new Date(v);return Number.isFinite(d.getTime())?new Intl.DateTimeFormat("en-CA",{timeZone:"UTC",year:"numeric",month:"2-digit",day:"2-digit"}).format(d):"—"};
 const dayLabel=k=>{const p=k.split("-");return p[2]+"."+p[1]};
-let busy=false, f72=null, meteopt72=null, comparison=null, stationHistory=null, rainHistory=null;
+let busy=false, f72=null, comparison=null, stationHistory=null, rainHistory=null;
 async function get(path){const url=path.startsWith("./")?path:BASE+path;const r=await fetch(url+"?v="+Date.now(),{cache:"no-store"});if(!r.ok)throw Error("HTTP "+r.status+" · "+url);return r.json()}
 function pointsOf(run,max=180){return (run?.forecast_6_hourly||[]).filter(p=>{const h=Number(p.forecast_hour);return Number.isFinite(h)&&h>=3&&h<=max&&h%3===0}).sort((a,b)=>Number(a.forecast_hour)-Number(b.forecast_hour))}
 function realizedErrorStats(runs,samples,metric){
@@ -409,15 +409,24 @@ function renderRunLegend(source){
  }).join("");
 }
 function renderRuns(d,f72){
- const runs=(d?.runs||[]).slice(0,4);
- $("report-meta").textContent=runs.length?"Son döngü: "+ts(runs[0].run_id_utc)+" · "+runs.length+" çıktı hazır":"Son model döngüsü bekleniyor";
+ const historyRuns=(Array.isArray(d?.runs)?d.runs:[])
+  .filter(run=>run&&Array.isArray(run.forecast_6_hourly)&&(!run.forecast_source||run.forecast_source==="meteopt"))
+  .slice(0,4);
+ const tableRun=f72&&Array.isArray(f72.forecast_6_hourly)&&f72.forecast_source==="meteopt"?f72:null;
+ // The latest series is the exact same object used by renderF72() for the MeteoPT table.
+ // Older lines come from the archived MeteoPT comparison bundle.
+ const source=tableRun
+  ? [tableRun,...historyRuns.filter(run=>run.run_id_utc!==tableRun.run_id_utc)].slice(0,4)
+  : historyRuns;
+ const runs=historyRuns;
+ $("report-meta").textContent=source.length?"Son döngü: "+ts(source[0].run_id_utc)+" · "+source.length+" çıktı hazır":"Son model döngüsü bekleniyor";
  const pngMetrics=[
   ["chart-temp","temperature","2 m sıcaklık · son 4 GFS döngüsü"],
   ["chart-t850","temperature_850","850 hPa sıcaklık · son 4 GFS döngüsü"],
   ["chart-rain","precipitation","6 saatlik yağış · son 4 GFS döngüsü"],
   ["chart-wind","wind_10m","10 m rüzgâr · son 4 GFS döngüsü"]
  ];
- const runStamp=runs[0]?.run_id_utc?(()=>{const d=new Date(runs[0].run_id_utc);return d.getUTCFullYear()+String(d.getUTCMonth()+1).padStart(2,"0")+String(d.getUTCDate()).padStart(2,"0")+"T"+String(d.getUTCHours()).padStart(2,"0")+"Z";})():null;
+ const runStamp=source[0]?.run_id_utc?(()=>{const d=new Date(source[0].run_id_utc);return d.getUTCFullYear()+String(d.getUTCMonth()+1).padStart(2,"0")+String(d.getUTCDate()).padStart(2,"0")+"T"+String(d.getUTCHours()).padStart(2,"0")+"Z";})():null;
  pngMetrics.forEach(([id,metric,alt])=>{
   const holder=$(id);
   if(!holder)return;
@@ -425,10 +434,10 @@ function renderRuns(d,f72){
   const src=`./koy-data/gfs/media/koy-gfs-${runStamp}-${metric}.png?v=${encodeURIComponent(runs[0].run_id_utc||"")}`;
   holder.innerHTML='<a class="notification-image-link" href="'+src+'" target="_blank" rel="noopener"><img class="notification-image" src="'+src+'" alt="'+esc(alt)+'"></a>';
  });
- const source=runs.length?runs:(f72?[f72]:[]);
  renderRunLegend(source);
- $("next-72h-meta").textContent=source.length?source.length+" GFS döngüsü karşılaştırılıyor":"Model verisi bekleniyor";
- // Use the exact same GFS payload rendered by the 72-hour table.\n const chartSource=f72?[f72]:[];
+ $("next-72h-meta").textContent=source.length?source.length+" GFS döngüsü karşılaştırılıyor":"MeteoPT GFS verisi bekleniyor";
+ // Both charts use the same latest MeteoPT payload as the table, plus its three archived cycles.
+ const chartSource=source;
  const realized=realizedErrorStats(runs,stationHistory,"temperature_2m_c");
  $("next72-temperature").innerHTML=svgLine(chartSource,"temperature_2m_c","2 m sıcaklık","°C",72,realized);
  $("next72-precipitation").innerHTML=svgLine(chartSource,"precipitation_6h_mm","6 saatlik yağış","mm / 6 saat",72);
@@ -454,23 +463,30 @@ function renderRuns(d,f72){
 }
 async function refresh(){if(busy)return;busy=true;
  const results=await Promise.allSettled([
-  get("f72/latest.json"),get("comparison.json"),get("./data/meteopt-gfs-first72.json"),get(MGM_BASE+"history.json"),
+  get("f72/latest.json"),get("comparison.json"),get(MGM_BASE+"history.json"),
   get(MGM_BASE+"rain-history-72h.json"),get(MGM_BASE+"observation.json")
  ]);
- if(results[0].status==="fulfilled"){f72=results[0].value;renderF72(f72)}else{}
  if(results[1].status==="fulfilled")comparison=results[1].value;else comparison=null;
- if(results[2].status==="fulfilled")meteopt72=results[2].value;else meteopt72=null;
- if(results[3].status==="fulfilled")stationHistory=results[3].value;else stationHistory=null;
- if(results[4].status==="fulfilled")rainHistory=results[4].value;else rainHistory=null;
+ if(results[0].status==="fulfilled"){
+  f72=results[0].value;
+ }else{
+  // If the short F72 pointer is temporarily missing, recover the exact latest MeteoPT run
+  // from the comparison archive so the table and charts continue from one canonical payload.
+  const archivedLatest=(comparison?.runs||[]).find(run=>run&&run.forecast_source==="meteopt"&&Array.isArray(run.forecast_6_hourly));
+  if(archivedLatest)f72=archivedLatest;
+ }
+ if(f72)renderF72(f72);
+ if(results[2].status==="fulfilled")stationHistory=results[2].value;else stationHistory=null;
+ if(results[3].status==="fulfilled")rainHistory=results[3].value;else rainHistory=null;
  if(stationHistory){
   renderStationHistory(stationHistory,rainHistory);
  }else{
   $("station-temperature-trend").innerHTML="<div class=\"station-trend-empty\">MGM istasyon geçmişi bekleniyor…</div>";
   $("station-rain-trend").innerHTML="<div class=\"station-trend-empty\">MGM yağış arşivi bekleniyor…</div>";
  }
- if(results[5].status==="fulfilled"){
-  renderMgmObservation(results[5].value,stationHistory,f72);
-  const o=results[5].value;
+ if(results[4].status==="fulfilled"){
+  renderMgmObservation(results[4].value,stationHistory,f72);
+  const o=results[4].value;
   $("mgm-status-date").textContent=ts(o.observed_at_utc);
   $("mgm-source-temp").innerHTML=fmt(o.temperature_2m_c)+"<small>°C</small>";
   $("mgm-source-status").textContent="Canlı MGM ölçümü · son 1 saat yağış "+fmt(o.precipitation_1h_mm)+" mm";
