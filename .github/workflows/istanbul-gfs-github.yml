@@ -1,7 +1,8 @@
 name: Istanbul GFS · MeteoPT
 
 on:
-  # UTC schedule = 07:20, 13:20, 19:20 and 01:20 Istanbul time.
+  # Istanbul local publication windows: 07:20, 13:20, 19:20 and 01:20.
+  # GitHub Actions cron is UTC: 04:20, 10:20, 16:20 and 22:20.
   # Each run checks all four model cycles and publishes only the newest F180-ready cycle.
   schedule:
     - cron: "20 4,10,16,22 * * *"
