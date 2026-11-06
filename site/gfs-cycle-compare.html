@@ -153,7 +153,8 @@ document.addEventListener("pointerdown",event=>{if(activeTooltip&&!activeTooltip
 async function load(){
  try{
   const cache=Date.now();
-  const gfsBase=(window.ISTANBUL_GFS_API_BASE||"").replace(/\\/$/,"");\n  const latestResponse=await fetch((gfsBase?gfsBase+"/gfs/latest":"./data/istanbul-gfs-latest.json")+"?v="+cache,{cache:"no-store"});
+  const gfsBase=(window.ISTANBUL_GFS_API_BASE||"").replace(/\/$/,"");
+  const latestResponse=await fetch((gfsBase?gfsBase+"/gfs/latest":"./data/istanbul-gfs-latest.json")+"?v="+cache,{cache:"no-store"});
   if(!latestResponse.ok)throw new Error("İstanbul GFS verisi HTTP "+latestResponse.status);
   const document=await latestResponse.json();
   const runs=Array.isArray(document.comparison_runs)?document.comparison_runs.slice():[];
