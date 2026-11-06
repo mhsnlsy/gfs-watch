@@ -646,6 +646,7 @@ function setStationMode(mode){
  $("station-home-button")?.setAttribute("aria-pressed",stationMode==="home"?"true":"false");
  const o=stationMode==="home"?evObservation:window.__koyMgmObservation;
  const h=stationMode==="home"?evHistory:stationHistory;
+ if(h)renderStationHistory(h,stationMode==="home"?h:rainHistory);
  if(o)renderMgmObservation(o,h,f72);
 }
 $("station-enka-button")?.addEventListener("click",()=>setStationMode("mgm"));
