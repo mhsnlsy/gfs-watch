@@ -126,3 +126,23 @@ Yalnızca dokümantasyon değişiklikleri uygulama sürümünü artırmaz.
 ## Cloudflare GFS
 
 İstanbul GFS collector/publisher `workers/istanbul-gfs/` altında Cloudflare'a taşındı. F180 gelmeden yayın yoktur; F180 sonrası Cloudflare KV + Telegram + Pages API dağıtımı yapılır.
+
+## Cloudflare İstasyon Servisi
+
+İstanbul canlı istasyon verilerinin tek toplama ve arşiv servisi Cloudflare Worker + D1'dir.
+
+- Worker: `gfs-watch-stations`
+- Cron: `* * * * *` — üç istasyon bağımsız olarak dakikada bir sorgulanır.
+- D1: `gfs-watch-stations` — güncel ölçüm ve kayan 72 saatlik geçmiş.
+- Kaynaklar: ENKA Balmumcu WeatherLink Current Values, MGM Eyüpsultan (18101), MGM Şişli (18401).
+- Balmumcu sıcaklık/nem/basınç/rüzgârı ENKA'dan; yağış ölçümü MGM Şişli'den alınır.
+- Pages, istasyon API'sini 60 saniyede bir okur; istasyon yenilemesi için Pages build veya GitHub Actions zamanlayıcısı kullanılmaz.
+
+API uç noktaları:
+
+- `/api/health` — Cron, D1 ve istasyon yazım durumu.
+- `/api/stations` — üç istasyonun son ölçümleri.
+- `/api/stations/enka`, `/api/stations/eyupsultan`, `/api/stations/sisli` — tek istasyon.
+- `/api/history/{station_key}?hours=72` — D1 geçmişi.
+
+İstanbul istasyonlarını toplayan eski `istanbul-mgm-independent.yml` GitHub Actions workflow'u kaldırıldı. `deploy-stations-worker.yml` yalnızca Worker kodu veya D1 migration değişince dağıtım/doğrulama için çalışır; periyodik veri toplama Cloudflare Cron üzerindedir.
