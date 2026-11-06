@@ -1,3 +1,4 @@
+<script src="./gfs-api-config.js"></script>
 (() => {
   "use strict";
   const ROOT = "meteopt-gfs-table";
