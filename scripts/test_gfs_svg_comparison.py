@@ -9,7 +9,7 @@ import main
 
 
 def make_payload(run_index: int) -> dict:
-    local_start = datetime(2026, 11, 6, 12, 0)
+    local_start = datetime(2026, 11, 7, 0, 0)
     timeline = {}
     for index in range(25):
         local = local_start + timedelta(hours=3 * index)
