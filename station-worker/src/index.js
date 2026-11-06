@@ -356,7 +356,7 @@ async function persistSuccess(env, key, observation, rainSource) {
   const status = observation.status || "live";
   const payloadJson = JSON.stringify(observation);
   const history = env.STATIONS_DB.prepare(
-    "INSERT INTO station_history (station_key, station_id, observed_at_utc, fetched_at_utc, temperature_c, humidity_percent, pressure_hpa, wind_speed_kmh, wind_direction, rain_1h_mm, rain_10m_mm, rain_6h_mm, rain_12h_mm, rain_24h_mm, rain_00_now_mm) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)"
+    "INSERT OR REPLACE INTO station_history (station_key, station_id, observed_at_utc, fetched_at_utc, temperature_c, humidity_percent, pressure_hpa, wind_speed_kmh, wind_direction, rain_1h_mm, rain_10m_mm, rain_6h_mm, rain_12h_mm, rain_24h_mm, rain_00_now_mm) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)"
   ).bind(
     key, observation.station_id, observation.observed_at_utc, fetchedAt,
     observation.temperature_2m_c, observation.humidity_percent,
