@@ -1,11 +1,17 @@
 """Source-level and contrast smoke tests for dark GFS report charts."""
 from __future__ import annotations
 
+import ast
+import json
+import math
 import re
+from datetime import datetime, timezone
 from pathlib import Path
+from zoneinfo import ZoneInfo
 
 ROOT = Path(__file__).resolve().parents[1]
 SOURCE = (ROOT / "main.py").read_text(encoding="utf-8")
+BUILDER_SOURCE = (ROOT / "scripts/build_istanbul_gfs_publication.py").read_text(encoding="utf-8")
 
 
 def parse_color(value: str) -> tuple[float, float, float]:
@@ -37,7 +43,109 @@ def constant(name: str) -> str:
     return match.group(1)
 
 
+
+def test_valid_time_alignment() -> None:
+    """Exercise the chart data preparer without importing main.py's API dependencies."""
+    tree = ast.parse(SOURCE)
+    selected = [
+        node for node in tree.body
+        if isinstance(node, ast.FunctionDef)
+        and node.name in {"_comparison_valid_time_key", "_prepare_comparison_chart_data"}
+    ]
+    assert {node.name for node in selected} == {
+        "_comparison_valid_time_key", "_prepare_comparison_chart_data"
+    }
+
+    def parse_utc(value: str):
+        parsed = datetime.fromisoformat(str(value).replace("Z", "+00:00"))
+        if parsed.tzinfo is None:
+            parsed = parsed.replace(tzinfo=timezone.utc)
+        return parsed.astimezone(timezone.utc)
+
+    namespace = {
+        "datetime": datetime,
+        "timezone": timezone,
+        "TR_TZ": ZoneInfo("Europe/Istanbul"),
+        "math": math,
+        "json": json,
+        "_parse_utc_datetime": parse_utc,
+    }
+    module = ast.Module(body=selected, type_ignores=[])
+    exec(compile(module, "main.py", "exec"), namespace)
+
+    run_ids = [
+        "2026-11-05T12:00:00+00:00",
+        "2026-11-05T18:00:00+00:00",
+        "2026-11-06T00:00:00+00:00",
+        "2026-11-06T06:00:00+00:00",
+    ]
+    # 8 November 15:00 TSİ is the same valid time in all four cycles,
+    # although its lead hour is different in each cycle.
+    leads = [72, 66, 60, 54]
+    timeline_keys = [
+        ("2026-11-08T15:00", "2026-11-08T12:00+00:00"),
+        ("2026-11-08T18:00", "2026-11-08T15:00+00:00"),
+    ]
+
+    def payload(run_index: int) -> dict:
+        timeline = {}
+        for point_index, (local_key, valid_utc) in enumerate(timeline_keys):
+            timeline[local_key] = {
+                "step_hour": leads[run_index] + point_index * 3,
+                "valid_time_utc": valid_utc,
+                "temp": 10.0 + run_index + point_index,
+                "temp_850": 1.0 + run_index + point_index,
+                "wind": 8.0 + run_index + point_index,
+                "wind_direction_deg": 45.0 + run_index,
+                "wind_850": 12.0 + run_index + point_index,
+                "precip": 0.1 * run_index,
+            }
+        # The latest-only point must not contaminate any cycle's daily extrema.
+        if run_index == 3:
+            timeline["2026-11-08T21:00"] = {
+                "step_hour": 60,
+                "valid_time_utc": "2026-11-08T18:00+00:00",
+                "temp": 99.0,
+                "temp_850": 99.0,
+                "wind": 99.0,
+                "wind_direction_deg": 99.0,
+                "wind_850": 99.0,
+                "precip": 99.0,
+            }
+        return {"timeline_180h": timeline, "daily": {}}
+
+    previous = [
+        (run_ids[index], json.dumps(payload(index)))
+        for index in range(3)
+    ]
+    prepared = namespace["_prepare_comparison_chart_data"](
+        run_ids[3], payload(3), previous
+    )
+
+    assert prepared["valid_time_count"] == 2
+    assert prepared["dates"] == ["2026-11-08"]
+    assert all(
+        list(item["timeline"]) == [
+            "2026-11-08T15:00", "2026-11-08T18:00"
+        ]
+        for item in prepared["series"]
+    )
+    leads_at_1500 = {
+        item["run_id"]: item["timeline"]["2026-11-08T15:00"]["step_hour"]
+        for item in prepared["series"]
+    }
+    assert leads_at_1500 == dict(zip(run_ids, leads))
+    latest_daily = prepared["series"][-1]["daily"]["2026-11-08"]
+    assert latest_daily["temp_max"] == 13.0
+    assert latest_daily["temp_850_max"] == 4.0
+    assert latest_daily["wind"] == 11.0
+    assert latest_daily["precip"] == 0.6
+
+    assert '"valid_time_utc": point.get("valid_time_utc")' in BUILDER_SOURCE
+    assert 'Aynı geçerlilik saatleri (TSİ)' in SOURCE
+
 def main() -> None:
+    test_valid_time_alignment()
     figure_bg = constant("GFS_REPORT_FIGURE_BG")
     axis_bg = constant("GFS_REPORT_AXIS_BG")
     panel_bg = constant("GFS_REPORT_PANEL_BG")
@@ -81,8 +189,7 @@ def main() -> None:
     assert "color=GFS_REPORT_MUTED" in pages
 
     print(
-        "[GFS REPORT THEME] Dark figure/axis backgrounds, readable labels, "
-        "four high-contrast cycle accents and Telegram/Pages parity passed."
+        "[GFS REPORT THEME] Dark chart contrast, four-cycle palette and shared valid-time alignment passed."
     )
 
 
