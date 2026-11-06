@@ -483,6 +483,7 @@ function renderRunLegend(source){
 function renderRuns(d,f72){
  const historyRuns=(Array.isArray(d?.runs)?d.runs:[])
   .filter(run=>run&&Array.isArray(run.forecast_6_hourly)&&run.forecast_source==="meteopt")
+  .sort((a,b)=>Date.parse(b.run_id_utc||"")-Date.parse(a.run_id_utc||""))
   .slice(0,4);
  const tableRun=f72&&Array.isArray(f72.forecast_6_hourly)&&f72.forecast_source==="meteopt"?f72:null;
  // The latest series is the exact same object used by renderF72() for the MeteoPT table.
