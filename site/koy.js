@@ -410,7 +410,7 @@ function renderRunLegend(source){
 }
 function renderRuns(d,f72){
  const historyRuns=(Array.isArray(d?.runs)?d.runs:[])
-  .filter(run=>run&&Array.isArray(run.forecast_6_hourly)&&(!run.forecast_source||run.forecast_source==="meteopt"))
+  .filter(run=>run&&Array.isArray(run.forecast_6_hourly)&&run.forecast_source==="meteopt")
   .slice(0,4);
  const tableRun=f72&&Array.isArray(f72.forecast_6_hourly)&&f72.forecast_source==="meteopt"?f72:null;
  // The latest series is the exact same object used by renderF72() for the MeteoPT table.
@@ -431,7 +431,7 @@ function renderRuns(d,f72){
   const holder=$(id);
   if(!holder)return;
   if(!runStamp){holder.innerHTML='<div class="chart-empty">PNG raporu bekleniyor…</div>';return;}
-  const src=`./koy-data/gfs/media/koy-gfs-${runStamp}-${metric}.png?v=${encodeURIComponent(runs[0].run_id_utc||"")}`;
+  const src=`./koy-data/gfs/media/koy-gfs-${runStamp}-${metric}.png?v=${encodeURIComponent(source[0].run_id_utc||"")}`;
   holder.innerHTML='<a class="notification-image-link" href="'+src+'" target="_blank" rel="noopener"><img class="notification-image" src="'+src+'" alt="'+esc(alt)+'"></a>';
  });
  renderRunLegend(source);
