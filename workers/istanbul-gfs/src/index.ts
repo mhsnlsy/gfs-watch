@@ -203,9 +203,19 @@ async function process(env:Env){
         continue;
       }
 
-      if(await env.GFS_KV.get("published:"+runKey(doc.run_id_utc))){
-        console.log("Already published",doc.run_id_utc);
+      const publishedKey="published:"+runKey(doc.run_id_utc);
+      const publishedMarker=await env.GFS_KV.get(publishedKey);
+      const latestExisting=await env.GFS_KV.get("latest");
+
+      // A published marker without a current latest payload can happen after
+      // a KV namespace migration/rebind. In that case rebuild the canonical
+      // payload instead of treating the run as complete.
+      if(publishedMarker && latestExisting){
+        console.log("Already published and latest payload exists",doc.run_id_utc);
         return;
+      }
+      if(publishedMarker && !latestExisting){
+        console.log("Published marker exists but latest payload is missing; rebuilding",doc.run_id_utc);
       }
 
       await storeRun(env,doc);
