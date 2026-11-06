@@ -159,7 +159,7 @@ async function loadInteractiveGfsCharts(root){
     host.dataset.loaded="true";
     const source=host.dataset.svgSrc;
     try{
-      const response=await fetch(source,{cache:"force-cache",credentials:"same-origin"});
+      const response=await fetch(source,{cache:"no-store",credentials:"same-origin"});
       if(!response.ok)throw new Error("SVG HTTP "+response.status);
       let sourceText=await response.text();
       sourceText=sourceText.replace(/^\s*<\?xml[^>]*\?>\s*/i,"").replace(/<!DOCTYPE[\s\S]*?>/i,"");
