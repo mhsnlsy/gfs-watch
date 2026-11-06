@@ -455,9 +455,44 @@ function renderRuns(d,f72){
  if(p.length){
    const daily=new Map();
    p.forEach(x=>{const k=dayKey(x.valid_time_utc);if(!daily.has(k))daily.set(k,[]);const v=num(x.temperature_2m_c);if(v!=null)daily.get(k).push(v)});
-   $("brief-temperature-trend").textContent=[...daily.entries()].slice(0,5).map(([k,v])=>dayLabel(k)+": "+fmt(Math.min(...v))+"–"+fmt(Math.max(...v))+"°C").join(" · ");
+   // Sentence-based briefing for the Koy panel.
+   const fiveDays=[...daily.entries()].slice(0,5);
+   const allFiveTemps=fiveDays.flatMap(([,values])=>values);
+   const tempMin=allFiveTemps.length?Math.min(...allFiveTemps):null;
+   const tempMax=allFiveTemps.length?Math.max(...allFiveTemps):null;
+   const tempSpread=tempMin!=null&&tempMax!=null?tempMax-tempMin:null;
+   let tempSentence="Önümüzdeki beş gün için sıcaklık tahmini bekleniyor.";
+   if(tempMin!=null&&tempMax!=null){
+    const stability=tempSpread<=2?"belirgin değişim göstermeden stabil seyrediyor":tempSpread<=4?"hafif dalgalanarak seyrediyor":"belirgin değişimler gösteriyor";
+    const nowTemp=num(window.__koyCurrentTemp);
+    tempSentence="Önümüzdeki beş gün boyunca sıcaklık "+stability+", "+fmt(tempMin,1)+"–"+fmt(tempMax,1)+"°C aralığında.";
+    if(nowTemp!=null)tempSentence+=" Çanakçı şu an "+fmt(nowTemp,1)+"°C.";
+   }
+   $("brief-temperature-trend").textContent=tempSentence;
+
    const rainy=p.filter(x=>num(x.precipitation_6h_mm)>0.1);
-   $("brief-rain-lines").textContent=rainy.length?rainy.slice(0,6).map(x=>tsGfsValid(x.valid_time_utc)+" · "+fmt(num(x.precipitation_6h_mm))+" mm / 6 saat").join("  |  "):"Modelde anlamlı yağış görünmüyor.";
+   const rainGroups=[];
+   for(const point of rainy){
+    const day=dayKey(point.valid_time_utc);
+    const value=num(point.precipitation_6h_mm);
+    const existing=rainGroups.find(g=>g.day===day);
+    if(existing){
+     existing.last=point;
+     existing.total+=value||0;
+    }else{
+     rainGroups.push({day,first:point,last:point,total:value||0});
+    }
+   }
+   const rainSentences=rainGroups.slice(0,5).map(group=>{
+    const firstDate=new Date(group.first.valid_time_utc),lastDate=new Date(group.last.valid_time_utc);
+    const start=new Intl.DateTimeFormat("tr-TR",{timeZone:"Europe/Istanbul",hour:"2-digit",minute:"2-digit",hourCycle:"h23"}).format(firstDate);
+    const end=new Intl.DateTimeFormat("tr-TR",{timeZone:"Europe/Istanbul",hour:"2-digit",minute:"2-digit",hourCycle:"h23"}).format(lastDate);
+    const dayName=new Intl.DateTimeFormat("tr-TR",{timeZone:"Europe/Istanbul",weekday:"long"}).format(firstDate);
+    const part=firstDate.getUTCHours()<12?"öğleden önce":"öğleden sonra";
+    const windowText=start===end?start:start+"–"+end;
+    return dayName.charAt(0).toUpperCase()+dayName.slice(1)+" · "+windowText+" · "+part+" · "+fmt(group.total,1)+" mm";
+   });
+   $("brief-rain-lines").textContent=rainSentences.length?rainSentences.join(". ")+".":"Önümüzdeki dönemde anlamlı yağış görünmüyor.";
    const dailyItems=[...daily.entries()].slice(0,8).map(([k,v])=>({date_istanbul:k,temperature_min_c:Math.min(...v),temperature_max_c:Math.max(...v),precipitation_total_mm:p.filter(x=>dayKey(x.valid_time_utc)===k).reduce((a,x)=>a+(num(x.precipitation_6h_mm)||0),0),wind_speed_max_10m_kmh:Math.max(...p.filter(x=>dayKey(x.valid_time_utc)===k).map(x=>num(x.wind_speed_10m_kmh)||0))}));
    $("daily-grid").innerHTML=dailyItems.map(item=>'<article class="day"><div class="day-name">'+dayLabel(item.date_istanbul)+'</div><div class="day-icon">'+(item.precipitation_total_mm>=5?"🌧️":item.precipitation_total_mm>=1?"🌦️":"⛅")+'</div><div class="day-range">'+fmt(item.temperature_max_c,0)+'° <span>'+fmt(item.temperature_min_c,0)+'°</span></div><div class="day-rain">☂ '+fmt(item.precipitation_total_mm,1)+' mm</div><div class="day-wind">↗ '+fmt(item.wind_speed_max_10m_kmh,0)+' km/sa</div></article>').join("");
  }
@@ -486,6 +521,7 @@ async function refresh(){if(busy)return;busy=true;
   $("station-rain-trend").innerHTML="<div class=\"station-trend-empty\">MGM yağış arşivi bekleniyor…</div>";
  }
  if(results[4].status==="fulfilled"){
+  window.__koyCurrentTemp=num(results[4].value.temperature_2m_c);
   renderMgmObservation(results[4].value,stationHistory,f72);
   const o=results[4].value;
   $("mgm-status-date").textContent=ts(o.observed_at_utc);
