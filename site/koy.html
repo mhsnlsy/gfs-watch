@@ -1435,7 +1435,7 @@
   <script>
     // Köy page is intentionally Köy Ev-first. Set the visual state before
     // the deferred application JavaScript loads, preventing a stale MGM state.
-    document.documentElement.dataset.koyDefaultStation="home";
+    document.documentElement.dataset.koyDefaultStation="home";\n    window.__KOY_DEFAULT_STATION="home";
   </script>
   <header class="shell topbar">
     <a class="brand" href="./#balmumcu" aria-label="İstanbul anasayfası · Balmumcu istasyon gözlemi"><span class="brand-mark">☀</span><span>İstanbul'un Havası<small>Şehir için hava tahmini</small></span></a>
@@ -1597,7 +1597,7 @@
   <div id="pull-refresh-indicator" role="status" aria-live="polite"><span class="pull-refresh-icon">↓</span><span class="pull-refresh-label">Yenilemek için aşağı çek</span></div>
     <script src="./gfs-comparison-tooltip.js?v=20261106-mobile-svg-stack-1"></script>
     <script src="./gfs-cycle-theme.js?v=20261106-shared-cycle-theme-1" defer></script>
-    <script src="./koy.js?v=20261106-koy-ev-gfs-363m-7" defer></script>
+    <script src="./koy.js?v=20261106-koy-ev-default-8" defer></script>
 </body>
 </html>
 
