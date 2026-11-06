@@ -476,20 +476,34 @@ function renderRuns(d,f72){
   : historyRuns;
  const runs=historyRuns;
  $("report-meta").textContent=source.length?"Son döngü: "+ts(source[0].run_id_utc)+" · "+source.length+" çıktı hazır":"Son model döngüsü bekleniyor";
- const pngMetrics=[
-  ["chart-temp","temperature","2 m sıcaklık · son 4 GFS döngüsü"],
-  ["chart-t850","temperature_850","850 hPa sıcaklık · son 4 GFS döngüsü"],
-  ["chart-rain","precipitation","6 saatlik yağış · son 4 GFS döngüsü"],
-  ["chart-wind","wind_10m","10 m rüzgâr · son 4 GFS döngüsü"]
- ];
- const runStamp=source[0]?.run_id_utc?(()=>{const d=new Date(source[0].run_id_utc);return d.getUTCFullYear()+String(d.getUTCMonth()+1).padStart(2,"0")+String(d.getUTCDate()).padStart(2,"0")+"T"+String(d.getUTCHours()).padStart(2,"0")+"Z";})():null;
- pngMetrics.forEach(([id,metric,alt])=>{
-  const holder=$(id);
-  if(!holder)return;
-  if(!runStamp){holder.innerHTML='<div class="chart-empty">PNG raporu bekleniyor…</div>';return;}
-  const src=`./koy-data/gfs/media/koy-gfs-${runStamp}-${metric}.png?v=${encodeURIComponent(source[0].run_id_utc||"")}`;
-  holder.innerHTML='<a class="notification-image-link" href="'+src+'" target="_blank" rel="noopener"><img class="notification-image" src="'+src+'" alt="'+esc(alt)+'"></a>';
- });
+ const svgContainer=$("koy-gfs-comparison-container");
+ if(svgContainer){
+  const svgRuns=historyRuns.slice(0,4);
+  if(svgRuns.length<4){
+   svgContainer.dataset.svgSrc="";
+   svgContainer.innerHTML='<div class="gfs-chart-loading">Dört tam Köy GFS döngüsü karşılaştırma için bekleniyor ('+svgRuns.length+'/4).</div>';
+  }else{
+   const latestSvgRun=svgRuns[0];
+   const runDate=new Date(latestSvgRun.run_id_utc);
+   const runStamp=runDate.getUTCFullYear()+String(runDate.getUTCMonth()+1).padStart(2,"0")+String(runDate.getUTCDate()).padStart(2,"0")+"T"+String(runDate.getUTCHours()).padStart(2,"0")+"Z";
+   const version=encodeURIComponent(d?.updated_at_utc||latestSvgRun.published_at_utc||latestSvgRun.run_id_utc);
+   const svgUrl=`./koy-data/gfs/media/koy-gfs-${runStamp}-comparison.svg?v=${version}`;
+   if(svgContainer.dataset.svgSrc!==svgUrl){
+    svgContainer.dataset.svgSrc=svgUrl;
+    svgContainer.innerHTML="";
+    const chart=document.createElement("div");
+    chart.className="gfs-interactive-chart";
+    chart.dataset.svgSrc=svgUrl;
+    chart.dataset.chartLabel="Köy GFS · Giresun / Çanakçı dört panelli etkileşimli valid-time karşılaştırması";
+    const loading=document.createElement("div");
+    loading.className="gfs-chart-loading";
+    loading.textContent="Köy GFS etkileşimli SVG raporu yükleniyor…";
+    chart.appendChild(loading);
+    svgContainer.appendChild(chart);
+    if(typeof loadInteractiveGfsCharts==="function")loadInteractiveGfsCharts(svgContainer);
+   }
+  }
+ }
  renderRunLegend(source);
  $("next-72h-meta").textContent=source.length?source.length+" GFS döngüsü karşılaştırılıyor":"MeteoPT GFS verisi bekleniyor";
  // Both charts align all four MeteoPT runs by exact valid_time_utc; older cycles may use different F-hour numbers.
