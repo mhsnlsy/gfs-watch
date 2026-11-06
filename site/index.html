@@ -394,8 +394,8 @@
 .dashboard-left .history-chart-head h3{font-size:12px}
 .dashboard-left .history-chart-head p,.dashboard-left .history-chart-meta,.dashboard-left .history-source-note{font-size:8px}
 .next-72h-panel{min-width:0;padding:15px;background:linear-gradient(145deg,rgba(18,43,61,.94),rgba(12,31,46,.96));border:1px solid var(--line);border-radius:20px}
-    .gfs-cycle-compare-frame{display:block;width:100%;height:380px;border:0;background:transparent;overflow:hidden;overflow-x:hidden;overflow-y:hidden;overscroll-behavior:none}
-    @media(max-width:700px){.gfs-cycle-compare-frame{height:620px;overflow:hidden;overflow-x:hidden;overflow-y:hidden}}
+    .gfs-cycle-compare-frame{display:block;width:100%;height:680px;min-height:680px;border:0;background:transparent;overflow:hidden;overflow-x:hidden;overflow-y:hidden;overscroll-behavior:none;display:block}
+    @media(max-width:700px){.gfs-cycle-compare-frame{height:700px;min-height:700px;overflow:hidden;overflow-x:hidden;overflow-y:hidden}}
 
 .rain-window-left{margin-top:12px;align-self:stretch;width:100%;min-width:0}.rain-window-left .rain-window-main{font-size:15px}.rain-window-left .rain-window-detail{max-width:680px}
     .rain-window{margin-top:14px;padding:13px 14px;border:1px solid rgba(131,201,235,.22);border-radius:14px;background:linear-gradient(120deg,rgba(30,79,103,.24),rgba(4,19,29,.24))}
@@ -1141,7 +1141,7 @@
             var frame=document.getElementById("gfs-cycle-compare-frame");
             if(!frame||event.source!==frame.contentWindow||!event.data||event.data.type!=="gfs-cycle-widget-height")return;
             var height=Number(event.data.height);
-            if(Number.isFinite(height))frame.style.height=Math.max(320,Math.min(900,Math.ceil(height)))+"px";
+            if(Number.isFinite(height))frame.style.height=Math.max(680,Math.min(900,Math.ceil(height)))+"px";
           });
         </script>
         <iframe id="gfs-cycle-compare-frame" class="gfs-cycle-compare-frame" src="./gfs-cycle-compare.html?v=20261106-no-iframe-scroll-1" title="İstanbul · Son dört GFS döngüsünün 72 saatlik karşılaştırması" loading="eager" scrolling="no"></iframe>
