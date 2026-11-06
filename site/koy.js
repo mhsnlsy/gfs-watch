@@ -104,21 +104,26 @@ function svgLine(runs,metric,title,unit,maxHour=72,verification=null){
   lo=Math.min(lo,Math.min(...values)-sigma);
   hi=Math.max(hi,Math.max(...values)+sigma);
  }
- const W=760,H=190,L=45,R=12,T=20,B=28,PW=W-L-R,PH=H-T-B;
+ const chartHost=$(metric==="temperature_2m_c"?"next72-temperature":"next72-precipitation");
+ const W=1000;
+ const boxWidth=Math.max(320,chartHost?.clientWidth||1000);
+ const boxHeight=Math.max(180,chartHost?.clientHeight||280);
+ const H=W*boxHeight/boxWidth;
+ const L=78,R=16,T=34,B=60,PW=W-L-R,PH=H-T-B;
  const x=h=>L+(timeline.length===1?PW/2:(h-timeline[0].elapsed)/(timeline[timeline.length-1].elapsed-timeline[0].elapsed||1))*PW;
  const y=v=>T+(hi-v)*PH/(hi-lo);
  const axisLabel=stamp=>new Intl.DateTimeFormat("tr-TR",{
   timeZone:"Europe/Istanbul",day:"2-digit",month:"2-digit",hour:"2-digit",hourCycle:"h23"
  }).format(new Date(stamp));
- let s='<svg class="koy-svg" viewBox="0 0 '+W+' '+H+'" role="img" aria-label="'+esc(title)+' · aynı geçerlilik saatleri TSİ">';
+ let s='<svg class="koy-svg" viewBox="0 0 '+W+' '+H+'" preserveAspectRatio="xMidYMid meet" text-rendering="optimizeLegibility" role="img" aria-label="'+esc(title)+'">';
  for(let j=0;j<=3;j++){
   const v=lo+(hi-lo)*j/3,yy=y(v);
-  s+='<line x1="'+L+'" y1="'+yy+'" x2="'+(W-R)+'" y2="'+yy+'" stroke="#294253" stroke-dasharray="3 5"/><text x="'+(L-7)+'" y="'+(yy+3)+'" text-anchor="end" fill="#91aab8" font-size="10">'+fmt(v,0)+'</text>';
+  s+='<line x1="'+L+'" y1="'+yy+'" x2="'+(W-R)+'" y2="'+yy+'" stroke="#355064" stroke-dasharray="3 5"/><text x="'+(L-8)+'" y="'+(yy+5)+'" text-anchor="end" fill="#d0dde4" font-size="20" font-weight="600" font-family="system-ui, -apple-system, BlinkMacSystemFont, Segoe UI, sans-serif">'+fmt(v,1)+'</text>';
  }
  timeline.forEach((point,index)=>{
   if(point.elapsed!==0&&point.elapsed%12!==0&&index!==timeline.length-1)return;
   const anchor=index===0?"start":index===timeline.length-1?"end":"middle";
-  s+='<text x="'+x(point.elapsed)+'" y="'+(H-7)+'" text-anchor="'+anchor+'" fill="#c5d3dc" font-size="10">'+esc(axisLabel(point.stamp))+'</text>';
+  s+='<text x="'+x(point.elapsed)+'" y="'+(H-8)+'" text-anchor="'+anchor+'" fill="#c5d3dc" font-size="18" font-weight="500" font-family="system-ui, -apple-system, BlinkMacSystemFont, Segoe UI, sans-serif">'+esc(axisLabel(point.stamp))+'</text>';
  });
  if(sigma&&metric.includes("temperature")){
   const upper=[],lower=[];
@@ -135,7 +140,7 @@ function svgLine(runs,metric,title,unit,maxHour=72,verification=null){
    const band=upper.concat(lower.reverse()).map(p=>p.join(",")).join(" ");
    s+='<polygon points="'+band+'" fill="#75b9c8" opacity=".16"/>';
   }
-  s+='<text x="'+(W-R-4)+'" y="'+(T+12)+'" text-anchor="end" fill="#91aab8" font-size="10">Gerçekleşen hata σ ±'+fmt(sigma,1)+'°C · '+verification.count+' doğrulama</text>';
+  s+='<text x="'+(W-R-4)+'" y="'+(T+12)+'" text-anchor="end" fill="#a8bac5" font-size="11">Gerçekleşen hata σ ±'+fmt(sigma,1)+'°C · '+verification.count+' doğrulama</text>';
  }
  usable.forEach(item=>{
   const i=item.runIndex,color=COLORS[i%COLORS.length],latest=i===0;
@@ -150,7 +155,7 @@ function svgLine(runs,metric,title,unit,maxHour=72,verification=null){
    s+='<path d="'+path+'" fill="none" stroke="'+color+'" stroke-width="'+(latest?GFS_CYCLE_THEME.latestStrokeWidth:GFS_CYCLE_THEME.previousStrokeWidth)+'" '+(latest?'':'stroke-dasharray="'+GFS_CYCLE_THEME.previousStrokeDasharray+'"')+' stroke-linecap="round" stroke-linejoin="round"/>';
   });
   if(latest)item.points.forEach(p=>{
-   s+='<circle cx="'+x(p.h)+'" cy="'+y(p.v)+'" r="2.5" fill="'+color+'"><title>F'+p.lead+' · '+esc(tsGfsValid(p.validTime))+' · '+fmt(p.v)+' '+unit+'</title></circle>';
+   s+='<circle cx="'+x(p.h)+'" cy="'+y(p.v)+'" r="3.5" fill="'+color+'"><title>F'+p.lead+' · '+esc(tsGfsValid(p.validTime))+' · '+fmt(p.v)+' '+unit+'</title></circle>';
   });
   item.points.forEach(p=>{
    s+='<circle class="gfs-point-target" cx="'+x(p.h)+'" cy="'+y(p.v)+'" r="0" data-run="'+esc(gfsRunLabel(item.run))+'" data-current="'+(latest?"true":"false")+'" data-validkey="'+p.stamp+'" data-valid="'+esc(tsGfsValid(p.validTime))+'" data-step="'+esc("F"+p.lead+" saat")+'" data-value="'+esc(fmt(p.v,1))+'" data-unit="'+esc(unit)+'" data-color="'+color+'" aria-hidden="true"/>';
@@ -512,8 +517,8 @@ function renderRuns(d,f72){
  // Both charts align all four MeteoPT runs by exact valid_time_utc; older cycles may use different F-hour numbers.
  const chartSource=source;
  const realized=realizedErrorStats(runs,stationHistory,"temperature_2m_c");
- $("next72-temperature").innerHTML=svgLine(chartSource,"temperature_2m_c","2 m sıcaklık","°C",72,realized);
- $("next72-precipitation").innerHTML=svgLine(chartSource,"precipitation_6h_mm","6 saatlik yağış","mm / 6 saat",72);
+ $("next72-temperature").innerHTML=svgLine(chartSource,"temperature_2m_c","2 m sıcaklık · aynı geçerlilik saatleri TSİ","°C",72,realized);
+ $("next72-precipitation").innerHTML=svgLine(chartSource,"precipitation_6h_mm","3 saatlik yağış · aynı geçerlilik saatleri TSİ","mm / 3 saat",72);
  bindGfsChartTooltip("next72-temperature");
  bindGfsChartTooltip("next72-precipitation");
  const first=source[0],p=first?pointsOf(first,180):[];
