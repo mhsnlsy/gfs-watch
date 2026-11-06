@@ -1131,6 +1131,16 @@
       .gfs-chart-tooltip-time{font-size:11px}
       .gfs-chart-tooltip-row{gap:7px}
     }
+    @media(max-width:600px){
+      .gfs-chart-tooltip{
+        min-width:0;
+        width:150px;
+        max-width:calc(100vw - 28px);
+        padding:7px 8px;
+      }
+      .gfs-chart-tooltip-time{font-size:9px}
+      .gfs-chart-tooltip-row{gap:5px;padding:2px 0}
+    }
   </style>
 </head>
 <body>
