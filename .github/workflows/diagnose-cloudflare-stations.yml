@@ -108,3 +108,13 @@ jobs:
               "| attempt:", station.last_attempt_utc, "| error:", station.last_error || "none");
           }
           NODE
+
+          for key in enka eyupsultan sisli; do
+            echo "===== D1 72-hour history: $key ====="
+            curl --silent --show-error --fail --max-time 15 "https://gfs-watch-stations.muhsin-ulusoy.workers.dev/api/history/$key?hours=72&diagnostic=$(date +%s)" |
+              node -e 'let s="";process.stdin.on("data",d=>s+=d).on("end",()=>{const d=JSON.parse(s);console.log(JSON.stringify({ok:d.ok,station_key:d.station_key,count:d.count,first:d.samples?.[0]?.observed_at_utc,last:d.samples?.at(-1)?.observed_at_utc,first_temperature:d.samples?.[0]?.temperature_c,last_temperature:d.samples?.at(-1)?.temperature_c}));});'
+          done
+
+          echo "===== Current station values ====="
+          curl --silent --show-error --fail --max-time 15 "https://gfs-watch-stations.muhsin-ulusoy.workers.dev/api/stations?diagnostic=$(date +%s)" |
+            node -e 'let s="";process.stdin.on("data",d=>s+=d).on("end",()=>{const d=JSON.parse(s);for(const x of d.stations||[])console.log(JSON.stringify({station_key:x.station_key,status:x.status,observed_at_utc:x.observed_at_utc,temperature_c:x.temperature_c,humidity_percent:x.humidity_percent,pressure_hpa:x.pressure_hpa,wind_speed_kmh:x.wind_speed_kmh,wind_direction_cardinal:x.wind_direction_cardinal,rain_1h_mm:x.rain_1h_mm,last_error:x.last_error}));});'
