@@ -7,7 +7,7 @@
   "elevation_m": 363.0,
   "elevation_delta_m": 217.0,
   "adjustment_method": "adaptive environmental lapse rate",
-  "updated_at_utc": "2026-11-06T21:18:02.883859+00:00",
+  "updated_at_utc": "2026-11-06T21:20:19.669363+00:00",
   "sampling_interval_minutes": 5,
   "feels_like_24h_min_c": 8.1,
   "feels_like_24h_max_c": 11.9,
@@ -9931,6 +9931,22 @@
       "lapse_rate_k_per_km": 6.05,
       "observed_at_utc": "2026-11-06T21:14:00.000Z",
       "logged_at_utc": "2026-11-06T21:18:02.883859+00:00"
+    },
+    {
+      "temperature_2m_c": 9.2,
+      "feels_like_c": 9.2,
+      "pressure_hpa": 974.5,
+      "humidity_percent": 100,
+      "wind_speed_10m_kmh": 0,
+      "wind_direction_deg": null,
+      "precipitation_10m_mm": 0.2,
+      "precipitation_1h_mm": 0.4,
+      "precipitation_6h_mm": 0.4,
+      "precipitation_12h_mm": 0.4,
+      "precipitation_24h_mm": 1,
+      "lapse_rate_k_per_km": 6.05,
+      "observed_at_utc": "2026-11-06T21:19:00.000Z",
+      "logged_at_utc": "2026-11-06T21:20:19.669363+00:00"
     }
   ]
 }
