@@ -192,8 +192,10 @@ function renderMgmObservation(o,history,f72){
  if(!o)return;
  const t=num(o.temperature_2m_c),rh=num(o.humidity_percent),wind=num(o.wind_speed_10m_kmh),rain=num(o.precipitation_1h_mm),press=num(o.pressure_hpa);
  $("temperature").textContent=fmt(t)+"°";
- $("station-observation-meta").textContent="Son ölçüm · "+ts(o.observed_at_utc)+" · MGM Çanakçı";
- $("freshness").textContent="CANLI ÖLÇÜM";
+ const cachedObservation=o.fetch_status==="stale_cached";
+ $("station-observation-meta").textContent="Son ölçüm · "+ts(o.observed_at_utc)+" · MGM Çanakçı"+(cachedObservation?" · son geçerli kayıt korunuyor":"");
+ $("freshness").textContent=cachedObservation?"MGM YANITI BEKLENİYOR":"CANLI ÖLÇÜM";
+ $("freshness").classList.toggle("stale",cachedObservation);
  $("feels-like").innerHTML=fmt(feelsLike(t,rh,wind))+'<span class="unit">°</span>';
  $("wind").innerHTML=fmt(wind,1)+'<span class="unit">km/sa</span>';
  $("wind-direction").textContent=windDir(o.wind_direction_deg);
