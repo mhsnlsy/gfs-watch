@@ -1,44 +1,65 @@
-"""Regression tests for the single-publisher live data architecture."""
+"""Regression tests for the split Cloudflare-stations / GitHub-GFS architecture."""
 from __future__ import annotations
 
+import json
 from pathlib import Path
 
 ROOT = Path(__file__).resolve().parents[1]
 
 
 def main() -> None:
-    workflows = ROOT / ".github/workflows"
+    workflows = ROOT / ".github" / "workflows"
     publisher = (workflows / "publish-live-site.yml").read_text(encoding="utf-8")
+    gfs_workflow_path = workflows / "istanbul-gfs-github.yml"
+    gfs_workflow = gfs_workflow_path.read_text(encoding="utf-8")
 
-    assert 'cron: "*/5 * * * *"' in publisher
+    # Pages remains a single publisher and consumes the isolated GFS data branch.
     assert "group: live-pages-publisher" in publisher
     assert "cancel-in-progress: false" in publisher
     assert "actions/deploy-pages@v4" in publisher
-    assert "gfs-watch-state" in publisher
+    assert "istanbul-gfs-data" in publisher
     assert "koy-gfs-data" in publisher
     assert "koy-mgm-data" in publisher
 
-    collector_workflows = (
-        "meteopt-gfs-live.yml",
-        "main-station-refresh.yml",
-        "eyupsultan-mgm-refresh.yml",
-        "sisli-mgm-refresh.yml",
-    )
-    for name in collector_workflows:
-        source = (workflows / name).read_text(encoding="utf-8")
-        assert "pages-live.yml" not in source, f"{name} still deploys Pages directly."
-        assert "deploy-pages:" not in source, f"{name} still has a direct Pages deploy job."
-        assert "deploy-live-site:" not in source, f"{name} still has a direct Pages deploy job."
+    # Istanbul GFS is four scheduled GitHub Actions publications per day.
+    assert 'cron: "20 4,10,16,22 * * *"' in gfs_workflow
+    assert "steps.fetch.outputs.publish == 'true'" in gfs_workflow
+    assert "F180" in gfs_workflow
+    assert "scripts/fetch_istanbul_gfs_meteopt.py" in gfs_workflow
+    assert "scripts/build_istanbul_gfs_publication.py" in gfs_workflow
+    assert "scripts/send_canonical_istanbul_gfs_telegram.py" in gfs_workflow
+    assert "gh workflow run publish-live-site.yml" in gfs_workflow
+    assert "TELEGRAM_TOKEN" in gfs_workflow and "CHAT_ID" in gfs_workflow
 
-    source = (workflows / "ecmwf-eps.yml").read_text(encoding="utf-8")
-    assert "gh workflow run pages.yml" not in source, "ecmwf-eps.yml still dispatches Pages directly."
-    assert not (workflows / "render-pages-charts-from-saved-data.yml").exists()
+    collector = (ROOT / "scripts" / "fetch_istanbul_gfs_meteopt.py").read_text(encoding="utf-8")
+    builder = (ROOT / "scripts" / "build_istanbul_gfs_publication.py").read_text(encoding="utf-8")
+    sender = (ROOT / "scripts" / "send_canonical_istanbul_gfs_telegram.py").read_text(encoding="utf-8")
+    assert "180 not in steps" in collector
+    assert 'series["wind10mdir"]' in collector or 'values_for(document, key)' in collector
+    assert "latest = dict(current_doc)" in builder
+    assert "comparison_runs = list(reversed(docs))" in builder
+    assert "telegram-sent" in sender
+    assert "send_media_group" in sender
 
-    assert not (workflows / "pages-live.yml").exists()
+    # Cloudflare is limited to station collection and the optional push API.
+    station_deploy = (workflows / "deploy-stations-worker.yml").read_text(encoding="utf-8")
+    assert "station-worker/**" in station_deploy
+    push_config = json.loads((ROOT / "push-worker" / "wrangler.jsonc").read_text(encoding="utf-8"))
+    assert push_config.get("triggers", {}).get("crons") == []
+    assert not (workflows / "deploy-istanbul-gfs-cloudflare.yml").exists()
+    assert not (ROOT / "workers" / "istanbul-gfs").exists()
+
+    # The frontend now reads GFS JSON and notifications from static Pages files.
+    api_config = (ROOT / "site" / "gfs-api-config.js").read_text(encoding="utf-8")
+    index = (ROOT / "site" / "index.html").read_text(encoding="utf-8")
+    table = (ROOT / "site" / "meteopt-gfs-table.js").read_text(encoding="utf-8")
+    assert 'ISTANBUL_GFS_API_BASE = "";' in api_config
+    assert 'const DATA_URL="./data/istanbul-gfs-latest.json";' in index
+    assert 'const DATA_URL = "./data/istanbul-gfs-latest.json";' in table
 
     print(
-        "[LIVE PUBLISH ARCHITECTURE SMOKE] "
-        "Collectors are decoupled from Pages and one central five-minute publisher owns deployment."
+        "[GFS/STATION ARCHITECTURE SMOKE] "
+        "Cloudflare owns stations; GitHub Actions owns four-times-daily GFS, PNGs, Telegram and Pages."
     )
 
 
