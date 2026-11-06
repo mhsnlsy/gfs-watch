@@ -1295,7 +1295,28 @@
       .next-72h-legend-line{width:26px!important}
     }
   </style>
-</head>
+<style id="gfs-cycle-compare-koy-shell">
+.gfs-cycle-compare-frame{
+  display:block!important;
+  width:100%!important;
+  height:365px!important;
+  min-height:365px!important;
+  max-height:365px!important;
+  border:0!important;
+  background:transparent!important;
+  overflow:hidden!important;
+  overflow-x:hidden!important;
+  overflow-y:hidden!important;
+  overscroll-behavior:none!important;
+}
+@media(max-width:700px){
+  .gfs-cycle-compare-frame{
+    height:365px!important;
+    min-height:365px!important;
+    max-height:365px!important;
+  }
+}
+</style></head>
 <body>
   <header class="shell topbar">
     <a class="brand" href="./#balmumcu" aria-label="İstanbul anasayfası · Balmumcu istasyon gözlemi"><span class="brand-mark">☀</span><span>İstanbul'un Havası<small>Şehir için hava tahmini</small></span></a>
@@ -1350,16 +1371,13 @@
 
       </div>
       <section class="next-72h-panel" id="next-72h-panel" aria-label="Önümüzdeki 72 saatlik hava tahmini">
-        <div class="next-72h-head">
- <div><div class="section-kicker">GFS · GİRESUN ÇANAKÇI</div><h2>Önümüzdeki 72 saat</h2><p>Son dört GFS döngüsünün aynı tahmin saatlerindeki aralığı ve güncel Çanakçı tahmini.</p></div>
- <span class="next-72h-badge" id="next-72h-meta">Model verisi bekleniyor</span>
+        <iframe id="gfs-cycle-compare-frame" class="gfs-cycle-compare-frame" src="./gfs-cycle-compare-koy.html?v=20261106-exact-template-1" title="Çanakçı · Son dört GFS döngüsünün 72 saatlik karşılaştırması" loading="eager" scrolling="no"></iframe>
+<div hidden aria-hidden="true">
+  <span id="next-72h-meta">Model verisi bekleniyor</span>
+  <div id="next72-temperature"></div>
+  <div id="next72-precipitation"></div>
+  <div id="next-72h-legend"></div>
 </div>
-<div class="next-72h-grid">
- <article class="next-72h-card"><div class="next-72h-card-head"><h3>Sıcaklık</h3><span>°C</span></div><div class="next-72h-chart" id="next72-temperature"><div class="chart-empty">Tahmin bekleniyor…</div></div></article>
- <article class="next-72h-card"><div class="next-72h-card-head"><h3>Yağış</h3><span>mm / 6 saat</span></div><div class="next-72h-chart" id="next72-precipitation"><div class="chart-empty">Tahmin bekleniyor…</div></div></article>
-</div>
-<div class="next-72h-legend" id="next-72h-legend" role="list" aria-label="Çizgi renkleri ve GFS döngüleri"><span class="next-72h-legend-loading">GFS döngüleri yükleniyor…</span></div>
-
 <div class="briefing" id="briefing" aria-live="polite">
         <div class="briefing-row" id="brief-rain">
           <div class="briefing-k">Yağış saatleri</div>
