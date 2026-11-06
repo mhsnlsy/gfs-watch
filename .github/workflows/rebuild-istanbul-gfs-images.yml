@@ -16,7 +16,7 @@ permissions:
   actions: write
 
 concurrency:
-  group: istanbul-gfs-canonical-publisher
+  group: istanbul-gfs-png-rebuild
   cancel-in-progress: false
 
 jobs:
