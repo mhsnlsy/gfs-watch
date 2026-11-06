@@ -1491,13 +1491,10 @@ document.addEventListener("pointerdown",event=>{if(activeTooltip&&!activeTooltip
 async function load(){
  try{
   const cache=Date.now();
-  const latestResponse=await fetch("./koy-data/gfs/latest.json?v="+cache,{cache:"no-store"});
-  if(!latestResponse.ok)throw new Error("Çanakçı GFS verisi HTTP "+latestResponse.status);
-  const document=await latestResponse.json();
-  const runs=Array.isArray(document.comparison_runs)?document.comparison_runs.slice():[];
-  if(document.run_id_utc&&Array.isArray(document.forecast_6_hourly)&&!runs.some(run=>run.run_id_utc===document.run_id_utc)){
-   runs.push({run_id_utc:document.run_id_utc,forecast_6_hourly:document.forecast_6_hourly});
-  }
+  const comparisonResponse=await fetch("./koy-data/gfs/comparison.json?v="+cache,{cache:"no-store"});
+  if(!comparisonResponse.ok)throw new Error("Çanakçı GFS karşılaştırma verisi HTTP "+comparisonResponse.status);
+  const comparison=await comparisonResponse.json();
+  const runs=Array.isArray(comparison.runs)?comparison.runs.slice():[];
   runs.sort((a,b)=>Date.parse(b.run_id_utc||"")-Date.parse(a.run_id_utc||""));
   const source=runs.slice(0,4);
   $("next-72h-meta").textContent=source.length?source.length+" GFS döngüsü karşılaştırılıyor":"Model verisi bekleniyor";
