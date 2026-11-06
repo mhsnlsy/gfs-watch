@@ -260,12 +260,27 @@ jobs:
                   if t>=cutoff: kept.append(s)
               except Exception: pass
           kept.sort(key=lambda x:x.get("logged_at_utc",""))
+          for s in kept:
+              if s.get("feels_like_c") is None:
+                  s["feels_like_c"]=feels_like(s.get("temperature_2m_c"), s.get("humidity_percent"), s.get("wind_speed_10m_kmh"))
           doc["samples"]=kept
           doc["updated_at_utc"]=obs.get("fetched_at_utc")
-          feels=[float(s["feels_like_c"]) for s in kept if s.get("feels_like_c") is not None]
-          if feels:
-              doc["feels_like_24h_min_c"]=round(min(feels),1)
-              doc["feels_like_24h_max_c"]=round(max(feels),1)
+          cutoff_24h=datetime.now(timezone.utc)-timedelta(hours=24)
+          recent_feels=[]
+          for s in kept:
+              stamp=s.get("observed_at_utc") or s.get("logged_at_utc")
+              try:
+                  when=datetime.fromisoformat(str(stamp).replace("Z","+00:00"))
+                  if when >= cutoff_24h and s.get("feels_like_c") is not None:
+                      recent_feels.append(float(s["feels_like_c"]))
+              except Exception:
+                  continue
+          if recent_feels:
+              doc["feels_like_24h_min_c"]=round(min(recent_feels),1)
+              doc["feels_like_24h_max_c"]=round(max(recent_feels),1)
+          else:
+              doc["feels_like_24h_min_c"]=None
+              doc["feels_like_24h_max_c"]=None
           pathlib.Path("output/history.json").write_text(json.dumps(doc,ensure_ascii=False),encoding="utf-8")
           print(f"MGM Çanakçı history: {len(kept)} samples")
           PY
