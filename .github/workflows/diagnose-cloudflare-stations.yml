@@ -1,0 +1,29 @@
+name: Diagnose Cloudflare Station API
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - ".github/workflows/diagnose-cloudflare-stations.yml"
+
+permissions:
+  contents: read
+
+jobs:
+  diagnostic:
+    runs-on: ubuntu-latest
+    timeout-minutes: 3
+    steps:
+      - name: Read Cloudflare station API health
+        run: |
+          set -euo pipefail
+          curl --silent --show-error --fail --max-time 15 "https://gfs-watch-stations.muhsin-ulusoy.workers.dev/api/health?diagnostic=$(date +%s)" | tee "$RUNNER_TEMP/health.json"
+          node - "$RUNNER_TEMP/health.json" <<'NODE'
+          const fs = require("fs");
+          const doc = JSON.parse(fs.readFileSync(process.argv[2], "utf8"));
+          console.log("Worker:", doc.service, "| storage:", doc.storage, "| cron:", doc.cron);
+          for (const station of doc.stations || []) {
+            console.log(station.key, "|", station.status, "| success:", station.last_success_utc,
+              "| attempt:", station.last_attempt_utc, "| error:", station.last_error || "none");
+          }
+          NODE
