@@ -36,7 +36,6 @@ def fetch_cycle(hour: int) -> tuple[dict, str]:
         "lon": str(LON),
         "run": f"{hour:02d}",
         "lang": "en",
-        "_cache_bust": str(int(datetime.now(UTC).timestamp())),
     }
     url = API + "?" + urlencode(params)
     request = Request(
