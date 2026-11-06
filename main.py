@@ -3377,7 +3377,7 @@ def create_valid_time_comparison_assets(current_run_id, payload, previous_runs):
             ("wind", "10 m rüzgâr hızı", "km/sa"),
         )
 
-        fig, axes = plt.subplots(2, 2, figsize=(16, 10.8))
+        fig, axes = plt.subplots(2, 2, figsize=(16, 11.6333333333))
         fig.patch.set_facecolor(GFS_REPORT_FIGURE_BG)
         fig.text(
             0.055, 0.965, "GFS · İSTANBUL",
@@ -3437,7 +3437,7 @@ def create_valid_time_comparison_assets(current_run_id, payload, previous_runs):
         )
 
         fig.subplots_adjust(
-            left=0.075, right=0.985, bottom=0.085, top=0.755,
+            left=0.075, right=0.985, bottom=0.085, top=0.707,
             wspace=0.18, hspace=0.36,
         )
 
