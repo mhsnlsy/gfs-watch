@@ -394,7 +394,7 @@
 .dashboard-left .history-chart-head h3{font-size:12px}
 .dashboard-left .history-chart-head p,.dashboard-left .history-chart-meta,.dashboard-left .history-source-note{font-size:8px}
 .next-72h-panel{min-width:0;padding:15px;background:linear-gradient(145deg,rgba(18,43,61,.94),rgba(12,31,46,.96));border:1px solid var(--line);border-radius:20px}
-    .gfs-cycle-compare-frame{display:block;width:100%;height:500px;border:0;background:transparent;overflow:hidden;overflow-x:hidden;overflow-y:hidden;overscroll-behavior:none}
+    .gfs-cycle-compare-frame{display:block;width:100%;height:420px;border:0;background:transparent;overflow:hidden;overflow-x:hidden;overflow-y:hidden;overscroll-behavior:none}
     @media(max-width:700px){.gfs-cycle-compare-frame{height:500px;overflow:hidden;overflow-x:hidden;overflow-y:hidden}}
 
 .rain-window-left{margin-top:12px;align-self:stretch;width:100%;min-width:0}.rain-window-left .rain-window-main{font-size:15px}.rain-window-left .rain-window-detail{max-width:680px}
@@ -1135,16 +1135,7 @@
 
       </div>
       <section class="next-72h-panel" id="next-72h-panel" aria-label="Önümüzdeki 72 saatlik hava tahmini">
-        <script>
-          window.addEventListener("message",function(event){
-            if(event.origin!==window.location.origin)return;
-            var frame=document.getElementById("gfs-cycle-compare-frame");
-            if(!frame||event.source!==frame.contentWindow||!event.data||event.data.type!=="gfs-cycle-widget-height")return;
-            var height=Number(event.data.height);
-            if(Number.isFinite(height))frame.style.height=Math.max(420,Math.min(700,Math.ceil(height)))+"px";
-          });
-        </script>
-        <iframe id="gfs-cycle-compare-frame" class="gfs-cycle-compare-frame" src="./gfs-cycle-compare.html?v=20261106-fit-height-1" title="İstanbul · Son dört GFS döngüsünün 72 saatlik karşılaştırması" loading="eager" scrolling="no"></iframe>
+        <iframe id="gfs-cycle-compare-frame" class="gfs-cycle-compare-frame" src="./gfs-cycle-compare.html?v=20261106-compact-iframe-1" title="İstanbul · Son dört GFS döngüsünün 72 saatlik karşılaştırması" loading="eager" scrolling="no"></iframe>
         <div hidden aria-hidden="true">
           <span id="next-72h-meta">Model verisi bekleniyor</span>
           <div id="next72-temperature"></div>
