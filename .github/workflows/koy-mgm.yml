@@ -17,108 +17,201 @@ concurrency:
 jobs:
   fetch:
     runs-on: ubuntu-latest
-    timeout-minutes: 5
+    timeout-minutes: 8
     steps:
       - name: Checkout repository
         uses: actions/checkout@v4
         with:
           fetch-depth: 0
-      - name: Fetch only the MGM Giresun-Çanakçı forecast page
+      - name: Restore last valid MGM snapshot and history
+        run: |
+          set -euo pipefail
+          mkdir -p output
+          git fetch origin refs/heads/koy-mgm-data:refs/remotes/origin/koy-mgm-data || true
+          if git show-ref --verify --quiet refs/remotes/origin/koy-mgm-data; then
+            for name in latest.json observation.json history.json rain-history-72h.json; do
+              source="origin/koy-mgm-data:mgm/$name"
+              if git cat-file -e "$source" 2>/dev/null; then
+                git show "$source" > "output/$name"
+              fi
+            done
+            echo "Previous valid MGM snapshot and archives restored."
+          else
+            echo "No previous MGM archive exists; first successful collection will initialize it."
+          fi
+      - name: Fetch optional MGM Giresun-Çanakçı forecast page
         run: |
           set -euo pipefail
           mkdir -p output
           python - <<'PY'
           import json
+          import time
           from datetime import datetime, timezone
+          from pathlib import Path
           from urllib.request import Request, urlopen
 
           url = "https://mgm.gov.tr/tahmin/il-ve-ilceler.aspx?il=Giresun&ilce=%C3%87anak%C3%A7%C4%B1"
-          request = Request(url, headers={
-              "User-Agent": "Mozilla/5.0 (compatible; Koy-MGM/1.0)",
+          headers = {
+              "User-Agent": "Mozilla/5.0 (compatible; Koy-MGM/1.1)",
               "Accept": "text/html,application/xhtml+xml",
               "Cache-Control": "no-cache",
-          })
-          with urlopen(request, timeout=40) as response:
-              html = response.read().decode("utf-8", errors="replace")
-              status = response.status
-          if status != 200 or "Çanakçı" not in html:
-              raise SystemExit(f"MGM Çanakçı page validation failed (HTTP {status})")
-          fetched = datetime.now(timezone.utc).isoformat()
-          payload = {
-              "schema": "koy-mgm.page-snapshot.v1",
-              "location": {"province": "Giresun", "district": "Çanakçı"},
-              "source": "Meteoroloji Genel Müdürlüğü",
-              "source_url": url,
-              "fetched_at_utc": fetched,
-              "http_status": status,
-              "html": html,
           }
-          with open("output/latest.json", "w", encoding="utf-8") as f:
-              json.dump(payload, f, ensure_ascii=False)
-          print(f"MGM Çanakçı page fetched: {len(html)} characters")
+          last_error = None
+          for attempt in range(1, 4):
+              try:
+                  request = Request(url, headers=headers)
+                  with urlopen(request, timeout=18) as response:
+                      html = response.read().decode("utf-8", errors="replace")
+                      status = response.status
+                  if status != 200 or "Çanakçı" not in html:
+                      raise RuntimeError(f"MGM Çanakçı page validation failed (HTTP {status})")
+                  payload = {
+                      "schema": "koy-mgm.page-snapshot.v1",
+                      "location": {"province": "Giresun", "district": "Çanakçı"},
+                      "source": "Meteoroloji Genel Müdürlüğü",
+                      "source_url": url,
+                      "fetched_at_utc": datetime.now(timezone.utc).isoformat(),
+                      "http_status": status,
+                      "html": html,
+                  }
+                  Path("output/latest.json").write_text(
+                      json.dumps(payload, ensure_ascii=False), encoding="utf-8"
+                  )
+                  print(f"MGM Çanakçı optional page fetched: {len(html)} characters")
+                  break
+              except Exception as exc:
+                  last_error = exc
+                  print(f"MGM forecast page attempt {attempt}/3 failed: {type(exc).__name__}: {exc}")
+                  if attempt < 3:
+                      time.sleep(2 ** attempt)
+          else:
+              # The HTML forecast page is not used for live station metrics.
+              # Keep the last known page snapshot and let the structured API run.
+              previous = Path("output/latest.json")
+              if previous.is_file() and previous.stat().st_size > 0:
+                  print(f"WARNING: keeping previous optional MGM page snapshot: {last_error}")
+              else:
+                  payload = {
+                      "schema": "koy-mgm.page-snapshot.v1",
+                      "location": {"province": "Giresun", "district": "Çanakçı"},
+                      "source": "Meteoroloji Genel Müdürlüğü",
+                      "source_url": url,
+                      "fetched_at_utc": None,
+                      "http_status": None,
+                      "html": None,
+                      "fetch_error": f"{type(last_error).__name__}: {last_error}",
+                  }
+                  previous.write_text(json.dumps(payload, ensure_ascii=False), encoding="utf-8")
+                  print("WARNING: optional MGM page unavailable; initialized an empty snapshot.")
           PY
       - name: Fetch structured MGM station observation
         run: |
           set -euo pipefail
           python - <<'PY'
-          import json, urllib.request
+          import json
+          import time
           from datetime import datetime, timezone
+          from pathlib import Path
+          from urllib.request import Request, urlopen
 
-          H={"User-Agent":"Mozilla/5.0 (compatible; Koy-MGM/1.0)","Accept":"application/json","Origin":"https://www.mgm.gov.tr"}
-          def get(url):
-              req=urllib.request.Request(url,headers=H)
-              with urllib.request.urlopen(req,timeout=30) as r:
-                  return json.load(r)
-
-          centers=get("https://servis.mgm.gov.tr/web/merkezler?il=Giresun&ilce=Canakci")
-          if not centers:
-              raise SystemExit("MGM Çanakçı merkezi bulunamadı")
-          center=next((x for x in centers if str(x.get("ilce","")).casefold()=="çanakçı"),centers[0])
-          merkez_id=center.get("merkezId")
-          station_no=center.get("sondurumIstNo") or center.get("gunlukTahminIstNo")
-          if not merkez_id:
-              raise SystemExit("MGM Çanakçı merkezId bulunamadı")
-
-          rows=get(f"https://servis.mgm.gov.tr/web/sondurumlar?merkezid={merkez_id}")
-          if not rows:
-              raise SystemExit("MGM Çanakçı son durum verisi boş")
-          obs=rows[0]
-          payload={
-            "schema":"koy-mgm.station-observation.v1",
-            "station_id":str(station_no or obs.get("istNo") or merkez_id),
-            "station_name":"Çanakçı",
-            "center_id":merkez_id,
-            "latitude":center.get("enlem"),
-            "longitude":center.get("boylam"),
-            "elevation_m":center.get("yukseklik"),
-            "observed_at_utc":obs.get("veriZamani"),
-            "fetched_at_utc":datetime.now(timezone.utc).isoformat(),
-            "temperature_2m_c":obs.get("sicaklik"),
-            "humidity_percent":obs.get("nem"),
-            "wind_speed_10m_kmh":obs.get("ruzgarHiz"),
-            "wind_direction_deg":obs.get("ruzgarYon"),
-            "pressure_hpa":obs.get("aktuelBasinc"),
-            "sea_level_pressure_hpa":obs.get("denizeIndirgenmisBasinc"),
-            "precipitation_10m_mm":obs.get("yagis10Dk"),
-            "precipitation_1h_mm":obs.get("yagis1Saat"),
-            "precipitation_6h_mm":obs.get("yagis6Saat"),
-            "precipitation_12h_mm":obs.get("yagis12Saat"),
-            "precipitation_24h_mm":obs.get("yagis24Saat"),
-            "condition_code":obs.get("hadiseKodu")
+          H = {
+              "User-Agent": "Mozilla/5.0 (compatible; Koy-MGM/1.1)",
+              "Accept": "application/json",
+              "Origin": "https://www.mgm.gov.tr",
+              "Referer": "https://www.mgm.gov.tr/",
+              "Cache-Control": "no-cache",
           }
-          with open("output/observation.json","w",encoding="utf-8") as f:
-              json.dump(payload,f,ensure_ascii=False)
-          print("MGM Çanakçı station:",json.dumps(payload,ensure_ascii=False))
-          PY
 
-      - name: Restore persistent MGM history from koy-mgm-data
-        run: |
-          set -euo pipefail
-          git fetch origin koy-mgm-data || true
-          if git show-ref --verify --quiet refs/remotes/origin/koy-mgm-data; then
-            git show origin/koy-mgm-data:mgm/history.json > output/history.json || true
-            git show origin/koy-mgm-data:mgm/rain-history-72h.json > output/rain-history-72h.json || true
-          fi
+          def get(url):
+              last_error = None
+              for attempt in range(1, 4):
+                  try:
+                      req = Request(url, headers=H)
+                      with urlopen(req, timeout=20) as response:
+                          status = response.status
+                          raw = response.read()
+                      if status != 200:
+                          raise RuntimeError(f"HTTP {status}")
+                      return json.loads(raw.decode("utf-8-sig"))
+                  except Exception as exc:
+                      last_error = exc
+                      print(
+                          f"MGM API attempt {attempt}/3 failed for {url}: "
+                          f"{type(exc).__name__}: {exc}"
+                      )
+                      if attempt < 3:
+                          time.sleep(2 ** attempt)
+              raise RuntimeError(
+                  f"MGM API request failed after 3 attempts: {url}: "
+                  f"{type(last_error).__name__}: {last_error}"
+              ) from last_error
+
+          try:
+              centers = get("https://servis.mgm.gov.tr/web/merkezler?il=Giresun&ilce=Canakci")
+              if not isinstance(centers, list) or not centers:
+                  raise RuntimeError("MGM Çanakçı merkezi bulunamadı")
+              center = next(
+                  (x for x in centers if str(x.get("ilce", "")).casefold() == "çanakçı"),
+                  centers[0],
+              )
+              merkez_id = center.get("merkezId")
+              station_no = center.get("sondurumIstNo") or center.get("gunlukTahminIstNo")
+              if not merkez_id:
+                  raise RuntimeError("MGM Çanakçı merkezId bulunamadı")
+
+              rows = get(f"https://servis.mgm.gov.tr/web/sondurumlar?merkezid={merkez_id}")
+              if not isinstance(rows, list) or not rows:
+                  raise RuntimeError("MGM Çanakçı son durum verisi boş")
+              obs = rows[0]
+              if not isinstance(obs, dict) or obs.get("sicaklik") is None or not obs.get("veriZamani"):
+                  raise RuntimeError("MGM Çanakçı ölçüm verisi eksik veya zaman damgası yok")
+
+              payload = {
+                  "schema": "koy-mgm.station-observation.v1",
+                  "station_id": str(station_no or obs.get("istNo") or merkez_id),
+                  "station_name": "Çanakçı",
+                  "center_id": merkez_id,
+                  "latitude": center.get("enlem"),
+                  "longitude": center.get("boylam"),
+                  "elevation_m": center.get("yukseklik"),
+                  "observed_at_utc": obs.get("veriZamani"),
+                  "fetched_at_utc": datetime.now(timezone.utc).isoformat(),
+                  "temperature_2m_c": obs.get("sicaklik"),
+                  "humidity_percent": obs.get("nem"),
+                  "wind_speed_10m_kmh": obs.get("ruzgarHiz"),
+                  "wind_direction_deg": obs.get("ruzgarYon"),
+                  "pressure_hpa": obs.get("aktuelBasinc"),
+                  "sea_level_pressure_hpa": obs.get("denizeIndirgenmisBasinc"),
+                  "precipitation_10m_mm": obs.get("yagis10Dk"),
+                  "precipitation_1h_mm": obs.get("yagis1Saat"),
+                  "precipitation_6h_mm": obs.get("yagis6Saat"),
+                  "precipitation_12h_mm": obs.get("yagis12Saat"),
+                  "precipitation_24h_mm": obs.get("yagis24Saat"),
+                  "condition_code": obs.get("hadiseKodu"),
+              }
+              Path("output/observation.json").write_text(
+                  json.dumps(payload, ensure_ascii=False), encoding="utf-8"
+              )
+              print("MGM Çanakçı fresh observation:", json.dumps(payload, ensure_ascii=False))
+          except Exception as exc:
+              # A brief MGM outage must not erase the last real measurement or stop
+              # publication of its archives. Never fabricate a new observed_at time.
+              cached_path = Path("output/observation.json")
+              if not cached_path.is_file() or cached_path.stat().st_size == 0:
+                  raise
+              cached = json.loads(cached_path.read_text(encoding="utf-8"))
+              cached["fetch_status"] = "stale_cached"
+              cached["fetch_error"] = f"{type(exc).__name__}: {exc}"
+              cached["last_fetch_attempt_at_utc"] = datetime.now(timezone.utc).isoformat()
+              cached_path.write_text(
+                  json.dumps(cached, ensure_ascii=False), encoding="utf-8"
+              )
+              print(
+                  "WARNING: MGM did not respond after retries; "
+                  "keeping the last valid observation without inventing a new measurement time. "
+                  + cached["fetch_error"]
+              )
+          PY
 
       - name: Build independent MGM station history
         run: |
