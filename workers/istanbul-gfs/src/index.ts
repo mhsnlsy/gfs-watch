@@ -182,6 +182,7 @@ async function publish(env:Env,doc:any,runs:any[]){
   await env.GFS_KV.put("published:"+runKey(doc.run_id_utc),JSON.stringify({run_id_utc:doc.run_id_utc,published_at_utc:new Date().toISOString()}));
 }
 async function process(env:Env){
+  await env.GFS_KV.put("gfs:last-check",JSON.stringify({started_at_utc:new Date().toISOString(),status:"running"}));
   // Always publish the newest run that has reached F180.
   // A newer cycle may exist but still be incomplete; it must not block
   // an older cycle (e.g. 00Z) that is already complete.
@@ -196,6 +197,7 @@ async function process(env:Env){
 
       const doc=normalize(x.doc);
       console.log("MeteoPT run check", doc.run_id_utc, "F180", doc.noaa_source_file.f180_available);
+      await env.GFS_KV.put("gfs:last-check",JSON.stringify({checked_at_utc:new Date().toISOString(),requested_cycle_utc:h,run_id_utc:doc.run_id_utc,f180_available:doc.noaa_source_file.f180_available,forecast_horizon_hours:doc.forecast_horizon_hours,status:"checked"}));
 
       if(!doc.noaa_source_file.f180_available){
         continue;
@@ -213,22 +215,31 @@ async function process(env:Env){
       return;
     }catch(e){
       console.error("MeteoPT GFS cycle failed",h,e);
+      await env.GFS_KV.put("gfs:last-check",JSON.stringify({checked_at_utc:new Date().toISOString(),requested_cycle_utc:h,status:"error",error:String(e)}));
     }
   }
 
+  await env.GFS_KV.put("gfs:last-check",JSON.stringify({checked_at_utc:new Date().toISOString(),status:"no_f180_ready"}));
   console.log("No MeteoPT GFS cycle with F180 ready");
 }
 
 export default {
   async scheduled(controller:ScheduledController,env:Env,ctx:ExecutionContext){
     console.log("GFS CRON START", controller.cron, new Date(controller.scheduledTime).toISOString());
-    ctx.waitUntil(process(env).catch(e=>console.error("GFS CRON FAILED", e)));
+    try {
+      await process(env);
+    } catch (e) {
+      console.error("GFS CRON FAILED", e);
+      await env.GFS_KV.put("gfs:last-check",JSON.stringify({checked_at_utc:new Date().toISOString(),status:"fatal_error",error:String(e)}));
+      throw e;
+    }
   },
   async fetch(request:Request,env:Env):Promise<Response>{
     const origin=env.ALLOWED_ORIGIN||"*";const u=new URL(request.url);
     if(request.method==="OPTIONS")return new Response(null,{headers:{"access-control-allow-origin":origin,"access-control-allow-methods":"GET,OPTIONS","access-control-allow-headers":"content-type"}});
     if(u.pathname==="/health")return json({ok:true,service:"istanbul-gfs-cloudflare",time:new Date().toISOString()},200,origin);
     if(u.pathname==="/gfs/latest"){const v=await env.GFS_KV.get("latest","json");return v?json(v,200,origin):json({error:"not_ready"},404,origin);}
+    if(u.pathname==="/gfs/status"){const v=await env.GFS_KV.get("gfs:last-check","json");return v?json(v,200,origin):json({error:"no_check_yet"},404,origin);}
     if(u.pathname==="/gfs/comparison"){const v=await env.GFS_KV.get("comparison","json");return v?json(v,200,origin):json({error:"not_ready"},404,origin);}
     if(u.pathname==="/gfs/report"){const v=await env.GFS_KV.get("report");return v?new Response(v,{headers:{"content-type":"text/plain; charset=utf-8","cache-control":"no-store","access-control-allow-origin":origin} }):new Response("not_ready",{status:404});}
     if(/^\/gfs\/image-[0-3]$/.test(u.pathname)){const i=u.pathname.slice(-1);const v=await env.GFS_KV.get("image:"+i,"arrayBuffer");return v?new Response(v,{headers:{"content-type":"image/png","cache-control":"no-store","access-control-allow-origin":origin}}):new Response("not_ready",{status:404});}
