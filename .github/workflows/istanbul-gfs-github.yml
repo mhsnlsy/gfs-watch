@@ -157,8 +157,3 @@ jobs:
       id-token: write
     uses: ./.github/workflows/publish-live-site.yml
 
-      - name: Report no-op poll
-        if: steps.fetch.outputs.publish != 'true' && steps.fetch.outputs.f72_publish != 'true'
-        run: |
-          echo "No new F72/F180 milestone. Existing Pages and Telegram publication remain unchanged."
-          echo "Reason: ${{ steps.fetch.outputs.reason }}"
