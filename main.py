@@ -3690,7 +3690,7 @@ def create_valid_time_comparison_assets(current_run_id, payload, previous_runs):
                 },
             )
         fig.savefig(
-            png_buffer, format="png", dpi=140, bbox_inches=None,
+            png_buffer, format="png", dpi=112, bbox_inches=None,
             facecolor=GFS_REPORT_FIGURE_BG,
             edgecolor=GFS_REPORT_FIGURE_BG,
         )

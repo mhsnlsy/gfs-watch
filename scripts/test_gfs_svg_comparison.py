@@ -4,6 +4,9 @@ from __future__ import annotations
 import json
 import math
 import sys
+from io import BytesIO
+
+from PIL import Image
 from datetime import datetime, timedelta, timezone
 from pathlib import Path
 
@@ -64,6 +67,11 @@ def main_test() -> None:
         assert b'gfs-interaction-layer' in svg
         assert svg.count(b'class="gfs-hit-area"') == 4
         assert png.startswith(b"\x89PNG\r\n\x1a\n")
+        png_size = Image.open(BytesIO(png)).size
+        assert png_size[0] == 1792 and 1208 <= png_size[1] <= 1211, f"Expected 20% smaller Telegram PNG, got {png_size}"
+        html = (ROOT / "site" / "index.html").read_text(encoding="utf-8")
+        assert ".gfs-interactive-chart{position:relative;width:80%;max-width:80%" in html
+        assert "margin-inline:auto" in html
         assert assets["series_count"] == 4
         assert assets["valid_time_count"] == 25
 
