@@ -2953,7 +2953,7 @@
     }
     function notificationAsset(path,cacheVersion){
       if(!path)return null;
-      const url=new URL("./data/notifications/"+path,window.location.href);
+      const url=/^https?:\/\//i.test(String(path))?new URL(String(path)):new URL("./data/notifications/"+path,window.location.href);
       if(cacheVersion)url.searchParams.set("v",String(cacheVersion));
       return url.href;
     }
@@ -3103,10 +3103,10 @@
       try{
         // The notification archive contains the four-cycle comparison PNGs.
         // The embedded forecast report and the archive now share the same PNG chart paths.
-        const response=await fetch("./data/notifications/latest.json?t="+Date.now(),{cache:"no-store"});
+        const gfsApi=(window.ISTANBUL_GFS_API_BASE||"").replace(/\/$/,"");\n        const response=await fetch((gfsApi?gfsApi+"/gfs/notification-latest":"./data/notifications/latest.json")+"?t="+Date.now(),{cache:"no-store"});
         if(!response.ok)throw new Error("Rapor arşivi henüz oluşturulmadı.");
         const document=await response.json();
-        if(document.schema!=="gfs-watch.notifications.v1"||!Array.isArray(document.items)||!document.items.length){
+        if(gfsApi){\n          document.schema="gfs-watch.notifications.v1";\n          document.items=[{run_id_utc:document.run_id_utc,published_at_utc:document.run_id_utc,title:"İstanbul GFS · F180 tamamlandı",cycle_label:"MeteoPT GFS",report_text:document.report_text,images:(document.images||[]).map((x,i)=>({label:["2 m sıcaklık","850 hPa sıcaklık","Yağış","10 m rüzgâr"][i]||"GFS grafiği",path:x.url}))}];\n        }\n        if(document.schema!=="gfs-watch.notifications.v1"||!Array.isArray(document.items)||!document.items.length){
           throw new Error("Rapor arşivi biçimi geçersiz veya boş.");
         }
         latestNotificationItems=document.items.slice(0,4);
