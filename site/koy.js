@@ -299,7 +299,7 @@ function svgDaily(runs,metric,title,unit,mode){
  s+='</svg>';return s;
 }
 function windDir(deg){const n=Number(deg);if(!Number.isFinite(n))return "—";const dirs=["K","KKD","KD","DKD","D","DGD","GD","GBD","B","GBB","KB","KKB"];return dirs[Math.round(n/30)%12]||"—"}
-function feelsLike(t,rh,wind){const T=Number(t),H=Number(rh),W=Number(wind);if(!Number.isFinite(T)||!Number.isFinite(H))return null;if(T>=20)return -8.784+1.611*T+2.338*H-0.146*T*H-0.0123*T*T-0.0164*H*H+0.00221*T*T*H+0.000725*T*H*H-0.00000358*T*T*H*H;if(T<=10&&Number.isFinite(W))return 13.12+0.6215*T-11.37*Math.pow(W,0.16)+0.3965*T*Math.pow(W,0.16);return T}
+function feelsLike(t,rh,wind){const T=Number(t),H=Number(rh),W=Number(wind);if(!Number.isFinite(T)||!Number.isFinite(H))return null;if(T>=20)return Number((-8.784+1.611*T+2.338*H-0.146*T*H-0.0123*T*T-0.0164*H*H+0.00221*T*T*H+0.000725*T*H*H-0.00000358*T*T*H*H).toFixed(1));if(T<=10&&Number.isFinite(W)){if(W<=4.8)return Number(T.toFixed(1));return Number((13.12+0.6215*T-11.37*Math.pow(W,0.16)+0.3965*T*Math.pow(W,0.16)).toFixed(1));}return Number(T.toFixed(1));}
 function dewpoint(t,rh){const T=Number(t),H=Number(rh);if(!Number.isFinite(T)||!Number.isFinite(H)||H<=0)return null;const a=17.62,b=243.12,g=Math.log(H/100)+a*T/(b+T);return b*g/(a-g)}
 function renderMgmObservation(o,history,f72){
  if(!o)return;
