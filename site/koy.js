@@ -251,7 +251,28 @@ function renderMgmObservation(o,history,f72){
  $("station-observation-meta").textContent="Son ölçüm · "+ts(o.observed_at_utc)+" · MGM Çanakçı"+(cachedObservation?" · son geçerli kayıt korunuyor":"");
  $("freshness").textContent=cachedObservation?"MGM YANITI BEKLENİYOR":"CANLI ÖLÇÜM";
  $("freshness").classList.toggle("stale",cachedObservation);
- $("feels-like").innerHTML=fmt(feelsLike(t,rh,wind))+'<span class="unit">°</span>';
+ const currentFeels=num(o.feels_like_c)!=null?num(o.feels_like_c):feelsLike(t,rh,wind);
+ $("feels-like").innerHTML=fmt(currentFeels)+'<span class="unit">°</span>';
+ const feelsRangeEl=$("feels-like-24h");
+ if(feelsRangeEl){
+  const now=Date.now(),cutoff=now-24*3600000;
+  const values=(Array.isArray(history?.samples)?history.samples:[]).filter(s=>{
+   const stamp=Date.parse(s.observed_at_utc||s.logged_at_utc||"");
+   return Number.isFinite(stamp)&&stamp>=cutoff&&stamp<=now+300000;
+  }).map(s=>{
+   const stored=num(s.feels_like_c);
+   return stored!=null?stored:feelsLike(num(s.temperature_2m_c),num(s.humidity_percent),num(s.wind_speed_10m_kmh));
+  }).filter(v=>v!=null);
+  const min24=num(history?.feels_like_24h_min_c)!=null?num(history.feels_like_24h_min_c):(values.length?Math.min(...values):null);
+  const max24=num(history?.feels_like_24h_max_c)!=null?num(history.feels_like_24h_max_c):(values.length?Math.max(...values):null);
+  if(min24!=null&&max24!=null){
+   feelsRangeEl.hidden=false;
+   feelsRangeEl.textContent="24 sa · min "+fmt(min24,1)+"° · maks "+fmt(max24,1)+"°";
+  }else{
+   feelsRangeEl.hidden=true;
+   feelsRangeEl.textContent="";
+  }
+ }
  $("wind").innerHTML=fmt(wind,1)+'<span class="unit">km/sa</span>';
  $("wind-direction").textContent=windDir(o.wind_direction_deg);
  $("humidity").innerHTML=fmt(rh,0)+'<span class="unit">%</span>';
