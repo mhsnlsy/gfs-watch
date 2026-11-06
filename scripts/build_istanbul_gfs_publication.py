@@ -2,8 +2,8 @@
 
 The collector writes the four latest MeteoPT cycles to gfs/runs/*.json.
 This script never downloads GFS data. It only transforms those saved cycle files
-into the public forecast bundle, four Pages comparison PNGs, and the report
-archive. One source -> one publication bundle.
+into the public forecast bundle, one vector SVG comparison report, one
+matching Telegram photo, and the report archive. One source -> one publication bundle.
 """
 from __future__ import annotations
 
@@ -116,34 +116,44 @@ def main_publish() -> None:
         for run_id, payload in payloads[:-1]
     ]
 
-    # Generate the exact same four Pages chart types used by the existing
-    # report system, but from the canonical MeteoPT run files.
-    charts = main.create_pages_comparison_charts(
+    # Render one shared 2x2 SVG composition. The PNG is exported from the
+    # same Matplotlib figure solely for Telegram's single-photo endpoint.
+    assets = main.create_valid_time_comparison_assets(
         current_run, current_payload, previous_runs
     )
-    if set(charts) != {"temperature", "temperature_850", "precipitation", "wind_10m"}:
-        for buffer in charts.values():
-            buffer.close()
-        raise RuntimeError(f"Four comparison PNGs were not generated: {sorted(charts)}")
+    if not assets.get("svg") or not assets.get("png"):
+        for buffer in assets.values():
+            if hasattr(buffer, "close"):
+                buffer.close()
+        raise RuntimeError("The shared SVG comparison and Telegram PNG were not generated.")
 
     full_report, speech_text = main.analyze_and_build_output(
         current_run, current_payload, previous_runs
     )
 
     try:
-        images = main.save_public_notification_images(current_run, charts)
+        telegram_image_path = main.save_public_notification_image(
+            current_run, assets["png"]
+        )
+        svg_image_path = main.save_public_notification_svg_image(
+            current_run, assets["svg"]
+        )
     finally:
-        for buffer in charts.values():
-            buffer.close()
+        assets["svg"].close()
+        assets["png"].close()
 
-    if len(images) != 4:
-        raise RuntimeError(f"Expected four PNGs, saved {len(images)}.")
+    if not telegram_image_path or not svg_image_path:
+        raise RuntimeError("The SVG report or its matching Telegram image could not be archived.")
 
+    images = [{
+        "label": "4 GFS döngüsü · 72 saat · aynı geçerlilik saatleri (TSİ)",
+        "path": svg_image_path,
+    }]
     report_entry = main.publish_public_notification(
         current_run,
         full_report,
         speech_text,
-        image_path=None,
+        image_path=telegram_image_path,
         audio_file=None,
         images=images,
     )
@@ -173,8 +183,8 @@ def main_publish() -> None:
 
     print(
         f"[ISTANBUL GFS BUNDLE] run={current_run}; "
-        f"cycles={len(run_files)}; pages_png={len(images)}; "
-        "report=1; source=MeteoPT"
+        f"cycles={len(run_files)}; pages_svg={len(images)}; telegram_photo=1; "
+        f"valid_times={assets.get('valid_time_count')}; report=1; source=MeteoPT"
     )
 
 
