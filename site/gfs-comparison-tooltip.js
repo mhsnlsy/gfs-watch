@@ -30,19 +30,20 @@ function buildGfsTooltipMarkup(panel,index,validTime){
     rows+'<div class="gfs-chart-tooltip-hint">Dört döngü · aynı geçerlilik anı · TSİ</div>';
 }
 function positionGfsTooltip(host,tooltip,clientX,clientY){
-  const hostRect=host.getBoundingClientRect();
+  const viewportWidth=window.innerWidth;
+  const viewportHeight=window.innerHeight;
   let left=12,top=12;
-  if(Number.isFinite(clientX))left=clientX-hostRect.left+14;
-  if(Number.isFinite(clientY))top=clientY-hostRect.top+14;
+  if(Number.isFinite(clientX))left=clientX+14;
+  if(Number.isFinite(clientY))top=clientY+14;
   tooltip.hidden=false;
-  tooltip.style.left=Math.max(8,left)+"px";
-  tooltip.style.top=Math.max(8,top)+"px";
+  tooltip.style.left=Math.max(8,Math.min(left,viewportWidth-250))+"px";
+  tooltip.style.top=Math.max(8,Math.min(top,viewportHeight-180))+"px";
   requestAnimationFrame(()=>{
-    const maxLeft=Math.max(8,host.clientWidth-tooltip.offsetWidth-8);
-    const maxTop=Math.max(8,host.clientHeight-tooltip.offsetHeight-8);
+    const maxLeft=Math.max(8,viewportWidth-tooltip.offsetWidth-8);
+    const maxTop=Math.max(8,viewportHeight-tooltip.offsetHeight-8);
     let nextLeft=Math.min(maxLeft,Math.max(8,left));
     let nextTop=top;
-    if(nextTop+tooltip.offsetHeight>host.clientHeight-8)nextTop=top-tooltip.offsetHeight-28;
+    if(nextTop+tooltip.offsetHeight>viewportHeight-8)nextTop=top-tooltip.offsetHeight-28;
     nextTop=Math.min(maxTop,Math.max(8,nextTop));
     tooltip.style.left=nextLeft+"px";
     tooltip.style.top=nextTop+"px";
@@ -143,6 +144,31 @@ function attachGfsSvgInteractions(host,svg,metadata){
       const next=Math.max(0,Math.min(panel.valid_times.length-1,current+(event.key==="ArrowRight"?1:-1)));
       show(panel,next,null);
     });
+  });
+  // Fallback hit testing on the host itself. This keeps tooltip interaction working
+  // even when the browser changes SVG pointer-event handling after DOM insertion.
+  host.addEventListener("pointermove",event=>{
+    if(event.pointerType==="touch"||host.hasAttribute("data-pinned"))return;
+    const svg=host.querySelector("svg.gfs-interactive-svg");
+    if(!svg)return;
+    const matrix=svg.getScreenCTM();
+    if(!matrix)return;
+    const point=svg.createSVGPoint();
+    point.x=event.clientX;
+    point.y=event.clientY;
+    const local=point.matrixTransform(matrix.inverse());
+    for(const panel of panels.values()){
+      const plot=panel.plot;
+      if(local.x<plot.x||local.x>plot.x+plot.width||local.y<plot.y||local.y>plot.y+plot.height)continue;
+      let nearest=0,best=Infinity;
+      panel.x_positions.forEach((x,index)=>{
+        const distance=Math.abs(x-local.x);
+        if(distance<best){best=distance;nearest=index;}
+      });
+      show(panel,nearest,event);
+      return;
+    }
+    hide();
   });
   host.addEventListener("pointerleave",()=>{
     if(!host.hasAttribute("data-pinned"))hide();
