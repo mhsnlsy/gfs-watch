@@ -32,6 +32,12 @@ def main() -> None:
     images = item.get("images") or []
     if not run_id or not report:
         raise RuntimeError("Canonical GFS report is incomplete.")
+
+    marker_dir = root / "gfs" / "notifications" / "telegram-sent"
+    marker_path = marker_dir / f"{run_id}.json"
+    if marker_path.is_file():
+        print(f"[TELEGRAM CANONICAL] run={run_id} already sent; skipping duplicate.")
+        return
     if len(images) != 4:
         raise RuntimeError(f"Canonical GFS report must contain 4 PNGs; found {len(images)}.")
 
@@ -78,7 +84,19 @@ def main() -> None:
                     handle.close()
 
     asyncio.run(send())
-    print(f"[TELEGRAM CANONICAL] run={run_id}; report=1; pngs={len(paths)}")
+
+    marker_dir.mkdir(parents=True, exist_ok=True)
+    marker_path.write_text(
+        json.dumps({
+            "run_id_utc": run_id,
+            "sent_at_utc": __import__("datetime").datetime.now(
+                __import__("datetime").timezone.utc
+            ).isoformat(timespec="seconds"),
+            "status": "sent",
+        }, ensure_ascii=False, indent=2) + "\\n",
+        encoding="utf-8",
+    )
+    print(f"[TELEGRAM CANONICAL] run={run_id}; report=1; pngs={len(paths)}; marker=written")
 
 
 if __name__ == "__main__":
