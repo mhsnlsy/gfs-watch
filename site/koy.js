@@ -626,15 +626,17 @@ async function refresh(){if(busy)return;busy=true;
  if(results[4].status==="fulfilled"){
   window.__koyMgmObservation=results[4].value;
   window.__koyCurrentTemp=num(results[4].value.temperature_2m_c);
-  const selectedObservation=stationMode==="home"?evObservation:results[4].value;
-  const selectedHistory=stationMode==="home"?evHistory:stationHistory;
-  if(selectedObservation)renderMgmObservation(selectedObservation,selectedHistory,f72);
   const o=results[4].value;
   $("mgm-status-date").textContent=ts(o.observed_at_utc);
   $("mgm-source-temp").innerHTML=fmt(o.temperature_2m_c)+"<small>°C</small>";
   $("mgm-source-status").textContent="Canlı MGM ölçümü · son 1 saat yağış "+fmt(o.precipitation_1h_mm)+" mm";
   $("mgm-source-fill").style.width=Math.min(100,Math.max(0,(num(o.precipitation_1h_mm)||0)*8))+"%";
  }
+ // Render the selected station independently from the MGM fetch result.
+ // This is important for Köy Ev: its derived payload is a separate artifact.
+ const selectedObservation=stationMode==="home"?evObservation:window.__koyMgmObservation;
+ const selectedHistory=stationMode==="home"?evHistory:stationHistory;
+ if(selectedObservation)renderMgmObservation(selectedObservation,selectedHistory,f72);
  renderRuns(comparison,f72);
  busy=false;
 }
