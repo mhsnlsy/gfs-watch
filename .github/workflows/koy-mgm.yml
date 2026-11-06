@@ -5,14 +5,18 @@ on:
     branches: [main]
   workflow_dispatch:
   schedule:
-    - cron: "*/5 * * * *"
+    # Offset from the top of the hour to reduce GitHub scheduler contention.
+    # Still runs exactly every 5 minutes: :01, :06, :11, ...
+    - cron: "1/5 * * * *"
 
 permissions:
   contents: write
 
 concurrency:
   group: koy-mgm-independent
-  cancel-in-progress: false
+  # Never allow a slow MGM request to queue stale 5-minute runs behind it.
+  # The newest scheduled run always wins.
+  cancel-in-progress: true
 
 jobs:
   fetch:
