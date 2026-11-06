@@ -3682,8 +3682,9 @@ def create_valid_time_comparison_assets(current_run_id, payload, previous_runs):
         with plt.rc_context({"svg.fonttype": "none"}):
             fig.savefig(
                 svg_buffer, format="svg", bbox_inches=None,
-                facecolor=GFS_REPORT_FIGURE_BG,
-                edgecolor=GFS_REPORT_FIGURE_BG,
+                transparent=True,
+                facecolor="none",
+                edgecolor="none",
                 metadata={
                     "Title": "İstanbul GFS · Dört döngü valid-time karşılaştırması",
                     "Description": "Dört GFS çıktısı aynı TSİ geçerlilik saatlerinde hizalanmıştır.",
