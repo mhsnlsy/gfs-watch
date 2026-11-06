@@ -1,0 +1,74 @@
+name: Rebuild Istanbul GFS Comparison PNGs
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - "main.py"
+      - "scripts/build_istanbul_gfs_publication.py"
+      - "scripts/rebuild_istanbul_gfs_comparison_images.py"
+      - "scripts/test_gfs_report_chart_theme.py"
+      - ".github/workflows/rebuild-istanbul-gfs-images.yml"
+  workflow_dispatch:
+
+permissions:
+  contents: write
+  actions: write
+
+concurrency:
+  group: istanbul-gfs-canonical-publisher
+  cancel-in-progress: false
+
+jobs:
+  rebuild:
+    name: Align and republish four comparison PNGs
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - name: Check out source code
+        uses: actions/checkout@v7
+
+      - name: Check out canonical Istanbul GFS archive
+        uses: actions/checkout@v7
+        with:
+          ref: istanbul-gfs-data
+          path: gfs-state
+
+      - name: Set up Python
+        uses: actions/setup-python@v7
+        with:
+          python-version: "3.12"
+
+      - name: Install chart dependencies
+        run: |
+          python -m pip install --upgrade pip
+          python -m pip install -r requirements.txt
+
+      - name: Validate syntax and valid-time alignment
+        run: |
+          python -m py_compile main.py scripts/build_istanbul_gfs_publication.py scripts/rebuild_istanbul_gfs_comparison_images.py scripts/test_gfs_report_chart_theme.py
+          python scripts/test_gfs_report_chart_theme.py
+
+      - name: Rebuild four PNGs from saved canonical forecasts
+        env:
+          ISTANBUL_GFS_DIR: ${{ github.workspace }}/gfs-state/gfs
+        run: python scripts/rebuild_istanbul_gfs_comparison_images.py
+
+      - name: Commit four aligned PNGs and manifest references
+        working-directory: gfs-state
+        run: |
+          set -euo pipefail
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add gfs/notifications/media gfs/notifications/latest.json gfs/latest.json
+          if git diff --cached --quiet; then
+            echo "The current canonical PNGs already match the valid-time alignment."
+          else
+            git commit -m "Align Istanbul GFS comparison PNGs by valid time"
+            git push origin HEAD:istanbul-gfs-data
+          fi
+
+      - name: Publish updated images to GitHub Pages
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: gh workflow run publish-live-site.yml --ref main
