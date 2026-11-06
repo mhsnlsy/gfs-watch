@@ -9,7 +9,7 @@
 
 ## Veri kaynakları
 
-- **GFS:** MeteoPT GFS — İstanbul, 41.014°N / 28.950°E (tek canonical kaynak).
+- **İstanbul GFS:** MeteoPT GFS — 41.014°N / 28.950°E; tek canonical tahmin kaynağı.
 - **ECMWF IFS:** GFS'den ayrı tutulan tahmin akışı.
 - **ENKA Balmumcu:** ENKA currentvalues.html canlı istasyon verisi.
 - **MGM Eyüpsultan:** MGM 18101 son durum ölçümleri.
@@ -18,99 +18,127 @@
 
 ## Otomatik işleyiş
 
-### İstanbul istasyonları
+### İstanbul istasyonları — Cloudflare
 
-ENKA Balmumcu, MGM Eyüpsultan ve MGM Şişli **birbirinden bağımsız** GitHub Actions job'larıdır.
+İstanbul canlı istasyonlarının toplama ve arşiv servisi Cloudflare Worker + D1'dir.
 
-Her 5 dakikalık çevrimde her istasyon:
+- Worker: `gfs-watch-stations`
+- Cron: `* * * * *` — dakikada bir.
+- D1: `gfs-watch-stations` — güncel ölçüm ve kayan 72 saatlik geçmiş.
+- Kaynaklar: ENKA Balmumcu, MGM Eyüpsultan (18101), MGM Şişli (18401).
+- Her istasyon bağımsız sorgulanır; bir kaynaktaki hata diğerlerini durdurmaz.
+- Pages, istasyon API'sini doğrudan okur. İstasyon verisi için GitHub Actions veya Pages build beklenmez.
 
-1. Kendi kaynağından güncel ölçümü alır.
-2. Ölçümü doğrular; 20 dakikadan eski veriyi güncel kabul etmez.
-3. Kendi 72 saatlik sıcaklık/yağış arşivini günceller.
-4. Yalnızca kendi veri dalına yayın yapar.
-5. Tamamlanan istasyon akışı ortak Pages publisher'ını tetikler.
+API uç noktaları:
 
-İstasyon workflow'ları **uzun süre çalışan döngüler değildir**. Her workflow çalışması tek toplama/yayın çevrimidir. Böylece 5 dakikalık schedule yeni çalışmaları saatlerce kuyrukta bekletmez. GitHub'ın schedule tetiklemeleri yüksek yük altında gecikebilir; 5 dakika platformun desteklediği en kısa schedule aralığıdır.
+- `/api/health` — Cron, D1 ve istasyon yazım durumu.
+- `/api/stations` — üç istasyonun son ölçümleri.
+- `/api/stations/enka`, `/api/stations/eyupsultan`, `/api/stations/sisli` — tek istasyon.
+- `/api/history/{station_key}?hours=72` — D1 geçmişi.
 
-Bir istasyonun başarısız olması diğer iki istasyonu durdurmaz.
+### İstanbul GFS — GitHub Actions
 
-| İstasyon | Workflow | Güncel veri | Arşiv |
-|---|---|---|---|
-| ENKA Balmumcu | `.github/workflows/istanbul-mgm-independent.yml` | ENKA currentvalues.html | 72 saat sıcaklık |
-| MGM Eyüpsultan | `.github/workflows/istanbul-mgm-independent.yml` | MGM 18101 | 72 saat sıcaklık + yağış |
-| MGM Şişli | `.github/workflows/istanbul-mgm-independent.yml` | MGM 18401 | 72 saat sıcaklık + yağış |
+`.github/workflows/istanbul-gfs-github.yml` İstanbul GFS'nin tek canlı toplama ve yayın akışıdır.
 
-### GFS
+Günlük dört kontrol/yayın penceresi (UTC cron):
 
-`.github/workflows/istanbul-gfs-independent.yml` İstanbul GFS'nin **tek canlı toplama ve yayın hazırlama akışıdır**.
+| GFS döngüsü | İstanbul saati |
+|---|---:|
+| 00Z | 07:20 |
+| 06Z | 13:20 |
+| 12Z | 19:20 |
+| 18Z | 01:20 (ertesi gün) |
 
-- 5 dakikada bir MeteoPT GFS'yi kontrol eder.
-- Yeni döngüyü tek canonical paket olarak üretir.
-- Aynı paketten raporu, dört Pages PNG'sini ve dört döngü karşılaştırmasını üretir.
-- Canonical paket `istanbul-gfs-data` dalında saklanır.
-- Telegram, aynı canonical rapor ve dört PNG'den oluşan tek medya albümünü gönderir.
-- Aynı döngü için `telegram-sent` marker'ı tutulur; başarısız gönderim sonraki poll'da yeniden denenir.
-- Pages deployment'ı ayrı ortak publisher tarafından yapılır; GFS workflow'u doğrudan Pages deploy etmez.
+Her çalıştırma:
 
-İstanbul GFS'nin veri kaynağı **yalnızca MeteoPT'dir**. Eski NOAA/Telegram polling yolu canlı akışın parçası değildir.
+1. MeteoPT'den 00Z, 06Z, 12Z ve 18Z döngülerini kontrol eder.
+2. İstenen döngü saati ile API'nin döndürdüğü döngüyü doğrular.
+3. **F180 yoksa yayın yapmaz.**
+4. En yeni F180-hazır döngüyü bir kez canonical JSON olarak arşivler.
+5. Aynı canonical veriden raporu, dört karşılaştırma PNG'sini ve Pages bildirim arşivini üretir.
+6. Raporu ve aynı döngüye ait dört PNG'yi Telegram'a gönderir.
+7. Run JSON'larını, PNG'leri, raporu ve Telegram gönderim işaretini `istanbul-gfs-data` dalına kaydeder.
+8. GitHub Pages publisher'ını tetikler.
+
+GFS yayınında Cloudflare kullanılmaz. GFS verisi, grafik üretimi, Telegram bildirimi ve Pages arşivinin sahibi GitHub Actions'tır. Aynı döngü için `gfs/notifications/telegram-sent/` altında işaret bulunduğunda tekrar bildirim gönderilmez. Manuel `workflow_dispatch` de aynı F180 ve tekrar-yayın kontrolünden geçer.
+
+GFS kaynak kodu:
+
+- `scripts/fetch_istanbul_gfs_meteopt.py` — MeteoPT sorgusu, cycle doğrulama ve F180 kapısı.
+- `scripts/build_istanbul_gfs_publication.py` — canonical rapor, JSON ve dört PNG.
+- `scripts/send_canonical_istanbul_gfs_telegram.py` — canonical rapor ve görsellerin Telegram gönderimi.
 
 ### GitHub Pages
 
-`.github/workflows/publish-live-site.yml` **tek Pages deployment noktasıdır**.
+`.github/workflows/publish-live-site.yml` tek Pages deployment noktasıdır.
 
 Publisher:
 
-- GFS verisini `gfs-watch-state` dalından,
+- GFS verisini `istanbul-gfs-data` dalından,
 - Köy GFS verisini `koy-gfs-data` dalından,
 - Köy MGM verisini `koy-mgm-data` dalından,
-- İstanbul istasyonlarını `main/site/data/` altından
+- Site kaynak kodunu `main/site/` dizininden
 
-alarak tek bir site paketi oluşturur ve GitHub Pages'e yayımlar.
+alarak tek site paketi oluşturur ve GitHub Pages'e yayımlar.
 
-İstasyon veya GFS toplayıcıları doğrudan Pages deploy etmez. Böylece aynı anda birden fazla workflow'un Pages deployment'ı üzerinde yarışması engellenir.
-
-Publisher ayrıca 5 dakikalık zamanlanmış çalışmaya sahiptir; veri güncellendiğinde toplayıcı tarafından da doğrudan tetiklenir.
-İstasyon sayfası ayrıca Worker verisi güncel değilse Pages üzerindeki son doğrulanmış istasyon paketine geri döner.
+GFS ana JSON'u `site/data/istanbul-gfs-latest.json`, rapor arşivi `site/data/notifications/latest.json` olarak sunulur. GFS sayfaları Cloudflare GFS API'sine değil, bu statik Pages dosyalarına bağlanır. Yeni GFS yayını tamamlandığında ortak Pages publisher doğrudan tetiklenir.
 
 ## Veri saklama
 
-- `main/site/data/`: İstanbul istasyonlarının güncel gözlemleri ve arşivleri.
-- `gfs-watch-state`: GFS veritabanı, run geçmişi ve yayıma hazırlanan GFS verileri.
-- `koy-mgm-data`: Çanakçı MGM gözlem ve arşiv verileri.
+- `istanbul-gfs-data/gfs/runs/`: MeteoPT GFS döngü arşivi.
+- `istanbul-gfs-data/gfs/latest.json`: son canonical GFS paketi.
+- `istanbul-gfs-data/gfs/comparison.json`: son dört döngünün karşılaştırma verisi.
+- `istanbul-gfs-data/gfs/notifications/`: son dört rapor ve PNG arşivi.
+- `gfs-watch-stations` D1: istasyonların 72 saatlik geçmişi.
 - `koy-gfs-data`: Çanakçı GFS verileri.
+- `koy-mgm-data`: Çanakçı MGM gözlem ve arşiv verileri.
 
 ## Telegram bildirimleri
 
-Tamamlanan GFS çevrimleri için rapor ve karşılaştırma görselleri Telegram üzerinden gönderilir.
+Her yeni F180-hazır GFS döngüsünde rapor ve dört karşılaştırma görseli Telegram'a gönderilir.
 
 Gerekli GitHub Actions secrets:
 
 - `TELEGRAM_TOKEN`
 - `CHAT_ID`
 
+## Cloudflare görev sınırı
+
+Cloudflare yalnızca canlı istasyon toplama/arşivleme (`station-worker/`) ve gerektiğinde Web Push API (`push-worker/`) için kullanılır.
+
+**İstanbul GFS için Cloudflare Worker, Cron, KV veya GFS API bağlantısı yoktur.** Eski `workers/istanbul-gfs/` runtime ve GFS Cloudflare deployment workflow'ları kaldırılmıştır.
+
 ## Mimari ilkesi
 
-Bu projede canlı veri toplama ile Pages deployment'ı birbirinden ayrıdır:
-
 ```
-ENKA ────────┐
-Eyüpsultan ──┤
-Şişli ───────┤
-GFS ─────────┤
-Köy GFS ─────┤
-Köy MGM ─────┘
+İstasyon kaynakları
        │
        ▼
-  Veri dalları
+Cloudflare Worker + D1
        │
        ▼
-Tek Pages Publisher
+Pages istasyon kartları
+
+
+MeteoPT GFS (00Z / 06Z / 12Z / 18Z)
+       │
+       ▼
+GitHub Actions · F180 kapısı
+       │
+       ▼
+Canonical GFS JSON + rapor + dört PNG
+       │
+       ├────────► Telegram
+       │
+       ▼
+istanbul-gfs-data
+       │
+       ▼
+Tek GitHub Pages Publisher
        │
        ▼
 GitHub Pages
 ```
-
-Amaç basit: **veri toplayıcıları birbirini beklemez; yalnızca ortak yayın noktası Pages'tir.**
 
 ## Sürüm yönetimi
 
@@ -121,28 +149,3 @@ Resmî sürümün tek kaynağı `site/version.json` dosyasıdır.
 - **MAJOR:** büyük mimari değişiklik veya uyumsuzluk.
 
 Yalnızca dokümantasyon değişiklikleri uygulama sürümünü artırmaz.
-
-
-## Cloudflare GFS
-
-İstanbul GFS collector/publisher `workers/istanbul-gfs/` altında Cloudflare'a taşındı. F180 gelmeden yayın yoktur; F180 sonrası Cloudflare KV + Telegram + Pages API dağıtımı yapılır.
-
-## Cloudflare İstasyon Servisi
-
-İstanbul canlı istasyon verilerinin tek toplama ve arşiv servisi Cloudflare Worker + D1'dir.
-
-- Worker: `gfs-watch-stations`
-- Cron: `* * * * *` — üç istasyon bağımsız olarak dakikada bir sorgulanır.
-- D1: `gfs-watch-stations` — güncel ölçüm ve kayan 72 saatlik geçmiş.
-- Kaynaklar: ENKA Balmumcu WeatherLink Current Values, MGM Eyüpsultan (18101), MGM Şişli (18401).
-- Balmumcu sıcaklık/nem/basınç/rüzgârı ENKA'dan; yağış ölçümü MGM Şişli'den alınır.
-- Pages, istasyon API'sini 60 saniyede bir okur; istasyon yenilemesi için Pages build veya GitHub Actions zamanlayıcısı kullanılmaz.
-
-API uç noktaları:
-
-- `/api/health` — Cron, D1 ve istasyon yazım durumu.
-- `/api/stations` — üç istasyonun son ölçümleri.
-- `/api/stations/enka`, `/api/stations/eyupsultan`, `/api/stations/sisli` — tek istasyon.
-- `/api/history/{station_key}?hours=72` — D1 geçmişi.
-
-İstanbul istasyonlarını toplayan eski `istanbul-mgm-independent.yml` GitHub Actions workflow'u kaldırıldı. `deploy-stations-worker.yml` yalnızca Worker kodu veya D1 migration değişince dağıtım/doğrulama için çalışır; periyodik veri toplama Cloudflare Cron üzerindedir.
