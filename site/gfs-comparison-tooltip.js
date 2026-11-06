@@ -167,6 +167,8 @@ async function loadInteractiveGfsCharts(root){
       if(parsed.querySelector("parsererror"))throw new Error("SVG parse edilemedi");
       const svg=parsed.documentElement;
       if(svg.localName!=="svg")throw new Error("SVG kök öğesi bulunamadı");
+      /* Masaüstündeki yatay genişletilmiş görünümde SVG içeriğini kutuya tam yay. */
+      svg.setAttribute("preserveAspectRatio","none");
       svg.querySelectorAll("script,foreignObject").forEach(node=>node.remove());
       svg.querySelectorAll("*").forEach(node=>{
         Array.from(node.attributes).forEach(attribute=>{
