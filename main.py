@@ -3411,7 +3411,7 @@ def create_pages_comparison_charts(current_run_id, payload, previous_runs):
                 )
                 fig.text(
                     0.01, 0.012,
-                    "Renkler her panelde aynı GFS döngüsünü gösterir | Kaynak: NOAA/NCEP GFS 0.25°",
+                    "Renkler her panelde aynı GFS döngüsünü gösterir | Kaynak: MeteoPT GFS · İstanbul nokta tahmini",
                     fontsize=10.5, color=GFS_REPORT_MUTED,
                 )
                 # Keep three non-overlapping vertical bands: report title,
