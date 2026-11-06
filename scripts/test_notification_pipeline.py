@@ -21,8 +21,9 @@ def main() -> None:
     assert "koy-gfs-data" in publisher
     assert "koy-mgm-data" in publisher
 
-    # Istanbul GFS is four scheduled GitHub Actions publications per day.
-    assert 'cron: "20 4,10,16,22 * * *"' in gfs_workflow
+    # Istanbul GFS polls every 5 minutes so publication is driven by F180
+    # availability rather than a fixed four-times-daily publication window.
+    assert 'cron: "*/5 * * * *"' in gfs_workflow
     assert "steps.fetch.outputs.publish == 'true'" in gfs_workflow
     assert "F180" in gfs_workflow
     assert "scripts/fetch_istanbul_gfs_meteopt.py" in gfs_workflow
@@ -59,7 +60,7 @@ def main() -> None:
 
     print(
         "[GFS/STATION ARCHITECTURE SMOKE] "
-        "Cloudflare owns stations; GitHub Actions owns four-times-daily GFS, PNGs, Telegram and Pages."
+        "Cloudflare owns stations; GitHub Actions owns 5-minute F180-driven GFS publication, PNGs, Telegram and Pages."
     )
 
 
