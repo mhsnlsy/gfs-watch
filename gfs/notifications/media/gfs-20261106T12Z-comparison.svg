@@ -24,12 +24,7 @@
  </defs>
  <g id="figure_1">
   <g id="patch_1">
-   <path d="M 0 837.6 
-L 1152 837.6 
-L 1152 0 
-L 0 0 
-z
-" style="fill: #0a1b29"/>
+   <path d="M 0 837.6 L 1152 837.6 L 1152 0 L 0 0 z" style="fill: none; stroke: none"/>
   </g>
   <g id="patch_2" transform="translate(0,55.1)">
    <path d="M 77.184 441.597722 
