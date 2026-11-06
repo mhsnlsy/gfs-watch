@@ -12,7 +12,7 @@ permissions:
   contents: write
 
 concurrency:
-  group: cloudflare-station-service-deploy
+  group: cloudflare-station-service-deploy-v2
   cancel-in-progress: true
 
 jobs:
