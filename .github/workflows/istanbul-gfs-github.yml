@@ -1,6 +1,8 @@
 name: Istanbul GFS · MeteoPT
 
 on:
+  push:
+    branches: [main]
   # Poll every 5 minutes so a newly available F180 is published immediately.
   # The fetcher checks all four GFS cycles and publishes only the newest
   # previously unpublished F180-ready cycle.
@@ -20,7 +22,7 @@ jobs:
   publish:
     name: Fetch, build and publish one canonical GFS bundle
     runs-on: ubuntu-latest
-    timeout-minutes: 25
+    timeout-minutes: 5
     steps:
       - name: Check out application source
         uses: actions/checkout@v5
