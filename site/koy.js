@@ -99,11 +99,6 @@ function svgLine(runs,metric,title,unit,maxHour=72,verification=null){
   hi=Math.max(1,Math.ceil(hi*1.15));
  }
  if(hi===lo)hi=lo+1;
- const sigma=verification?.sigma||null;
- if(sigma&&metric.includes("temperature")){
-  lo=Math.min(lo,Math.min(...values)-sigma);
-  hi=Math.max(hi,Math.max(...values)+sigma);
- }
  const chartHost=$(metric==="temperature_2m_c"?"next72-temperature":"next72-precipitation");
  const W=1000;
  const boxWidth=Math.max(320,chartHost?.clientWidth||1000);
@@ -125,23 +120,6 @@ function svgLine(runs,metric,title,unit,maxHour=72,verification=null){
   const anchor=index===0?"start":index===timeline.length-1?"end":"middle";
   s+='<text x="'+x(point.elapsed)+'" y="'+(H-8)+'" text-anchor="'+anchor+'" fill="#c5d3dc" font-size="18" font-weight="500" font-family="system-ui, -apple-system, BlinkMacSystemFont, Segoe UI, sans-serif">'+esc(axisLabel(point.stamp))+'</text>';
  });
- if(sigma&&metric.includes("temperature")){
-  const upper=[],lower=[];
-  const latestSeries=usable.find(item=>item.runIndex===0)||usable[0];
-  timeline.forEach(target=>{
-   const point=latestSeries.points.find(p=>p.index===target.index);
-   if(!point)return;
-   const local=verification.sigmaByHour?.get(point.lead);
-   const bandSigma=Number.isFinite(local)&&local>0?local:sigma;
-   upper.push([x(point.h),y(point.v+bandSigma)]);
-   lower.push([x(point.h),y(point.v-bandSigma)]);
-  });
-  if(upper.length>1){
-   const band=upper.concat(lower.reverse()).map(p=>p.join(",")).join(" ");
-   s+='<polygon points="'+band+'" fill="#75b9c8" opacity=".16"/>';
-  }
-  s+='<text x="'+(W-R-4)+'" y="'+(T+12)+'" text-anchor="end" fill="#a8bac5" font-size="11">Gerçekleşen hata σ ±'+fmt(sigma,1)+'°C · '+verification.count+' doğrulama</text>';
- }
  usable.forEach(item=>{
   const i=item.runIndex,color=COLORS[i%COLORS.length],latest=i===0;
   const groups=[];
