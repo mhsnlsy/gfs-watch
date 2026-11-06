@@ -489,16 +489,21 @@ function renderRuns(d,f72){
      rainGroups.push({day,first:point,last:point,total:value||0});
     }
    }
-   const rainSentences=rainGroups.slice(0,5).map(group=>{
+   const rainByDay=new Map(rainGroups.map(group=>[group.day,group]));
+   const rainDays=fiveDays.map(([day])=>{
+    const group=rainByDay.get(day);
+    const dayDate=new Date(day+"T12:00:00Z");
+    const dayName=new Intl.DateTimeFormat("tr-TR",{timeZone:"Europe/Istanbul",weekday:"long"}).format(dayDate);
+    const label=dayName.charAt(0).toUpperCase()+dayName.slice(1);
+    if(!group)return label+" · yağış yok";
     const firstDate=new Date(group.first.valid_time_utc),lastDate=new Date(group.last.valid_time_utc);
     const start=new Intl.DateTimeFormat("tr-TR",{timeZone:"Europe/Istanbul",hour:"2-digit",minute:"2-digit",hourCycle:"h23"}).format(firstDate);
     const end=new Intl.DateTimeFormat("tr-TR",{timeZone:"Europe/Istanbul",hour:"2-digit",minute:"2-digit",hourCycle:"h23"}).format(lastDate);
-    const dayName=new Intl.DateTimeFormat("tr-TR",{timeZone:"Europe/Istanbul",weekday:"long"}).format(firstDate);
     const part=firstDate.getUTCHours()<12?"öğleden önce":"öğleden sonra";
     const windowText=start===end?start:start+"–"+end;
-    return dayName.charAt(0).toUpperCase()+dayName.slice(1)+" · "+windowText+" · "+part+" · "+fmt(group.total,1)+" mm";
+    return label+" · "+windowText+" · "+part+" · "+fmt(group.total,1)+" mm";
    });
-   $("brief-rain-lines").textContent=rainSentences.length?rainSentences.join(". ")+".":"Önümüzdeki dönemde anlamlı yağış görünmüyor.";
+   $("brief-rain-lines").innerHTML='<div class="brief-rain-days">'+rainDays.map(line=>'<div class="brief-rain-day">'+esc(line)+'</div>').join("")+'</div>';
    const dailyItems=[...daily.entries()].slice(0,8).map(([k,v])=>({date_istanbul:k,temperature_min_c:Math.min(...v),temperature_max_c:Math.max(...v),precipitation_total_mm:p.filter(x=>dayKey(x.valid_time_utc)===k).reduce((a,x)=>a+(num(x.precipitation_6h_mm)||0),0),wind_speed_max_10m_kmh:Math.max(...p.filter(x=>dayKey(x.valid_time_utc)===k).map(x=>num(x.wind_speed_10m_kmh)||0))}));
    $("daily-grid").innerHTML=dailyItems.map(item=>'<article class="day"><div class="day-name">'+dayLabel(item.date_istanbul)+'</div><div class="day-icon">'+(item.precipitation_total_mm>=5?"🌧️":item.precipitation_total_mm>=1?"🌦️":"⛅")+'</div><div class="day-range">'+fmt(item.temperature_max_c,0)+'° <span>'+fmt(item.temperature_min_c,0)+'°</span></div><div class="day-rain">☂ '+fmt(item.precipitation_total_mm,1)+' mm</div><div class="day-wind">↗ '+fmt(item.wind_speed_max_10m_kmh,0)+' km/sa</div></article>').join("");
  }
