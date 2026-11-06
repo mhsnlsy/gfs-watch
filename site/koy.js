@@ -1,6 +1,6 @@
 (() => {
 "use strict";
-const BASE="./koy-data/gfs/", MGM_BASE="./koy-data/mgm/", COLORS=["#7dd3d7","#8abce8","#f1c98b","#b38be8"];
+const BASE="./koy-data/gfs/", MGM_BASE="./koy-data/mgm/", COLORS=["#b38be8","#f1c98b","#8abce8","#7dd3d7"];
 const $=id=>document.getElementById(id);
 const num=v=>v==null||v===""||!Number.isFinite(Number(v))?null:Number(v);
 const fmt=(v,d=1)=>v==null?"—":Number(v).toLocaleString("tr-TR",{minimumFractionDigits:d,maximumFractionDigits:d});
