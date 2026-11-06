@@ -1169,6 +1169,13 @@
       overflow: visible !important;
       overscroll-behavior: auto !important;
     }
+    /* Mobile: enlarge the 4-cycle GFS comparison by exactly 15%. */
+    @media (max-width: 600px) {
+      #gfs-cycle-compare-frame {
+        width: 115% !important;
+        margin-left: -7.5% !important;
+      }
+    }
   </style>
 </head>
 <body>
