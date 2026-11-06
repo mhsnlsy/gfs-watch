@@ -1627,7 +1627,10 @@ load();window.setInterval(load,300000);
     #pull-refresh-indicator.loading .pull-refresh-icon{animation:pull-refresh-spin .8s linear infinite}
     @keyframes pull-refresh-spin{to{transform:rotate(360deg)}}
     @media(prefers-reduced-motion:reduce){#pull-refresh-indicator{transition:none}#pull-refresh-indicator.loading .pull-refresh-icon{animation:none}}
-  </style>
+  
+    /* Keep the legend DOM for chart JS, but remove its visible cycle labels. */
+    #next-72h-legend{display:none!important}
+</style>
   <div id="pull-refresh-indicator" role="status" aria-live="polite"><span class="pull-refresh-icon">↓</span><span class="pull-refresh-label">Yenilemek için aşağı çek</span></div>
     <script src="./gfs-cycle-theme.js?v=20261106-shared-cycle-theme-1" defer></script>
     <script src="./koy.js?v=20261106-shared-cycle-theme-1" defer></script>
