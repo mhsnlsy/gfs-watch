@@ -40,6 +40,15 @@ jobs:
           };
           EOF
           cp wrangler.jsonc wrangler.unified.jsonc
+          python - <<'PY'
+          import json
+          p="wrangler.unified.jsonc"
+          s=open(p).read()
+          obj=json.loads(s)
+          obj["compatibility_date"]="2026-11-06"
+          obj["triggers"]={"crons":["*/5 * * * *"]}
+          open(p,"w").write(json.dumps(obj,indent=2)+"\n")
+          PY
 
       - name: Install Wrangler
         run: npm install --global wrangler@4
