@@ -145,15 +145,13 @@ def main_publish() -> None:
         images=images,
     )
 
-    # Canonical latest.json is the same data used to build the report/charts.
-    latest = json.loads((GFS_DIR / "runs" / run_files[-1].name).read_text(encoding="utf-8"))
+    # Canonical latest.json must be the newest document, not the oldest file
+    # in the descending filename list used to select the four most recent runs.
+    latest = dict(current_doc)
     latest["schema"] = "gfs-watch.forecast.v1"
     latest["forecast_source"] = "meteopt"
     latest["report"] = report_entry
-    latest["comparison_runs"] = [
-        json.loads((GFS_DIR / "runs" / path.name).read_text(encoding="utf-8"))
-        for path in run_files
-    ]
+    latest["comparison_runs"] = list(reversed(docs))
     (GFS_DIR / "latest.json").write_text(
         json.dumps(latest, ensure_ascii=False, indent=2) + "\n",
         encoding="utf-8",
@@ -163,10 +161,7 @@ def main_publish() -> None:
         "schema": "istanbul-gfs.comparison.v1",
         "location": {"name": "Istanbul", "latitude": 41.014, "longitude": 28.950},
         "updated_at_utc": latest.get("published_at_utc"),
-        "runs": [
-            json.loads((GFS_DIR / "runs" / path.name).read_text(encoding="utf-8"))
-            for path in run_files
-        ],
+        "runs": list(reversed(docs)),
     }
     (GFS_DIR / "comparison.json").write_text(
         json.dumps(comparison, ensure_ascii=False, indent=2) + "\n",
