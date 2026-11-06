@@ -45,7 +45,6 @@ jobs:
           mkdir -p output
           python - <<'PY'
           import json
-          import time
           from datetime import datetime, timezone
           from pathlib import Path
           from urllib.request import Request, urlopen
@@ -81,7 +80,7 @@ jobs:
                   break
               except Exception as exc:
                   last_error = exc
-                  print(f"MGM forecast page attempt {attempt}/3 failed: {type(exc).__name__}: {exc}")
+                  print(f"MGM forecast page attempt {attempt}/1 failed: {type(exc).__name__}: {exc}")
           else:
               # The HTML forecast page is not used for live station metrics.
               # Keep the last known page snapshot and let the structured API run.
