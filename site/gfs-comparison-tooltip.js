@@ -20,7 +20,7 @@ function buildGfsTooltipMarkup(panel,index,validTime){
       ? " · "+gfsWindCardinal(direction)+" ("+Math.round(direction)+"°)" : "";
     return '<div class="gfs-chart-tooltip-row">'+
       '<div class="gfs-chart-tooltip-cycle"><i class="gfs-chart-tooltip-swatch" style="background:'+escapeGfsTooltip(series.color)+'"></i>'+
-      '<div class="gfs-chart-tooltip-cycle-name">'+escapeGfsTooltip(String(series.label||"").replace(/^YENİ\\s*·\\s*/,""))+
+      '<div class="gfs-chart-tooltip-cycle-name">'+escapeGfsTooltip(String(series.label||"").replace(/^YENİ\s*·\s*/,""))+
       '<span class="gfs-chart-tooltip-lead">'+(lead===null||lead===undefined?"Tahmin adımı yok":"F"+escapeGfsTooltip(lead))+'</span></div></div>'+
       '<div class="gfs-chart-tooltip-value">'+formatted+' <small>'+escapeGfsTooltip(panel.unit)+'</small>'+escapeGfsTooltip(directionText)+'</div>'+
       '</div>';
