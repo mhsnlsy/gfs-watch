@@ -1081,7 +1081,7 @@
     .gfs-interactive-svg{display:block;width:100%;height:auto;max-width:100%;overflow:visible}
     .gfs-interactive-svg .gfs-hit-area{cursor:crosshair;outline:none}
     .gfs-interactive-svg .gfs-hit-area:focus{stroke:rgba(125,211,215,.5);stroke-width:1;stroke-dasharray:4 4}
-    .gfs-chart-tooltip{position:fixed;z-index:30;min-width:230px;max-width:min(310px,calc(100% - 16px));padding:11px 13px;border:1px solid rgba(125,211,215,.42);border-radius:13px;background:rgba(4,18,29,.97);box-shadow:0 10px 28px rgba(0,0,0,.46);color:#eaf5f8;font:12px/1.5 "DM Sans",system-ui,sans-serif;pointer-events:none;backdrop-filter:blur(9px);white-space:normal}
+    .gfs-chart-tooltip{position:absolute;z-index:30;min-width:230px;max-width:min(310px,calc(100% - 16px));padding:11px 13px;border:1px solid rgba(125,211,215,.42);border-radius:13px;background:rgba(4,18,29,.97);box-shadow:0 10px 28px rgba(0,0,0,.46);color:#eaf5f8;font:12px/1.5 "DM Sans",system-ui,sans-serif;pointer-events:none;backdrop-filter:blur(9px);white-space:normal}
     .gfs-chart-tooltip[hidden]{display:none!important}
     .gfs-chart-tooltip-head{display:flex;justify-content:space-between;align-items:flex-start;gap:12px;padding-bottom:8px;margin-bottom:7px;border-bottom:1px solid rgba(125,211,215,.18)}
     .gfs-chart-tooltip-title{font-size:11px;font-weight:800;letter-spacing:.08em;color:#7dd3d7;text-transform:uppercase}
@@ -1255,7 +1255,7 @@
 
   </main>
   <footer class="shell footer"><span><strong data-app-name>İstanbul'un Havası</strong> <span data-app-version>4.0</span></span><span>Veri kaynakları: ENKA Balmumcu kamera OCR · MGM Eyüpsultan 18101 · MGM Şişli 18401 · MeteoPT GFS · ECMWF · Otomatik kontrol: 5 dakika</span></footer>
-  <script src="./gfs-comparison-tooltip.js?v=20261106-hover-2"></script>
+  <script src="./gfs-comparison-tooltip.js?v=20261106-tooltip-restore-3"></script>
     <script>
     const DATA_URL="./data/istanbul-gfs-latest.json";
     const ECMWF_DATA_URL="./data/ecmwf/latest.json";
