@@ -182,7 +182,7 @@ async function loadInteractiveGfsCharts(root){
       manifestNode.remove();
       svg.classList.add("gfs-interactive-svg");
       svg.setAttribute("role","group");
-      svg.setAttribute("aria-label","İstanbul GFS dört panelli etkileşimli valid-time karşılaştırması");
+      svg.setAttribute("aria-label",host.dataset.chartLabel||"İstanbul GFS dört panelli etkileşimli valid-time karşılaştırması");
       svg.setAttribute("focusable","true");
       host.querySelector(".gfs-chart-loading")?.remove();
       host.appendChild(svg);
