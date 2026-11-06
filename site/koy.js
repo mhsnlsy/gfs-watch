@@ -122,8 +122,9 @@ function svgLine(runs,metric,title,unit,maxHour=72,verification=null){
  });
  if(sigma&&metric.includes("temperature")){
   const upper=[],lower=[];
+  const latestSeries=usable.find(item=>item.runIndex===0)||usable[0];
   timeline.forEach(target=>{
-   const point=usable[0].points.find(p=>p.index===target.index);
+   const point=latestSeries.points.find(p=>p.index===target.index);
    if(!point)return;
    const local=verification.sigmaByHour?.get(point.lead);
    const bandSigma=Number.isFinite(local)&&local>0?local:sigma;
@@ -191,17 +192,8 @@ function bindGfsChartTooltip(containerId){
  function latestPointAtSameTime(hit){
   if(!hit||!currentTargets.length)return null;
   const validKey=hit.dataset.validkey;
-  if(validKey){
-   const exact=currentTargets.find(target=>target.dataset.validkey===validKey);
-   if(exact)return exact;
-  }
-  const hoveredX=Number(hit.getAttribute("cx"));
-  let nearest=null,best=Infinity;
-  for(const target of currentTargets){
-   const distance=Math.abs(Number(target.getAttribute("cx"))-hoveredX);
-   if(distance<best){best=distance;nearest=target}
-  }
-  return nearest;
+  if(!validKey)return null;
+  return currentTargets.find(target=>target.dataset.validkey===validKey)||null;
  }
  function hide(){
   tooltip.hidden=true;
