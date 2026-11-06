@@ -2888,7 +2888,7 @@ def _prepare_comparison_chart_data(current_run_id, payload, previous_runs):
             raise ValueError(f"{run_id} için geçerli tahmin zamanı bulunamadı.")
 
         run_utc = _parse_utc_datetime(run_id)
-        cycle_label = f"{run_utc:%H}Z | {run_utc:%d.%m %H:%M} UTC"
+        cycle_label = f"{run_utc:%H}Z | {run_utc:%d.%m %H:%M}"
         if run_id == current_run_id:
             cycle_label = "YENİ · " + cycle_label
         series.append({
