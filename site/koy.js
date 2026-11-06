@@ -341,6 +341,17 @@ function renderMgmObservation(o,history,f72){
  $("rain").innerHTML=fmt(rain)+'<span class="unit">mm</span>';
  $("rain-detail").textContent="Son 1 saat";
  $("pressure").innerHTML=fmt(press,1)+'<span class="unit">hPa</span>';
+ const validationEl=$("station-alert");
+ if(validationEl){
+  const v=o?.validation;
+  if(isHome&&v?.status==="FAIL"){
+   validationEl.hidden=false;
+   validationEl.textContent="Köy Ev hesap kontrolü: "+(Array.isArray(v.checks)?v.checks.join(", "):"tutarsızlık")+" · değerler yeniden hesaplanmalı.";
+  }else{
+   validationEl.hidden=true;
+   validationEl.textContent="";
+  }
+ }
  const samples=Array.isArray(history?.samples)?history.samples:[];
  const temps=samples.map(x=>num(x.temperature_2m_c)).filter(v=>v!=null);
  if(temps.length){const min=Math.min(...temps),max=Math.max(...temps),d=t!=null?t-temps[0]:null;const diff=t!=null?t-min:null;$("station-24h-diff").textContent="Son 24 saatte "+(diff>=0?fmt(diff)+"° daha sıcak":fmt(Math.abs(diff))+"° daha soğuk");}
