@@ -48,6 +48,8 @@ jobs:
         run: |
           python -m py_compile main.py scripts/build_istanbul_gfs_publication.py scripts/rebuild_istanbul_gfs_comparison_images.py scripts/test_gfs_report_chart_theme.py
           python scripts/test_gfs_report_chart_theme.py
+          python scripts/test_gfs_svg_comparison.py
+          node --check site/gfs-comparison-tooltip.js
 
       - name: Rebuild four PNGs from saved canonical forecasts
         env:
