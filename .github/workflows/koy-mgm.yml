@@ -1,4 +1,5 @@
 name: Köy MGM
+# 5-minute live collector: keep the main station path self-contained and publish every successful cycle.
 
 on:
   push:
