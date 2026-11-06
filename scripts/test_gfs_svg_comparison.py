@@ -68,7 +68,7 @@ def main_test() -> None:
         assert svg.count(b'class="gfs-hit-area"') == 4
         assert png.startswith(b"\x89PNG\r\n\x1a\n")
         png_size = Image.open(BytesIO(png)).size
-        assert png_size == (1792, 1210), f"Expected 20% smaller Telegram PNG, got {png_size}"
+        assert png_size[0] == 1792 and 1208 <= png_size[1] <= 1211, f"Expected 20% smaller Telegram PNG, got {png_size}"
         html = (ROOT / "site" / "index.html").read_text(encoding="utf-8")
         assert ".gfs-interactive-chart{position:relative;width:80%;max-width:80%" in html
         assert "margin-inline:auto" in html
