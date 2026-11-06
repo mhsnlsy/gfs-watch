@@ -1,6 +1,11 @@
 name: Deploy GFS Watch Push API
 
 on:
+  push:
+    branches: [main]
+    paths:
+      - "push-worker/**"
+      - ".github/workflows/deploy-push-worker.yml"
   workflow_dispatch:
 
 permissions:
