@@ -170,7 +170,7 @@ async function fetchEnka() {
   const pressureCell = enkaCurrentCell(rows, "Barometer (hPa)");
   const humidityCell = enkaCurrentCell(rows, "Humidity");
   const windCell = enkaCurrentCell(rows, "Wind");
-  const tempMatch = valueMatch(tempCell, /([-+]?\d+(?:[.,]\d+)?)\s*°\s*C/i, "Day Temperature", plain);
+  const tempMatch = valueMatch(tempCell, /([-+]?\d+(?:[.,]\d+)?)\s*[\u00B0\uFFFD]?\s*C/i, "Day Temperature", plain);
   const pressureMatch = valueMatch(pressureCell, /(\d{3,4}(?:[.,]\d+)?)\s*(?:hPa)?/i, "Barometer", plain);
   const humidityMatch = valueMatch(humidityCell, /(\d{1,3}(?:[.,]\d+)?)\s*%/i, "Humidity", plain);
   const windMatch = valueMatch(windCell, /\b(NNE|ENE|ESE|SSE|SSW|WSW|WNW|NNW|N|NE|E|SE|S|SW|W|NW)\b\s*(\d+(?:[.,]\d+)?)\s*kt\b/i, "Wind", plain);
@@ -356,7 +356,7 @@ async function persistSuccess(env, key, observation, rainSource) {
   const status = observation.status || "live";
   const payloadJson = JSON.stringify(observation);
   const history = env.STATIONS_DB.prepare(
-    "INSERT OR REPLACE INTO station_history (station_key, station_id, observed_at_utc, fetched_at_utc, temperature_c, humidity_percent, pressure_hpa, wind_speed_kmh, wind_direction, rain_1h_mm, rain_10m_mm, rain_6h_mm, rain_12h_mm, rain_24h_mm, rain_00_now_mm) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)"
+    "INSERT OR REPLACE INTO station_history (station_key, station_id, observed_at_utc, fetched_at_utc, temperature_c, humidity_percent, pressure_hpa, wind_speed_kmh, wind_direction, rain_1h_mm, rain_10m_mm, rain_6h_mm, rain_12h_mm, rain_24h_mm, rain_00_now_mm, payload_json) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)"
   ).bind(
     key, observation.station_id, observation.observed_at_utc, fetchedAt,
     observation.temperature_2m_c, observation.humidity_percent,
@@ -364,7 +364,7 @@ async function persistSuccess(env, key, observation, rainSource) {
     observation.wind_direction_degrees, observation.precipitation_1h_mm,
     observation.precipitation_10m_mm, observation.precipitation_6h_mm,
     observation.precipitation_12h_mm, observation.precipitation_24h_mm,
-    observation.precipitation_daily_mm
+    observation.precipitation_daily_mm, payloadJson
   );
   const current = env.STATIONS_DB.prepare(
     "INSERT INTO station_current (station_key, station_id, station_name, observed_at_utc, fetched_at_utc, status, payload_json, last_error, last_success_utc, last_attempt_utc) VALUES (?, ?, ?, ?, ?, ?, ?, NULL, ?, ?) ON CONFLICT(station_key) DO UPDATE SET station_id=excluded.station_id, station_name=excluded.station_name, observed_at_utc=excluded.observed_at_utc, fetched_at_utc=excluded.fetched_at_utc, status=excluded.status, payload_json=excluded.payload_json, last_error=NULL, last_success_utc=excluded.last_success_utc, last_attempt_utc=excluded.last_attempt_utc"
