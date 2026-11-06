@@ -85,7 +85,7 @@ def normalize(document: dict, source_url: str, cycle: datetime) -> dict:
         "tmp2m": "temperature_2m_c",
         "tmp850mb": "temperature_850hpa_c",
         "wind10m": "wind_speed_10m_kmh",
-        "wind10mdir": "wind_direction_10m_deg",
+        "winddir10m": "wind_direction_10m_deg",
         "wind850": "wind_speed_850hpa_kmh",
         "apcp": "precipitation_6h_mm",
     }
