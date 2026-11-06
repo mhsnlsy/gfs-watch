@@ -3557,6 +3557,16 @@ if(typeof renderBriefing==="function")renderBriefing();
       touch-action:auto;
     }
   </style>
+  <style id="desktop-gfs-tooltip-chart-size">
+    /* Masaüstünde dört döngülü tooltip grafiğini %20 küçült; mobil tam genişlikte kalır. */
+    @media (min-width: 851px) {
+      .notification-chart-only .gfs-interactive-chart {
+        width: 80% !important;
+        max-width: 80% !important;
+        margin-inline: auto !important;
+      }
+    }
+  </style>
   <script>
     (() => {
       const frame = document.getElementById("gfs-cycle-compare-frame");
