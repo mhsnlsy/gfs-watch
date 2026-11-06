@@ -244,6 +244,24 @@ jobs:
           python - <<'PY'
           import json, pathlib
           from datetime import datetime, timezone, timedelta
+
+          def feels_like(temp_c, humidity, wind_kmh):
+              try:
+                  t=float(temp_c); rh=max(0.0,min(100.0,float(humidity)))
+              except (TypeError, ValueError):
+                  return None
+              if t >= 20:
+                  return round(-8.784 + 1.611*t + 2.338*rh - 0.146*t*rh - 0.0123*t*t - 0.0164*rh*rh + 0.00221*t*t*rh + 0.000725*t*rh*rh - 0.00000358*t*t*rh*rh, 1)
+              if t <= 10 and wind_kmh is not None:
+                  try:
+                      w=max(0.0,float(wind_kmh))
+                      if w <= 4.8:
+                          return round(t, 1)
+                      return round(13.12 + 0.6215*t - 11.37*(w**0.16) + 0.3965*t*(w**0.16), 1)
+                  except (TypeError, ValueError):
+                      pass
+              return round(t, 1)
+
           obs=json.loads(pathlib.Path("output/observation.json").read_text(encoding="utf-8"))
           history_path=pathlib.Path("output/history.json")
           if history_path.exists():
@@ -260,6 +278,8 @@ jobs:
               "precipitation_10m_mm":obs.get("precipitation_10m_mm"),
               "precipitation_1h_mm":obs.get("precipitation_1h_mm"),
               "precipitation_6h_mm":obs.get("precipitation_6h_mm"),
+              "precipitation_12h_mm":obs.get("precipitation_12h_mm"),
+              "precipitation_24h_mm":obs.get("precipitation_24h_mm"),
               "humidity_percent":obs.get("humidity_percent"),
               "pressure_hpa":obs.get("pressure_hpa"),
               "wind_speed_10m_kmh":obs.get("wind_speed_10m_kmh")
