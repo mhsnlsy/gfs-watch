@@ -3071,7 +3071,8 @@
       try{
         // The notification archive contains the four-cycle comparison PNGs.
         // The embedded forecast report and the archive now share the same PNG chart paths.
-        const gfsApi=(window.ISTANBUL_GFS_API_BASE||"").replace(/\/$/,"");\n        const response=await fetch((gfsApi?gfsApi+"/gfs/notification-latest":"./data/notifications/latest.json")+"?t="+Date.now(),{cache:"no-store"});
+        const gfsApi=(window.ISTANBUL_GFS_API_BASE||"").replace(/\/$/,"");
+        const response=await fetch((gfsApi?gfsApi+"/gfs/notification-latest":"./data/notifications/latest.json")+"?t="+Date.now(),{cache:"no-store"});
         if(!response.ok)throw new Error("Rapor arşivi henüz oluşturulmadı.");
         const document=await response.json();
         if(gfsApi){
