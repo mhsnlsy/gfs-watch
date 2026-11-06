@@ -1662,9 +1662,7 @@
       if(measured===null){
         current.textContent="MGM Eyüpsultan anlık yağış ölçümü alınamıyor.";
       }else{
-        current.textContent=measured>=0.1
-          ?"MGM Eyüpsultan ölçümüne göre şu anda yağış var ("+fmt(measured,1)+" mm/son 1 saat)."
-          :"MGM Eyüpsultan ölçümüne göre şu anda yağış yok ("+fmt(measured,1)+" mm/son 1 saat).";
+        current.textContent=measured>=0.1?"Yağmurlu":"Yağış yok";
       }
       const points=latestRainForecastPoints.filter(p=>p.modelLead>0&&numeric(p.precipitation_6h_mm)&&Number.isFinite(p.stamp)).sort((a,b)=>a.stamp-b.stamp);
       if(points.length<2){
