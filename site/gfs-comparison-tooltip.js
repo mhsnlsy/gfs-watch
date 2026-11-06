@@ -153,6 +153,42 @@ function attachGfsSvgInteractions(host,svg,metadata){
   });
   host.gfsHideTooltip=hide;
 }
+
+function isMobileGfsLayout(){
+  return window.matchMedia("(max-width:700px)").matches ||
+    window.matchMedia("(pointer:coarse)").matches;
+}
+function buildMobileGfsPanelViews(sourceSvg,metadata){
+  const panels=Array.isArray(metadata.panels)?metadata.panels:[];
+  if(panels.length!==4)return null;
+  const views=[];
+  panels.forEach((panel,index)=>{
+    const plot=panel.plot||{};
+    const padX=34;
+    const padTop=48;
+    const padBottom=34;
+    const minX=Math.max(0,Number(plot.x||0)-padX);
+    const minY=Math.max(0,Number(plot.y||0)-padTop);
+    const maxX=Number(plot.x||0)+Number(plot.width||0)+padX;
+    const maxY=Number(plot.y||0)+Number(plot.height||0)+padBottom;
+    const cropWidth=Math.max(1,maxX-minX);
+    const cropHeight=Math.max(1,maxY-minY);
+    const clone=sourceSvg.cloneNode(true);
+    clone.classList.add("gfs-interactive-svg","gfs-mobile-panel-svg");
+    clone.setAttribute("viewBox",minX+" "+minY+" "+cropWidth+" "+cropHeight);
+    clone.setAttribute("width",String(cropWidth));
+    clone.setAttribute("height",String(cropHeight));
+    clone.setAttribute("preserveAspectRatio","none");
+    clone.setAttribute("role","group");
+    clone.setAttribute("aria-label",panel.title+" · mobil görünüm");
+    clone.querySelectorAll(".gfs-panel-interaction").forEach(group=>{
+      if(group.getAttribute("data-panel-id")!==panel.id)group.remove();
+    });
+    views.push({svg:clone,metadata:{version:metadata.version||1,panels:[panel]},index});
+  });
+  return views;
+}
+
 async function loadInteractiveGfsCharts(root){
   const hosts=Array.from(root.querySelectorAll(".gfs-interactive-chart[data-svg-src]:not([data-loaded])"));
   await Promise.all(hosts.map(async host=>{
@@ -185,8 +221,26 @@ async function loadInteractiveGfsCharts(root){
       svg.setAttribute("aria-label",host.dataset.chartLabel||"İstanbul GFS dört panelli etkileşimli valid-time karşılaştırması");
       svg.setAttribute("focusable","true");
       host.querySelector(".gfs-chart-loading")?.remove();
-      host.appendChild(svg);
-      attachGfsSvgInteractions(host,svg,metadata);
+      if(isMobileGfsLayout()){
+        const mobileViews=buildMobileGfsPanelViews(svg,metadata);
+        if(mobileViews){
+          host.dataset.mobilePanels="true";
+          host.classList.add("gfs-mobile-panel-stack");
+          mobileViews.forEach(({svg:panelSvg,metadata:panelMetadata})=>{
+            const panelHost=document.createElement("div");
+            panelHost.className="gfs-mobile-panel-host";
+            panelHost.appendChild(panelSvg);
+            host.appendChild(panelHost);
+            attachGfsSvgInteractions(panelHost,panelSvg,panelMetadata);
+          });
+        }else{
+          host.appendChild(svg);
+          attachGfsSvgInteractions(host,svg,metadata);
+        }
+      }else{
+        host.appendChild(svg);
+        attachGfsSvgInteractions(host,svg,metadata);
+      }
     }catch(error){
       console.error("[GFS SVG TOOLTIP]",error);
       host.innerHTML='<div class="gfs-chart-error">Etkileşimli grafik yüklenemedi. <a href="'+escapeGfsTooltip(source)+'" target="_blank" rel="noopener">SVG dosyasını aç</a></div>';
