@@ -1,0 +1,15 @@
+{
+  "$schema": "node_modules/wrangler/config-schema.json",
+  "name": "istanbul-gfs-cloudflare",
+  "main": "src/index.ts",
+  "compatibility_date": "2026-11-06",
+  "triggers": {
+    "crons": ["*/5 * * * *"]
+  },
+  "kv_namespaces": [
+    { "binding": "GFS_KV", "id": "REPLACE_WITH_GFS_KV_NAMESPACE_ID" }
+  ],
+  "vars": {
+    "ALLOWED_ORIGIN": "https://mhsnlsy.github.io"
+  }
+}
