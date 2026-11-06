@@ -112,11 +112,12 @@ jobs:
           from urllib.request import Request, urlopen
 
           H = {
-              "User-Agent": "Mozilla/5.0 (compatible; Koy-MGM/1.1)",
-              "Accept": "application/json",
+              "User-Agent": "Mozilla/5.0 (compatible; Koy-MGM/1.2)",
+              "Accept": "application/json, text/plain, */*",
               "Origin": "https://www.mgm.gov.tr",
               "Referer": "https://www.mgm.gov.tr/",
               "Cache-Control": "no-cache",
+              "Pragma": "no-cache",
           }
 
           def feels_like(temp_c, humidity, wind_kmh):
@@ -136,25 +137,32 @@ jobs:
 
           def get(url):
               last_error = None
-              for attempt in range(1, 4):
+              for attempt in range(1, 6):
                   try:
                       req = Request(url, headers=H)
-                      with urlopen(req, timeout=20) as response:
+                      with urlopen(req, timeout=30) as response:
                           status = response.status
                           raw = response.read()
+                          content_type = response.headers.get("Content-Type", "")
                       if status != 200:
                           raise RuntimeError(f"HTTP {status}")
-                      return json.loads(raw.decode("utf-8-sig"))
+                      if not raw:
+                          raise RuntimeError("empty response")
+                      data = json.loads(raw.decode("utf-8-sig"))
+                      if not isinstance(data, (list, dict)):
+                          raise RuntimeError(f"unexpected JSON type: {type(data).__name__}")
+                      print(f"MGM API OK: HTTP {status} · {content_type} · {len(raw)} bytes")
+                      return data
                   except Exception as exc:
                       last_error = exc
                       print(
-                          f"MGM API attempt {attempt}/3 failed for {url}: "
+                          f"MGM API attempt {attempt}/5 failed for {url}: "
                           f"{type(exc).__name__}: {exc}"
                       )
-                      if attempt < 3:
-                          time.sleep(2 ** attempt)
+                      if attempt < 5:
+                          time.sleep(min(2 ** attempt, 16))
               raise RuntimeError(
-                  f"MGM API request failed after 3 attempts: {url}: "
+                  f"MGM API request failed after 5 attempts: {url}: "
                   f"{type(last_error).__name__}: {last_error}"
               ) from last_error
 
@@ -556,7 +564,25 @@ jobs:
           cp "$GITHUB_WORKSPACE/output/ev-history.json" mgm/ev-history.json
           cp mgm/latest.json "mgm/$(date -u +%Y%m%dT%H%M%SZ).json"
           find mgm -type f -name '*.json' -mtime +14 -delete
+          # Keep a machine-readable heartbeat so a stopped 5-minute collector is
+          # immediately distinguishable from an unchanged MGM observation.
+          python - <<'PY'
+          import json
+          from datetime import datetime, timezone
+          from pathlib import Path
+          obs=json.loads(Path("mgm/observation.json").read_text(encoding="utf-8"))
+          heartbeat={
+              "schema":"koy-mgm.collector-heartbeat.v1",
+              "collector":"koy-mgm",
+              "status": "fresh" if obs.get("fetch_status") != "stale_cached" else "stale_cached",
+              "attempted_at_utc": obs.get("last_fetch_attempt_at_utc") or obs.get("fetched_at_utc"),
+              "observed_at_utc": obs.get("observed_at_utc"),
+              "published_at_utc": datetime.now(timezone.utc).isoformat(),
+              "station_id": obs.get("station_id"),
+              "station_name": obs.get("station_name")
+          }
+          Path("mgm/collector-heartbeat.json").write_text(json.dumps(heartbeat,ensure_ascii=False,indent=2),encoding="utf-8")
+          PY
           git add mgm
-          if git diff --cached --quiet; then exit 0; fi
-          git commit -m "Update MGM Çanakçı forecast snapshot"
+          git commit -m "Update MGM Çanakçı collector heartbeat" || true
           git push origin koy-mgm-data
