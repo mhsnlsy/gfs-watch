@@ -29,6 +29,11 @@
     .station-current .temp-meta{margin-top:6px}
     .delta-badge{display:inline-flex;align-items:center;gap:4px;margin-top:6px;padding:3px 9px;border-radius:999px;background:rgba(125,211,215,.12);border:1px solid rgba(125,211,215,.28);color:var(--cyan);font-size:11px;font-weight:600;letter-spacing:.01em;min-height:22px}
     .delta-badge:empty{display:none}
+    .station-switch{display:flex;gap:7px;margin:14px 0 0}
+    .station-switch button{appearance:none;border:1px solid var(--line);background:rgba(255,255,255,.035);color:#aabdc8;padding:8px 11px;border-radius:999px;font:600 10px "DM Sans",sans-serif;cursor:pointer}
+    .station-switch button.active{background:rgba(125,211,215,.13);border-color:rgba(125,211,215,.35);color:#c6f0ec}
+    .station-switch button:focus-visible{outline:2px solid var(--cyan);outline-offset:2px}
+    @media(max-width:560px){.station-switch{width:100%}.station-switch button{flex:1;min-height:38px}}
     .feels-like-stat{min-width:0}
     .feels-like-24h-badge{display:inline-flex;align-items:center;justify-content:center;white-space:nowrap;width:max-content;max-width:100%;box-sizing:border-box;margin:5px auto 0;padding:3px 7px;border-radius:999px;background:rgba(125,211,215,.09);border:1px solid rgba(125,211,215,.24);color:#a9c8d2;font-size:9px;line-height:1.25;font-weight:600;letter-spacing:.01em}
     .feels-like-24h-badge[hidden]{display:none}
@@ -1439,6 +1444,7 @@
         <div class="weather-top"><div><div class="label">GERÇEK İSTASYON GÖZLEMİ</div><div class="place" id="station-card-title">Çanakçı · Giresun</div></div><span class="model-state" id="freshness">Veri bekleniyor</span></div>
         <div class="station-switch" role="group" aria-label="İstasyon seçimi">
           <button type="button" id="station-enka-button" class="active" aria-pressed="true">Çanakçı MGM</button>
+          <button type="button" id="station-home-button" aria-pressed="false">Köy Ev · 363 m</button>
         </div>
         <div class="station-overview">
   <div class="station-current">
