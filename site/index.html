@@ -2069,7 +2069,7 @@
       $("history-station-source").textContent=stationName.toLocaleUpperCase("tr-TR")+" · GERÇEK ÖLÇÜMLER";
       $("station-history-panel").setAttribute("aria-label",stationName+" son 24 saat geçmişi");
       $("history-source-note").hidden=false;
-      $("history-source-note").textContent=activeStation==="enka"?"Sıcaklık: ENKA kamera OCR ölçümleri. Yağış: MGM Şişli ölçümleri.":activeStation==="eyupsultan"?"Sıcaklık ve yağış: MGM Eyüpsultan ölçümleri.":"Sıcaklık ve yağış: MGM Şişli ölçümleri.";
+      $("history-source-note").textContent=activeStation==="enka"?"Sıcaklık, nem, basınç ve rüzgâr: ENKA WeatherLink. Yağış: MGM Şişli ölçümleri.":activeStation==="eyupsultan"?"Sıcaklık ve yağış: MGM Eyüpsultan ölçümleri.":"Sıcaklık ve yağış: MGM Şişli ölçümleri.";
       renderStationTemperatureTrend(samples,stationName);
       // Balmumcu rainfall intentionally uses the Şişli MGM archive.
       // Eyüpsultan and Şişli keep their own rainfall archives.
