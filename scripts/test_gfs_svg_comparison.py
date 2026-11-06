@@ -69,7 +69,7 @@ def main_test() -> None:
 
         import re
         match = re.search(
-            rb'<metadata id="gfs-interactive-data"><!\\[CDATA\\[(.*?)\\]\\]></metadata>',
+            rb'<metadata id="gfs-interactive-data"><!\[CDATA\[(.*?)\]\]></metadata>',
             svg,
             re.DOTALL,
         )
@@ -86,6 +86,14 @@ def main_test() -> None:
             assert all(len(series["values"]) == 25 for series in panel["series"])
             assert all(len(series["y_positions"]) == 25 for series in panel["series"])
             assert all(time["label"].endswith(" TSİ") for time in panel["valid_times"])
+
+            plot = panel["plot"]
+            assert plot["width"] > 0 and plot["height"] > 0
+            assert len(panel["x_positions"]) == 25
+            assert all(plot["x"] <= x <= plot["x"] + plot["width"] for x in panel["x_positions"])
+            for series in panel["series"]:
+                for y in series["y_positions"]:
+                    assert y is None or plot["y"] <= y <= plot["y"] + plot["height"]
 
         # Same valid instant, different lead hours: four cycle values must be
         # available from every panel for the first valid-time position.
