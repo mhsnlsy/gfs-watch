@@ -32,6 +32,7 @@ jobs:
           set -euo pipefail
           mkdir -p "$RUNNER_TEMP/koy-output"
           cp scripts/render_koy_gfs_charts.py "$RUNNER_TEMP/render_koy_gfs_charts.py"
+          cp scripts/build_koy_gfs_interactive_svg.py "$RUNNER_TEMP/build_koy_gfs_interactive_svg.py"
           python - <<'PY'
           import json, os
           from datetime import datetime, timezone
@@ -218,7 +219,7 @@ jobs:
           # report, but exclusively from the Köy GFS canonical comparison bundle.
           if [ -s gfs/comparison.json ]; then
             python -m pip install -q matplotlib
-            KOY_GFS_DIR="$PWD/gfs" python scripts/build_koy_gfs_interactive_svg.py
+            KOY_GFS_DIR="$PWD/gfs" python "$RUNNER_TEMP/build_koy_gfs_interactive_svg.py"
             git add gfs/media
             if ! git diff --cached --quiet; then
               git commit -m "Publish Köy GFS interactive SVG comparison"
