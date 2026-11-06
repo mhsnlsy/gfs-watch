@@ -397,6 +397,18 @@ function gfsRunLabel(run){
  const utcHour=String(date.getUTCHours()).padStart(2,"0")+"Z";
  return ts(date.toISOString())+" · "+utcHour;
 }
+function renderRunLegend(source){
+ const host=$("next-72h-legend");
+ if(!host)return;
+ if(!source.length){
+  host.innerHTML='<span class="next-72h-legend-loading">GFS döngü bilgisi bekleniyor…</span>';
+  return;
+ }
+ host.innerHTML=source.slice(0,4).map((run,index)=>{
+  const latest=index===0,color=COLORS[index%COLORS.length];
+  return '<span class="next-72h-legend-item'+(latest?' is-latest':'')+'" role="listitem"><i class="next-72h-legend-line" style="--run-color:'+color+'" aria-hidden="true"></i><span>'+esc(gfsRunLabel(run))+'</span>'+(latest?'<b class="next-72h-legend-tag">EN GÜNCEL</b>':'')+'</span>';
+ }).join("");
+}
 function renderRuns(d,f72){
  const historyRuns=(Array.isArray(d?.runs)?d.runs:[])
   .filter(run=>run&&Array.isArray(run.forecast_6_hourly)&&run.forecast_source==="meteopt")
@@ -423,6 +435,7 @@ function renderRuns(d,f72){
   const src=`./koy-data/gfs/media/koy-gfs-${runStamp}-${metric}.png?v=${encodeURIComponent(source[0].run_id_utc||"")}`;
   holder.innerHTML='<a class="notification-image-link" href="'+src+'" target="_blank" rel="noopener"><img class="notification-image" src="'+src+'" alt="'+esc(alt)+'"></a>';
  });
+ renderRunLegend(source);
  $("next-72h-meta").textContent=source.length?source.length+" GFS döngüsü karşılaştırılıyor":"MeteoPT GFS verisi bekleniyor";
  // Both charts use the same latest MeteoPT payload as the table, plus its three archived cycles.
  const chartSource=source;
