@@ -26,7 +26,7 @@ function buildGfsTooltipMarkup(panel,index,validTime){
       '</div>';
   }).join("");
   return '<div class="gfs-chart-tooltip-head"><div><div class="gfs-chart-tooltip-title">'+escapeGfsTooltip(panel.title)+'</div>'+
-    '<div class="gfs-chart-tooltip-time">'+escapeGfsTooltip(validTime.label)+'</div></div></div>'+
+    '<div class="gfs-chart-tooltip-time">'+escapeGfsTooltip(String(validTime.label||"").replace(/\s*UTC\b/g,""))+'</div></div></div>'+
     rows+'<div class="gfs-chart-tooltip-hint">Dört döngü · aynı geçerlilik anı · TSİ</div>';
 }
 function positionGfsTooltip(host,tooltip,clientX,clientY){
