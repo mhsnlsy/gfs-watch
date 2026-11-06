@@ -18,6 +18,35 @@ const MGM_STATION_ELEVATION_M=146;
 const HOME_DELTA_M=HOME_ELEVATION_M-MGM_STATION_ELEVATION_M;
 const HOME_STANDARD_LAPSE_K_PER_KM=6.5;
 const HOME_GFS_TEMP_CORRECTION_C=HOME_DELTA_M/1000*HOME_STANDARD_LAPSE_K_PER_KM;
+
+function buildVirtualHomeObservation(source){
+ if(!source)return null;
+ const t=num(source.temperature_2m_c),rh=num(source.humidity_percent),wind=num(source.wind_speed_10m_kmh);
+ if(t==null)return null;
+ const correctedT=Number((t-HOME_GFS_TEMP_CORRECTION_C).toFixed(1));
+ const p=num(source.pressure_hpa);
+ let correctedP=null;
+ if(p!=null){
+  const tk=t+273.15,tev=correctedT+273.15,L=HOME_STANDARD_LAPSE_K_PER_KM/1000;
+  correctedP=Number((p*Math.pow(tev/tk,9.80665/(287.05*L))).toFixed(1));
+ }
+ return {...source,schema:"koy-mgm.virtual-home-observation.v1",station_id:"KOY-EV-363M",station_name:"Köy Ev",elevation_m:HOME_ELEVATION_M,source_station_name:"Çanakçı",source_station_elevation_m:MGM_STATION_ELEVATION_M,elevation_delta_m:HOME_DELTA_M,virtual_station:true,adjustment_method:"6.5 K/km environmental lapse rate",temperature_2m_c:correctedT,pressure_hpa:correctedP,feels_like_c:feelsLike(correctedT,rh,wind)};
+}
+function buildVirtualHomeHistory(source){
+ if(!source||!Array.isArray(source.samples))return null;
+ const samples=source.samples.map(s=>{
+  const t=num(s.temperature_2m_c),rh=num(s.humidity_percent),wind=num(s.wind_speed_10m_kmh);
+  if(t==null)return null;
+  const correctedT=Number((t-HOME_GFS_TEMP_CORRECTION_C).toFixed(1));
+  const p=num(s.pressure_hpa);
+  let correctedP=null;
+  if(p!=null){const tk=t+273.15,tev=correctedT+273.15,L=HOME_STANDARD_LAPSE_K_PER_KM/1000;correctedP=Number((p*Math.pow(tev/tk,9.80665/(287.05*L))).toFixed(1));}
+  return {...s,temperature_2m_c:correctedT,pressure_hpa:correctedP,feels_like_c:feelsLike(correctedT,rh,wind)};
+ }).filter(Boolean);
+ const recent=samples.filter(s=>{const stamp=Date.parse(s.observed_at_utc||s.logged_at_utc||"");return Number.isFinite(stamp)&&stamp>=Date.now()-24*3600000;});
+ const feels=recent.map(s=>num(s.feels_like_c)).filter(v=>v!=null);
+ return {...source,schema:"koy-mgm.virtual-home-history.v1",station_id:"KOY-EV-363M",station_name:"Köy Ev",source_station_name:"Çanakçı",source_station_elevation_m:MGM_STATION_ELEVATION_M,elevation_m:HOME_ELEVATION_M,elevation_delta_m:HOME_DELTA_M,adjustment_method:"6.5 K/km environmental lapse rate",feels_like_24h_min_c:feels.length?Number(Math.min(...feels).toFixed(1)):null,feels_like_24h_max_c:feels.length?Number(Math.max(...feels).toFixed(1)):null,samples};
+}
 function adjustGfsPointForHome(point){
  const copy={...point};
  const t=num(copy.temperature_2m_c);
@@ -440,7 +469,7 @@ function bindStationHistoryTooltip(containerId){
  }
  function show(target,event,lock=false){
   if(!target)return;
-  tooltip.innerHTML='<div class="station-history-tooltip-time">MGM Çanakçı · Gerçek ölçüm<br>'+esc(target.dataset.period||"—")+'</div><div class="station-history-tooltip-value">'+esc(target.dataset.value||"—")+' <small>'+esc(target.dataset.unit||"")+'</small></div><div class="station-history-tooltip-detail">'+esc(target.dataset.detail||"")+'</div>';
+  tooltip.innerHTML='<div class="station-history-tooltip-time">'+esc(stationMode==="home"?"Köy Ev · 363 m · Rakım düzeltilmiş":"MGM Çanakçı · Gerçek ölçüm")+'<br>'+esc(target.dataset.period||"—")+'</div><div class="station-history-tooltip-value">'+esc(target.dataset.value||"—")+' <small>'+esc(target.dataset.unit||"")+'</small></div><div class="station-history-tooltip-detail">'+esc(target.dataset.detail||"")+'</div>';
   tooltip.hidden=false;
   pinned=lock;
   const box=host.getBoundingClientRect();
@@ -469,13 +498,17 @@ function bindStationHistoryTooltip(containerId){
  });
 }
 function renderStationHistory(doc,rainDoc){
+ const isHome=stationMode==="home";
  const samples=Array.isArray(doc?.samples)?doc.samples:[];
  const rainSamples=Array.isArray(rainDoc?.samples)?rainDoc.samples:samples;
- $("station-trend-meta").textContent="Çanakçı · MGM · "+samples.length+" kayıt · 30 dk ortalama / min–maks";
- $("station-rain-meta").textContent="Çanakçı · MGM · "+rainSamples.length+" kayıt · 72 saatlik ayrı yağış arşivi · saatlik kayan 1 saat toplam";
- $("history-source-note").textContent="Sıcaklık: MGM Çanakçı gözlem geçmişi. Yağış: bağımsız 72 saatlik MGM yağış arşivi.";
- $("station-temperature-trend").innerHTML=svgStationHistory(samples,"temperature_2m_c","Çanakçı sıcaklık","°C");
- $("station-rain-trend").innerHTML=svgStationHistory(rainSamples,"precipitation_1h_mm","Çanakçı yağış","mm");
+ const stationLabel=isHome?"Köy Ev · 363 m":"Çanakçı · MGM";
+ const tempTitle=isHome?"Köy Ev sıcaklık":"Çanakçı sıcaklık";
+ const rainTitle=isHome?"Köy Ev yağış":"Çanakçı yağış";
+ $("station-trend-meta").textContent=stationLabel+" · "+samples.length+" kayıt · 30 dk ortalama / min–maks";
+ $("station-rain-meta").textContent=stationLabel+" · "+rainSamples.length+" kayıt · 72 saatlik arşiv · saatlik kayan 1 saat toplam";
+ $("history-source-note").textContent=isHome?"Sıcaklık ve yağış: Çanakçı MGM gerçek ölçümlerinden +217 m rakım düzeltmesiyle türetilmiş Köy Ev sanal istasyonu.":"Sıcaklık: MGM Çanakçı gözlem geçmişi. Yağış: bağımsız 72 saatlik MGM yağış arşivi.";
+ $("station-temperature-trend").innerHTML=svgStationHistory(samples,"temperature_2m_c",tempTitle,"°C");
+ $("station-rain-trend").innerHTML=svgStationHistory(rainSamples,"precipitation_1h_mm",rainTitle,"mm");
  const now=Date.now(),hour=3600000,end=Math.floor(now/hour)*hour,start=end-24*hour;
  const byHour=new Map();
  rainSamples.forEach(sample=>{
@@ -488,15 +521,8 @@ function renderStationHistory(doc,rainDoc){
  const maxPoint=hourlyRain.reduce((best,p)=>!best||p.value>best.value?p:best,null);
  const maxBadge=$("station-rain-max");
  if(maxBadge){
-  if(maxPoint){
-   maxBadge.hidden=false;
-   maxBadge.textContent="24 saatte max "+fmt(maxPoint.value)+" mm / 1 sa";
-   maxBadge.title="En yüksek kayan 1 saatlik yağış · "+ts(maxPoint.time);
-  }else{
-   maxBadge.hidden=true;
-   maxBadge.textContent="";
-   maxBadge.removeAttribute("title");
-  }
+  if(maxPoint){maxBadge.hidden=false;maxBadge.textContent="24 saatte max "+fmt(maxPoint.value)+" mm / 1 sa";maxBadge.title="En yüksek kayan 1 saatlik yağış · "+ts(maxPoint.time);}
+  else{maxBadge.hidden=true;maxBadge.textContent="";maxBadge.removeAttribute("title");}
  }
  bindStationHistoryTooltip("station-temperature-trend");
  bindStationHistoryTooltip("station-rain-trend");
@@ -646,11 +672,16 @@ async function refresh(){if(busy)return;busy=true;
  if(results[3].status==="fulfilled")rainHistory=results[3].value;else rainHistory=null;
  if(results[5].status==="fulfilled")evHistory=results[5].value;else evHistory=null;
  if(results[6].status==="fulfilled")evObservation=results[6].value;else evObservation=null;
- if(stationHistory){
-  renderStationHistory(stationHistory,rainHistory);
+ // During the publish gap, derive the same virtual station locally from the canonical MGM payload.
+ if(!evObservation&&window.__koyMgmObservation)evObservation=buildVirtualHomeObservation(window.__koyMgmObservation);
+ if(!evHistory&&stationHistory)evHistory=buildVirtualHomeHistory(stationHistory);
+ const initialHistory=stationMode==="home"?evHistory:stationHistory;
+ const initialRainHistory=stationMode==="home"?evHistory:rainHistory;
+ if(initialHistory){
+  renderStationHistory(initialHistory,initialRainHistory);
  }else{
-  $("station-temperature-trend").innerHTML="<div class=\"station-trend-empty\">MGM istasyon geçmişi bekleniyor…</div>";
-  $("station-rain-trend").innerHTML="<div class=\"station-trend-empty\">MGM yağış arşivi bekleniyor…</div>";
+  $("station-temperature-trend").innerHTML='<div class="station-trend-empty">'+(stationMode==="home"?"Köy Ev sanal istasyon geçmişi bekleniyor…":"MGM istasyon geçmişi bekleniyor…")+'</div>';
+  $("station-rain-trend").innerHTML='<div class="station-trend-empty">'+(stationMode==="home"?"Köy Ev sanal yağış arşivi bekleniyor…":"MGM yağış arşivi bekleniyor…")+'</div>';
  }
  if(results[4].status==="fulfilled"){
   window.__koyMgmObservation=results[4].value;
