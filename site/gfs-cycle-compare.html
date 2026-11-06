@@ -10,37 +10,37 @@
 <style>
 :root{color-scheme:dark;--line:rgba(204,225,239,.11);--text:#edf5f8;--muted:#9bb1bf;--cyan:#7dd3d7}
 *{box-sizing:border-box}
-html,body{margin:0;padding:0;background:transparent;color:var(--text);font-family:"DM Sans",sans-serif}
+html,body{margin:0;padding:0;background:transparent;color:var(--text);font-family:system-ui,-apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif}
 .next-72h-head{display:flex;justify-content:space-between;align-items:flex-start;gap:12px;margin-bottom:16px}
-.next-72h-head h2{font:700 22px/1.2 Manrope,sans-serif;letter-spacing:-.045em;margin:5px 0 0}
-.next-72h-head p{font-size:11px;color:var(--muted);margin:6px 0 0;line-height:1.5}
+.next-72h-head h2{font:650 22px/1.28 system-ui,-apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif;letter-spacing:-.015em;margin:5px 0 0}
+.next-72h-head p{font-size:13px;color:var(--muted);margin:7px 0 0;line-height:1.6}
 .section-kicker{font-size:11px;text-transform:uppercase;letter-spacing:.15em;color:var(--cyan);font-weight:700}
 .next-72h-badge{font-size:10px;color:#b8d7df;border:1px solid var(--line);padding:7px 10px;border-radius:9px;white-space:nowrap;max-width:42%}
 .next-72h-grid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:18px 20px}
 .next-72h-card{position:relative;min-width:0;padding:12px 0 12px;border:1px solid rgba(204,225,239,.12);border-radius:16px;background:rgba(4,19,29,.17);overflow:hidden}
 .next-72h-card-head{display:flex;align-items:center;justify-content:space-between;gap:8px;padding:0 14px}
-.next-72h-card-head h3{font:700 16px Manrope,sans-serif;margin:0}
-.next-72h-card-head span{font-size:10px;color:var(--muted);white-space:nowrap}
+.next-72h-card-head h3{font:650 18px/1.3 system-ui,-apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif;letter-spacing:0;margin:0}
+.next-72h-card-head span{font-size:12px;color:var(--muted);white-space:nowrap}
 .next-72h-chart{height:clamp(220px,20vw,285px);width:100%;margin-top:10px;min-width:0;position:relative;overflow:hidden;padding:0}
 .next-72h-chart svg{display:block;width:100%;height:100%;overflow:visible}
 .chart-empty{color:var(--muted);font-size:13px;padding:32px 0}
 .next-72h-legend{display:flex;flex-wrap:wrap;align-items:center;gap:11px 22px;margin:10px 2px 0;padding:14px 2px 9px;border-top:1px solid rgba(204,225,239,.10)}
-.next-72h-legend-item{display:inline-flex;align-items:center;gap:9px;color:#c2d3dc;font-size:12px;line-height:1.4;white-space:nowrap}
+.next-72h-legend-item{display:inline-flex;align-items:center;gap:10px;color:#d0dce3;font-size:13px;font-weight:500;line-height:1.55;white-space:nowrap}
 .next-72h-legend-line{display:inline-block;width:34px;flex:none;border-top:2px dashed var(--run-color)}
 .next-72h-legend-item.is-latest .next-72h-legend-line{border-top:4px solid var(--run-color)}
 .next-72h-legend-tag{color:#8fd7ba;background:rgba(39,166,105,.13);border:1px solid rgba(143,215,186,.22);border-radius:999px;padding:3px 7px;font-size:9px;font-weight:800;letter-spacing:.04em}
 .next-72h-legend-loading{color:var(--muted);font-size:11px}
-.next-72h-legend-note{margin:3px 2px 0;color:#8fa7b5;font-size:11px;line-height:1.5}
-.gfs-point-tooltip{position:absolute;z-index:40;min-width:180px;max-width:min(250px,calc(100% - 12px));padding:9px 11px;border:1px solid rgba(125,211,215,.38);border-radius:11px;background:rgba(4,18,29,.97);box-shadow:0 9px 25px rgba(0,0,0,.42);color:#eaf5f8;font-size:11px;line-height:1.45;pointer-events:none;backdrop-filter:blur(8px)}
+.next-72h-legend-note{margin:4px 2px 0;color:#a8bac5;font-size:12px;line-height:1.6}
+.gfs-point-tooltip{position:absolute;z-index:40;min-width:190px;max-width:min(260px,calc(100% - 12px));padding:10px 12px;border:1px solid rgba(125,211,215,.38);border-radius:12px;background:rgba(4,18,29,.97);box-shadow:0 9px 25px rgba(0,0,0,.42);color:#eaf5f8;font-family:system-ui,-apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif;font-size:12px;line-height:1.55;pointer-events:none;backdrop-filter:blur(8px)}
 .gfs-point-tooltip[hidden]{display:none}
-.gfs-point-tooltip-head{display:flex;align-items:center;gap:8px;color:#d8f4f0;font-size:11px}
+.gfs-point-tooltip-head{display:flex;align-items:center;gap:8px;color:#d8f4f0;font-size:12px;font-weight:600}
 .gfs-point-tooltip-head i{width:8px;height:8px;flex:none;border-radius:50%}
-.gfs-point-tooltip-time{margin-top:6px;color:#a9bfca;font-size:10px}
-.gfs-point-tooltip-value{margin-top:4px;color:#fff;font:700 18px/1.2 Manrope,sans-serif}
+.gfs-point-tooltip-time{margin-top:7px;color:#b7c7d0;font-size:11px}
+.gfs-point-tooltip-value{margin-top:5px;color:#fff;font:700 19px/1.3 system-ui,-apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif}
 .gfs-point-tooltip-value small{font:500 10px "DM Sans",sans-serif;color:#a9bfca}
-.gfs-point-tooltip-meta{margin-top:5px;color:#8fa7b5;font-size:10px}
+.gfs-point-tooltip-meta{margin-top:6px;color:#a8bac5;font-size:11px}
 @media(max-width:700px){.next-72h-grid{grid-template-columns:minmax(0,1fr)}.next-72h-chart{height:230px}}
-@media(max-width:560px){.next-72h-head h2{font-size:20px}.next-72h-head p{font-size:10px}.next-72h-grid{gap:10px}.next-72h-card{padding:10px 0 10px}.next-72h-card-head h3{font-size:15px}.next-72h-card-head span{font-size:10px}.next-72h-chart{height:210px}.next-72h-legend{gap:9px 14px;margin-top:6px;padding-top:11px}.next-72h-legend-item{font-size:11px;white-space:normal}.next-72h-legend-line{width:26px}.next-72h-legend-note{font-size:10px}.gfs-point-tooltip{min-width:160px;max-width:min(220px,calc(100% - 12px));padding:8px 10px}.gfs-point-tooltip-value{font-size:16px}}
+@media(max-width:560px){.next-72h-head h2{font-size:20px}.next-72h-head p{font-size:11px}.next-72h-grid{gap:10px}.next-72h-card{padding:10px 0 10px}.next-72h-card-head h3{font-size:15px}.next-72h-card-head span{font-size:10px}.next-72h-chart{height:210px}.next-72h-legend{gap:9px 14px;margin-top:6px;padding-top:11px}.next-72h-legend-item{font-size:11px;white-space:normal}.next-72h-legend-line{width:26px}.next-72h-legend-note{font-size:10px}.gfs-point-tooltip{min-width:160px;max-width:min(220px,calc(100% - 12px));padding:8px 10px}.gfs-point-tooltip-value{font-size:16px}}
 </style>
 </head>
 <body>
@@ -130,14 +130,20 @@ function svgLine(runs,metric,title,unit,verification=null){
   hi=Math.max(1,Math.ceil(hi*1.15));
  }
  if(hi===lo)hi=lo+1;
- const W=1000,H=280,L=54,R=8,T=24,B=42,PW=W-L-R,PH=H-T-B;
+ const chartHost=$(metric==="temperature_2m_c"?"next72-temperature":"next72-precipitation");
+ const W=1000;
+ const boxWidth=Math.max(320,chartHost?.clientWidth||1000);
+ const boxHeight=Math.max(180,chartHost?.clientHeight||280);
+ // Match the SVG viewBox to its real display ratio so glyphs are never squeezed horizontally.
+ const H=W*boxHeight/boxWidth;
+ const L=78,R=16,T=34,B=60,PW=W-L-R,PH=H-T-B;
  const x=h=>L+(hours.length===1?PW/2:(h-hours[0])/(hours[hours.length-1]-hours[0]||1))*PW;
  const y=v=>T+(hi-v)*PH/(hi-lo);
- let out='<svg class="koy-svg" viewBox="0 0 '+W+' '+H+'" preserveAspectRatio="none" role="img" aria-label="'+esc(title)+'">';
- for(let j=0;j<=3;j++){const v=lo+(hi-lo)*j/3,yy=y(v);out+='<line x1="'+L+'" y1="'+yy+'" x2="'+(W-R)+'" y2="'+yy+'" stroke="#355064" stroke-dasharray="3 5"/><text x="'+(L-8)+'" y="'+(yy+5)+'" text-anchor="end" fill="#d0dde4" font-size="17" font-weight="600" font-family="DM Sans, sans-serif">'+fmt(v,1)+'</text>';}
+ let out='<svg class="koy-svg" viewBox="0 0 '+W+' '+H+'" preserveAspectRatio="xMidYMid meet" text-rendering="optimizeLegibility" role="img" aria-label="'+esc(title)+'">';
+ for(let j=0;j<=3;j++){const v=lo+(hi-lo)*j/3,yy=y(v);out+='<line x1="'+L+'" y1="'+yy+'" x2="'+(W-R)+'" y2="'+yy+'" stroke="#355064" stroke-dasharray="3 5"/><text x="'+(L-8)+'" y="'+(yy+5)+'" text-anchor="end" fill="#d0dde4" font-size="20" font-weight="600" font-family="system-ui, -apple-system, BlinkMacSystemFont, Segoe UI, sans-serif">'+fmt(v,1)+'</text>';}
  const axisPoint=usable.flatMap(item=>item.points).find(p=>p.h===hours[0]);
  const axisLabel=v=>{if(!v)return "—";const d=new Date(v);if(!Number.isFinite(d.getTime()))return "—";d.setTime(d.getTime()-3*3600000);return new Intl.DateTimeFormat("tr-TR",{timeZone:"Europe/Istanbul",day:"numeric",month:"long",hour:"2-digit",minute:"2-digit",hourCycle:"h23"}).format(d)+" TSİ";};
- hours.forEach(h=>{if(h!==hours[0]&&h%12!==0&&h!==hours[hours.length-1])return;const label=h===hours[0]?axisLabel(axisPoint?.validTime):"+"+h+"s";const anchor=h===hours[0]?"start":h===hours[hours.length-1]?"end":"middle";out+='<text x="'+x(h)+'" y="'+(H-8)+'" text-anchor="'+anchor+'" fill="#c5d3dc" font-size="15" font-weight="600" font-family="DM Sans, sans-serif">'+esc(label)+'</text>';});
+ hours.forEach(h=>{if(h!==hours[0]&&h%12!==0&&h!==hours[hours.length-1])return;const label=h===hours[0]?axisLabel(axisPoint?.validTime):"+"+h+"s";const anchor=h===hours[0]?"start":h===hours[hours.length-1]?"end":"middle";out+='<text x="'+x(h)+'" y="'+(H-8)+'" text-anchor="'+anchor+'" fill="#c5d3dc" font-size="18" font-weight="500" font-family="system-ui, -apple-system, BlinkMacSystemFont, Segoe UI, sans-serif">'+esc(label)+'</text>';});
  const lookup=usable.map(item=>new Map(item.points.map(p=>[p.h,p.v])));
  const upper=[],lower=[];
  hours.forEach(h=>{const vals=lookup.map(map=>map.get(h)).filter(v=>v!=null);if(vals.length){upper.push([x(h),y(Math.max(...vals))]);lower.push([x(h),y(Math.min(...vals))]);}});
@@ -146,7 +152,7 @@ function svgLine(runs,metric,title,unit,verification=null){
   const upperSigma=[],lowerSigma=[];
   hours.forEach(h=>{const point=usable[0].points.find(p=>p.h===h);if(!point)return;const local=verification.sigmaByHour?.get(h),width=Number.isFinite(local)&&local>0?local:sigma;upperSigma.push([x(h),y(point.v+width)]);lowerSigma.push([x(h),y(point.v-width)]);});
   if(upperSigma.length>1){const polygon=upperSigma.concat(lowerSigma.slice().reverse()).map(p=>p.join(",")).join(" ");out+='<polygon points="'+polygon+'" fill="#7dd3d7" opacity=".13"/>';}
-  out+='<text x="'+(W-R-4)+'" y="'+(T+16)+'" text-anchor="end" fill="#bdccd5" font-size="13" font-weight="600" font-family="DM Sans, sans-serif">Gerçekleşen hata σ ±'+fmt(sigma,1)+'°C · '+verification.count+' doğrulama</text>';
+  out+='<text x="'+(W-R-4)+'" y="'+(T+16)+'" text-anchor="end" fill="#bdccd5" font-size="15" font-weight="500" font-family="system-ui, -apple-system, BlinkMacSystemFont, Segoe UI, sans-serif">Gerçekleşen hata σ ±'+fmt(sigma,1)+'°C · '+verification.count+' doğrulama</text>';
  }
  usable.forEach(item=>{
   const index=item.runIndex,color=COLORS[index%COLORS.length],latest=index===0;
@@ -158,6 +164,16 @@ function svgLine(runs,metric,title,unit,verification=null){
  out+='</svg>';return out;
 }
 let activeTooltip=null;
+let activeChartSource=[];
+let activeChartVerification=null;
+function renderCharts(){
+ if(!activeChartSource.length)return;
+ $("next72-temperature").innerHTML=svgLine(activeChartSource,"temperature_2m_c","2 m sıcaklık","°C",activeChartVerification);
+ $("next72-precipitation").innerHTML=svgLine(activeChartSource,"precipitation_6h_mm","3 saatlik yağış","mm / 3 saat",null);
+ bindTooltip("next72-temperature");
+ bindTooltip("next72-precipitation");
+ reportHeight();
+}
 function bindTooltip(containerId){
  const host=$(containerId),svg=host?.querySelector("svg.koy-svg");if(!host||!svg)return;
  const tooltip=document.createElement("div");tooltip.className="gfs-point-tooltip";tooltip.hidden=true;tooltip.setAttribute("role","status");host.appendChild(tooltip);
@@ -195,10 +211,9 @@ async function load(){
    samples:historyDoc.samples.map(sample=>({...sample,temperature_2m_c:sample.temperature_c}))
   }:null;
   const verification=realizedErrorStats(source,history);
-  $("next72-temperature").innerHTML=svgLine(source,"temperature_2m_c","2 m sıcaklık","°C",verification);
-  $("next72-precipitation").innerHTML=svgLine(source,"precipitation_6h_mm","3 saatlik yağış","mm / 3 saat",null);
-  bindTooltip("next72-temperature");bindTooltip("next72-precipitation");
-  reportHeight();
+  activeChartSource=source;
+  activeChartVerification=verification;
+  renderCharts();
  }catch(error){
   $("next-72h-meta").textContent="GFS verisi bekleniyor";
   $("next-72h-legend").innerHTML='<span class="next-72h-legend-loading">'+esc(error.message||"GFS karşılaştırması yüklenemedi")+'</span>';
@@ -206,7 +221,18 @@ async function load(){
  }
 }
 function reportHeight(){if(window.parent===window)return;const height=Math.ceil(document.documentElement.scrollHeight);window.parent.postMessage({type:"gfs-cycle-widget-height",height},"*");}
-if("ResizeObserver"in window){new ResizeObserver(reportHeight).observe(document.documentElement);}
+if("ResizeObserver"in window){
+ new ResizeObserver(reportHeight).observe(document.documentElement);
+ let chartSizeKey="";
+ const chartObserver=new ResizeObserver(()=>{
+  const nextKey=["next72-temperature","next72-precipitation"].map(id=>{
+   const node=$(id);return node?Math.round(node.clientWidth)+"x"+Math.round(node.clientHeight):"0x0";
+  }).join("|");
+  if(chartSizeKey&&nextKey!==chartSizeKey&&activeChartSource.length)renderCharts();
+  chartSizeKey=nextKey;
+ });
+ ["next72-temperature","next72-precipitation"].forEach(id=>{const node=$(id);if(node)chartObserver.observe(node);});
+}
 window.addEventListener("load",reportHeight);
 load();window.setInterval(load,300000);
 })();
