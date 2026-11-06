@@ -2,7 +2,7 @@
   "use strict";
   const ROOT = "meteopt-gfs-table";
   // Homepage table reads the same independent Istanbul GFS payload used by the live homepage.
-  const DATA_URL = "./data/istanbul-gfs-latest.json";
+  const DATA_URL = ((window.ISTANBUL_GFS_API_BASE||"").replace(/\\/$/,"") + "/gfs/latest");
   const $ = (id) => document.getElementById(id);
   const finite = (value) => value !== null && value !== undefined && value !== "" && Number.isFinite(Number(value));
   const number = (value) => finite(value) ? Number(value) : null;
