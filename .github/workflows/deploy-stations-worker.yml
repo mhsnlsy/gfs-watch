@@ -1,0 +1,178 @@
+name: Deploy Cloudflare Station Service
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - "station-worker/**"
+      - ".github/workflows/deploy-stations-worker.yml"
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+concurrency:
+  group: cloudflare-station-service-deploy
+  cancel-in-progress: false
+
+jobs:
+  deploy:
+    name: Deploy Worker + D1 and verify live collection
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - name: Check out repository
+        uses: actions/checkout@v5
+        with:
+          ref: main
+          fetch-depth: 0
+
+      - name: Set up Node.js
+        uses: actions/setup-node@v5
+        with:
+          node-version: "22"
+
+      - name: Verify Cloudflare credentials
+        env:
+          CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+          CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
+        run: |
+          set -euo pipefail
+          test -n "$CLOUDFLARE_API_TOKEN" || { echo "::error::CLOUDFLARE_API_TOKEN is not configured"; exit 1; }
+          test -n "$CLOUDFLARE_ACCOUNT_ID" || { echo "::error::CLOUDFLARE_ACCOUNT_ID is not configured"; exit 1; }
+
+      - name: Install Wrangler
+        run: npm install --global wrangler@4
+
+      - name: Create or locate the production D1 database
+        working-directory: station-worker
+        env:
+          CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+          CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
+        run: |
+          set -euo pipefail
+          npx wrangler d1 list --json > "$RUNNER_TEMP/d1-list.json"
+
+          find_db_id() {
+            node - "$RUNNER_TEMP/d1-list.json" <<'NODE'
+          const fs = require("fs");
+          const data = JSON.parse(fs.readFileSync(process.argv[2], "utf8"));
+          function walk(value) {
+            if (!value) return null;
+            if (Array.isArray(value)) {
+              for (const item of value) { const found = walk(item); if (found) return found; }
+              return null;
+            }
+            if (typeof value !== "object") return null;
+            const name = value.name || value.database_name || value.databaseName;
+            const id = value.uuid || value.database_id || value.databaseId;
+            if (name === "gfs-watch-stations" && id) return String(id);
+            for (const child of Object.values(value)) { const found = walk(child); if (found) return found; }
+            return null;
+          }
+          const id = walk(data);
+          if (id) process.stdout.write(id);
+          NODE
+          }
+
+          D1_ID="$(find_db_id)"
+          if [ -z "$D1_ID" ]; then
+            echo "Creating production D1 database in Eastern Europe..."
+            npx wrangler d1 create gfs-watch-stations --location eeur
+            npx wrangler d1 list --json > "$RUNNER_TEMP/d1-list.json"
+            D1_ID="$(find_db_id)"
+          fi
+
+          test -n "$D1_ID" || { echo "::error::Could not resolve gfs-watch-stations D1 database ID"; exit 1; }
+          echo "Using D1 database ID: $D1_ID"
+
+          node - "$D1_ID" station-worker/wrangler.jsonc <<'NODE'
+          const fs = require("fs");
+          const id = process.argv[2];
+          const file = process.argv[3];
+          const config = JSON.parse(fs.readFileSync(file, "utf8"));
+          const binding = (config.d1_databases || []).find(item => item.database_name === "gfs-watch-stations");
+          if (!binding) throw new Error("STATIONS_DB binding missing in wrangler config");
+          binding.database_id = id;
+          fs.writeFileSync(file, JSON.stringify(config, null, 2) + "\n");
+          NODE
+
+      - name: Apply production D1 migrations
+        working-directory: station-worker
+        env:
+          CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+          CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
+        run: npx wrangler d1 migrations apply gfs-watch-stations --remote --config wrangler.jsonc
+
+      - name: Deploy the minute-cron Worker
+        working-directory: station-worker
+        env:
+          CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+          CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
+        run: npx wrangler deploy --config wrangler.jsonc
+
+      - name: Verify Worker, Cron collection, and D1 history
+        env:
+          STATIONS_API: https://gfs-watch-stations.muhsin-ulusoy.workers.dev/api
+        run: |
+          set -euo pipefail
+          verified=0
+          for attempt in $(seq 1 24); do
+            echo "Waiting for all three D1 station samples ($attempt/24)..."
+            if curl --silent --show-error --fail --max-time 12 "$STATIONS_API/health?check=$(date +%s)" -o "$RUNNER_TEMP/station-health.json"; then
+              if node - "$RUNNER_TEMP/station-health.json" <<'NODE'
+          const fs = require("fs");
+          const doc = JSON.parse(fs.readFileSync(process.argv[2], "utf8"));
+          const required = ["enka", "eyupsultan", "sisli"];
+          if (doc.ok !== true || doc.storage !== "D1") process.exit(1);
+          const rows = doc.stations || [];
+          const now = Date.now();
+          const good = required.every(key => {
+            const row = rows.find(item => item.key === key);
+            const fetched = Date.parse(row && row.fetched_at_utc || "");
+            return row && Number.isFinite(fetched) && now - fetched >= -30000 && now - fetched < 240000;
+          });
+          if (!good) process.exit(1);
+          NODE
+              then
+                verified=1
+                break
+              fi
+            fi
+            sleep 10
+          done
+
+          if [ "$verified" -ne 1 ]; then
+            echo "::error::Worker did not collect all three stations into D1 within four minutes. The old collector is intentionally not removed."
+            [ -s "$RUNNER_TEMP/station-health.json" ] && cat "$RUNNER_TEMP/station-health.json" || true
+            exit 1
+          fi
+
+          for key in enka eyupsultan sisli; do
+            curl --silent --show-error --fail --max-time 12 "$STATIONS_API/history/$key?hours=72" -o "$RUNNER_TEMP/history-$key.json"
+            node - "$RUNNER_TEMP/history-$key.json" "$key" <<'NODE'
+          const fs = require("fs");
+          const doc = JSON.parse(fs.readFileSync(process.argv[2], "utf8"));
+          if (doc.ok !== true || !Array.isArray(doc.samples) || doc.samples.length < 1) {
+            throw new Error("D1 history missing for " + process.argv[3]);
+          }
+          console.log(process.argv[3] + ": " + doc.count + " archived samples");
+          NODE
+          done
+
+          curl --silent --show-error --fail --max-time 12 "$STATIONS_API/stations" -o "$RUNNER_TEMP/stations.json"
+          cat "$RUNNER_TEMP/station-health.json"
+
+      - name: Retire the old GitHub Actions station collectors
+        if: success()
+        run: |
+          set -euo pipefail
+          if [ -f ".github/workflows/istanbul-mgm-independent.yml" ]; then
+            git config user.name "github-actions[bot]"
+            git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+            git rm ".github/workflows/istanbul-mgm-independent.yml"
+            git commit -m "Retire GitHub Actions station collectors after Cloudflare cutover"
+            git push origin HEAD:main
+          else
+            echo "GitHub Actions station collectors are already retired."
+          fi
