@@ -70,6 +70,7 @@ alarak tek bir site paketi oluşturur ve GitHub Pages'e yayımlar.
 İstasyon veya GFS toplayıcıları doğrudan Pages deploy etmez. Böylece aynı anda birden fazla workflow'un Pages deployment'ı üzerinde yarışması engellenir.
 
 Publisher ayrıca 5 dakikalık zamanlanmış çalışmaya sahiptir; veri güncellendiğinde toplayıcı tarafından da doğrudan tetiklenir.
+İstasyon sayfası ayrıca Worker verisi güncel değilse Pages üzerindeki son doğrulanmış istasyon paketine geri döner.
 
 ## Veri saklama
 
