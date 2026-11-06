@@ -367,6 +367,8 @@ jobs:
               if T<=10 and wind is not None:
                   try:
                       W=max(0,float(wind))
+                      if W <= 4.8:
+                          return round(T,1)
                       return round(13.12+0.6215*T-11.37*(W**0.16)+0.3965*T*(W**0.16),1)
                   except (TypeError,ValueError):
                       pass
@@ -375,6 +377,25 @@ jobs:
           current=adjust(obs)
           if current:
               current["feels_like_c"]=feels_like(current["temperature_2m_c"],current["humidity_percent"],current["wind_speed_10m_kmh"])
+          # Automatic integrity check: the virtual station must be exactly
+          # +217 m above the agreed Çanakçı reference and its derived values
+          # must remain physically consistent with the adjustment.
+          validation_checks=[]
+          if abs(DELTA_M-217.0)>0.1:
+              validation_checks.append("elevation_delta")
+          if current:
+              expected_temp_delta=float(obs.get("temperature_2m_c"))-float(current["temperature_2m_c"])
+              expected_min=5.0*DELTA_M/1000.0
+              expected_max=7.2*DELTA_M/1000.0
+              if not (expected_min-0.05 <= expected_temp_delta <= expected_max+0.05):
+                  validation_checks.append("temperature_lapse")
+              recalculated_feels=feels_like(current["temperature_2m_c"],current["humidity_percent"],current["wind_speed_10m_kmh"])
+              if recalculated_feels is None or abs(float(recalculated_feels)-float(current["feels_like_c"]))>0.05:
+                  validation_checks.append("feels_like")
+              if current.get("pressure_hpa") is not None and obs.get("pressure_hpa") is not None:
+                  if float(current["pressure_hpa"]) >= float(obs["pressure_hpa"]):
+                      validation_checks.append("pressure_direction")
+          validation_status="PASS" if not validation_checks else "FAIL"
           ev_obs={
               **obs,
               "schema":"koy-mgm.virtual-home-observation.v1",
@@ -386,6 +407,12 @@ jobs:
               "elevation_delta_m":DELTA_M,
               "virtual_station":True,
               "adjustment_method":"adaptive environmental lapse rate",
+              "validation":{
+                  "status":validation_status,
+                  "checks":validation_checks,
+                  "temperature_delta_c":round(float(obs.get("temperature_2m_c"))-float(current["temperature_2m_c"]),1) if current else None,
+                  "feels_like_delta_c":round(float(obs.get("feels_like_c"))-float(current["feels_like_c"]),1) if current and obs.get("feels_like_c") is not None and current.get("feels_like_c") is not None else None
+              },
               **(current or {})
           }
           pathlib.Path("output/ev-observation.json").write_text(json.dumps(ev_obs,ensure_ascii=False,indent=2),encoding="utf-8")
