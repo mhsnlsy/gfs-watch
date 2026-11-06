@@ -11,6 +11,9 @@ on:
     - cron: "3-59/5 * * * *"
   workflow_dispatch:
   workflow_call:
+  workflow_run:
+    workflows: ["Köy MGM"]
+    types: [completed]
 
 permissions:
   contents: read
@@ -24,7 +27,7 @@ concurrency:
 jobs:
   publish:
     name: Assemble and deploy latest live data
-    if: always()
+    if: github.event_name != 'workflow_run' || github.event.workflow_run.conclusion == 'success'
     runs-on: ubuntu-latest
     timeout-minutes: 10
     steps:
