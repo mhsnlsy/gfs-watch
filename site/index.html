@@ -1076,6 +1076,31 @@
     .notification-images .notification-image-item:only-child{grid-column:1/-1}
     .notification-images .notification-image-item:only-child .notification-image{max-height:none}
   </style>
+  <style id="gfs-interactive-tooltip-styles">
+    .gfs-interactive-chart{position:relative;width:100%;max-width:100%;min-width:0;line-height:0;overflow:visible;touch-action:pan-y}
+    .gfs-interactive-svg{display:block;width:100%;height:auto;max-width:100%;overflow:visible}
+    .gfs-interactive-svg .gfs-hit-area{cursor:crosshair;outline:none}
+    .gfs-interactive-svg .gfs-hit-area:focus{stroke:rgba(125,211,215,.5);stroke-width:1;stroke-dasharray:4 4}
+    .gfs-chart-tooltip{position:absolute;z-index:30;min-width:230px;max-width:min(310px,calc(100% - 16px));padding:11px 13px;border:1px solid rgba(125,211,215,.42);border-radius:13px;background:rgba(4,18,29,.97);box-shadow:0 10px 28px rgba(0,0,0,.46);color:#eaf5f8;font:12px/1.5 "DM Sans",system-ui,sans-serif;pointer-events:none;backdrop-filter:blur(9px);white-space:normal}
+    .gfs-chart-tooltip[hidden]{display:none!important}
+    .gfs-chart-tooltip-head{display:flex;justify-content:space-between;align-items:flex-start;gap:12px;padding-bottom:8px;margin-bottom:7px;border-bottom:1px solid rgba(125,211,215,.18)}
+    .gfs-chart-tooltip-title{font-size:11px;font-weight:800;letter-spacing:.08em;color:#7dd3d7;text-transform:uppercase}
+    .gfs-chart-tooltip-time{font-size:12px;font-weight:700;color:#f1f7fa;white-space:nowrap}
+    .gfs-chart-tooltip-row{display:grid;grid-template-columns:minmax(0,1fr) auto;gap:10px;align-items:center;padding:4px 0}
+    .gfs-chart-tooltip-cycle{display:flex;align-items:center;gap:7px;min-width:0;color:#c9d9e1;font-size:11px}
+    .gfs-chart-tooltip-swatch{display:inline-block;width:9px;height:9px;border-radius:50%;flex:none}
+    .gfs-chart-tooltip-cycle-name{overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+    .gfs-chart-tooltip-lead{display:block;color:#8fa8b7;font-size:10px;margin-top:1px}
+    .gfs-chart-tooltip-value{font-size:13px;font-weight:800;color:#fff;white-space:nowrap;text-align:right;font-variant-numeric:tabular-nums}
+    .gfs-chart-tooltip-value small{font-size:10px;font-weight:500;color:#9fb4c0}
+    .gfs-chart-tooltip-hint{margin-top:7px;padding-top:6px;border-top:1px solid rgba(125,211,215,.14);font-size:9px;color:#8fa8b7}
+    .gfs-chart-loading,.gfs-chart-error{padding:12px;color:#9bb0bc;font:12px/1.5 "DM Sans",sans-serif}
+    @media(max-width:700px){
+      .gfs-chart-tooltip{min-width:205px;max-width:min(270px,calc(100% - 12px));padding:9px 10px}
+      .gfs-chart-tooltip-time{font-size:11px}
+      .gfs-chart-tooltip-row{gap:7px}
+    }
+  </style>
 </head>
 <body>
   <header class="shell topbar">
@@ -1230,7 +1255,8 @@
 
   </main>
   <footer class="shell footer"><span><strong data-app-name>İstanbul'un Havası</strong> <span data-app-version>4.0</span></span><span>Veri kaynakları: ENKA Balmumcu kamera OCR · MGM Eyüpsultan 18101 · MGM Şişli 18401 · MeteoPT GFS · ECMWF · Otomatik kontrol: 5 dakika</span></footer>
-  <script>
+  <script src="./gfs-comparison-tooltip.js?v=20261106-hover-1"></script>
+    <script>
     const DATA_URL="./data/istanbul-gfs-latest.json";
     const ECMWF_DATA_URL="./data/ecmwf/latest.json";
     function applyAppVersion(doc){
@@ -2904,12 +2930,15 @@ if(typeof renderBriefing==="function")renderBriefing();
       list.innerHTML=items.slice(0,1).map(item=>{
         const legacyImage=notificationAsset(item.image_path,cacheVersion);
         const imageItems=Array.isArray(item.images)
-          ? item.images.filter(image=>image&&typeof image.path==="string"&&/\.(?:png|svg)$/i.test(image.path)).map(image=>({label:image.label||"GFS grafiği",url:notificationAsset(image.path,cacheVersion)}))
+          ? item.images.filter(image=>image&&typeof image.path==="string"&&/\.(?:png|svg)$/i.test(image.path)).map(image=>({label:image.label||"GFS grafiği",url:notificationAsset(image.path,cacheVersion),isSvg:/\.svg$/i.test(image.path)}))
           : legacyImage&&/\.(?:png|svg)(?:[?#]|$)/i.test(item.image_path||"")?[{label:"Dört döngü karşılaştırması",url:legacyImage}]:[];
         const imagesHtml=imageItems.length>0
-          ? '<div class="comparison-heading">SON 4 GFS DÖNGÜSÜ · KIYASLAMA</div><div class="notification-images">'+imageItems.map(image=>
-              '<div class="notification-image-item"><div class="notification-image-caption">'+esc(image.label)+'</div><a class="notification-image-link" href="'+image.url+'" target="_blank" rel="noopener"><img class="notification-image" src="'+image.url+'" alt="'+esc(image.label)+' · son dört GFS döngüsü karşılaştırması" loading="eager" decoding="async" fetchpriority="high" onerror="this.style.display=\'none\';this.parentElement.insertAdjacentHTML(\'beforeend\',\'<span class=\\\'media-pending\\\'>Grafik yüklenemedi · yeniden denenecek</span>\')"></a></div>'
-            ).join("")+'</div>'
+          ? '<div class="comparison-heading">SON 4 GFS DÖNGÜSÜ · KIYASLAMA</div><div class="notification-images">'+imageItems.map(image=>{
+              const media=image.isSvg
+                ? '<div class="gfs-interactive-chart" data-svg-src="'+esc(image.url)+'"><div class="gfs-chart-loading">Etkileşimli GFS grafiği yükleniyor…</div></div>'
+                : '<a class="notification-image-link" href="'+image.url+'" target="_blank" rel="noopener"><img class="notification-image" src="'+image.url+'" alt="'+esc(image.label)+' · son dört GFS döngüsü karşılaştırması" loading="eager" decoding="async" fetchpriority="high"></a>';
+              return '<div class="notification-image-item"><div class="notification-image-caption">'+esc(image.label)+'</div>'+media+'</div>';
+            }).join("")+'</div>'
           : '<div class="media-pending">Dört döngü karşılaştırma grafiği hazırlanıyor; son rapor verisi korunuyor.</div>';
         const audio=notificationAsset(item.audio_path);
         const spoken=/Önümüzdeki üç günün özeti|Balmumcu istasyonunda/.test(item.summary||"");
@@ -2925,6 +2954,7 @@ if(typeof renderBriefing==="function")renderBriefing();
           (report?'<details class="report-text"><summary>Yazılı raporu görüntüle</summary><pre>'+report+'</pre></details>':'')+
           '</article>';
       }).join("");
+      loadInteractiveGfsCharts(list);
     }
     async function loadPushConfig(){
       const configUrl=new URL("/gfs-watch/push-config.json",window.location.origin);

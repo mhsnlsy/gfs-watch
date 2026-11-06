@@ -74,6 +74,7 @@ jobs:
           python scripts/test_notification_pipeline.py
           python scripts/test_gfs_report_chart_theme.py
           python scripts/test_gfs_svg_comparison.py
+          node --check site/gfs-comparison-tooltip.js
 
       - name: Check MeteoPT cycles and apply F180 gate
         id: fetch
@@ -98,7 +99,7 @@ jobs:
             git push origin HEAD:istanbul-gfs-data
           fi
 
-      - name: Build report, four comparison PNGs and Pages bundle
+      - name: Build report, shared SVG comparison and Pages bundle
         if: steps.fetch.outputs.publish == 'true'
         run: python scripts/build_istanbul_gfs_publication.py
 
@@ -121,7 +122,7 @@ jobs:
             git push origin HEAD:istanbul-gfs-data
           fi
 
-      - name: Send the exact canonical report and four PNGs to Telegram
+      - name: Send the canonical report and one composite photo to Telegram
         if: steps.fetch.outputs.publish == 'true'
         env:
           TELEGRAM_TOKEN: ${{ secrets.TELEGRAM_TOKEN }}

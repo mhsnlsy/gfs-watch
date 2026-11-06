@@ -3452,7 +3452,8 @@ def create_valid_time_comparison_assets(current_run_id, payload, previous_runs):
             for index in tick_indices
         ]
 
-        for axis, (field, title, unit) in zip(axes.flat, metrics):
+        svg_panel_metadata = []
+        for panel_index, (axis, (field, title, unit)) in enumerate(zip(axes.flat, metrics)):
             axis.set_facecolor(GFS_REPORT_AXIS_BG)
             axis.set_zorder(1)
             axis.set_title(
@@ -3540,6 +3541,108 @@ def create_valid_time_comparison_assets(current_run_id, payload, previous_runs):
             )
             axis.margins(x=0.01)
 
+            # Save exact point values and SVG coordinates for the browser tooltip.
+            # The timestamps are shared across all four cycles; only each
+            # cycle's F-hour differs.
+            axis_meta = axis.get_window_extent()
+            scale = 72.0 / fig.dpi
+            canvas_height_px = fig.get_figheight() * fig.dpi
+
+            def to_svg_point(display_x, display_y):
+                return (
+                    round(display_x * scale, 3),
+                    round((canvas_height_px - display_y) * scale, 3),
+                )
+
+            plot_x = round(axis_meta.x0 * scale, 3)
+            plot_y = round((canvas_height_px - axis_meta.y1) * scale, 3)
+            plot_width = round(axis_meta.width * scale, 3)
+            plot_height = round(axis_meta.height * scale, 3)
+            x_positions = []
+            for x_value in x_values:
+                display_x, display_y = axis.transData.transform(
+                    (x_value, axis.get_ylim()[0])
+                )
+                svg_x, _ = to_svg_point(display_x, display_y)
+                x_positions.append(svg_x)
+
+            panel_series = []
+            for series_index, item in enumerate(series):
+                timeline = item.get("timeline") or {}
+                values = []
+                y_positions = []
+                leads = []
+                directions = []
+                for index, key in enumerate(valid_keys):
+                    point = timeline.get(key) or {}
+                    raw_value = point.get(field)
+                    try:
+                        value = float(raw_value)
+                        if not math.isfinite(value):
+                            value = None
+                    except (TypeError, ValueError):
+                        value = None
+                    values.append(value)
+                    lead = point.get("step_hour")
+                    try:
+                        lead = int(lead) if lead is not None else None
+                    except (TypeError, ValueError):
+                        lead = None
+                    leads.append(lead)
+                    direction = point.get("wind_direction_deg") if field == "wind" else None
+                    try:
+                        direction = float(direction) % 360.0 if direction is not None else None
+                    except (TypeError, ValueError):
+                        direction = None
+                    directions.append(direction)
+                    if value is None:
+                        y_positions.append(None)
+                    else:
+                        display_x, display_y = axis.transData.transform(
+                            (x_values[index], value)
+                        )
+                        _, svg_y = to_svg_point(display_x, display_y)
+                        y_positions.append(svg_y)
+                panel_series.append({
+                    "label": item["label"],
+                    "color": active_palette[series_index],
+                    "lead_hours": leads,
+                    "values": values,
+                    "y_positions": y_positions,
+                    "directions_deg": directions,
+                })
+
+            valid_time_records = []
+            for key in valid_keys:
+                point = newest_timeline.get(key) or {}
+                raw_utc = point.get("valid_time_utc")
+                if raw_utc:
+                    valid_dt = _parse_utc_datetime(raw_utc).astimezone(TR_TZ)
+                    local_label = valid_dt.strftime("%d.%m.%Y %H:%M")
+                    utc_label = _parse_utc_datetime(raw_utc).strftime("%Y-%m-%d %H:%M UTC")
+                else:
+                    local_dt = datetime.fromisoformat(key).replace(tzinfo=TR_TZ)
+                    local_label = local_dt.strftime("%d.%m.%Y %H:%M")
+                    utc_label = local_dt.astimezone(timezone.utc).strftime("%Y-%m-%d %H:%M UTC")
+                valid_time_records.append({
+                    "local_key": key,
+                    "label": local_label + " TSİ",
+                    "utc_label": utc_label,
+                })
+
+            svg_panel_metadata.append({
+                "id": ("temperature", "temperature_850", "precipitation", "wind_10m")[panel_index],
+                "title": title,
+                "unit": unit,
+                "plot": {
+                    "x": plot_x, "y": plot_y,
+                    "width": plot_width, "height": plot_height,
+                },
+                "x_positions": x_positions,
+                "valid_times": valid_time_records,
+                "series": panel_series,
+            })
+
         # Rounded card frames echo the 72-hour dashboard's two chart cards.
         for axis in axes.flat:
             position = axis.get_position()
@@ -3570,11 +3673,15 @@ def create_valid_time_comparison_assets(current_run_id, payload, previous_runs):
         )
         _whiten_dark_text(fig)
 
+        # Keep the SVG viewBox equal to the figure canvas so the hit areas,
+        # crosshairs and data-point markers share exact coordinates.
+        fig.canvas.draw()
+        renderer = fig.canvas.get_renderer()
         svg_buffer = io.BytesIO()
         png_buffer = io.BytesIO()
         with plt.rc_context({"svg.fonttype": "none"}):
             fig.savefig(
-                svg_buffer, format="svg", bbox_inches="tight",
+                svg_buffer, format="svg", bbox_inches=None,
                 facecolor=GFS_REPORT_FIGURE_BG,
                 edgecolor=GFS_REPORT_FIGURE_BG,
                 metadata={
@@ -3583,10 +3690,52 @@ def create_valid_time_comparison_assets(current_run_id, payload, previous_runs):
                 },
             )
         fig.savefig(
-            png_buffer, format="png", dpi=140, bbox_inches="tight",
+            png_buffer, format="png", dpi=140, bbox_inches=None,
             facecolor=GFS_REPORT_FIGURE_BG,
             edgecolor=GFS_REPORT_FIGURE_BG,
         )
+
+        # Append browser-only transparent hit areas and a compact data manifest.
+        # They are added after PNG export, so Telegram keeps the clean static art.
+        interaction_metadata = {
+            "version": 1,
+            "panels": svg_panel_metadata,
+        }
+        metadata_json = json.dumps(
+            interaction_metadata, ensure_ascii=False, separators=(",", ":")
+        ).replace("]]>", "]]\\u003e")
+        interaction_parts = [
+            '<metadata id="gfs-interactive-data"><![CDATA[' + metadata_json + ']]></metadata>',
+            '<g id="gfs-interaction-layer">',
+        ]
+        for panel in svg_panel_metadata:
+            plot = panel["plot"]
+            x_start = panel["x_positions"][0]
+            x_end = panel["x_positions"][-1]
+            interaction_parts.append(
+                '<g class="gfs-panel-interaction" data-panel-id="' + panel["id"] + '">'
+                '<rect class="gfs-hit-area" data-panel-id="' + panel["id"] + '" '
+                'x="' + str(plot["x"]) + '" y="' + str(plot["y"]) + '" '
+                'width="' + str(plot["width"]) + '" height="' + str(plot["height"]) + '" '
+                'fill="transparent" pointer-events="all" tabindex="0" role="group" '
+                'aria-label="' + panel["title"] + ' grafiği; ok tuşlarıyla geçerlilik saatleri arasında gezinin"/>'
+                '<line class="gfs-tooltip-crosshair" x1="' + str(x_start) + '" '
+                'x2="' + str(x_start) + '" y1="' + str(plot["y"]) + '" '
+                'y2="' + str(plot["y"] + plot["height"]) + '" '
+                'stroke="#EAF5F8" stroke-width="1.1" stroke-dasharray="4 4" '
+                'opacity=".78" visibility="hidden" pointer-events="none"/>'
+                '<g class="gfs-tooltip-markers" pointer-events="none"></g>'
+                '</g>'
+            )
+        interaction_parts.append("</g>")
+        svg_text = svg_buffer.getvalue().decode("utf-8")
+        closing = "</svg>"
+        if closing not in svg_text:
+            raise RuntimeError("SVG closing element is missing.")
+        svg_text = svg_text.replace(
+            closing, "".join(interaction_parts) + closing, 1
+        )
+        svg_buffer = io.BytesIO(svg_text.encode("utf-8"))
         svg_buffer.seek(0)
         png_buffer.seek(0)
         print(

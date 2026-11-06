@@ -1,0 +1,200 @@
+function escapeGfsTooltip(value){
+  return String(value??"").replace(/[&<>"']/g,char=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[char]));
+}
+function formatGfsTooltipNumber(value){
+  if(value===null||value===undefined||!Number.isFinite(Number(value)))return "—";
+  return new Intl.NumberFormat("tr-TR",{minimumFractionDigits:1,maximumFractionDigits:1}).format(Number(value));
+}
+function gfsWindCardinal(degrees){
+  if(degrees===null||degrees===undefined||!Number.isFinite(Number(degrees)))return "";
+  const names=["K","KD","D","GD","G","GB","B","KB"];
+  return names[Math.round((Number(degrees)%360)/45)%8];
+}
+function buildGfsTooltipMarkup(panel,index,validTime){
+  const rows=(panel.series||[]).slice().reverse().map(series=>{
+    const value=series.values?.[index];
+    const lead=series.lead_hours?.[index];
+    const direction=series.directions_deg?.[index];
+    const formatted=value===null||value===undefined?"—":formatGfsTooltipNumber(value);
+    const directionText=panel.id==="wind_10m"&&direction!==null&&direction!==undefined
+      ? " · "+gfsWindCardinal(direction)+" ("+Math.round(direction)+"°)" : "";
+    return '<div class="gfs-chart-tooltip-row">'+
+      '<div class="gfs-chart-tooltip-cycle"><i class="gfs-chart-tooltip-swatch" style="background:'+escapeGfsTooltip(series.color)+'"></i>'+
+      '<div class="gfs-chart-tooltip-cycle-name">'+escapeGfsTooltip(series.label)+
+      '<span class="gfs-chart-tooltip-lead">'+(lead===null||lead===undefined?"Tahmin adımı yok":"F"+escapeGfsTooltip(lead))+'</span></div></div>'+
+      '<div class="gfs-chart-tooltip-value">'+formatted+' <small>'+escapeGfsTooltip(panel.unit)+'</small>'+escapeGfsTooltip(directionText)+'</div>'+
+      '</div>';
+  }).join("");
+  return '<div class="gfs-chart-tooltip-head"><div><div class="gfs-chart-tooltip-title">'+escapeGfsTooltip(panel.title)+'</div>'+
+    '<div class="gfs-chart-tooltip-time">'+escapeGfsTooltip(validTime.label)+'</div></div></div>'+
+    rows+'<div class="gfs-chart-tooltip-hint">Dört döngü · aynı geçerlilik anı · TSİ</div>';
+}
+function positionGfsTooltip(host,tooltip,clientX,clientY){
+  const hostRect=host.getBoundingClientRect();
+  let left=12,top=12;
+  if(Number.isFinite(clientX))left=clientX-hostRect.left+14;
+  if(Number.isFinite(clientY))top=clientY-hostRect.top+14;
+  tooltip.hidden=false;
+  tooltip.style.left=Math.max(8,left)+"px";
+  tooltip.style.top=Math.max(8,top)+"px";
+  requestAnimationFrame(()=>{
+    const maxLeft=Math.max(8,host.clientWidth-tooltip.offsetWidth-8);
+    const maxTop=Math.max(8,host.clientHeight-tooltip.offsetHeight-8);
+    let nextLeft=Math.min(maxLeft,Math.max(8,left));
+    let nextTop=top;
+    if(nextTop+tooltip.offsetHeight>host.clientHeight-8)nextTop=top-tooltip.offsetHeight-28;
+    nextTop=Math.min(maxTop,Math.max(8,nextTop));
+    tooltip.style.left=nextLeft+"px";
+    tooltip.style.top=nextTop+"px";
+  });
+}
+function attachGfsSvgInteractions(host,svg,metadata){
+  const tooltip=document.createElement("div");
+  tooltip.className="gfs-chart-tooltip";
+  tooltip.hidden=true;
+  tooltip.setAttribute("role","status");
+  tooltip.setAttribute("aria-live","polite");
+  tooltip.setAttribute("aria-atomic","true");
+  host.appendChild(tooltip);
+  const panels=new Map((metadata.panels||[]).map(panel=>[panel.id,panel]));
+  const activeIndexes=new Map();
+  function hide(){
+    tooltip.hidden=true;
+    host.removeAttribute("data-pinned");
+    svg.querySelectorAll(".gfs-tooltip-crosshair").forEach(line=>line.setAttribute("visibility","hidden"));
+    svg.querySelectorAll(".gfs-tooltip-markers").forEach(group=>group.replaceChildren());
+  }
+  function show(panel,index,event){
+    if(!panel||!panel.valid_times?.[index])return;
+    const validTime=panel.valid_times[index];
+    const overlay=svg.querySelector('.gfs-panel-interaction[data-panel-id="'+panel.id+'"]');
+    if(!overlay)return;
+    activeIndexes.set(panel.id,index);
+    const crosshair=overlay.querySelector(".gfs-tooltip-crosshair");
+    const x=panel.x_positions[index];
+    crosshair.setAttribute("x1",x);
+    crosshair.setAttribute("x2",x);
+    crosshair.setAttribute("visibility","visible");
+    const markerGroup=overlay.querySelector(".gfs-tooltip-markers");
+    markerGroup.replaceChildren();
+    (panel.series||[]).forEach(series=>{
+      const y=series.y_positions?.[index];
+      const value=series.values?.[index];
+      if(y===null||y===undefined||value===null||value===undefined)return;
+      const marker=document.createElementNS("http://www.w3.org/2000/svg","circle");
+      marker.setAttribute("cx",x);
+      marker.setAttribute("cy",y);
+      marker.setAttribute("r","5.2");
+      marker.setAttribute("fill",series.color);
+      marker.setAttribute("stroke","#071724");
+      marker.setAttribute("stroke-width","1.7");
+      marker.setAttribute("class","gfs-tooltip-marker");
+      markerGroup.appendChild(marker);
+    });
+    tooltip.innerHTML=buildGfsTooltipMarkup(panel,index,validTime);
+    positionGfsTooltip(
+      host,tooltip,
+      event&&Number.isFinite(event.clientX)?event.clientX:NaN,
+      event&&Number.isFinite(event.clientY)?event.clientY:NaN
+    );
+  }
+  svg.querySelectorAll(".gfs-hit-area").forEach(hit=>{
+    const panel=panels.get(hit.getAttribute("data-panel-id"));
+    if(!panel)return;
+    hit.addEventListener("pointermove",event=>{
+      if(event.pointerType==="touch"||host.hasAttribute("data-pinned"))return;
+      const point=svg.createSVGPoint();
+      point.x=event.clientX;
+      point.y=event.clientY;
+      const local=point.matrixTransform(svg.getScreenCTM().inverse());
+      let nearest=0,best=Infinity;
+      panel.x_positions.forEach((x,index)=>{
+        const distance=Math.abs(x-local.x);
+        if(distance<best){best=distance;nearest=index;}
+      });
+      show(panel,nearest,event);
+    });
+    hit.addEventListener("pointerdown",event=>{
+      if(event.pointerType!=="touch")return;
+      host.setAttribute("data-pinned","true");
+      const point=svg.createSVGPoint();
+      point.x=event.clientX;
+      point.y=event.clientY;
+      const local=point.matrixTransform(svg.getScreenCTM().inverse());
+      let nearest=0,best=Infinity;
+      panel.x_positions.forEach((x,index)=>{
+        const distance=Math.abs(x-local.x);
+        if(distance<best){best=distance;nearest=index;}
+      });
+      show(panel,nearest,event);
+    });
+    hit.addEventListener("pointerleave",()=>{
+      if(!host.hasAttribute("data-pinned"))hide();
+    });
+    hit.addEventListener("focus",()=>{
+      const index=activeIndexes.get(panel.id)??Math.floor(panel.valid_times.length/2);
+      show(panel,index,null);
+    });
+    hit.addEventListener("keydown",event=>{
+      if(event.key==="Escape"){event.preventDefault();hide();return;}
+      if(event.key!=="ArrowLeft"&&event.key!=="ArrowRight")return;
+      event.preventDefault();
+      const current=activeIndexes.get(panel.id)??0;
+      const next=Math.max(0,Math.min(panel.valid_times.length-1,current+(event.key==="ArrowRight"?1:-1)));
+      show(panel,next,null);
+    });
+  });
+  host.addEventListener("pointerleave",()=>{
+    if(!host.hasAttribute("data-pinned"))hide();
+  });
+  host.addEventListener("pointerdown",event=>{
+    if(event.target.closest(".gfs-hit-area"))return;
+    if(!event.target.closest(".gfs-chart-tooltip"))hide();
+  });
+  host.gfsHideTooltip=hide;
+}
+async function loadInteractiveGfsCharts(root){
+  const hosts=Array.from(root.querySelectorAll(".gfs-interactive-chart[data-svg-src]:not([data-loaded])"));
+  await Promise.all(hosts.map(async host=>{
+    host.dataset.loaded="true";
+    const source=host.dataset.svgSrc;
+    try{
+      const response=await fetch(source,{cache:"force-cache",credentials:"same-origin"});
+      if(!response.ok)throw new Error("SVG HTTP "+response.status);
+      let sourceText=await response.text();
+      sourceText=sourceText.replace(/^\s*<\?xml[^>]*\?>\s*/i,"").replace(/<!DOCTYPE[\s\S]*?>/i,"");
+      const parsed=new DOMParser().parseFromString(sourceText,"image/svg+xml");
+      if(parsed.querySelector("parsererror"))throw new Error("SVG parse edilemedi");
+      const svg=parsed.documentElement;
+      if(svg.localName!=="svg")throw new Error("SVG kök öğesi bulunamadı");
+      svg.querySelectorAll("script,foreignObject").forEach(node=>node.remove());
+      svg.querySelectorAll("*").forEach(node=>{
+        Array.from(node.attributes).forEach(attribute=>{
+          if(/^on/i.test(attribute.name))node.removeAttribute(attribute.name);
+        });
+      });
+      const manifestNode=svg.querySelector("#gfs-interactive-data");
+      if(!manifestNode)throw new Error("Etkileşimli veri manifesti bulunamadı");
+      const metadata=JSON.parse(manifestNode.textContent||"{}");
+      if(!Array.isArray(metadata.panels)||metadata.panels.length!==4)throw new Error("Dört grafik paneli bulunamadı");
+      manifestNode.remove();
+      svg.classList.add("gfs-interactive-svg");
+      svg.setAttribute("role","group");
+      svg.setAttribute("aria-label","İstanbul GFS dört panelli etkileşimli valid-time karşılaştırması");
+      svg.setAttribute("focusable","true");
+      host.querySelector(".gfs-chart-loading")?.remove();
+      host.appendChild(svg);
+      attachGfsSvgInteractions(host,svg,metadata);
+    }catch(error){
+      console.error("[GFS SVG TOOLTIP]",error);
+      host.innerHTML='<div class="gfs-chart-error">Etkileşimli grafik yüklenemedi. <a href="'+escapeGfsTooltip(source)+'" target="_blank" rel="noopener">SVG dosyasını aç</a></div>';
+    }
+  }));
+}
+if(!window.__gfsTooltipDocumentListener){
+  window.__gfsTooltipDocumentListener=true;
+  document.addEventListener("pointerdown",event=>{
+    if(event.target.closest(".gfs-interactive-chart"))return;
+    document.querySelectorAll(".gfs-interactive-chart[data-pinned]").forEach(host=>host.gfsHideTooltip?.());
+  });
+}
