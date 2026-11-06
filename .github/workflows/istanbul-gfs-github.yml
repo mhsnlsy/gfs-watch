@@ -1,14 +1,6 @@
 name: Istanbul GFS · MeteoPT
 
 on:
-  push:
-    branches: [main]
-    paths:
-      - ".github/workflows/istanbul-gfs-github.yml"
-      - "scripts/fetch_istanbul_gfs_meteopt.py"
-      - "scripts/build_istanbul_gfs_publication.py"
-      - "scripts/send_canonical_istanbul_gfs_telegram.py"
-      - "scripts/test_notification_pipeline.py"
   # UTC schedule = 07:20, 13:20, 19:20 and 01:20 Istanbul time.
   # Each run checks all four model cycles and publishes only the newest F180-ready cycle.
   schedule:
