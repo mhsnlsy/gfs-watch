@@ -11,7 +11,7 @@ function gfsWindCardinal(degrees){
   return names[Math.round((Number(degrees)%360)/45)%8];
 }
 function buildGfsTooltipMarkup(panel,index,validTime){
-  const rows=(panel.series||[]).map(series=>{
+  const rows=(panel.series||[]).slice().reverse().map(series=>{
     const value=series.values?.[index];
     const lead=series.lead_hours?.[index];
     const direction=series.directions_deg?.[index];
@@ -136,6 +136,7 @@ function attachGfsSvgInteractions(host,svg,metadata){
       show(panel,index,null);
     });
     hit.addEventListener("keydown",event=>{
+      if(event.key==="Escape"){event.preventDefault();hide();return;}
       if(event.key!=="ArrowLeft"&&event.key!=="ArrowRight")return;
       event.preventDefault();
       const current=activeIndexes.get(panel.id)??0;
