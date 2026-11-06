@@ -475,7 +475,7 @@ function renderRuns(d,f72){
     ?String(sourceDate.getUTCDate()).padStart(2,"0")+"/"+String(sourceDate.getUTCMonth()+1).padStart(2,"0")+" "+String(sourceDate.getUTCHours()).padStart(2,"0")+":"+String(sourceDate.getUTCMinutes()).padStart(2,"0")+" UTC"
     :"";
    const sourceNode=$("brief-source");
-   if(sourceNode)sourceNode.textContent=sourceStamp?"Kaynak: GFS "+sourceStamp+" çıktısı":"Kaynak: GFS";
+   if(sourceNode)sourceNode.textContent="";
 
    const rainy=p.filter(x=>num(x.precipitation_6h_mm)>0.1);
    const rainGroups=[];
