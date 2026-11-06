@@ -1,8 +1,8 @@
 """Fetch one ready Istanbul MeteoPT GFS cycle for the GitHub Actions publisher.
 
-The workflow runs four times per day at the established Istanbul publication
-windows. It probes all four cycle hours, but persists only the newest run whose
-F180 step is present. No Cloudflare calls are made here.
+The workflow polls every 5 minutes. It probes all four cycle hours, but persists
+only the newest previously unpublished run whose F180 step is present. No
+Cloudflare calls are made here.
 """
 from __future__ import annotations
 
@@ -36,6 +36,7 @@ def fetch_cycle(hour: int) -> tuple[dict, str]:
         "lon": str(LON),
         "run": f"{hour:02d}",
         "lang": "en",
+        "_cache_bust": str(int(datetime.now(UTC).timestamp())),
     }
     url = API + "?" + urlencode(params)
     request = Request(
