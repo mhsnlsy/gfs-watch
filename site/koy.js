@@ -324,8 +324,8 @@ function renderMgmObservation(o,history,f72){
    const stored=num(s.feels_like_c);
    return stored!=null?stored:feelsLike(num(s.temperature_2m_c),num(s.humidity_percent),num(s.wind_speed_10m_kmh));
   }).filter(v=>v!=null);
-  const min24=num(history?.feels_like_24h_min_c)!=null?num(history.feels_like_24h_min_c):(values.length?Math.min(...values):null);
-  const max24=num(history?.feels_like_24h_max_c)!=null?num(history.feels_like_24h_max_c):(values.length?Math.max(...values):null);
+  const min24=values.length?Math.min(...values):null;
+  const max24=values.length?Math.max(...values):null;
   if(min24!=null&&max24!=null){
    feelsRangeEl.hidden=false;
    feelsRangeEl.textContent="24 sa · min "+fmt(min24,1)+"° · maks "+fmt(max24,1)+"°";
@@ -344,9 +344,13 @@ function renderMgmObservation(o,history,f72){
  const validationEl=$("station-alert");
  if(validationEl){
   const v=o?.validation;
+  validationEl.classList.toggle("station-alert-ok",isHome&&v?.status==="PASS");
   if(isHome&&v?.status==="FAIL"){
    validationEl.hidden=false;
    validationEl.textContent="Köy Ev hesap kontrolü: "+(Array.isArray(v.checks)?v.checks.join(", "):"tutarsızlık")+" · değerler yeniden hesaplanmalı.";
+  }else if(isHome&&v?.status==="PASS"){
+   validationEl.hidden=false;
+   validationEl.textContent="✓ Köy Ev hesap doğrulandı · +217 m rakım · hissedilen ve basınç tutarlı";
   }else{
    validationEl.hidden=true;
    validationEl.textContent="";
