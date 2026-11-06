@@ -60,9 +60,38 @@ def main_test() -> None:
         png = assets["png"].getvalue()
         assert b"<svg" in svg[:4096]
         assert b"viewBox" in svg[:4096]
+        assert b'gfs-interactive-data' in svg
+        assert b'gfs-interaction-layer' in svg
+        assert svg.count(b'class="gfs-hit-area"') == 4
         assert png.startswith(b"\x89PNG\r\n\x1a\n")
         assert assets["series_count"] == 4
         assert assets["valid_time_count"] == 25
+
+        import re
+        match = re.search(
+            rb'<metadata id="gfs-interactive-data"><!\\[CDATA\\[(.*?)\\]\\]></metadata>',
+            svg,
+            re.DOTALL,
+        )
+        assert match, "SVG interaction metadata block is missing."
+        metadata = json.loads(match.group(1).decode("utf-8"))
+        assert len(metadata["panels"]) == 4
+        assert {panel["id"] for panel in metadata["panels"]} == {
+            "temperature", "temperature_850", "precipitation", "wind_10m"
+        }
+        for panel in metadata["panels"]:
+            assert len(panel["valid_times"]) == 25
+            assert len(panel["series"]) == 4
+            assert all(len(series["lead_hours"]) == 25 for series in panel["series"])
+            assert all(len(series["values"]) == 25 for series in panel["series"])
+            assert all(len(series["y_positions"]) == 25 for series in panel["series"])
+            assert all(time["label"].endswith(" TSİ") for time in panel["valid_times"])
+
+        # Same valid instant, different lead hours: four cycle values must be
+        # available from every panel for the first valid-time position.
+        expected_leads = [21, 15, 9, 3]
+        for panel in metadata["panels"]:
+            assert [series["lead_hours"][0] for series in panel["series"]] == expected_leads
     finally:
         assets["svg"].close()
         assets["png"].close()
