@@ -183,9 +183,10 @@ async function publish(env:Env,doc:any,runs:any[]){
 }
 async function process(env:Env){
   await env.GFS_KV.put("gfs:last-check",JSON.stringify({started_at_utc:new Date().toISOString(),status:"running"}));
-  // Always publish the newest run that has reached F180.
-  // A newer cycle may exist but still be incomplete; it must not block
-  // an older cycle (e.g. 00Z) that is already complete.
+
+  // Check every available cycle. Do not stop at the first F180-ready run:
+  // the newest completed cycle must win (e.g. 00Z must beat 18Z).
+  const ready:any[]=[];
   for(const h of [18,12,6,0]){
     try{
       const x=await fetchRun(h);
@@ -196,41 +197,72 @@ async function process(env:Env){
       }
 
       const doc=normalize(x.doc);
-      console.log("MeteoPT run check", doc.run_id_utc, "F180", doc.noaa_source_file.f180_available);
-      await env.GFS_KV.put("gfs:last-check",JSON.stringify({checked_at_utc:new Date().toISOString(),requested_cycle_utc:h,run_id_utc:doc.run_id_utc,f180_available:doc.noaa_source_file.f180_available,forecast_horizon_hours:doc.forecast_horizon_hours,status:"checked"}));
+      const ready180=doc.noaa_source_file.f180_available;
+      console.log("MeteoPT run check", doc.run_id_utc, "F180", ready180);
+      await env.GFS_KV.put("gfs:last-check",JSON.stringify({
+        checked_at_utc:new Date().toISOString(),
+        requested_cycle_utc:h,
+        run_id_utc:doc.run_id_utc,
+        f180_available:ready180,
+        forecast_horizon_hours:doc.forecast_horizon_hours,
+        status:"checked"
+      }));
 
-      if(!doc.noaa_source_file.f180_available){
-        continue;
-      }
-
-      const publishedKey="published:"+runKey(doc.run_id_utc);
-      const publishedMarker=await env.GFS_KV.get(publishedKey);
-      const latestExisting=await env.GFS_KV.get("latest");
-
-      // A published marker without a current latest payload can happen after
-      // a KV namespace migration/rebind. In that case rebuild the canonical
-      // payload instead of treating the run as complete.
-      if(publishedMarker && latestExisting){
-        console.log("Already published and latest payload exists",doc.run_id_utc);
-        return;
-      }
-      if(publishedMarker && !latestExisting){
-        console.log("Published marker exists but latest payload is missing; rebuilding",doc.run_id_utc);
-      }
-
-      await storeRun(env,doc);
-      const runs=await lastRuns(env);
-      await publish(env,doc,runs);
-      console.log("Published Istanbul GFS",doc.run_id_utc);
-      return;
+      if(ready180) ready.push(doc);
     }catch(e){
       console.error("MeteoPT GFS cycle failed",h,e);
-      await env.GFS_KV.put("gfs:last-check",JSON.stringify({checked_at_utc:new Date().toISOString(),requested_cycle_utc:h,status:"error",error:String(e)}));
+      await env.GFS_KV.put("gfs:last-check",JSON.stringify({
+        checked_at_utc:new Date().toISOString(),
+        requested_cycle_utc:h,
+        status:"error",
+        error:String(e)
+      }));
     }
   }
 
-  await env.GFS_KV.put("gfs:last-check",JSON.stringify({checked_at_utc:new Date().toISOString(),status:"no_f180_ready"}));
-  console.log("No MeteoPT GFS cycle with F180 ready");
+  if(!ready.length){
+    await env.GFS_KV.put("gfs:last-check",JSON.stringify({
+      checked_at_utc:new Date().toISOString(),
+      status:"no_f180_ready"
+    }));
+    console.log("No MeteoPT GFS cycle with F180 ready");
+    return;
+  }
+
+  ready.sort((a,b)=>Date.parse(b.run_id_utc)-Date.parse(a.run_id_utc));
+  const doc=ready[0];
+  const publishedKey="published:"+runKey(doc.run_id_utc);
+  const publishedMarker=await env.GFS_KV.get(publishedKey);
+  const latestExisting=await env.GFS_KV.get("latest");
+
+  if(publishedMarker && latestExisting){
+    await env.GFS_KV.put("gfs:last-check",JSON.stringify({
+      checked_at_utc:new Date().toISOString(),
+      status:"already_published",
+      run_id_utc:doc.run_id_utc,
+      f180_available:true,
+      forecast_horizon_hours:doc.forecast_horizon_hours
+    }));
+    console.log("Already published and latest payload exists",doc.run_id_utc);
+    return;
+  }
+
+  if(publishedMarker && !latestExisting){
+    console.log("Published marker exists but latest payload is missing; rebuilding",doc.run_id_utc);
+  }
+
+  await storeRun(env,doc);
+  const runs=await lastRuns(env);
+  await publish(env,doc,runs);
+
+  await env.GFS_KV.put("gfs:last-check",JSON.stringify({
+    checked_at_utc:new Date().toISOString(),
+    status:"published",
+    run_id_utc:doc.run_id_utc,
+    f180_available:true,
+    forecast_horizon_hours:doc.forecast_horizon_hours
+  }));
+  console.log("Published Istanbul GFS",doc.run_id_utc);
 }
 
 export default {
