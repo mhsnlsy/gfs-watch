@@ -250,7 +250,7 @@ def main() -> None:
             normalized72["milestone"] = "F72"
             f72_marker.parent.mkdir(parents=True, exist_ok=True)
             f72_marker.write_text(
-                json.dumps(normalized72, ensure_ascii=False, indent=2) + "\\n",
+                json.dumps(normalized72, ensure_ascii=False, indent=2) + "\n",
                 encoding="utf-8",
             )
             f72_publish = True
