@@ -2924,35 +2924,23 @@ if(typeof renderBriefing==="function")renderBriefing();
     function renderNotifications(items,cacheVersion){
       const list=$("notifications-list");
       if(!Array.isArray(items)||!items.length){
-        list.innerHTML='<div class="chart-empty">Henüz yayınlanmış bir rapor bulunmuyor. Yeni model döngüsü tamamlandığında rapor burada görünecek.</div>';
+        list.innerHTML='<div class="chart-empty">Henüz yayınlanmış bir grafik bulunmuyor.</div>';
         return;
       }
       list.innerHTML=items.slice(0,1).map(item=>{
         const legacyImage=notificationAsset(item.image_path,cacheVersion);
         const imageItems=Array.isArray(item.images)
-          ? item.images.filter(image=>image&&typeof image.path==="string"&&/\.(?:png|svg)$/i.test(image.path)).map(image=>({label:image.label||"GFS grafiği",url:notificationAsset(image.path,cacheVersion),isSvg:/\.svg$/i.test(image.path)}))
-          : legacyImage&&/\.(?:png|svg)(?:[?#]|$)/i.test(item.image_path||"")?[{label:"Dört döngü karşılaştırması",url:legacyImage}]:[];
+          ? item.images.filter(image=>image&&typeof image.path==="string"&&/\\.(?:png|svg)$/i.test(image.path)).map(image=>({url:notificationAsset(image.path,cacheVersion),isSvg:/\\.svg$/i.test(image.path)}))
+          : legacyImage&&/\\.(?:png|svg)(?:[?#]|$)/i.test(item.image_path||"")?[{url:legacyImage,isSvg:/\\.svg(?:[?#]|$)/i.test(item.image_path||"")}]:[];
         const imagesHtml=imageItems.length>0
-          ? '<div class="comparison-heading">SON 4 GFS DÖNGÜSÜ · KIYASLAMA</div><div class="notification-images">'+imageItems.map(image=>{
+          ? '<div class="notification-images">'+imageItems.map(image=>{
               const media=image.isSvg
-                ? '<div class="gfs-interactive-chart" data-svg-src="'+esc(image.url)+'"><div class="gfs-chart-loading">Etkileşimli GFS grafiği yükleniyor…</div></div>'
-                : '<a class="notification-image-link" href="'+image.url+'" target="_blank" rel="noopener"><img class="notification-image" src="'+image.url+'" alt="'+esc(image.label)+' · son dört GFS döngüsü karşılaştırması" loading="eager" decoding="async" fetchpriority="high"></a>';
-              return '<div class="notification-image-item"><div class="notification-image-caption">'+esc(image.label)+'</div>'+media+'</div>';
+                ? '<div class="gfs-interactive-chart" data-svg-src="'+esc(image.url)+'"><div class="gfs-chart-loading">Etkileşimli grafik yükleniyor…</div></div>'
+                : '<a class="notification-image-link" href="'+image.url+'" target="_blank" rel="noopener"><img class="notification-image" src="'+image.url+'" alt="İstanbul GFS dört döngü karşılaştırması" loading="eager" decoding="async" fetchpriority="high"></a>';
+              return '<div class="notification-image-item">'+media+'</div>';
             }).join("")+'</div>'
-          : '<div class="media-pending">Dört döngü karşılaştırma grafiği hazırlanıyor; son rapor verisi korunuyor.</div>';
-        const audio=notificationAsset(item.audio_path);
-        const spoken=/Önümüzdeki üç günün özeti|Balmumcu istasyonunda/.test(item.summary||"");
-        const summary=item.summary&&!spoken?'<p class="notification-summary">'+esc(item.summary)+'</p>':'';
-        const report=esc(String(item.report_text||"").replace(/\n*🎙 Seslendirme metni:[\s\S]*$/,""));
-        const date=esc(item.published_at_istanbul||formatNotificationTime(item.published_at_utc));
-        const cycle=esc(item.cycle_label||"GFS model raporu");
-        return '<article class="notification-card">'+
-          '<div class="notification-card-top"><div><div class="notification-kicker">GFS MODEL BİLDİRİMİ</div><h3>'+esc(item.title||"İstanbul hava raporu")+'</h3><div class="notification-meta">'+cycle+' · '+date+'</div></div><span class="notification-dot" aria-hidden="true"></span></div>'+
-          summary+
-          imagesHtml+
-          (audio&&!spoken?'<div class="audio-block"><span class="audio-label">SES RAPORU · 1,27×</span><audio controls preload="none" src="'+audio+'">Tarayıcın ses oynatmayı desteklemiyor.</audio></div>':'')+
-          (report?'<details class="report-text"><summary>Yazılı raporu görüntüle</summary><pre>'+report+'</pre></details>':'')+
-          '</article>';
+          : '<div class="media-pending">GFS karşılaştırma grafiği hazırlanıyor.</div>';
+        return '<article class="notification-card notification-chart-only">'+imagesHtml+'</article>';
       }).join("");
       loadInteractiveGfsCharts(list);
     }
