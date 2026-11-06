@@ -61,8 +61,11 @@ def _fetch_current_values_page():
 
 def _parse_current_values(text):
     """Parse the values table published by ENKA WeatherLink."""
+    # WeatherLink has changed the presentation of the UTC offset a few times.
+    # The local date/time is the authoritative observation clock; accept any
+    # parenthesized UTC-offset text instead of hard-coding one exact spelling.
     as_of = re.search(
-        r"As of:\s*(\d{2}/\d{2}/\d{2})\s+(\d{1,2}:\d{2})\s*\(UTC\s+\d{1,2}:\d{2}\)",
+        r"As of:\s*(\d{2}/\d{2}/\d{2})\s+(\d{1,2}:\d{2})\s*\([^)]*UTC[^)]*\)",
         text,
         flags=re.I,
     )
@@ -194,7 +197,7 @@ def _fetch_enka_history_samples():
     now_local = datetime.now(TR_TZ)
     cutoff = now_local - timedelta(hours=24)
     samples = []
-    pattern = re.compile(r"^\\s*(\\d{2}/\\d{2}/\\d{2})\\s+(\\d{1,2}:\\d{2})\\s+([-+]?\\d+(?:[.,]\\d+)?)\\s+")
+    pattern = re.compile(r"^\s*(\d{2}/\d{2}/\d{2})\s+(\d{1,2}:\d{2})\s+([-+]?\d+(?:[.,]\d+)?)\s+")
     for line in response.text.splitlines():
         match = pattern.match(line)
         if not match:
