@@ -97,9 +97,11 @@ def to_main_payload(doc: dict) -> dict:
 
 
 def main_publish() -> None:
+    # Like the Köy renderer, publish what is available instead of blocking
+    # the first F180 publication until four complete cycles have accumulated.
     run_files = sorted((GFS_DIR / "runs").glob("*.json"), reverse=True)[:4]
-    if len(run_files) < 4:
-        raise RuntimeError(f"Four GFS cycles are required; found {len(run_files)}.")
+    if not run_files:
+        raise RuntimeError("No canonical Istanbul GFS run is available.")
 
     docs = [json.loads(path.read_text(encoding="utf-8")) for path in run_files]
     docs.sort(key=lambda d: utc_dt(d["run_id_utc"]))
