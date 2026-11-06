@@ -3437,7 +3437,7 @@ def create_valid_time_comparison_assets(current_run_id, payload, previous_runs):
         )
 
         fig.subplots_adjust(
-            left=0.075, right=0.985, bottom=0.085, top=0.707,
+            left=0.045, right=0.955, bottom=0.085, top=0.707,
             wspace=0.18, hspace=0.36,
         )
 
