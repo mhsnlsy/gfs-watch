@@ -489,15 +489,35 @@ async function collectAll(env) {
     failed: ["enka","eyupsultan","sisli"].filter(key => !result[key] || result[key].status !== "live")
   };
 }
+async function getFeelsLike24h(env, key) {
+  const since = new Date(Date.now() - 24 * 3600000).toISOString();
+  const result = await env.STATIONS_DB.prepare(
+    "SELECT temperature_c, humidity_percent, wind_speed_kmh, feels_like_c FROM station_history WHERE station_key = ? AND observed_at_utc >= ? ORDER BY observed_at_utc ASC LIMIT 5000"
+  ).bind(key, since).all();
+  const values = (result.results || []).map(row => {
+    const stored = asNumber(row.feels_like_c);
+    if (stored !== null) return stored;
+    return feelsLike(asNumber(row.temperature_c), asNumber(row.humidity_percent), asNumber(row.wind_speed_kmh));
+  }).filter(value => value !== null);
+  return {
+    min_c: values.length ? round(Math.min(...values), 1) : null,
+    max_c: values.length ? round(Math.max(...values), 1) : null
+  };
+}
+
 async function getStationRows(env) {
   const result = await env.STATIONS_DB.prepare(
     "SELECT station_key, payload_json, status, last_error, last_success_utc, last_attempt_utc FROM station_current ORDER BY station_key"
   ).all();
-  return (result.results || []).map(row => {
+  return (await Promise.all((result.results || []).map(async row => {
     let payload;
     try { payload = JSON.parse(row.payload_json); } catch (_) { return null; }
-    return apiStation(row.station_key, payload, row.status, row.last_error, row.last_success_utc, row.last_attempt_utc);
-  }).filter(Boolean);
+    const range = await getFeelsLike24h(env, row.station_key);
+    const item = apiStation(row.station_key, payload, row.status, row.last_error, row.last_success_utc, row.last_attempt_utc);
+    item.feels_like_24h_min_c = range.min_c;
+    item.feels_like_24h_max_c = range.max_c;
+    return item;
+  }))).filter(Boolean);
 }
 async function handleApi(request, env) {
   const url = new URL(request.url);
@@ -548,7 +568,11 @@ async function handleApi(request, env) {
     try {
       const current = await readCurrent(env, currentMatch[1]);
       if (!current) return json({ ok: false, error: "Station has not collected a successful observation yet", station_key: currentMatch[1] }, 404);
-      return json({ ok: true, station: apiStation(currentMatch[1], current.payload, current.status, current.last_error, current.last_success_utc, current.last_attempt_utc) });
+      const range = await getFeelsLike24h(env, currentMatch[1]);
+      const station = apiStation(currentMatch[1], current.payload, current.status, current.last_error, current.last_success_utc, current.last_attempt_utc);
+      station.feels_like_24h_min_c = range.min_c;
+      station.feels_like_24h_max_c = range.max_c;
+      return json({ ok: true, station });
     } catch (error) {
       return json({ ok: false, error: String(error.message || error) }, 503);
     }
