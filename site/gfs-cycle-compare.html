@@ -131,7 +131,7 @@ function svgLine(runs,metric,title,unit,verification=null){
  usable.forEach(item=>{
   const index=item.runIndex,color=COLORS[index%COLORS.length],latest=index===0;
   const path=item.points.map((p,j)=>(j?"L":"M")+x(p.h)+" "+y(p.v)).join(" ");
-  out+='<path d="'+path+'" fill="none" stroke="'+color+'" stroke-width="'+(latest?3:1.8)+'" '+(latest?'':'stroke-dasharray="5 4"')+' stroke-linecap="round" stroke-linejoin="round"/>';
+  out+='<path d="'+path+'" fill="none" stroke="'+color+'" stroke-width="'+(latest?5:1.8)+'" '+(latest?'':'stroke-dasharray="5 4"')+' stroke-linecap="round" stroke-linejoin="round"/>';
   if(latest)item.points.forEach(p=>{out+='<circle cx="'+x(p.h)+'" cy="'+y(p.v)+'" r="2.5" fill="'+color+'"><title>F'+p.h+' · '+fmt(p.v)+' '+unit+'</title></circle>';});
   item.points.forEach(p=>{out+='<circle class="gfs-point-target" cx="'+x(p.h)+'" cy="'+y(p.v)+'" r="0" data-run="'+esc(gfsRunLabel(item.run))+'" data-current="'+(latest?"true":"false")+'" data-valid="'+esc(tsGfsValid(p.validTime))+'" data-step="'+esc("F"+p.h+" saat")+'" data-value="'+esc(fmt(p.v,1))+'" data-unit="'+esc(unit)+'" data-color="'+color+'" aria-hidden="true"/>';});
  });
