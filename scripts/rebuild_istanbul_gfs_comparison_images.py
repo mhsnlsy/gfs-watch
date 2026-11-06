@@ -1,7 +1,7 @@
-"""Rebuild Istanbul's four public comparison PNGs from the canonical saved runs.
+"""Rebuild Istanbul's shared four-panel SVG / Telegram image from saved runs.
 
 No forecast data is downloaded or refreshed. The script only re-renders the
-four comparison images with valid-time alignment and updates the image refs in
+single vector comparison report and its matching Telegram PNG, then updates
 the existing public notification manifests.
 """
 from __future__ import annotations
@@ -59,21 +59,31 @@ def main_rebuild() -> None:
         for run_id, payload in payloads[:-1]
     ]
 
-    chart_data = main._prepare_comparison_chart_data(current_run, current_payload, previous_runs)
-    expected = {"temperature", "temperature_850", "precipitation", "wind_10m"}
-    charts = main.create_pages_comparison_charts(current_run, current_payload, previous_runs)
-    if set(charts) != expected:
-        for buffer in charts.values():
-            buffer.close()
-        raise RuntimeError(f"Expected four aligned PNGs; got {sorted(charts)}.")
+    assets = main.create_valid_time_comparison_assets(
+        current_run, current_payload, previous_runs
+    )
+    if not assets.get("svg") or not assets.get("png"):
+        for buffer in assets.values():
+            if hasattr(buffer, "close"):
+                buffer.close()
+        raise RuntimeError("The shared SVG comparison and Telegram PNG were not generated.")
 
     try:
-        images = main.save_public_notification_images(current_run, charts)
+        telegram_image_path = main.save_public_notification_image(
+            current_run, assets["png"]
+        )
+        svg_image_path = main.save_public_notification_svg_image(
+            current_run, assets["svg"]
+        )
     finally:
-        for buffer in charts.values():
-            buffer.close()
-    if len(images) != 4:
-        raise RuntimeError(f"Expected four image records; saved {len(images)}.")
+        assets["svg"].close()
+        assets["png"].close()
+    if not telegram_image_path or not svg_image_path:
+        raise RuntimeError("The SVG report or its matching Telegram image could not be archived.")
+    images = [{
+        "label": "4 GFS döngüsü · 72 saat · aynı geçerlilik saatleri (TSİ)",
+        "path": svg_image_path,
+    }]
 
     run_key = main._parse_utc_datetime(current_run).strftime("%Y%m%dT%HZ")
     manifest_path = GFS_DIR / "notifications" / "latest.json"
@@ -90,7 +100,7 @@ def main_rebuild() -> None:
     if len(matched) != 1:
         raise RuntimeError(f"Expected one manifest entry for {run_key}; found {len(matched)}.")
     matched[0]["images"] = images
-    matched[0]["image_path"] = None
+    matched[0]["image_path"] = telegram_image_path
     manifest["updated_at_utc"] = main.datetime.now(main.timezone.utc).isoformat(timespec="seconds")
     main._write_json_atomically(str(manifest_path), manifest)
 
@@ -102,13 +112,13 @@ def main_rebuild() -> None:
     if not isinstance(report, dict):
         raise RuntimeError("Canonical latest.json has no report record.")
     report["images"] = images
-    report["image_path"] = None
+    report["image_path"] = telegram_image_path
     main._write_json_atomically(str(latest_path), latest)
 
     print(
-        f"[ISTANBUL VALID-TIME PNG REBUILD] run={current_run}; "
-        f"common_valid_times={chart_data['valid_time_count']}; "
-        f"cycles={len(documents)}; images={len(images)}; download=none"
+        f"[ISTANBUL VALID-TIME SVG REBUILD] run={current_run}; "
+        f"common_valid_times={assets['valid_time_count']}; "
+        f"cycles={len(documents)}; svg=1; telegram_photo=1; download=none"
     )
 
 
