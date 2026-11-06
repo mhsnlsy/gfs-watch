@@ -119,6 +119,21 @@ jobs:
               "Cache-Control": "no-cache",
           }
 
+          def feels_like(temp_c, humidity, wind_kmh):
+              try:
+                  t=float(temp_c); rh=max(0.0,min(100.0,float(humidity)))
+              except (TypeError, ValueError):
+                  return None
+              if t >= 20:
+                  return round(-8.784 + 1.611*t + 2.338*rh - 0.146*t*rh - 0.0123*t*t - 0.0164*rh*rh + 0.00221*t*t*rh + 0.000725*t*rh*rh - 0.00000358*t*t*rh*rh, 1)
+              if t <= 10 and wind_kmh is not None:
+                  try:
+                      w=max(0.0,float(wind_kmh))
+                      return round(13.12 + 0.6215*t - 11.37*(w**0.16) + 0.3965*t*(w**0.16), 1)
+                  except (TypeError, ValueError):
+                      pass
+              return round(t, 1)
+
           def get(url):
               last_error = None
               for attempt in range(1, 4):
@@ -175,6 +190,7 @@ jobs:
                   "fetched_at_utc": datetime.now(timezone.utc).isoformat(),
                   "temperature_2m_c": obs.get("sicaklik"),
                   "humidity_percent": obs.get("nem"),
+                  "feels_like_c": feels_like(obs.get("sicaklik"), obs.get("nem"), obs.get("ruzgarHiz")),
                   "wind_speed_10m_kmh": obs.get("ruzgarHiz"),
                   "wind_direction_deg": obs.get("ruzgarYon"),
                   "pressure_hpa": obs.get("aktuelBasinc"),
@@ -228,6 +244,7 @@ jobs:
               "observed_at_utc":obs.get("observed_at_utc"),
               "logged_at_utc":obs.get("fetched_at_utc"),
               "temperature_2m_c":obs.get("temperature_2m_c"),
+              "feels_like_c":obs.get("feels_like_c"),
               "precipitation_10m_mm":obs.get("precipitation_10m_mm"),
               "precipitation_1h_mm":obs.get("precipitation_1h_mm"),
               "precipitation_6h_mm":obs.get("precipitation_6h_mm"),
@@ -245,6 +262,10 @@ jobs:
           kept.sort(key=lambda x:x.get("logged_at_utc",""))
           doc["samples"]=kept
           doc["updated_at_utc"]=obs.get("fetched_at_utc")
+          feels=[float(s["feels_like_c"]) for s in kept if s.get("feels_like_c") is not None]
+          if feels:
+              doc["feels_like_24h_min_c"]=round(min(feels),1)
+              doc["feels_like_24h_max_c"]=round(max(feels),1)
           pathlib.Path("output/history.json").write_text(json.dumps(doc,ensure_ascii=False),encoding="utf-8")
           print(f"MGM Çanakçı history: {len(kept)} samples")
           PY
