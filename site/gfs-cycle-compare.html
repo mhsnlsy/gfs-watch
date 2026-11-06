@@ -10,7 +10,7 @@
 <style>
 :root{color-scheme:dark;--line:rgba(204,225,239,.11);--text:#edf5f8;--muted:#9bb1bf;--cyan:#7dd3d7}
 *{box-sizing:border-box}
-html,body{margin:0;padding:0;background:transparent;color:var(--text);font-family:system-ui,-apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif}
+html,body{margin:0;padding:0;background:transparent;color:var(--text);font-family:"DM Sans",sans-serif}
 .next-72h-head{display:flex;justify-content:space-between;align-items:flex-start;gap:12px;margin-bottom:16px}
 .next-72h-head h2{font:650 22px/1.28 system-ui,-apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif;letter-spacing:-.015em;margin:5px 0 0}
 .next-72h-head p{font-size:13px;color:var(--muted);margin:7px 0 0;line-height:1.6}
@@ -41,6 +41,141 @@ html,body{margin:0;padding:0;background:transparent;color:var(--text);font-famil
 .gfs-point-tooltip-meta{margin-top:6px;color:#a8bac5;font-size:11px}
 @media(max-width:700px){.next-72h-grid{grid-template-columns:minmax(0,1fr)}.next-72h-chart{height:230px}}
 @media(max-width:560px){.next-72h-head h2{font-size:20px}.next-72h-head p{font-size:11px}.next-72h-grid{gap:10px}.next-72h-card{padding:10px 0 10px}.next-72h-card-head h3{font-size:15px}.next-72h-card-head span{font-size:10px}.next-72h-chart{height:210px}.next-72h-legend{gap:9px 14px;margin-top:6px;padding-top:11px}.next-72h-legend-item{font-size:11px;white-space:normal}.next-72h-legend-line{width:26px}.next-72h-legend-note{font-size:10px}.gfs-point-tooltip{min-width:160px;max-width:min(220px,calc(100% - 12px));padding:8px 10px}.gfs-point-tooltip-value{font-size:16px}}
+
+/* Köy sayfasındaki GFS grafik şablonunun bire bir CSS kopyası. */
+
+    /* İstanbul GFS grafik şablonu — Köy verisi korunur. */
+    .next-72h-head{
+      display:flex!important;
+      justify-content:space-between!important;
+      align-items:flex-start!important;
+      gap:12px!important;
+      margin-bottom:16px!important;
+    }
+    .next-72h-head h2{
+      font:650 22px/1.28 system-ui,-apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif!important;
+      letter-spacing:-.015em!important;
+      margin:5px 0 0!important;
+    }
+    .next-72h-head p{
+      font-size:13px!important;
+      color:var(--muted)!important;
+      margin:7px 0 0!important;
+      line-height:1.6!important;
+    }
+    .next-72h-badge{
+      font-size:10px!important;
+      color:#b8d7df!important;
+      border:1px solid var(--line)!important;
+      padding:7px 10px!important;
+      border-radius:9px!important;
+      white-space:nowrap!important;
+      max-width:42%!important;
+    }
+    .next-72h-grid{
+      display:grid!important;
+      grid-template-columns:repeat(2,minmax(0,1fr))!important;
+      gap:18px 20px!important;
+    }
+    .next-72h-card{
+      position:relative!important;
+      min-width:0!important;
+      padding:12px 0 12px!important;
+      border:1px solid rgba(204,225,239,.12)!important;
+      border-radius:16px!important;
+      background:rgba(4,19,29,.17)!important;
+      overflow:hidden!important;
+    }
+    .next-72h-card-head{
+      display:flex!important;
+      align-items:center!important;
+      justify-content:space-between!important;
+      gap:8px!important;
+      padding:0 14px!important;
+    }
+    .next-72h-card-head h3{
+      font:650 18px/1.3 system-ui,-apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif!important;
+      letter-spacing:0!important;
+      margin:0!important;
+    }
+    .next-72h-card-head span{
+      font-size:12px!important;
+      color:var(--muted)!important;
+      white-space:nowrap!important;
+    }
+    .next-72h-chart{
+      height:clamp(220px,20vw,285px)!important;
+      width:100%!important;
+      margin-top:10px!important;
+      min-width:0!important;
+      min-height:0!important;
+      position:relative!important;
+      overflow:hidden!important;
+      padding:0!important;
+    }
+    .next-72h-chart svg{
+      display:block!important;
+      width:100%!important;
+      height:100%!important;
+      overflow:visible!important;
+    }
+    .next-72h-legend{
+      display:flex!important;
+      flex-wrap:wrap!important;
+      align-items:center!important;
+      gap:11px 22px!important;
+      margin:10px 2px 0!important;
+      padding:14px 2px 9px!important;
+      border-top:1px solid rgba(204,225,239,.10)!important;
+    }
+    .next-72h-legend-item{
+      display:inline-flex!important;
+      align-items:center!important;
+      gap:10px!important;
+      color:#d0dce3!important;
+      font-size:13px!important;
+      font-weight:500!important;
+      line-height:1.55!important;
+      white-space:nowrap!important;
+    }
+    .next-72h-legend-line{
+      display:inline-block!important;
+      width:34px!important;
+      flex:none!important;
+      border-top:2px dashed var(--run-color)!important;
+    }
+    .next-72h-legend-item.is-latest .next-72h-legend-line{
+      border-top:4px solid var(--run-color)!important;
+    }
+    .next-72h-legend-tag{
+      color:#8fd7ba!important;
+      background:rgba(39,166,105,.13)!important;
+      border:1px solid rgba(143,215,186,.22)!important;
+      border-radius:999px!important;
+      padding:3px 7px!important;
+      font-size:9px!important;
+      font-weight:800!important;
+      letter-spacing:.04em!important;
+    }
+    @media(max-width:700px){
+      .next-72h-grid{grid-template-columns:minmax(0,1fr)!important}
+      .next-72h-chart{height:230px!important}
+    }
+    @media(max-width:560px){
+      .next-72h-head h2{font-size:20px!important}
+      .next-72h-head p{font-size:11px!important}
+      .next-72h-grid{gap:10px!important}
+      .next-72h-card{padding:10px 0 10px!important}
+      .next-72h-card-head h3{font-size:15px!important}
+      .next-72h-card-head span{font-size:10px!important}
+      .next-72h-chart{height:210px!important}
+      .next-72h-legend{gap:9px 14px!important;margin-top:6px!important;padding-top:11px!important}
+      .next-72h-legend-item{font-size:11px!important;white-space:normal!important}
+      .next-72h-legend-line{width:26px!important}
+    }
+  
+/* Döngü renk etiketleri Köy görünümüyle aynı şekilde gizli; DOM korunur. */
+#next-72h-legend{display:none!important}
 </style>
 </head>
 <body>
