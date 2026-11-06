@@ -9,7 +9,7 @@
   ]);
   const theme = Object.freeze({
     colors,
-    latestStrokeWidth: 5,
+    latestStrokeWidth: 6,
     previousStrokeWidth: 1.8,
     previousStrokeDasharray: "5 4"
   });
