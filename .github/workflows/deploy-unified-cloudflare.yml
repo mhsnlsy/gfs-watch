@@ -64,7 +64,7 @@ jobs:
           python - <<'PY'
           import json,subprocess
           xs=json.load(open("/tmp/kv.json"))
-          x=next((x for x in xs if x.get("title")=="gfs-watch-istanbul-gfs"),None)
+          x=next((x for x in xs if x.get("title") in ("gfs-watch-push-GFS_KV","gfs-watch-istanbul-gfs")),None)
           if not x:
               out=subprocess.check_output(["wrangler","kv","namespace","create","GFS_KV"],text=True,stderr=subprocess.STDOUT)
               import re
