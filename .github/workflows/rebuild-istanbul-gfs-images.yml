@@ -1,4 +1,4 @@
-name: Rebuild Istanbul GFS Comparison PNGs
+name: Rebuild Istanbul GFS Interactive SVG
 
 on:
   push:
@@ -21,7 +21,7 @@ concurrency:
 
 jobs:
   rebuild:
-    name: Align and republish four comparison PNGs
+    name: Rebuild SVG with interactive tooltip data
     runs-on: ubuntu-latest
     timeout-minutes: 15
     steps:
@@ -56,7 +56,7 @@ jobs:
           ISTANBUL_GFS_DIR: ${{ github.workspace }}/gfs-state/gfs
         run: python scripts/rebuild_istanbul_gfs_comparison_images.py
 
-      - name: Commit four aligned PNGs and manifest references
+      - name: Commit interactive SVG, matching PNG and manifest references
         working-directory: gfs-state
         run: |
           set -euo pipefail
@@ -64,9 +64,9 @@ jobs:
           git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
           git add gfs/notifications/media gfs/notifications/latest.json gfs/latest.json
           if git diff --cached --quiet; then
-            echo "The current canonical PNGs already match the valid-time alignment."
+            echo "The current canonical SVG and Telegram PNG already contain valid-time tooltip data."
           else
-            git commit -m "Align Istanbul GFS comparison PNGs by valid time"
+            git commit -m "Rebuild Istanbul GFS interactive SVG comparison"
             git push origin HEAD:istanbul-gfs-data
           fi
 
