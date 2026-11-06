@@ -2865,38 +2865,12 @@
     async function loadForecast(){
       try{
         const cacheKey=Date.now();
-        const [response,stationResponse,historyResponse,eyupsultanResponse,eyupsultanHistoryResponse,sisliResponse,sisliHistoryResponse]=await Promise.all([
-          fetch(DATA_URL+"?t="+cacheKey,{cache:"no-store"}),
-          fetch(STATION_URL+"?t="+cacheKey,{cache:"no-store"}).catch(()=>null),
-          fetch(STATION_HISTORY_URL+"?t="+cacheKey,{cache:"no-store"}).catch(()=>null),
-          fetch(EYUPSULTAN_STATION_URL+"?t="+cacheKey,{cache:"no-store"}).catch(()=>null),
-          fetch(EYUPSULTAN_STATION_HISTORY_URL+"?t="+cacheKey,{cache:"no-store"}).catch(()=>null),
-          fetch(SISLI_STATION_URL+"?t="+cacheKey,{cache:"no-store"}).catch(()=>null),
-          fetch(SISLI_STATION_HISTORY_URL+"?t="+cacheKey,{cache:"no-store"}).catch(()=>null)
-        ]);
+        const response=await fetch(DATA_URL+"?t="+cacheKey,{cache:"no-store"});
         if(!response.ok)throw new Error("Tahmin verisi şu anda alınamıyor.");
         const data=await response.json();
-        if(!data||!["gfs-watch.forecast.v1","gfs-watch.forecast.v2"].includes(data.schema))throw new Error("Tahmin verisinin biçimi beklenenden farklı.");
-        enkaStationObservation=null;
-        eyupsultanStationObservation=null;
-        sisliStationObservation=null;
-        if(stationResponse&&stationResponse.ok){
-          const stationDocument=await stationResponse.json();
-          if(stationDocument&&stationDocument.schema==="gfs-watch.station-observation.v1"){
-            enkaStationObservation=stationDocument.station_observation||null;
-          }
+        if(!data||!["gfs-watch.forecast.v1","gfs-watch.forecast.v2"].includes(data.schema)){
+          throw new Error("Tahmin verisinin biçimi beklenenden farklı.");
         }
-        if(eyupsultanResponse&&eyupsultanResponse.ok){
-          try{
-            const eyupsultanDocument=await eyupsultanResponse.json();
-            const candidate=eyupsultanDocument&&eyupsultanDocument.station_observation;
-            if(eyupsultanDocument.schema==="gfs-watch.station-observation.v1"&&candidate&&String(candidate.station_id)==="18101"){
-              eyupsultanStationObservation=candidate;
-            }
-          }catch(_){eyupsultanStationObservation=null;}
-        }
-        if(sisliResponse&&sisliResponse.ok){try{const d=await sisliResponse.json();const s=d&&d.station_observation;if(d&&d.schema==="gfs-watch.station-observation.v1"&&s&&String(s.station_id)==="18401")sisliStationObservation=s;}catch(_){sisliStationObservation=null;}}
-        // Keep the user's selected station. ENKA Balmumcu is always fed by WeatherLink current values.
         $("station-enka-button").classList.toggle("active",activeStation==="enka");
         $("station-eyupsultan-button").classList.toggle("active",activeStation==="eyupsultan");
         $("station-sisli-button").classList.toggle("active",activeStation==="sisli");
@@ -2904,40 +2878,8 @@
         $("station-eyupsultan-button").setAttribute("aria-pressed",String(activeStation==="eyupsultan"));
         $("station-sisli-button").setAttribute("aria-pressed",String(activeStation==="sisli"));
         render(data);
-        enkaStationHistorySamples=[];
-        eyupsultanStationHistorySamples=[];
-        sisliStationHistorySamples=[];
-        eyupsultanStationRainHistorySamples=[];
-        sisliStationRainHistorySamples=[];
-        if(historyResponse&&historyResponse.ok){
-          try{
-            const historyDocument=await historyResponse.json();
-            if(historyDocument&&historyDocument.schema==="gfs-watch.station-temperature-history.v1"&&Array.isArray(historyDocument.samples)){
-              enkaStationHistorySamples=historyDocument.samples;
-            }
-          }catch(_){enkaStationHistorySamples=[];}
-        }
-        if(eyupsultanHistoryResponse&&eyupsultanHistoryResponse.ok){
-          try{
-            const historyDocument=await eyupsultanHistoryResponse.json();
-            if(historyDocument&&historyDocument.schema==="gfs-watch.station-temperature-history.v1"&&String(historyDocument.station_id)==="18101"&&Array.isArray(historyDocument.samples)){
-              eyupsultanStationHistorySamples=historyDocument.samples;
-            }
-          }catch(_){eyupsultanStationHistorySamples=[];}
-        }
-        if(sisliHistoryResponse&&sisliHistoryResponse.ok){
-          try{
-            const historyDocument=await sisliHistoryResponse.json();
-            if(historyDocument&&historyDocument.schema==="gfs-watch.station-temperature-history.v1"&&String(historyDocument.station_id)==="18401"&&Array.isArray(historyDocument.samples)){
-              sisliStationHistorySamples=historyDocument.samples;
-            }
-          }catch(_){sisliStationHistorySamples=[];}
-        }
-        renderStationHistory();
-        renderStationCard(activeStation==="enka"?enkaStationObservation:activeStation==="eyupsultan"?eyupsultanStationObservation:sisliStationObservation);
       }catch(error){
-        // Forecast/model data may fail independently. Never erase live station
-        // observations or their history charts because GFS is temporarily unavailable.
+        // Forecast/model data is independent from live station data.
         $("daily-grid").innerHTML='<div class="error">'+esc(error.message)+'</div>';
         $("forecast-chart").innerHTML='<div class="chart-empty">Tahmin verisi şu anda alınamıyor. İstasyon ölçümleri bağımsız olarak çalışmaya devam ediyor.</div>';
         renderStationCard(activeStation==="enka"?enkaStationObservation:activeStation==="eyupsultan"?eyupsultanStationObservation:sisliStationObservation);
