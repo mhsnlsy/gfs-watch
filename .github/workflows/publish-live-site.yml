@@ -69,6 +69,18 @@ jobs:
           mkdir -p _site/data
           cp -a source/site/. _site/
 
+          # Station observations and 72-hour archives are Cloudflare D1/API-only.
+          # Never publish stale repository snapshots as station data.
+          rm -f \
+            _site/data/station-observation.json \
+            _site/data/station-temperature-history.json \
+            _site/data/eyupsultan-station-observation.json \
+            _site/data/eyupsultan-station-temperature-history.json \
+            _site/data/eyupsultan-station-rain-history.json \
+            _site/data/sisli-station-observation.json \
+            _site/data/sisli-station-temperature-history.json \
+            _site/data/sisli-station-rain-history.json
+
           if [ -s "istanbul-gfs-data/gfs/latest.json" ]; then
             cp "istanbul-gfs-data/gfs/latest.json" "_site/data/istanbul-gfs-latest.json"
             if [ -d "istanbul-gfs-data/gfs/notifications" ]; then
