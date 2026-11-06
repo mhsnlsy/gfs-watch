@@ -270,7 +270,7 @@ def main() -> None:
         run_file = GFS_DIR / "runs" / f"{run_id}.json"
         temporary = run_file.with_suffix(".json.tmp")
         temporary.write_text(
-            json.dumps(normalized, ensure_ascii=False, indent=2) + "\\n",
+            json.dumps(normalized, ensure_ascii=False, indent=2) + "\n",
             encoding="utf-8",
         )
         temporary.replace(run_file)
