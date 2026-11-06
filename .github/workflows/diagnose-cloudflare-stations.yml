@@ -60,7 +60,7 @@ jobs:
           const binding = (config.d1_databases || []).find(item => item.database_name === "gfs-watch-stations");
           if (!binding) throw new Error("STATIONS_DB binding not found");
           binding.database_id = process.argv[2];
-          fs.writeFileSync(process.argv[3], JSON.stringify(config, null, 2) + "\\n");
+          fs.writeFileSync(process.argv[3], JSON.stringify(config, null, 2));
           NODE
           echo "===== station_history schema ====="
           wrangler d1 execute gfs-watch-stations --remote --config wrangler.jsonc --command "PRAGMA table_info(station_history);" --json
