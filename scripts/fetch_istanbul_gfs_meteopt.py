@@ -1,8 +1,8 @@
 """Fetch one ready Istanbul MeteoPT GFS cycle for the GitHub Actions publisher.
 
-The workflow polls every 5 minutes. It probes all four cycle hours, but persists
-only the newest previously unpublished run whose F180 step is present. No
-Cloudflare calls are made here.
+The workflow polls every 5 minutes. It probes all four cycle hours and
+publishes the F72 milestone as soon as it is ready. It then publishes the
+canonical report only after F180 is ready. No Cloudflare calls are made here.
 """
 from __future__ import annotations
 
@@ -68,7 +68,7 @@ def values_for(document: dict, name: str) -> list:
     return series if isinstance(series, list) else []
 
 
-def normalize(document: dict, source_url: str, cycle: datetime) -> dict:
+def normalize(document: dict, source_url: str, cycle: datetime, require_f180: bool = True) -> dict:
     raw_steps = ((document.get("steps") or {}).get("values") or [])
     steps = []
     for value in raw_steps:
@@ -79,7 +79,7 @@ def normalize(document: dict, source_url: str, cycle: datetime) -> dict:
         if step >= 0:
             steps.append(step)
 
-    if 180 not in steps:
+    if require_f180 and 180 not in steps:
         raise RuntimeError("F180 gate failed during normalization")
 
     names = {
@@ -152,14 +152,21 @@ def normalize(document: dict, source_url: str, cycle: datetime) -> dict:
             "forecast": "MeteoPT GFS point forecast (Istanbul, TR)",
             "forecast_url": source_url,
         },
+        "f72": {
+            "available": 72 in steps,
+            "forecast_hour": 72,
+            "source": "MeteoPT",
+        },
         "f180": {
-            "available": True,
+            "available": 180 in steps,
             "forecast_hour": 180,
             "source": "MeteoPT",
         },
         "noaa_source_file": {
-            "f180_available": True,
-            "f180_source_name": "MeteoPT",
+            "f72_available": 72 in steps,
+            "f72_source_name": "MeteoPT" if 72 in steps else None,
+            "f180_available": 180 in steps,
+            "f180_source_name": "MeteoPT" if 180 in steps else None,
             "f180_source_url": API,
         },
         "current_conditions": {
@@ -204,49 +211,72 @@ def main() -> None:
                     steps.append(int(float(value)))
                 except (TypeError, ValueError):
                     pass
+            has_f72 = 72 in steps
             has_f180 = 180 in steps
             print(
-                f"[GFS] {cycle.isoformat()} · F180={str(has_f180).lower()} "
-                f"· horizon={max(steps) if steps else 0}h"
+                f"[GFS] {cycle.isoformat()} · F72={str(has_f72).lower()} "
+                f"· F180={str(has_f180).lower()} · horizon={max(steps) if steps else 0}h"
             )
-            if has_f180:
-                candidates.append((cycle, document, url))
+            candidates.append((cycle, document, url, steps))
         except Exception as exc:
             print(f"[GFS] {hour:02d}Z check failed: {exc}")
 
     if not candidates:
-        print("[GFS] No new F180-ready cycle; no publication.")
+        print("[GFS] No usable MeteoPT cycle returned.")
         write_output("publish", "false")
-        write_output("reason", "no_f180_ready")
+        write_output("f72_publish", "false")
+        write_output("reason", "no_usable_cycle")
         return
 
     candidates.sort(key=lambda item: item[0], reverse=True)
-    cycle, document, url = candidates[0]
+    cycle, document, url, steps = candidates[0]
     run_id = cycle.isoformat(timespec="seconds")
-    marker = GFS_DIR / "notifications" / "telegram-sent" / f"{run_id}.json"
-    if marker.exists():
-        print(f"[GFS] {run_id} already sent to Telegram; no duplicate publication.")
-        write_output("publish", "false")
-        write_output("reason", "already_published")
-        write_output("run_id", run_id)
-        return
+    run_file = GFS_DIR / "runs" / f"{run_id}.json"
+    f72_marker = GFS_DIR / "milestones" / "f72" / f"{run_id}.json"
+    telegram_marker = GFS_DIR / "notifications" / "telegram-sent" / f"{run_id}.json"
 
-    normalized = normalize(document, url, cycle)
-    filename = f"{run_id}.json"
-    target = GFS_DIR / "runs" / filename
-    temporary = target.with_suffix(".json.tmp")
-    temporary.write_text(
-        json.dumps(normalized, ensure_ascii=False, indent=2) + "\n",
-        encoding="utf-8",
-    )
-    temporary.replace(target)
+    # Like the Köy workflow: F72 is an independently published milestone,
+    # not a substitute for the full F180 report/Telegram release.
+    f72_publish = 72 in steps and not f72_marker.exists()
+    if f72_publish:
+        normalized72 = normalize(document, url, cycle, require_f180=False)
+        normalized72["forecast_6_hourly"] = [
+            point for point in normalized72["forecast_6_hourly"]
+            if point.get("forecast_hour", 0) <= 72
+        ]
+        normalized72["forecast_horizon_hours"] = 72
+        normalized72["milestone"] = "F72"
+        f72_marker.parent.mkdir(parents=True, exist_ok=True)
+        f72_marker.write_text(
+            json.dumps(normalized72, ensure_ascii=False, indent=2) + "\n",
+            encoding="utf-8",
+        )
+        print(f"[GFS] New F72 milestone saved for {run_id}.")
 
-    print(
-        f"[GFS] Selected {run_id}; F180={normalized['f180']['available']}; "
-        f"points={len(normalized['forecast_6_hourly'])}."
-    )
-    write_output("publish", "true")
-    write_output("reason", "new_f180_cycle")
+    # F180 publication is deduplicated by the canonical sent marker, matching
+    # the milestone-based Köy pipeline. The F72 marker never blocks F180.
+    publish = 180 in steps and not telegram_marker.exists()
+    if publish:
+        normalized = normalize(document, url, cycle, require_f180=True)
+        temporary = run_file.with_suffix(".json.tmp")
+        temporary.write_text(
+            json.dumps(normalized, ensure_ascii=False, indent=2) + "\n",
+            encoding="utf-8",
+        )
+        temporary.replace(run_file)
+        print(
+            f"[GFS] Selected {run_id}; F180=true; "
+            f"points={len(normalized['forecast_6_hourly'])}."
+        )
+    else:
+        print(
+            f"[GFS] No new F180 publication for {run_id}; "
+            f"F72 milestone={'new' if f72_publish else 'already published/not ready'}."
+        )
+
+    write_output("publish", "true" if publish else "false")
+    write_output("f72_publish", "true" if f72_publish else "false")
+    write_output("reason", "new_f180_cycle" if publish else ("new_f72_milestone" if f72_publish else "no_new_milestone"))
     write_output("run_id", run_id)
 
 
