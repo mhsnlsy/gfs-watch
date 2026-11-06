@@ -435,7 +435,6 @@ function renderRuns(d,f72){
   const src=`./koy-data/gfs/media/koy-gfs-${runStamp}-${metric}.png?v=${encodeURIComponent(source[0].run_id_utc||"")}`;
   holder.innerHTML='<a class="notification-image-link" href="'+src+'" target="_blank" rel="noopener"><img class="notification-image" src="'+src+'" alt="'+esc(alt)+'"></a>';
  });
- renderRunLegend(source);
  $("next-72h-meta").textContent=source.length?source.length+" GFS döngüsü karşılaştırılıyor":"MeteoPT GFS verisi bekleniyor";
  // Both charts use the same latest MeteoPT payload as the table, plus its three archived cycles.
  const chartSource=source;
