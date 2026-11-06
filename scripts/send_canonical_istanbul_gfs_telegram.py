@@ -2,7 +2,7 @@
 
 This script does not fetch weather data or rebuild charts. It reads only the
 already-published bundle under gfs/notifications and sends the exact report
-text plus the four PNGs generated from that same MeteoPT cycle.
+text plus one photo rendered from the same SVG figure displayed on Pages.
 """
 from __future__ import annotations
 
