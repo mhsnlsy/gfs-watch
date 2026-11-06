@@ -61,10 +61,14 @@ jobs:
       - name: Validate GFS publisher code and architecture contracts
         run: |
           python -m py_compile \
+            main.py \
             scripts/fetch_istanbul_gfs_meteopt.py \
             scripts/build_istanbul_gfs_publication.py \
-            scripts/send_canonical_istanbul_gfs_telegram.py
+            scripts/send_canonical_istanbul_gfs_telegram.py \
+            scripts/test_gfs_svg_comparison.py
           python scripts/test_notification_pipeline.py
+          python scripts/test_gfs_report_chart_theme.py
+          python scripts/test_gfs_svg_comparison.py
 
       - name: Check MeteoPT cycles and apply F180 gate
         id: fetch
