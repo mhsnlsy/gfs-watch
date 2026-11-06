@@ -106,17 +106,35 @@ function svgLine(runs,metric,title,unit,verification=null){
  const usable=runs.map((run,runIndex)=>({run,runIndex,points:pointsOf(run,72).map(p=>({h:Number(p.forecast_hour),v:num(p[metric]),validTime:p.valid_time_utc})).filter(p=>p.v!=null)})).filter(item=>item.points.length);
  if(!usable.length)return '<div class="chart-empty">Tahmin verisi bekleniyor…</div>';
  const hours=Array.from(new Set(usable.flatMap(item=>item.points.map(p=>p.h)))).sort((a,b)=>a-b);
- const values=usable.flatMap(item=>item.points.map(p=>p.v));let lo=Math.min(...values),hi=Math.max(...values);
- if(metric==="temperature_2m_c"){lo=Math.floor((lo-2)/2)*2;hi=Math.ceil((hi+2)/2)*2;}
- else{lo=Math.min(0,lo);hi=Math.max(1,Math.ceil(hi*1.15));}
- if(hi===lo)hi=lo+1;
+ const values=usable.flatMap(item=>item.points.map(p=>p.v));
  const sigma=verification?.sigma||null;
- if(sigma&&metric==="temperature_2m_c"){lo=Math.min(lo,Math.min(...values)-sigma);hi=Math.max(hi,Math.max(...values)+sigma);}
+ let lo=Math.min(...values),hi=Math.max(...values);
+ if(metric==="temperature_2m_c"){
+  // Tight temperature scale: fit every visible GFS cycle and the full verification band,
+  // then keep a small margin. A 4 °C floor prevents over-zoom when forecasts are nearly flat.
+  const localSigmas=verification?.sigmaByHour?Array.from(verification.sigmaByHour.values()).filter(Number.isFinite):[];
+  const sigmaPad=Math.max(sigma||0,...localSigmas);
+  const dataLo=lo-sigmaPad,dataHi=hi+sigmaPad;
+  const padding=Math.max(0.5,(dataHi-dataLo)*0.05);
+  lo=dataLo-padding;
+  hi=dataHi+padding;
+  if(hi-lo<4){
+   const center=(lo+hi)/2;
+   lo=center-2;
+   hi=center+2;
+  }
+  lo=Math.floor(lo*2)/2;
+  hi=Math.ceil(hi*2)/2;
+ }else{
+  lo=Math.min(0,lo);
+  hi=Math.max(1,Math.ceil(hi*1.15));
+ }
+ if(hi===lo)hi=lo+1;
  const W=760,H=190,L=45,R=12,T=20,B=28,PW=W-L-R,PH=H-T-B;
  const x=h=>L+(hours.length===1?PW/2:(h-hours[0])/(hours[hours.length-1]-hours[0]||1))*PW;
  const y=v=>T+(hi-v)*PH/(hi-lo);
  let out='<svg class="koy-svg" viewBox="0 0 '+W+' '+H+'" role="img" aria-label="'+esc(title)+'">';
- for(let j=0;j<=3;j++){const v=lo+(hi-lo)*j/3,yy=y(v);out+='<line x1="'+L+'" y1="'+yy+'" x2="'+(W-R)+'" y2="'+yy+'" stroke="#294253" stroke-dasharray="3 5"/><text x="'+(L-7)+'" y="'+(yy+3)+'" text-anchor="end" fill="#91aab8" font-size="10">'+fmt(v,0)+'</text>';}
+ for(let j=0;j<=3;j++){const v=lo+(hi-lo)*j/3,yy=y(v);out+='<line x1="'+L+'" y1="'+yy+'" x2="'+(W-R)+'" y2="'+yy+'" stroke="#294253" stroke-dasharray="3 5"/><text x="'+(L-7)+'" y="'+(yy+3)+'" text-anchor="end" fill="#91aab8" font-size="10">'+fmt(v,metric==="temperature_2m_c"?1:0)+'</text>';}
  const axisPoint=usable.flatMap(item=>item.points).find(p=>p.h===hours[0]);
  const axisLabel=v=>{if(!v)return "—";const d=new Date(v);if(!Number.isFinite(d.getTime()))return "—";d.setTime(d.getTime()-3*3600000);return new Intl.DateTimeFormat("tr-TR",{timeZone:"Europe/Istanbul",day:"numeric",month:"long",hour:"2-digit",minute:"2-digit",hourCycle:"h23"}).format(d)+" TSİ";};
  hours.forEach(h=>{if(h!==hours[0]&&h%12!==0&&h!==hours[hours.length-1])return;const label=h===hours[0]?axisLabel(axisPoint?.validTime):"+"+h+"s";out+='<text x="'+x(h)+'" y="'+(H-7)+'" text-anchor="middle" fill="#91aab8" font-size="10">'+esc(label)+'</text>';});
