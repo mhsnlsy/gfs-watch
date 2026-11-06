@@ -2,9 +2,9 @@
   "schema": "koy-mgm.collector-heartbeat.v1",
   "collector": "koy-mgm",
   "status": "fresh",
-  "attempted_at_utc": "2026-11-06T21:15:37.400767+00:00",
+  "attempted_at_utc": "2026-11-06T21:16:40.582284+00:00",
   "observed_at_utc": "2026-11-06T21:14:00.000Z",
-  "published_at_utc": "2026-11-06T21:15:37.881998+00:00",
+  "published_at_utc": "2026-11-06T21:16:41.095653+00:00",
   "station_id": "18223",
   "station_name": "Çanakçı"
 }
