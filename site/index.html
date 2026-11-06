@@ -3,7 +3,6 @@
 <head>
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
-  <meta http-equiv="refresh" content="300">
   <meta name="theme-color" content="#081827">
   <meta name="apple-mobile-web-app-capable" content="yes">
   <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
@@ -1244,14 +1243,9 @@
       document.querySelectorAll("[data-app-version]").forEach(node=>{node.textContent=doc.version;});
     }
     fetch("./version.json",{cache:"no-store"}).then(response=>response.ok?response.json():null).then(applyAppVersion).catch(()=>{});
-    const STATION_URL="./data/station-observation.json";
-    const STATION_HISTORY_URL="./data/station-temperature-history.json";
-    const EYUPSULTAN_STATION_URL="./data/eyupsultan-station-observation.json";
-    const EYUPSULTAN_STATION_HISTORY_URL="./data/eyupsultan-station-temperature-history.json";
-    const SISLI_STATION_URL="./data/sisli-station-observation.json";
-    const SISLI_STATION_HISTORY_URL="./data/sisli-station-temperature-history.json";
-    const EYUPSULTAN_RAIN_HISTORY_URL="./data/eyupsultan-station-rain-history.json";
-    const SISLI_RAIN_HISTORY_URL="./data/sisli-station-rain-history.json";
+    const STATIONS_API="https://gfs-watch-stations.muhsin-ulusoy.workers.dev/api";
+    const STATIONS_URL=STATIONS_API+"/stations";
+    const STATION_HISTORY_API=key=>STATIONS_API+"/history/"+encodeURIComponent(key)+"?hours=72";
     const VERIFY_URL="./data/forecast-verification.json";
     let enkaStationObservation=null,eyupsultanStationObservation=null,sisliStationObservation=null,activeStation="enka";
     try{
@@ -2725,7 +2719,67 @@
       if(data.forecast_valid_until_utc&&$("valid-until"))$("valid-until").textContent="Son geçerlilik: "+new Intl.DateTimeFormat("tr-TR",{timeZone:"Europe/Istanbul",day:"2-digit",month:"2-digit"}).format(new Date(data.forecast_valid_until_utc));
       renderFindings(data.regional_pressure_analysis&&data.regional_pressure_analysis.findings,data.current_conditions&&data.current_conditions.mean_sea_level_pressure_hpa);
     }
+    function workerStationToPageStation(row){
+      if(!row)return null;
+      const pressure=Number(row.pressure_hpa);
+      const wind=Number(row.wind_speed_kmh);
+      const temp=Number(row.temperature_c);
+      const humidity=Number(row.humidity_percent);
+      const rain1=Number(row.rain_1h_mm);
+      const rain10=Number(row.rain_10m_mm);
+      const rain6=Number(row.rain_6h_mm);
+      const rain12=Number(row.rain_12h_mm);
+      const rain24=Number(row.rain_24h_mm);
+      const rain00=Number(row.rain_00_now_mm);
+      const degree=Number(row.wind_direction);
+      let directionCardinal=null;
+      if(Number.isFinite(degree)){
+        const dirs=["Kuzey","Kuzeydoğu","Doğu","Güneydoğu","Güney","Güneybatı","Batı","Kuzeybatı"];
+        directionCardinal=dirs[Math.round(((degree%360)+360)%360/45)%8];
+      }
+      return {
+        station_id:String(row.station_id||""),
+        station_name:row.station_name||row.station||"İstasyon",
+        source:row.source||"Worker",
+        observed_at_utc:row.observed_at_utc||row.fetched_at_utc||null,
+        fetched_at_utc:row.fetched_at_utc||null,
+        temperature_2m_c:Number.isFinite(temp)?temp:null,
+        humidity_percent:Number.isFinite(humidity)?humidity:null,
+        actual_station_pressure_hpa:Number.isFinite(pressure)&&pressure>-9000?pressure:null,
+        station_pressure_hpa:Number.isFinite(pressure)&&pressure>-9000?pressure:null,
+        wind_speed_10m_kmh:Number.isFinite(wind)?wind:null,
+        wind_direction_cardinal:directionCardinal,
+        wind_direction_tr:Number.isFinite(degree)?directionCardinal:null,
+        precipitation_1h_mm:Number.isFinite(rain1)?rain1:null,
+        precipitation_10m_mm:Number.isFinite(rain10)?rain10:null,
+        precipitation_6h_mm:Number.isFinite(rain6)?rain6:null,
+        precipitation_12h_mm:Number.isFinite(rain12)?rain12:null,
+        precipitation_24h_mm:Number.isFinite(rain24)?rain24:null,
+        precipitation_00_now_mm:Number.isFinite(rain00)?rain00:null,
+        dew_point_c:null,
+        status:row.status||"unknown",
+        is_stale:row.status==="stale",
+        stale_after_minutes:20
+      };
+    }
+    function workerHistoryToPageSamples(rows){
+      if(!Array.isArray(rows))return [];
+      return rows.map(row=>{
+        const temp=Number(row.temperature_c);
+        const rain1=Number(row.rain_1h_mm);
+        const rain10=Number(row.rain_10m_mm);
+        return {
+          station_id:String(row.station_id||""),
+          observed_at_utc:row.observed_at_utc||row.fetched_at_utc||null,
+          logged_at_utc:row.fetched_at_utc||row.observed_at_utc||null,
+          temperature_2m_c:Number.isFinite(temp)?temp:null,
+          precipitation_1h_mm:Number.isFinite(rain1)?rain1:null,
+          precipitation_10m_mm:Number.isFinite(rain10)?rain10:null
+        };
+      }).filter(row=>row.observed_at_utc);
+    }
     // Station observations refresh independently from forecast/model data.
+
     // A delayed GFS/ECMWF payload must never block live station readings.
     async function refreshStationHealth(){
       const observation=activeStation==="enka"?enkaStationObservation:activeStation==="eyupsultan"?eyupsultanStationObservation:sisliStationObservation;
@@ -2749,89 +2803,64 @@
 
     async function refreshStationObservations(){
       const cacheKey=Date.now();
-      const [enkaResponse,eyupsultanResponse,sisliResponse]=await Promise.all([
-        fetch(STATION_URL+"?t="+cacheKey,{cache:"no-store"}).catch(()=>null),
-        fetch(EYUPSULTAN_STATION_URL+"?t="+cacheKey,{cache:"no-store"}).catch(()=>null),
-        fetch(SISLI_STATION_URL+"?t="+cacheKey,{cache:"no-store"}).catch(()=>null)
-      ]);
-      if(enkaResponse&&enkaResponse.ok){
-        try{
-          const document=await enkaResponse.json();
-          if(document?.schema==="gfs-watch.station-observation.v1"&&document.station_observation?.station_id==="ENKA-BALMUMCU-WEATHERLINK"){
-            enkaStationObservation=document.station_observation;
-          }
-        }catch(_){}
+      try{
+        const response=await fetch(STATIONS_URL+"?t="+cacheKey,{cache:"no-store"});
+        if(!response.ok)throw new Error("Worker stations HTTP "+response.status);
+        const document=await response.json();
+        const rows=Array.isArray(document?.stations)?document.stations:[];
+        for(const row of rows){
+          const station=workerStationToPageStation(row);
+          if(!station)continue;
+          if(station.station_id==="ENKA-BALMUMCU-WEATHERLINK")enkaStationObservation=station;
+          if(station.station_id==="18101")eyupsultanStationObservation=station;
+          if(station.station_id==="18401")sisliStationObservation=station;
+        }
+        renderStationCard(activeStation==="enka"?enkaStationObservation:activeStation==="eyupsultan"?eyupsultanStationObservation:sisliStationObservation);
+        if(latestRainForecastPoints.length)renderRainWindow(latestRainForecastPoints);
+        refreshStationHealth();
+        if(typeof renderBriefing==="function")renderBriefing();
+      }catch(error){
+        console.warn("Worker istasyon verisi alınamadı:",error);
       }
-      if(eyupsultanResponse&&eyupsultanResponse.ok){
-        try{
-          const document=await eyupsultanResponse.json();
-          const candidate=document?.station_observation;
-          if(document?.schema==="gfs-watch.station-observation.v1"&&candidate&&String(candidate.station_id)==="18101"){
-            eyupsultanStationObservation=candidate;
-          }
-        }catch(_){}
-      }
-      if(sisliResponse&&sisliResponse.ok){try{const d=await sisliResponse.json();const s=d?.station_observation;if(d?.schema==="gfs-watch.station-observation.v1"&&s&&String(s.station_id)==="18401")sisliStationObservation=s;}catch(_){}}
-      renderStationCard(activeStation==="enka"?enkaStationObservation:activeStation==="eyupsultan"?eyupsultanStationObservation:sisliStationObservation);
-      if(latestRainForecastPoints.length)renderRainWindow(latestRainForecastPoints);
-      if(typeof renderBriefing==="function")renderBriefing();
     }
     async function refreshSelectedStation(){
       const stationKey=activeStation;
       const cacheKey=Date.now();
-      const observationUrl=stationKey==="eyupsultan"?EYUPSULTAN_STATION_URL:stationKey==="sisli"?SISLI_STATION_URL:STATION_URL;
-      const historyUrl=stationKey==="eyupsultan"?EYUPSULTAN_STATION_HISTORY_URL:stationKey==="sisli"?SISLI_STATION_HISTORY_URL:STATION_HISTORY_URL;
-      const [observationResponse,historyResponse,eyupObservationResponse,eyupHistoryResponse,sisliObservationResponse,sisliHistoryResponse]=await Promise.all([
-        fetch(observationUrl+"?t="+cacheKey,{cache:"no-store"}).catch(()=>null),
-        fetch(historyUrl+"?t="+cacheKey,{cache:"no-store"}).catch(()=>null),
-        stationKey!=="eyupsultan"?fetch(EYUPSULTAN_STATION_URL+"?t="+cacheKey,{cache:"no-store"}).catch(()=>null):Promise.resolve(null),
-        stationKey!=="eyupsultan"?fetch(EYUPSULTAN_STATION_HISTORY_URL+"?t="+cacheKey,{cache:"no-store"}).catch(()=>null):Promise.resolve(null),
-        stationKey!=="sisli"?fetch(SISLI_STATION_URL+"?t="+cacheKey,{cache:"no-store"}).catch(()=>null):Promise.resolve(null),
-        stationKey!=="sisli"?fetch(SISLI_STATION_HISTORY_URL+"?t="+cacheKey,{cache:"no-store"}).catch(()=>null):Promise.resolve(null)
-      ]);
-      const rainHistoryUrl=stationKey==="eyupsultan"?EYUPSULTAN_RAIN_HISTORY_URL:SISLI_RAIN_HISTORY_URL;
-      const rainHistoryResponse=await fetch(rainHistoryUrl+"?t="+cacheKey,{cache:"no-store"}).catch(()=>null);
-      if(observationResponse&&observationResponse.ok){
-        try{
-          const document=await observationResponse.json();
-          const candidate=document&&document.station_observation;
-          if(document&&document.schema==="gfs-watch.station-observation.v1"&&candidate){
-            if(stationKey==="eyupsultan"&&String(candidate.station_id)==="18101")eyupsultanStationObservation=candidate;
-            if(stationKey==="sisli"&&String(candidate.station_id)==="18401")sisliStationObservation=candidate;
-            if(stationKey==="enka"&&candidate.station_id==="ENKA-BALMUMCU-WEATHERLINK")enkaStationObservation=candidate;
+      try{
+        const [currentResponse,historyResponse]=await Promise.all([
+          fetch(STATIONS_API+"/stations/"+encodeURIComponent(stationKey)+"?t="+cacheKey,{cache:"no-store"}),
+          fetch(STATION_HISTORY_API(stationKey)+"&t="+cacheKey,{cache:"no-store"})
+        ]);
+
+        if(currentResponse.ok){
+          const document=await currentResponse.json();
+          const candidate=workerStationToPageStation(document?.station);
+          if(candidate){
+            if(stationKey==="enka")enkaStationObservation=candidate;
+            if(stationKey==="eyupsultan")eyupsultanStationObservation=candidate;
+            if(stationKey==="sisli")sisliStationObservation=candidate;
           }
-        }catch(_){}
-      }
-      if(historyResponse&&historyResponse.ok){
-        try{
+        }
+
+        if(historyResponse.ok){
           const document=await historyResponse.json();
-          if(document&&document.schema==="gfs-watch.station-temperature-history.v1"&&Array.isArray(document.samples)){
-            if(stationKey==="eyupsultan"&&String(document.station_id)==="18101")eyupsultanStationHistorySamples=document.samples;
-            if(stationKey==="sisli"&&String(document.station_id)==="18401")sisliStationHistorySamples=document.samples;
-            if(stationKey==="enka")enkaStationHistorySamples=document.samples;
-          }
-        }catch(_){}
+          const samples=workerHistoryToPageSamples(document?.history);
+          if(stationKey==="enka")enkaStationHistorySamples=samples;
+          if(stationKey==="eyupsultan")eyupsultanStationHistorySamples=samples;
+          if(stationKey==="sisli")sisliStationHistorySamples=samples;
+          if(stationKey==="eyupsultan")eyupsultanStationRainHistorySamples=samples;
+          if(stationKey==="sisli")sisliStationRainHistorySamples=samples;
+        }
+
+        if(activeStation!==stationKey)return;
+        renderStationCard(activeStation==="enka"?enkaStationObservation:activeStation==="eyupsultan"?eyupsultanStationObservation:sisliStationObservation);
+        renderStationHistory();
+        refreshStationHealth();
+        if(typeof renderBriefing==="function")renderBriefing();
+        if(typeof forecastData!=="undefined"&&forecastData&&typeof renderNext72Hours==="function")renderNext72Hours();
+      }catch(error){
+        console.warn("Worker seçili istasyon verisi alınamadı:",error);
       }
-      if(eyupObservationResponse&&eyupObservationResponse.ok){
-        try{
-          const document=await eyupObservationResponse.json();
-          const candidate=document&&document.station_observation;
-          if(document&&document.schema==="gfs-watch.station-observation.v1"&&candidate&&String(candidate.station_id)==="18101")eyupsultanStationObservation=candidate;
-        }catch(_){}
-      }
-      if(eyupHistoryResponse&&eyupHistoryResponse.ok){
-        try{
-          const document=await eyupHistoryResponse.json();
-          if(document&&document.schema==="gfs-watch.station-temperature-history.v1"&&String(document.station_id)==="18101"&&Array.isArray(document.samples))eyupsultanStationHistorySamples=document.samples;
-        }catch(_){}
-      }
-      if(sisliObservationResponse&&sisliObservationResponse.ok){try{const d=await sisliObservationResponse.json();const s=d&&d.station_observation;if(d&&d.schema==="gfs-watch.station-observation.v1"&&s&&String(s.station_id)==="18401")sisliStationObservation=s;}catch(_){}}
-      if(sisliHistoryResponse&&sisliHistoryResponse.ok){try{const d=await sisliHistoryResponse.json();if(d&&d.schema==="gfs-watch.station-temperature-history.v1"&&String(d.station_id)==="18401"&&Array.isArray(d.samples))sisliStationHistorySamples=d.samples;}catch(_){}}
-      if(activeStation!==stationKey)return;
-      renderStationCard(activeStation==="enka"?enkaStationObservation:activeStation==="eyupsultan"?eyupsultanStationObservation:sisliStationObservation);
-      renderStationHistory();
-      if(typeof renderBriefing==="function")renderBriefing();
-      if(typeof forecastData!=="undefined"&&forecastData&&typeof renderNext72Hours==="function")renderNext72Hours();
     }
     async function loadForecast(){
       try{
@@ -3182,7 +3211,7 @@
       ]);
       // Forecast, station observations, and station history are independent.
       // A failure in one chain must not prevent the others from refreshing.
-      window.setInterval(()=>{loadForecast();loadNotifications();loadVerification();loadRadarGfsComparison();},300000);
+      window.setInterval(()=>{loadForecast();loadNotifications();loadVerification();loadRadarGfsComparison();refreshSelectedStation();},300000);
       window.setInterval(refreshStationObservations,60000);
       window.setInterval(refreshSelectedStation,300000);
     }
