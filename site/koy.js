@@ -1,6 +1,7 @@
 (() => {
 "use strict";
-const BASE="./koy-data/gfs/", MGM_BASE="./koy-data/mgm/", COLORS=["#b38be8","#f1c98b","#8abce8","#7dd3d7"];
+const GFS_CYCLE_THEME=window.GFS_CYCLE_THEME;
+const BASE="./koy-data/gfs/", MGM_BASE="./koy-data/mgm/", COLORS=GFS_CYCLE_THEME.colors;
 const $=id=>document.getElementById(id);
 const num=v=>v==null||v===""||!Number.isFinite(Number(v))?null:Number(v);
 const fmt=(v,d=1)=>v==null?"—":Number(v).toLocaleString("tr-TR",{minimumFractionDigits:d,maximumFractionDigits:d});
@@ -73,7 +74,7 @@ function svgLine(runs,metric,title,unit,maxHour=72,verification=null){
  usable.forEach(item=>{
   const i=item.runIndex,color=COLORS[i%COLORS.length],latest=i===0;
   const path=item.points.map((p,j)=>(j?"L":"M")+x(p.h)+" "+y(p.v)).join(" ");
-  s+='<path d="'+path+'" fill="none" stroke="'+color+'" stroke-width="'+(latest?3:1.8)+'" '+(latest?'':'stroke-dasharray="5 4"')+' stroke-linecap="round" stroke-linejoin="round"/>';
+  s+='<path d="'+path+'" fill="none" stroke="'+color+'" stroke-width="'+(latest?GFS_CYCLE_THEME.latestStrokeWidth:GFS_CYCLE_THEME.previousStrokeWidth)+'" '+(latest?'':'stroke-dasharray="'+GFS_CYCLE_THEME.previousStrokeDasharray+'"')+' stroke-linecap="round" stroke-linejoin="round"/>';
   if(latest)item.points.forEach(p=>{
    s+='<circle cx="'+x(p.h)+'" cy="'+y(p.v)+'" r="2.5" fill="'+color+'"><title>F'+p.h+' · '+fmt(p.v)+' '+unit+'</title></circle>';
   });
@@ -135,7 +136,7 @@ function bindGfsChartTooltip(containerId){
   const step=target.dataset.step||"";
   const value=target.dataset.value||"—";
   const unit=target.dataset.unit||"";
-  const color=target.dataset.color||"#7dd3d7";
+  const color=target.dataset.color||GFS_CYCLE_THEME.colors[0];
   tooltip.innerHTML='<div class="gfs-point-tooltip-head"><i style="background:'+color+'"></i><strong>Güncel GFS tahmini</strong></div><div class="gfs-point-tooltip-time">Döngü · '+esc(run)+'<br>Geçerlilik · '+esc(valid)+'</div><div class="gfs-point-tooltip-value">'+esc(value)+' <small>'+esc(unit)+'</small></div><div class="gfs-point-tooltip-meta">Tahmin adımı '+esc(step)+'</div>';
   tooltip.hidden=false;
   pinned=lock;
