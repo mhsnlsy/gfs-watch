@@ -128,11 +128,11 @@ function png(w:number,h:number,pix:Uint8Array){
   const n=chunks.reduce((s,x)=>s+x.length,0),out=new Uint8Array(n);let p=0;for(const x of chunks){out.set(x,p);p+=x.length;}return out;
 }
 function chart(points:Point[],key:keyof Point,color:[number,number,number]){
-  const W=1000,H=560, pix=new Uint8Array(W*H*4);pix.fill(245);
+  const W=640,H=360, pix=new Uint8Array(W*H*4);pix.fill(245);
   const set=(x:number,y:number,c:[number,number,number,number])=>{x=Math.round(x);y=Math.round(y);if(x<0||x>=W||y<0||y>=H)return;const i=(y*W+x)*4;pix[i]=c[0];pix[i+1]=c[1];pix[i+2]=c[2];pix[i+3]=c[3];};
   const line=(x0:number,y0:number,x1:number,y1:number,c:[number,number,number,number],width=2)=>{let dx=Math.abs(x1-x0),sx=x0<x1?1:-1,dy=-Math.abs(y1-y0),sy=y0<y1?1:-1,e=dx+dy;for(;;){for(let a=-width;a<=width;a++)for(let b=-width;b<=width;b++)if(a*a+b*b<=width*width)set(x0+a,y0+b,c);if(x0===x1&&y0===y1)break;const e2=2*e;if(e2>=dy){e+=dy;x0+=sx}if(e2<=dx){e+=dx;y0+=sy}}};
   const vals=points.map(p=>Number(p[key])).filter(Number.isFinite);if(!vals.length)return png(W,H,pix);
-  const lo=Math.min(...vals),hi=Math.max(...vals)+(Math.max(...vals)===Math.min(...vals)?1:0.0001), x0=70,x1=960,y0=60,y1=500;
+  const lo=Math.min(...vals),hi=Math.max(...vals)+(Math.max(...vals)===Math.min(...vals)?1:0.0001), x0=48,x1=608,y0=42,y1=318;
   for(let i=0;i<=5;i++){const y=y0+(y1-y0)*i/5;line(x0,y,x1,y,[220,228,232,255],1);}
   for(let i=1;i<points.length;i++){const a=points[i-1],b=points[i],av=Number(a[key]),bv=Number(b[key]);if(!Number.isFinite(av)||!Number.isFinite(bv))continue;
     const xa=x0+(i-1)*((x1-x0)/Math.max(1,points.length-1)),xb=x0+i*((x1-x0)/Math.max(1,points.length-1));
@@ -186,95 +186,71 @@ async function publish(env:Env,doc:any,runs:any[]){
 async function process(env:Env){
   const startedAt=new Date().toISOString();
   const checks:any[]=[];
-  await env.GFS_KV.put("gfs:last-check",JSON.stringify({
-    checked_at_utc:startedAt,
-    status:"running"
-  }));
+  const readyCycles:number[]=[];
 
-  // Check every cycle independently. A failure in one cycle must not abort the others.
+  await env.GFS_KV.put("gfs:last-check",JSON.stringify({checked_at_utc:startedAt,status:"running"}));
+
+  // Cheap discovery pass: fetch each cycle once and inspect only run + F180.
+  // Normalize only the newest ready cycle to keep CPU usage low.
   for(const h of [18,12,6,0]){
     try{
       const x=await fetchRun(h);
       const returnedRun=String(x.doc.run||"").trim();
       const id=runKey(returnedRun);
-
       if(!id){
         checks.push({requested_cycle_utc:h,status:"invalid_run",returned_run:returnedRun});
         continue;
       }
 
-      const doc=normalize(x.doc);
-      const returnedHour=new Date(doc.run_id_utc).getUTCHours();
-      const ready180=doc.noaa_source_file.f180_available;
+      const returnedHour=new Date(Date.UTC(
+        Number(id.slice(0,4)),Number(id.slice(4,6))-1,
+        Number(id.slice(6,8)),Number(id.slice(8,10))
+      )).getUTCHours();
 
-      // The API can temporarily serve the newest run even when an older cycle was requested.
-      // Never mistake that response for the requested cycle.
       if(returnedHour!==h){
-        console.log("MeteoPT returned a different cycle",{
-          requested_cycle_utc:h,
-          returned_run_id_utc:doc.run_id_utc
-        });
-        checks.push({
-          requested_cycle_utc:h,
-          returned_run_id_utc:doc.run_id_utc,
-          f180_available:ready180,
-          forecast_horizon_hours:doc.forecast_horizon_hours,
-          status:"different_cycle"
-        });
+        console.log("MeteoPT returned a different cycle",{requested_cycle_utc:h,returned_run_id_utc:returnedRun});
+        checks.push({requested_cycle_utc:h,returned_run_id_utc:returnedRun,f180_available:false,status:"different_cycle"});
         continue;
       }
 
-      console.log("MeteoPT run check",doc.run_id_utc,"F180",ready180);
+      const steps=(x.doc.steps?.values||[]).map((v:any)=>Number(v)).filter((v:number)=>Number.isFinite(v));
+      const ready180=steps.includes(180);
+      const runId=new Date(Date.UTC(
+        Number(id.slice(0,4)),Number(id.slice(4,6))-1,
+        Number(id.slice(6,8)),Number(id.slice(8,10))
+      )).toISOString();
+
+      console.log("MeteoPT run check",runId,"F180",ready180);
       checks.push({
         requested_cycle_utc:h,
-        run_id_utc:doc.run_id_utc,
+        run_id_utc:runId,
         f180_available:ready180,
-        forecast_horizon_hours:doc.forecast_horizon_hours,
+        forecast_horizon_hours:steps.length?Math.max(...steps):0,
         status:"checked"
       });
+      if(ready180) readyCycles.push(h);
     }catch(e){
       console.error("MeteoPT GFS cycle failed",h,e);
-      checks.push({
-        requested_cycle_utc:h,
-        status:"error",
-        error:String(e)
-      });
+      checks.push({requested_cycle_utc:h,status:"error",error:String(e)});
     }
   }
 
   await env.GFS_KV.put("gfs:last-check",JSON.stringify({
-    checked_at_utc:new Date().toISOString(),
-    status:"checked",
-    checks
+    checked_at_utc:new Date().toISOString(),status:"checked",checks
   }));
 
-  const ready:any[]=[];
-  for(const c of checks){
-    if(c.status==="checked" && c.f180_available){
-      try{
-        const x=await fetchRun(c.requested_cycle_utc);
-        const doc=normalize(x.doc);
-        if(new Date(doc.run_id_utc).getUTCHours()===c.requested_cycle_utc && doc.noaa_source_file.f180_available){
-          ready.push(doc);
-        }
-      }catch(e){
-        console.error("MeteoPT ready-cycle recheck failed",c.requested_cycle_utc,e);
-      }
-    }
-  }
-
-  if(!ready.length){
+  if(!readyCycles.length){
     await env.GFS_KV.put("gfs:last-check",JSON.stringify({
-      checked_at_utc:new Date().toISOString(),
-      status:"no_f180_ready",
-      checks
+      checked_at_utc:new Date().toISOString(),status:"no_f180_ready",checks
     }));
     console.log("No MeteoPT GFS cycle with F180 ready");
     return;
   }
 
-  ready.sort((a,b)=>Date.parse(b.run_id_utc)-Date.parse(a.run_id_utc));
-  const doc=ready[0];
+  // Cycles are checked newest-first; only fetch/normalize the newest ready cycle.
+  const selected=await fetchRun(readyCycles[0]);
+  const doc=normalize(selected.doc);
+
   const publishedKey="published:"+runKey(doc.run_id_utc);
   const publishedMarker=await env.GFS_KV.get(publishedKey);
   const latestExisting=await env.GFS_KV.get("latest");
