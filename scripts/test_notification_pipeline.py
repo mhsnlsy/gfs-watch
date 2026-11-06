@@ -26,6 +26,8 @@ def main() -> None:
     assert 'cron: "*/5 * * * *"' in gfs_workflow
     assert "steps.fetch.outputs.publish == 'true'" in gfs_workflow
     assert "steps.fetch.outputs.f72_publish == 'true'" in gfs_workflow
+    assert "Commit new F72 milestone independently" in gfs_workflow
+    assert 'push:\n    branches: [main]' in gfs_workflow
     assert "F72" in gfs_workflow and "F180" in gfs_workflow
     assert "scripts/fetch_istanbul_gfs_meteopt.py" in gfs_workflow
     assert "scripts/build_istanbul_gfs_publication.py" in gfs_workflow
