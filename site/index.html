@@ -2069,13 +2069,14 @@
       $("history-station-source").textContent=stationName.toLocaleUpperCase("tr-TR")+" · GERÇEK ÖLÇÜMLER";
       $("station-history-panel").setAttribute("aria-label",stationName+" son 24 saat geçmişi");
       $("history-source-note").hidden=false;
-      $("history-source-note").textContent=activeStation==="enka"?"Sıcaklık: ENKA kamera OCR ölçümleri. Yağış: MGM Eyüpsultan ölçümleri.":activeStation==="eyupsultan"?"Sıcaklık ve yağış: MGM Eyüpsultan ölçümleri.":"Sıcaklık ve yağış: MGM Şişli ölçümleri.";
+      $("history-source-note").textContent=activeStation==="enka"?"Sıcaklık: ENKA kamera OCR ölçümleri. Yağış: MGM Şişli ölçümleri.":activeStation==="eyupsultan"?"Sıcaklık ve yağış: MGM Eyüpsultan ölçümleri.":"Sıcaklık ve yağış: MGM Şişli ölçümleri.";
       renderStationTemperatureTrend(samples,stationName);
-      // Balmumcu rainfall is intentionally a carbon copy of the Eyüpsultan MGM rainfall graph:
-      // same source archive, same hourly aggregation, same chart design.
-      const dedicatedRainSamples=activeStation==="eyupsultan"?eyupsultanStationRainHistorySamples:activeStation==="sisli"?sisliStationRainHistorySamples:eyupsultanStationRainHistorySamples;
-      // Backward-compatible fallback to the existing station history archive.
-      const rainSamples=dedicatedRainSamples.length?dedicatedRainSamples:(activeStation==="eyupsultan"?eyupsultanStationHistorySamples:activeStation==="sisli"?sisliStationHistorySamples:eyupsultanStationHistorySamples);
+      // Balmumcu rainfall intentionally uses the Şişli MGM archive.
+      // Eyüpsultan and Şişli keep their own rainfall archives.
+      const dedicatedRainSamples=activeStation==="enka"?sisliStationRainHistorySamples:activeStation==="eyupsultan"?eyupsultanStationRainHistorySamples:sisliStationRainHistorySamples;
+      // Fallback to the selected station archive if the rainfall-source archive is not loaded yet.
+      const fallbackRainSamples=activeStation==="enka"?sisliStationHistorySamples:activeStation==="eyupsultan"?eyupsultanStationHistorySamples:sisliStationHistorySamples;
+      const rainSamples=dedicatedRainSamples.length?dedicatedRainSamples:fallbackRainSamples;
       renderStationRainTrend(rainSamples,stationName);
     }
 
@@ -2827,9 +2828,10 @@
       const stationKey=activeStation;
       const cacheKey=Date.now();
       try{
-        const [currentResponse,historyResponse]=await Promise.all([
+        const historyKeys=stationKey==="enka"?["enka","sisli"]:[stationKey];
+        const [currentResponse,...historyResponses]=await Promise.all([
           fetch(STATIONS_API+"/stations/"+encodeURIComponent(stationKey)+"?t="+cacheKey,{cache:"no-store"}),
-          fetch(STATION_HISTORY_API(stationKey)+"&t="+cacheKey,{cache:"no-store"})
+          ...historyKeys.map(key=>fetch(STATION_HISTORY_API(key)+"&t="+cacheKey,{cache:"no-store"}))
         ]);
 
         if(currentResponse.ok){
@@ -2842,14 +2844,21 @@
           }
         }
 
-        if(historyResponse.ok){
-          const document=await historyResponse.json();
+        for(let i=0;i<historyResponses.length;i++){
+          const response=historyResponses[i];
+          if(!response.ok)continue;
+          const document=await response.json();
           const samples=workerHistoryToPageSamples(document?.history);
-          if(stationKey==="enka")enkaStationHistorySamples=samples;
-          if(stationKey==="eyupsultan")eyupsultanStationHistorySamples=samples;
-          if(stationKey==="sisli")sisliStationHistorySamples=samples;
-          if(stationKey==="eyupsultan")eyupsultanStationRainHistorySamples=samples;
-          if(stationKey==="sisli")sisliStationRainHistorySamples=samples;
+          const historyKey=historyKeys[i];
+          if(historyKey==="enka")enkaStationHistorySamples=samples;
+          if(historyKey==="eyupsultan"){
+            eyupsultanStationHistorySamples=samples;
+            eyupsultanStationRainHistorySamples=samples;
+          }
+          if(historyKey==="sisli"){
+            sisliStationHistorySamples=samples;
+            sisliStationRainHistorySamples=samples;
+          }
         }
 
         if(activeStation!==stationKey)return;
@@ -3155,7 +3164,8 @@
       // A failure in one chain must not prevent the others from refreshing.
       window.setInterval(()=>{loadForecast();loadNotifications();loadVerification();loadRadarGfsComparison();refreshSelectedStation();},300000);
       window.setInterval(refreshStationObservations,60000);
-      window.setInterval(refreshSelectedStation,300000);
+      // Keep the live dashboard and rolling 72h history synchronized with Worker/D1.
+      window.setInterval(refreshSelectedStation,60000);
     }
 
     let ecmwfForecast=null,ecmwfLoading=false,ecmwfLastFetch=0;
