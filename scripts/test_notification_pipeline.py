@@ -37,7 +37,7 @@ def main() -> None:
     assert "180 not in steps" in collector
     assert 'series["wind10mdir"]' in collector or 'values_for(document, key)' in collector
     assert "latest = dict(current_doc)" in builder
-    assert "comparison_runs = list(reversed(docs))" in builder
+    assert 'latest["comparison_runs"] = list(reversed(docs))' in builder
     assert "telegram-sent" in sender
     assert "send_media_group" in sender
 
