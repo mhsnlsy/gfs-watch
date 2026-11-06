@@ -124,7 +124,7 @@ jobs:
           CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
           CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
           TELEGRAM_TOKEN: ${{ secrets.TELEGRAM_TOKEN }}
-          TELEGRAM_CHAT_ID: ${{ secrets.TELEGRAM_CHAT_ID }}
+          TELEGRAM_CHAT_ID: ${{ secrets.TELEGRAM_CHAT_ID || secrets.CHAT_ID }}
         run: |
           printf '%s' "$TELEGRAM_TOKEN" | wrangler secret put TELEGRAM_TOKEN --config wrangler.unified.jsonc
           printf '%s' "$TELEGRAM_CHAT_ID" | wrangler secret put TELEGRAM_CHAT_ID --config wrangler.unified.jsonc
