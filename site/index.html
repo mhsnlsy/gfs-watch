@@ -3558,12 +3558,42 @@ if(typeof renderBriefing==="function")renderBriefing();
     }
   </style>
   <style id="desktop-gfs-tooltip-chart-size">
-    /* Masaüstünde dört döngülü tooltip grafiğini %20 küçült; mobil tam genişlikte kalır. */
-    @media (min-width: 851px) {
+    /* Masaüstünde rapor kartının tamamını daraltıp tam ortala.
+       Mobil görünüm bu kuralların dışında kalır. */
+    @media (min-width: 851px) and (hover: hover) {
+      .notification-list .notification-card.notification-chart-only,
+      .notification-card.notification-chart-only {
+        display: block !important;
+        box-sizing: border-box !important;
+        width: 60% !important;
+        max-width: 60% !important;
+        min-width: 0 !important;
+        margin-left: auto !important;
+        margin-right: auto !important;
+        justify-self: center !important;
+      }
+      .notification-chart-only .notification-images {
+        display: grid !important;
+        grid-template-columns: minmax(0, 1fr) !important;
+        width: 100% !important;
+        max-width: 100% !important;
+        margin: 0 auto !important;
+        justify-items: stretch !important;
+      }
+      .notification-chart-only .notification-image-item,
       .notification-chart-only .gfs-interactive-chart {
-        width: 80% !important;
-        max-width: 80% !important;
-        margin-inline: auto !important;
+        display: block !important;
+        box-sizing: border-box !important;
+        width: 100% !important;
+        max-width: 100% !important;
+        min-width: 0 !important;
+        margin: 0 !important;
+      }
+      .notification-chart-only .gfs-interactive-svg {
+        display: block !important;
+        width: 100% !important;
+        max-width: 100% !important;
+        height: auto !important;
       }
     }
   </style>
