@@ -30,6 +30,11 @@
     .station-current .temp-meta{margin-top:6px}
     .delta-badge{display:inline-flex;align-items:center;gap:4px;margin-top:6px;padding:3px 9px;border-radius:999px;background:rgba(125,211,215,.12);border:1px solid rgba(125,211,215,.28);color:var(--cyan);font-size:11px;font-weight:600;letter-spacing:.01em;min-height:22px}
     .delta-badge:empty{display:none}
+    .feels-like-stat{min-width:0}
+    .feels-like-24h-badge{display:inline-flex;align-items:center;justify-content:center;white-space:nowrap;width:max-content;max-width:100%;box-sizing:border-box;margin:5px auto 0;padding:3px 7px;border-radius:999px;background:rgba(125,211,215,.09);border:1px solid rgba(125,211,215,.24);color:#a9c8d2;font-size:9px;line-height:1.25;font-weight:600;letter-spacing:.01em}
+    .feels-like-24h-badge[hidden]{display:none}
+    @media(max-width:560px){.feels-like-24h-badge{font-size:8px;padding:3px 6px;margin-top:4px}}
+
     .rain-brief{display:grid;justify-items:start;gap:2px;margin-top:3px}
     .rain-brief .delta-badge{margin-top:2px!important;white-space:normal;max-width:100%;line-height:1.35}
     .rain-brief div:empty{display:none}
@@ -1306,7 +1311,7 @@
   </div>
 </div>
         <div class="weather-stats">
-  <div class="stat"><div class="name">Hissedilen</div><div class="value" id="feels-like">—<span class="unit">°</span></div></div>
+  <div class="stat feels-like-stat"><div class="name">Hissedilen</div><div class="value" id="feels-like">—<span class="unit">°</span></div><div class="feels-like-24h-badge" id="feels-like-24h" hidden aria-label="Hissedilen son 24 saat minimum ve maksimum"></div></div>
   <div class="stat"><div class="name">Rüzgâr</div><div class="value" id="wind">—<span class="unit">km/sa</span></div><div class="detail" id="wind-direction">—</div></div>
   <div class="stat"><div class="name">Nem</div><div class="value" id="humidity">—<span class="unit">%</span></div></div>
   <div class="stat"><div class="name">Çiğ Noktası</div><div class="value" id="dewpoint-value">—<span class="unit">°</span></div></div>
@@ -2356,7 +2361,20 @@
       const feels = isFresh ? calculateFeelsLike(station.temperature_2m_c, station.humidity_percent, station.wind_speed_10m_kmh) : null;
       const feelsEl = $("feels-like");
       if (feelsEl) {
-        feelsEl.innerHTML = (feels !== null) ? fmt(feels, 1) + '<span class="unit">°</span>' : '—<span class="unit">°</span>';
+        const archivedFeels = numeric(station.feels_like_c) ? Number(station.feels_like_c) : feels;
+        feelsEl.innerHTML = (archivedFeels !== null) ? fmt(archivedFeels, 1) + '<span class="unit">°</span>' : '—<span class="unit">°</span>';
+      }
+      const feelsRangeEl = $("feels-like-24h");
+      if (feelsRangeEl) {
+        const minFeels = numeric(station.feels_like_24h_min_c) ? Number(station.feels_like_24h_min_c) : null;
+        const maxFeels = numeric(station.feels_like_24h_max_c) ? Number(station.feels_like_24h_max_c) : null;
+        if (isFresh && minFeels !== null && maxFeels !== null) {
+          feelsRangeEl.hidden = false;
+          feelsRangeEl.textContent = "24 sa · min " + fmt(minFeels, 1) + "° · maks " + fmt(maxFeels, 1) + "°";
+        } else {
+          feelsRangeEl.hidden = true;
+          feelsRangeEl.textContent = "";
+        }
       }
       const livePressure=isFresh?(numeric(station.actual_station_pressure_hpa)?Number(station.actual_station_pressure_hpa):numeric(station.station_pressure_hpa)?Number(station.station_pressure_hpa):null):null;
       $("pressure").innerHTML=livePressure!==null?fmt(livePressure,1)+'<span class="unit">hPa</span>':'—<span class="unit">hPa</span>';
@@ -2933,6 +2951,9 @@
         precipitation_24h_mm:rain24,
         precipitation_daily_mm:rain00,
         dew_point_c:toNumber(row.dew_point_c),
+        feels_like_c:toNumber(row.feels_like_c),
+        feels_like_24h_min_c:toNumber(row.feels_like_24h_min_c),
+        feels_like_24h_max_c:toNumber(row.feels_like_24h_max_c),
         status:row.status||((row.is_stale===true)?"stale":"live"),
         is_stale:row.status==="stale"||row.is_stale===true,
         age_minutes:toNumber(row.age_minutes),
@@ -2958,7 +2979,8 @@
           precipitation_24h_mm:toNumber(row.rain_24h_mm),
           station_pressure_hpa:toNumber(row.pressure_hpa),
           humidity_percent:toNumber(row.humidity_percent),
-          wind_speed_10m_kmh:toNumber(row.wind_speed_kmh)
+          wind_speed_10m_kmh:toNumber(row.wind_speed_kmh),
+          feels_like_c:toNumber(row.feels_like_c)
         };
       }).filter(row=>row.observed_at_utc&&row.temperature_2m_c!==null);
     }
