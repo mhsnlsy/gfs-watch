@@ -79,17 +79,7 @@ jobs:
         if: steps.fetch.outputs.publish == 'true'
         run: python scripts/build_istanbul_gfs_publication.py
 
-      - name: Send the exact canonical report and four PNGs to Telegram
-        if: steps.fetch.outputs.publish == 'true'
-        env:
-          TELEGRAM_TOKEN: ${{ secrets.TELEGRAM_TOKEN }}
-          CHAT_ID: ${{ secrets.CHAT_ID }}
-        run: |
-          set -euo pipefail
-          python scripts/send_canonical_istanbul_gfs_telegram.py
-          test -s "gfs/notifications/telegram-sent/${{ steps.fetch.outputs.run_id }}.json"
-
-      - name: Commit canonical GFS archive and notification marker
+      - name: Commit canonical GFS archive before notification
         if: steps.fetch.outputs.publish == 'true'
         working-directory: gfs-state
         env:
@@ -102,9 +92,35 @@ jobs:
           git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
           git add gfs
           if git diff --cached --quiet; then
-            echo "Canonical GFS branch already contains this complete publication."
+            echo "Canonical GFS branch already contains this publication."
           else
             git commit -m "Publish Istanbul GFS bundle ${GFS_RUN_ID}"
+            git push origin HEAD:istanbul-gfs-data
+          fi
+
+      - name: Send the exact canonical report and four PNGs to Telegram
+        if: steps.fetch.outputs.publish == 'true'
+        env:
+          TELEGRAM_TOKEN: ${{ secrets.TELEGRAM_TOKEN }}
+          CHAT_ID: ${{ secrets.CHAT_ID }}
+        run: |
+          set -euo pipefail
+          python scripts/send_canonical_istanbul_gfs_telegram.py
+          test -s "gfs/notifications/telegram-sent/${{ steps.fetch.outputs.run_id }}.json"
+
+      - name: Commit Telegram delivery marker
+        if: steps.fetch.outputs.publish == 'true'
+        working-directory: gfs-state
+        env:
+          GFS_RUN_ID: ${{ steps.fetch.outputs.run_id }}
+        run: |
+          set -euo pipefail
+          cp -a "${GITHUB_WORKSPACE}/gfs/notifications/telegram-sent/." gfs/notifications/telegram-sent/
+          git add gfs/notifications/telegram-sent
+          if git diff --cached --quiet; then
+            echo "Telegram delivery marker already present."
+          else
+            git commit -m "Mark Istanbul GFS Telegram delivery ${GFS_RUN_ID}"
             git push origin HEAD:istanbul-gfs-data
           fi
 
