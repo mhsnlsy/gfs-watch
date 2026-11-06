@@ -182,33 +182,41 @@ async function publish(env:Env,doc:any,runs:any[]){
   await env.GFS_KV.put("published:"+runKey(doc.run_id_utc),JSON.stringify({run_id_utc:doc.run_id_utc,published_at_utc:new Date().toISOString()}));
 }
 async function process(env:Env){
-  let selected:any=null;
+  // Always publish the newest run that has reached F180.
+  // A newer cycle may exist but still be incomplete; it must not block
+  // an older cycle (e.g. 00Z) that is already complete.
   for(const h of [18,12,6,0]){
     try{
       const x=await fetchRun(h);
       const id=runKey(String(x.doc.run||""));
-      if(id && (!selected || id>selected.id)) selected={id,doc:x.doc};
+      if(!id){
+        console.log("MeteoPT run invalid for requested cycle",h);
+        continue;
+      }
+
+      const doc=normalize(x.doc);
+      console.log("MeteoPT run check", doc.run_id_utc, "F180", doc.noaa_source_file.f180_available);
+
+      if(!doc.noaa_source_file.f180_available){
+        continue;
+      }
+
+      if(await env.GFS_KV.get("published:"+runKey(doc.run_id_utc))){
+        console.log("Already published",doc.run_id_utc);
+        return;
+      }
+
+      await storeRun(env,doc);
+      const runs=await lastRuns(env);
+      await publish(env,doc,runs);
+      console.log("Published Istanbul GFS",doc.run_id_utc);
+      return;
     }catch(e){
-      console.log("MeteoPT unavailable for run",h,e);
+      console.error("MeteoPT GFS cycle failed",h,e);
     }
   }
-  if(!selected){
-    console.log("MeteoPT unavailable; nothing published");
-    return;
-  }
-  const doc=normalize(selected.doc);
-  if(!doc.noaa_source_file.f180_available){
-    console.log("F180 not ready",doc.run_id_utc);
-    return;
-  }
-  if(await env.GFS_KV.get("published:"+runKey(doc.run_id_utc))){
-    console.log("Already published",doc.run_id_utc);
-    return;
-  }
-  await storeRun(env,doc);
-  const runs=await lastRuns(env);
-  await publish(env,doc,runs);
-  console.log("Published Istanbul GFS",doc.run_id_utc);
+
+  console.log("No MeteoPT GFS cycle with F180 ready");
 }
 
 export default {
