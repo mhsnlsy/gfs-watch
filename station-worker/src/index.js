@@ -266,7 +266,31 @@ async function fetchMgm(stationKey) {
   const humidity = asNumber(row.nem);
   const windSpeed = asNumber(row.ruzgarHiz);
   const windDegrees = asNumber(row.ruzgarYon);
-  const pressure = asNumber(row.aktuelBasinc);
+  let pressure = asNumber(row.aktuelBasinc);
+  let pressureSourceUrl = result.url;
+  // Şişli's temperature endpoint can omit current station pressure while
+  // the dedicated MGM API still returns aktuelBasinc. Try it independently
+  // without replacing station pressure with sea-level pressure.
+  if (stationKey === "sisli" && pressure === null) {
+    const pressureUrls = [
+      "https://servis.mgm.gov.tr/api/sondurumlar?merkezid=18401",
+      "https://servis.mgm.gov.tr/api/sondurumlar/ilTumSondurum?ilPlaka=34"
+    ];
+    for (const url of pressureUrls) {
+      try {
+        const rows = await fetchMgmArray(url);
+        const pressureRow = rows.find(item => Number(item.istNo) === Number(STATION_DEFS.sisli.station_id));
+        const candidate = pressureRow ? asNumber(pressureRow.aktuelBasinc) : null;
+        if (candidate !== null && candidate >= 800 && candidate <= 1100) {
+          pressure = candidate;
+          pressureSourceUrl = url;
+          break;
+        }
+      } catch (error) {
+        console.warn("[MGM PRESSURE FALLBACK]", stationKey, url, String(error.message || error));
+      }
+    }
+  }
   const dailyRain = asNumber(row.yagis00Now);
   return {
     station_id: stationKey === "eyupsultan" ? "18101" : "18401",
@@ -274,6 +298,7 @@ async function fetchMgm(stationKey) {
     source: STATION_DEFS[stationKey].source,
     source_url: STATION_DEFS[stationKey].source_url,
     measurement_source_url: result.url,
+    pressure_source_url: pressureSourceUrl,
     observed_at_utc: observed.toISOString(),
     fetched_at_utc: new Date().toISOString(),
     age_minutes: round(age, 1),
@@ -297,6 +322,7 @@ async function fetchMgm(stationKey) {
     precipitation_source: "MGM " + STATION_DEFS[stationKey].station_id,
     pressure_type: "station",
     pressure_observed_at_utc: observed.toISOString(),
+    pressure_source: "MGM 18401 actual station pressure",
     observation_method: "mgm-sondurum"
   };
 }
