@@ -300,7 +300,7 @@ async function fetchMgm(stationKey) {
     observation_method: "mgm-sondurum"
   };
 }
-function apiStation(key, payload, status, lastError) {
+function apiStation(key, payload, status, lastError, lastSuccess, lastAttempt) {
   return {
     station_key: key,
     station_id: payload.station_id,
@@ -326,16 +326,18 @@ function apiStation(key, payload, status, lastError) {
     status: status || payload.status || "unknown",
     is_stale: (status || payload.status) !== "live",
     age_minutes: payload.age_minutes,
+    last_success_utc: lastSuccess || null,
+    last_attempt_utc: lastAttempt || payload.fetched_at_utc || null,
     last_error: lastError || null
   };
 }
 async function readCurrent(env, key) {
   const row = await env.STATIONS_DB.prepare(
-    "SELECT payload_json, status, last_error FROM station_current WHERE station_key = ?"
+    "SELECT payload_json, status, last_error, last_success_utc, last_attempt_utc FROM station_current WHERE station_key = ?"
   ).bind(key).first();
   if (!row) return null;
   try {
-    return { payload: JSON.parse(row.payload_json), status: row.status, last_error: row.last_error };
+    return { payload: JSON.parse(row.payload_json), status: row.status, last_error: row.last_error, last_success_utc: row.last_success_utc, last_attempt_utc: row.last_attempt_utc };
   } catch (_) {
     return null;
   }
@@ -365,18 +367,44 @@ async function persistSuccess(env, key, observation, rainSource) {
     observation.precipitation_daily_mm
   );
   const current = env.STATIONS_DB.prepare(
-    "INSERT INTO station_current (station_key, station_id, station_name, observed_at_utc, fetched_at_utc, status, payload_json, last_error) VALUES (?, ?, ?, ?, ?, ?, ?, NULL) ON CONFLICT(station_key) DO UPDATE SET station_id=excluded.station_id, station_name=excluded.station_name, observed_at_utc=excluded.observed_at_utc, fetched_at_utc=excluded.fetched_at_utc, status=excluded.status, payload_json=excluded.payload_json, last_error=NULL"
+    "INSERT INTO station_current (station_key, station_id, station_name, observed_at_utc, fetched_at_utc, status, payload_json, last_error, last_success_utc, last_attempt_utc) VALUES (?, ?, ?, ?, ?, ?, ?, NULL, ?, ?) ON CONFLICT(station_key) DO UPDATE SET station_id=excluded.station_id, station_name=excluded.station_name, observed_at_utc=excluded.observed_at_utc, fetched_at_utc=excluded.fetched_at_utc, status=excluded.status, payload_json=excluded.payload_json, last_error=NULL, last_success_utc=excluded.last_success_utc, last_attempt_utc=excluded.last_attempt_utc"
   ).bind(
     key, observation.station_id, observation.station_name, observation.observed_at_utc,
-    fetchedAt, status, payloadJson
+    fetchedAt, status, payloadJson, fetchedAt, fetchedAt
   );
   await env.STATIONS_DB.batch([current, history]);
 }
 async function persistFailure(env, key, error) {
   const message = String(error && error.message ? error.message : error).slice(0, 500);
+  const attemptedAt = new Date().toISOString();
+  const def = STATION_DEFS[key];
+  const emptyPayload = {
+    station_id: def.station_id,
+    station_name: def.station_name,
+    source: def.source,
+    source_url: def.source_url,
+    observed_at_utc: null,
+    fetched_at_utc: attemptedAt,
+    age_minutes: null,
+    status: "stale",
+    is_stale: true,
+    temperature_2m_c: null,
+    humidity_percent: null,
+    station_pressure_hpa: null,
+    actual_station_pressure_hpa: null,
+    wind_speed_10m_kmh: null,
+    wind_direction_degrees: null,
+    wind_direction_cardinal: null,
+    precipitation_1h_mm: null,
+    precipitation_10m_mm: null,
+    precipitation_6h_mm: null,
+    precipitation_12h_mm: null,
+    precipitation_24h_mm: null,
+    precipitation_daily_mm: null
+  };
   await env.STATIONS_DB.prepare(
-    "UPDATE station_current SET status='stale', last_error=? WHERE station_key=?"
-  ).bind(message, key).run();
+    "INSERT INTO station_current (station_key, station_id, station_name, observed_at_utc, fetched_at_utc, status, payload_json, last_error, last_success_utc, last_attempt_utc) VALUES (?, ?, ?, NULL, ?, 'stale', ?, ?, NULL, ?) ON CONFLICT(station_key) DO UPDATE SET status='stale', last_error=excluded.last_error, last_attempt_utc=excluded.last_attempt_utc"
+  ).bind(key, def.station_id, def.station_name, attemptedAt, JSON.stringify(emptyPayload), message, attemptedAt).run();
   console.error("[STATION ERROR]", key, message);
 }
 async function collectAll(env) {
@@ -422,18 +450,32 @@ async function collectAll(env) {
 }
 async function getStationRows(env) {
   const result = await env.STATIONS_DB.prepare(
-    "SELECT station_key, payload_json, status, last_error FROM station_current ORDER BY station_key"
+    "SELECT station_key, payload_json, status, last_error, last_success_utc, last_attempt_utc FROM station_current ORDER BY station_key"
   ).all();
   return (result.results || []).map(row => {
     let payload;
     try { payload = JSON.parse(row.payload_json); } catch (_) { return null; }
-    return apiStation(row.station_key, payload, row.status, row.last_error);
+    return apiStation(row.station_key, payload, row.status, row.last_error, row.last_success_utc, row.last_attempt_utc);
   }).filter(Boolean);
 }
 async function handleApi(request, env) {
   const url = new URL(request.url);
   const path = url.pathname.replace(/\/+$/, "");
   if (request.method === "OPTIONS") return json({ ok: true });
+  if (path === "/api/admin/collect") {
+    if (request.method !== "POST") return json({ error: "Method not allowed" }, 405);
+    const expected = env.STATIONS_ADMIN_TOKEN;
+    if (!expected || request.headers.get("Authorization") !== "Bearer " + expected) {
+      return json({ error: "Unauthorized" }, 401);
+    }
+    try {
+      const result = await collectAll(env);
+      const ok = result.failed.length === 0;
+      return json({ ok, ...result }, ok ? 200 : 502);
+    } catch (error) {
+      return json({ ok: false, error: String(error.message || error) }, 500);
+    }
+  }
   if (request.method !== "GET") return json({ error: "Method not allowed" }, 405);
   if (path === "/api/health") {
     try {
@@ -446,7 +488,7 @@ async function handleApi(request, env) {
         cron: "* * * * *",
         station_count: rows.length,
         latest_fetch_at_utc: latest,
-        stations: rows.map(row => ({ key: row.station_key, status: row.status, fetched_at_utc: row.fetched_at_utc, last_error: row.last_error }))
+        stations: rows.map(row => ({ key: row.station_key, status: row.status, fetched_at_utc: row.fetched_at_utc, last_success_utc: row.last_success_utc, last_attempt_utc: row.last_attempt_utc, last_error: row.last_error }))
       });
     } catch (error) {
       return json({ ok: false, service: "gfs-watch-stations", error: String(error.message || error) }, 503);
@@ -465,7 +507,7 @@ async function handleApi(request, env) {
     try {
       const current = await readCurrent(env, currentMatch[1]);
       if (!current) return json({ ok: false, error: "Station has not collected a successful observation yet", station_key: currentMatch[1] }, 404);
-      return json({ ok: true, station: apiStation(currentMatch[1], current.payload, current.status, current.last_error) });
+      return json({ ok: true, station: apiStation(currentMatch[1], current.payload, current.status, current.last_error, current.last_success_utc, current.last_attempt_utc) });
     } catch (error) {
       return json({ ok: false, error: String(error.message || error) }, 503);
     }
