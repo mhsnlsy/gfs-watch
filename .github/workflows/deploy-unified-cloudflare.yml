@@ -59,25 +59,55 @@ jobs:
           CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
           CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
         run: |
-          set -e
-          wrangler kv namespace list > /tmp/kv.json
+          set -euo pipefail
           python - <<'PY'
-          import json,subprocess
-          xs=json.load(open("/tmp/kv.json"))
-          x=next((x for x in xs if x.get("title") in ("gfs-watch-push-GFS_KV","gfs-watch-istanbul-gfs")),None)
-          if not x:
-              out=subprocess.check_output(["wrangler","kv","namespace","create","GFS_KV"],text=True,stderr=subprocess.STDOUT)
-              import re
-              m=re.search(r'\\b[0-9a-f]{32}\\b',out)
-              if not m:
-                  raise RuntimeError("KV namespace created but namespace ID was not found in Wrangler output")
-              x={"id":m.group(0)}
-          open("/tmp/kv-id","w").write(x["id"])
+          import json, os, urllib.request, urllib.error
+
+          account=os.environ["CLOUDFLARE_ACCOUNT_ID"]
+          token=os.environ["CLOUDFLARE_API_TOKEN"]
+          base=f"https://api.cloudflare.com/client/v4/accounts/{account}/storage/kv/namespaces"
+          headers={
+              "Authorization": f"Bearer {token}",
+              "Content-Type": "application/json",
+          }
+
+          def request(method, url, body=None):
+              data=None if body is None else json.dumps(body).encode()
+              req=urllib.request.Request(url, data=data, headers=headers, method=method)
+              try:
+                  with urllib.request.urlopen(req) as r:
+                      return json.load(r)
+              except urllib.error.HTTPError as e:
+                  raw=e.read().decode("utf-8","replace")
+                  raise RuntimeError(f"Cloudflare API {method} {url} failed: HTTP {e.code}: {raw}")
+
+          data=request("GET", base)
+          if not data.get("success"):
+              raise RuntimeError("Cloudflare KV namespace list failed: "+json.dumps(data))
+
+          target=next((x for x in data.get("result",[]) if x.get("title") in (
+              "gfs-watch-push-GFS_KV",
+              "gfs-watch-istanbul-gfs",
+          )), None)
+
+          if not target:
+              created=request("POST", base, {"title":"gfs-watch-push-GFS_KV"})
+              if not created.get("success"):
+                  raise RuntimeError("Cloudflare KV namespace create failed: "+json.dumps(created))
+              target={"id":created["result"]["id"]}
+
+          open("/tmp/kv-id","w").write(target["id"])
+          print("Using GFS KV namespace:", target["id"])
           PY
+
           python - <<'PY'
-          import json
           p="wrangler.unified.jsonc"
-          s=open(p).read().replace('"d1_databases": [','"kv_namespaces": [{"binding":"GFS_KV","id":"'+open("/tmp/kv-id").read().strip()+'"}],\n  "d1_databases": [')
+          s=open(p).read()
+          marker='"d1_databases": ['
+          binding='"kv_namespaces": [{"binding":"GFS_KV","id":"'+open("/tmp/kv-id").read().strip()+'"}],\n  '
+          if marker not in s:
+              raise RuntimeError("d1_databases marker not found in unified Wrangler config")
+          s=s.replace(marker,binding+marker,1)
           open(p,"w").write(s)
           PY
 
