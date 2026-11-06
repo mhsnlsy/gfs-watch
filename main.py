@@ -26,7 +26,7 @@ matplotlib.use("Agg")
 import matplotlib.pyplot as plt
 import matplotlib.patheffects as patheffects
 from matplotlib.lines import Line2D
-from matplotlib.patches import Rectangle
+from matplotlib.patches import FancyBboxPatch, Rectangle
 from google.cloud import texttospeech
 from google.oauth2 import service_account
 from telegram import Bot
@@ -350,6 +350,23 @@ def save_public_notification_image(run_id, chart_buffer):
     return f"media/{filename}"
 
 
+def save_public_notification_svg_image(run_id, chart_buffer):
+    """Archive the vector SVG used by the public four-panel report."""
+    if not chart_buffer:
+        return None
+    run_dt = _parse_utc_datetime(run_id)
+    run_key = run_dt.strftime("%Y%m%dT%HZ")
+    notification_dir = os.path.join(PUBLIC_DATA_DIR, "notifications")
+    media_dir = os.path.join(notification_dir, "media")
+    filename = f"gfs-{run_key}-comparison.svg"
+    content = chart_buffer.getvalue()
+    if not content or b"<svg" not in content[:4096]:
+        return None
+    _write_bytes_atomically(os.path.join(media_dir, filename), content)
+    print(f"[WEB NOTIFICATION] Vektör karşılaştırma SVG arşivlendi: {filename}")
+    return f"media/{filename}"
+
+
 def save_public_notification_images(run_id, chart_buffers):
     """Archive four independent charts for the public Pages report."""
     if not isinstance(chart_buffers, dict) or not chart_buffers:
@@ -457,8 +474,8 @@ def publish_public_notification(
     )
     retained = retained[:4]
 
-    # Never carry legacy SVG paths forward in the public notification archive.
-    # PNG is the sole supported report image format for current and retained runs.
+    # SVG is the vector source displayed on Pages; image_path remains a PNG
+    # rendered from the same figure for Telegram's single-photo endpoint.
     for retained_item in retained:
         legacy_image = retained_item.get("image_path")
         if isinstance(legacy_image, str) and legacy_image.lower().endswith(".svg"):
@@ -467,7 +484,7 @@ def publish_public_notification(
             image for image in retained_item.get("images", [])
             if isinstance(image, dict)
             and isinstance(image.get("path"), str)
-            and image["path"].lower().endswith(".png")
+            and image["path"].lower().endswith((".png", ".svg"))
         ]
 
     _write_json_atomically(
@@ -3302,6 +3319,294 @@ def _format_comparison_date_axis(axis, dates):
     axis.set_xticklabels(labels, fontsize=9.5, color=GFS_REPORT_TEXT)
     axis.set_xlabel("İstanbul yerel tarihi", fontsize=9.5, color=GFS_REPORT_TEXT)
     axis.xaxis.label.set_color(GFS_REPORT_TEXT)
+
+
+def create_valid_time_comparison_assets(current_run_id, payload, previous_runs):
+    """Create one 2x2 vector comparison report and its Telegram photo from one figure.
+
+    All four panels use the exact shared UTC valid-time keys prepared by
+    _prepare_comparison_chart_data. The newest cycle defines a 72-hour window;
+    each older cycle is plotted at those same valid instants, even when its F
+    hour is different.
+    """
+    if not previous_runs:
+        print("[SVG KIYAS] Önceki GFS kaydı yok; karşılaştırma görseli atlandı.")
+        return {}
+
+    fig = None
+    svg_buffer = None
+    png_buffer = None
+    try:
+        _apply_dark_report_theme()
+        chart_data = _prepare_comparison_chart_data(
+            current_run_id, payload, previous_runs
+        )
+        series = chart_data["series"]
+        if len(series) < 2:
+            raise ValueError("En az iki GFS döngüsü olmadan karşılaştırma çizilemez.")
+
+        newest_timeline = series[-1].get("timeline") or {}
+        ordered_keys = sorted(newest_timeline)
+        if len(ordered_keys) < 2:
+            raise ValueError("Karşılaştırma için yeterli ortak geçerlilik zamanı yok.")
+
+        first_local = datetime.fromisoformat(ordered_keys[0])
+        last_local = first_local + timedelta(hours=72)
+        valid_keys = [
+            key for key in ordered_keys
+            if first_local <= datetime.fromisoformat(key) <= last_local
+        ]
+        if len(valid_keys) < 2:
+            raise ValueError("İlk 72 saatte yeterli ortak geçerlilik zamanı yok.")
+
+        local_times = [datetime.fromisoformat(key) for key in valid_keys]
+        first_time = local_times[0]
+        x_values = [
+            (value - first_time).total_seconds() / 3600.0
+            for value in local_times
+        ]
+
+        # Series are oldest -> newest. Reverse the shared web palette so the
+        # newest line is lilac, then amber, blue, and turquoise.
+        cycle_palette = ["#7DD3D7", "#8ABCE8", "#F1C98B", "#B38BE8"]
+        metrics = (
+            ("temp", "Sıcaklık", "°C"),
+            ("temp_850", "850 hPa sıcaklık", "°C"),
+            ("precip", "Yağış", "mm / 3 saat"),
+            ("wind", "10 m rüzgâr hızı", "km/sa"),
+        )
+
+        fig, axes = plt.subplots(2, 2, figsize=(16, 10.8))
+        fig.patch.set_facecolor(GFS_REPORT_FIGURE_BG)
+        fig.text(
+            0.055, 0.965, "GFS · İSTANBUL",
+            fontsize=12, fontweight="bold", color="#7DD3D7",
+            ha="left", va="top",
+        )
+        fig.text(
+            0.055, 0.925, "Son GFS raporu · 4'lü döngü karşılaştırması",
+            fontsize=22, fontweight="bold", color=GFS_REPORT_TEXT,
+            ha="left", va="top",
+        )
+        fig.text(
+            0.055, 0.885,
+            "Dört GFS çıktısı aynı geçerlilik saatlerinde (TSİ) üst üste karşılaştırılır.",
+            fontsize=12.5, color=GFS_REPORT_MUTED,
+            ha="left", va="top",
+        )
+        fig.text(
+            0.945, 0.958, f"{len(series)} GFS döngüsü karşılaştırılıyor",
+            fontsize=10.5, color="#B8D7DF", ha="right", va="top",
+            bbox={
+                "boxstyle": "round,pad=0.65",
+                "facecolor": GFS_REPORT_FIGURE_BG,
+                "edgecolor": GFS_REPORT_SPINE,
+                "linewidth": 1.0,
+            },
+        )
+
+        legend_handles = []
+        for series_index in reversed(range(len(series))):
+            item = series[series_index]
+            color = cycle_palette[series_index % len(cycle_palette)]
+            is_latest = series_index == len(series) - 1
+            legend_handles.append(Line2D(
+                [], [],
+                color=color,
+                linewidth=3.2 if is_latest else 1.8,
+                linestyle="-" if is_latest else (0, (4, 3)),
+                label=item["label"],
+            ))
+        fig.legend(
+            handles=legend_handles,
+            loc="upper center",
+            bbox_to_anchor=(0.5, 0.835),
+            ncol=2,
+            fontsize=10.5,
+            frameon=True,
+            facecolor=GFS_REPORT_PANEL_BG,
+            edgecolor=GFS_REPORT_LEGEND_EDGE,
+            framealpha=0.98,
+            labelcolor=GFS_REPORT_TEXT,
+            borderpad=0.75,
+            handlelength=2.4,
+            columnspacing=2.8,
+            labelspacing=0.75,
+            handletextpad=0.8,
+        )
+
+        fig.subplots_adjust(
+            left=0.075, right=0.985, bottom=0.085, top=0.755,
+            wspace=0.18, hspace=0.36,
+        )
+
+        tick_indices = [
+            index for index, hour in enumerate(x_values)
+            if index == 0 or abs(hour % 12.0) < 0.01
+        ]
+        if tick_indices[-1] != len(x_values) - 1:
+            tick_indices.append(len(x_values) - 1)
+        tick_labels = [
+            local_times[index].strftime("%d/%m %H:%M")
+            for index in tick_indices
+        ]
+
+        for axis, (field, title, unit) in zip(axes.flat, metrics):
+            axis.set_facecolor(GFS_REPORT_AXIS_BG)
+            axis.set_zorder(1)
+            axis.set_title(
+                title, loc="left", fontsize=17,
+                fontweight="bold", color=GFS_REPORT_TEXT, pad=15,
+            )
+            axis.set_ylabel(
+                unit, fontsize=11.5, fontweight="bold",
+                color=GFS_REPORT_TEXT, labelpad=8,
+            )
+            axis.grid(
+                axis="y", color=GFS_REPORT_GRID,
+                linestyle=(0, (2, 4)), alpha=0.55, linewidth=0.8,
+            )
+            axis.set_axisbelow(True)
+            axis.tick_params(
+                axis="both", which="major", colors=GFS_REPORT_MUTED,
+                labelcolor=GFS_REPORT_MUTED, labelsize=10.5,
+                width=0.8, length=3, pad=6,
+            )
+            for spine in axis.spines.values():
+                spine.set_color(GFS_REPORT_SPINE)
+                spine.set_linewidth(0.9)
+
+            finite_values = []
+            for series_index, item in enumerate(series):
+                timeline = item.get("timeline") or {}
+                y_values = []
+                for key in valid_keys:
+                    raw_value = (timeline.get(key) or {}).get(field)
+                    try:
+                        value = float(raw_value)
+                    except (TypeError, ValueError):
+                        value = math.nan
+                    if not math.isfinite(value):
+                        value = math.nan
+                    else:
+                        finite_values.append(value)
+                    y_values.append(value)
+
+                is_latest = series_index == len(series) - 1
+                axis.plot(
+                    x_values,
+                    y_values,
+                    color=cycle_palette[series_index % len(cycle_palette)],
+                    linewidth=3.2 if is_latest else 1.8,
+                    linestyle="-" if is_latest else (0, (4, 3)),
+                    marker="o" if is_latest else None,
+                    markersize=3.0 if is_latest else 0,
+                    markeredgewidth=0,
+                    solid_capstyle="round",
+                    solid_joinstyle="round",
+                    zorder=5 if is_latest else 3,
+                )
+
+            if not finite_values:
+                axis.text(
+                    0.5, 0.5, "Bu değişken için veri yok",
+                    transform=axis.transAxes, ha="center", va="center",
+                    fontsize=11, color=GFS_REPORT_MUTED,
+                )
+            elif field in ("temp", "temp_850"):
+                low, high = min(finite_values), max(finite_values)
+                span = high - low
+                if span < 4:
+                    center = (low + high) / 2
+                    low, high = center - 2, center + 2
+                else:
+                    margin = max(0.5, span * 0.08)
+                    low, high = low - margin, high + margin
+                axis.set_ylim(low, high)
+            else:
+                axis.set_ylim(bottom=0)
+                high = max(finite_values)
+                axis.set_ylim(0, max(1.0, high * 1.18))
+
+            axis.set_xlim(
+                min(x_values) - 1.0,
+                max(x_values) + max(1.0, (max(x_values) - min(x_values)) * 0.015),
+            )
+            axis.set_xticks([x_values[index] for index in tick_indices])
+            axis.set_xticklabels(
+                tick_labels, fontsize=10, color=GFS_REPORT_MUTED,
+                fontweight="semibold",
+            )
+            axis.margins(x=0.01)
+
+        # Rounded card frames echo the 72-hour dashboard's two chart cards.
+        for axis in axes.flat:
+            position = axis.get_position()
+            card = FancyBboxPatch(
+                (position.x0 - 0.018, position.y0 - 0.035),
+                position.width + 0.036,
+                position.height + 0.075,
+                boxstyle="round,pad=0.004,rounding_size=0.014",
+                transform=fig.transFigure,
+                facecolor=GFS_REPORT_AXIS_BG,
+                edgecolor=GFS_REPORT_SPINE,
+                linewidth=1.0,
+                zorder=0,
+            )
+            fig.add_artist(card)
+            axis.set_facecolor("none")
+            axis.set_zorder(1)
+
+        fig.text(
+            0.055, 0.025,
+            f"Aynı geçerlilik saatleri (TSİ) · {len(valid_keys)} ortak nokta",
+            fontsize=9.5, color=GFS_REPORT_MUTED, ha="left",
+        )
+        fig.text(
+            0.945, 0.025,
+            "Kaynak: MeteoPT GFS · İstanbul nokta tahmini",
+            fontsize=9.5, color=GFS_REPORT_MUTED, ha="right",
+        )
+        _whiten_dark_text(fig)
+
+        svg_buffer = io.BytesIO()
+        png_buffer = io.BytesIO()
+        with plt.rc_context({"svg.fonttype": "none"}):
+            fig.savefig(
+                svg_buffer, format="svg", bbox_inches="tight",
+                facecolor=GFS_REPORT_FIGURE_BG,
+                edgecolor=GFS_REPORT_FIGURE_BG,
+                metadata={
+                    "Title": "İstanbul GFS · Dört döngü valid-time karşılaştırması",
+                    "Description": "Dört GFS çıktısı aynı TSİ geçerlilik saatlerinde hizalanmıştır.",
+                },
+            )
+        fig.savefig(
+            png_buffer, format="png", dpi=140, bbox_inches="tight",
+            facecolor=GFS_REPORT_FIGURE_BG,
+            edgecolor=GFS_REPORT_FIGURE_BG,
+        )
+        svg_buffer.seek(0)
+        png_buffer.seek(0)
+        print(
+            f"[GFS SVG KIYAS] {len(series)} döngü; {len(valid_keys)} ortak TSİ zamanı; "
+            "2x2 SVG + aynı figürden tek Telegram PNG hazır."
+        )
+        return {
+            "svg": svg_buffer,
+            "png": png_buffer,
+            "valid_time_count": len(valid_keys),
+            "series_count": len(series),
+        }
+    except Exception as exc:
+        for buffer in (svg_buffer, png_buffer):
+            if buffer:
+                buffer.close()
+        print(f"[GFS SVG KIYAS HATA] Dört panelli karşılaştırma oluşturulamadı: {exc}")
+        return {}
+    finally:
+        if fig is not None:
+            plt.close(fig)
 
 
 def create_comparison_chart(current_run_id, payload, previous_runs):
