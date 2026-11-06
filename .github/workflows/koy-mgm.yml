@@ -285,6 +285,127 @@ jobs:
           print(f"MGM Çanakçı history: {len(kept)} samples")
           PY
 
+      - name: Build virtual Köy Ev station at 363 m
+        run: |
+          set -euo pipefail
+          python - <<'PY'
+          import json, pathlib, math
+          from datetime import datetime, timezone, timedelta
+
+          obs=json.loads(pathlib.Path("output/observation.json").read_text(encoding="utf-8"))
+          history=json.loads(pathlib.Path("output/history.json").read_text(encoding="utf-8"))
+          HOME_ELEVATION_M=363.0
+          station_elevation=float(obs.get("elevation_m") or 146.0)
+          DELTA_M=HOME_ELEVATION_M-station_elevation
+
+          def lapse_rate_km(temp_c, rh):
+              # Adaptive environmental lapse estimate. Standard 6.5 K/km is
+              # blended with a humidity-aware moist lapse estimate and clamped
+              # to a realistic near-surface range.
+              try:
+                  t=float(temp_c); h=max(1.0,min(100.0,float(rh)))
+              except (TypeError,ValueError):
+                  return 6.5
+              tk=t+273.15
+              es=6.112*math.exp(17.67*t/(t+243.5))
+              q=max(0.001,min(0.02,0.622*(h/100*es)/(1013.25-(h/100*es))))
+              gamma_m=9.81*(1+2501000*q/(287.05*tk))/(1005.0+2501000**2*q/(461.5*287.05*tk**2))
+              moist=max(4.0,min(7.5,gamma_m*1000))
+              return max(5.0,min(7.2,0.65*6.5+0.35*moist))
+
+          def adjust(sample):
+              t=sample.get("temperature_2m_c")
+              rh=sample.get("humidity_percent")
+              if t is None: return None
+              rate=lapse_rate_km(t,rh)
+              ev_t=float(t)-rate*DELTA_M/1000.0
+              p=sample.get("pressure_hpa")
+              ev_p=None
+              if p is not None:
+                  try:
+                      tk=float(t)+273.15
+                      tev=ev_t+273.15
+                      L=rate/1000.0
+                      ev_p=float(p)*(tev/tk)**(9.80665/(287.05*L))
+                  except (ValueError,TypeError,ZeroDivisionError):
+                      ev_p=None
+              return {
+                  "temperature_2m_c":round(ev_t,1),
+                  "feels_like_c":None,
+                  "pressure_hpa":round(ev_p,1) if ev_p is not None else None,
+                  "humidity_percent":sample.get("humidity_percent"),
+                  "wind_speed_10m_kmh":sample.get("wind_speed_10m_kmh"),
+                  "wind_direction_deg":sample.get("wind_direction_deg"),
+                  "precipitation_10m_mm":sample.get("precipitation_10m_mm"),
+                  "precipitation_1h_mm":sample.get("precipitation_1h_mm"),
+                  "precipitation_6h_mm":sample.get("precipitation_6h_mm"),
+                  "precipitation_12h_mm":sample.get("precipitation_12h_mm"),
+                  "precipitation_24h_mm":sample.get("precipitation_24h_mm"),
+                  "lapse_rate_k_per_km":round(rate,2)
+              }
+
+          def feels_like(t,rh,wind):
+              try:
+                  T=float(t); H=float(rh)
+              except (TypeError,ValueError):
+                  return None
+              if T>=20:
+                  return round(-8.784+1.611*T+2.338*H-0.146*T*H-0.0123*T*T-0.0164*H*H+0.00221*T*T*H+0.000725*T*H*H-0.00000358*T*T*H*H,1)
+              if T<=10 and wind is not None:
+                  try:
+                      W=max(0,float(wind))
+                      return round(13.12+0.6215*T-11.37*(W**0.16)+0.3965*T*(W**0.16),1)
+                  except (TypeError,ValueError):
+                      pass
+              return round(T,1)
+
+          current=adjust(obs)
+          if current:
+              current["feels_like_c"]=feels_like(current["temperature_2m_c"],current["humidity_percent"],current["wind_speed_10m_kmh"])
+          ev_obs={
+              **obs,
+              "schema":"koy-mgm.virtual-home-observation.v1",
+              "station_id":"KOY-EV-363M",
+              "station_name":"Köy Ev",
+              "elevation_m":HOME_ELEVATION_M,
+              "source_station_name":"Çanakçı",
+              "source_station_elevation_m":station_elevation,
+              "elevation_delta_m":DELTA_M,
+              "virtual_station":True,
+              "adjustment_method":"adaptive environmental lapse rate",
+              **(current or {})
+          }
+          pathlib.Path("output/ev-observation.json").write_text(json.dumps(ev_obs,ensure_ascii=False,indent=2),encoding="utf-8")
+
+          ev_samples=[]
+          for s in history.get("samples",[]):
+              a=adjust(s)
+              if not a: continue
+              a.update({"observed_at_utc":s.get("observed_at_utc"),"logged_at_utc":s.get("logged_at_utc")})
+              a["feels_like_c"]=feels_like(a.get("temperature_2m_c"),a.get("humidity_percent"),a.get("wind_speed_10m_kmh"))
+              ev_samples.append(a)
+          cutoff=datetime.now(timezone.utc)-timedelta(days=7)
+          ev_samples=[s for s in ev_samples if (lambda x:x>=cutoff)(datetime.fromisoformat(str(s.get("logged_at_utc")).replace("Z","+00:00")))]
+          recent=[float(s["feels_like_c"]) for s in ev_samples if s.get("feels_like_c") is not None and datetime.fromisoformat(str(s.get("observed_at_utc") or s.get("logged_at_utc")).replace("Z","+00:00"))>=datetime.now(timezone.utc)-timedelta(hours=24)]
+          ev_hist={
+              "schema":"koy-mgm.virtual-home-history.v1",
+              "station_id":"KOY-EV-363M",
+              "station_name":"Köy Ev",
+              "source_station_name":"Çanakçı",
+              "source_station_elevation_m":station_elevation,
+              "elevation_m":HOME_ELEVATION_M,
+              "elevation_delta_m":DELTA_M,
+              "adjustment_method":"adaptive environmental lapse rate",
+              "updated_at_utc":obs.get("fetched_at_utc"),
+              "sampling_interval_minutes":5,
+              "feels_like_24h_min_c":round(min(recent),1) if recent else None,
+              "feels_like_24h_max_c":round(max(recent),1) if recent else None,
+              "samples":ev_samples
+          }
+          pathlib.Path("output/ev-history.json").write_text(json.dumps(ev_hist,ensure_ascii=False,indent=2),encoding="utf-8")
+          print(f"Köy Ev virtual station: {HOME_ELEVATION_M:.0f} m · delta {DELTA_M:.0f} m · {len(ev_samples)} samples")
+          PY
+
       - name: Build dedicated 72-hour rainfall archive
         run: |
           set -euo pipefail
@@ -391,6 +512,8 @@ jobs:
           cp "$GITHUB_WORKSPACE/output/observation.json" mgm/observation.json
           cp "$GITHUB_WORKSPACE/output/history.json" mgm/history.json
           cp "$GITHUB_WORKSPACE/output/rain-history-72h.json" mgm/rain-history-72h.json
+          cp "$GITHUB_WORKSPACE/output/ev-observation.json" mgm/ev-observation.json
+          cp "$GITHUB_WORKSPACE/output/ev-history.json" mgm/ev-history.json
           cp mgm/latest.json "mgm/$(date -u +%Y%m%dT%H%M%SZ).json"
           find mgm -type f -name '*.json' -mtime +14 -delete
           git add mgm
