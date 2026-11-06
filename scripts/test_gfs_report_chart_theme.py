@@ -139,7 +139,7 @@ def test_valid_time_alignment() -> None:
     assert latest_daily["temp_max"] == 14.0
     assert latest_daily["temp_850_max"] == 5.0
     assert latest_daily["wind"] == 12.0
-    assert latest_daily["precip"] == 0.6
+    assert abs(latest_daily["precip"] - 0.6) < 1e-9
 
     assert '"valid_time_utc": point.get("valid_time_utc")' in BUILDER_SOURCE
     assert 'Aynı geçerlilik saatleri (TSİ)' in SOURCE
