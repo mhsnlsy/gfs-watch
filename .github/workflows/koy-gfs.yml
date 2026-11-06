@@ -9,6 +9,8 @@ on:
 
 permissions:
   contents: write
+  pages: write
+  id-token: write
 
 concurrency:
   group: koy-gfs-independent
@@ -17,7 +19,9 @@ concurrency:
 jobs:
   publish:
     runs-on: ubuntu-latest
-    timeout-minutes: 5
+    timeout-minutes: 10
+    outputs:
+      pages_publish: ${{ steps.publish_data.outputs.changed == '1' }}
     steps:
       - uses: actions/checkout@v4
         with:
@@ -121,6 +125,7 @@ jobs:
           print(f"Cycle {run_id}; max forecast hour {max(steps)}; steps {len(steps)}")
           PY
       - name: Publish only new F72 and F180 milestones to the isolated data branch
+        id: publish_data
         run: |
           set -euo pipefail
           mkdir -p "$RUNNER_TEMP/koy-output"
@@ -209,4 +214,15 @@ jobs:
             fi
           fi
 
+          echo "changed=$changed" >> "$GITHUB_OUTPUT"
           find gfs/runs -type f -name '*.json' -mtime +45 -delete
+
+  publish-pages:
+    name: Publish the latest Köy GFS bundle to GitHub Pages
+    needs: publish
+    if: needs.publish.result == 'success' && needs.publish.outputs.pages_publish == 'true'
+    permissions:
+      contents: read
+      pages: write
+      id-token: write
+    uses: ./.github/workflows/publish-live-site.yml
