@@ -69,7 +69,7 @@ def main() -> None:
 
     print(
         "[GFS/STATION ARCHITECTURE SMOKE] "
-        "Cloudflare owns stations; GitHub Actions owns 5-minute F180-driven GFS publication, PNGs, Telegram and Pages."
+        "Cloudflare owns stations; GitHub Actions owns 5-minute F180-driven GFS publication, SVG reports, Telegram and Pages."
     )
 
 
