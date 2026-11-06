@@ -1080,6 +1080,25 @@
     .gfs-interactive-chart{position:relative;width:100%;max-width:none;min-width:0;margin-inline:0;line-height:0;overflow:visible;background:transparent;touch-action:auto;-webkit-user-select:none;user-select:none}
     .gfs-interactive-svg{display:block;width:100%;height:auto;max-width:100%;overflow:visible;background:transparent}
     .gfs-interactive-svg .gfs-hit-area{cursor:crosshair;outline:none}
+    /* Mobile: keep the GFS comparison inside the outer report frame. */
+    .notification-chart-only{
+      padding:0!important;
+      overflow:hidden;
+    }
+    .notification-chart-only .notification-images{
+      margin:0!important;
+      width:100%!important;
+    }
+    .notification-chart-only .notification-image-item{
+      width:100%!important;
+      min-width:0!important;
+    }
+    .notification-chart-only .gfs-interactive-chart{
+      width:100%!important;
+      margin:0!important;
+      background:transparent!important;
+    }
+
     .gfs-interactive-svg .gfs-hit-area:focus{stroke:rgba(125,211,215,.5);stroke-width:1;stroke-dasharray:4 4}
     .gfs-chart-tooltip{position:absolute;z-index:30;min-width:230px;max-width:min(310px,calc(100% - 16px));padding:11px 13px;border:1px solid rgba(125,211,215,.42);border-radius:13px;background:rgba(4,18,29,.97);box-shadow:0 10px 28px rgba(0,0,0,.46);color:#eaf5f8;font:12px/1.5 "DM Sans",system-ui,sans-serif;pointer-events:none;backdrop-filter:blur(9px);white-space:normal}
     .gfs-chart-tooltip[hidden]{display:none!important}
@@ -2807,7 +2826,7 @@
       renderNext72Hours();
       renderBriefing();
       if(data.report&&data.report.report_text){
-        renderNotifications([data.report], data.published_at_utc||data.report.published_at_utc);
+        renderNotifications([data.report], (data.published_at_utc||data.report.published_at_utc)+"-svgfit2");
       }
       renderStationCard(activeStation==="enka"?enkaStationObservation:activeStation==="eyupsultan"?eyupsultanStationObservation:sisliStationObservation);
       if(data.published_at_utc){
