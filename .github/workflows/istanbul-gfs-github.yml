@@ -13,6 +13,8 @@ on:
 permissions:
   contents: write
   actions: write
+  pages: write
+  id-token: write
 
 concurrency:
   group: istanbul-gfs-canonical-publisher
@@ -22,7 +24,9 @@ jobs:
   publish:
     name: Fetch, build and publish one canonical GFS bundle
     runs-on: ubuntu-latest
-    timeout-minutes: 5
+    timeout-minutes: 10
+    outputs:
+      pages_publish: ${{ steps.fetch.outputs.publish == 'true' || steps.fetch.outputs.f72_publish == 'true' }}
     steps:
       - name: Check out application source
         uses: actions/checkout@v5
@@ -143,17 +147,15 @@ jobs:
             git push origin HEAD:istanbul-gfs-data
           fi
 
-      - name: Trigger the single GitHub Pages publisher
-        if: steps.fetch.outputs.publish == 'true'
-        env:
-          GH_TOKEN: ${{ github.token }}
-        run: gh workflow run publish-live-site.yml --ref main
-
-      - name: Trigger Pages for a new F72 milestone
-        if: steps.fetch.outputs.f72_publish == 'true' && steps.fetch.outputs.publish != 'true'
-        env:
-          GH_TOKEN: ${{ github.token }}
-        run: gh workflow run publish-live-site.yml --ref main
+  publish-pages:
+    name: Publish the canonical bundle to GitHub Pages
+    needs: publish
+    if: needs.publish.result == 'success' && needs.publish.outputs.pages_publish == 'true'
+    permissions:
+      contents: read
+      pages: write
+      id-token: write
+    uses: ./.github/workflows/publish-live-site.yml
 
       - name: Report no-op poll
         if: steps.fetch.outputs.publish != 'true' && steps.fetch.outputs.f72_publish != 'true'
