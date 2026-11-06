@@ -1095,6 +1095,37 @@
     .gfs-chart-tooltip-value small{font-size:10px;font-weight:500;color:#9fb4c0}
     .gfs-chart-tooltip-hint{margin-top:7px;padding-top:6px;border-top:1px solid rgba(125,211,215,.14);font-size:9px;color:#8fa8b7}
     .gfs-chart-loading,.gfs-chart-error{padding:12px;color:#9bb0bc;font:12px/1.5 "DM Sans",sans-serif}
+    @media (max-width: 600px){
+      .gfs-chart-tooltip{
+        min-width:0;
+        width:150px;
+        max-width:calc(100vw - 28px);
+        padding:7px 8px;
+        border-radius:9px;
+        font-size:9px;
+        line-height:1.25;
+        box-shadow:0 6px 16px rgba(0,0,0,.4);
+      }
+      .gfs-chart-tooltip-head{
+        gap:5px;
+        padding-bottom:5px;
+        margin-bottom:4px;
+      }
+      .gfs-chart-tooltip-title{font-size:9px}
+      .gfs-chart-tooltip-time{font-size:9px}
+      .gfs-chart-tooltip-row{
+        gap:5px;
+        padding:2px 0;
+      }
+      .gfs-chart-tooltip-cycle{gap:5px;font-size:9px}
+      .gfs-chart-tooltip-swatch{width:7px;height:7px}
+      .gfs-chart-tooltip-lead{font-size:8px;margin-top:0}
+      .gfs-chart-tooltip-value{font-size:11px}
+      .gfs-chart-tooltip-value small{font-size:8px}
+      .gfs-chart-tooltip-hint{margin-top:4px;padding-top:4px;font-size:7.5px}
+      /* Mobilde yalnızca en güncel GFS döngüsünü göster. */
+      .gfs-chart-tooltip-row:nth-child(n+3){display:none}
+    }
     @media(max-width:700px){
       .gfs-chart-tooltip{min-width:205px;max-width:min(270px,calc(100% - 12px));padding:9px 10px}
       .gfs-chart-tooltip-time{font-size:11px}
