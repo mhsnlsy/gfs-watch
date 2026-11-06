@@ -14,7 +14,7 @@ jobs:
         with:
           python-version: "3.12"
       - name: Validate Python syntax
-        run: python -m py_compile main.py scripts/send_canonical_istanbul_gfs_telegram.py scripts/fetch_ecmwf_eps.py scripts/test_ecmwf_eps.py scripts/test_ecmwf_ui.py scripts/test_notification_pipeline.py scripts/test_850hpa_history.py scripts/backfill_gfs_wind_direction.py scripts/test_gfs_wind_direction.py scripts/test_gfs_report_chart_theme.py
+        run: python -m py_compile main.py scripts/fetch_istanbul_gfs_meteopt.py scripts/build_istanbul_gfs_publication.py scripts/send_canonical_istanbul_gfs_telegram.py scripts/fetch_ecmwf_eps.py scripts/test_ecmwf_eps.py scripts/test_ecmwf_ui.py scripts/test_notification_pipeline.py scripts/test_850hpa_history.py scripts/backfill_gfs_wind_direction.py scripts/test_gfs_wind_direction.py scripts/test_gfs_report_chart_theme.py
       - name: Run ECMWF offline and UI contract smoke tests
         run: |
           python scripts/test_ecmwf_eps.py
