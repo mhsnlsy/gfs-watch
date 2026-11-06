@@ -20,14 +20,7 @@
     *{box-sizing:border-box}html{scroll-behavior:smooth}body{margin:0;background:radial-gradient(ellipse at 82% 0%,rgba(46,103,128,.2),transparent 34rem),linear-gradient(180deg,#081927 0%,#071521 55%,#091a28 100%);color:var(--text);font-family:"DM Sans",sans-serif;min-height:100vh}a{color:inherit;text-decoration:none}
     .shell{width:min(1120px,calc(100% - 40px));margin:auto}.topbar{height:76px;border-bottom:1px solid var(--line);display:flex;align-items:center;justify-content:space-between}.brand{display:flex;align-items:center;gap:12px;font-family:Manrope,sans-serif;font-weight:800;letter-spacing:-.04em;font-size:18px}.brand-mark{width:38px;height:38px;border-radius:13px;background:linear-gradient(145deg,#b7e6dc,#6ba8bc);display:grid;place-items:center;color:#102c3b;font-size:21px;box-shadow:0 7px 25px rgba(109,193,191,.2)}.brand small{display:block;color:var(--muted);font:500 10px "DM Sans",sans-serif;letter-spacing:.12em;text-transform:uppercase;margin-top:2px}nav{display:flex;gap:25px;color:#b5c7d1;font-size:13px}nav a:hover{color:white}.top-right{display:flex;align-items:center;gap:10px}.version{font-size:11px;color:#b7cbd6;border:1px solid var(--line);padding:7px 10px;border-radius:999px}
     .hero{padding:54px 0 28px;display:grid;grid-template-columns:1fr 1.02fr;gap:28px;align-items:stretch}.eyebrow{display:inline-flex;align-items:center;gap:8px;color:var(--cyan);font-size:11px;letter-spacing:.14em;font-weight:700;text-transform:uppercase}.dot{width:7px;height:7px;border-radius:100%;background:var(--green);box-shadow:0 0 0 5px rgba(143,215,186,.11)}h1{font:800 clamp(36px,5.3vw,62px)/1.04 Manrope,sans-serif;letter-spacing:-.065em;margin:17px 0 16px;max-width:570px}h1 span{color:var(--cyan)}.intro{color:#a9bdc9;font-size:15px;line-height:1.75;max-width:510px;margin:0}.hero-meta{display:flex;flex-wrap:wrap;gap:9px;margin-top:28px}.meta-chip{font-size:11px;color:#b7c9d3;background:rgba(255,255,255,.045);border:1px solid var(--line);border-radius:9px;padding:9px 11px}
-    .weather-card{position:relative;overflow:hidden;background:linear-gradient(145deg,rgba(30,74,94,.95),rgba(15,39,56,.98) 68%);border:1px solid rgba(170,218,225,.19);border-radius:24px;padding:25px 26px;box-shadow:var(--shadow);min-height:276px}.weather-card:before{content:"";position:absolute;width:290px;height:290px;border-radius:50%;right:-95px;top:-145px;background:radial-gradient(circle,rgba(132,204,208,.18),transparent 70%)}.station-card{border-color:rgba(125,211,215,.34);box-shadow:0 22px 70px rgba(0,0,0,.23),inset 3px 0 0 rgba(125,211,215,.62)}.model-state.stale{border-color:rgba(241,201,139,.45);color:#ffe0ad;background:rgba(183,119,46,.16)}.station-alert{position:relative;margin-top:14px;padding:11px 13px;border:1px solid rgba(241,201,139,.48);border-radius:11px;background:rgba(130,83,33,.23);color:#ffe0ad;font-size:11px;line-height:1.55}.station-alert[hidden]{display:none}
-    .station-health{display:flex;align-items:center;gap:8px;margin-top:8px;padding:7px 10px;border:1px solid rgba(143,215,186,.2);border-radius:10px;background:rgba(143,215,186,.06);font-size:10px;color:#bfe5d8}
-    .station-health.recovery{border-color:rgba(241,201,139,.4);background:rgba(183,119,46,.12);color:#ffe0ad}
-    .station-health.stale{border-color:rgba(240,141,141,.4);background:rgba(140,52,52,.12);color:#ffc5c5}
-    .station-health-dot{width:7px;height:7px;border-radius:50%;background:#8fd7ba;box-shadow:0 0 0 4px rgba(143,215,186,.08);flex:0 0 auto}
-    .station-health.recovery .station-health-dot{background:#f1c98b}
-    .station-health.stale .station-health-dot{background:#f08d8d}
-    .station-health[hidden]{display:none}.weather-top{display:flex;justify-content:space-between;align-items:flex-start;position:relative}.label{font-size:10px;letter-spacing:.13em;text-transform:uppercase;color:#b1cbd3;font-weight:700}.place{font:700 18px Manrope,sans-serif;margin-top:7px}.model-state{border:1px solid rgba(170,220,210,.2);color:#bfe5d8;background:rgba(143,215,186,.08);border-radius:999px;padding:7px 10px;font-size:10px;white-space:nowrap}.temp-row{display:flex;align-items:center;gap:13px;margin-top:27px;position:relative}.temperature{font:700 clamp(55px,7vw,76px)/1 Manrope,sans-serif;letter-spacing:-.075em}.weather-symbol{font-size:45px;filter:drop-shadow(0 8px 14px rgba(0,0,0,.2))}.temp-caption{font-size:12px;color:#b7cbd3;margin-top:9px}.weather-stats{display:grid;grid-template-columns:repeat(auto-fit,minmax(90px,1fr));gap:8px;margin-top:24px;position:relative}.stat{background:rgba(5,20,31,.24);border:1px solid rgba(213,237,240,.09);border-radius:13px;padding:12px}.stat .name{font-size:10px;color:#a9c0cb}.stat .value{font:700 19px Manrope,sans-serif;margin-top:6px}.stat .unit{font:500 10px "DM Sans",sans-serif;color:#a9c0cb;margin-left:3px}
+    .weather-card{position:relative;overflow:hidden;background:linear-gradient(145deg,rgba(30,74,94,.95),rgba(15,39,56,.98) 68%);border:1px solid rgba(170,218,225,.19);border-radius:24px;padding:25px 26px;box-shadow:var(--shadow);min-height:276px}.weather-card:before{content:"";position:absolute;width:290px;height:290px;border-radius:50%;right:-95px;top:-145px;background:radial-gradient(circle,rgba(132,204,208,.18),transparent 70%)}.station-card{border-color:rgba(125,211,215,.34);box-shadow:0 22px 70px rgba(0,0,0,.23),inset 3px 0 0 rgba(125,211,215,.62)}.model-state.stale{border-color:rgba(241,201,139,.45);color:#ffe0ad;background:rgba(183,119,46,.16)}.station-alert{position:relative;margin-top:14px;padding:11px 13px;border:1px solid rgba(241,201,139,.48);border-radius:11px;background:rgba(130,83,33,.23);color:#ffe0ad;font-size:11px;line-height:1.55}.station-alert[hidden]{display:none}.weather-top{display:flex;justify-content:space-between;align-items:flex-start;position:relative}.label{font-size:10px;letter-spacing:.13em;text-transform:uppercase;color:#b1cbd3;font-weight:700}.place{font:700 18px Manrope,sans-serif;margin-top:7px}.model-state{border:1px solid rgba(170,220,210,.2);color:#bfe5d8;background:rgba(143,215,186,.08);border-radius:999px;padding:7px 10px;font-size:10px;white-space:nowrap}.temp-row{display:flex;align-items:center;gap:13px;margin-top:27px;position:relative}.temperature{font:700 clamp(55px,7vw,76px)/1 Manrope,sans-serif;letter-spacing:-.075em}.weather-symbol{font-size:45px;filter:drop-shadow(0 8px 14px rgba(0,0,0,.2))}.temp-caption{font-size:12px;color:#b7cbd3;margin-top:9px}.weather-stats{display:grid;grid-template-columns:repeat(auto-fit,minmax(90px,1fr));gap:8px;margin-top:24px;position:relative}.stat{background:rgba(5,20,31,.24);border:1px solid rgba(213,237,240,.09);border-radius:13px;padding:12px}.stat .name{font-size:10px;color:#a9c0cb}.stat .value{font:700 19px Manrope,sans-serif;margin-top:6px}.stat .unit{font:500 10px "DM Sans",sans-serif;color:#a9c0cb;margin-left:3px}
     .section{padding:29px 0}.section-head{display:flex;align-items:flex-end;justify-content:space-between;gap:20px;margin-bottom:17px}.section-kicker{font-size:10px;text-transform:uppercase;letter-spacing:.15em;color:var(--cyan);font-weight:700}h2{font:700 23px Manrope,sans-serif;letter-spacing:-.045em;margin:7px 0 0}.section-note{color:var(--muted);font-size:11px;line-height:1.5;text-align:right}.daily-grid{display:grid;grid-template-columns:repeat(8,minmax(0,1fr));gap:9px}.day{background:linear-gradient(180deg,rgba(18,44,62,.88),rgba(13,33,48,.9));border:1px solid var(--line);border-radius:15px;text-align:center;padding:15px 7px 14px;min-width:0}.day-name{font-size:11px;color:#c1d0d8;font-weight:600}.day-icon{font-size:23px;margin:12px 0}.day-range{font:700 14px Manrope,sans-serif;white-space:nowrap}.day-range span{color:#91a8b6;font-weight:500;margin-left:3px}.day-rain,.day-wind{font-size:10px;margin-top:7px;white-space:nowrap}.day-rain{color:#8fc9e9}.day-wind{color:#a8bdc8}
     .chart-card,.pressure-card,.info-card{background:linear-gradient(145deg,rgba(18,43,61,.94),rgba(12,31,46,.96));border:1px solid var(--line);border-radius:21px;padding:22px}.chart-toolbar{display:flex;align-items:center;gap:7px}.tab{border:1px solid var(--line);background:rgba(255,255,255,.035);color:#aabdc8;padding:8px 12px;border-radius:999px;font:600 11px "DM Sans",sans-serif;cursor:pointer}.tab.active{background:rgba(125,211,215,.13);border-color:rgba(125,211,215,.35);color:#c6f0ec}.chart-legend{display:flex;gap:16px;color:#9fb4c0;font-size:11px;margin-top:7px}.legend-dot{display:inline-block;width:7px;height:7px;border-radius:50%;background:var(--cyan);margin-right:6px}.chart-wrap{width:100%;overflow:hidden;margin-top:14px}.chart-wrap svg{display:block;width:100%;height:auto;overflow:visible}.chart-empty{color:var(--muted);font-size:13px;padding:28px 0}
     .lower-grid{display:grid;grid-template-columns:1.2fr .8fr;gap:14px}#basinc .lower-grid{grid-template-columns:minmax(0,1fr)}.pressure-list{list-style:none;padding:0;margin:15px 0 0;display:grid;gap:11px}.pressure-list li{display:flex;gap:10px;align-items:flex-start;color:#c7d5dc;font-size:13px;line-height:1.5}.pressure-icon{color:var(--gold);font-size:15px}.pressure-explainer{color:#9fb5c1;font-size:12px;line-height:1.65;margin:10px 0 0;max-width:720px}.pressure-empty{color:var(--muted);font-size:12px;margin-top:15px}.info-card p{color:#a8bdc8;font-size:12px;line-height:1.75;margin:12px 0 0}.source-row{display:flex;align-items:center;justify-content:space-between;gap:15px;padding-top:16px;margin-top:18px;border-top:1px solid var(--line);color:#8da5b3;font-size:10px}.footer{border-top:1px solid var(--line);margin-top:38px;padding:24px 0 34px;color:#8299a7;font-size:11px;display:flex;justify-content:space-between;gap:20px}.footer strong{color:#b5c7d1;font-weight:600}.loading,.error{color:#b5c7d1;font-size:12px}.error{color:#f0bd9f}
@@ -1128,7 +1121,7 @@
   <div class="stat"><div class="name">Yağış</div><div class="value" id="rain">—<span class="unit">mm</span></div><div class="detail" id="rain-detail">Son 12 saat</div></div>
   <div class="stat"><div class="name">Basınç</div><div class="value" id="pressure">—<span class="unit">hPa</span></div><div class="detail" id="pressure-detail"></div></div>
 </div>
-        <div class="station-alert" id="station-alert" role="status" aria-live="polite" hidden></div>\n        <div class="station-health" id="station-health" role="status" aria-live="polite" hidden><span class="station-health-dot"></span><span id="station-health-text">Veri akışı kontrol ediliyor…</span></div>
+        <div class="station-alert" id="station-alert" role="status" aria-live="polite" hidden></div>
       <section class="station-history-inline history-panel" id="station-history-panel" aria-label="Seçili istasyonun son 24 saat geçmişi">
         <div class="history-panel-head"><div><div class="section-kicker" id="history-station-source">ENKA BALMUMCU · GERÇEK ÖLÇÜMLER</div><h2>Son 24 saat</h2></div></div>
         <div class="history-charts">
@@ -2789,27 +2782,6 @@
     }
     // Station observations refresh independently from forecast/model data.
 
-    // A delayed GFS/ECMWF payload must never block live station readings.
-    async function refreshStationHealth(){
-      const observation=activeStation==="enka"?enkaStationObservation:activeStation==="eyupsultan"?eyupsultanStationObservation:sisliStationObservation;
-      const box=$("station-health"),node=$("station-health-text");
-      if(!box||!node)return;
-      box.hidden=false;
-      box.classList.remove("recovery","stale");
-      const observedAt=Date.parse(observation?.observed_at_utc||"");
-      const age=Number.isFinite(observedAt)?Math.max(0,(Date.now()-observedAt)/60000):9999;
-      const ageText=Number.isFinite(age)&&age<9999?Math.round(age)+" dk":"—";
-      if(age>=20){
-        box.classList.add("stale");
-        node.textContent="Ölçüm eski · son veri "+ageText+" önce";
-      }else if(age>=10){
-        box.classList.add("recovery");
-        node.textContent="Veri akışı yavaşladı · son veri "+ageText+" önce";
-      }else{
-        node.textContent="Veri akışı aktif · son veri "+ageText+" önce";
-      }
-    }
-
     async function refreshStationObservations(){
       const cacheKey=Date.now();
       try{
@@ -2826,8 +2798,7 @@
         }
         renderStationCard(activeStation==="enka"?enkaStationObservation:activeStation==="eyupsultan"?eyupsultanStationObservation:sisliStationObservation);
         if(latestRainForecastPoints.length)renderRainWindow(latestRainForecastPoints);
-        refreshStationHealth();
-        if(typeof renderBriefing==="function")renderBriefing();
+if(typeof renderBriefing==="function")renderBriefing();
       }catch(error){
         console.warn("Worker istasyon verisi alınamadı:",error);
       }
@@ -2878,13 +2849,11 @@
         if(activeStation!==stationKey)return;
         renderStationCard(activeStation==="enka"?enkaStationObservation:activeStation==="eyupsultan"?eyupsultanStationObservation:sisliStationObservation);
         renderStationHistory();
-        refreshStationHealth();
-        if(typeof renderBriefing==="function")renderBriefing();
+if(typeof renderBriefing==="function")renderBriefing();
         if(typeof forecastData!=="undefined"&&forecastData&&typeof renderNext72Hours==="function")renderNext72Hours();
       }catch(error){
         console.warn("Cloudflare istasyon API verisi alınamadı:",error);
-        refreshStationHealth();
-      }
+}
     }
     async function loadForecast(){
       try{
