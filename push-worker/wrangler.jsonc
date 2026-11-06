@@ -16,5 +16,8 @@
       "database_name": "gfs-watch-push",
       "migrations_dir": "migrations"
     }
-  ]
+  ],
+  "triggers": {
+    "crons": []
+  }
 }
