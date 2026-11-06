@@ -66,7 +66,12 @@ jobs:
           xs=json.load(open("/tmp/kv.json"))
           x=next((x for x in xs if x.get("title")=="gfs-watch-istanbul-gfs"),None)
           if not x:
-              x=json.loads(subprocess.check_output(["wrangler","kv","namespace","create","GFS_KV","--json"],text=True)).get("result")
+              out=subprocess.check_output(["wrangler","kv","namespace","create","GFS_KV"],text=True,stderr=subprocess.STDOUT)
+              import re
+              m=re.search(r'\\b[0-9a-f]{32}\\b',out)
+              if not m:
+                  raise RuntimeError("KV namespace created but namespace ID was not found in Wrangler output")
+              x={"id":m.group(0)}
           open("/tmp/kv-id","w").write(x["id"])
           PY
           python - <<'PY'
