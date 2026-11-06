@@ -1,11 +1,6 @@
 name: Deploy Istanbul GFS Cloudflare Worker
 
 on:
-  push:
-    branches: [main]
-    paths:
-      - "workers/istanbul-gfs/**"
-      - ".github/workflows/deploy-istanbul-gfs-cloudflare.yml"
   workflow_dispatch:
 
 jobs:
