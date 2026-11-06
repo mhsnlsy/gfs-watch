@@ -1235,7 +1235,7 @@
   </main>
   <footer class="shell footer"><span><strong data-app-name>İstanbul'un Havası</strong> <span data-app-version>4.0</span></span><span>Veri kaynakları: ENKA Balmumcu kamera OCR · MGM Eyüpsultan 18101 · MGM Şişli 18401 · MeteoPT GFS · ECMWF · Otomatik kontrol: 5 dakika</span></footer>
   <script>
-    const DATA_URL=(window.ISTANBUL_GFS_API_BASE||"").replace(/\/$/,"")+"/gfs/latest";
+    const DATA_URL="./data/istanbul-gfs-latest.json";
     const ECMWF_DATA_URL="./data/ecmwf/latest.json";
     function applyAppVersion(doc){
       if(!doc||!doc.name||!doc.version)return;
