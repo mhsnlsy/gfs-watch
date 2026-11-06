@@ -1,4 +1,5 @@
 name: Deploy unified Cloudflare GFS
+# Deploys the unified Worker whenever the GFS runtime changes.
 
 on:
   workflow_dispatch:
