@@ -121,3 +121,8 @@ Resmî sürümün tek kaynağı `site/version.json` dosyasıdır.
 - **MAJOR:** büyük mimari değişiklik veya uyumsuzluk.
 
 Yalnızca dokümantasyon değişiklikleri uygulama sürümünü artırmaz.
+
+
+## Cloudflare GFS
+
+İstanbul GFS collector/publisher `workers/istanbul-gfs/` altında Cloudflare'a taşındı. F180 gelmeden yayın yoktur; F180 sonrası Cloudflare KV + Telegram + Pages API dağıtımı yapılır.
