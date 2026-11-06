@@ -447,7 +447,7 @@ def render_svg(series: list[dict], valid_keys: list[str], comparison: dict) -> b
                 metadata={
                     "Title": title,
                     "Description": "Dört Köy GFS çıktısı aynı UTC geçerlilik saatlerinde hizalanmıştır.",
-                    "Date": stable_date,
+                    "Date": parse_utc(stable_date),
                 },
             )
             svg_text = svg_buffer.getvalue().decode("utf-8")
