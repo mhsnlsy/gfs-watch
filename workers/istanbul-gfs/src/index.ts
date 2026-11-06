@@ -170,8 +170,8 @@ async function publish(env:Env,doc:any,runs:any[]){
   await env.GFS_KV.put("comparison",JSON.stringify(comparison));
   await env.GFS_KV.put("report",text);
   for(let i=0;i<images.length;i++)await env.GFS_KV.put("image:"+i,images[i]);
-  await env.GFS_KV.put("published:"+runKey(doc.run_id_utc),JSON.stringify({run_id_utc:doc.run_id_utc,published_at_utc:new Date().toISOString()}));
   await notify(env,text,images);
+  await env.GFS_KV.put("published:"+runKey(doc.run_id_utc),JSON.stringify({run_id_utc:doc.run_id_utc,published_at_utc:new Date().toISOString()}));
 }
 async function process(env:Env){
   const candidates:any[]=[];
