@@ -2825,8 +2825,26 @@ async def send_telegram_text(text):
     print("[TELEGRAM] Metin bildirimi gönderildi.")
 
 
+def _comparison_valid_time_key(local_key, values):
+    """Return a canonical UTC key for a forecast valid time.
+
+    The canonical Istanbul publisher stores the UTC timestamp alongside each
+    local timeline key. Older compatibility payloads may lack that field, in
+    which case the naive timeline key is interpreted as Europe/Istanbul.
+    """
+    raw_utc = values.get("valid_time_utc") if isinstance(values, dict) else None
+    if raw_utc:
+        parsed = _parse_utc_datetime(raw_utc)
+    else:
+        parsed = datetime.fromisoformat(str(local_key))
+        if parsed.tzinfo is None:
+            parsed = parsed.replace(tzinfo=TR_TZ)
+        parsed = parsed.astimezone(timezone.utc)
+    return parsed.astimezone(timezone.utc).isoformat(timespec="minutes")
+
+
 def _prepare_comparison_chart_data(current_run_id, payload, previous_runs):
-    """Build chronological daily series shared by Telegram and Pages charts."""
+    """Build four-cycle chart series aligned on identical forecast valid times."""
     entries = []
     for run_id, forecast_json in previous_runs:
         forecast_payload = (
@@ -2839,54 +2857,93 @@ def _prepare_comparison_chart_data(current_run_id, payload, previous_runs):
 
     series = []
     for run_id, forecast_payload in entries:
-        daily = forecast_payload.get("daily", {})
-        dates = daily.get("time", [])
-        required = ("temp_min", "temp_max", "precip_sum", "wind_max")
-        if any(len(daily.get(key, [])) != len(dates) for key in required):
-            raise ValueError("Günlük özet dizilerinin uzunlukları uyuşmuyor.")
-        temp_850_max = daily.get("temp_850_max", [])
-        temp_850_min = daily.get("temp_850_min", [])
-        if (temp_850_max and len(temp_850_max) != len(dates)) or (temp_850_min and len(temp_850_min) != len(dates)):
-            raise ValueError("850 hPa sıcaklık dizilerinin uzunluğu uyuşmuyor.")
-        wind_850_values = daily.get("wind_850_max", [])
-        if wind_850_values and len(wind_850_values) != len(dates):
-            raise ValueError("850 hPa günlük rüzgâr dizisinin uzunluğu uyuşmuyor.")
-        daily_map = {}
-        for index, day in enumerate(dates):
-            raw_850 = wind_850_values[index] if wind_850_values else None
-            daily_map[day] = {
-                "temp_min": float(daily["temp_min"][index]),
-                "temp_max": float(daily["temp_max"][index]),
-                "precip": float(daily["precip_sum"][index]),
-                "wind": float(daily["wind_max"][index]),
-                "temp_850_min": float(temp_850_min[index]) if temp_850_min and temp_850_min[index] is not None else None,
-                "temp_850_max": float(temp_850_max[index]) if temp_850_max and temp_850_max[index] is not None else None,
-                "wind_850": float(raw_850) if raw_850 is not None else None,
-            }
-        if not daily_map:
-            raise ValueError(f"{run_id} için günlük tahmin verisi bulunamadı.")
+        raw_timeline = forecast_payload.get("timeline_180h", {})
+        if not isinstance(raw_timeline, dict) or not raw_timeline:
+            raise ValueError(f"{run_id} için geçerlilik zamanı çizelgesi bulunamadı.")
+
+        timeline_by_valid_time = {}
+        for local_key, values in raw_timeline.items():
+            if not isinstance(values, dict):
+                continue
+            valid_key = _comparison_valid_time_key(local_key, values)
+            timeline_by_valid_time[valid_key] = (str(local_key), values)
+        if not timeline_by_valid_time:
+            raise ValueError(f"{run_id} için geçerli tahmin zamanı bulunamadı.")
+
         run_utc = _parse_utc_datetime(run_id)
-        run_local = run_utc.astimezone(TR_TZ)
         cycle_label = f"{run_utc:%H}Z | {run_utc:%d.%m %H:%M} UTC"
         if run_id == current_run_id:
             cycle_label = "YENİ · " + cycle_label
         series.append({
             "run_id": run_id,
             "label": cycle_label,
-            "daily": daily_map,
-            "timeline": forecast_payload.get("timeline_180h", {}),
+            "timeline_by_valid_time": timeline_by_valid_time,
+            "timeline": {},
+            "daily": {},
         })
 
-    common_dates = set(series[0]["daily"])
-    for item in series[1:]:
-        common_dates.intersection_update(item["daily"])
-    dates = sorted(common_dates)
+    # The newest cycle defines the reference timeline. Older cycles are looked
+    # up by exact UTC valid time, so different F-hour numbers can represent the
+    # same Istanbul forecast instant (e.g. latest F54 vs older F60/F66/F72).
+    common_valid_times = set(series[-1]["timeline_by_valid_time"])
+    for item in series[:-1]:
+        common_valid_times.intersection_update(item["timeline_by_valid_time"])
+    ordered_valid_times = sorted(common_valid_times)
+    if len(ordered_valid_times) < 2:
+        raise ValueError("Dört döngünün ortak geçerlilik saati bulunamadı.")
+
+    reference_timeline = series[-1]["timeline_by_valid_time"]
+    for valid_key in ordered_valid_times:
+        reference_local_key = reference_timeline[valid_key][0]
+        for item in series:
+            _, values = item["timeline_by_valid_time"][valid_key]
+            # Re-key every cycle to the newest run's common TSİ timeline.
+            item["timeline"][reference_local_key] = values
+
+    dates = sorted({key[:10] for key in series[-1]["timeline"]})
     if not dates:
         raise ValueError("Dört döngünün ortak tahmin günü bulunamadı.")
 
+    def numeric_values(timeline, day, field):
+        values = []
+        for local_key, point in timeline.items():
+            if local_key[:10] != day:
+                continue
+            value = point.get(field)
+            if value is None:
+                continue
+            try:
+                value = float(value)
+            except (TypeError, ValueError):
+                continue
+            if math.isfinite(value):
+                values.append(value)
+        return values
+
+    # Recalculate daily extrema from the same matched valid-time samples.
+    # This keeps temperature candles, 850 hPa ranges and wind maxima on the
+    # exact same set of timestamps rather than each run's private day window.
+    for item in series:
+        for day in dates:
+            timeline = item["timeline"]
+            temp = numeric_values(timeline, day, "temp")
+            temp_850 = numeric_values(timeline, day, "temp_850")
+            precip = numeric_values(timeline, day, "precip")
+            wind = numeric_values(timeline, day, "wind")
+            wind_850 = numeric_values(timeline, day, "wind_850")
+            item["daily"][day] = {
+                "temp_min": min(temp) if temp else None,
+                "temp_max": max(temp) if temp else None,
+                "precip": sum(max(0.0, value) for value in precip),
+                "wind": max(wind) if wind else None,
+                "temp_850_min": min(temp_850) if temp_850 else None,
+                "temp_850_max": max(temp_850) if temp_850 else None,
+                "wind_850": max(wind_850) if wind_850 else None,
+            }
+
     missing_850 = [
         item["label"] for item in series
-        if any(item["daily"][day].get("wind_850") is None for day in dates)
+        if any(item["daily"][day].get("temp_850_min") is None for day in dates)
     ]
     if missing_850:
         print(
@@ -2905,12 +2962,13 @@ def _prepare_comparison_chart_data(current_run_id, payload, previous_runs):
     return {
         "series": series,
         "dates": dates,
+        "valid_times": ordered_valid_times,
+        "valid_time_count": len(ordered_valid_times),
         "colors": colors,
         "offsets": offsets,
         "candle_width": group_width * 0.72,
         "bar_width": group_width * 0.90,
     }
-
 
 def _comparison_temperature_ohlc(forecast, day):
     samples = [
@@ -3291,7 +3349,8 @@ def create_comparison_chart(current_run_id, payload, previous_runs):
         fig.text(
             0.01, 0.012,
             "Renkler her panelde aynı GFS döngüsünü gösterir | "
-            "Kaynak: NOAA/NCEP GFS 0.25° | Yalnızca tüm döngülerde ortak günler",
+            f"Aynı geçerlilik saatleri (TSİ) · {chart_data['valid_time_count']} ortak nokta | "
+            "Kaynak: NOAA/NCEP GFS 0.25°",
             fontsize=9.5, color=GFS_REPORT_MUTED,
         )
         fig.tight_layout(rect=(0, 0.035, 1, 0.95))
@@ -3411,7 +3470,7 @@ def create_pages_comparison_charts(current_run_id, payload, previous_runs):
                 )
                 fig.text(
                     0.01, 0.012,
-                    "Renkler her panelde aynı GFS döngüsünü gösterir | Kaynak: MeteoPT GFS · İstanbul nokta tahmini",
+                    f"Renkler her panelde aynı GFS döngüsünü gösterir | Aynı geçerlilik saatleri (TSİ) · {chart_data['valid_time_count']} ortak nokta | Kaynak: MeteoPT GFS · İstanbul nokta tahmini",
                     fontsize=10.5, color=GFS_REPORT_MUTED,
                 )
                 # Keep three non-overlapping vertical bands: report title,
