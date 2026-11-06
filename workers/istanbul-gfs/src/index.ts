@@ -38,8 +38,8 @@ async function fetchRun(hour:number){
   const u=new URL(METEOPT);
   u.searchParams.set("lat",String(LAT)); u.searchParams.set("lon",String(LON));
   u.searchParams.set("run",String(hour).padStart(2,"0")); u.searchParams.set("lang","en");
-  // Cache-bust the upstream request so a new GFS cycle cannot be hidden by an intermediary cache.
-  u.searchParams.set("_",String(Date.now()));
+  // Do not add arbitrary cache-buster query parameters: MeteoPT rejects unknown parameters with HTTP 400.
+  // The explicit run parameter selects the requested GFS cycle; use no-store/no-cache at the HTTP layer.
   const r=await fetch(u,{cache:"no-store",headers:{"user-agent":"Istanbul-GFS-Cloudflare/1.0","cache-control":"no-cache"}});
   if(!r.ok) throw new Error("MeteoPT HTTP "+r.status);
   const doc:any=await r.json();
