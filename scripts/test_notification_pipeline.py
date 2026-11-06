@@ -25,7 +25,8 @@ def main() -> None:
     # availability rather than a fixed four-times-daily publication window.
     assert 'cron: "*/5 * * * *"' in gfs_workflow
     assert "steps.fetch.outputs.publish == 'true'" in gfs_workflow
-    assert "F180" in gfs_workflow
+    assert "steps.fetch.outputs.f72_publish == 'true'" in gfs_workflow
+    assert "F72" in gfs_workflow and "F180" in gfs_workflow
     assert "scripts/fetch_istanbul_gfs_meteopt.py" in gfs_workflow
     assert "scripts/build_istanbul_gfs_publication.py" in gfs_workflow
     assert "scripts/send_canonical_istanbul_gfs_telegram.py" in gfs_workflow
@@ -35,7 +36,9 @@ def main() -> None:
     collector = (ROOT / "scripts" / "fetch_istanbul_gfs_meteopt.py").read_text(encoding="utf-8")
     builder = (ROOT / "scripts" / "build_istanbul_gfs_publication.py").read_text(encoding="utf-8")
     sender = (ROOT / "scripts" / "send_canonical_istanbul_gfs_telegram.py").read_text(encoding="utf-8")
-    assert "180 not in steps" in collector
+    assert "180 not in steps" in collector or "require_f180" in collector
+    assert "f72_marker" in collector
+    assert "f72_publish" in collector
     assert 'series["wind10mdir"]' in collector or 'values_for(document, key)' in collector
     assert "latest = dict(current_doc)" in builder
     assert 'latest["comparison_runs"] = list(reversed(docs))' in builder
