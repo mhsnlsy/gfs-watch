@@ -7,7 +7,7 @@ const num=v=>v==null||v===""||!Number.isFinite(Number(v))?null:Number(v);
 const fmt=(v,d=1)=>v==null?"—":Number(v).toLocaleString("tr-TR",{minimumFractionDigits:d,maximumFractionDigits:d});
 const esc=s=>String(s??"").replace(/[&<>"]/g,c=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;"}[c]));
 const ts=v=>{if(!v)return "—";const d=new Date(v);return Number.isFinite(d.getTime())?new Intl.DateTimeFormat("tr-TR",{timeZone:"Europe/Istanbul",day:"2-digit",month:"2-digit",hour:"2-digit",minute:"2-digit"}).format(d)+" TSİ":"—"};
-const tsGfsValid=v=>{if(!v)return "—";const d=new Date(v);return Number.isFinite(d.getTime())?new Intl.DateTimeFormat("tr-TR",{timeZone:"UTC",day:"2-digit",month:"2-digit",hour:"2-digit",minute:"2-digit"}).format(d)+" TSİ":"—"};
+const tsGfsValid=v=>{if(!v)return "—";const d=new Date(v);return Number.isFinite(d.getTime())?new Intl.DateTimeFormat("tr-TR",{timeZone:"Europe/Istanbul",day:"2-digit",month:"2-digit",hour:"2-digit",minute:"2-digit",hourCycle:"h23"}).format(d)+" TSİ":"—"};
 const dayKey=v=>{const d=new Date(v);return Number.isFinite(d.getTime())?new Intl.DateTimeFormat("en-CA",{timeZone:"UTC",year:"numeric",month:"2-digit",day:"2-digit"}).format(d):"—"};
 const dayLabel=k=>{const p=k.split("-");return p[2]+"."+p[1]};
 let busy=false, f72=null, comparison=null, stationHistory=null, rainHistory=null;
@@ -51,38 +51,112 @@ function realizedErrorStats(runs,samples,metric){
  return {sigma, count:errors.length, sigmaByHour};
 }
 function svgLine(runs,metric,title,unit,maxHour=72,verification=null){
- const usable=runs.map((r,runIndex)=>({run:r,runIndex,points:pointsOf(r,maxHour).map(p=>({h:Number(p.forecast_hour),v:num(p[metric]),validTime:p.valid_time_utc})).filter(p=>p.v!=null)})).filter(x=>x.points.length);
+ // The newest run defines the valid-time axis. Each archived cycle is sampled
+ // at those exact UTC instants, regardless of its own forecast-hour number.
+ const reference=pointsOf(runs[0],maxHour)
+  .map(p=>({...p,stamp:Date.parse(p.valid_time_utc||"")}))
+  .filter(p=>Number.isFinite(p.stamp))
+  .sort((a,b)=>a.stamp-b.stamp);
+ if(!reference.length)return '<div class="chart-empty">Tahmin verisi bekleniyor…</div>';
+ const startTime=reference[0].stamp;
+ const timeline=reference.map((p,index)=>({
+  index,
+  stamp:p.stamp,
+  elapsed:(p.stamp-startTime)/3600000,
+  validTime:p.valid_time_utc
+ }));
+ const usable=runs.map((run,runIndex)=>{
+  // Do not apply maxHour to the older runs: matching the newest run's 72-hour
+  // window may require F75, F81, F87… from older cycles.
+  const byValidTime=new Map();
+  (run?.forecast_6_hourly||[]).forEach(p=>{
+   const stamp=Date.parse(p.valid_time_utc||"");
+   if(Number.isFinite(stamp))byValidTime.set(stamp,p);
+  });
+  const points=timeline.map(target=>{
+   const p=byValidTime.get(target.stamp);
+   const value=num(p?.[metric]);
+   if(value==null)return null;
+   return {
+    index:target.index,
+    h:target.elapsed,
+    lead:Number(p.forecast_hour),
+    v:value,
+    validTime:p.valid_time_utc,
+    stamp:target.stamp
+   };
+  });
+  return {run,runIndex,points:points.filter(Boolean)};
+ }).filter(item=>item.points.length);
  if(!usable.length)return '<div class="chart-empty">Tahmin verisi bekleniyor…</div>';
- const hours=[...new Set(usable.flatMap(x=>x.points.map(p=>p.h)))].sort((a,b)=>a-b);
- const values=usable.flatMap(x=>x.points.map(p=>p.v));let lo=Math.min(...values),hi=Math.max(...values);
- if(metric.includes("temperature")){lo=Math.floor((lo-2)/2)*2;hi=Math.ceil((hi+2)/2)*2}else{lo=Math.min(0,lo);hi=Math.max(1,Math.ceil(hi*1.15))}
+ const values=usable.flatMap(item=>item.points.map(p=>p.v));
+ let lo=Math.min(...values),hi=Math.max(...values);
+ if(metric.includes("temperature")){
+  lo=Math.floor((lo-2)/2)*2;
+  hi=Math.ceil((hi+2)/2)*2;
+ }else{
+  lo=Math.min(0,lo);
+  hi=Math.max(1,Math.ceil(hi*1.15));
+ }
  if(hi===lo)hi=lo+1;
  const sigma=verification?.sigma||null;
- if(sigma&&metric.includes("temperature")){lo=Math.min(lo,Math.min(...values)-sigma);hi=Math.max(hi,Math.max(...values)+sigma)}
+ if(sigma&&metric.includes("temperature")){
+  lo=Math.min(lo,Math.min(...values)-sigma);
+  hi=Math.max(hi,Math.max(...values)+sigma);
+ }
  const W=760,H=190,L=45,R=12,T=20,B=28,PW=W-L-R,PH=H-T-B;
- const x=h=>L+(hours.length===1?PW/2:(h-hours[0])/(hours[hours.length-1]-hours[0]||1))*PW;
+ const x=h=>L+(timeline.length===1?PW/2:(h-timeline[0].elapsed)/(timeline[timeline.length-1].elapsed-timeline[0].elapsed||1))*PW;
  const y=v=>T+(hi-v)*PH/(hi-lo);
- let s='<svg class="koy-svg" viewBox="0 0 '+W+' '+H+'" role="img" aria-label="'+esc(title)+'">';
- for(let j=0;j<=3;j++){const v=lo+(hi-lo)*j/3,yy=y(v);s+='<line x1="'+L+'" y1="'+yy+'" x2="'+(W-R)+'" y2="'+yy+'" stroke="#294253" stroke-dasharray="3 5"/><text x="'+(L-7)+'" y="'+(yy+3)+'" text-anchor="end" fill="#91aab8" font-size="10">'+fmt(v,0)+'</text>'}
- const axisPoint=usable.flatMap(x=>x.points).find(p=>p.h===hours[0]); const axisLabel=v=>{if(!v)return "—";const d=new Date(v);if(!Number.isFinite(d.getTime()))return "—";d.setTime(d.getTime()-3*3600000);return new Intl.DateTimeFormat("tr-TR",{timeZone:"Europe/Istanbul",day:"numeric",month:"long",hour:"2-digit",minute:"2-digit",hourCycle:"h23"}).format(d)+" TSİ"}; hours.forEach(h=>{if(h!==hours[0]&&h%12!==0&&h!==hours[hours.length-1])return;const label=h===hours[0]?axisLabel(axisPoint?.validTime):"+"+h+"s";s+='<text x="'+x(h)+'" y="'+(H-7)+'" text-anchor="middle" fill="#91aab8" font-size="10">'+esc(label)+'</text>'});
+ const axisLabel=stamp=>new Intl.DateTimeFormat("tr-TR",{
+  timeZone:"Europe/Istanbul",day:"2-digit",month:"2-digit",hour:"2-digit",hourCycle:"h23"
+ }).format(new Date(stamp));
+ let s='<svg class="koy-svg" viewBox="0 0 '+W+' '+H+'" role="img" aria-label="'+esc(title)+' · aynı geçerlilik saatleri TSİ">';
+ for(let j=0;j<=3;j++){
+  const v=lo+(hi-lo)*j/3,yy=y(v);
+  s+='<line x1="'+L+'" y1="'+yy+'" x2="'+(W-R)+'" y2="'+yy+'" stroke="#294253" stroke-dasharray="3 5"/><text x="'+(L-7)+'" y="'+(yy+3)+'" text-anchor="end" fill="#91aab8" font-size="10">'+fmt(v,0)+'</text>';
+ }
+ timeline.forEach((point,index)=>{
+  if(point.elapsed!==0&&point.elapsed%12!==0&&index!==timeline.length-1)return;
+  const anchor=index===0?"start":index===timeline.length-1?"end":"middle";
+  s+='<text x="'+x(point.elapsed)+'" y="'+(H-7)+'" text-anchor="'+anchor+'" fill="#c5d3dc" font-size="10">'+esc(axisLabel(point.stamp))+'</text>';
+ });
  if(sigma&&metric.includes("temperature")){
   const upper=[],lower=[];
-  hours.forEach(h=>{const vals=usable[0].points.filter(p=>p.h===h).map(p=>p.v);if(!vals.length)return;const local=verification.sigmaByHour?.get(h);const bandSigma=Number.isFinite(local)&&local>0?local:sigma;upper.push([x(h),y(vals[0]+bandSigma)]);lower.push([x(h),y(vals[0]-bandSigma)])});
-  if(upper.length>1){const band=upper.concat(lower.reverse()).map(p=>p.join(",")).join(" ");s+='<polygon points="'+band+'" fill="#75b9c8" opacity=".16"/>'}
+  timeline.forEach(target=>{
+   const point=usable[0].points.find(p=>p.index===target.index);
+   if(!point)return;
+   const local=verification.sigmaByHour?.get(point.lead);
+   const bandSigma=Number.isFinite(local)&&local>0?local:sigma;
+   upper.push([x(point.h),y(point.v+bandSigma)]);
+   lower.push([x(point.h),y(point.v-bandSigma)]);
+  });
+  if(upper.length>1){
+   const band=upper.concat(lower.reverse()).map(p=>p.join(",")).join(" ");
+   s+='<polygon points="'+band+'" fill="#75b9c8" opacity=".16"/>';
+  }
   s+='<text x="'+(W-R-4)+'" y="'+(T+12)+'" text-anchor="end" fill="#91aab8" font-size="10">Gerçekleşen hata σ ±'+fmt(sigma,1)+'°C · '+verification.count+' doğrulama</text>';
  }
  usable.forEach(item=>{
   const i=item.runIndex,color=COLORS[i%COLORS.length],latest=i===0;
-  const path=item.points.map((p,j)=>(j?"L":"M")+x(p.h)+" "+y(p.v)).join(" ");
-  s+='<path d="'+path+'" fill="none" stroke="'+color+'" stroke-width="'+(latest?GFS_CYCLE_THEME.latestStrokeWidth:GFS_CYCLE_THEME.previousStrokeWidth)+'" '+(latest?'':'stroke-dasharray="'+GFS_CYCLE_THEME.previousStrokeDasharray+'"')+' stroke-linecap="round" stroke-linejoin="round"/>';
+  const groups=[];
+  item.points.forEach(point=>{
+   const group=groups[groups.length-1];
+   if(!group||point.index!==group[group.length-1].index+1)groups.push([point]);
+   else group.push(point);
+  });
+  groups.forEach(group=>{
+   const path=group.map((p,j)=>(j?"L":"M")+x(p.h)+" "+y(p.v)).join(" ");
+   s+='<path d="'+path+'" fill="none" stroke="'+color+'" stroke-width="'+(latest?GFS_CYCLE_THEME.latestStrokeWidth:GFS_CYCLE_THEME.previousStrokeWidth)+'" '+(latest?'':'stroke-dasharray="'+GFS_CYCLE_THEME.previousStrokeDasharray+'"')+' stroke-linecap="round" stroke-linejoin="round"/>';
+  });
   if(latest)item.points.forEach(p=>{
-   s+='<circle cx="'+x(p.h)+'" cy="'+y(p.v)+'" r="2.5" fill="'+color+'"><title>F'+p.h+' · '+fmt(p.v)+' '+unit+'</title></circle>';
+   s+='<circle cx="'+x(p.h)+'" cy="'+y(p.v)+'" r="2.5" fill="'+color+'"><title>F'+p.lead+' · '+esc(tsGfsValid(p.validTime))+' · '+fmt(p.v)+' '+unit+'</title></circle>';
   });
   item.points.forEach(p=>{
-   s+='<circle class="gfs-point-target" cx="'+x(p.h)+'" cy="'+y(p.v)+'" r="0" data-run="'+esc(gfsRunLabel(item.run))+'" data-current="'+(latest?"true":"false")+'" data-valid="'+esc(tsGfsValid(p.validTime))+'" data-step="'+esc("F"+p.h+" saat")+'" data-value="'+esc(fmt(p.v,1))+'" data-unit="'+esc(unit)+'" data-color="'+color+'" aria-hidden="true"/>';
+   s+='<circle class="gfs-point-target" cx="'+x(p.h)+'" cy="'+y(p.v)+'" r="0" data-run="'+esc(gfsRunLabel(item.run))+'" data-current="'+(latest?"true":"false")+'" data-validkey="'+p.stamp+'" data-valid="'+esc(tsGfsValid(p.validTime))+'" data-step="'+esc("F"+p.lead+" saat")+'" data-value="'+esc(fmt(p.v,1))+'" data-unit="'+esc(unit)+'" data-color="'+color+'" aria-hidden="true"/>';
   });
  });
- s+='</svg>';return s;
+ s+='</svg>';
+ return s;
 }
 let activeGfsTooltip=null;
 document.addEventListener("pointerdown",event=>{
@@ -116,6 +190,11 @@ function bindGfsChartTooltip(containerId){
  }
  function latestPointAtSameTime(hit){
   if(!hit||!currentTargets.length)return null;
+  const validKey=hit.dataset.validkey;
+  if(validKey){
+   const exact=currentTargets.find(target=>target.dataset.validkey===validKey);
+   if(exact)return exact;
+  }
   const hoveredX=Number(hit.getAttribute("cx"));
   let nearest=null,best=Infinity;
   for(const target of currentTargets){
@@ -437,7 +516,7 @@ function renderRuns(d,f72){
  });
  renderRunLegend(source);
  $("next-72h-meta").textContent=source.length?source.length+" GFS döngüsü karşılaştırılıyor":"MeteoPT GFS verisi bekleniyor";
- // Both charts use the same latest MeteoPT payload as the table, plus its three archived cycles.
+ // Both charts align all four MeteoPT runs by exact valid_time_utc; older cycles may use different F-hour numbers.
  const chartSource=source;
  const realized=realizedErrorStats(runs,stationHistory,"temperature_2m_c");
  $("next72-temperature").innerHTML=svgLine(chartSource,"temperature_2m_c","2 m sıcaklık","°C",72,realized);
