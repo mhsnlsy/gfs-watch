@@ -1142,6 +1142,34 @@
       .gfs-chart-tooltip-row{gap:5px;padding:2px 0}
     }
   </style>
+  <style id="unrestricted-mobile-gestures">
+    /* Final gesture layer: page and panels must not capture/clip touch navigation. */
+    html, body, main, .shell, .section, .hero, .dashboard-top, .dashboard-left,
+    .dashboard-right, .lower-grid, .notification-list, .notification-card,
+    .chart-stack, .chart-card, .chart-wrap, .pressure-card, .info-card,
+    .next-72h-panel, .next-72h-card, .next-72h-chart, .notification-images,
+    .notification-image-item, .gfs-interactive-chart, .gfs-interactive-svg {
+      touch-action: auto !important;
+    }
+    html, body {
+      overflow-x: auto !important;
+      overflow-y: auto !important;
+      overscroll-behavior: auto !important;
+    }
+    main, .shell, .section, .hero, .dashboard-top, .dashboard-left,
+    .dashboard-right, .lower-grid, .notification-list, .notification-card,
+    .chart-stack, .chart-card, .chart-wrap, .pressure-card, .info-card,
+    .next-72h-panel, .next-72h-card, .next-72h-chart,
+    .notification-images, .notification-image-item, .gfs-interactive-chart {
+      overflow: visible !important;
+      overscroll-behavior: auto !important;
+    }
+    iframe, .gfs-cycle-compare-frame {
+      touch-action: auto !important;
+      overflow: visible !important;
+      overscroll-behavior: auto !important;
+    }
+  </style>
 </head>
 <body>
   <header class="shell topbar">
