@@ -295,7 +295,11 @@ jobs:
           obs=json.loads(pathlib.Path("output/observation.json").read_text(encoding="utf-8"))
           history=json.loads(pathlib.Path("output/history.json").read_text(encoding="utf-8"))
           HOME_ELEVATION_M=363.0
-          station_elevation=float(obs.get("elevation_m") or 146.0)
+          # MGM Çanakçı center metadata currently reports 0 m, but the agreed
+          # reference elevation for the real Çanakçı station is 146 m.
+          # Keep the virtual-station correction tied to the physical reference,
+          # not to the unreliable center metadata.
+          station_elevation=146.0
           DELTA_M=HOME_ELEVATION_M-station_elevation
 
           def lapse_rate_km(temp_c, rh):
