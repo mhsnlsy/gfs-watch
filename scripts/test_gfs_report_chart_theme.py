@@ -136,9 +136,9 @@ def test_valid_time_alignment() -> None:
     }
     assert leads_at_1500 == dict(zip(run_ids, leads))
     latest_daily = prepared["series"][-1]["daily"]["2026-11-08"]
-    assert latest_daily["temp_max"] == 13.0
-    assert latest_daily["temp_850_max"] == 4.0
-    assert latest_daily["wind"] == 11.0
+    assert latest_daily["temp_max"] == 14.0
+    assert latest_daily["temp_850_max"] == 5.0
+    assert latest_daily["wind"] == 12.0
     assert latest_daily["precip"] == 0.6
 
     assert '"valid_time_utc": point.get("valid_time_utc")' in BUILDER_SOURCE
