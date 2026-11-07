@@ -14,7 +14,7 @@ This Worker is a watchdog for the Istanbul GFS pipeline. It does not download mo
 
 ## Required secret
 
-Set the GitHub Actions repository secret `GITHUB_GFS_DISPATCH_TOKEN` before deployment. Use a fine-grained PAT restricted to `mhsnlsy/gfs-watch` with **Actions: Read and write** permission. The token is stored as the Cloudflare Worker secret `GITHUB_DISPATCH_TOKEN` by the deployment workflow; it is never written to the repository.
+Set the GitHub Actions repository secret `GFS_DISPATCH_TOKEN` before deployment. Use a fine-grained PAT restricted to `mhsnlsy/gfs-watch` with **Actions: Read and write** permission. The token is stored as the Cloudflare Worker secret `GFS_DISPATCH_TOKEN` by the deployment workflow; it is never written to the repository.
 
 The existing repository secrets `CLOUDFLARE_API_TOKEN` and `CLOUDFLARE_ACCOUNT_ID` are also required by the deployment workflow.
 

@@ -48,12 +48,12 @@ function newest(items, timestampField) {
 }
 
 async function runGuardian(env, scheduledTime) {
-  if (!env.GITHUB_DISPATCH_TOKEN) {
-    throw new Error("GITHUB_DISPATCH_TOKEN secret is not configured");
+  if (!env.GFS_DISPATCH_TOKEN) {
+    throw new Error("GFS_DISPATCH_TOKEN secret is not configured");
   }
 
   const workflowPath = `/repos/${REPOSITORY}/actions/workflows/${WORKFLOW_FILE}/runs?branch=main&per_page=20`;
-  const payload = await githubRequest(workflowPath, env.GITHUB_DISPATCH_TOKEN);
+  const payload = await githubRequest(workflowPath, env.GFS_DISPATCH_TOKEN);
   const runs = Array.isArray(payload?.workflow_runs) ? payload.workflow_runs : [];
   const now = Date.now();
 
@@ -109,7 +109,7 @@ async function runGuardian(env, scheduledTime) {
 
   await githubRequest(
     `/repos/${REPOSITORY}/actions/workflows/${WORKFLOW_FILE}/dispatches`,
-    env.GITHUB_DISPATCH_TOKEN,
+    env.GFS_DISPATCH_TOKEN,
     {
       method: "POST",
       headers: { "content-type": "application/json" },
