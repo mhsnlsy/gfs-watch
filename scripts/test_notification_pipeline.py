@@ -10,7 +10,7 @@ ROOT = Path(__file__).resolve().parents[1]
 def main() -> None:
     workflows = ROOT / ".github" / "workflows"
     publisher = (workflows / "publish-live-site.yml").read_text(encoding="utf-8")
-    gfs_workflow_path = workflows / "istanbul-gfs-github.yml"
+    gfs_workflow_path = workflows / "istanbul-gfs-10min.yml"
     gfs_workflow = gfs_workflow_path.read_text(encoding="utf-8")
 
     # Pages remains a single publisher and consumes the isolated GFS data branch.
@@ -21,36 +21,40 @@ def main() -> None:
     assert "koy-gfs-data" in publisher
     assert "koy-mgm-data" in publisher
 
-    # Istanbul GFS polls every 5 minutes so publication is driven by F180
-    # availability rather than a fixed four-times-daily publication window.
-    assert 'cron: "*/5 * * * *"' in gfs_workflow
-    assert "steps.fetch.outputs.publish == 'true'" in gfs_workflow
-    assert "steps.fetch.outputs.f72_publish == 'true'" in gfs_workflow
-    assert "Commit new F72 milestone independently" in gfs_workflow
-    assert 'push:\n    branches: [main]' in gfs_workflow
+    # Istanbul GFS is a dedicated ten-minute state machine: F72 cache first,
+    # F180 report second, with Pages and Telegram in independent jobs.
+    assert 'cron: "*/10 * * * *"' in gfs_workflow
+    assert "branches: [main]" in gfs_workflow
+    assert "${GITHUB_WORKSPACE}/gfs/" in gfs_workflow
+    assert "\\${GITHUB_WORKSPACE}" not in gfs_workflow
+    assert "scripts/poll_istanbul_gfs_10min.py" in gfs_workflow
+    assert "steps.poll.outputs.f180_ready == 'true'" in gfs_workflow
     assert "F72" in gfs_workflow and "F180" in gfs_workflow
-    assert "scripts/fetch_istanbul_gfs_meteopt.py" in gfs_workflow
-    assert "scripts/build_istanbul_gfs_publication.py" in gfs_workflow
-    assert "scripts/send_canonical_istanbul_gfs_telegram.py" in gfs_workflow
+    assert "Persist F72 cache and any F180 canonical run" in gfs_workflow
+    assert "Build the report from the newly archived F180 run" in gfs_workflow
     assert "publish-live-site.yml" in gfs_workflow
     assert "uses: ./.github/workflows/publish-live-site.yml" in gfs_workflow
+    assert "telegram:" in gfs_workflow
+    assert "scripts/send_pending_istanbul_gfs_telegram.py" in gfs_workflow
     assert "TELEGRAM_TOKEN" in gfs_workflow and "CHAT_ID" in gfs_workflow
+    assert "cancel-in-progress: false" in gfs_workflow
 
-    collector = (ROOT / "scripts" / "fetch_istanbul_gfs_meteopt.py").read_text(encoding="utf-8")
+    collector = (ROOT / "scripts" / "poll_istanbul_gfs_10min.py").read_text(encoding="utf-8")
     builder = (ROOT / "scripts" / "build_istanbul_gfs_publication.py").read_text(encoding="utf-8")
-    sender = (ROOT / "scripts" / "send_canonical_istanbul_gfs_telegram.py").read_text(encoding="utf-8")
-    assert "180 not in steps" in collector or "require_f180" in collector
-    assert "f72_marker" in collector
-    assert "f72_publish" in collector
-    assert 'series["wind10mdir"]' in collector or 'values_for(document, key)' in collector
-    assert "latest = dict(current_doc)" in builder
-    assert 'latest["comparison_runs"] = list(reversed(docs))' in builder
+    sender = (ROOT / "scripts" / "send_pending_istanbul_gfs_telegram.py").read_text(encoding="utf-8")
+    assert "fetch_cycle" in collector and "normalize" in collector
+    assert "f72_path" in collector and "run_path" in collector
+    assert "not f180_ready" in collector
+    assert "GFS_TARGET_RUN_ID" in builder
+    assert "Older delayed cycle" in builder
+    assert "existing_run > utc_dt(current_run)" in builder
     assert "create_valid_time_comparison_assets" in builder
     assert "save_public_notification_svg_image" in builder
     assert "telegram_image_path" in builder
     assert "telegram-sent" in sender
+    assert "text_message_id" in sender and "photo_message_id" in sender
     assert "send_photo" in sender
-    assert "send_media_group" in sender  # legacy notification fallback
+    assert "for item in items" in sender
 
     # Cloudflare is limited to station collection and the optional push API.
     station_deploy = (workflows / "deploy-stations-worker.yml").read_text(encoding="utf-8")
@@ -70,7 +74,7 @@ def main() -> None:
 
     print(
         "[GFS/STATION ARCHITECTURE SMOKE] "
-        "Cloudflare owns stations; GitHub Actions owns 5-minute F180-driven GFS publication, SVG reports, Telegram and Pages."
+        "Cloudflare owns stations; GitHub Actions owns a 10-minute F72-cache/F180-publication GFS state machine, with independent Telegram delivery and Pages deployment."
     )
 
 

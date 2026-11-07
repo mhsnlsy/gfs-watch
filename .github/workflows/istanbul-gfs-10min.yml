@@ -1,0 +1,194 @@
+name: Istanbul GFS · 10 Minute Pipeline
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - ".github/workflows/istanbul-gfs-10min.yml"
+      - "scripts/poll_istanbul_gfs_10min.py"
+      - "scripts/build_istanbul_gfs_publication.py"
+      - "scripts/send_pending_istanbul_gfs_telegram.py"
+  schedule:
+    - cron: "*/10 * * * *"
+  workflow_dispatch:
+
+permissions:
+  contents: write
+  actions: write
+  pages: write
+  id-token: write
+
+concurrency:
+  group: istanbul-gfs-10min-pipeline
+  cancel-in-progress: false
+
+jobs:
+  poll-and-publish:
+    name: Poll → F72 cache → F180 report
+    runs-on: ubuntu-latest
+    timeout-minutes: 12
+    outputs:
+      f180_ready: ${{ steps.poll.outputs.f180_ready }}
+      run_id: ${{ steps.poll.outputs.run_id }}
+    steps:
+      - name: Check out application source
+        uses: actions/checkout@v5
+        with:
+          ref: main
+          fetch-depth: 1
+
+      - name: Check out canonical Istanbul GFS state
+        uses: actions/checkout@v5
+        with:
+          ref: istanbul-gfs-data
+          path: gfs-state
+          fetch-depth: 0
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+          cache: pip
+          cache-dependency-path: requirements.txt
+
+      - name: Install publication dependencies
+        run: |
+          python -m pip install --upgrade pip
+          python -m pip install -r requirements.txt
+
+      - name: Restore canonical state
+        run: |
+          set -euo pipefail
+          mkdir -p gfs
+          if [ -d gfs-state/gfs ]; then
+            cp -a gfs-state/gfs/. gfs/
+          fi
+          mkdir -p gfs/runs gfs/milestones/f72 gfs/notifications/telegram-sent
+
+      - name: Poll MeteoPT for a new GFS run and cache F72
+        id: poll
+        run: python scripts/poll_istanbul_gfs_10min.py
+
+      - name: Persist F72 cache and any F180 canonical run
+        if: steps.poll.outputs.new_run == 'true'
+        working-directory: gfs-state
+        run: |
+          set -euo pipefail
+          rsync -a "${GITHUB_WORKSPACE}/gfs/" gfs/
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add gfs
+          if git diff --cached --quiet; then
+            echo "No new GFS state to persist."
+          else
+            git commit -m "Archive Istanbul GFS milestones and runs"
+            git push origin HEAD:istanbul-gfs-data
+          fi
+
+      - name: Validate publication code
+        if: steps.poll.outputs.f180_ready == 'true'
+        run: |
+          set -euo pipefail
+          python -m py_compile \
+            main.py \
+            scripts/fetch_istanbul_gfs_meteopt.py \
+            scripts/poll_istanbul_gfs_10min.py \
+            scripts/build_istanbul_gfs_publication.py \
+            scripts/send_pending_istanbul_gfs_telegram.py
+          python scripts/test_notification_pipeline.py
+          python scripts/test_gfs_report_chart_theme.py
+          python scripts/test_gfs_svg_comparison.py
+          node --check site/gfs-comparison-tooltip.js
+
+      - name: Build the report from the newly archived F180 run
+        if: steps.poll.outputs.f180_ready == 'true'
+        env:
+          GFS_TARGET_RUN_ID: ${{ steps.poll.outputs.run_id }}
+        run: python scripts/build_istanbul_gfs_publication.py
+
+      - name: Persist the publication bundle
+        if: steps.poll.outputs.f180_ready == 'true'
+        working-directory: gfs-state
+        run: |
+          set -euo pipefail
+          rsync -a "${GITHUB_WORKSPACE}/gfs/" gfs/
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add gfs
+          if git diff --cached --quiet; then
+            echo "Publication bundle already persisted."
+          else
+            git commit -m "Publish Istanbul GFS F180 report"
+            git push origin HEAD:istanbul-gfs-data
+          fi
+
+  publish-pages:
+    name: Deploy the new GFS bundle to Pages
+    needs: poll-and-publish
+    if: needs.poll-and-publish.result == 'success' && needs.poll-and-publish.outputs.f180_ready == 'true'
+    permissions:
+      contents: read
+      pages: write
+      id-token: write
+    uses: ./.github/workflows/publish-live-site.yml
+
+  telegram:
+    name: Deliver pending GFS Telegram reports
+    needs: poll-and-publish
+    if: needs.poll-and-publish.result == 'success'
+    runs-on: ubuntu-latest
+    timeout-minutes: 8
+    permissions:
+      contents: write
+    steps:
+      - name: Check out canonical Istanbul GFS state
+        uses: actions/checkout@v5
+        with:
+          ref: istanbul-gfs-data
+          path: gfs-state
+          fetch-depth: 0
+
+      - name: Check out application source
+        uses: actions/checkout@v5
+        with:
+          ref: main
+          path: source
+          fetch-depth: 1
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+
+      - name: Install Telegram dependency
+        run: python -m pip install python-telegram-bot
+
+      - name: Restore GFS publication tree
+        run: |
+          set -euo pipefail
+          mkdir -p gfs
+          cp -a gfs-state/gfs/. gfs/
+
+      - name: Deliver every pending GFS report
+        env:
+          TELEGRAM_TOKEN: ${{ secrets.TELEGRAM_TOKEN }}
+          CHAT_ID: ${{ secrets.CHAT_ID }}
+        run: python source/scripts/send_pending_istanbul_gfs_telegram.py
+
+      - name: Persist Telegram delivery markers
+        if: always()
+        working-directory: gfs-state
+        run: |
+          set -euo pipefail
+          if [ -d "${GITHUB_WORKSPACE}/gfs/notifications/telegram-sent" ]; then
+            rsync -a "${GITHUB_WORKSPACE}/gfs/notifications/telegram-sent/" gfs/notifications/telegram-sent/
+          fi
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add gfs/notifications/telegram-sent
+          if git diff --cached --quiet; then
+            echo "No Telegram delivery markers to persist."
+          else
+            git commit -m "Record Istanbul GFS Telegram delivery"
+            git push origin HEAD:istanbul-gfs-data
+          fi
