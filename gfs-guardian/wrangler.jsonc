@@ -4,8 +4,18 @@
   "main": "src/index.js",
   "compatibility_date": "2026-11-07",
   "workers_dev": true,
-  "observability": { "enabled": true },
+  "observability": {
+    "enabled": true
+  },
   "triggers": {
-    "crons": ["*/30 * * * *"]
-  }
+    "crons": [
+      "5,15,25,35,45,55 * * * *"
+    ]
+  },
+  "services": [
+    {
+      "binding": "ISTANBUL_GFS",
+      "service": "gfs-watch-istanbul-gfs"
+    }
+  ]
 }
