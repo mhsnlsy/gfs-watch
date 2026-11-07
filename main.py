@@ -3907,7 +3907,7 @@ def create_pages_comparison_charts(current_run_id, payload, previous_runs):
                     date_labels = []
                     for day in dates:
                         date_value = datetime.strptime(day, "%Y-%m-%d")
-                        date_labels.append(f"{date_value:%d.%m} {weekday_names[date_value.weekday()]}")
+                        date_labels.append(f"{date_value:%d}")
                     axis.set_xticklabels(date_labels, fontsize=14, fontweight="semibold", color=GFS_REPORT_TEXT)
                 for tick_label in axis.get_xticklabels():
                     tick_label.set_fontsize(12 if metric == "precipitation" else 14)
