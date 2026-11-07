@@ -35,10 +35,11 @@ Canlı web arayüzü, API geçidi ve veri toplama servisleri Cloudflare üzerind
 - Worker: `gfs-watch-web`
 - Adres: `https://gfs-watch-web.muhsin-ulusoy.workers.dev`
 - Sunum: Cloudflare Workers Static Assets (`web-worker/public`)
-- Kaynak: `site/` ve dağıtım sırasında eklenen arşiv/veri varlıkları.
+- Kaynak: `site/`; mevcut geçiş döneminde bildirim görselleri, ECMWF paketi ve Köy GFS karşılaştırma SVG'si deployment sırasında Static Assets'a eklenir.
 - API yönlendirmesi: Cloudflare Service Bindings; tarayıcı istekleri aynı origin üzerinden yapılır.
 - Sağlık kontrolü: `/__health`.
-- Üretim HTML, JavaScript, CSS ve görselleri yeni veri geldiğinde redeploy edilmez. Canlı hava verisi doğrudan Worker API'lerinden alınır.
+- Canlı GFS ve istasyon ölçümleri D1 API'lerinden gelir; bunlar için web deployment gerekmez.
+- Arşiv dosyaları henüz R2'ye alınmadı. Worker'da R2-first/Static Assets fallback kodu hazır; R2 binding, yetkili token sağlandıktan sonra açılacak.
 
 ### İstanbul GFS
 
@@ -49,7 +50,7 @@ Canlı web arayüzü, API geçidi ve veri toplama servisleri Cloudflare üzerind
 - Worker 00Z, 06Z, 12Z ve 18Z seçicilerini kontrol eder; kullanılabilir döngüleri D1'e arşivler.
 - F72 güncel paketi ve F180 tamamlanmış döngü arşivi D1'de tutulur.
 - API: `/gfs/latest`, `/gfs/comparison`, `/api/health`.
-- GitHub Actions artık MeteoPT'yi tekrar sorgulamaz. Rapor üretim iş akışı Cloudflare API'sinden D1'deki son dört tam döngüyü alır; mevcut SVG/PNG raporunu ve Telegram mesajını üretir.
+- GitHub Actions artık MeteoPT'yi tekrar sorgulamaz. Rapor üretim iş akışı Cloudflare API'sinden D1'deki son dört tam döngüyü alır; mevcut SVG/PNG raporunu ve Telegram mesajını üretir. Raporun SVG/PNG çıktılarının R2'ye taşınması sonraki aşamadır.
 
 ### Köy GFS
 
@@ -91,15 +92,17 @@ GitHub Actions artık canlı İstanbul GFS veya istasyon verisini toplamaz.
 | `publish-live-site.yml` | GitHub Pages yedek kopyasını yalnızca manuel tetiklemeyle yayımlar. Üretim güncellemelerini bekletmez. |
 | `ecmwf-eps.yml` | ECMWF EPS veri hazırlığını yürütür; henüz Cloudflare Cron'a taşınmamıştır. |
 
-Kod değişikliklerinde Cloudflare deployment'ı GitHub üzerinden başlatılır; bu yalnızca dağıtım adımıdır. Web arayüzü değişikliği artık İstanbul GFS Worker + D1 deployment'ını tetiklemez. GitHub Pages, yeni GFS raporlarında yeniden oluşturulmaz. İstanbul GFS rapor/Telegram pipeline'ı 10 dakikada bir boş yere runner açmaz; yeni F180 geldiğinde Worker doğrudan workflow dispatch yapar. D1 outbox kuyruğu başarısız dispatch denemelerini sonraki Cron'a bırakır. GFS Guardian 30 dakikada bir çalışan yedek kontroldür; 8 saatlik sessizlikte devreye girer. Canlı GFS ve istasyon güncellemeleri web deployment'ına bağlı değildir.
+Kod değişikliklerinde Cloudflare deployment'ı GitHub üzerinden başlatılır; bu yalnızca dağıtım adımıdır. Web arayüzü değişikliği artık İstanbul GFS Worker + D1 deployment'ını tetiklemez. GitHub Pages otomatik yayın akışından çıkarılmıştır; yalnızca manuel geri dönüş seçeneğidir. İstanbul GFS rapor/Telegram pipeline'ı 10 dakikada bir boş yere runner açmaz; yeni F180 geldiğinde Worker doğrudan workflow dispatch yapar. D1 outbox kuyruğu başarısız dispatch denemelerini sonraki Cron'a bırakır. GFS Guardian 30 dakikada bir çalışan yedek kontroldür; 8 saatlik sessizlikte devreye girer. Canlı GFS ve istasyon güncellemeleri web deployment'ına bağlı değildir. Arşivler R2'ye aktarılana kadar bildirim/ECMWF/Köy SVG dosyalarının Static Assets paketi için ilgili veri branch'leri deployment sırasında alınmaya devam eder.
 
 ## Veri saklama
 
 - İstanbul GFS: `gfs-watch-istanbul-gfs` D1.
 - Köy GFS: `gfs-watch-koy-gfs` D1.
 - İstasyon geçmişi: `gfs-watch-stations` D1.
-- İstanbul Telegram/SVG/PNG bildirim arşivi: `istanbul-gfs-data` dalı ve Cloudflare Static Assets.
-- ECMWF EPS: `gfs-watch-state/public/ecmwf`.
+- İstanbul Telegram/SVG/PNG bildirim arşivi: geçiş sürecinde `istanbul-gfs-data` dalı ve Cloudflare Static Assets; R2 aktarımı bekliyor.
+- ECMWF EPS: `gfs-watch-state/public/ecmwf`; R2 aktarımı bekliyor.
+- Köy GFS rapor SVG'leri: `koy-gfs-data` dalı ve Cloudflare Static Assets; R2 aktarımı bekliyor.
+- Köy MGM statik arşivi web paketinden çıkarıldı; güncel ölçümler Station Worker/D1 API'sinden alınır.
 - GitHub dalları gerektiğinde geri yükleme ve arşiv kaynağı olarak korunur.
 
 ## Telegram
