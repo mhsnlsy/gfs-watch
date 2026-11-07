@@ -181,6 +181,35 @@ jobs:
             warnings: result.warnings
           }));
           NODE
+      - name: Verify active ENKA station panel contract
+        env:
+          STATIONS_API: https://gfs-watch-stations.muhsin-ulusoy.workers.dev
+        run: |
+          set -euo pipefail
+          curl --fail --silent --show-error --max-time 30 "$STATIONS_API/api/stations/enka?check=$(date +%s)" -o "$RUNNER_TEMP/enka-station.json"
+          node - "$RUNNER_TEMP/enka-station.json" <<'NODE'
+          const fs = require("fs");
+          const doc = JSON.parse(fs.readFileSync(process.argv[2], "utf8"));
+          const s = doc.station || {};
+          if (doc.ok !== true || s.station_id !== "ENKA-BALMUMCU-WEATHERLINK" ||
+              !s.observed_at_utc || !Number.isFinite(Number(s.temperature_2m_c)) ||
+              !Number.isFinite(Number(s.humidity_percent)) ||
+              !Number.isFinite(Number(s.station_pressure_hpa)) ||
+              !Number.isFinite(Number(s.wind_speed_10m_kmh))) {
+            throw new Error("Active ENKA station panel contract failed: " + JSON.stringify(doc));
+          }
+          console.log(JSON.stringify({
+            station: s.station_name,
+            observed_at_utc: s.observed_at_utc,
+            age_minutes: s.age_minutes,
+            temperature_2m_c: s.temperature_2m_c,
+            humidity_percent: s.humidity_percent,
+            station_pressure_hpa: s.station_pressure_hpa,
+            wind_speed_10m_kmh: s.wind_speed_10m_kmh,
+            precipitation_daily_mm: s.precipitation_daily_mm
+          }));
+          NODE
+
       - name: Verify Istanbul GFS Worker, D1 and four-cycle API
         env:
           ISTANBUL_GFS_API: https://gfs-watch-istanbul-gfs.muhsin-ulusoy.workers.dev
