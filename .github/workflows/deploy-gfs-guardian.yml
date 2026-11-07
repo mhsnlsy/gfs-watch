@@ -1,0 +1,88 @@
+name: Deploy Cloudflare GFS Guardian
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - "gfs-guardian/**"
+      - ".github/workflows/deploy-gfs-guardian.yml"
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: cloudflare-gfs-guardian-deploy
+  cancel-in-progress: false
+
+jobs:
+  deploy:
+    name: Deploy and verify the GFS watchdog
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - name: Check out repository
+        uses: actions/checkout@v5
+        with:
+          ref: main
+          fetch-depth: 1
+
+      - name: Set up Node.js
+        uses: actions/setup-node@v5
+        with:
+          node-version: "22"
+          cache: npm
+          cache-dependency-path: gfs-guardian/package.json
+
+      - name: Verify deployment credentials
+        env:
+          CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+          CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
+          GITHUB_GFS_DISPATCH_TOKEN: ${{ secrets.GITHUB_GFS_DISPATCH_TOKEN }}
+        run: |
+          set -euo pipefail
+          test -n "$CLOUDFLARE_API_TOKEN" || { echo "::error::CLOUDFLARE_API_TOKEN is not configured"; exit 1; }
+          test -n "$CLOUDFLARE_ACCOUNT_ID" || { echo "::error::CLOUDFLARE_ACCOUNT_ID is not configured"; exit 1; }
+          test -n "$GITHUB_GFS_DISPATCH_TOKEN" || { echo "::error::Add repository secret GITHUB_GFS_DISPATCH_TOKEN (fine-grained token with Actions: read/write) before deploying the Guardian."; exit 1; }
+
+      - name: Install dependencies and validate Worker source
+        working-directory: gfs-guardian
+        run: |
+          set -euo pipefail
+          npm install
+          npm run check
+
+      - name: Upload GitHub dispatch token to Cloudflare Worker secret
+        working-directory: gfs-guardian
+        env:
+          CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+          CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
+          GITHUB_GFS_DISPATCH_TOKEN: ${{ secrets.GITHUB_GFS_DISPATCH_TOKEN }}
+        run: |
+          set -euo pipefail
+          printf '%s' "$GITHUB_GFS_DISPATCH_TOKEN" | npx wrangler secret put GITHUB_DISPATCH_TOKEN --config wrangler.jsonc
+
+      - name: Deploy the nine-minute Guardian Cron
+        working-directory: gfs-guardian
+        env:
+          CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+          CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
+        run: npx wrangler deploy --config wrangler.jsonc
+
+      - name: Verify the deployed Worker health endpoint
+        run: |
+          set -euo pipefail
+          curl --silent --show-error --fail --max-time 15 \
+            "https://gfs-watch-gfs-guardian.muhsin-ulusoy.workers.dev/health" \
+            -o "$RUNNER_TEMP/gfs-guardian-health.json"
+          node - "$RUNNER_TEMP/gfs-guardian-health.json" <<'NODE'
+          const fs = require("fs");
+          const health = JSON.parse(fs.readFileSync(process.argv[2], "utf8"));
+          if (health.ok !== true ||
+              health.service !== "gfs-watch-gfs-guardian" ||
+              health.cron !== "*/9 * * * *" ||
+              health.stale_after_minutes !== 15) {
+            throw new Error("Guardian health response did not match the expected deployment");
+          }
+          console.log(JSON.stringify(health, null, 2));
+          NODE
