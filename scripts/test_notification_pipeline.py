@@ -21,6 +21,7 @@ def main() -> None:
     guardian = read("gfs-guardian/src/index.js")
     guardian_config = json.loads(read("gfs-guardian/wrangler.jsonc"))
     gfs_worker = read("istanbul-gfs-worker/src/index.js")
+    gfs_publication = read("istanbul-gfs-worker/src/publication.js")
     web_worker = read("web-worker/src/index.js")
     web_config = json.loads(read("web-worker/wrangler.jsonc"))
     koy_worker = read("koy-gfs-worker/src/index.js")
@@ -31,6 +32,7 @@ def main() -> None:
     builder = read("scripts/build_istanbul_gfs_publication.py")
     sender = read("scripts/send_pending_istanbul_gfs_telegram.py")
     dispatch_migration = read("istanbul-gfs-worker/migrations/0002_create_report_dispatch_queue.sql")
+    native_delivery_migration = read("istanbul-gfs-worker/migrations/0004_cloudflare_native_report_delivery.sql")
 
     # Pages remains an on-demand/source-change fallback, not a 5-minute publisher.
     assert "Publish GitHub Pages Fallback" in publisher
@@ -41,7 +43,7 @@ def main() -> None:
     # GitHub Pages is a manual-only rollback path, never an automatic workflow_run deployment.
     assert "workflow_run:" not in publisher
 
-    # Cloudflare is the only live GFS collector; report work is event-driven on new F180.
+    # Cloudflare collects GFS and now builds/delivers F180 reports without a GitHub runtime dispatch.
     assert "schedule:" not in report_workflow
     assert "push:" not in report_workflow
     assert "workflow_dispatch:" in report_workflow and "inputs:" in report_workflow
@@ -67,7 +69,7 @@ def main() -> None:
     assert "fetch_istanbul_gfs_meteopt" not in poller
     assert "GFS_TRIGGERED_RUN_ID" in poller
 
-    # Report rendering and exactly-once Telegram delivery remain unchanged.
+    # Python publication remains an explicit emergency fallback; the live renderer and sender are Worker-native.
     assert "GFS_TARGET_RUN_ID" in builder
     assert "create_valid_time_comparison_assets" in builder
     assert "save_public_notification_svg_image" in builder
@@ -156,7 +158,17 @@ def main() -> None:
     assert "cloudflare-js-v1" in koy_svg_workflow
     assert "matplotlib" not in koy_svg_workflow.lower()
     assert "workflow_run:" not in platform_workflow
-    assert "actions/workflows/istanbul-gfs-10min.yml/dispatches" in gfs_worker
+    assert "actions/workflows/istanbul-gfs-10min.yml/dispatches" not in gfs_worker
+    assert "processQueuedReports(env)" in gfs_worker
+    assert "deliverPendingTelegram(env)" in gfs_worker
+    assert "sendDocument" in gfs_worker and "sendMessage" in gfs_worker
+    assert "native_report_generation: true" in gfs_worker
+    assert "telegram_configured" in gfs_worker
+    assert "export function buildIstanbulInteractiveSvg" in gfs_publication
+    assert "export function buildIstanbulReportText" in gfs_publication
+    assert "gfs_report_publications" in native_delivery_migration
+    assert "text_message_id TEXT" in native_delivery_migration
+    assert "document_message_id TEXT" in native_delivery_migration
     assert "LIMIT 1" in gfs_worker
     assert "CREATE TABLE IF NOT EXISTS gfs_report_dispatch_queue" in dispatch_migration
     assert "status TEXT NOT NULL DEFAULT 'pending'" in dispatch_migration
