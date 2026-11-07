@@ -13,8 +13,8 @@ function json(data, status = 200) {
       "Content-Type": "application/json; charset=utf-8",
       "Cache-Control": "no-store, max-age=0",
       "Access-Control-Allow-Origin": "*",
-      "Access-Control-Allow-Methods": "GET, OPTIONS",
-      "Access-Control-Allow-Headers": "Content-Type",
+      "Access-Control-Allow-Methods": "GET, POST, OPTIONS",
+      "Access-Control-Allow-Headers": "Content-Type, Authorization",
     },
   });
 }
@@ -223,6 +223,78 @@ async function persistF72(env, f72) {
   return true;
 }
 
+async function getPublicationAsset(env, key) {
+  return await env.GFS_DB.prepare(
+    "SELECT asset_key, run_id_utc, content_type, body, updated_at_utc " +
+    "FROM gfs_publication_assets WHERE asset_key = ?"
+  ).bind(key).first();
+}
+
+async function putPublicationAsset(env, asset) {
+  await env.GFS_DB.prepare(
+    "INSERT INTO gfs_publication_assets (asset_key, run_id_utc, content_type, body, updated_at_utc) " +
+    "VALUES (?, ?, ?, ?, ?) " +
+    "ON CONFLICT(asset_key) DO UPDATE SET run_id_utc=excluded.run_id_utc, " +
+    "content_type=excluded.content_type, body=excluded.body, updated_at_utc=excluded.updated_at_utc"
+  ).bind(
+    asset.key,
+    asset.run_id_utc || null,
+    asset.content_type,
+    asset.body,
+    new Date().toISOString(),
+  ).run();
+}
+
+function decodePublicationAsset(row) {
+  const headers = new Headers({
+    "Content-Type": row.content_type || "image/svg+xml; charset=utf-8",
+    "Cache-Control": "public, max-age=3600, s-maxage=86400",
+    "Access-Control-Allow-Origin": "*",
+    "X-GFS-Publication-Source": "D1",
+  });
+  if (row.updated_at_utc) headers.set("Last-Modified", row.updated_at_utc);
+  return new Response(row.body, { status: 200, headers });
+}
+
+async function handlePublicationUpload(request, env) {
+  if (request.method !== "POST") return json({ ok: false, error: "Method not allowed" }, 405);
+  const authorization = request.headers.get("Authorization") || "";
+  if (!env.GFS_DISPATCH_TOKEN || authorization !== "Bearer " + env.GFS_DISPATCH_TOKEN) {
+    return json({ ok: false, error: "Unauthorized" }, 401);
+  }
+
+  let payload;
+  try {
+    payload = await request.json();
+  } catch (_) {
+    return json({ ok: false, error: "Invalid JSON body" }, 400);
+  }
+
+  const key = String(payload?.key || "").replace(/^\\/+/, "");
+  const body = typeof payload?.body === "string" ? payload.body : "";
+  const contentType = String(payload?.content_type || "image/svg+xml; charset=utf-8");
+  const runId = payload?.run_id_utc ? String(payload.run_id_utc) : null;
+  if (!/^media\\/koy-gfs-[0-9]{8}T[0-9]{2}Z-comparison\\.svg$/.test(key)) {
+    return json({ ok: false, error: "Unsupported Köy publication asset path" }, 400);
+  }
+  if (!body || body.length > 1900000) {
+    return json({ ok: false, error: "SVG body is empty or exceeds the D1 row safety limit" }, 413);
+  }
+  if (!contentType.startsWith("image/svg+xml")) {
+    return json({ ok: false, error: "Only SVG publication assets are accepted" }, 415);
+  }
+  if (!body.includes("<svg") || !body.includes("</svg>")) {
+    return json({ ok: false, error: "SVG document is incomplete" }, 400);
+  }
+
+  try {
+    await putPublicationAsset(env, { key, body, content_type: contentType, run_id_utc: runId });
+    return json({ ok: true, key, bytes: body.length, source: "D1" });
+  } catch (error) {
+    return json({ ok: false, error: String(error?.message || error) }, 500);
+  }
+}
+
 async function collect(env) {
   const now = new Date();
   const candidates = await fetchAvailableCycles();
@@ -286,12 +358,29 @@ async function api(request, env) {
   const path = url.pathname.replace(/\/+$/, "");
 
   if (request.method === "OPTIONS") return json({ ok: true });
+
+  // The authenticated publisher is the only write route; keep it ahead of the GET-only API guard.
+  if (path === "/api/publication-upload") {
+    return handlePublicationUpload(request, env);
+  }
   if (request.method !== "GET") return json({ ok: false, error: "Method not allowed" }, 405);
+
+  if (path.startsWith("/api/publication-asset/")) {
+    const key = decodeURIComponent(path.slice("/api/publication-asset/".length)).replace(/^\\/+/, "");
+    try {
+      const row = await getPublicationAsset(env, key);
+      if (!row) return json({ ok: false, error: "Publication asset not found" }, 404);
+      return decodePublicationAsset(row);
+    } catch (error) {
+      return json({ ok: false, error: String(error?.message || error) }, 503);
+    }
+  }
 
   if (path === "/api/health") {
     try {
       const current = await currentRun(env, "f72");
       const count = await env.GFS_DB.prepare("SELECT COUNT(*) AS count FROM gfs_runs").first();
+      const assetCount = await env.GFS_DB.prepare("SELECT COUNT(*) AS count FROM gfs_publication_assets").first();
       return json({
         ok: true,
         service: "gfs-watch-koy-gfs",
@@ -301,6 +390,8 @@ async function api(request, env) {
         latest_run_id_utc: current?.run_id_utc || null,
         latest_updated_at_utc: current?.updated_at_utc || null,
         archived_runs: Number(count?.count || 0),
+        publication_assets: Number(assetCount?.count || 0),
+        publication_upload_configured: Boolean(env.GFS_DISPATCH_TOKEN),
       });
     } catch (error) {
       return json({ ok: false, service: "gfs-watch-koy-gfs", error: String(error?.message || error) }, 503);
