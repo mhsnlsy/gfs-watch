@@ -56,7 +56,7 @@ jobs:
       - name: Sync the canonical GFS cycles from Cloudflare D1
         id: poll
         env:
-          ISTANBUL_GFS_API: https://gfs-watch-web.muhsin-ulusoy.workers.dev/gfs/latest
+          ISTANBUL_GFS_API: https://gfs-watch-istanbul-gfs.muhsin-ulusoy.workers.dev/gfs/latest
           GFS_TRIGGERED_RUN_ID: ${{ inputs.run_id }}
         run: python scripts/poll_istanbul_gfs_10min.py
 
