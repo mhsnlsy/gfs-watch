@@ -38,7 +38,7 @@ test("does not dispatch when the GFS pipeline has a recent successful heartbeat"
     created_at: isoMinutesAgo(5, now),
   }], calls);
 
-  await worker.scheduled({ scheduledTime: now }, { GITHUB_DISPATCH_TOKEN: "test-token" });
+  await worker.scheduled({ scheduledTime: now }, { GFS_DISPATCH_TOKEN: "test-token" });
 
   assert.equal(calls.length, 1);
   assert.match(calls[0].url, /actions\/workflows\/istanbul-gfs-10min\.yml\/runs/);
@@ -56,7 +56,7 @@ test("dispatches the existing workflow when the last success is stale", async ()
     created_at: isoMinutesAgo(23, now),
   }], calls);
 
-  await worker.scheduled({ scheduledTime: now }, { GITHUB_DISPATCH_TOKEN: "test-token" });
+  await worker.scheduled({ scheduledTime: now }, { GFS_DISPATCH_TOKEN: "test-token" });
 
   assert.equal(calls.length, 2);
   assert.match(calls[1].url, /actions\/workflows\/istanbul-gfs-10min\.yml\/dispatches$/);
@@ -75,7 +75,7 @@ test("does not dispatch while a GFS workflow run is active", async () => {
     created_at: isoMinutesAgo(2, now),
   }], calls);
 
-  await worker.scheduled({ scheduledTime: now }, { GITHUB_DISPATCH_TOKEN: "test-token" });
+  await worker.scheduled({ scheduledTime: now }, { GFS_DISPATCH_TOKEN: "test-token" });
 
   assert.equal(calls.length, 1);
 });
@@ -102,7 +102,7 @@ test("applies the cooldown after a previous fallback dispatch", async () => {
     },
   ], calls);
 
-  await worker.scheduled({ scheduledTime: now }, { GITHUB_DISPATCH_TOKEN: "test-token" });
+  await worker.scheduled({ scheduledTime: now }, { GFS_DISPATCH_TOKEN: "test-token" });
 
   assert.equal(calls.length, 1);
 });
@@ -114,5 +114,5 @@ test("exposes a minimal health response without exposing secrets", async () => {
   assert.equal(response.status, 200);
   assert.equal(body.ok, true);
   assert.equal(body.cron, "*/9 * * * *");
-  assert.equal("GITHUB_DISPATCH_TOKEN" in body, false);
+  assert.equal("GFS_DISPATCH_TOKEN" in body, false);
 });
