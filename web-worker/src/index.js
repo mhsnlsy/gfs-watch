@@ -1,7 +1,7 @@
-const BACKENDS = {
-  istanbul: "https://gfs-watch-istanbul-gfs.muhsin-ulusoy.workers.dev",
-  koy: "https://gfs-watch-koy-gfs.muhsin-ulusoy.workers.dev",
-  stations: "https://gfs-watch-stations.muhsin-ulusoy.workers.dev",
+const SERVICES = {
+  istanbul: "gfs-watch-istanbul-gfs",
+  koy: "gfs-watch-koy-gfs",
+  stations: "gfs-watch-stations",
 };
 
 function responseJson(data, status = 200) {
@@ -15,12 +15,22 @@ function responseJson(data, status = 200) {
   });
 }
 
-async function proxy(request, upstreamUrl) {
-  const upstream = new Request(upstreamUrl, request);
-  const response = await fetch(upstream);
+function internalRequest(request, path) {
+  const incoming = new URL(request.url);
+  const target = new URL(path, "https://gfs-watch-internal.invalid");
+  target.search = incoming.search;
+  return new Request(target, request);
+}
+
+async function callService(binding, request, path) {
+  if (!binding || typeof binding.fetch !== "function") {
+    return responseJson({ ok: false, error: "Cloudflare service binding is not configured" }, 503);
+  }
+  const response = await binding.fetch(internalRequest(request, path));
   const headers = new Headers(response.headers);
   headers.set("Cache-Control", "no-store, max-age=0");
   headers.set("Access-Control-Allow-Origin", "*");
+  headers.set("X-GFS-Watch-Gateway", "service-binding");
   return new Response(response.body, {
     status: response.status,
     statusText: response.statusText,
@@ -33,53 +43,72 @@ export default {
     const url = new URL(request.url);
     const path = url.pathname.replace(/\/+$/, "") || "/";
 
+    if (request.method === "OPTIONS") {
+      return new Response(null, {
+        status: 204,
+        headers: {
+          "Access-Control-Allow-Origin": "*",
+          "Access-Control-Allow-Methods": "GET, HEAD, OPTIONS",
+          "Access-Control-Allow-Headers": "Content-Type",
+          "Access-Control-Max-Age": "86400",
+        },
+      });
+    }
+
     if (path === "/__health") {
+      const bindings = {
+        istanbul: Boolean(env.ISTANBUL_GFS?.fetch),
+        koy: Boolean(env.KOY_GFS?.fetch),
+        stations: Boolean(env.STATIONS?.fetch),
+      };
       return responseJson({
-        ok: true,
+        ok: Object.values(bindings).every(Boolean),
         service: "gfs-watch-web",
         delivery: "Cloudflare Workers Static Assets",
-        api_gateway: true,
-        backends: BACKENDS,
+        api_gateway: "Cloudflare Service Bindings",
+        services: SERVICES,
+        bindings,
         checked_at_utc: new Date().toISOString(),
-      });
+      }, Object.values(bindings).every(Boolean) ? 200 : 503);
     }
 
     if (path === "/gfs/notification-latest") {
       const assetUrl = new URL("/data/notifications/latest.json", url);
       const asset = await env.ASSETS.fetch(new Request(assetUrl, request));
-      if (!asset.ok) return responseJson({ ok: false, error: "Notification archive not published" }, 404);
+      if (!asset.ok) {
+        return responseJson({ ok: false, error: "Notification archive not published" }, 404);
+      }
       const headers = new Headers(asset.headers);
       headers.set("Cache-Control", "no-store, max-age=0");
       return new Response(asset.body, { status: asset.status, headers });
     }
 
-    if (path.startsWith("/gfs/")) {
-      const target = new URL(path + url.search, BACKENDS.istanbul);
-      return proxy(request, target);
+    if (path === "/gfs/latest" || path === "/api/latest" || path === "/api/health" ||
+        path === "/gfs/comparison" || path === "/api/comparison") {
+      const targetPath = path.startsWith("/gfs/") ? path : path;
+      return callService(env.ISTANBUL_GFS, request, targetPath);
     }
 
     if (path.startsWith("/api/koy-gfs/")) {
       const suffix = path.slice("/api/koy-gfs".length);
-      const target = new URL("/api" + suffix + url.search, BACKENDS.koy);
-      return proxy(request, target);
+      return callService(env.KOY_GFS, request, "/api" + suffix);
     }
 
     if (path === "/api/koy-gfs") {
-      return proxy(request, new URL("/api/health" + url.search, BACKENDS.koy));
+      return callService(env.KOY_GFS, request, "/api/health");
     }
 
     if (path.startsWith("/api/stations/")) {
       const suffix = path.slice("/api/stations".length);
-      const target = new URL("/api" + suffix + url.search, BACKENDS.stations);
-      return proxy(request, target);
+      return callService(env.STATIONS, request, "/api" + suffix);
     }
 
     if (path === "/api/stations") {
-      return proxy(request, new URL("/api/health" + url.search, BACKENDS.stations));
+      return callService(env.STATIONS, request, "/api/stations");
     }
 
     if (path.startsWith("/api/")) {
-      return responseJson({ ok: false, error: "Unknown API route" }, 404);
+      return responseJson({ ok: false, error: "Unknown API route", path }, 404);
     }
 
     return env.ASSETS.fetch(request);
