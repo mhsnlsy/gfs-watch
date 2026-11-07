@@ -83,6 +83,10 @@ def main() -> None:
     web = json.loads(read("web-worker/wrangler.jsonc"))
     assert web["assets"]["directory"] == "./public"
     assert web["assets"]["binding"] == "ASSETS"
+    r2_bindings = web.get("r2_buckets", [])
+    assert any(item.get("binding") == "LIVE_ARCHIVE" and item.get("bucket_name") == "gfs-watch-live-archive" for item in r2_bindings)
+    assert "/data/ecmwf/*" in web["assets"]["run_worker_first"]
+    assert "/koy-data/gfs/*" in web["assets"]["run_worker_first"]
     assert "/data/notifications/*" in web["assets"]["run_worker_first"]
     services = {item["binding"]: item["service"] for item in web["services"]}
     assert services == {
@@ -117,6 +121,9 @@ def main() -> None:
     assert "/gfs/publication-asset/" in gfs_worker
     assert gfs_worker.index('if (path === "/gfs/publication-upload")') < gfs_worker.index('if (request.method !== "GET")')
     assert '"Access-Control-Allow-Methods": "GET, POST, OPTIONS"' in gfs_worker
+    assert "X-GFS-Archive-Source" in web_worker
+    assert "fetchArchiveObject(request, env, path)" in web_worker
+    assert "R2" in web_worker
     assert "fetchD1PublicationAsset" in web_worker
     assert '"/gfs/publication-asset/" + normalized' in web_worker
     assert "curl --fail" in report_workflow and "--data-binary" in report_workflow
@@ -132,6 +139,10 @@ def main() -> None:
     assert "Verified D1 live SVG dark surfaces" in istanbul_svg_workflow
     assert 'path.startsWith("/data/notifications/")' in web_worker
     # ECMWF is calculated in the existing workflow but published and served from D1.
+    assert "Publish validated ECMWF archive to Cloudflare R2" in ecmwf_workflow
+    assert "CLOUDFLARE_R2_API_TOKEN" in ecmwf_workflow
+    assert "data/ecmwf/$relative" in ecmwf_workflow
+    assert "Verified ECMWF R2 archive" in ecmwf_workflow
     assert "Publish ECMWF latest payload and report images to Cloudflare D1" in ecmwf_workflow
     assert "gfs/publication-upload" in ecmwf_workflow and "gfs/publication-asset/data/ecmwf/latest.json" in ecmwf_workflow
     assert "--data-binary" in ecmwf_workflow and "GFS_DISPATCH_TOKEN" in ecmwf_workflow
