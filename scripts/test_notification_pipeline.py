@@ -176,6 +176,12 @@ def main() -> None:
     assert "sendDocument" in gfs_worker and "sendMessage" in gfs_worker
     assert "native_report_generation: true" in gfs_worker
     assert "telegram_configured" in gfs_worker
+    assert "pending_report_publications" in gfs_worker
+    assert "sent_report_publications" in gfs_worker
+    assert "exhausted_report_publications" in gfs_worker
+    assert "latest_report_publication" in gfs_worker
+    assert "retainedItems" in gfs_worker
+    assert ".slice(0, 4)" in gfs_worker
     assert "export function buildIstanbulInteractiveSvg" in gfs_publication
     assert "export function buildIstanbulReportText" in gfs_publication
     assert "gfs_report_publications" in native_delivery_migration
