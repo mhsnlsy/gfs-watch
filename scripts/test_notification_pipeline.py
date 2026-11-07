@@ -33,6 +33,7 @@ def main() -> None:
     sender = read("scripts/send_pending_istanbul_gfs_telegram.py")
     dispatch_migration = read("istanbul-gfs-worker/migrations/0002_create_report_dispatch_queue.sql")
     native_delivery_migration = read("istanbul-gfs-worker/migrations/0004_cloudflare_native_report_delivery.sql")
+    delivery_lease_migration = read("istanbul-gfs-worker/migrations/0005_report_delivery_leases.sql")
 
     # Pages remains an on-demand/source-change fallback, not a 5-minute publisher.
     assert "Publish GitHub Pages Fallback" in publisher
@@ -169,6 +170,9 @@ def main() -> None:
     assert "gfs_report_publications" in native_delivery_migration
     assert "text_message_id TEXT" in native_delivery_migration
     assert "document_message_id TEXT" in native_delivery_migration
+    assert "lease_until_utc TEXT" in delivery_lease_migration
+    assert "status = 'sending'" in gfs_worker
+    assert "lease_until_utc" in gfs_worker
     assert "LIMIT 1" in gfs_worker
     assert "CREATE TABLE IF NOT EXISTS gfs_report_dispatch_queue" in dispatch_migration
     assert "status TEXT NOT NULL DEFAULT 'pending'" in dispatch_migration
