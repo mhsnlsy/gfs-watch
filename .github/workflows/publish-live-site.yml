@@ -1,11 +1,19 @@
 name: Publish GitHub Pages Fallback (Manual)
 
 on:
-  # GitHub Pages remains the public fallback and is also kept synchronized
-  # automatically after a successful canonical Istanbul GFS publication.
+  # Keep the fallback synchronized with site and Köy SVG asset changes.
+  push:
+    branches: [main, koy-gfs-data, koy-mgm-data]
+    paths:
+      - ".github/workflows/publish-live-site.yml"
+      - "site/**"
+      - "gfs/**"
+      - "mgm/**"
   workflow_dispatch:
   workflow_run:
-    workflows: ["Istanbul GFS · Event-Driven Report Pipeline"]
+    workflows:
+      - "Istanbul GFS · Event-Driven Report Pipeline"
+      - "Rebuild Köy GFS Interactive SVG"
     types: [completed]
 
 permissions:
