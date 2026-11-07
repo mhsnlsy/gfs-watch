@@ -470,3 +470,203 @@
     padding: 1px 0 !important;
   }
 }
+
+
+/* FINAL LAYOUT: one integrated, compact GFS 72-hour forecast panel. */
+.gfs-table-pressure-layout {
+  display: flex !important;
+  flex-direction: column !important;
+  align-items: stretch !important;
+  gap: 10px !important;
+}
+.gfs-table-pressure-layout > #meteopt-gfs-table,
+.gfs-table-pressure-layout > #basinc {
+  width: 100% !important;
+  max-width: 100% !important;
+  min-width: 0 !important;
+  margin: 0 !important;
+}
+#meteopt-gfs-table.gfs-table-section {
+  padding: 12px 0 !important;
+}
+#meteopt-gfs-table .meteopt-table-card {
+  width: 100% !important;
+  max-width: 100% !important;
+  margin: 0 !important;
+  padding: 12px 14px !important;
+  border-radius: 15px !important;
+  box-sizing: border-box !important;
+}
+#meteopt-gfs-table .meteopt-table-panel-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 14px;
+  margin: 0 0 7px;
+}
+#meteopt-gfs-table .meteopt-table-title {
+  min-width: 0;
+}
+#meteopt-gfs-table .meteopt-table-title .section-kicker {
+  margin-bottom: 2px;
+  font-size: 9px;
+  letter-spacing: .13em;
+}
+#meteopt-gfs-table .meteopt-table-title h2 {
+  margin: 0;
+  font-size: clamp(17px, 2vw, 21px);
+  line-height: 1.15;
+}
+#meteopt-gfs-table .meteopt-table-cycle {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-end;
+  gap: 2px;
+  color: #9eb3c0;
+  font-size: 10px;
+  line-height: 1.25;
+  text-align: right;
+  white-space: nowrap;
+}
+#meteopt-gfs-table .meteopt-table-toolbar {
+  display: flex;
+  flex-direction: row;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+  margin: 0 0 5px;
+  padding: 5px 8px;
+  border: 1px solid rgba(204,225,239,.075);
+  border-radius: 8px;
+  background: rgba(2,15,24,.22);
+  font-size: 9px;
+  line-height: 1.15;
+}
+#meteopt-gfs-table .meteopt-table-scroll {
+  width: 100% !important;
+  max-width: 100% !important;
+  overflow: hidden !important;
+  border: 1px solid rgba(204,225,239,.08);
+  border-radius: 8px;
+}
+#meteopt-gfs-table .meteopt-data-table {
+  display: table !important;
+  width: 100% !important;
+  min-width: 0 !important;
+  max-width: 100% !important;
+  table-layout: fixed !important;
+  border-spacing: 0 !important;
+  font-size: 11px !important;
+  line-height: 1.1 !important;
+  white-space: nowrap !important;
+}
+#meteopt-gfs-table .meteopt-data-table th {
+  padding: 5px 4px !important;
+  font-size: 9px !important;
+  line-height: 1.1 !important;
+}
+#meteopt-gfs-table .meteopt-data-table td {
+  padding: 3px 4px !important;
+  height: 23px;
+  line-height: 1.1 !important;
+}
+#meteopt-gfs-table .meteopt-data-table th:first-child,
+#meteopt-gfs-table .meteopt-data-table td:first-child {
+  width: 7% !important;
+  min-width: 0 !important;
+}
+#meteopt-gfs-table .meteopt-data-table th:nth-child(2),
+#meteopt-gfs-table .meteopt-data-table td:nth-child(2) {
+  width: 25% !important;
+  min-width: 0 !important;
+  padding-left: 6px !important;
+  padding-right: 6px !important;
+}
+#meteopt-gfs-table .meteopt-data-table th:nth-child(n+3),
+#meteopt-gfs-table .meteopt-data-table td:nth-child(n+3) {
+  width: 13.6% !important;
+  min-width: 0 !important;
+}
+#meteopt-gfs-table .meteopt-data-table td:nth-child(2) {
+  text-align: left !important;
+}
+#meteopt-gfs-table .meteopt-value {
+  min-width: 0 !important;
+  padding: 1px 4px !important;
+  border-radius: 5px !important;
+  font-size: 10px !important;
+  line-height: 1.1 !important;
+}
+.gfs-table-pressure-layout > #basinc {
+  padding: 8px 0 0 !important;
+}
+.gfs-table-pressure-layout > #basinc .section-head {
+  margin-bottom: 7px;
+}
+@media (max-width: 700px) {
+  #meteopt-gfs-table .meteopt-table-card {
+    padding: 9px 8px !important;
+    border-radius: 12px !important;
+  }
+  #meteopt-gfs-table .meteopt-table-panel-head {
+    align-items: flex-start;
+    gap: 6px;
+    margin-bottom: 5px;
+  }
+  #meteopt-gfs-table .meteopt-table-title h2 {
+    font-size: 16px;
+  }
+  #meteopt-gfs-table .meteopt-table-cycle {
+    font-size: 8px;
+    line-height: 1.2;
+  }
+  #meteopt-gfs-table .meteopt-table-toolbar {
+    padding: 4px 6px;
+    font-size: 8px;
+  }
+  #meteopt-gfs-table .meteopt-data-table {
+    font-size: 9px !important;
+  }
+  #meteopt-gfs-table .meteopt-data-table th {
+    padding: 4px 2px !important;
+    font-size: 8px !important;
+  }
+  #meteopt-gfs-table .meteopt-data-table td {
+    height: 21px;
+    padding: 2px 2px !important;
+  }
+  #meteopt-gfs-table .meteopt-data-table th:first-child,
+  #meteopt-gfs-table .meteopt-data-table td:first-child {
+    width: 7% !important;
+  }
+  #meteopt-gfs-table .meteopt-data-table th:nth-child(2),
+  #meteopt-gfs-table .meteopt-data-table td:nth-child(2) {
+    width: 26% !important;
+    padding-left: 3px !important;
+    padding-right: 3px !important;
+  }
+  #meteopt-gfs-table .meteopt-data-table th:nth-child(n+3),
+  #meteopt-gfs-table .meteopt-data-table td:nth-child(n+3) {
+    width: 13.4% !important;
+  }
+  #meteopt-gfs-table .meteopt-value {
+    padding: 1px 2px !important;
+    font-size: 8.5px !important;
+  }
+}
+@media (max-width: 390px) {
+  #meteopt-gfs-table .meteopt-table-cycle {
+    max-width: 42%;
+    white-space: normal;
+  }
+  #meteopt-gfs-table .meteopt-data-table {
+    font-size: 8px !important;
+  }
+  #meteopt-gfs-table .meteopt-data-table th {
+    font-size: 7px !important;
+  }
+  #meteopt-gfs-table .meteopt-data-table th:nth-child(2),
+  #meteopt-gfs-table .meteopt-data-table td:nth-child(2) {
+    width: 27% !important;
+  }
+}
