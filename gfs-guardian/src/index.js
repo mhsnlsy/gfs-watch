@@ -1,8 +1,8 @@
 const REPOSITORY = "mhsnlsy/gfs-watch";
 const WORKFLOW_FILE = "istanbul-gfs-10min.yml";
 const API_ROOT = "https://api.github.com";
-const HEALTH_WINDOW_MS = 15 * 60 * 1000;
-const DISPATCH_COOLDOWN_MS = 18 * 60 * 1000;
+const HEALTH_WINDOW_MS = 8 * 60 * 60 * 1000;
+const DISPATCH_COOLDOWN_MS = 60 * 60 * 1000;
 
 function json(data, status = 200) {
   return new Response(JSON.stringify(data, null, 2), {
@@ -138,10 +138,10 @@ export default {
         service: "gfs-watch-gfs-guardian",
         repository: REPOSITORY,
         workflow: WORKFLOW_FILE,
-        cron: "*/9 * * * *",
-        stale_after_minutes: 15,
-        dispatch_cooldown_minutes: 18,
-        role: "watchdog-only; GitHub Actions remains the sole GFS poller and publisher",
+        cron: "*/30 * * * *",
+        stale_after_minutes: 480,
+        dispatch_cooldown_minutes: 60,
+        role: "fallback-watchdog; primary F180 report dispatch comes from the Cloudflare GFS Cron",
       });
     }
     return json({ ok: false, error: "not_found" }, 404);
