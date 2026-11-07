@@ -1,18 +1,7 @@
 name: Publish GitHub Pages Fallback
 
 on:
-  push:
-    branches: [main, koy-gfs-data, koy-mgm-data]
-    paths:
-      - ".github/workflows/publish-live-site.yml"
-      - "site/**"
-      - "gfs/**"
-      - "mgm/**"
   workflow_dispatch:
-  workflow_call:
-  workflow_run:
-    workflows: ["Köy MGM"]
-    types: [completed]
 
 permissions:
   contents: read
