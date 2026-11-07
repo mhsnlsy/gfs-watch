@@ -98,15 +98,32 @@ def to_main_payload(doc: dict) -> dict:
 
 
 def main_publish() -> None:
-    # Like the Köy renderer, publish what is available instead of blocking
-    # the first F180 publication until four complete cycles have accumulated.
-    run_files = sorted((GFS_DIR / "runs").glob("*.json"), reverse=True)[:4]
+    # The poller chooses exactly one F180 cycle per 10-minute run. Honor that
+    # target so a delayed cycle cannot accidentally rebuild a newer report.
+    target_run = os.getenv("GFS_TARGET_RUN_ID", "").strip()
+    if target_run:
+        target_dt = utc_dt(target_run)
+        target_files = [
+            path for path in (GFS_DIR / "runs").glob("*.json")
+            if utc_dt(json.loads(path.read_text(encoding="utf-8"))["run_id_utc"]) == target_dt
+        ]
+        if not target_files:
+            raise RuntimeError(f"Requested GFS target run is not archived: {target_run}")
+        target_path = target_files[0]
+        run_files = sorted((GFS_DIR / "runs").glob("*.json"), reverse=True)[:4]
+        if target_path not in run_files:
+            run_files = [target_path] + [path for path in run_files if path != target_path][:3]
+    else:
+        run_files = sorted((GFS_DIR / "runs").glob("*.json"), reverse=True)[:4]
     if not run_files:
         raise RuntimeError("No canonical Istanbul GFS run is available.")
 
     docs = [json.loads(path.read_text(encoding="utf-8")) for path in run_files]
     docs.sort(key=lambda d: utc_dt(d["run_id_utc"]))
-    current_doc = docs[-1]
+    current_doc = next(
+        (doc for doc in docs if target_run and utc_dt(doc["run_id_utc"]) == utc_dt(target_run)),
+        docs[-1],
+    )
     current_run = utc_dt(current_doc["run_id_utc"]).isoformat(timespec="seconds")
 
     payloads = [(d["run_id_utc"], to_main_payload(d)) for d in docs]
