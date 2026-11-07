@@ -777,3 +777,47 @@
     padding-right: 1.8px !important;
   }
 }
+
+
+/* COLUMN GAP -20% TOTAL:
+   Apply a second 10% tightening to the current spacing.
+   This is additive to the previous -10% pass. */
+@media (min-width: 701px) {
+  #meteopt-gfs-table .meteopt-data-table th {
+    padding-left: 3.24px !important;
+    padding-right: 3.24px !important;
+  }
+  #meteopt-gfs-table .meteopt-data-table td {
+    padding-left: 3.24px !important;
+    padding-right: 3.24px !important;
+  }
+  #meteopt-gfs-table .meteopt-data-table th:nth-child(2),
+  #meteopt-gfs-table .meteopt-data-table td:nth-child(2) {
+    padding-left: 4.86px !important;
+    padding-right: 4.86px !important;
+  }
+  #meteopt-gfs-table .meteopt-value {
+    padding-left: 3.24px !important;
+    padding-right: 3.24px !important;
+  }
+}
+
+@media (max-width: 700px) {
+  #meteopt-gfs-table .meteopt-data-table th {
+    padding-left: 1.62px !important;
+    padding-right: 1.62px !important;
+  }
+  #meteopt-gfs-table .meteopt-data-table td {
+    padding-left: 1.62px !important;
+    padding-right: 1.62px !important;
+  }
+  #meteopt-gfs-table .meteopt-data-table th:nth-child(2),
+  #meteopt-gfs-table .meteopt-data-table td:nth-child(2) {
+    padding-left: 2.43px !important;
+    padding-right: 2.43px !important;
+  }
+  #meteopt-gfs-table .meteopt-value {
+    padding-left: 1.62px !important;
+    padding-right: 1.62px !important;
+  }
+}
