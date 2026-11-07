@@ -147,7 +147,7 @@ function realizedErrorStats(runs,samples,metric){
  }
  return {sigma, count:errors.length, sigmaByHour};
 }
-function svgLine(runs,metric,title,unit,maxHour=72,verification=null){
+function svgLine(runs,metric,title,unit,maxHour=180,verification=null){
  // The newest run defines the valid-time axis. Each archived cycle is sampled
  // at those exact UTC instants, regardless of its own forecast-hour number.
  const reference=pointsOf(runs[0],maxHour)
