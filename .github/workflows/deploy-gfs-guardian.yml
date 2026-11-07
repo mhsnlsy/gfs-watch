@@ -79,8 +79,8 @@ jobs:
           if (health.ok !== true ||
               health.service !== "gfs-watch-gfs-guardian" ||
               health.cron !== "*/30 * * * *" ||
-              health.stale_after_minutes !== 480 ||
-              health.dispatch_cooldown_minutes !== 60) {
+              health.stale_after_minutes !== 45 ||
+              health.dispatch_cooldown_minutes !== 10) {
             throw new Error("Guardian health response did not match the expected deployment");
           }
           console.log(JSON.stringify(health, null, 2));
