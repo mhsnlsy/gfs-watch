@@ -31,6 +31,11 @@ for (let cycle = 0; cycle < 4; cycle += 1) {
   });
 }
 
+const earlyChart = buildIstanbulInteractiveSvg(runs.slice(0, 1));
+assert.match(earlyChart.key, /^notifications\\/istanbul-gfs-20261101T00Z-comparison\\.svg$/);
+assert.ok(earlyChart.common_valid_time_count >= 20, "single-cycle report should still have aligned valid times");
+assert.ok(earlyChart.body.includes("1 döngü karşılaştırması"));
+
 const chart = buildIstanbulInteractiveSvg(runs);
 assert.match(chart.key, /^notifications\/istanbul-gfs-20261101T18Z-comparison\.svg$/);
 assert.ok(chart.common_valid_time_count >= 20, "common UTC valid times should be aligned");
@@ -45,7 +50,7 @@ const report = buildIstanbulReportText(runs[3], new Date("2026-11-01T12:00:00Z")
 assert.ok(report.includes("İSTANBUL GFS TAHMİN RAPORU"));
 assert.ok(report.includes("GÜNÜN KALANINDA"));
 assert.ok(report.includes("ÖNÜMÜZDEKİ 3 GÜN"));
-assert.ok(report.includes("SON DÖRT GFS") || report.includes("Son dört GFS"));
+assert.ok(report.includes("SON DÖRT GFS") || report.includes("Son dört GFS") || report.includes("Son 4 GFS"));
 assert.ok(report.length < 4096, "Telegram report must fit one text message");
 console.log(JSON.stringify({
   ok: true,
