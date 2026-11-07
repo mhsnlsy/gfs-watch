@@ -13,7 +13,8 @@
     "run_worker_first": [
       "/__health",
       "/gfs/*",
-      "/api/*"
+      "/api/*",
+      "/data/notifications/*"
     ],
     "not_found_handling": "404-page"
   },
