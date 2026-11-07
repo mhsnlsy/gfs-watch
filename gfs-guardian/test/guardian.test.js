@@ -36,7 +36,9 @@ test("does not trigger recovery while the Cloudflare primary Cron is healthy", a
     }, calls),
     GFS_DISPATCH_TOKEN: "worker-token",
   };
-  await worker.scheduled({ scheduledTime: now }, env, { waitUntil: promise => promise });
+  let task;
+  await worker.scheduled({ scheduledTime: now }, env, { waitUntil: promise => { task = promise; } });
+  await task;
   assert.equal(calls.length, 1);
   assert.equal(calls[0].url, "/api/health");
 });
@@ -54,7 +56,9 @@ test("recovers a stale primary Cron through Cloudflare Service Binding", async (
     }, calls),
     GFS_DISPATCH_TOKEN: "worker-token",
   };
-  await worker.scheduled({ scheduledTime: now }, env, { waitUntil: promise => promise });
+  let task;
+  await worker.scheduled({ scheduledTime: now }, env, { waitUntil: promise => { task = promise; } });
+  await task;
   assert.equal(calls.length, 2);
   assert.equal(calls[1].url, "/internal/reconcile");
   assert.equal(calls[1].method, "POST");
