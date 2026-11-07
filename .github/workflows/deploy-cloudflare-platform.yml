@@ -2,12 +2,13 @@ name: Deploy Cloudflare Platform
 
 on:
   push:
-    branches: [main, istanbul-gfs-data, gfs-watch-state, koy-mgm-data]
+    branches: [main, istanbul-gfs-data, gfs-watch-state, koy-gfs-data, koy-mgm-data]
     paths:
       - ".github/workflows/deploy-cloudflare-platform.yml"
       - "site/**"
       - "web-worker/**"
       - "gfs/notifications/**"
+      - "gfs/**"
       - "!gfs/notifications/telegram-sent/**"
       - "public/ecmwf/**"
       - "mgm/**"
