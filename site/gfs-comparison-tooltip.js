@@ -382,9 +382,11 @@ async function loadInteractiveGfsCharts(root){
             panelHost.className="gfs-mobile-panel-host";
             forceDarkGfsSvg(panelSvg);
             panelHost.style.setProperty("background","#0A1B29","important");
-            panelHost.style.setProperty("overflow","visible","important");
-            panelHost.style.setProperty("position","relative","important");
-            panelHost.style.setProperty("z-index","2","important");
+            // The panel SVG uses a cropped viewBox. Clip everything outside that
+            // viewport so the report header and neighboring panels cannot bleed
+            // into this card on mobile.
+            panelHost.style.setProperty("overflow","hidden","important");
+            panelSvg.style.setProperty("overflow","hidden","important");
             panelHost.appendChild(panelSvg);
             host.appendChild(panelHost);
             const syncGroup=host.__gfsMobileSyncGroup||(host.__gfsMobileSyncGroup={members:[]});
