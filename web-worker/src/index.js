@@ -70,7 +70,7 @@ async function callService(binding, request, path) {
 }
 
 async function fetchD1PublicationAsset(request, env, key) {
-  const normalized = String(key || "").replace(/^\\/+/, "");
+  const normalized = String(key || "").replace(/^\/+/, "");
   if (!normalized || normalized.split("/").some(part => part === "." || part === "..")) return null;
   const response = await callService(
     env.ISTANBUL_GFS,
