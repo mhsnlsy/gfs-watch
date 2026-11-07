@@ -78,19 +78,6 @@ jobs:
       - name: Install Wrangler
         run: npm install --global wrangler@4
 
-      - name: Ensure Cloudflare R2 archive bucket exists
-        env:
-          CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
-          CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
-          R2_BUCKET: gfs-watch-live-archive
-        run: |
-          set -euo pipefail
-          if wrangler r2 bucket list | grep -Fq "$R2_BUCKET"; then
-            echo "R2 bucket already exists: $R2_BUCKET"
-          else
-            wrangler r2 bucket create "$R2_BUCKET"
-          fi
-
       - name: Assemble production static assets
         working-directory: source
         env:
