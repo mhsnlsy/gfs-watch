@@ -138,18 +138,32 @@ function attachGfsSvgInteractions(host,svg,metadata){
     });
     show(panel,nearest,event);
   }
+  // Touch scrub is handled at both Pointer Events and the native touch layer.
+  // This is deliberate: some mobile WebViews/Safari builds do not continuously
+  // dispatch pointermove while the finger is sliding over an SVG.
   svg.style.touchAction="pan-y";
   svg.style.webkitTapHighlightColor="transparent";
+  const handleTouchMove=event=>{
+    if(event.pointerType&&event.pointerType!=="touch")return;
+    if(event.cancelable)event.preventDefault();
+    if(!host.hasAttribute("data-pinned"))host.setAttribute("data-pinned","true");
+    selectNearest(event);
+    scheduleTouchHide();
+  };
   svg.addEventListener("pointermove",event=>{
     if(event.pointerType==="touch"){
-      if(!host.hasAttribute("data-pinned"))host.setAttribute("data-pinned","true");
-      selectNearest(event);
-      scheduleTouchHide();
+      handleTouchMove(event);
       return;
     }
     if(host.hasAttribute("data-pinned"))return;
     selectNearest(event);
   });
+  svg.addEventListener("pointerrawupdate",handleTouchMove,{passive:false});
+  svg.addEventListener("touchmove",event=>{
+    const touch=event.touches?.[0];
+    if(!touch)return;
+    handleTouchMove({clientX:touch.clientX,clientY:touch.clientY,pointerType:"touch",cancelable:event.cancelable,preventDefault:()=>event.preventDefault()});
+  },{passive:false});
   svg.addEventListener("pointerdown",event=>{
     if(event.pointerType!=="touch"&&event.pointerType!=="pen")return;
     event.preventDefault();
