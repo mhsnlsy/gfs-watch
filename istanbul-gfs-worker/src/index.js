@@ -298,35 +298,65 @@ async function processQueuedReports(env) {
 
     const existingLatest = await getPublicationAsset(env, "notifications/latest.json");
     let shouldUpdateLatest = true;
+    let previousItems = [];
     if (existingLatest?.body) {
       try {
         const existing = JSON.parse(existingLatest.body);
         if (existing.run_id_utc && Date.parse(existing.run_id_utc) > Date.parse(target.run_id_utc)) {
           shouldUpdateLatest = false;
         }
+        if (Array.isArray(existing.items)) previousItems = existing.items;
+        else if (existing.run_id_utc && existing.report_text) {
+          previousItems = [{
+            id: existing.run_id_utc,
+            run_id_utc: existing.run_id_utc,
+            published_at_utc: existing.published_at_utc || existing.updated_at_utc || existing.run_id_utc,
+            title: existing.title || "İstanbul GFS · F180 tamamlandı",
+            cycle_label: existing.cycle_label || "MeteoPT GFS",
+            report_text: existing.report_text,
+            images: Array.isArray(existing.images) ? existing.images : [],
+          }];
+        }
       } catch (_) {
-        // Replace a malformed legacy manifest with the validated native manifest.
+        // Replace a malformed legacy manifest with a validated native manifest.
       }
     }
 
-    const manifest = {
-      schema: "gfs-watch.notifications.v1",
-      updated_at_utc: now,
+    await env.GFS_DB.prepare(
+      "INSERT OR IGNORE INTO gfs_report_publications " +
+      "(run_id_utc, report_text, svg_asset_key, status, attempts, created_at_utc, updated_at_utc) " +
+      "VALUES (?, ?, ?, 'pending', 0, ?, ?)"
+    ).bind(target.run_id_utc, reportText, chart.key, now, now).run();
+
+    const currentItem = {
+      id: target.run_id_utc,
       run_id_utc: target.run_id_utc,
       published_at_utc: now,
       title: "İstanbul GFS · F180 tamamlandı",
       cycle_label: "MeteoPT GFS",
       report_text: reportText,
       images,
-      items: [{
-        id: target.run_id_utc,
-        run_id_utc: target.run_id_utc,
-        published_at_utc: now,
-        title: "İstanbul GFS · F180 tamamlandı",
-        cycle_label: "MeteoPT GFS",
-        report_text: reportText,
-        images,
-      }],
+    };
+    const uniqueItems = new Map();
+    for (const item of previousItems) {
+      const runId = String(item?.run_id_utc || item?.id || "");
+      if (runId && Number.isFinite(Date.parse(runId))) uniqueItems.set(runId, item);
+    }
+    uniqueItems.set(target.run_id_utc, currentItem);
+    const retainedItems = [...uniqueItems.values()]
+      .sort((a, b) => Date.parse(b.run_id_utc || b.id) - Date.parse(a.run_id_utc || a.id))
+      .slice(0, 4);
+
+    const manifest = {
+      schema: "gfs-watch.notifications.v1",
+      updated_at_utc: now,
+      run_id_utc: retainedItems[0]?.run_id_utc || target.run_id_utc,
+      published_at_utc: retainedItems[0]?.published_at_utc || now,
+      title: retainedItems[0]?.title || "İstanbul GFS · F180 tamamlandı",
+      cycle_label: retainedItems[0]?.cycle_label || "MeteoPT GFS",
+      report_text: retainedItems[0]?.report_text || reportText,
+      images: retainedItems[0]?.images || images,
+      items: retainedItems,
     };
     if (shouldUpdateLatest) {
       await putPublicationAsset(env, {
@@ -337,12 +367,6 @@ async function processQueuedReports(env) {
         body: JSON.stringify(manifest),
       });
     }
-
-    await env.GFS_DB.prepare(
-      "INSERT OR IGNORE INTO gfs_report_publications " +
-      "(run_id_utc, report_text, svg_asset_key, status, attempts, created_at_utc, updated_at_utc) " +
-      "VALUES (?, ?, ?, 'pending', 0, ?, ?)"
-    ).bind(target.run_id_utc, reportText, chart.key, now, now).run();
 
     await env.GFS_DB.prepare(
       "UPDATE gfs_report_dispatch_queue SET status = 'published', dispatched_at_utc = ?, " +
@@ -557,6 +581,9 @@ async function collect(env) {
   await env.GFS_DB.prepare(
     "DELETE FROM gfs_report_dispatch_queue WHERE status IN ('dispatched', 'completed') AND dispatched_at_utc < ?"
   ).bind(new Date(started.getTime() - 30 * 86400000).toISOString()).run();
+  await env.GFS_DB.prepare(
+    "DELETE FROM gfs_report_publications WHERE run_id_utc < ? AND status = 'sent'"
+  ).bind(new Date(started.getTime() - 90 * 86400000).toISOString()).run();
 
   const reportDispatch = await processQueuedReports(env);
   const telegramDelivery = await deliverPendingTelegram(env);
@@ -697,7 +724,18 @@ async function handleApi(request, env) {
       const current = await getCurrent(env, "latest");
       const count = await env.GFS_DB.prepare("SELECT COUNT(*) AS count FROM gfs_runs").first();
       const pendingDispatch = await env.GFS_DB.prepare(
-        "SELECT COUNT(*) AS count FROM gfs_report_dispatch_queue WHERE status = 'pending'"
+        "SELECT COUNT(*) AS count FROM gfs_report_dispatch_queue WHERE status IN ('pending', 'processing')"
+      ).first();
+      const publicationStats = await env.GFS_DB.prepare(
+        "SELECT " +
+        "SUM(CASE WHEN status IN ('pending', 'partial', 'sending') AND attempts < 12 THEN 1 ELSE 0 END) AS pending, " +
+        "SUM(CASE WHEN status = 'sent' THEN 1 ELSE 0 END) AS sent, " +
+        "SUM(CASE WHEN attempts >= 12 AND status <> 'sent' THEN 1 ELSE 0 END) AS exhausted " +
+        "FROM gfs_report_publications"
+      ).first();
+      const latestPublication = await env.GFS_DB.prepare(
+        "SELECT run_id_utc, status, updated_at_utc, last_error " +
+        "FROM gfs_report_publications ORDER BY run_id_utc DESC LIMIT 1"
       ).first();
       return json({
         ok: true,
@@ -711,6 +749,10 @@ async function handleApi(request, env) {
         native_report_generation: true,
         telegram_configured: Boolean(env.TELEGRAM_TOKEN && env.TELEGRAM_CHAT_ID),
         pending_report_dispatches: Number(pendingDispatch?.count || 0),
+        pending_report_publications: Number(publicationStats?.pending || 0),
+        sent_report_publications: Number(publicationStats?.sent || 0),
+        exhausted_report_publications: Number(publicationStats?.exhausted || 0),
+        latest_report_publication: latestPublication || null,
         publication_assets: Number((await env.GFS_DB.prepare("SELECT COUNT(*) AS count FROM gfs_publication_assets").first())?.count || 0),
         location: LOCATION,
       });
