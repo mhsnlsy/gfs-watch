@@ -1321,6 +1321,20 @@
     }
 
 </style>
+
+<style id="meteopt-table-touch-scroll-fix">
+@media (max-width:700px), (pointer:coarse){
+  #meteopt-gfs-table .meteopt-table-scroll,
+  #meteopt-gfs-table .meteopt-data-table,
+  #meteopt-gfs-table .meteopt-data-table tbody,
+  #meteopt-gfs-table .meteopt-data-table tr,
+  #meteopt-gfs-table .meteopt-data-table td,
+  #meteopt-gfs-table .meteopt-data-table th{
+    touch-action:none!important;
+  }
+  #meteopt-gfs-table .meteopt-table-scroll{-webkit-user-select:none!important;user-select:none!important}
+}
+</style>
 </head>
 <body>
   <header class="shell topbar">
@@ -4301,6 +4315,30 @@ if(typeof renderBriefing==="function")renderBriefing();
       }
     }
   </style>
-\n</body>
+\n
+<script id="meteopt-table-touch-scroll-script">
+(()=>{
+ const host=document.getElementById("meteopt-gfs-table");
+ if(!host||host.dataset.touchScrollFix==="1")return;
+ host.dataset.touchScrollFix="1";
+ let active=false,startY=0,startScroll=0,lastY=0,lastT=0;
+ const start=e=>{
+   if(!e.touches||e.touches.length!==1)return;
+   active=true; startY=lastY=e.touches[0].clientY; startScroll=window.scrollY; lastT=performance.now();
+ };
+ const move=e=>{
+   if(!active||!e.touches||e.touches.length!==1)return;
+   const y=e.touches[0].clientY;
+   window.scrollTo(0,startScroll+(startY-y));
+   lastY=y; lastT=performance.now();
+ };
+ const end=()=>{active=false};
+ host.addEventListener("touchstart",start,{passive:true});
+ host.addEventListener("touchmove",move,{passive:true});
+ host.addEventListener("touchend",end,{passive:true});
+ host.addEventListener("touchcancel",end,{passive:true});
+})();
+</script>
+</body>
 </html>
 
