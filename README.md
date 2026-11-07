@@ -40,27 +40,19 @@ API uç noktaları:
 
 `.github/workflows/istanbul-gfs-github.yml` İstanbul GFS'nin tek canlı toplama ve yayın akışıdır.
 
-Günlük dört kontrol/yayın penceresi (UTC cron):
-
-| GFS döngüsü | İstanbul saati |
-|---|---:|
-| 00Z | 07:20 |
-| 06Z | 13:20 |
-| 12Z | 19:20 |
-| 18Z | 01:20 (ertesi gün) |
+İstanbul GFS workflow'u UTC saatine göre **her 5 dakikada bir** çalışır. Her turda MeteoPT'nin 00Z, 06Z, 12Z ve 18Z uçları sorgulanır; dönen run kimliği doğrulanır ve yalnızca F180 hazır olan döngüler değerlendirilir. Kaçırılmış birden fazla döngü varsa en eski yayımlanmamış döngü önce işlenir; böylece 18Z/00Z gibi gecikmiş çıktılar yeni döngülerin arkasında kaybolmaz.
 
 Her çalıştırma:
 
-1. MeteoPT'den 00Z, 06Z, 12Z ve 18Z döngülerini kontrol eder.
-2. İstenen döngü saati ile API'nin döndürdüğü döngüyü doğrular.
-3. **F180 yoksa yayın yapmaz.**
-4. En yeni F180-hazır döngüyü bir kez canonical JSON olarak arşivler.
-5. Aynı canonical veriden raporu, dört karşılaştırma PNG'sini ve Pages bildirim arşivini üretir.
-6. Raporu ve aynı döngüye ait dört PNG'yi Telegram'a gönderir.
-7. Run JSON'larını, PNG'leri, raporu ve Telegram gönderim işaretini `istanbul-gfs-data` dalına kaydeder.
-8. GitHub Pages publisher'ını tetikler.
+1. Dört GFS döngüsünü kontrol eder ve F72/F180 kullanılabilirliğini doğrular.
+2. Daha önce `gfs/runs/{run_id}.json` olarak arşivlenmemiş en eski F180 döngüsünü seçer.
+3. Seçilen döngü için canonical JSON, aynı geçerlilik saatlerine hizalanmış SVG/PNG karşılaştırması ve rapor üretir.
+4. Telegram raporunu ve görselini `gfs/telegram-outbox/` altında kalıcı kuyruğa yazar.
+5. Canonical veriyi ve Pages rapor arşivini `istanbul-gfs-data` dalına kaydeder.
+6. **GitHub Pages dağıtımını Telegram'dan bağımsız olarak başlatır.** Telegram API, token veya sohbet hatası Pages yayınını engelleyemez.
+7. Ayrı Telegram işi bekleyen kuyruk öğelerini gönderir; mesaj ve görsel onaylarını ayrı işaretleyerek kısmi hatada metni ikinci kez yollamaz.
 
-GFS yayınında Cloudflare kullanılmaz. GFS verisi, grafik üretimi, Telegram bildirimi ve Pages arşivinin sahibi GitHub Actions'tır. Aynı döngü için `gfs/notifications/telegram-sent/` altında işaret bulunduğunda tekrar bildirim gönderilmez. Manuel `workflow_dispatch` de aynı F180 ve tekrar-yayın kontrolünden geçer.
+Gönderilemeyen raporlar `gfs/telegram-outbox/` içinde kalır ve sonraki beş dakikalık turda yeniden denenir. Başarılı teslimler `gfs/notifications/telegram-sent/` altında işaretlenir. Ana sayfa her zaman en yeni GFS run'ını korur; geriden gelen eski döngülerin raporları ana tahmini geriye almaz. Manuel `workflow_dispatch` de aynı F180 kapısı ve idempotency kontrollerini kullanır.
 
 GFS kaynak kodu:
 
@@ -88,14 +80,15 @@ GFS ana JSON'u `site/data/istanbul-gfs-latest.json`, rapor arşivi `site/data/no
 - `istanbul-gfs-data/gfs/runs/`: MeteoPT GFS döngü arşivi.
 - `istanbul-gfs-data/gfs/latest.json`: son canonical GFS paketi.
 - `istanbul-gfs-data/gfs/comparison.json`: son dört döngünün karşılaştırma verisi.
-- `istanbul-gfs-data/gfs/notifications/`: son dört rapor ve PNG arşivi.
+- `istanbul-gfs-data/gfs/notifications/`: Pages'te gösterilen son dört rapor ve SVG/PNG arşivi.
+- `istanbul-gfs-data/gfs/telegram-outbox/`: Telegram'a teslim bekleyen kalıcı rapor ve görsel kuyruğu.
 - `gfs-watch-stations` D1: istasyonların 72 saatlik geçmişi.
 - `koy-gfs-data`: Çanakçı GFS verileri.
 - `koy-mgm-data`: Çanakçı MGM gözlem ve arşiv verileri.
 
 ## Telegram bildirimleri
 
-Her yeni F180-hazır GFS döngüsünde rapor ve dört karşılaştırma görseli Telegram'a gönderilir.
+Her yeni F180-hazır GFS döngüsünde rapor ve aynı dört panelli karşılaştırmanın tek kompozit görseli Telegram'a gönderilir.
 
 Gerekli GitHub Actions secrets:
 
@@ -126,18 +119,14 @@ MeteoPT GFS (00Z / 06Z / 12Z / 18Z)
 GitHub Actions · F180 kapısı
        │
        ▼
-Canonical GFS JSON + rapor + dört PNG
-       │
-       ├────────► Telegram
+Canonical GFS JSON + rapor + SVG/PNG + Telegram kuyruğu
        │
        ▼
 istanbul-gfs-data
        │
-       ▼
-Tek GitHub Pages Publisher
+       ├────────► Tek GitHub Pages Publisher ─────► GitHub Pages
        │
-       ▼
-GitHub Pages
+       └────────► Bağımsız Telegram işi ──────────► Telegram
 ```
 
 ## Sürüm yönetimi
