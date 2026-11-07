@@ -39,7 +39,7 @@ Canlı web arayüzü, API geçidi ve veri toplama servisleri Cloudflare üzerind
 - API yönlendirmesi: Cloudflare Service Bindings; tarayıcı istekleri aynı origin üzerinden yapılır.
 - Sağlık kontrolü: `/__health`.
 - Canlı GFS ve istasyon ölçümleri D1 API'lerinden gelir; bunlar için web deployment gerekmez.
-- Arşiv dosyaları henüz R2'ye alınmadı. Worker'da R2-first/Static Assets fallback kodu hazır; R2 binding, yetkili token sağlandıktan sonra açılacak.
+- Arşiv sunumu R2-first olarak hazırlandı; `LIVE_ARCHIVE` binding'i yalnızca `CLOUDFLARE_R2_API_TOKEN` secret'ı tanımlandığında etkinleşir. Secret henüz tanımlı değilse canlı Worker mevcut D1/Static Assets fallback yolunda çalışır. R2 etkinleştiğinde ECMWF ve tarihsel bildirim arşivleri otomatik aktarılır.
 
 ### İstanbul GFS
 
@@ -75,7 +75,7 @@ Canlı web arayüzü, API geçidi ve veri toplama servisleri Cloudflare üzerind
 
 ### ECMWF ve diğer dış servisler
 
-- ECMWF EPS tahmin dosyası şu an `.github/workflows/ecmwf-eps.yml` ile alınır ve Cloudflare Static Assets dağıtımına eklenir.
+- ECMWF EPS verisi, resmi Open Data GRIB2 dosyalarının ecCodes ile çözülmesi nedeniyle şimdilik `.github/workflows/ecmwf-eps.yml` içinde hazırlanır; doğrulanan JSON ve görseller D1'e yazılır. `CLOUDFLARE_R2_API_TOKEN` eklendiğinde aynı iş akışı arşivi ayrıca R2'ye kopyalar. GRIB2 edinme/çözümleme kısmı henüz Cloudflare Cron'a taşınmamıştır.
 - Yağış radarı RainViewer'ın herkese açık harita API'sini kullanır.
 - Web Push ayrı `gfs-watch-push` Worker'ı üzerinden yürür.
 
@@ -95,15 +95,15 @@ GitHub Actions artık canlı İstanbul GFS veya istasyon verisini toplamaz.
 | `publish-live-site.yml` | GitHub Pages yedek kopyasını yalnızca manuel tetiklemeyle yayımlar. Üretim güncellemelerini bekletmez. |
 | `ecmwf-eps.yml` | ECMWF EPS veri hazırlığını yürütür; henüz Cloudflare Cron'a taşınmamıştır. |
 
-Kod değişikliklerinde Cloudflare deployment'ı GitHub üzerinden başlatılır; bu yalnızca dağıtım adımıdır. Web arayüzü değişikliği artık İstanbul GFS Worker + D1 deployment'ını tetiklemez. GitHub Pages otomatik yayın akışından çıkarılmıştır; yalnızca manuel geri dönüş seçeneğidir. İstanbul GFS rapor/Telegram pipeline'ı 10 dakikada bir boş yere runner açmaz; yeni F180 geldiğinde Worker doğrudan workflow dispatch yapar. D1 outbox kuyruğu başarısız dispatch denemelerini sonraki Cron'a bırakır. GFS Guardian 30 dakikada bir çalışan yedek kontroldür; 8 saatlik sessizlikte devreye girer. Canlı GFS ve istasyon güncellemeleri web deployment'ına bağlı değildir. Arşivler R2'ye aktarılana kadar İstanbul bildirim/ECMWF varlıklarının Static Assets yedekleri korunur. Köy SVG'si artık çalışma anında Köy Worker tarafından D1'e üretilir; canlı sayfanın SVG sunumu için Köy veri branch'ine veya Static Assets derlemesine ihtiyaç duyulmaz.
+Kod değişikliklerinde Cloudflare deployment'ı GitHub üzerinden başlatılır; bu yalnızca dağıtım adımıdır. Web arayüzü değişikliği artık İstanbul GFS Worker + D1 deployment'ını tetiklemez. GitHub Pages üretim ortamında kullanılmaz; eski yayın workflow'u yalnızca elle çalıştırılabilir. İstanbul GFS F180 raporu, dört döngülü etkileşimli SVG ve Telegram teslimatı artık İstanbul GFS Worker'ın 10 dakikalık Cron'u içinde çalışır; GitHub Actions rapor üretiminde veya normal Telegram teslimatında runner açmaz. D1 outbox lease'leri yarım kalan ve çakışan teslimatları yönetir. GFS Guardian 30 dakikada bir çalışan yedek kontroldür; 8 saatlik sessizlikte devreye girer. Canlı GFS ve istasyon güncellemeleri web deployment'ına bağlı değildir. R2 token tanımlanana kadar arşiv okumaları D1/Static Assets fallback ile sürer. Köy SVG'si çalışma anında Köy Worker tarafından D1'e üretilir; yeni/eskimiş SVG için Service Binding fallback'i korunur.
 
 ## Veri saklama
 
 - İstanbul GFS: `gfs-watch-istanbul-gfs` D1.
 - Köy GFS: `gfs-watch-koy-gfs` D1.
 - İstasyon geçmişi: `gfs-watch-stations` D1.
-- İstanbul Telegram/SVG/PNG bildirim arşivi: geçiş sürecinde `istanbul-gfs-data` dalı ve Cloudflare Static Assets; R2 aktarımı bekliyor.
-- ECMWF EPS: `gfs-watch-state/public/ecmwf`; R2 aktarımı bekliyor.
+- İstanbul Telegram/SVG bildirim arşivi: canlı raporlar İstanbul GFS D1'de; geçmiş arşivlerin R2'ye toplu kopyası `CLOUDFLARE_R2_API_TOKEN` eklendiğinde etkinleşir.
+- ECMWF EPS: doğrulanmış son veri ve rapor görselleri İstanbul D1'e yazılır; aynı dosyalar R2'ye yansıtma için hazırlanmıştır. GRIB2 kaynak dosyaları geçici olarak GitHub runner'da işlenir.
 - Köy GFS rapor SVG'leri: Köy Worker tarafından üretilir ve `gfs-watch-koy-gfs` D1 içinde saklanır.
 - Köy MGM statik arşivi web paketinden çıkarıldı; güncel ölçümler Station Worker/D1 API'sinden alınır.
 - GitHub dalları gerektiğinde geri yükleme ve arşiv kaynağı olarak korunur.
