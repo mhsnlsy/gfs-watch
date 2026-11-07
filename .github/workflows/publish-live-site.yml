@@ -64,6 +64,19 @@ jobs:
           path: koy-mgm-data
           fetch-depth: 1
 
+      - name: Prepare Python for Köy GFS chart rendering
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+
+      - name: Rebuild Köy GFS SVG with Turkish weekday labels
+        env:
+          KOY_GFS_DIR: ${{ github.workspace }}/koy-data/gfs
+        run: |
+          set -euo pipefail
+          python -m pip install --disable-pip-version-check matplotlib
+          python source/scripts/build_koy_gfs_interactive_svg.py
+
       - name: Assemble live website
         env:
           PUSH_API_URL: ${{ vars.PUSH_API_URL }}
