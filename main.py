@@ -3325,7 +3325,7 @@ def create_valid_time_comparison_assets(current_run_id, payload, previous_runs):
     """Create one 2x2 vector comparison report and its Telegram photo from one figure.
 
     All four panels use the exact shared UTC valid-time keys prepared by
-    _prepare_comparison_chart_data. The newest cycle defines a 72-hour window;
+    _prepare_comparison_chart_data. The newest cycle defines a 180-hour window;
     each older cycle is plotted at those same valid instants, even when its F
     hour is different.
     """
@@ -3351,13 +3351,13 @@ def create_valid_time_comparison_assets(current_run_id, payload, previous_runs):
             raise ValueError("Karşılaştırma için yeterli ortak geçerlilik zamanı yok.")
 
         first_local = datetime.fromisoformat(ordered_keys[0])
-        last_local = first_local + timedelta(hours=72)
+        last_local = first_local + timedelta(hours=180)
         valid_keys = [
             key for key in ordered_keys
             if first_local <= datetime.fromisoformat(key) <= last_local
         ]
         if len(valid_keys) < 2:
-            raise ValueError("İlk 72 saatte yeterli ortak geçerlilik zamanı yok.")
+            raise ValueError("İlk 180 saatte yeterli ortak geçerlilik zamanı yok.")
 
         local_times = [datetime.fromisoformat(key) for key in valid_keys]
         first_time = local_times[0]
