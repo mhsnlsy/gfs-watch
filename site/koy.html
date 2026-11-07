@@ -1441,6 +1441,17 @@
   }
   .koy-gfs-svg-images .gfs-mobile-panel-host{width:100%!important}
 </style>
+<style id="koy-remove-legacy-report-copy">
+  /* Defensive removal of legacy report text if an old card shell is still present. */
+  #notifications-list .notification-card-top,
+  #notifications-list .notification-summary,
+  #notifications-list .comparison-heading,
+  #notifications-list .notification-kicker,
+  #notifications-list .notification-meta,
+  #notifications-list .notification-card h3 {
+    display:none!important;
+  }
+</style>
 </head>
 <body data-default-station="home">
   <script>
