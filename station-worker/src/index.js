@@ -16,6 +16,12 @@ const STATION_DEFS = {
     station_name: "MGM Şişli",
     source: "MGM İstanbul-Şişli 18401",
     source_url: "https://www.mgm.gov.tr/tahmin/il-ve-ilceler.aspx?il=istanbul&ilce=sisli"
+  },
+  canakci: {
+    station_id: "CANAKCI-DYNAMIC",
+    station_name: "MGM Çanakçı",
+    source: "MGM Giresun-Çanakçı",
+    source_url: "https://www.mgm.gov.tr/tahmin/il-ve-ilceler.aspx?il=Giresun&ilce=Çanakçı"
   }
 };
 const RETENTION_HOURS = 72;
@@ -238,6 +244,18 @@ async function fetchMgmArray(url) {
   return payload;
 }
 async function fetchMgmStation(stationKey) {
+  if (stationKey === "canakci") {
+    const centers = await fetchMgmArray("https://servis.mgm.gov.tr/web/merkezler?il=Giresun&ilce=Canakci");
+    if (!Array.isArray(centers) || !centers.length) throw new Error("MGM Çanakçı merkezi bulunamadı");
+    const center = centers.find(item => String(item.ilce || "").toLocaleLowerCase("tr-TR") === "çanakçı") || centers[0];
+    const centerId = center.merkezId;
+    if (!centerId) throw new Error("MGM Çanakçı merkezId bulunamadı");
+    const rows = await fetchMgmArray("https://servis.mgm.gov.tr/web/sondurumlar?merkezid=" + encodeURIComponent(centerId));
+    if (!Array.isArray(rows) || !rows.length) throw new Error("MGM Çanakçı son durum verisi boş");
+    const stationId = center.sondurumIstNo || center.gunlukTahminIstNo || rows[0].istNo || String(centerId);
+    const row = rows.find(item => String(item.istNo || "") === String(stationId)) || rows[0];
+    return { row, url: "https://servis.mgm.gov.tr/web/sondurumlar?merkezid=" + encodeURIComponent(centerId), center };
+  }
   const stationId = STATION_DEFS[stationKey].station_id;
   const urls = stationKey === "eyupsultan"
     ? [
@@ -304,7 +322,7 @@ async function fetchMgm(stationKey) {
   }
   const dailyRain = asNumber(row.yagis00Now);
   return {
-    station_id: stationKey === "eyupsultan" ? "18101" : "18401",
+    station_id: stationKey === "eyupsultan" ? "18101" : stationKey === "sisli" ? "18401" : String(result.row.istNo || result.center?.sondurumIstNo || result.center?.merkezId || "CANAKCI"),
     station_name: STATION_DEFS[stationKey].station_name,
     source: STATION_DEFS[stationKey].source,
     source_url: STATION_DEFS[stationKey].source_url,
@@ -334,7 +352,7 @@ async function fetchMgm(stationKey) {
     precipitation_source: "MGM " + STATION_DEFS[stationKey].station_id,
     pressure_type: "station",
     pressure_observed_at_utc: observed.toISOString(),
-    pressure_source: "MGM 18401 actual station pressure",
+    pressure_source: "MGM actual station pressure",
     observation_method: "mgm-sondurum"
   };
 }
@@ -452,7 +470,8 @@ async function collectAll(env) {
   const tasks = await Promise.allSettled([
     fetchEnka().then(value => ({ key: "enka", value })),
     fetchMgm("eyupsultan").then(value => ({ key: "eyupsultan", value })),
-    fetchMgm("sisli").then(value => ({ key: "sisli", value }))
+    fetchMgm("sisli").then(value => ({ key: "sisli", value })),
+    fetchMgm("canakci").then(value => ({ key: "canakci", value }))
   ]);
   const result = {};
   for (const task of tasks) {
@@ -464,7 +483,7 @@ async function collectAll(env) {
     const stored = await readCurrent(env, "sisli");
     sisliRain = stored ? stored.payload : null;
   }
-  const keys = ["enka", "eyupsultan", "sisli"];
+  const keys = ["enka", "eyupsultan", "sisli", "canakci"];
   for (let i = 0; i < keys.length; i++) {
     const key = keys[i];
     if (result[key]) {
@@ -563,7 +582,7 @@ async function handleApi(request, env) {
       return json({ ok: false, error: String(error.message || error) }, 503);
     }
   }
-  const currentMatch = path.match(/^\/api\/stations\/(enka|eyupsultan|sisli)$/);
+  const currentMatch = path.match(/^\/api\/stations\/(enka|eyupsultan|sisli|canakci)$/);
   if (currentMatch) {
     try {
       const current = await readCurrent(env, currentMatch[1]);
@@ -577,7 +596,7 @@ async function handleApi(request, env) {
       return json({ ok: false, error: String(error.message || error) }, 503);
     }
   }
-  const historyMatch = path.match(/^\/api\/history\/(enka|eyupsultan|sisli)$/);
+  const historyMatch = path.match(/^\/api\/history\/(enka|eyupsultan|sisli|canakci)$/);
   if (historyMatch) {
     try {
       const requested = Number(url.searchParams.get("hours") || 72);
