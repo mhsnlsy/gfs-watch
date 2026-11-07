@@ -9,6 +9,8 @@ on:
       - ".github/workflows/publish-live-site.yml"
       - ".github/workflows/deploy-cloudflare-platform.yml"
       - ".github/workflows/deploy-istanbul-gfs-worker.yml"
+      - ".github/workflows/deploy-gfs-guardian.yml"
+      - "gfs-guardian/**"
       - "scripts/**"
       - "site/**"
       - "web-worker/**"
