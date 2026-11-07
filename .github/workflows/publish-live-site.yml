@@ -1,6 +1,14 @@
 name: Publish GitHub Pages Fallback
 
 on:
+  push:
+    branches: [main, koy-gfs-data, koy-mgm-data]
+    paths:
+      - ".github/workflows/publish-live-site.yml"
+      - "site/**"
+      - "scripts/build_koy_gfs_interactive_svg.py"
+      - "gfs/**"
+      - "mgm/**"
   workflow_dispatch:
 
 permissions:
@@ -127,6 +135,21 @@ jobs:
 
           touch _site/.nojekyll
           test -s _site/index.html
+          node - _site/koy.html <<'NODE'
+          const fs = require("fs");
+          const html = fs.readFileSync(process.argv[2], "utf8");
+          const forbidden = [
+            "GFS MODEL BİLDİRİMİ",
+            "Giresun Çanakçı GFS tahmin raporu",
+            "Son döngü:",
+            "İlk GFS tahmin adımı:",
+            "SON 4 GFS DÖNGÜSÜ",
+            "AYNI GEÇERLİLİK SAATLERİ"
+          ];
+          const found = forbidden.filter(text => html.includes(text));
+          if (found.length) throw new Error("Legacy Köy GFS text still exists in Pages artifact: " + found.join(" | "));
+          console.log("Pages artifact verified: Köy GFS report text removed.");
+          NODE
 
       - name: Configure GitHub Pages
         uses: actions/configure-pages@v6
