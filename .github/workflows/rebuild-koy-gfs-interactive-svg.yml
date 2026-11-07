@@ -1,80 +1,11 @@
-name: Rebuild Köy GFS Interactive SVG
-
-on:
-  push:
-    branches: [main]
-    paths:
-      - "scripts/build_koy_gfs_interactive_svg.py"
-      - ".github/workflows/rebuild-koy-gfs-interactive-svg.yml"
-  workflow_dispatch:
-  schedule:
-    - cron: "*/10 * * * *"
-
-permissions:
-  contents: write
-  actions: write
-
-concurrency:
-  group: koy-gfs-interactive-svg-builder
-  cancel-in-progress: true
-
-jobs:
-  rebuild:
-    name: Regenerate and persist Köy four-panel SVG
-    runs-on: ubuntu-latest
-    timeout-minutes: 10
-    steps:
-      - name: Check out renderer source
-        uses: actions/checkout@v5
-        with:
-          ref: main
-          path: source
-          fetch-depth: 1
-
-      - name: Check out canonical Köy GFS archive
-        uses: actions/checkout@v5
-        with:
-          ref: koy-gfs-data
-          path: koy-data
-          fetch-depth: 0
-
-      - name: Set up Python
-        uses: actions/setup-python@v5
-        with:
-          python-version: "3.12"
-
-      - name: Install SVG renderer dependency
-        run: python -m pip install --disable-pip-version-check matplotlib
-
-      - name: Refresh Köy comparison from live D1 archive
-        env:
-          KOY_GFS_DIR: ${{ github.workspace }}/koy-data/gfs
-          KOY_GFS_API: https://gfs-watch-koy-gfs.muhsin-ulusoy.workers.dev/api
-        run: |
-          set -euo pipefail
-          mkdir -p "$KOY_GFS_DIR"
-          curl --silent --show-error --fail --retry 3 --retry-delay 2 --max-time 60 \
-            "$KOY_GFS_API/comparison?asset_refresh=$(date +%s)" \
-            -o "$KOY_GFS_DIR/comparison.json"
-          python - <<'PY'
-          import json, os
-          from pathlib import Path
-          doc = json.loads((Path(os.environ["KOY_GFS_DIR"]) / "comparison.json").read_text(encoding="utf-8"))
-          runs = doc.get("runs") or []
-          if len(runs) < 4:
-              raise SystemExit(f"Live Köy comparison has only {len(runs)} runs; four are required.")
-          latest = max(runs, key=lambda item: item.get("run_id_utc", ""))
-          print("Live Köy comparison refreshed:", latest["run_id_utc"], "cycles:", len(runs))
-          PY
-
       - name: Rebuild four-panel SVG from canonical valid-time archive
         env:
-          KOY_GFS_DIR: ${{ github.workspace }}/koy-data/gfs
+          KOY_GFS_DIR: ${{ runner.temp }}/koy-gfs
         run: |
           set -euo pipefail
           python source/scripts/build_koy_gfs_interactive_svg.py
-          test "$(cat koy-data/gfs/media/.koy-svg-renderer-version)" = "koy-gfs-weekday-axis-v1"
-          SVG="$(python -c 'from pathlib import Path; files=list(Path("koy-data/gfs/media").glob("koy-gfs-*-comparison.svg")); print(max(files, key=lambda p: p.stat().st_mtime) if files else "")')"
+          test "$(cat "$KOY_GFS_DIR/media/.koy-svg-renderer-version")" = "koy-gfs-weekday-axis-v1"
+          SVG="$(find "$KOY_GFS_DIR/media" -maxdepth 1 -type f -name 'koy-gfs-*-comparison.svg' -printf '%T@ %p\\n' | sort -nr | head -n1 | cut -d' ' -f2-)"
           test -n "$SVG" && test -s "$SVG"
           grep -q 'gfs-interactive-data' "$SVG"
           python - <<'PY'
@@ -88,25 +19,60 @@ jobs:
           print("Turkish weekday labels verified.")
           PY
 
-      - name: Persist regenerated SVG to koy-gfs-data
-        id: persist
-        working-directory: koy-data
+      - name: Upload generated Köy SVG to D1 publication assets
+        env:
+          KOY_GFS_DIR: ${{ runner.temp }}/koy-gfs
+          KOY_GFS_API: https://gfs-watch-koy-gfs.muhsin-ulusoy.workers.dev/api
+          GFS_DISPATCH_TOKEN: ${{ secrets.GFS_DISPATCH_TOKEN }}
         run: |
           set -euo pipefail
-          git config user.name "github-actions[bot]"
-          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
-          git add gfs/media/*.svg gfs/media/.koy-svg-renderer-version
-          if git diff --cached --quiet; then
-            echo "The canonical Köy SVG already has Turkish weekday labels."
-            echo "changed=false" >> "$GITHUB_OUTPUT"
-          else
-            git commit -m "Rebuild Köy GFS SVG with Turkish weekday axis"
-            git push origin HEAD:koy-gfs-data
-            echo "changed=true" >> "$GITHUB_OUTPUT"
-          fi
+          test -n "$GFS_DISPATCH_TOKEN" || { echo "::error::GFS_DISPATCH_TOKEN is required for Köy D1 SVG publication"; exit 1; }
+          SVG="$(find "$KOY_GFS_DIR/media" -maxdepth 1 -type f -name 'koy-gfs-*-comparison.svg' -printf '%T@ %p\\n' | sort -nr | head -n1 | cut -d' ' -f2-)"
+          test -n "$SVG" && test -s "$SVG"
 
-      - name: Deploy newly generated Köy SVG to Cloudflare
-        if: steps.persist.outputs.changed == 'true'
-        env:
-          GH_TOKEN: ${{ github.token }}
-        run: gh workflow run deploy-cloudflare-platform.yml --ref main
+          python - "$SVG" "$KOY_GFS_DIR/comparison.json" "$RUNNER_TEMP/koy-svg-payload.json" <<'PY'
+          import json
+          import sys
+          from pathlib import Path
+
+          svg_path, comparison_path, output_path = sys.argv[1:]
+          comparison = json.loads(Path(comparison_path).read_text(encoding="utf-8"))
+          runs = comparison.get("runs") or []
+          if len(runs) < 4:
+              raise SystemExit(f"Expected four Köy GFS cycles, received {len(runs)}")
+          latest = max(runs, key=lambda item: item.get("run_id_utc", ""))
+          body = Path(svg_path).read_text(encoding="utf-8")
+          if len(body) > 1900000:
+              raise SystemExit("Generated Köy SVG exceeds the D1 row safety limit")
+          payload = {
+              "key": "media/" + Path(svg_path).name,
+              "run_id_utc": latest["run_id_utc"],
+              "content_type": "image/svg+xml; charset=utf-8",
+              "body": body,
+          }
+          Path(output_path).write_text(
+              json.dumps(payload, ensure_ascii=False, separators=(",", ":")),
+              encoding="utf-8",
+          )
+          print("Prepared D1 Köy SVG:", payload["key"], "run:", latest["run_id_utc"])
+          PY
+
+          curl --fail --silent --show-error --max-time 45 \\
+            --request POST \\
+            --url "$KOY_GFS_API/publication-upload" \\
+            --header "Authorization: Bearer $GFS_DISPATCH_TOKEN" \\
+            --header "Content-Type: application/json" \\
+            --header "Accept: application/json" \\
+            --data-binary "@$RUNNER_TEMP/koy-svg-payload.json" \\
+            --output "$RUNNER_TEMP/koy-svg-response.json"
+
+          python - "$RUNNER_TEMP/koy-svg-response.json" <<'PY'
+          import json
+          import sys
+          from pathlib import Path
+
+          response = json.loads(Path(sys.argv[1]).read_text(encoding="utf-8"))
+          if response.get("ok") is not True:
+              raise SystemExit(f"Köy D1 SVG upload failed: {response}")
+          print("Published Köy SVG into D1:", response.get("key"), response.get("bytes"), "characters")
+          PY
