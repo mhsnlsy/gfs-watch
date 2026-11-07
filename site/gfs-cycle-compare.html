@@ -282,14 +282,11 @@ function svgLine(runs,metric,title,unit,verification=null){
  // (or another lead) from a different cycle for the same Istanbul clock time.
  const reference=pointsOf(runs[0],72)
   .map(p=>({...p,stamp:Date.parse(p.valid_time_utc||"")}))
-  .filter(p=>Number.isFinite(p.stamp))
+  .filter(p=>Number.isFinite(p.stamp)&&Number(p.forecast_hour)>=3)
   .sort((a,b)=>a.stamp-b.stamp);
  if(!reference.length)return '<div class="chart-empty">Tahmin verisi bekleniyor…</div>';
- const cycleStart=new Date(runs[0]?.run_id_utc||reference[0].valid_time_utc);
- cycleStart.setUTCMinutes(0,0,0);
- cycleStart.setUTCHours(0);
- const startTime=cycleStart.getTime();
- const hours=reference.map(p=>Number(p.forecast_hour)).filter(Number.isFinite);
+ const startTime=reference[0].stamp;
+ const hours=reference.map(p=>(p.stamp-startTime)/3600000);
  const usable=runs.map((run,runIndex)=>{
   const byValidTime=new Map();
   (run?.forecast_6_hourly||[]).forEach(p=>{
@@ -301,7 +298,7 @@ function svgLine(runs,metric,title,unit,verification=null){
    const value=num(p?.[metric]);
    if(value==null)return null;
    return {
-    h:Number(p.forecast_hour),
+    h:(target.stamp-startTime)/3600000,
     lead:Number(p.forecast_hour),
     v:value,
     validTime:p.valid_time_utc,
@@ -342,11 +339,11 @@ function svgLine(runs,metric,title,unit,verification=null){
  const x=h=>L+(hours.length===1?PW/2:(h-hours[0])/(hours[hours.length-1]-hours[0]||1))*PW;
  const y=v=>T+(hi-v)*PH/(hi-lo);
  const axisLabel=h=>{
-  const p=reference.find(x=>Number(x.forecast_hour)===Number(h));
+  const p=reference.find(x=>Math.abs((x.stamp-startTime)/3600000-Number(h))<0.01);
   const d=new Date(p?.stamp||startTime+h*3600000);
   const day=new Intl.DateTimeFormat("tr-TR",{timeZone:"Europe/Istanbul",day:"2-digit"}).format(d);
   const weekday=new Intl.DateTimeFormat("tr-TR",{timeZone:"Europe/Istanbul",weekday:"short"}).format(d).replace(/\.$/,"");
-  return {day,weekday,lead:Number(h)};
+  return {day,weekday,lead:Number(p?.forecast_hour||0)};
  };
  let out='<svg class="koy-svg" viewBox="0 0 '+W+' '+H+'" preserveAspectRatio="xMidYMid meet" text-rendering="optimizeLegibility" role="img" aria-label="'+esc(title)+' · aynı geçerlilik saatleri TSİ">';
  for(let j=0;j<=3;j++){
