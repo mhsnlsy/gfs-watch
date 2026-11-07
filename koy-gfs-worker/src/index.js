@@ -113,7 +113,7 @@ function normalizeDocument(candidate, now) {
     const valid = new Date(cycle.getTime() + lead * 3600000);
     points.push({
       forecast_hour: lead,
-      valid_time_utc: valid.toISOString().slice(0, 16),
+      valid_time_utc: valid.toISOString(),
       temperature_2m_c: asNumber(series("tmp2m"), i),
       temperature_850hpa_c: asNumber(series("tmp850mb"), i),
       wind_speed_10m_kmh: asNumber(series("wind10m"), i),
@@ -126,8 +126,8 @@ function normalizeDocument(candidate, now) {
     location: LOCATION,
     source: "MeteoPT GFS",
     source_url: candidate.url,
-    run_id_utc: cycle.toISOString().slice(0, 19),
-    published_at_utc: new Date(now).toISOString().slice(0, 19),
+    run_id_utc: cycle.toISOString(),
+    published_at_utc: new Date(now).toISOString(),
     forecast_source: "meteopt",
   };
 
