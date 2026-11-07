@@ -137,7 +137,7 @@ jobs:
           import json, os
           from datetime import datetime, timezone
           from pathlib import Path
-          comparison = Path("$GITHUB_WORKSPACE/koy-data/gfs/comparison.json")
+          comparison = Path(os.environ["GITHUB_WORKSPACE"]) / "koy-data/gfs/comparison.json"
           if not comparison.is_file():
               raise SystemExit("Köy comparison.json missing from canonical archive")
           doc = json.loads(comparison.read_text(encoding="utf-8"))
@@ -151,7 +151,7 @@ jobs:
           if not asset.is_file() or asset.stat().st_size < 10000:
               raise SystemExit(f"Latest Köy comparison SVG missing after asset assembly: {asset}")
           with open(os.environ["GITHUB_ENV"], "a", encoding="utf-8") as env:
-              env.write(f"KOY_SVG_REL={rel}\\n")
+              env.write(f"KOY_SVG_REL={rel}" + chr(10))
           print(f"Verified packaged Köy comparison SVG: {rel} ({asset.stat().st_size} bytes)")
           PY
           if [ -d "$GITHUB_WORKSPACE/koy-mgm-data/mgm" ]; then
