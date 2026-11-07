@@ -441,7 +441,7 @@ async function load(){
   renderRunLegend(source);
   let stationKey="enka";
   try{const selected=localStorage.getItem("istanbul-hava-station");if(selected==="eyupsultan")stationKey="eyupsultan";else if(selected==="sisli")stationKey="sisli";}catch(_){}
-  const stationApi="/api/history/"+encodeURIComponent(stationKey)+"?hours=72&v="+cache;
+  const stationApi=(window.GFS_WATCH_API_BASE||window.location.origin)+"/api/history/"+encodeURIComponent(stationKey)+"?hours=72&v="+cache;
   const historyResponse=await fetch(stationApi,{cache:"no-store"}).catch(()=>null);
   const historyDoc=historyResponse&&historyResponse.ok?await historyResponse.json().catch(()=>null):null;
   const history=historyDoc&&Array.isArray(historyDoc.samples)?{
