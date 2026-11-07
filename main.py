@@ -3229,7 +3229,7 @@ def _draw_comparison_precip_line_axis(axis, chart_data):
     labels = []
     for index in tick_index:
         stamp = datetime.strptime(times[index], "%Y-%m-%dT%H:%M")
-        labels.append(f"{stamp:%d.%m}\n{stamp:%H:%M}")
+        labels.append(f"{stamp:%d}")
     axis.set_xticks(tick_index)
     axis.set_xticklabels(labels, fontsize=9, color=GFS_REPORT_TEXT)
     axis.set_title("3 saatlik yağış | çizgi trend", loc="left", fontsize=11)
@@ -3312,7 +3312,7 @@ def _format_comparison_date_axis(axis, dates):
     labels = []
     for day in dates:
         local_date = datetime.strptime(day, "%Y-%m-%d")
-        labels.append(f"{local_date:%d.%m}\n{turkish_weekdays[local_date.weekday()]}")
+        labels.append(f"{local_date:%d}")
     positions = list(range(len(dates)))
     axis.set_xlim(-0.5, max(len(dates) - 0.5, 0.5))
     axis.set_xticks(positions)
