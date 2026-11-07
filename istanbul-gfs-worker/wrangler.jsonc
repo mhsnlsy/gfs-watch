@@ -6,6 +6,12 @@
   "workers_dev": true,
   "observability": { "enabled": true },
   "triggers": { "crons": ["*/10 * * * *"] },
+  "r2_buckets": [
+    {
+      "binding": "ECMWF_ARCHIVE",
+      "bucket_name": "gfs-watch-live-archive"
+    }
+  ],
   "d1_databases": [
     {
       "binding": "GFS_DB",
