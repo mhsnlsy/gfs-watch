@@ -50,7 +50,7 @@ Canlı web arayüzü, API geçidi ve veri toplama servisleri Cloudflare üzerind
 - Worker 00Z, 06Z, 12Z ve 18Z seçicilerini kontrol eder; kullanılabilir döngüleri D1'e arşivler.
 - F72 güncel paketi ve F180 tamamlanmış döngü arşivi D1'de tutulur.
 - API: `/gfs/latest`, `/gfs/comparison`, `/api/health`.
-- F180 tamamlandığında İstanbul GFS Worker, D1'deki son dört tam döngüyü aynı UTC geçerlilik saatlerine hizalar; rapor metnini ve etkileşimli dört panelli SVG'yi kendi içinde üretir, D1 yayın arşivine yazar ve Telegram'a metin + SVG dosyası gönderir. Teslimat adımları D1 outbox tablosunda tutulur; yarım kalan teslimatlar sonraki Cron çalışmasında kaldığı adımdan sürdürülür. Python/Matplotlib PNG hattı yalnızca manuel geri dönüş aracı olarak korunur.
+- F180 tamamlandığında İstanbul GFS Worker, D1'deki son dört tam döngüyü aynı UTC geçerlilik saatlerine hizalar; rapor metnini ve etkileşimli dört panelli SVG'yi kendi içinde üretir, D1 yayın arşivine yazar ve Telegram'a metin + SVG dosyası gönderir. Teslimat adımları D1 outbox tablosunda tutulur; süreli atomik lease eşzamanlı Cron tekrarlarının aynı raporu göndermesini önler ve yarım kalan teslimatlar lease süresi dolduğunda kaldığı adımdan sürdürülür. Python/Matplotlib PNG hattı yalnızca manuel geri dönüş aracı olarak korunur.
 
 ### Köy GFS
 
