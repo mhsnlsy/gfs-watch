@@ -56,6 +56,7 @@ def main() -> None:
     assert "telegram-outbox" in sender
     assert "message_sent" in sender and "photo_sent" in sender
     assert "telegram-sent" in sender
+    assert "sent_at_utc" in sender  # recognize legacy markers without status
     assert "send_photo" in sender
     assert "send_media_group" in sender  # legacy notification fallback
     assert "not run_file.exists()" in collector
