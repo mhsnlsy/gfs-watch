@@ -92,7 +92,6 @@ export default {
         istanbul: Boolean(env.ISTANBUL_GFS?.fetch),
         koy: Boolean(env.KOY_GFS?.fetch),
         stations: Boolean(env.STATIONS?.fetch),
-        archive: Boolean(env.LIVE_ARCHIVE?.get),
       };
       return responseJson({
         ok: Object.values(bindings).every(Boolean),
@@ -101,7 +100,7 @@ export default {
         api_gateway: "Cloudflare Service Bindings",
         services: SERVICES,
         bindings,
-        archive_bucket: "gfs-watch-live-archive",
+        archive_storage: env.LIVE_ARCHIVE ? "R2" : "Static Assets fallback",
         checked_at_utc: new Date().toISOString(),
       }, Object.values(bindings).every(Boolean) ? 200 : 503);
     }
