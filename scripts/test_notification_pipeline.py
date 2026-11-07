@@ -124,7 +124,7 @@ def main() -> None:
     assert "gfs/publication-upload" in ecmwf_workflow and "gfs/publication-asset/data/ecmwf/latest.json" in ecmwf_workflow
     assert "--data-binary" in ecmwf_workflow and "GFS_DISPATCH_TOKEN" in ecmwf_workflow
     assert 'path.startsWith("/data/ecmwf/")' in web_worker
-    assert '"path.slice(1)' in web_worker
+    assert "path.slice(1)" in web_worker
     assert '"public/ecmwf/**"' not in platform_workflow
     # Köy interactive SVG is now stored and served from Köy D1 without redeploying Static Assets.
     assert "gfs_publication_assets" in koy_worker
