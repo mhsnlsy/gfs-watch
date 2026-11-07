@@ -59,8 +59,8 @@ jobs:
           spec = importlib.util.spec_from_file_location("koy_svg", "source/scripts/build_koy_gfs_interactive_svg.py")
           module = importlib.util.module_from_spec(spec)
           spec.loader.exec_module(module)
-          assert module.label_time("2026-11-09T00:00:00+00:00") == "09\\nPzt"
-          assert module.label_time("2026-11-07T00:00:00+00:00") == "07\\nCmt"
+          assert module.label_time("2026-11-09T00:00:00+00:00") == "09" + chr(10) + "Pzt"
+          assert module.label_time("2026-11-07T00:00:00+00:00") == "07" + chr(10) + "Cmt"
           print("Turkish weekday labels verified.")
           PY
 
