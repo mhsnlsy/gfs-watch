@@ -256,46 +256,6 @@ function decodePublicationAsset(row) {
   return new Response(row.body, { status: 200, headers });
 }
 
-async function handlePublicationUpload(request, env) {
-  if (request.method !== "POST") return json({ ok: false, error: "Method not allowed" }, 405);
-  const authorization = request.headers.get("Authorization") || "";
-  if (!env.GFS_DISPATCH_TOKEN || authorization !== "Bearer " + env.GFS_DISPATCH_TOKEN) {
-    return json({ ok: false, error: "Unauthorized" }, 401);
-  }
-
-  let payload;
-  try {
-    payload = await request.json();
-  } catch (_) {
-    return json({ ok: false, error: "Invalid JSON body" }, 400);
-  }
-
-  const key = String(payload?.key || "").replace(/^\/+/, "");
-  const body = typeof payload?.body === "string" ? payload.body : "";
-  const contentType = String(payload?.content_type || "image/svg+xml; charset=utf-8");
-  const runId = payload?.run_id_utc ? String(payload.run_id_utc) : null;
-  if (!/^media\/koy-gfs-[0-9]{8}T[0-9]{2}Z-comparison\.svg$/.test(key)) {
-    return json({ ok: false, error: "Unsupported Köy publication asset path" }, 400);
-  }
-  if (!body || body.length > 1900000) {
-    return json({ ok: false, error: "SVG body is empty or exceeds the D1 row safety limit" }, 413);
-  }
-  if (!contentType.startsWith("image/svg+xml")) {
-    return json({ ok: false, error: "Only SVG publication assets are accepted" }, 415);
-  }
-  if (!body.includes("<svg") || !body.includes("</svg>")) {
-    return json({ ok: false, error: "SVG document is incomplete" }, 400);
-  }
-
-  try {
-    await putPublicationAsset(env, { key, body, content_type: contentType, run_id_utc: runId });
-    return json({ ok: true, key, bytes: body.length, source: "D1" });
-  } catch (error) {
-    return json({ ok: false, error: String(error?.message || error) }, 500);
-  }
-}
-
-
 const KOY_SVG_RENDERER_VERSION = "cloudflare-js-v1";
 const KOY_SVG_COLORS = ["#7DD3D7", "#8ABCE8", "#F1C98B", "#B38BE8"];
 const KOY_SVG_PANELS = [
@@ -438,9 +398,9 @@ function buildKoyInteractiveSvg(comparison) {
     const row = Math.floor(panelIndex / 2);
     const px = panelLeft[column];
     const py = panelTop[row];
-    const plotX = px + 65;
+    const plotX = px + 50;
     const plotY = py + 57;
-    const plotWidth = panelWidth - 88;
+    const plotWidth = panelWidth - 73;
     const plotHeight = 146;
     const panelRight = px + panelWidth;
     const panelBottom = py + panelHeight;
@@ -747,10 +707,6 @@ async function api(request, env) {
 
   if (request.method === "OPTIONS") return json({ ok: true });
 
-  // The authenticated publisher is the only write route; keep it ahead of the GET-only API guard.
-  if (path === "/api/publication-upload") {
-    return handlePublicationUpload(request, env);
-  }
   if (request.method !== "GET") return json({ ok: false, error: "Method not allowed" }, 405);
 
   if (path === "/api/comparison.svg") {
@@ -794,7 +750,6 @@ async function api(request, env) {
         archived_runs: Number(count?.count || 0),
         publication_assets: Number(assetCount?.count || 0),
         svg_renderer: KOY_SVG_RENDERER_VERSION,
-        publication_upload_configured: Boolean(env.GFS_DISPATCH_TOKEN),
       });
     } catch (error) {
       return json({ ok: false, service: "gfs-watch-koy-gfs", error: String(error?.message || error) }, 503);
