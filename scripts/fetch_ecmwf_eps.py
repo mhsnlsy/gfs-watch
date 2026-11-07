@@ -337,7 +337,7 @@ def load_comparison_runs(archive_dir: Path, limit: int = 4) -> list[dict]:
     for path in sorted(Path(archive_dir).glob("*.json")):
         try:
             item = json.loads(path.read_text(encoding="utf-8"))
-            validate_document(item)
+            _validate_meteopt_document(item)
             run_id = _normalise_datetime(item["run_id_utc"]).isoformat(timespec="seconds")
             timeline = _timeline_with_850_temperature(item)
             if not timeline or any(
