@@ -670,3 +670,36 @@
     width: 27% !important;
   }
 }
+
+
+/* FINAL DESKTOP WIDTH OVERRIDE:
+   Older max-content selectors had higher specificity than the first compact-panel
+   rules. Match their full selector weight and use the complete card width. */
+@media (min-width: 851px) and (pointer: fine) {
+  .gfs-table-pressure-layout > #meteopt-gfs-table,
+  .gfs-table-pressure-layout > #meteopt-gfs-table .meteopt-table-card,
+  .gfs-table-pressure-layout > #meteopt-gfs-table .meteopt-table-scroll,
+  .gfs-table-pressure-layout > #meteopt-gfs-table .meteopt-data-table {
+    display: block !important;
+    width: 100% !important;
+    min-width: 0 !important;
+    max-width: 100% !important;
+    box-sizing: border-box !important;
+  }
+  .gfs-table-pressure-layout > #meteopt-gfs-table .meteopt-data-table {
+    display: table !important;
+    table-layout: fixed !important;
+  }
+  .gfs-table-pressure-layout > #meteopt-gfs-table .meteopt-data-table th:first-child,
+  .gfs-table-pressure-layout > #meteopt-gfs-table .meteopt-data-table td:first-child {
+    width: 7% !important;
+  }
+  .gfs-table-pressure-layout > #meteopt-gfs-table .meteopt-data-table th:nth-child(2),
+  .gfs-table-pressure-layout > #meteopt-gfs-table .meteopt-data-table td:nth-child(2) {
+    width: 27% !important;
+  }
+  .gfs-table-pressure-layout > #meteopt-gfs-table .meteopt-data-table th:nth-child(n+3),
+  .gfs-table-pressure-layout > #meteopt-gfs-table .meteopt-data-table td:nth-child(n+3) {
+    width: 13.2% !important;
+  }
+}
