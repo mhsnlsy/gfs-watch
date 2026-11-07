@@ -289,7 +289,7 @@ function svgLine(runs,metric,title,unit,verification=null){
  cycleStart.setUTCMinutes(0,0,0);
  cycleStart.setUTCHours(0);
  const startTime=cycleStart.getTime();
- const hours=reference.map(p=>(p.stamp-startTime)/3600000);
+ const hours=reference.map(p=>Number(p.forecast_hour)).filter(Number.isFinite);
  const usable=runs.map((run,runIndex)=>{
   const byValidTime=new Map();
   (run?.forecast_6_hourly||[]).forEach(p=>{
