@@ -205,7 +205,7 @@ function svgLine(runs,metric,title,unit,maxHour=180,verification=null){
  const x=h=>L+(timeline.length===1?PW/2:(h-timeline[0].elapsed)/(timeline[timeline.length-1].elapsed-timeline[0].elapsed||1))*PW;
  const y=v=>T+(hi-v)*PH/(hi-lo);
  const axisLabel=stamp=>new Intl.DateTimeFormat("tr-TR",{
-  timeZone:"Europe/Istanbul",day:"2-digit",month:"2-digit",hour:"2-digit",hourCycle:"h23"
+  timeZone:"Europe/Istanbul",day:"2-digit"
  }).format(new Date(stamp));
  let s='<svg class="koy-svg" viewBox="0 0 '+W+' '+H+'" preserveAspectRatio="xMidYMid meet" text-rendering="optimizeLegibility" role="img" aria-label="'+esc(title)+'">';
  for(let j=0;j<=3;j++){
