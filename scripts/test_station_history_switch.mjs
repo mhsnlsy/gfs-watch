@@ -36,6 +36,7 @@ function node(id) {
 
 const sandbox = {
   $: node,
+  window: { addEventListener() {} },
   activeStation: "enka",
   enkaStationObservation: {
     station_name: "ENKA Balmumcu",
