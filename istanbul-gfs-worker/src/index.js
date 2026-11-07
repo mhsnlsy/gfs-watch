@@ -910,6 +910,7 @@ async function handleApi(request, env) {
   if (path === "/api/health") {
     try {
       const current = await getCurrent(env, "latest");
+      const ecmwfCurrent = await env.GFS_DB.prepare("SELECT run_id_utc, updated_at_utc FROM ecmwf_current WHERE key = 'latest'").first();
       const count = await env.GFS_DB.prepare("SELECT COUNT(*) AS count FROM gfs_runs").first();
       const pendingDispatch = await env.GFS_DB.prepare(
         "SELECT COUNT(*) AS count FROM gfs_report_dispatch_queue WHERE status IN ('pending', 'processing')"
@@ -943,6 +944,9 @@ async function handleApi(request, env) {
         latest_report_publication: latestPublication || null,
         publication_assets: Number((await env.GFS_DB.prepare("SELECT COUNT(*) AS count FROM gfs_publication_assets").first())?.count || 0),
         location: LOCATION,
+        ecmwf_source: ECMWF_SOURCE_URL,
+        ecmwf_latest_run_id_utc: ecmwfCurrent?.run_id_utc || null,
+        ecmwf_latest_updated_at_utc: ecmwfCurrent?.updated_at_utc || null,
       });
     } catch (error) {
       return json({ ok: false, error: String(error?.message || error) }, 503);
@@ -951,7 +955,11 @@ async function handleApi(request, env) {
 
   if (path === "/ecmwf/latest" || path === "/api/ecmwf/latest") {
     try {
-      const row = await env.GFS_DB.prepare("SELECT payload_json FROM ecmwf_current WHERE key = 'latest'").first();
+      let row = await env.GFS_DB.prepare("SELECT payload_json FROM ecmwf_current WHERE key = 'latest'").first();
+      if (!row) {
+        await collectEcmwf(env);
+        row = await env.GFS_DB.prepare("SELECT payload_json FROM ecmwf_current WHERE key = 'latest'").first();
+      }
       if (!row) return json({ ok: false, error: "No MeteoPT ECMWF run is available yet" }, 503);
       return json(JSON.parse(row.payload_json));
     } catch (error) {
