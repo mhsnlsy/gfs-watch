@@ -1,0 +1,5 @@
+{
+  "name": "gfs-watch-istanbul-worker",
+  "private": true,
+  "type": "module"
+}
