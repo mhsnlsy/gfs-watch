@@ -1,14 +1,7 @@
-name: Publish GitHub Pages Fallback
+name: Publish GitHub Pages Fallback (Manual)
 
 on:
-  push:
-    branches: [main, koy-gfs-data, koy-mgm-data]
-    paths:
-      - ".github/workflows/publish-live-site.yml"
-      - "site/**"
-      - "scripts/build_koy_gfs_interactive_svg.py"
-      - "gfs/**"
-      - "mgm/**"
+  # Emergency rollback only. The primary website is Cloudflare Workers Static Assets.
   workflow_dispatch:
 
 permissions:
