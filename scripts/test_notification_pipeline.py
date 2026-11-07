@@ -31,6 +31,7 @@ def main() -> None:
     assert "schedule:" not in publisher
     assert "group: live-pages-publisher" in publisher
     # The Pages fallback is intentionally source-change driven; push is valid here.
+    # Recovery trigger touch: 12Z F180 publication verification.
     assert "workflow_run:" not in publisher
 
     # Cloudflare is the only live GFS collector; report work is event-driven on new F180.
