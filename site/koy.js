@@ -348,8 +348,12 @@ function renderMgmObservation(o,history,f72){
  const t=num(o.temperature_2m_c),rh=num(o.humidity_percent),wind=num(o.wind_speed_10m_kmh),rain=num(o.precipitation_1h_mm),press=num(o.pressure_hpa);
  $("temperature").textContent=fmt(t)+"°";
  const cachedObservation=o.fetch_status==="stale_cached";
- const lastCheckedAt=o.last_attempt_utc||o.fetched_at_utc||o.observed_at_utc;
- $("station-observation-meta").textContent="Son ölçüm · "+ts(lastCheckedAt)+" · "+stationName+(stationElevation?" · "+stationElevation:"")+(isHome?" · +217 m rakım düzeltmesi":"")+(cachedObservation?" · son geçerli kayıt korunuyor":"");
+ const observedAt=o.observed_at_utc||o.fetched_at_utc||o.last_attempt_utc;
+ const observedMs=Date.parse(observedAt||"");
+ const observedText=Number.isFinite(observedMs)?new Intl.DateTimeFormat("tr-TR",{timeZone:"Europe/Istanbul",day:"2-digit",month:"2-digit",hour:"2-digit",minute:"2-digit"}).format(new Date(observedMs)):"zaman bilinmiyor";
+ const ageMinutes=Number.isFinite(observedMs)?Math.max(0,Math.floor((Date.now()-observedMs)/60000)):null;
+ const ageText=ageMinutes===null?"":ageMinutes<60?ageMinutes+" dk önce":(ageMinutes/60).toFixed(1).replace(".",",")+" saat önce";
+ $("station-observation-meta").textContent="Son ölçüm · "+observedText+" TSİ · "+ageText;
  $("freshness").textContent=cachedObservation?"MGM YANITI BEKLENİYOR":"CANLI ÖLÇÜM";
  $("freshness").classList.toggle("stale",cachedObservation);
  const currentFeels=num(o.feels_like_c)!=null?num(o.feels_like_c):feelsLike(t,rh,wind);
