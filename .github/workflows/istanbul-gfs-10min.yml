@@ -53,11 +53,6 @@ jobs:
           cache: pip
           cache-dependency-path: requirements.txt
 
-      - name: Install publication dependencies
-        run: |
-          python -m pip install --upgrade pip
-          python -m pip install -r requirements.txt
-
       - name: Restore canonical state
         run: |
           set -euo pipefail
@@ -72,6 +67,12 @@ jobs:
         env:
           ISTANBUL_GFS_API: https://gfs-watch-web.muhsin-ulusoy.workers.dev/gfs/latest
         run: python scripts/poll_istanbul_gfs_10min.py
+
+      - name: Install publication dependencies for a new F180 report
+        if: steps.poll.outputs.f180_ready == 'true'
+        run: |
+          python -m pip install --upgrade pip
+          python -m pip install -r requirements.txt
 
       - name: Persist F72 cache and any F180 canonical run
         if: steps.poll.outputs.new_run == 'true'
@@ -159,28 +160,35 @@ jobs:
           path: source
           fetch-depth: 1
 
-      - name: Set up Python
-        uses: actions/setup-python@v5
-        with:
-          python-version: "3.12"
-
-      - name: Install Telegram dependency
-        run: python -m pip install python-telegram-bot
-
       - name: Restore GFS publication tree
         run: |
           set -euo pipefail
           mkdir -p gfs
           cp -a gfs-state/gfs/. gfs/
 
+      - name: Check for pending Telegram reports
+        id: pending
+        run: python3 source/scripts/send_pending_istanbul_gfs_telegram.py --check
+
+      - name: Set up Python for pending Telegram delivery
+        if: steps.pending.outputs.pending == 'true'
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+
+      - name: Install Telegram dependency only when needed
+        if: steps.pending.outputs.pending == 'true'
+        run: python -m pip install python-telegram-bot
+
       - name: Deliver every pending GFS report
+        if: steps.pending.outputs.pending == 'true'
         env:
           TELEGRAM_TOKEN: ${{ secrets.TELEGRAM_TOKEN }}
           CHAT_ID: ${{ secrets.CHAT_ID }}
         run: python source/scripts/send_pending_istanbul_gfs_telegram.py
 
       - name: Persist Telegram delivery markers
-        if: always()
+        if: always() && steps.pending.outputs.pending == 'true'
         working-directory: gfs-state
         run: |
           set -euo pipefail
