@@ -338,9 +338,12 @@ function svgLine(runs,metric,title,unit,verification=null){
  const L=78,R=16,T=34,B=60,PW=W-L-R,PH=H-T-B;
  const x=h=>L+(hours.length===1?PW/2:(h-hours[0])/(hours[hours.length-1]-hours[0]||1))*PW;
  const y=v=>T+(hi-v)*PH/(hi-lo);
- const axisLabel=h=>new Intl.DateTimeFormat("tr-TR",{
-  timeZone:"Europe/Istanbul",day:"2-digit"
- }).format(new Date(startTime+h*3600000));
+ const axisLabel=h=>{
+  const d=new Date(startTime+h*3600000);
+  const day=new Intl.DateTimeFormat("tr-TR",{timeZone:"Europe/Istanbul",day:"2-digit"}).format(d);
+  const weekday=new Intl.DateTimeFormat("tr-TR",{timeZone:"Europe/Istanbul",weekday:"short"}).format(d).replace(/\.$/,"");
+  return {day,weekday};
+ };
  let out='<svg class="koy-svg" viewBox="0 0 '+W+' '+H+'" preserveAspectRatio="xMidYMid meet" text-rendering="optimizeLegibility" role="img" aria-label="'+esc(title)+' · aynı geçerlilik saatleri TSİ">';
  for(let j=0;j<=3;j++){
   const v=lo+(hi-lo)*j/3,yy=y(v);
