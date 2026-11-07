@@ -447,6 +447,10 @@ async function deliverPendingTelegram(env) {
       form.set("document", new Blob([asset.body], { type: "image/svg+xml" }), filename);
       const message = await telegramApi(env, "sendDocument", form, true);
       publication.document_message_id = String(message.message_id);
+      await env.GFS_DB.prepare(
+        "UPDATE gfs_report_publications SET document_message_id = ?, updated_at_utc = ? " +
+        "WHERE run_id_utc = ? AND status = 'sending'"
+      ).bind(publication.document_message_id, new Date().toISOString(), publication.run_id_utc).run();
     }
 
     const sentAt = new Date().toISOString();
