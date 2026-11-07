@@ -1106,3 +1106,20 @@
     text-align: center !important;
   }
 }
+
+
+/* FINAL: pin the GFS table/panel to the left edge of the page content. */
+@media (min-width: 851px) and (pointer: fine) {
+  #meteopt-gfs-table .meteopt-table-card {
+    margin-left: 0 !important;
+    margin-right: auto !important;
+  }
+  #meteopt-gfs-table .meteopt-table-scroll {
+    margin-left: 0 !important;
+    margin-right: auto !important;
+  }
+  #meteopt-gfs-table .meteopt-data-table {
+    margin-left: 0 !important;
+    margin-right: auto !important;
+  }
+}
