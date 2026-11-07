@@ -104,7 +104,7 @@ jobs:
           CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
         run: wrangler d1 migrations apply gfs-watch-stations --remote --config wrangler.jsonc
 
-      - name: Deploy the six-minute-cron Worker
+      - name: Deploy the one-minute-cron Worker
         working-directory: station-worker
         env:
           CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
@@ -118,7 +118,7 @@ jobs:
           set -euo pipefail
           baseline="$(date -u +%s)"
           verified=0
-          echo "Waiting for the autonomous six-minute Cron to collect all four stations..."
+          echo "Waiting for the autonomous one-minute Cron to collect all four stations..."
           for attempt in $(seq 1 17); do
             if curl --silent --show-error --fail --max-time 12 "$STATIONS_API/health?check=$(date +%s)" -o "$RUNNER_TEMP/station-health.json"; then
               if node - "$RUNNER_TEMP/station-health.json" "$baseline" <<'NODE'
@@ -149,7 +149,7 @@ jobs:
           done
 
           if [ "$verified" -ne 1 ]; then
-            echo "::error::Autonomous Cloudflare Cron did not collect all three fresh station readings into D1. The old GitHub MGM collector remains enabled until Cloudflare verification succeeds."
+            echo "::error::Autonomous Cloudflare Cron did not collect all four fresh station readings into D1. The old GitHub MGM collector remains enabled until Cloudflare verification succeeds."
             [ -s "$RUNNER_TEMP/station-health.json" ] && cat "$RUNNER_TEMP/station-health.json" || true
             exit 1
           fi
