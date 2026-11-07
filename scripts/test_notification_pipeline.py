@@ -14,6 +14,7 @@ def read(path: str) -> str:
 def main() -> None:
     publisher = read(".github/workflows/publish-live-site.yml")
     report_workflow = read(".github/workflows/istanbul-gfs-10min.yml")
+    ecmwf_workflow = read(".github/workflows/ecmwf-eps.yml")
     platform_workflow = read(".github/workflows/deploy-cloudflare-platform.yml")
     archive_sync = read(".github/workflows/sync-cloudflare-live-archive.yml")
     istanbul_deploy = read(".github/workflows/deploy-istanbul-gfs-worker.yml")
@@ -118,6 +119,13 @@ def main() -> None:
     assert "gfs/publication-upload" in report_workflow
     assert "GFS_DISPATCH_TOKEN" in report_workflow
     assert 'path.startsWith("/data/notifications/")' in web_worker
+    # ECMWF is calculated in the existing workflow but published and served from D1.
+    assert "Publish ECMWF latest payload and report images to Cloudflare D1" in ecmwf_workflow
+    assert "gfs/publication-upload" in ecmwf_workflow and "gfs/publication-asset/data/ecmwf/latest.json" in ecmwf_workflow
+    assert "--data-binary" in ecmwf_workflow and "GFS_DISPATCH_TOKEN" in ecmwf_workflow
+    assert 'path.startsWith("/data/ecmwf/")' in web_worker
+    assert '"path.slice(1)' in web_worker
+    assert '"public/ecmwf/**"' not in platform_workflow
     # Köy interactive SVG is now stored and served from Köy D1 without redeploying Static Assets.
     assert "gfs_publication_assets" in koy_worker
     assert "/api/publication-upload" in koy_worker
