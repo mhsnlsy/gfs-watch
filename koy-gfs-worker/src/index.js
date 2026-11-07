@@ -68,10 +68,11 @@ async function fetchCycle(requestedHour) {
   return { apiRun, document, url: url.toString() };
 }
 
-async function fetchNewestCycle() {
+async function fetchAvailableCycles() {
   const candidates = [];
-  // Prefer the current 06Z cycle explicitly. MeteoPT's run selector is authoritative
-  // for the requested cycle, so do not let an older cached response win.
+  // Fetch all four available MeteoPT cycle selectors on every Cloudflare poll.
+  // This deliberately keeps the previous three cycles available for the four-run
+  // comparison instead of only persisting the newest cycle.
   const preferred = [6, ...CYCLES.filter(h => h !== 6)];
   for (const requestedHour of preferred) {
     try {
@@ -85,12 +86,25 @@ async function fetchNewestCycle() {
     }
   }
 
-  if (!candidates.length) {
+  const unique = new Map();
+  for (const candidate of candidates) {
+    const key = runKey(candidate.apiRun);
+    if (key) unique.set(key, candidate);
+  }
+
+  const sorted = [...unique.values()].sort((a, b) =>
+    runKey(b.apiRun).localeCompare(runKey(a.apiRun))
+  );
+
+  if (!sorted.length) {
     throw new Error("MeteoPT returned no usable GFS cycle");
   }
 
-  candidates.sort((a, b) => runKey(b.apiRun).localeCompare(runKey(a.apiRun)));
-  return candidates[0];
+  return sorted;
+}
+
+async function fetchNewestCycle() {
+  return (await fetchAvailableCycles())[0];
 }
 
 function normalizeDocument(candidate, now) {
@@ -211,28 +225,39 @@ async function persistF72(env, f72) {
 
 async function collect(env) {
   const now = new Date();
-  const candidate = await fetchNewestCycle();
-  const normalized = normalizeDocument(candidate, now);
+  const candidates = await fetchAvailableCycles();
+  const normalizedRuns = candidates.map(candidate => normalizeDocument(candidate, now));
+  const normalized = normalizedRuns[0];
 
   let f72Changed = false;
   let f180Changed = false;
+  let archivedRunsChanged = 0;
 
+  // The newest cycle remains the canonical F72/F180 output.
   if (normalized.f72) {
     f72Changed = await persistF72(env, normalized.f72);
   }
 
-  if (normalized.full) {
-    f180Changed = await persistRun(env, normalized.full);
-
-    // Keep the F72 endpoint on the same canonical F180-ready cycle once it exists.
-    if (f180Changed) {
-      f72Changed = await persistF72(env, normalized.full) || f72Changed;
+  // Persist every available F180-ready cycle. This backfills the previous three
+  // cycles on the first Cloudflare poll and maintains the four-run comparison
+  // automatically thereafter.
+  for (const run of normalizedRuns) {
+    if (run.full && await persistRun(env, run.full)) {
+      archivedRunsChanged += 1;
+      f180Changed = true;
     }
+  }
+
+  // Keep the F72 endpoint on the same canonical F180-ready cycle once it exists.
+  if (normalized.full && f180Changed) {
+    f72Changed = await persistF72(env, normalized.full) || f72Changed;
   }
 
   console.log(JSON.stringify({
     event: "koy_gfs_collect",
     run_id_utc: normalized.runId,
+    fetched_cycles: normalizedRuns.length,
+    archived_runs_changed: archivedRunsChanged,
     f72_ready: Boolean(normalized.f72),
     f72_changed: f72Changed,
     f180_ready: Boolean(normalized.full),
@@ -244,6 +269,8 @@ async function collect(env) {
   return {
     ok: true,
     run_id_utc: normalized.runId,
+    fetched_cycles: normalizedRuns.length,
+    archived_runs_changed: archivedRunsChanged,
     f72_ready: Boolean(normalized.f72),
     f72_changed: f72Changed,
     f180_ready: Boolean(normalized.full),
