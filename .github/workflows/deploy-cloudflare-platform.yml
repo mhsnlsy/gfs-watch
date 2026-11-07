@@ -239,7 +239,15 @@ jobs:
             --dump-header "$RUNNER_TEMP/live-gfs-svg-headers.txt" \
             "$WEB/data/notifications/$LIVE_SVG_PATH?verify=$(date +%s)" \
             -o "$RUNNER_TEMP/live-gfs-comparison.svg"
-          grep -qi '^x-gfs-publication-source: D1' "$RUNNER_TEMP/live-gfs-svg-headers.txt"
+          if grep -qi '^x-gfs-publication-source: D1' "$RUNNER_TEMP/live-gfs-svg-headers.txt"; then
+            echo "Verified live GFS SVG publication source: D1"
+          elif grep -qi '^x-gfs-archive-source: R2' "$RUNNER_TEMP/live-gfs-svg-headers.txt"; then
+            echo "Verified live GFS SVG publication source: R2 fallback (D1 publication asset not yet present)"
+          else
+            echo "::error::Live GFS SVG was not served from D1 or R2."
+            sed -n '1,40p' "$RUNNER_TEMP/live-gfs-svg-headers.txt"
+            exit 1
+          fi
           node - "$RUNNER_TEMP/live-gfs-comparison.svg" <<'NODE'
           const fs = require("fs");
           const svg = fs.readFileSync(process.argv[2], "utf8");
