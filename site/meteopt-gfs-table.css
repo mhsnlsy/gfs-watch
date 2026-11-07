@@ -1223,3 +1223,184 @@
 #meteopt-gfs-table .meteopt-value.mt-red{color:#ff9292 !important;background:rgba(220,65,65,.18) !important}
 #meteopt-gfs-table .meteopt-value.mt-purple{color:#d7a6ff !important;background:rgba(151,82,205,.20) !important}
 #meteopt-gfs-table .meteopt-value.mt-gray{color:#b7c2ca !important;background:rgba(145,158,168,.16) !important}
+
+
+/* FINAL MOBILE FIT — MeteoPT GFS
+   The GFS header and 7-column forecast table are a single fixed-width
+   mobile composition: no horizontal swipe/scroll and no oversized table. */
+@media (max-width: 850px), (pointer: coarse) {
+  #meteopt-gfs-table {
+    width: 100% !important;
+    max-width: 100% !important;
+    min-width: 0 !important;
+    overflow: visible !important;
+  }
+
+  #meteopt-gfs-table .meteopt-table-card {
+    width: 100% !important;
+    max-width: 100% !important;
+    min-width: 0 !important;
+    margin: 0 !important;
+    padding: 8px 9px !important;
+    border-radius: 12px !important;
+  }
+
+  #meteopt-gfs-table .meteopt-table-panel-head {
+    display: grid !important;
+    grid-template-columns: minmax(0, 1fr) auto !important;
+    align-items: center !important;
+    gap: 7px !important;
+    width: 100% !important;
+    margin: 0 0 6px !important;
+  }
+
+  #meteopt-gfs-table .meteopt-table-title {
+    min-width: 0 !important;
+  }
+
+  #meteopt-gfs-table .meteopt-table-title .section-kicker {
+    margin: 0 0 2px !important;
+    font-size: 8px !important;
+    line-height: 1.1 !important;
+    letter-spacing: .11em !important;
+  }
+
+  #meteopt-gfs-table .meteopt-table-title h2 {
+    margin: 0 !important;
+    font-size: 16px !important;
+    line-height: 1.1 !important;
+    letter-spacing: -.025em !important;
+    white-space: nowrap !important;
+  }
+
+  #meteopt-gfs-table .meteopt-table-cycle {
+    min-width: 0 !important;
+    max-width: 48% !important;
+    display: flex !important;
+    flex-direction: column !important;
+    align-items: flex-end !important;
+    justify-content: center !important;
+    gap: 1px !important;
+    font-size: 8px !important;
+    line-height: 1.15 !important;
+    white-space: nowrap !important;
+    text-align: right !important;
+  }
+
+  #meteopt-gfs-table .meteopt-table-cycle span {
+    display: block !important;
+    max-width: 100% !important;
+    overflow: hidden !important;
+    text-overflow: clip !important;
+  }
+
+  #meteopt-gfs-table .meteopt-table-toolbar {
+    width: 100% !important;
+    max-width: 100% !important;
+    margin: 0 0 4px !important;
+    padding: 3px 5px !important;
+    min-height: 0 !important;
+    font-size: 7.5px !important;
+    line-height: 1.1 !important;
+    gap: 5px !important;
+    overflow: hidden !important;
+  }
+
+  #meteopt-gfs-table .meteopt-table-scroll {
+    width: 100% !important;
+    max-width: 100% !important;
+    min-width: 0 !important;
+    overflow: hidden !important;
+    overflow-x: hidden !important;
+    overflow-y: visible !important;
+    border-radius: 7px !important;
+    overscroll-behavior: none !important;
+  }
+
+  #meteopt-gfs-table .meteopt-data-table {
+    display: table !important;
+    width: 100% !important;
+    min-width: 0 !important;
+    max-width: 100% !important;
+    table-layout: fixed !important;
+    font-size: 7.5px !important;
+    white-space: nowrap !important;
+  }
+
+  #meteopt-gfs-table .meteopt-data-table th,
+  #meteopt-gfs-table .meteopt-data-table td {
+    min-width: 0 !important;
+    max-width: none !important;
+    box-sizing: border-box !important;
+    padding: 3px 1px !important;
+    overflow: hidden !important;
+    text-overflow: clip !important;
+    text-align: center !important;
+    line-height: 1.05 !important;
+    white-space: nowrap !important;
+  }
+
+  #meteopt-gfs-table .meteopt-data-table th:first-child,
+  #meteopt-gfs-table .meteopt-data-table td:first-child {
+    width: 7% !important;
+  }
+
+  #meteopt-gfs-table .meteopt-data-table th:nth-child(2),
+  #meteopt-gfs-table .meteopt-data-table td:nth-child(2) {
+    width: 25% !important;
+    padding-left: 1px !important;
+    padding-right: 1px !important;
+    text-align: center !important;
+  }
+
+  #meteopt-gfs-table .meteopt-data-table th:nth-child(n+3),
+  #meteopt-gfs-table .meteopt-data-table td:nth-child(n+3) {
+    width: 13.6% !important;
+  }
+
+  #meteopt-gfs-table .meteopt-data-table th {
+    font-size: 7px !important;
+    font-weight: 700 !important;
+  }
+
+  #meteopt-gfs-table .meteopt-data-table td {
+    height: 20px !important;
+    font-size: 7.5px !important;
+  }
+
+  #meteopt-gfs-table .meteopt-value {
+    display:inline !important;
+    min-width: 0 !important;
+    max-width: 100% !important;
+    padding: 1px 0 !important;
+    font-size: 7.5px !important;
+    line-height: 1 !important;
+    border-radius: 3px !important;
+  }
+}
+
+@media (max-width: 390px) {
+  #meteopt-gfs-table .meteopt-table-card {
+    padding: 7px 8px !important;
+  }
+
+  #meteopt-gfs-table .meteopt-table-title h2 {
+    font-size: 15px !important;
+  }
+
+  #meteopt-gfs-table .meteopt-table-cycle {
+    font-size: 7.5px !important;
+  }
+
+  #meteopt-gfs-table .meteopt-data-table {
+    font-size: 7px !important;
+  }
+
+  #meteopt-gfs-table .meteopt-data-table th {
+    font-size: 6.5px !important;
+  }
+
+  #meteopt-gfs-table .meteopt-data-table td {
+    font-size: 7px !important;
+  }
+}
