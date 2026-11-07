@@ -48,13 +48,6 @@ jobs:
           path: koy-data
           fetch-depth: 1
 
-      - name: Check out Köy MGM data
-        uses: actions/checkout@v5
-        with:
-          ref: koy-mgm-data
-          path: koy-mgm-data
-          fetch-depth: 1
-
       - name: Prepare Python for Köy GFS chart rendering
         uses: actions/setup-python@v5
         with:
@@ -121,11 +114,6 @@ jobs:
           if [ -d koy-data/gfs ]; then
             cp -a koy-data/gfs _site/koy-data/
           fi
-          if [ -d koy-mgm-data/mgm ]; then
-            mkdir -p _site/koy-data/mgm
-            cp -a koy-mgm-data/mgm/. _site/koy-data/mgm/
-          fi
-
           touch _site/.nojekyll
           test -s _site/index.html
           node - _site/koy-data/gfs/comparison.json _site/koy-data/gfs/media <<'NODE'
