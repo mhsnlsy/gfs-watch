@@ -43,7 +43,7 @@ PANEL_SPECS = (
     ("precipitation", "precipitation_6h_mm", "Yağış", "mm / 6 saat"),
     ("wind_10m", "wind_speed_10m_kmh", "10 m rüzgâr hızı", "km/sa"),
 )
-RENDERER_VERSION = "koy-gfs-valid-time-svg-tooltip-v1"
+RENDERER_VERSION = "koy-gfs-weekday-axis-v1"
 
 
 def parse_utc(value: str) -> datetime:
@@ -126,8 +126,10 @@ def value_for(item: dict, key: str, field: str):
 
 
 def label_time(key: str) -> str:
-    # MeteoPT reference clock: display raw GFS UTC valid time without +3 conversion.
-    return parse_utc(key).strftime("%d")
+    # Use the raw MeteoPT/GFS UTC valid date; no Istanbul +3 conversion.
+    weekday_short = ("Pzt", "Sal", "Çar", "Per", "Cum", "Cmt", "Paz")
+    valid_time = parse_utc(key)
+    return f"{valid_time:%d}\n{weekday_short[valid_time.weekday()]}"
 
 
 def render_svg(series: list[dict], valid_keys: list[str], comparison: dict) -> bytes:
@@ -215,7 +217,7 @@ def render_svg(series: list[dict], valid_keys: list[str], comparison: dict) -> b
                 handletextpad=0.8,
             )
             fig.subplots_adjust(
-                left=0.045, right=0.955, bottom=0.085, top=0.707,
+                left=0.045, right=0.955, bottom=0.105, top=0.707,
                 wspace=0.18, hspace=0.36,
             )
 
@@ -292,7 +294,7 @@ def render_svg(series: list[dict], valid_keys: list[str], comparison: dict) -> b
                 )
                 axis.set_xticks([x_values[index] for index in tick_indices])
                 axis.set_xticklabels(
-                    tick_labels, fontsize=10, color=MUTED,
+                    tick_labels, fontsize=9.5, color=MUTED, linespacing=1.15,
                     fontweight="semibold",
                 )
                 axis.margins(x=0.01)
