@@ -21,8 +21,8 @@ jobs:
     runs-on: ubuntu-latest
     timeout-minutes: 12
     outputs:
-      f180_ready: \${{ steps.poll.outputs.f180_ready }}
-      run_id: \${{ steps.poll.outputs.run_id }}
+      f180_ready: ${{ steps.poll.outputs.f180_ready }}
+      run_id: ${{ steps.poll.outputs.run_id }}
     steps:
       - name: Check out application source
         uses: actions/checkout@v5
@@ -96,7 +96,7 @@ jobs:
       - name: Build the report from the newly archived F180 run
         if: steps.poll.outputs.f180_ready == 'true'
         env:
-          GFS_TARGET_RUN_ID: \${{ steps.poll.outputs.run_id }}
+          GFS_TARGET_RUN_ID: ${{ steps.poll.outputs.run_id }}
         run: python scripts/build_istanbul_gfs_publication.py
 
       - name: Persist the publication bundle
@@ -164,8 +164,8 @@ jobs:
 
       - name: Deliver every pending GFS report
         env:
-          TELEGRAM_TOKEN: \${{ secrets.TELEGRAM_TOKEN }}
-          CHAT_ID: \${{ secrets.CHAT_ID }}
+          TELEGRAM_TOKEN: ${{ secrets.TELEGRAM_TOKEN }}
+          CHAT_ID: ${{ secrets.CHAT_ID }}
         run: python source/scripts/send_pending_istanbul_gfs_telegram.py
 
       - name: Persist Telegram delivery markers
