@@ -148,6 +148,12 @@ async def send_pending(root: Path, outbox_dir: Path, token: str, chat_id: str) -
                         marker = {}
 
                 if marker.get("status") == "sent":
+                    for photo_path in resolve_photos(root, outbox_dir, item):
+                        try:
+                            photo_path.relative_to(outbox_dir)
+                            photo_path.unlink(missing_ok=True)
+                        except ValueError:
+                            pass
                     queued_file.unlink(missing_ok=True)
                     processed += 1
                     continue
