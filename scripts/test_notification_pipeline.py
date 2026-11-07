@@ -140,7 +140,7 @@ def main() -> None:
     assert 'path.startsWith("/data/notifications/")' in web_worker
     # ECMWF is calculated in the existing workflow but published and served from D1.
     assert "Publish validated ECMWF archive to Cloudflare R2" in ecmwf_workflow
-    assert "CLOUDFLARE_API_TOKEN" in ecmwf_workflow
+    assert "CLOUDFLARE_R2_API_TOKEN" in ecmwf_workflow
     assert "data/ecmwf/$relative" in ecmwf_workflow
     assert "Verified ECMWF R2 archive" in ecmwf_workflow
     assert "Publish ECMWF latest payload and report images to Cloudflare D1" in ecmwf_workflow
