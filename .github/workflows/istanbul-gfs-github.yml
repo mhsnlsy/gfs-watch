@@ -187,11 +187,11 @@ jobs:
         run: |
           set -euo pipefail
           mkdir -p gfs/notifications/telegram-sent gfs/telegram-outbox
-          if [ -d "\${GITHUB_WORKSPACE}/gfs/notifications/telegram-sent" ]; then
-            cp -a "\${GITHUB_WORKSPACE}/gfs/notifications/telegram-sent/." gfs/notifications/telegram-sent/
+          if [ -d "${GITHUB_WORKSPACE}/gfs/notifications/telegram-sent" ]; then
+            cp -a "${GITHUB_WORKSPACE}/gfs/notifications/telegram-sent/." gfs/notifications/telegram-sent/
           fi
-          if [ -d "\${GITHUB_WORKSPACE}/gfs/telegram-outbox" ]; then
-            cp -a "\${GITHUB_WORKSPACE}/gfs/telegram-outbox/." gfs/telegram-outbox/
+          if [ -d "${GITHUB_WORKSPACE}/gfs/telegram-outbox" ]; then
+            cp -a "${GITHUB_WORKSPACE}/gfs/telegram-outbox/." gfs/telegram-outbox/
           fi
           git config user.name "github-actions[bot]"
           git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
