@@ -135,6 +135,17 @@
     .notification-images .notification-image-item{width:100%;min-width:0}
     .notification-images .notification-image-link{display:block !important;width:100% !important;max-width:100% !important;aspect-ratio:auto !important;overflow:hidden}
     .notification-images .notification-image{display:block;width:100% !important;min-width:0 !important;max-width:100% !important;height:auto !important;max-height:none !important;object-fit:contain}
+    /* DESKTOP: shrink the entire report panel by 15% while preserving
+       the Köy-derived internal 90% chart ratio. */
+    @media(min-width:701px) and (pointer:fine){
+      #bildirimler .notification-card.notification-chart-only{
+        width:85%!important;
+        max-width:85%!important;
+        margin-left:auto!important;
+        margin-right:auto!important;
+      }
+    }
+
     @media(max-width:700px),(pointer:coarse){
       .notification-images{grid-template-columns:minmax(0,1fr) !important;gap:14px}
     }
