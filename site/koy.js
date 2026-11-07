@@ -348,7 +348,8 @@ function renderMgmObservation(o,history,f72){
  const t=num(o.temperature_2m_c),rh=num(o.humidity_percent),wind=num(o.wind_speed_10m_kmh),rain=num(o.precipitation_1h_mm),press=num(o.pressure_hpa);
  $("temperature").textContent=fmt(t)+"°";
  const cachedObservation=o.fetch_status==="stale_cached";
- $("station-observation-meta").textContent="Son ölçüm · "+ts(o.observed_at_utc)+" · "+stationName+(stationElevation?" · "+stationElevation:"")+(isHome?" · +217 m rakım düzeltmesi":"")+(cachedObservation?" · son geçerli kayıt korunuyor":"");
+ const lastCheckedAt=o.last_attempt_utc||o.fetched_at_utc||o.observed_at_utc;
+ $("station-observation-meta").textContent="Son ölçüm · "+ts(lastCheckedAt)+" · "+stationName+(stationElevation?" · "+stationElevation:"")+(isHome?" · +217 m rakım düzeltmesi":"")+(cachedObservation?" · son geçerli kayıt korunuyor":"");
  $("freshness").textContent=cachedObservation?"MGM YANITI BEKLENİYOR":"CANLI ÖLÇÜM";
  $("freshness").classList.toggle("stale",cachedObservation);
  const currentFeels=num(o.feels_like_c)!=null?num(o.feels_like_c):feelsLike(t,rh,wind);
@@ -742,7 +743,7 @@ async function refresh(){if(busy)return;busy=true;
   if(!evObservation)evObservation=buildVirtualHomeObservation(window.__koyMgmObservation);
   window.__koyCurrentTemp=num(results[3].value.station.temperature_c ?? results[3].value.station.temperature_2m_c);
   const o=window.__koyMgmObservation;
-  $("mgm-status-date").textContent=ts(o.observed_at_utc);
+  $("mgm-status-date").textContent=ts(o.last_attempt_utc||o.fetched_at_utc||o.observed_at_utc);
   $("mgm-source-temp").innerHTML=fmt(o.temperature_2m_c)+"<small>°C</small>";
   $("mgm-source-status").textContent="Canlı MGM ölçümü · son 1 saat yağış "+fmt(o.precipitation_1h_mm)+" mm";
   $("mgm-source-fill").style.width=Math.min(100,Math.max(0,(num(o.precipitation_1h_mm)||0)*8))+"%";
