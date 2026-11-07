@@ -420,8 +420,15 @@ function svgLine(runs,metric,title,unit,verification=null){
 let activeTooltip=null;
 let activeChartSource=[];
 let activeChartVerification=null;
+const synchronized72Charts=new Map();
+
+function hideSynchronized72Tooltips(){
+ synchronized72Charts.forEach(api=>api.hide());
+ activeTooltip=null;
+}
 function renderCharts(){
  if(!activeChartSource.length)return;
+ synchronized72Charts.clear();
  $("next72-temperature").innerHTML=svgLine(activeChartSource,"temperature_2m_c","2 m sıcaklık","°C",activeChartVerification);
  $("next72-precipitation").innerHTML=svgLine(activeChartSource,"precipitation_6h_mm","3 saatlik yağış","mm / 3 saat",null);
  bindTooltip("next72-temperature");
@@ -429,32 +436,46 @@ function renderCharts(){
  reportHeight();
 }
 function bindTooltip(containerId){
- const host=$(containerId),svg=host?.querySelector("svg.koy-svg");if(!host||!svg)return;
+ const host=$(containerId),svg=host?.querySelector("svg.koy-svg");
+ if(!host||!svg)return;
  const tooltip=document.createElement("div");
  tooltip.className="gfs-point-tooltip";
  tooltip.hidden=true;
  tooltip.setAttribute("role","status");
+ tooltip.setAttribute("aria-live","polite");
  host.appendChild(tooltip);
+ host.style.position="relative";
+ host.style.overflow="visible";
  let pinned=false;
- const targets=[...svg.querySelectorAll(".gfs-point-target")],currentTargets=targets.filter(target=>target.dataset.current==="true");
- const screenXOf=target=>{const matrix=svg.getScreenCTM();if(!matrix)return NaN;const point=svg.createSVGPoint();point.x=Number(target.getAttribute("cx"));point.y=Number(target.getAttribute("cy"));return point.matrixTransform(matrix).x;};
+ const targets=[...svg.querySelectorAll(".gfs-point-target")];
+ const currentTargets=targets.filter(target=>target.dataset.current==="true");
+ const screenPointOf=target=>{
+  const matrix=svg.getScreenCTM();
+  if(!matrix)return null;
+  const point=svg.createSVGPoint();
+  point.x=Number(target.getAttribute("cx"));
+  point.y=Number(target.getAttribute("cy"));
+  const screen=point.matrixTransform(matrix);
+  return {clientX:screen.x,clientY:screen.y};
+ };
  const currentByTime=new Map(currentTargets.map(target=>[target.dataset.validkey,target]));
- let currentXs=currentTargets.map(target=>({target,x:screenXOf(target)})).filter(item=>Number.isFinite(item.x)).sort((a,b)=>a.x-b.x);
- function refreshScreenXs(){currentXs=currentTargets.map(target=>({target,x:screenXOf(target)})).filter(item=>Number.isFinite(item.x)).sort((a,b)=>a.x-b.x);}
+ let currentXs=[];
+ function refreshScreenXs(){
+  currentXs=currentTargets.map(target=>({target,x:screenPointOf(target)?.clientX}))
+   .filter(item=>Number.isFinite(item.x)).sort((a,b)=>a.x-b.x);
+ }
+ refreshScreenXs();
  function hide(){
   tooltip.hidden=true;
   pinned=false;
+  host.style.zIndex="";
   if(activeTooltip?.tooltip===tooltip)activeTooltip=null;
  }
-
  function positionTooltipInHost(event){
   if(!event||!Number.isFinite(event.clientX)||!Number.isFinite(event.clientY))return;
   const rect=host.getBoundingClientRect();
-  const gap=10;
-  const tw=tooltip.offsetWidth;
-  const th=tooltip.offsetHeight;
-  const localX=event.clientX-rect.left;
-  const localY=event.clientY-rect.top;
+  const gap=10,tw=tooltip.offsetWidth,th=tooltip.offsetHeight;
+  const localX=event.clientX-rect.left,localY=event.clientY-rect.top;
   const maxLeft=Math.max(8,rect.width-tw-8);
   const maxTop=Math.max(8,rect.height-th-8);
   const left=Math.max(8,Math.min(maxLeft,localX-tw/2));
@@ -464,77 +485,141 @@ function bindTooltip(containerId){
  }
  function show(target,event,lock=false){
   if(!target)return;
-  const run=target.dataset.run||"GFS döngüsü",valid=target.dataset.valid||"—",step=target.dataset.step||"",value=target.dataset.value||"—",unit=target.dataset.unit||"",color=target.dataset.color||GFS_CYCLE_THEME.colors[0];
+  const run=target.dataset.run||"GFS döngüsü";
+  const valid=target.dataset.valid||"—";
+  const step=target.dataset.step||"";
+  const value=target.dataset.value||"—";
+  const unit=target.dataset.unit||"";
+  const color=target.dataset.color||GFS_CYCLE_THEME.colors[0];
   tooltip.innerHTML='<div class="gfs-point-tooltip-head"><i style="background:'+color+'"></i><strong>Güncel GFS tahmini</strong></div><div class="gfs-point-tooltip-time">Döngü · '+esc(run)+'<br>Geçerlilik · '+esc(valid)+'</div><div class="gfs-point-tooltip-value">'+esc(value)+' <small>'+esc(unit)+'</small></div><div class="gfs-point-tooltip-meta">Tahmin adımı '+esc(step)+'</div>';
   tooltip.hidden=false;
   pinned=lock;
-  positionTooltipInHost(event);
+  host.style.zIndex="80";
+  positionTooltipInHost(event||screenPointOf(target));
   if(lock)activeTooltip={host,tooltip,hide};
+ }
+ function showSynchronized(target,event,lock=false){
+  const key=target?.dataset?.validkey;
+  if(!key){hideSynchronized72Tooltips();return;}
+  // Both cards resolve the identical valid-time key, not an assumed shared index.
+  synchronized72Charts.forEach(api=>{
+   const matching=api.currentByTime.get(key);
+   if(!matching){api.hide();return;}
+   const anchor=api.host===host
+    ? event
+    : (api.screenPointOf(matching)||event);
+   api.show(matching,anchor,lock);
+  });
  }
  function nearestPoint(event){
   if(!currentXs.length)refreshScreenXs();
   if(!currentXs.length)return null;
   const x=event.clientX;
   let lo=0,hi=currentXs.length-1;
-  while(lo<hi){const mid=(lo+hi)>>1;if(currentXs[mid].x<x)lo=mid+1;else hi=mid;}
+  while(lo<hi){
+   const mid=(lo+hi)>>1;
+   if(currentXs[mid].x<x)lo=mid+1;else hi=mid;
+  }
   let best=currentXs[lo];
   if(lo>0&&Math.abs(currentXs[lo-1].x-x)<Math.abs(best.x-x))best=currentXs[lo-1];
   return best.target;
  }
- function latestPointAtSameTime(hit){return hit?currentByTime.get(hit.dataset.validkey)||hit:null;}
- const updateTouch=event=>{
-  if(!event||!Number.isFinite(event.clientX)||!Number.isFinite(event.clientY))return;
-  pinned=true;
-  const hit=nearestPoint(event),target=latestPointAtSameTime(hit);
-  if(target)show(target,event,true);else hide();
+ function latestPointAtSameTime(hit){
+  return hit?currentByTime.get(hit.dataset.validkey)||hit:null;
+ }
+ const api={
+  host,svg,tooltip,currentByTime,show,hide,screenPointOf,
+  refreshScreenXs,
+  nearestPoint:event=>latestPointAtSameTime(nearestPoint(event))
  };
- svg.style.touchAction="pan-y";
- svg.style.webkitTapHighlightColor="transparent";
+ synchronized72Charts.set(containerId,api);
  let touchStartX=NaN,touchStartY=NaN,touchScrolling=false;
  const beginTouch=event=>{
   if(event.pointerType!=="touch")return;
-  touchStartX=event.clientX;touchStartY=event.clientY;touchScrolling=false;
+  touchStartX=event.clientX;
+  touchStartY=event.clientY;
+  touchScrolling=false;
  };
  const shouldReleaseForScroll=event=>{
   if(!Number.isFinite(touchStartX)||!Number.isFinite(touchStartY))return false;
   const dx=Math.abs(event.clientX-touchStartX),dy=Math.abs(event.clientY-touchStartY);
-  return dy>10 && dy>dx*1.15;
+  return dy>10&&dy>dx*1.15;
  };
+ const updateTouch=event=>{
+  if(!event||!Number.isFinite(event.clientX)||!Number.isFinite(event.clientY))return;
+  const target=api.nearestPoint(event);
+  if(target)showSynchronized(target,event,true);
+ };
+ svg.style.touchAction="pan-y";
+ svg.style.webkitTapHighlightColor="transparent";
  svg.addEventListener("pointermove",event=>{
   if(event.pointerType==="touch"){
-   if(shouldReleaseForScroll(event)){touchScrolling=true;hide();return;}
-   if(!touchScrolling){updateTouch(event);}
+   if(shouldReleaseForScroll(event)){
+    touchScrolling=true;
+    hideSynchronized72Tooltips();
+    return;
+   }
+   if(!touchScrolling)updateTouch(event);
    return;
   }
-  if(pinned)return;
-  const hit=nearestPoint(event),target=latestPointAtSameTime(hit);
-  if(target)show(target,event,false);else hide();
+  if([...synchronized72Charts.values()].some(item=>item.host===host&&pinned))return;
+  const target=api.nearestPoint(event);
+  if(target)showSynchronized(target,event,false);
+  else hideSynchronized72Tooltips();
  });
  svg.addEventListener("pointerrawupdate",event=>{
   if(event.pointerType==="touch"&&!touchScrolling){
-   if(shouldReleaseForScroll(event)){touchScrolling=true;hide();return;}
+   if(shouldReleaseForScroll(event)){
+    touchScrolling=true;
+    hideSynchronized72Tooltips();
+    return;
+   }
    updateTouch(event);
   }
-},{passive:true});
+ },{passive:true});
  svg.addEventListener("touchmove",event=>{
-  const touch=event.touches?.[0];if(!touch)return;
+  const touch=event.touches?.[0];
+  if(!touch)return;
   updateTouch({clientX:touch.clientX,clientY:touch.clientY});
  },{passive:true});
- svg.addEventListener("pointerleave",()=>{if(!pinned)hide();});
+ svg.addEventListener("pointerleave",()=>{
+  if(!pinned)hideSynchronized72Tooltips();
+ });
  svg.addEventListener("pointerdown",event=>{
   if(event.pointerType!=="touch"&&event.pointerType!=="pen")return;
   beginTouch(event);
-  if(event.pointerType==="touch"){pinned=true;try{svg.setPointerCapture(event.pointerId);}catch(_){}}
-  const hit=nearestPoint(event),target=latestPointAtSameTime(hit);
-  if(target)show(target,event,true);else hide();
+  if(event.pointerType==="touch"){
+   pinned=true;
+   try{svg.setPointerCapture(event.pointerId);}catch(_){}
+  }
+  const target=api.nearestPoint(event);
+  if(target)showSynchronized(target,event,true);
+  else hideSynchronized72Tooltips();
  });
- svg.addEventListener("pointerup",event=>{if(event.pointerType==="touch"){hide();touchScrolling=false;touchStartX=touchStartY=NaN;}});
- svg.addEventListener("pointercancel",event=>{if(event.pointerType==="touch"){hide();touchScrolling=false;touchStartX=touchStartY=NaN;}});
- svg.addEventListener("lostpointercapture",event=>{if(event.pointerType==="touch"){hide();touchScrolling=false;touchStartX=touchStartY=NaN;}});
- window.addEventListener("scroll",hide,{passive:true,capture:true});
- window.addEventListener("resize",()=>{refreshScreenXs();hide();},{passive:true});
+ svg.addEventListener("pointerup",event=>{
+  if(event.pointerType==="touch"){
+   // Keep both cards on the selected timestamp after the user lifts a finger.
+   touchScrolling=false;
+   touchStartX=touchStartY=NaN;
+  }
+ });
+ svg.addEventListener("pointercancel",event=>{
+  if(event.pointerType==="touch"){
+   hideSynchronized72Tooltips();
+   touchScrolling=false;
+   touchStartX=touchStartY=NaN;
+  }
+ });
+ window.addEventListener("scroll",hideSynchronized72Tooltips,{passive:true,capture:true});
+ window.addEventListener("resize",()=>{
+  synchronized72Charts.forEach(item=>item.refreshScreenXs());
+  hideSynchronized72Tooltips();
+ },{passive:true});
 }
-document.addEventListener("pointerdown",event=>{if(activeTooltip&&!activeTooltip.host.contains(event.target))activeTooltip.hide();},true);
+document.addEventListener("pointerdown",event=>{
+ const inside=[...synchronized72Charts.values()].some(api=>api.host.contains(event.target));
+ if(!inside)hideSynchronized72Tooltips();
+},true);
 async function load(){
  try{
   const cache=Date.now();
