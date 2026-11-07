@@ -14,7 +14,8 @@
       "/__health",
       "/gfs/*",
       "/api/*",
-      "/data/notifications/*"
+      "/data/notifications/*",
+      "/koy-data/gfs/media/*"
     ],
     "not_found_handling": "404-page"
   },
