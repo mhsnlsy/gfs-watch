@@ -15,6 +15,7 @@ def main() -> None:
     publisher = read(".github/workflows/publish-live-site.yml")
     report_workflow = read(".github/workflows/istanbul-gfs-10min.yml")
     platform_workflow = read(".github/workflows/deploy-cloudflare-platform.yml")
+    istanbul_deploy = read(".github/workflows/deploy-istanbul-gfs-worker.yml")
     poller = read("scripts/poll_istanbul_gfs_10min.py")
     builder = read("scripts/build_istanbul_gfs_publication.py")
     sender = read("scripts/send_pending_istanbul_gfs_telegram.py")
@@ -25,6 +26,7 @@ def main() -> None:
     assert "actions/deploy-pages@v4" in publisher
     assert "schedule:" not in publisher
     assert "group: live-pages-publisher" in publisher
+    assert "push:" not in publisher and "workflow_run:" not in publisher
 
     # Cloudflare is the only live GFS collector. GitHub syncs D1 for reports.
     assert 'cron: "*/10 * * * *"' in report_workflow
@@ -68,6 +70,11 @@ def main() -> None:
     }
     assert "Deploy Cloudflare Worker + Static Assets" in platform_workflow
     assert "Verify Cloudflare website and proxied APIs" in platform_workflow
+    assert "istanbul-gfs-worker/**" not in platform_workflow
+    assert "Locate or create Istanbul GFS D1" not in platform_workflow
+    assert "Deploy Istanbul GFS Worker + D1" in istanbul_deploy
+    assert "istanbul-gfs-worker/**" in istanbul_deploy
+    assert "Deploy autonomous Istanbul GFS Cron Worker" in istanbul_deploy
 
     istanbul = json.loads(read("istanbul-gfs-worker/wrangler.jsonc"))
     koy = json.loads(read("koy-gfs-worker/wrangler.jsonc"))
