@@ -149,6 +149,38 @@ jobs:
           printf '%s' "$TELEGRAM_TOKEN" | wrangler secret put TELEGRAM_TOKEN --config wrangler.jsonc
           printf '%s' "$TELEGRAM_CHAT_ID" | wrangler secret put TELEGRAM_CHAT_ID --config wrangler.jsonc
 
+      - name: Smoke-test live GFS collection through the Cloudflare Worker
+        env:
+          ISTANBUL_GFS_API: https://gfs-watch-istanbul-gfs.muhsin-ulusoy.workers.dev
+          GFS_DISPATCH_TOKEN: ${{ secrets.GFS_DISPATCH_TOKEN }}
+        run: |
+          set -euo pipefail
+          test -n "$GFS_DISPATCH_TOKEN" || { echo "::error::GFS_DISPATCH_TOKEN is required for the authenticated collection smoke test"; exit 1; }
+          curl --fail --silent --show-error --max-time 100 \
+            --request POST \
+            --url "$ISTANBUL_GFS_API/internal/reconcile?smoke=$(date +%s)" \
+            --header "Authorization: Bearer $GFS_DISPATCH_TOKEN" \
+            --header "Accept: application/json" \
+            --output "$RUNNER_TEMP/istanbul-collect-smoke.json"
+          node - "$RUNNER_TEMP/istanbul-collect-smoke.json" <<'NODE'
+          const fs = require("fs");
+          const doc = JSON.parse(fs.readFileSync(process.argv[2], "utf8"));
+          const result = doc.result || {};
+          if (doc.ok !== true || !Number.isFinite(result.fetched_cycles) ||
+              result.fetched_cycles < 1 || !Array.isArray(result.warnings)) {
+            throw new Error("Live Cloudflare GFS collector smoke test failed: " + JSON.stringify(doc));
+          }
+          console.log(JSON.stringify({
+            collector: "cloudflare-worker",
+            fetched_cycles: result.fetched_cycles,
+            latest_run_id_utc: result.run_id_utc,
+            archived_runs_changed: result.archived_runs_changed,
+            f180_ready: result.f180_ready,
+            report_dispatch: result.report_dispatch,
+            telegram_delivery: result.telegram_delivery,
+            warnings: result.warnings
+          }));
+          NODE
       - name: Verify Istanbul GFS Worker, D1 and four-cycle API
         env:
           ISTANBUL_GFS_API: https://gfs-watch-istanbul-gfs.muhsin-ulusoy.workers.dev
@@ -164,7 +196,7 @@ jobs:
               doc.cron !== "*/10 * * * *" || doc.report_dispatch_configured !== true ||
               doc.native_report_generation !== true || doc.telegram_configured !== true ||
               doc.photo_archive_configured !== true || doc.telegram_photo_mode !== "sendPhoto/png" ||
-              doc.internal_reconcile_configured !== true ||
+              doc.internal_reconcile_configured !== true || !doc.last_cron_success_at_utc ||
               !Number.isFinite(doc.pending_report_publications) ||
               !Number.isFinite(doc.sent_report_publications) ||
               !Number.isFinite(doc.exhausted_report_publications)) {
