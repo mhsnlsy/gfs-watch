@@ -24,7 +24,7 @@ const STATION_DEFS = {
     source_url: "https://www.mgm.gov.tr/tahmin/il-ve-ilceler.aspx?il=Giresun&ilce=Çanakçı"
   }
 };
-const RETENTION_HOURS = 72;
+const RETENTION_HOURS = null;
 const MAX_SOURCE_AGE_MINUTES = 20;
 
 function json(data, status = 200) {
@@ -499,13 +499,11 @@ async function collectAll(env) {
       await persistFailure(env, key, error);
     }
   }
-  await env.STATIONS_DB.prepare(
-    "DELETE FROM station_history WHERE fetched_at_utc < ?"
-  ).bind(new Date(Date.now() - RETENTION_HOURS * 3600000).toISOString()).run();
+  // Station history is intentionally retained indefinitely. The API still limits\n  // the requested window/response size, but the underlying D1 archive is not pruned.\n  if (RETENTION_HOURS !== null) {\n    await env.STATIONS_DB.prepare(\n      "DELETE FROM station_history WHERE fetched_at_utc < ?"\n    ).bind(new Date(Date.now() - RETENTION_HOURS * 3600000).toISOString()).run();\n  }
   return {
     fetched_at_utc: new Date().toISOString(),
     succeeded: Object.keys(result),
-    failed: ["enka","eyupsultan","sisli"].filter(key => !result[key] || result[key].status !== "live")
+    failed: ["enka","eyupsultan","sisli","canakci"].filter(key => !result[key] || result[key].status !== "live")
   };
 }
 async function getFeelsLike24h(env, key) {
