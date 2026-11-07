@@ -147,9 +147,9 @@ export default {
     return json({ ok: false, error: "not_found" }, 404);
   },
 
-  async scheduled(controller) {
+  async scheduled(controller, env) {
     try {
-      await runGuardian({}, controller.scheduledTime);
+      await runGuardian(env, controller.scheduledTime);
     } catch (error) {
       console.error(JSON.stringify({
         event: "guardian_error",
