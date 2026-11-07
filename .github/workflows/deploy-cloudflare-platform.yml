@@ -109,17 +109,28 @@ jobs:
           test -s web-worker/public/gfs-cycle-compare.html
           echo "Static asset count: $(find web-worker/public -type f | wc -l)"
 
-      - name: Ensure R2 archive bucket and upload legacy archives
+      - name: Ensure R2 archive bucket and upload legacy archives (optional)
         working-directory: source/web-worker
         env:
-          CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+          CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_R2_API_TOKEN }}
           CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
           R2_BUCKET: gfs-watch-live-archive
         run: |
           set -euo pipefail
-          test -n "$CLOUDFLARE_API_TOKEN" || { echo "::error::CLOUDFLARE_R2_API_TOKEN is required to activate the R2 archive binding"; exit 1; }
-          test -s "$GITHUB_WORKSPACE/forecast-data/public/ecmwf/latest.json" || { echo "::error::ECMWF latest.json is missing from gfs-watch-state"; exit 1; }
+          if [ -z "$CLOUDFLARE_API_TOKEN" ]; then
+            node - wrangler.jsonc <<'NODE'
+          const fs = require("fs");
+          const file = process.argv[2];
+          const config = JSON.parse(fs.readFileSync(file, "utf8"));
+          delete config.r2_buckets;
+          fs.writeFileSync(file, JSON.stringify(config, null, 2) + "\n");
+          NODE
+            echo "R2 token not configured; deploying with the existing D1/Static Assets fallback."
+            echo "R2_ENABLED=0" >> "$GITHUB_ENV"
+            exit 0
+          fi
 
+          test -s "$GITHUB_WORKSPACE/forecast-data/public/ecmwf/latest.json" || { echo "::error::ECMWF latest.json is missing from gfs-watch-state"; exit 1; }
           wrangler r2 bucket list > "$RUNNER_TEMP/r2-buckets.txt"
           if ! grep -Fq "$R2_BUCKET" "$RUNNER_TEMP/r2-buckets.txt"; then
             wrangler r2 bucket create "$R2_BUCKET"
@@ -154,6 +165,7 @@ jobs:
             --file "$RUNNER_TEMP/r2-ecmwf-latest.json" --remote
           cmp -s "$GITHUB_WORKSPACE/forecast-data/public/ecmwf/latest.json" "$RUNNER_TEMP/r2-ecmwf-latest.json"
           echo "Verified ECMWF latest.json byte-for-byte in R2; uploaded $uploaded archive objects."
+          echo "R2_ENABLED=1" >> "$GITHUB_ENV"
 
       - name: Deploy Cloudflare Worker + Static Assets
         working-directory: source/web-worker
@@ -174,7 +186,8 @@ jobs:
           if (doc.ok !== true || doc.service !== "gfs-watch-web" ||
               doc.delivery !== "Cloudflare Workers Static Assets" ||
               doc.api_gateway !== "Cloudflare Service Bindings" ||
-              doc.archive_storage !== "R2" ||
+              (process.env.R2_ENABLED === "1" && doc.archive_storage !== "R2") ||
+              (process.env.R2_ENABLED !== "1" && doc.archive_storage !== "Static Assets fallback") ||
               Object.values(doc.bindings || {}).some(value => value !== true)) {
             throw new Error("Cloudflare web Worker/static assets/service bindings health contract failed");
           }
@@ -185,11 +198,12 @@ jobs:
             curl --silent --show-error --fail --max-time 20 "$WEB$path" -o /dev/null
             echo "OK $path"
           done
-          curl --silent --show-error --fail --max-time 30 \
-            --dump-header "$RUNNER_TEMP/r2-ecmwf-headers.txt" \
-            "$WEB/data/ecmwf/latest.json?verify=$(date +%s)" -o "$RUNNER_TEMP/r2-ecmwf-live.json"
-          grep -qi '^x-gfs-archive-source: R2' "$RUNNER_TEMP/r2-ecmwf-headers.txt"
-          node - "$RUNNER_TEMP/r2-ecmwf-live.json" <<'NODE'
+          if [ "${R2_ENABLED:-0}" = "1" ]; then
+            curl --silent --show-error --fail --max-time 30 \
+              --dump-header "$RUNNER_TEMP/r2-ecmwf-headers.txt" \
+              "$WEB/data/ecmwf/latest.json?verify=$(date +%s)" -o "$RUNNER_TEMP/r2-ecmwf-live.json"
+            grep -qi '^x-gfs-archive-source: R2' "$RUNNER_TEMP/r2-ecmwf-headers.txt"
+            node - "$RUNNER_TEMP/r2-ecmwf-live.json" <<'NODE'
           const fs = require("fs");
           const doc = JSON.parse(fs.readFileSync(process.argv[2], "utf8"));
           if (doc.schema !== "gfs-watch.ecmwf-eps.v1" || !doc.run_id_utc) {
@@ -197,6 +211,9 @@ jobs:
           }
           console.log("Verified live ECMWF payload served from R2:", doc.run_id_utc);
           NODE
+          else
+            echo "R2 is not enabled; ECMWF is verified by the existing D1/Static Assets path."
+          fi
           curl --silent --show-error --fail --max-time 20 "$WEB/?verify=$(date +%s)" -o "$RUNNER_TEMP/live-index.html"
           grep -q 'gfs-comparison-tooltip.js?v=20261107-svg-dom-force-dark-3' "$RUNNER_TEMP/live-index.html"
           curl --silent --show-error --fail --max-time 20 "$WEB/gfs-comparison-tooltip.js?v=20261107-svg-dom-force-dark-3" -o "$RUNNER_TEMP/live-gfs-tooltip.js"
