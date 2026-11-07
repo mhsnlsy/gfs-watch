@@ -32,7 +32,7 @@ for (let cycle = 0; cycle < 4; cycle += 1) {
 }
 
 const earlyChart = buildIstanbulInteractiveSvg(runs.slice(0, 1));
-assert.match(earlyChart.key, /^notifications\\/istanbul-gfs-20261101T00Z-comparison\\.svg$/);
+assert.equal(earlyChart.key, "notifications/istanbul-gfs-20261101T00Z-comparison.svg");
 assert.ok(earlyChart.common_valid_time_count >= 20, "single-cycle report should still have aligned valid times");
 assert.ok(earlyChart.body.includes("1 döngü karşılaştırması"));
 
