@@ -1276,7 +1276,11 @@
     margin-right:auto!important;
   }
 
-    /* GFS comparison report: match the dark 72-hour forecast panels. */
+    /* GFS comparison report: force the complete SVG canvas and all four plot areas dark. */
+    .notification-chart-only .gfs-interactive-svg #patch_1 path {
+      fill: #0A1B29 !important;
+      stroke: #0A1B29 !important;
+    }
     .notification-chart-only .gfs-interactive-svg #patch_2 path,
     .notification-chart-only .gfs-interactive-svg #patch_3 path,
     .notification-chart-only .gfs-interactive-svg #patch_4 path,
@@ -1284,11 +1288,15 @@
       fill: #102A3A !important;
       stroke: #416174 !important;
     }
+    /* Matplotlib's plot-area patch IDs advance by five for each axes group. */
     .notification-chart-only .gfs-interactive-svg #axes_1 #patch_6 path,
-    .notification-chart-only .gfs-interactive-svg #axes_2 #patch_7 path,
-    .notification-chart-only .gfs-interactive-svg #axes_3 #patch_8 path,
-    .notification-chart-only .gfs-interactive-svg #axes_4 #patch_9 path {
+    .notification-chart-only .gfs-interactive-svg #axes_2 #patch_11 path,
+    .notification-chart-only .gfs-interactive-svg #axes_3 #patch_16 path,
+    .notification-chart-only .gfs-interactive-svg #axes_4 #patch_21 path {
       fill: #102A3A !important;
+    }
+    .notification-chart-only .gfs-interactive-svg {
+      background: #0A1B29 !important;
     }
 
 </style>
