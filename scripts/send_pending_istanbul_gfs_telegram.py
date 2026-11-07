@@ -49,8 +49,9 @@ def main() -> None:
                 marker_state = json.loads(marker.read_text(encoding="utf-8"))
             except (OSError, ValueError, TypeError):
                 marker_state = {}
-            # Legacy markers without a status are treated as already delivered.
-            if marker_state.get("status") == "sent" or not marker_state:
+            # Only our explicit partial marker is resumable. Legacy markers
+            # without a status are historical acknowledgements and stay untouched.
+            if marker_state.get("status") != "partial":
                 continue
 
         image_relative = item.get("image_path")
