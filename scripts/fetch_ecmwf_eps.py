@@ -24,7 +24,7 @@ LICENSE_URL = "https://www.meteopt.com/modelos/ecmwf"
 
 
 def forecast_steps(max_hour: int = MAX_FORECAST_HOUR) -> list[int]:
-    """IFS ENS 00/12Z steps: 3-hourly through 144h, then 6-hourly."""
+    """MeteoPT ECMWF 00/12Z steps: 3-hourly through 144h, then 6-hourly."""
     return list(range(0, min(max_hour, 144) + 1, 3)) + (
         list(range(150, max_hour + 1, 6)) if max_hour >= 150 else []
     )
@@ -37,6 +37,19 @@ def same_published_cycle(existing_run_id: str | None, candidate_run_id: str) -> 
     try:
         return _normalise_datetime(existing_run_id) == _normalise_datetime(candidate_run_id)
     except (TypeError, ValueError, OverflowError):
+        return False
+
+
+def _normalise_datetime(value) -> datetime:
+    if isinstance(value, datetime):
+        parsed = value
+    else:
+        text = str(value).strip().replace("Z", "+00:00")
+        parsed = datetime.fromisoformat(text)
+    if parsed.tzinfo is None:
+        parsed = parsed.replace(tzinfo=timezone.utc)
+    return parsed.astimezone(timezone.utc).replace(minute=0, second=0, microsecond=0)
+
 
 def _meteopt_number(value):
     try:
