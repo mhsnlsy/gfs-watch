@@ -1608,3 +1608,14 @@ html,body{
   #meteopt-gfs-table .meteopt-table-title h2{font-size:14px!important}
   #meteopt-gfs-table .meteopt-table-cycle{font-size:7px!important}
 }
+
+/* GFS table is a normal document block: no nested scrolling, no touch interception. */
+#meteopt-gfs-table .meteopt-table-scroll{
+  overflow:visible!important;
+  overflow-x:visible!important;
+  overflow-y:visible!important;
+  overscroll-behavior:auto!important;
+  touch-action:auto!important;
+  -webkit-overflow-scrolling:auto!important;
+  scrollbar-width:auto!important;
+}
