@@ -134,18 +134,25 @@ def main() -> None:
     assert 'path.startsWith("/data/ecmwf/")' in web_worker
     assert "path.slice(1)" in web_worker
     assert '"public/ecmwf/**"' not in platform_workflow
-    # Köy interactive SVG is now stored and served from Köy D1 without redeploying Static Assets.
+    # Köy four-panel SVG rendering now runs inside the Cloudflare Worker and persists to D1.
     assert "gfs_publication_assets" in koy_worker
-    assert "/api/publication-upload" in koy_worker
+    assert "function buildKoyInteractiveSvg" in koy_worker
+    assert "function publishLatestKoySvg" in koy_worker
+    assert 'const KOY_SVG_RENDERER_VERSION = "cloudflare-js-v1"' in koy_worker
+    assert 'path === "/api/comparison.svg"' in koy_worker
+    assert "comparison_svg_published" in koy_worker
+    assert "svg_renderer: KOY_SVG_RENDERER_VERSION" in koy_worker
     assert "/api/publication-asset/" in koy_worker
     assert koy_worker.index('if (path === "/api/publication-upload")') < koy_worker.index('if (request.method !== "GET")')
     assert "GFS_DISPATCH_TOKEN" in koy_worker and "wrangler secret put GFS_DISPATCH_TOKEN" in koy_deploy
     assert 'path.startsWith("/koy-data/gfs/media/")' in web_worker
     assert '"/api/publication-asset/" + assetKey' in web_worker
-    assert "Upload generated Köy SVG to D1 publication assets" in koy_svg_workflow
-    assert "--data-binary" in koy_svg_workflow and "GFS_DISPATCH_TOKEN" in koy_svg_workflow
-    assert "git push origin HEAD:koy-gfs-data" not in koy_svg_workflow
-    assert "gh workflow run deploy-cloudflare-platform.yml" not in koy_svg_workflow
+    assert "workflow_dispatch:" in koy_svg_workflow
+    assert "schedule:" not in koy_svg_workflow
+    assert "push:" not in koy_svg_workflow
+    assert "comparison.svg" in koy_svg_workflow
+    assert "cloudflare-js-v1" in koy_svg_workflow
+    assert "matplotlib" not in koy_svg_workflow.lower()
     assert "workflow_run:" not in platform_workflow
     assert "actions/workflows/istanbul-gfs-10min.yml/dispatches" in gfs_worker
     assert "LIMIT 1" in gfs_worker
