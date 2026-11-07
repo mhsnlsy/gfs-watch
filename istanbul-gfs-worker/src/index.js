@@ -1,4 +1,4 @@
-const API_BASE = "https://api.meteopt.com/gfs/json";
+// Istanbul GFS Worker: canonical MeteoPT collector + D1 event dispatcher\nconst API_BASE = "https://api.meteopt.com/gfs/json";
 const LOCATION = {
   name: "Istanbul",
   latitude: 41.014,
