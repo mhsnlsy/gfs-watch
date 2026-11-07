@@ -1430,7 +1430,18 @@
     }
   </style>
 
-  </head>
+  <style id="koy-gfs-report-scale-90">
+  /* Keep the four-panel report proportions and center it at 90% width. */
+  .koy-gfs-svg-images .gfs-interactive-chart,
+  .koy-gfs-svg-images .gfs-mobile-panel-stack{
+    width:90%!important;
+    max-width:90%!important;
+    margin-left:auto!important;
+    margin-right:auto!important;
+  }
+  .koy-gfs-svg-images .gfs-mobile-panel-host{width:100%!important}
+</style>
+</head>
 <body data-default-station="home">
   <script>
     // Köy page is intentionally Köy Ev-first. Set the visual state before
