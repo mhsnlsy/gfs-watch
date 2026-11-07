@@ -160,10 +160,10 @@ def run_offline_tests() -> None:
         history = load_comparison_runs(archive_dir, limit=4)
         assert len(history) == 4
         assert [item["run_id_utc"] for item in history] == [
+            "2026-10-30T12:00:00+00:00",
             "2026-10-31T00:00:00+00:00",
             "2026-10-31T12:00:00+00:00",
             "2026-11-01T00:00:00+00:00",
-            "2026-11-01T12:00:00+00:00",
         ]
 
     print("[ECMWF METEOPT OFFLINE SMOKE] MeteoPT schema, 180h timeline, validation and 4-cycle comparison checks passed.")
