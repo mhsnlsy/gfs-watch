@@ -125,7 +125,7 @@ def main() -> None:
     assert koy_worker.index('if (path === "/api/publication-upload")') < koy_worker.index('if (request.method !== "GET")')
     assert "GFS_DISPATCH_TOKEN" in koy_worker and "wrangler secret put GFS_DISPATCH_TOKEN" in koy_deploy
     assert 'path.startsWith("/koy-data/gfs/media/")' in web_worker
-    assert '"\/api/publication-asset/" + assetKey' in web_worker
+    assert '"/api/publication-asset/" + assetKey' in web_worker
     assert "Upload generated Köy SVG to D1 publication assets" in koy_svg_workflow
     assert "--data-binary" in koy_svg_workflow and "GFS_DISPATCH_TOKEN" in koy_svg_workflow
     assert "git push origin HEAD:koy-gfs-data" not in koy_svg_workflow
