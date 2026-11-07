@@ -176,6 +176,18 @@ function forceDarkGfsSvg(svg){
     ["patch_16","#102A3A"],
     ["patch_21","#102A3A"]
   ]);
+  // Matplotlib can leave standalone white rectangles for the legend/badge in older SVG assets.
+  // Convert only white-filled SVG shapes to the same dark report palette; text remains untouched.
+  svg.querySelectorAll("rect,path,polygon").forEach(shape=>{
+    const fill=(shape.getAttribute("fill")||"").trim().toLowerCase();
+    const style=(shape.getAttribute("style")||"").toLowerCase();
+    const isWhite=fill==="white"||fill==="#fff"||fill==="#ffffff"||fill==="rgb(255,255,255)"||/fill\\s*:\\s*(#fff|#ffffff|white|rgb\\(255,255,255\\))/.test(style);
+    if(isWhite){
+      shape.style.setProperty("fill","#153448","important");
+      shape.style.setProperty("stroke","#36586C","important");
+      shape.style.setProperty("opacity","0.98","important");
+    }
+  });
   fills.forEach((fill,id)=>{
     const group=svg.querySelector("#"+id);
     if(!group)return;
