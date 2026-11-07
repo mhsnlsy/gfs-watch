@@ -39,6 +39,9 @@ jobs:
           python scripts/test_850hpa_history.py
           python scripts/test_gfs_wind_direction.py
           python scripts/test_gfs_report_chart_theme.py
+      - name: Install Istanbul GFS Worker image renderer for tests
+        working-directory: istanbul-gfs-worker
+        run: npm install --no-audit --no-fund --no-progress
       - name: Test ENKA and Eyüpsultan history graph switching
         run: node scripts/test_station_history_switch.mjs
       - name: Validate website JavaScript syntax
