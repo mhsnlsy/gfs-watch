@@ -3393,16 +3393,7 @@ def create_valid_time_comparison_assets(current_run_id, payload, previous_runs):
             fontsize=12.5, color=GFS_REPORT_MUTED,
             ha="left", va="top",
         )
-        fig.text(
-            0.945, 0.958, f"{len(series)} GFS döngüsü karşılaştırılıyor",
-            fontsize=10.5, color="#B8D7DF", ha="right", va="top",
-            bbox={
-                "boxstyle": "round,pad=0.65",
-                "facecolor": GFS_REPORT_FIGURE_BG,
-                "edgecolor": GFS_REPORT_SPINE,
-                "linewidth": 1.0,
-            },
-        )
+        # Header badge frame removed; keep the report header clean.
 
         legend_handles = []
         for series_index in reversed(range(len(series))):
@@ -3422,12 +3413,9 @@ def create_valid_time_comparison_assets(current_run_id, payload, previous_runs):
             bbox_to_anchor=(0.5, 0.835),
             ncol=2,
             fontsize=10.5,
-            frameon=True,
-            facecolor=GFS_REPORT_PANEL_BG,
-            edgecolor=GFS_REPORT_LEGEND_EDGE,
-            framealpha=0.98,
+            frameon=False,
             labelcolor=GFS_REPORT_TEXT,
-            borderpad=0.75,
+            borderpad=0,
             handlelength=2.4,
             columnspacing=2.8,
             labelspacing=0.75,
