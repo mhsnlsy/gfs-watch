@@ -1,54 +1,123 @@
-"""Ten-minute Istanbul GFS state machine.
+"""Sync canonical Istanbul GFS cycles from Cloudflare D1.
 
-Polls MeteoPT for the newest available cycle. F72 is cached immediately.
-The same cycle is considered publication-ready only when F180 exists.
-Canonical run JSON is written exactly once; report generation and delivery
-are separate workflow jobs.
-
-State lives on the istanbul-gfs-data branch, so a runner replacement cannot
-forget which cycle milestones have already been archived.
+Cloudflare's autonomous Cron Worker is the only MeteoPT collector. This
+GitHub workflow only reads its D1-backed API, backfills the publication
+workspace, and builds the report/PNG bundle when a new F180 cycle is ready.
 """
 from __future__ import annotations
 
-import os
-import sys
 import json
+import os
+import time
+from datetime import datetime, timezone
 from pathlib import Path
+from urllib.error import HTTPError, URLError
+from urllib.request import Request, urlopen
 
 ROOT = Path.cwd()
 GFS_DIR = ROOT / "gfs"
-sys.path.insert(0, str(ROOT / "scripts"))
-
-from fetch_istanbul_gfs_meteopt import fetch_cycle, normalize, run_datetime  # noqa: E402
-
-CYCLE_HOURS = (18, 12, 6, 0)
+API_URL = os.getenv(
+    "ISTANBUL_GFS_API",
+    "https://gfs-watch-web.muhsin-ulusoy.workers.dev/gfs/latest",
+)
 
 
 def output(name: str, value: str) -> None:
     target = os.getenv("GITHUB_OUTPUT")
     if target:
-        with open(target, "a", encoding="utf-8") as fh:
-            fh.write(f"{name}={value}\n")
+        with open(target, "a", encoding="utf-8") as handle:
+            handle.write(f"{name}={value}\n")
 
 
-def steps_of(document: dict) -> set[int]:
-    result = set()
-    for value in ((document.get("steps") or {}).get("values") or []):
-        try:
-            result.add(int(float(value)))
-        except (TypeError, ValueError):
-            pass
-    return result
+def parse_run(value: str) -> datetime:
+    parsed = datetime.fromisoformat(str(value).replace("Z", "+00:00"))
+    if parsed.tzinfo is None:
+        parsed = parsed.replace(tzinfo=timezone.utc)
+    return parsed.astimezone(timezone.utc)
 
 
 def save_atomic(path: Path, document: dict) -> None:
     path.parent.mkdir(parents=True, exist_ok=True)
-    temp = path.with_suffix(path.suffix + ".tmp")
-    temp.write_text(
+    temporary = path.with_suffix(path.suffix + ".tmp")
+    temporary.write_text(
         json.dumps(document, ensure_ascii=False, indent=2) + "\n",
         encoding="utf-8",
     )
-    temp.replace(path)
+    temporary.replace(path)
+
+
+def fetch_latest() -> dict:
+    separator = "&" if "?" in API_URL else "?"
+    request = Request(
+        API_URL + separator + "report_sync=" + str(int(time.time())),
+        headers={
+            "Accept": "application/json",
+            "Cache-Control": "no-cache",
+            "User-Agent": "GFS-Watch-Report-Sync/1.0",
+        },
+    )
+    try:
+        with urlopen(request, timeout=45) as response:
+            document = json.loads(response.read().decode("utf-8"))
+    except (HTTPError, URLError, TimeoutError, UnicodeDecodeError, json.JSONDecodeError) as exc:
+        raise RuntimeError(f"Cloudflare GFS API is unavailable: {exc}") from exc
+
+    if not isinstance(document, dict) or document.get("schema") != "gfs-watch.forecast.v1":
+        raise RuntimeError("Cloudflare GFS API returned an unexpected payload schema")
+    if not isinstance(document.get("forecast_6_hourly"), list):
+        raise RuntimeError("Cloudflare GFS API returned no forecast time series")
+    return document
+
+
+def all_runs(latest: dict) -> list[dict]:
+    candidates = latest.get("comparison_runs")
+    rows = [item for item in candidates if isinstance(item, dict)] if isinstance(candidates, list) else []
+    latest_run_id = latest.get("run_id_utc")
+    if latest_run_id and not any(item.get("run_id_utc") == latest_run_id for item in rows):
+        rows.append(latest)
+
+    unique: dict[str, dict] = {}
+    for item in rows:
+        run_id = item.get("run_id_utc")
+        points = item.get("forecast_6_hourly")
+        if not run_id or not isinstance(points, list):
+            continue
+        try:
+            parse_run(run_id)
+        except (TypeError, ValueError):
+            continue
+        clean = dict(item)
+        clean.pop("comparison_runs", None)
+        unique[str(run_id)] = clean
+
+    return sorted(
+        unique.values(),
+        key=lambda item: parse_run(item["run_id_utc"]),
+        reverse=True,
+    )
+
+
+def is_f72_ready(document: dict) -> bool:
+    milestone = document.get("f72")
+    if isinstance(milestone, dict) and milestone.get("available") is True:
+        return True
+    points = document.get("forecast_6_hourly") or []
+    return sum(
+        1 for point in points
+        if isinstance(point, dict) and 0 < int(point.get("forecast_hour") or 0) <= 72
+    ) >= 12
+
+
+def is_f180_ready(document: dict) -> bool:
+    milestone = document.get("f180")
+    if isinstance(milestone, dict) and milestone.get("available") is True:
+        return True
+    points = document.get("forecast_6_hourly") or []
+    leads = [
+        int(point.get("forecast_hour") or 0)
+        for point in points if isinstance(point, dict)
+    ]
+    return bool(leads) and max(leads) >= 180 and sum(1 for lead in leads if 0 < lead <= 180) >= 30
 
 
 def has_publication(run_id: str) -> bool:
@@ -60,88 +129,79 @@ def has_publication(run_id: str) -> bool:
     except (OSError, ValueError, TypeError):
         return False
     return any(
-        item.get("run_id_utc") == run_id
+        isinstance(item, dict) and item.get("run_id_utc") == run_id
         for item in (manifest.get("items") or [])
-        if isinstance(item, dict)
     )
 
 
 def main() -> int:
-    (GFS_DIR / "runs").mkdir(parents=True, exist_ok=True)
-    (GFS_DIR / "milestones" / "f72").mkdir(parents=True, exist_ok=True)
-    (GFS_DIR / "notifications" / "telegram-sent").mkdir(parents=True, exist_ok=True)
+    for directory in (
+        GFS_DIR / "runs",
+        GFS_DIR / "milestones" / "f72",
+        GFS_DIR / "notifications" / "telegram-sent",
+    ):
+        directory.mkdir(parents=True, exist_ok=True)
 
-    candidates = []
-    errors = []
-    for hour in CYCLE_HOURS:
-        try:
-            document, url = fetch_cycle(hour)
-            cycle = run_datetime(document.get("run"))
-            if cycle.hour != hour:
-                errors.append(f"{hour:02d}Z returned {cycle.isoformat()}")
-                continue
-            steps = steps_of(document)
-            candidates.append((cycle, document, url, steps))
-            print(
-                f"[GFS 10M] {cycle.isoformat()} · "
-                f"F72={'yes' if 72 in steps else 'no'} · "
-                f"F180={'yes' if 180 in steps else 'no'}"
-            )
-        except Exception as exc:
-            errors.append(f"{hour:02d}Z: {exc}")
-
-    if not candidates:
-        print("[GFS 10M] No usable cycle returned.")
+    try:
+        latest = fetch_latest()
+        runs = all_runs(latest)
+    except RuntimeError as exc:
+        print(f"::warning::{exc}")
         output("new_run", "false")
         output("f72_cached", "false")
         output("f180_ready", "false")
         output("run_id", "")
-        output("reason", "source_unavailable")
+        output("reason", "cloudflare_api_unavailable")
         return 0
 
-    candidates.sort(key=lambda item: item[0], reverse=True)
+    if not runs:
+        print("[GFS REPORT SYNC] Cloudflare D1 has no archived GFS runs yet.")
+        output("new_run", "false")
+        output("f72_cached", "false")
+        output("f180_ready", "false")
+        output("run_id", "")
+        output("reason", "no_archived_runs")
+        return 0
+
     any_new_run = False
     f72_cached = False
     f180_ready = False
     selected_f72_run = ""
     selected_f180_run = ""
 
-    # F72 is cached for every newly visible cycle; F180 publication remains
-    # limited to one newest unpublished cycle per poll.
-    for cycle, document, url, steps in candidates:
-        run_id = cycle.isoformat(timespec="seconds")
+    for document in runs:
+        run_id = str(document["run_id_utc"])
         f72_path = GFS_DIR / "milestones" / "f72" / f"{run_id}.json"
         run_path = GFS_DIR / "runs" / f"{run_id}.json"
+        points = document.get("forecast_6_hourly") or []
 
-        if 72 in steps and not f72_path.exists():
-            cached = normalize(document, url, cycle, require_f180=False)
+        if is_f72_ready(document) and not f72_path.exists():
+            cached = dict(document)
+            cached.pop("comparison_runs", None)
             cached["milestone"] = "F72"
-            cached["forecast_6_hourly"] = [
-                point for point in cached["forecast_6_hourly"]
-                if point.get("forecast_hour", 0) <= 72
-            ]
             cached["forecast_horizon_hours"] = 72
+            cached["forecast_6_hourly"] = [
+                point for point in points
+                if 0 < int(point.get("forecast_hour") or 0) <= 72
+            ]
             save_atomic(f72_path, cached)
             f72_cached = True
             any_new_run = True
             selected_f72_run = selected_f72_run or run_id
-            print(f"[GFS 10M] F72 cached: {run_id}")
+            print(f"[GFS REPORT SYNC] F72 milestone backfilled from D1: {run_id}")
 
-        if 180 in steps and not f180_ready:
-            if not run_path.exists():
-                full = normalize(document, url, cycle, require_f180=True)
-                save_atomic(run_path, full)
-                any_new_run = True
-                print(f"[GFS 10M] F180 canonical run archived: {run_id}")
+        if not is_f180_ready(document):
+            continue
 
-            # A raw run file can survive a failed validation/build. Retry report
-            # generation until that run has an entry in the durable manifest.
-            if not has_publication(run_id):
-                f180_ready = True
-                selected_f180_run = run_id
-                print(f"[GFS 10M] F180 ready for report retry: {run_id}")
-            else:
-                print(f"[GFS 10M] F180 already published: {run_id}")
+        if not run_path.exists():
+            save_atomic(run_path, document)
+            any_new_run = True
+            print(f"[GFS REPORT SYNC] Canonical F180 run imported from D1: {run_id}")
+
+        if not f180_ready and not has_publication(run_id):
+            f180_ready = True
+            selected_f180_run = run_id
+            print(f"[GFS REPORT SYNC] F180 ready for report generation: {run_id}")
 
     output("new_run", "true" if any_new_run else "false")
     output("f72_cached", "true" if f72_cached else "false")
@@ -150,13 +210,16 @@ def main() -> int:
     output(
         "reason",
         "f180_ready" if f180_ready else (
-            "f72_cached" if f72_cached else "no_new_milestone"
+            "f72_backfilled" if f72_cached else "no_new_milestone"
         ),
     )
-    if errors:
-        print("[GFS 10M] Non-fatal probe warnings:")
-        for error in errors:
-            print(f"::warning::{error}")
+
+    print(
+        "[GFS REPORT SYNC] "
+        f"source=Cloudflare D1; archived_runs={len(runs)}; "
+        f"new_f72={f72_cached}; unpublished_f180={f180_ready}; "
+        f"checked_at_utc={datetime.now(timezone.utc).isoformat(timespec='seconds')}"
+    )
     return 0
 
 
