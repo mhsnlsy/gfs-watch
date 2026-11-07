@@ -420,7 +420,7 @@ function bindTooltip(containerId){
  tooltip.className="gfs-point-tooltip";
  tooltip.hidden=true;
  tooltip.setAttribute("role","status");
- document.body.appendChild(tooltip);
+ host.appendChild(tooltip);
  let pinned=false;
  const targets=[...svg.querySelectorAll(".gfs-point-target")],currentTargets=targets.filter(target=>target.dataset.current==="true");
  const screenXOf=target=>{const matrix=svg.getScreenCTM();if(!matrix)return NaN;const point=svg.createSVGPoint();point.x=Number(target.getAttribute("cx"));point.y=Number(target.getAttribute("cy"));return point.matrixTransform(matrix).x;};
