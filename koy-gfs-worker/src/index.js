@@ -325,10 +325,21 @@ async function api(request, env) {
 
   if (path === "/api/comparison") {
     try {
-      const result = await env.GFS_DB.prepare(
+      let result = await env.GFS_DB.prepare(
         "SELECT payload_json FROM gfs_runs ORDER BY run_id_utc DESC LIMIT 4"
       ).all();
-      const runs = (result.results || []).map(row => JSON.parse(row.payload_json));
+      let runs = (result.results || []).map(row => JSON.parse(row.payload_json));
+
+      // If the comparison archive is incomplete (for example immediately after
+      // migration), fetch all currently available MeteoPT cycles before replying.
+      if (runs.length < 4) {
+        await collect(env);
+        result = await env.GFS_DB.prepare(
+          "SELECT payload_json FROM gfs_runs ORDER BY run_id_utc DESC LIMIT 4"
+        ).all();
+        runs = (result.results || []).map(row => JSON.parse(row.payload_json));
+      }
+
       return json({
         schema: "koy-gfs.comparison.v1",
         location: LOCATION,
