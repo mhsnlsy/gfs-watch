@@ -251,7 +251,7 @@ function bindGfsChartTooltip(containerId){
  tooltip.hidden=true;
  tooltip.setAttribute("role","status");
  tooltip.setAttribute("aria-live","polite");
- document.body.appendChild(tooltip);
+ host.appendChild(tooltip);
  let pinned=false;
  const targets=[...svg.querySelectorAll(".gfs-point-target")];
  const currentTargets=targets.filter(target=>target.dataset.current==="true");
@@ -274,14 +274,20 @@ function bindGfsChartTooltip(containerId){
   if(activeGfsTooltip?.tooltip===tooltip)activeGfsTooltip=null;
  }
  function positionTooltipAbove(event){
-  tooltip.style.position="fixed";
+  const rect=host.getBoundingClientRect();
+  tooltip.style.position="absolute";
   tooltip.style.zIndex="2147483647";
   tooltip.style.pointerEvents="none";
   tooltip.style.left="0px";
   tooltip.style.top="0px";
   const tw=tooltip.offsetWidth,th=tooltip.offsetHeight;
-  const left=Math.max(8,Math.min(window.innerWidth-tw-8,event.clientX-tw/2));
-  const top=Math.max(8,event.clientY-th-14);
+  const gap=12;
+  const x=event.clientX-rect.left;
+  const y=event.clientY-rect.top;
+  const maxLeft=Math.max(8,rect.width-tw-8);
+  const maxTop=Math.max(8,rect.height-th-8);
+  const left=Math.max(8,Math.min(maxLeft,x-tw/2));
+  const top=Math.max(8,Math.min(maxTop,y-th-gap));
   tooltip.style.left=Math.round(left)+"px";
   tooltip.style.top=Math.round(top)+"px";
  }
