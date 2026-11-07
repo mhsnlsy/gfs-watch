@@ -1,8 +1,5 @@
-const REPOSITORY = "mhsnlsy/gfs-watch";
-const WORKFLOW_FILE = "istanbul-gfs-10min.yml";
-const API_ROOT = "https://api.github.com";
-const HEALTH_WINDOW_MS = 45 * 60 * 1000;
-const DISPATCH_COOLDOWN_MS = 10 * 60 * 1000;
+const STALE_AFTER_MS = 25 * 60 * 1000;
+const RECENT_START_GRACE_MS = 18 * 60 * 1000;
 
 function json(data, status = 200) {
   return new Response(JSON.stringify(data, null, 2), {
@@ -14,119 +11,68 @@ function json(data, status = 200) {
   });
 }
 
-async function githubRequest(path, token, options = {}) {
-  const response = await fetch(`${API_ROOT}${path}`, {
-    ...options,
-    headers: {
-      accept: "application/vnd.github+json",
-      authorization: `Bearer ${token}`,
-      "x-github-api-version": "2022-11-28",
-      "user-agent": "gfs-watch-cloudflare-guardian",
-      ...(options.headers || {}),
-    },
-    signal: AbortSignal.timeout(12_000),
-  });
-
-  if (!response.ok) {
-    // Keep response bodies and credentials out of Worker logs.
-    throw new Error(`GitHub API request failed: HTTP ${response.status}`);
-  }
-
-  if (response.status === 204) return null;
-  return response.json();
-}
-
-function ageMs(timestamp, now) {
-  const parsed = Date.parse(timestamp || "");
+function timestampAgeMs(value, now) {
+  const parsed = Date.parse(value || "");
   return Number.isFinite(parsed) ? Math.max(0, now - parsed) : Number.POSITIVE_INFINITY;
 }
 
-function newest(items, timestampField) {
-  return items
-    .filter((item) => Number.isFinite(Date.parse(item[timestampField] || "")))
-    .sort((a, b) => Date.parse(b[timestampField]) - Date.parse(a[timestampField]))[0] || null;
+async function getPrimaryHealth(env) {
+  if (!env.ISTANBUL_GFS) throw new Error("Istanbul GFS Service Binding is not configured");
+  const response = await env.ISTANBUL_GFS.fetch(
+    new Request("https://istanbul-gfs.internal/api/health", { method: "GET" })
+  );
+  if (!response.ok) throw new Error("Istanbul GFS health request failed: HTTP " + response.status);
+  const health = await response.json();
+  if (health.ok !== true || health.service !== "gfs-watch-istanbul-gfs") {
+    throw new Error("Istanbul GFS health response is invalid");
+  }
+  return health;
+}
+
+async function triggerPrimary(env) {
+  if (!env.GFS_DISPATCH_TOKEN) throw new Error("Worker-to-Worker recovery token is not configured");
+  const response = await env.ISTANBUL_GFS.fetch(
+    new Request("https://istanbul-gfs.internal/internal/reconcile", {
+      method: "POST",
+      headers: { Authorization: "Bearer " + env.GFS_DISPATCH_TOKEN },
+    })
+  );
+  const payload = await response.json().catch(() => ({}));
+  if (!response.ok || payload.ok !== true) {
+    throw new Error("Istanbul GFS recovery request failed: HTTP " + response.status + " " +
+      String(payload.error || "unknown error").slice(0, 250));
+  }
+  return payload.result || {};
 }
 
 async function runGuardian(env, scheduledTime) {
-  if (!env.GFS_DISPATCH_TOKEN) {
-    throw new Error("GFS_DISPATCH_TOKEN secret is not configured");
-  }
+  const now = Number(scheduledTime);
+  const health = await getPrimaryHealth(env);
+  const successAge = timestampAgeMs(health.last_cron_success_at_utc, now);
+  const startAge = timestampAgeMs(health.last_cron_started_at_utc, now);
 
-  const workflowPath = `/repos/${REPOSITORY}/actions/workflows/${WORKFLOW_FILE}/runs?branch=main&per_page=20`;
-  const payload = await githubRequest(workflowPath, env.GFS_DISPATCH_TOKEN);
-  const runs = Array.isArray(payload?.workflow_runs) ? payload.workflow_runs : [];
-  const now = Date.now();
-
-  const active = runs
-    .filter((run) => run.status === "queued" || run.status === "in_progress")
-    .sort((a, b) => Date.parse(b.created_at || 0) - Date.parse(a.created_at || 0))[0];
-
-  if (active) {
-    console.log(JSON.stringify({
-      event: "guardian_skip",
-      reason: "pipeline_active",
-      run_id: active.id,
-      run_status: active.status,
-      scheduled_time: new Date(scheduledTime).toISOString(),
-    }));
-    return;
-  }
-
-  const latestDispatch = newest(
-    runs.filter((run) => run.event === "workflow_dispatch"),
-    "created_at",
-  );
-
-  if (latestDispatch && ageMs(latestDispatch.created_at, now) < DISPATCH_COOLDOWN_MS) {
-    console.log(JSON.stringify({
-      event: "guardian_skip",
-      reason: "dispatch_cooldown",
-      run_id: latestDispatch.id,
-      created_at: latestDispatch.created_at,
-      scheduled_time: new Date(scheduledTime).toISOString(),
-    }));
-    return;
-  }
-
-  const latestSuccess = newest(
-    runs.filter((run) => run.status === "completed" && run.conclusion === "success"),
-    "completed_at",
-  );
-  const successAge = latestSuccess
-    ? ageMs(latestSuccess.completed_at, now)
-    : Number.POSITIVE_INFINITY;
-
-  if (successAge <= HEALTH_WINDOW_MS) {
+  // Avoid racing a primary Cron that is still running. Recover when the last
+  // successful collection is stale and no recent collection is in progress.
+  if (successAge <= STALE_AFTER_MS || startAge <= RECENT_START_GRACE_MS) {
     console.log(JSON.stringify({
       event: "guardian_healthy",
-      latest_success_run_id: latestSuccess.id,
-      completed_at: latestSuccess.completed_at,
-      age_minutes: Math.round(successAge / 60_000 * 10) / 10,
-      scheduled_time: new Date(scheduledTime).toISOString(),
+      last_success_at_utc: health.last_cron_success_at_utc,
+      success_age_minutes: Number.isFinite(successAge) ? Math.round(successAge / 60000 * 10) / 10 : null,
+      collection_started_at_utc: health.last_cron_started_at_utc,
+      scheduled_time: new Date(now).toISOString(),
     }));
-    return;
+    return { recovered: false, healthy: true };
   }
 
-  await githubRequest(
-    `/repos/${REPOSITORY}/actions/workflows/${WORKFLOW_FILE}/dispatches`,
-    env.GFS_DISPATCH_TOKEN,
-    {
-      method: "POST",
-      headers: { "content-type": "application/json" },
-      body: JSON.stringify({ ref: "main" }),
-    },
-  );
-
+  const result = await triggerPrimary(env);
   console.log(JSON.stringify({
-    event: "guardian_dispatched",
-    reason: latestSuccess ? "last_success_stale" : "no_successful_run_found",
-    latest_success_run_id: latestSuccess?.id ?? null,
-    latest_success_completed_at: latestSuccess?.completed_at ?? null,
-    success_age_minutes: Number.isFinite(successAge)
-      ? Math.round(successAge / 60_000 * 10) / 10
-      : null,
-    scheduled_time: new Date(scheduledTime).toISOString(),
+    event: "guardian_recovery_triggered",
+    previous_success_at_utc: health.last_cron_success_at_utc,
+    previous_error: health.last_cron_error || null,
+    result_run_id_utc: result.run_id_utc || null,
+    scheduled_time: new Date(now).toISOString(),
   }));
+  return { recovered: true, result };
 }
 
 export default {
@@ -136,26 +82,25 @@ export default {
       return json({
         ok: true,
         service: "gfs-watch-gfs-guardian",
-        repository: REPOSITORY,
-        workflow: WORKFLOW_FILE,
-        cron: "*/30 * * * *",
-        stale_after_minutes: 45,
-        dispatch_cooldown_minutes: 10,
-        role: "fallback-watchdog; primary F180 report dispatch comes from the Cloudflare GFS Cron",
+        cron: "5,15,25,35,45,55 * * * *",
+        stale_after_minutes: 25,
+        recent_start_grace_minutes: 18,
+        recovery: "Cloudflare Service Binding -> Istanbul GFS Worker /internal/reconcile",
+        github_runtime_dependency: false,
       });
     }
     return json({ ok: false, error: "not_found" }, 404);
   },
 
-  async scheduled(controller, env) {
-    try {
-      await runGuardian(env, controller.scheduledTime);
-    } catch (error) {
-      console.error(JSON.stringify({
-        event: "guardian_error",
-        message: error instanceof Error ? error.message : "Unknown Guardian error",
-        scheduled_time: new Date(controller.scheduledTime).toISOString(),
-      }));
-    }
+  async scheduled(controller, env, ctx) {
+    ctx.waitUntil(
+      runGuardian(env, controller.scheduledTime).catch(error => {
+        console.error(JSON.stringify({
+          event: "guardian_error",
+          message: error instanceof Error ? error.message : "Unknown Guardian error",
+          scheduled_time: new Date(controller.scheduledTime).toISOString(),
+        }));
+      })
+    );
   },
 };
