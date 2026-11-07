@@ -26,7 +26,7 @@ concurrency:
 
 jobs:
   poll-and-publish:
-    name: Poll → F72 cache → F180 report
+    name: Sync Cloudflare D1 → F72 archive → F180 report
     runs-on: ubuntu-latest
     timeout-minutes: 12
     outputs:
@@ -67,8 +67,10 @@ jobs:
           fi
           mkdir -p gfs/runs gfs/milestones/f72 gfs/notifications/telegram-sent
 
-      - name: Poll MeteoPT for a new GFS run and cache F72
+      - name: Sync the canonical GFS cycles from Cloudflare D1
         id: poll
+        env:
+          ISTANBUL_GFS_API: https://gfs-watch-web.muhsin-ulusoy.workers.dev/gfs/latest
         run: python scripts/poll_istanbul_gfs_10min.py
 
       - name: Persist F72 cache and any F180 canonical run
