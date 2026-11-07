@@ -1,0 +1,70 @@
+name: Rebuild Köy GFS Interactive SVG
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - "scripts/build_koy_gfs_interactive_svg.py"
+      - ".github/workflows/rebuild-koy-gfs-interactive-svg.yml"
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+concurrency:
+  group: koy-gfs-interactive-svg-builder
+  cancel-in-progress: true
+
+jobs:
+  rebuild:
+    name: Regenerate and persist Köy four-panel SVG
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - name: Check out renderer source
+        uses: actions/checkout@v5
+        with:
+          ref: main
+          path: source
+          fetch-depth: 1
+
+      - name: Check out canonical Köy GFS archive
+        uses: actions/checkout@v5
+        with:
+          ref: koy-gfs-data
+          path: koy-data
+          fetch-depth: 0
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+
+      - name: Install SVG renderer dependency
+        run: python -m pip install --disable-pip-version-check matplotlib
+
+      - name: Rebuild four-panel SVG from canonical valid-time archive
+        env:
+          KOY_GFS_DIR: ${{ github.workspace }}/koy-data/gfs
+        run: |
+          set -euo pipefail
+          python source/scripts/build_koy_gfs_interactive_svg.py
+          test -s koy-data/gfs/media/.koy-svg-renderer-version
+          SVG="$(find koy-data/gfs/media -maxdepth 1 -type f -name 'koy-gfs-*-comparison.svg' -printf '%T@ %p\\n' | sort -nr | head -n1 | cut -d' ' -f2-)"
+          test -n "$SVG" && test -s "$SVG"
+          grep -q 'Pzt' "$SVG"
+          grep -q 'Cmt' "$SVG"
+
+      - name: Persist regenerated SVG to koy-gfs-data
+        working-directory: koy-data
+        run: |
+          set -euo pipefail
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add gfs/media/*.svg gfs/media/.koy-svg-renderer-version
+          if git diff --cached --quiet; then
+            echo "The canonical Köy SVG already has Turkish weekday labels."
+          else
+            git commit -m "Rebuild Köy GFS SVG with Turkish weekday axis"
+            git push origin HEAD:koy-gfs-data
+          fi
