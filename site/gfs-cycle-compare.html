@@ -216,8 +216,8 @@ html,body{margin:0;padding:0;background:transparent;color:var(--text);font-famil
 /* Döngü renk etiketleri Köy görünümüyle aynı şekilde gizli; DOM korunur. */
 #next-72h-legend{display:none!important}
 
-/* Mobil GFS 72 saat: tooltip daima dokunma noktasının üstünde. */
-.gfs-point-tooltip{position:fixed!important;z-index:2147483647!important;pointer-events:none!important;}
+/* GFS 72 saat: tooltip aktif grafik hostu içinde kalır. */
+.gfs-point-tooltip{position:absolute!important;z-index:40!important;pointer-events:none!important;}
 </style>
 </head>
 <body>
