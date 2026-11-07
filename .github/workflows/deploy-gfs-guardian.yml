@@ -31,8 +31,6 @@ jobs:
         uses: actions/setup-node@v5
         with:
           node-version: "22"
-          cache: npm
-          cache-dependency-path: gfs-guardian/package.json
 
       - name: Verify deployment credentials
         env:
