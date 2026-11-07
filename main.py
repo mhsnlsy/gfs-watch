@@ -3226,10 +3226,11 @@ def _draw_comparison_precip_line_axis(axis, chart_data):
     tick_index = list(range(0, len(times), step))
     if tick_index[-1] != len(times) - 1:
         tick_index.append(len(times) - 1)
+    weekday_short = ("Pzt", "Sal", "Çar", "Per", "Cum", "Cmt", "Paz")
     labels = []
     for index in tick_index:
         stamp = datetime.strptime(times[index], "%Y-%m-%dT%H:%M")
-        labels.append(f"{stamp:%d}")
+        labels.append(f"{stamp:%d}\n{weekday_short[stamp.weekday()]}")
     axis.set_xticks(tick_index)
     axis.set_xticklabels(labels, fontsize=9, color=GFS_REPORT_TEXT)
     axis.set_title("3 saatlik yağış | çizgi trend", loc="left", fontsize=11)
@@ -3305,14 +3306,11 @@ def _draw_comparison_bar_axis(axis, chart_data, metric, title, ylabel):
 
 
 def _format_comparison_date_axis(axis, dates):
-    turkish_weekdays = (
-        "Pazartesi", "Salı", "Çarşamba", "Perşembe",
-        "Cuma", "Cumartesi", "Pazar",
-    )
+    turkish_weekdays = ("Pzt", "Sal", "Çar", "Per", "Cum", "Cmt", "Paz")
     labels = []
     for day in dates:
         local_date = datetime.strptime(day, "%Y-%m-%d")
-        labels.append(f"{local_date:%d}")
+        labels.append(f"{local_date:%d}\n{turkish_weekdays[local_date.weekday()]}")
     positions = list(range(len(dates)))
     axis.set_xlim(-0.5, max(len(dates) - 0.5, 0.5))
     axis.set_xticks(positions)
@@ -3437,7 +3435,7 @@ def create_valid_time_comparison_assets(current_run_id, payload, previous_runs):
         )
 
         fig.subplots_adjust(
-            left=0.045, right=0.955, bottom=0.085, top=0.707,
+            left=0.045, right=0.955, bottom=0.105, top=0.707,
             wspace=0.18, hspace=0.36,
         )
 
@@ -3447,8 +3445,9 @@ def create_valid_time_comparison_assets(current_run_id, payload, previous_runs):
         ]
         if tick_indices[-1] != len(x_values) - 1:
             tick_indices.append(len(x_values) - 1)
+        weekday_short = ("Pzt", "Sal", "Çar", "Per", "Cum", "Cmt", "Paz")
         tick_labels = [
-            local_times[index].strftime("%d")
+            f"{local_times[index]:%d}\n{weekday_short[local_times[index].weekday()]}"
             for index in tick_indices
         ]
 
@@ -3536,7 +3535,7 @@ def create_valid_time_comparison_assets(current_run_id, payload, previous_runs):
             )
             axis.set_xticks([x_values[index] for index in tick_indices])
             axis.set_xticklabels(
-                tick_labels, fontsize=10, color=GFS_REPORT_MUTED,
+                tick_labels, fontsize=9.5, color=GFS_REPORT_MUTED, linespacing=1.15,
                 fontweight="semibold",
             )
             axis.margins(x=0.01)
@@ -3910,7 +3909,7 @@ def create_pages_comparison_charts(current_run_id, payload, previous_runs):
                     date_labels = []
                     for day in dates:
                         date_value = datetime.strptime(day, "%Y-%m-%d")
-                        date_labels.append(f"{date_value:%d}")
+                        date_labels.append(f"{date_value:%d}\n{weekday_names[date_value.weekday()]}")
                     axis.set_xticklabels(date_labels, fontsize=14, fontweight="semibold", color=GFS_REPORT_TEXT)
                 for tick_label in axis.get_xticklabels():
                     tick_label.set_fontsize(12 if metric == "precipitation" else 14)
