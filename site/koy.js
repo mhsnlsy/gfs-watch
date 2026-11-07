@@ -543,7 +543,7 @@ function bindStationHistoryTooltip(containerId){
  function nearestByTime(event,maxDistance){
   const matrix=svg.getScreenCTM();
   if(!matrix)return null;
-  let nearest=null,best=maxDistance;
+  let nearest=null,best=Number.isFinite(maxDistance)?maxDistance:Infinity;
   const point=svg.createSVGPoint();
   for(const target of targets){
    point.x=Number(target.getAttribute("cx"));
