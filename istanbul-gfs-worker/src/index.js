@@ -239,8 +239,8 @@ async function enqueueReportDispatch(env, runId, createdAt) {
 
 async function dispatchQueuedReports(env) {
   const result = await env.GFS_DB.prepare(
-    "SELECT run_id_utc FROM gfs_report_dispatch_queue " +
-    "WHERE status = 'pending' ORDER BY run_id_utc ASC LIMIT 1"
+    "SELECT run_id_utc, attempts FROM gfs_report_dispatch_queue " +
+    "WHERE status = 'pending' AND attempts < 5 ORDER BY run_id_utc ASC LIMIT 1"
   ).all();
   const jobs = result.results || [];
   if (!jobs.length) return { queued: 0, dispatched: 0, failed: 0 };
