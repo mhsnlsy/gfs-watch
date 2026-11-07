@@ -186,10 +186,12 @@ async function fetchEnka() {
   const pressureCell = enkaCurrentCell(rows, "Barometer (hPa)");
   const humidityCell = enkaCurrentCell(rows, "Humidity");
   const windCell = enkaCurrentCell(rows, "Wind");
+  const dailyRainCell = enkaCurrentCell(rows, "Daily Rain");
   const tempMatch = valueMatch(tempCell, /([-+]?\d+(?:[.,]\d+)?)\s*[\u00B0\uFFFD]?\s*C/i, "Day Temperature", plain);
   const pressureMatch = valueMatch(pressureCell, /(\d{3,4}(?:[.,]\d+)?)\s*(?:hPa)?/i, "Barometer", plain);
   const humidityMatch = valueMatch(humidityCell, /(\d{1,3}(?:[.,]\d+)?)\s*%/i, "Humidity", plain);
   const windMatch = valueMatch(windCell, /\b(NNE|ENE|ESE|SSE|SSW|WSW|WNW|NNW|N|NE|E|SE|S|SW|W|NW)\b\s*(\d+(?:[.,]\d+)?)\s*kt\b/i, "Wind", plain);
+  const dailyRainMatch = String(dailyRainCell || plain).match(/(\d+(?:[.,]\d+)?)\s*mm/i);
   const temperature = Number(tempMatch[1].replace(",", "."));
   const pressure = Number(pressureMatch[1].replace(",", "."));
   const humidity = Number(humidityMatch[1].replace(",", "."));
@@ -226,7 +228,7 @@ async function fetchEnka() {
     precipitation_6h_mm: null,
     precipitation_12h_mm: null,
     precipitation_24h_mm: null,
-    precipitation_daily_mm: null,
+    precipitation_daily_mm: dailyRainMatch ? round(Number(dailyRainMatch[1].replace(",", ".")), 1) : null,
     precipitation_source: "MGM 18401 · Şişli",
     observation_method: "weatherlink-current-values-current-value"
   };
