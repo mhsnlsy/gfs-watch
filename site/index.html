@@ -1448,8 +1448,8 @@
     };
     const fmt=(value,digits=1)=>numeric(value)?value.toLocaleString("tr-TR",{minimumFractionDigits:digits,maximumFractionDigits:digits}):"—";
     const esc=value=>String(value??"").replace(/[&<>"']/g,char=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[char]));
-    const timeTR=value=>new Intl.DateTimeFormat("tr-TR",{timeZone:"Europe/Istanbul",day:"2-digit",month:"2-digit",hour:"2-digit",minute:"2-digit"}).format(new Date(value));
-    const timeUTC=value=>new Intl.DateTimeFormat("tr-TR",{timeZone:"UTC",day:"2-digit",month:"2-digit",hour:"2-digit",minute:"2-digit",hourCycle:"h23"}).format(new Date(value));
+    const timeTR=value=>new Intl.DateTimeFormat("tr-TR",{timeZone:"Europe/Istanbul",day:"2-digit",minute:"2-digit"}).format(new Date(value));
+    const timeUTC=value=>new Intl.DateTimeFormat("tr-TR",{timeZone:"UTC",day:"2-digit",minute:"2-digit",hourCycle:"h23"}).format(new Date(value));
     const forecastClockUTC=value=>new Intl.DateTimeFormat("tr-TR",{timeZone:"UTC",hour:"2-digit",minute:"2-digit",hourCycle:"h23"}).format(new Date(value));
     const symbolFor=rain=>rain>=5?"🌧️":rain>=1?"🌦️":"⛅";
     function renderDaily(items,targetId="daily-grid"){
@@ -1531,7 +1531,7 @@
 
     const chartDateTimeTR=value=>{
       const date=new Date(value);
-      const dayMonth=new Intl.DateTimeFormat("tr-TR",{timeZone:"Europe/Istanbul",day:"numeric",month:"long"}).format(date);
+      const dayMonth=new Intl.DateTimeFormat("tr-TR",{timeZone:"Europe/Istanbul",day:"2-digit"}).format(date);
       const clock=new Intl.DateTimeFormat("tr-TR",{timeZone:"Europe/Istanbul",hour:"2-digit",minute:"2-digit",hourCycle:"h23"}).format(date);
       return dayMonth+" "+clock;
     };
@@ -1540,7 +1540,7 @@
     // Step 3 (15Z) is displayed as 15 TSİ, not 18 TSİ.
     const forecastDateTimeTSI=value=>{
       const date=new Date(value);
-      const dayMonth=new Intl.DateTimeFormat("tr-TR",{timeZone:"UTC",day:"numeric",month:"long"}).format(date);
+      const dayMonth=new Intl.DateTimeFormat("tr-TR",{timeZone:"UTC",day:"2-digit"}).format(date);
       const clock=new Intl.DateTimeFormat("tr-TR",{timeZone:"UTC",hour:"2-digit",minute:"2-digit",hourCycle:"h23"}).format(date);
       return dayMonth+" "+clock+" TSİ";
     };
@@ -1770,7 +1770,7 @@
       const markers=coords.filter((point,index)=>index===0||index===coords.length-1||index%8===0)
         .map(point=>'<circle cx="'+point.x+'" cy="'+point.y+'" r="3.2" fill="#c8f2ec" stroke="#133548" stroke-width="2"/>').join("");
       const labels=[coords[0],coords[Math.floor(coords.length/2)],coords[coords.length-1]]
-        .map(point=>'<text x="'+point.x+'" y="'+(height-12)+'" fill="#91a9b8" font-size="7" text-anchor="middle">'+esc(new Intl.DateTimeFormat("tr-TR",{timeZone:"UTC",day:"2-digit",month:"2-digit",hour:"2-digit",hourCycle:"h23"}).format(new Date(point.date)))+'</text>').join("");
+        .map(point=>'<text x="'+point.x+'" y="'+(height-12)+'" fill="#91a9b8" font-size="7" text-anchor="middle">'+esc(new Intl.DateTimeFormat("tr-TR",{timeZone:"UTC",day:"2-digit"}).format(new Date(point.date)))+'</text>').join("");
       const gradientId=targetId+"-fill";
       const stroke=temperature?"#7dd3d7":"#8abce8";
       container.innerHTML='<svg viewBox="0 0 '+width+' '+height+'" role="img" aria-label="'+title+' grafiği"><defs><linearGradient id="'+gradientId+'" x1="0" x2="0" y1="0" y2="1"><stop offset="0%" stop-color="'+stroke+'" stop-opacity=".28"/><stop offset="100%" stop-color="'+stroke+'" stop-opacity="0"/></linearGradient></defs>'+grid+'<path d="'+area+'" fill="url(#'+gradientId+')"/><path d="'+line+'" fill="none" stroke="'+stroke+'" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"/>'+markers+labels+'</svg>';
@@ -3465,7 +3465,7 @@ if(typeof renderBriefing==="function")renderBriefing();
         const labelIndices=[0,Math.floor((common.length-1)/2),common.length-1];
         labels=Array.from(new Set(labelIndices)).map(index=>{
           const date=new Date(common[index]);
-          const label=new Intl.DateTimeFormat("tr-TR",{timeZone:"Europe/Istanbul",day:"2-digit",month:"2-digit",hour:"2-digit"}).format(date);
+          const label=new Intl.DateTimeFormat("tr-TR",{timeZone:"Europe/Istanbul",day:"2-digit"}).format(date);
           return '<text x="'+xFor(index)+'" y="'+(height-14)+'" fill="#91a9b8" font-size="11" text-anchor="middle">'+esc(label)+'</text>';
         }).join("");
       }
