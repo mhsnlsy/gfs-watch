@@ -1,2 +1,9 @@
-// Same-origin API gateway. Live GFS, Köy and station data are routed by gfs-watch-web.
-window.ISTANBUL_GFS_API_BASE = window.location.origin;
+// Live API gateway shared by the Cloudflare site and the temporary GitHub Pages fallback.
+(() => {
+  const cloudflareWeb = "https://gfs-watch-web.muhsin-ulusoy.workers.dev";
+  const isGitHubPages = window.location.hostname === "github.io" ||
+    window.location.hostname.endsWith(".github.io");
+  const apiBase = isGitHubPages ? cloudflareWeb : window.location.origin;
+  window.GFS_WATCH_API_BASE = apiBase;
+  window.ISTANBUL_GFS_API_BASE = apiBase;
+})();
