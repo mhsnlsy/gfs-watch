@@ -1,18 +1,6 @@
 name: Sync Live Archives to Cloudflare R2
 
 on:
-  push:
-    branches:
-      - main
-      - gfs-watch-state
-      - istanbul-gfs-data
-      - koy-gfs-data
-      - koy-mgm-data
-    paths:
-      - ".github/workflows/sync-cloudflare-live-archive.yml"
-      - "public/ecmwf/**"
-      - "gfs/**"
-      - "mgm/**"
   workflow_dispatch:
 
 permissions:
@@ -76,7 +64,11 @@ jobs:
         run: |
           set -euo pipefail
 
-          if ! wrangler r2 bucket list | grep -Fq "$R2_BUCKET"; then
+          if ! wrangler r2 bucket list > "$RUNNER_TEMP/r2-buckets.txt"; then
+            echo "::error::CLOUDFLARE_API_TOKEN needs account-level Workers R2 Storage: Edit permission."
+            exit 1
+          fi
+          if ! grep -Fq "$R2_BUCKET" "$RUNNER_TEMP/r2-buckets.txt"; then
             wrangler r2 bucket create "$R2_BUCKET"
           fi
 
