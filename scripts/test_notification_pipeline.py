@@ -32,6 +32,9 @@ def main() -> None:
     assert "scripts/fetch_istanbul_gfs_meteopt.py" in gfs_workflow
     assert "scripts/build_istanbul_gfs_publication.py" in gfs_workflow
     assert "scripts/send_canonical_istanbul_gfs_telegram.py" in gfs_workflow
+    assert "notify-telegram:" in gfs_workflow
+    assert "Persist Telegram acknowledgements and outbox cleanup" in gfs_workflow
+    assert "Send the canonical report and one composite photo to Telegram" not in gfs_workflow
     assert "publish-live-site.yml" in gfs_workflow
     assert "uses: ./.github/workflows/publish-live-site.yml" in gfs_workflow
     assert "TELEGRAM_TOKEN" in gfs_workflow and "CHAT_ID" in gfs_workflow
@@ -48,9 +51,15 @@ def main() -> None:
     assert "create_valid_time_comparison_assets" in builder
     assert "save_public_notification_svg_image" in builder
     assert "telegram_image_path" in builder
+    assert "telegram-outbox" in builder
+    assert "GFS_TARGET_RUN_ID" in builder
+    assert "telegram-outbox" in sender
+    assert "message_sent" in sender and "photo_sent" in sender
     assert "telegram-sent" in sender
     assert "send_photo" in sender
     assert "send_media_group" in sender  # legacy notification fallback
+    assert "not run_file.exists()" in collector
+    assert "f180_candidates.sort(key=lambda item: item[0])" in collector
 
     # Cloudflare is limited to station collection and the optional push API.
     station_deploy = (workflows / "deploy-stations-worker.yml").read_text(encoding="utf-8")
@@ -70,7 +79,7 @@ def main() -> None:
 
     print(
         "[GFS/STATION ARCHITECTURE SMOKE] "
-        "Cloudflare owns stations; GitHub Actions owns 5-minute F180-driven GFS publication, SVG reports, Telegram and Pages."
+        "Cloudflare owns stations; GitHub Actions archives F180 cycles, deploys Pages independently, and retries Telegram from a durable outbox."
     )
 
 
