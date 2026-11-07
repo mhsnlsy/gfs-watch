@@ -68,7 +68,7 @@ const payload = JSON.stringify({
   title: item.title || "İstanbul'un Havası",
   body: String(item.summary || "Yeni İstanbul GFS hava raporu yayımlandı.").slice(0, 180),
   tag: testMode ? item.id : "gfs-" + item.id,
-  url: "https://mhsnlsy.github.io/gfs-watch/#bildirimler"
+  url: "https://gfs-watch-web.muhsin-ulusoy.workers.dev/#bildirimler"
 });
 
 let delivered = 0;
