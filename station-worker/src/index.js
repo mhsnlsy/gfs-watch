@@ -243,18 +243,69 @@ async function fetchMgmArray(url) {
   if (!Array.isArray(payload)) throw new Error("MGM JSON dizisi bekleniyordu");
   return payload;
 }
+function normalizeMgmText(value) {
+  return String(value || "")
+    .toLocaleLowerCase("tr-TR")
+    .normalize("NFD")
+    .replace(/[\\u0300-\\u036f]/g, "")
+    .replace(/ı/g, "i")
+    .replace(/[^a-z0-9]+/g, " ")
+    .trim();
+}
+function findMgmDistrictRow(rows, district) {
+  const target = normalizeMgmText(district);
+  const fields = ["ilce", "ilceAdi", "ilceAd", "merkezAdi", "merkezAd", "istasyonAdi", "istasyon", "aciklama", "yer"];
+  return rows.find(item => fields.some(field => normalizeMgmText(item && item[field]).includes(target))) || null;
+}
 async function fetchMgmStation(stationKey) {
   if (stationKey === "canakci") {
-    const centers = await fetchMgmArray("https://servis.mgm.gov.tr/web/merkezler?il=Giresun&ilce=Canakci");
-    if (!Array.isArray(centers) || !centers.length) throw new Error("MGM Çanakçı merkezi bulunamadı");
-    const center = centers.find(item => String(item.ilce || "").toLocaleLowerCase("tr-TR") === "çanakçı") || centers[0];
-    const centerId = center.merkezId;
-    if (!centerId) throw new Error("MGM Çanakçı merkezId bulunamadı");
-    const rows = await fetchMgmArray("https://servis.mgm.gov.tr/web/sondurumlar?merkezid=" + encodeURIComponent(centerId));
-    if (!Array.isArray(rows) || !rows.length) throw new Error("MGM Çanakçı son durum verisi boş");
-    const stationId = center.sondurumIstNo || center.gunlukTahminIstNo || rows[0].istNo || String(centerId);
-    const row = rows.find(item => String(item.istNo || "") === String(stationId)) || rows[0];
-    return { row, url: "https://servis.mgm.gov.tr/web/sondurumlar?merkezid=" + encodeURIComponent(centerId), center };
+    let centerError = null;
+    try {
+      const centers = await fetchMgmArray("https://servis.mgm.gov.tr/web/merkezler?il=Giresun&ilce=Canakci");
+      if (!Array.isArray(centers) || !centers.length) throw new Error("MGM Çanakçı merkezi bulunamadı");
+      const center = centers.find(item => normalizeMgmText(item && item.ilce) === "canakci") || centers[0];
+      const centerId = center.merkezId;
+      if (!centerId) throw new Error("MGM Çanakçı merkezId bulunamadı");
+      const url = "https://servis.mgm.gov.tr/web/sondurumlar?merkezid=" + encodeURIComponent(centerId);
+      const rows = await fetchMgmArray(url);
+      if (!Array.isArray(rows) || !rows.length) throw new Error("MGM Çanakçı son durum verisi boş");
+      const stationId = center.sondurumIstNo || center.gunlukTahminIstNo || rows[0].istNo || String(centerId);
+      const row = rows.find(item => String(item.istNo || "") === String(stationId)) || rows[0];
+      return { row, url, center };
+    } catch (error) {
+      centerError = error;
+    }
+
+    // Çanakçı'nın merkez-lookup endpoint'i zaman zaman 530 ile
+    // Cloudflare Worker isteklerini reddediyor. Ana sistemi durdurmadan
+    // Giresun'un toplu son-durum listesinden aynı ilçeyi bul.
+    const fallbackUrls = [
+      "https://servis.mgm.gov.tr/web/sondurumlar/ilTumSondurum?ilPlaka=28",
+      "https://servis.mgm.gov.tr/api/sondurumlar/ilTumSondurum?ilPlaka=28"
+    ];
+    const fallbackAttempts = await Promise.allSettled(
+      fallbackUrls.map(async url => {
+        const rows = await fetchMgmArray(url);
+        const row = findMgmDistrictRow(rows, "Çanakçı");
+        if (!row) throw new Error("MGM Çanakçı kaydı bu uç noktada bulunamadı");
+        return { row, url, center: null, fallback: true };
+      })
+    );
+    for (const attempt of fallbackAttempts) {
+      if (attempt.status === "fulfilled") {
+        console.warn("[MGM FALLBACK] canakci " + attempt.value.url + " · primary lookup failed: " + String(centerError && centerError.message || centerError));
+        return attempt.value;
+      }
+    }
+    const fallbackErrors = fallbackAttempts
+      .filter(item => item.status === "rejected")
+      .map(item => String(item.reason && item.reason.message || item.reason))
+      .filter(Boolean);
+    throw new Error(
+      "MGM Çanakçı primary lookup failed: " +
+      String(centerError && centerError.message || centerError) +
+      (fallbackErrors.length ? " | fallback: " + fallbackErrors.join(" | ") : "")
+    );
   }
   const stationId = STATION_DEFS[stationKey].station_id;
   const urls = stationKey === "eyupsultan"
