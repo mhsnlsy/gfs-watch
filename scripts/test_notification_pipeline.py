@@ -14,7 +14,6 @@ def read(path: str) -> str:
 def main() -> None:
     publisher = read(".github/workflows/publish-live-site.yml")
     report_workflow = read(".github/workflows/istanbul-gfs-10min.yml")
-    ecmwf_workflow = read(".github/workflows/ecmwf-eps.yml")
     platform_workflow = read(".github/workflows/deploy-cloudflare-platform.yml")
     archive_sync = read(".github/workflows/sync-cloudflare-live-archive.yml")
     istanbul_deploy = read(".github/workflows/deploy-istanbul-gfs-worker.yml")
@@ -143,14 +142,12 @@ def main() -> None:
     assert "publication-asset/notifications/latest.json" in istanbul_svg_workflow
     assert "Verified D1 live SVG dark surfaces" in istanbul_svg_workflow
     assert 'path.startsWith("/data/notifications/")' in web_worker
-    # ECMWF is calculated in the existing workflow but published and served from D1.
-    assert "Publish validated ECMWF archive to Cloudflare R2" in ecmwf_workflow
-    assert "CLOUDFLARE_R2_API_TOKEN" in ecmwf_workflow
-    assert "data/ecmwf/$relative" in ecmwf_workflow
-    assert "Verified ECMWF R2 archive" in ecmwf_workflow
-    assert "Publish ECMWF latest payload and report images to Cloudflare D1" in ecmwf_workflow
-    assert "gfs/publication-upload" in ecmwf_workflow and "gfs/publication-asset/data/ecmwf/latest.json" in ecmwf_workflow
-    assert "--data-binary" in ecmwf_workflow and "GFS_DISPATCH_TOKEN" in ecmwf_workflow
+    # ECMWF is now collected by the Istanbul GFS Worker from MeteoPT and archived
+    # directly into D1/R2; there is no separate ECMWF GitHub Actions workflow.
+    assert "api.meteopt.com/ecmwf/json" in gfs_worker
+    assert "ECMWF_ARCHIVE" in gfs_worker
+    assert "data/ecmwf/latest.json" in platform_workflow
+    assert "Verified live ECMWF payload served from R2" in platform_workflow
     assert 'path.startsWith("/data/ecmwf/")' in web_worker
     assert "path.slice(1)" in web_worker
     assert '"public/ecmwf/**"' not in platform_workflow
