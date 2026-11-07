@@ -140,11 +140,32 @@ jobs:
           }
           console.log(JSON.stringify(doc));
           NODE
-              exit 0
+              break
             fi
             echo "Waiting for Köy GFS Worker deployment/health..."
             sleep 10
           done
           echo "::error::Köy GFS Worker health endpoint did not become available."
           [ -s "$RUNNER_TEMP/koy-health.json" ] && cat "$RUNNER_TEMP/koy-health.json" || true
-          exit 1
+          if [ ! -s "$RUNNER_TEMP/koy-health.json" ]; then
+            echo "::error::Köy GFS Worker health endpoint did not become available."
+            exit 1
+          fi
+
+          echo "Testing live F72 collection..."
+          curl --silent --show-error --fail --max-time 60 "$KOY_GFS_API/f72?check=$(date +%s)" -o "$RUNNER_TEMP/koy-f72.json"
+          node - "$RUNNER_TEMP/koy-f72.json" <<'NODE'
+          const fs = require("fs");
+          const doc = JSON.parse(fs.readFileSync(process.argv[2], "utf8"));
+          if (!Array.isArray(doc.forecast_6_hourly) || doc.forecast_6_hourly.length < 12 || doc.forecast_source !== "meteopt") {
+            console.error(JSON.stringify(doc, null, 2));
+            throw new Error("Köy GFS F72 live payload is missing or incomplete");
+          }
+          console.log(JSON.stringify({
+            run_id_utc: doc.run_id_utc,
+            forecast_source: doc.forecast_source,
+            points: doc.forecast_6_hourly.length,
+            first_valid_time_utc: doc.forecast_6_hourly[0]?.valid_time_utc || null,
+            last_valid_time_utc: doc.forecast_6_hourly.at(-1)?.valid_time_utc || null
+          }));
+          NODE
