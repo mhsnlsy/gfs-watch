@@ -1,4 +1,4 @@
-"""Regression tests for the split Cloudflare-stations / GitHub-GFS architecture."""
+"""Offline contract tests for the Cloudflare-first weather platform."""
 from __future__ import annotations
 
 import json
@@ -7,76 +7,90 @@ from pathlib import Path
 ROOT = Path(__file__).resolve().parents[1]
 
 
+def read(path: str) -> str:
+    return (ROOT / path).read_text(encoding="utf-8")
+
+
 def main() -> None:
-    workflows = ROOT / ".github" / "workflows"
-    publisher = (workflows / "publish-live-site.yml").read_text(encoding="utf-8")
-    gfs_workflow_path = workflows / "istanbul-gfs-10min.yml"
-    gfs_workflow = gfs_workflow_path.read_text(encoding="utf-8")
+    publisher = read(".github/workflows/publish-live-site.yml")
+    report_workflow = read(".github/workflows/istanbul-gfs-10min.yml")
+    platform_workflow = read(".github/workflows/deploy-cloudflare-platform.yml")
+    poller = read("scripts/poll_istanbul_gfs_10min.py")
+    builder = read("scripts/build_istanbul_gfs_publication.py")
+    sender = read("scripts/send_pending_istanbul_gfs_telegram.py")
 
-    # Pages remains a single publisher and consumes the isolated GFS data branch.
-    assert "group: live-pages-publisher" in publisher
-    assert "cancel-in-progress: false" in publisher
+    # Pages remains an on-demand/source-change fallback, not a 5-minute publisher.
+    assert "Publish GitHub Pages Fallback" in publisher
+    assert "workflow_dispatch:" in publisher
     assert "actions/deploy-pages@v4" in publisher
-    assert "istanbul-gfs-data" in publisher
-    assert "koy-gfs-data" in publisher
-    assert "koy-mgm-data" in publisher
+    assert "schedule:" not in publisher
+    assert "group: live-pages-publisher" in publisher
 
-    # Istanbul GFS is a dedicated ten-minute state machine: F72 cache first,
-    # F180 report second, with Pages and Telegram in independent jobs.
-    assert 'cron: "*/10 * * * *"' in gfs_workflow
-    assert "branches: [main]" in gfs_workflow
-    assert "${GITHUB_WORKSPACE}/gfs/" in gfs_workflow
-    assert "\\${GITHUB_WORKSPACE}" not in gfs_workflow
-    assert "scripts/poll_istanbul_gfs_10min.py" in gfs_workflow
-    assert "steps.poll.outputs.f180_ready == 'true'" in gfs_workflow
-    assert "F72" in gfs_workflow and "F180" in gfs_workflow
-    assert "Persist F72 cache and any F180 canonical run" in gfs_workflow
-    assert "Build the report from the newly archived F180 run" in gfs_workflow
-    assert "publish-live-site.yml" in gfs_workflow
-    assert "uses: ./.github/workflows/publish-live-site.yml" in gfs_workflow
-    assert "telegram:" in gfs_workflow
-    assert "scripts/send_pending_istanbul_gfs_telegram.py" in gfs_workflow
-    assert "TELEGRAM_TOKEN" in gfs_workflow and "CHAT_ID" in gfs_workflow
-    assert "cancel-in-progress: false" in gfs_workflow
+    # Cloudflare is the only live GFS collector. GitHub syncs D1 for reports.
+    assert 'cron: "*/10 * * * *"' in report_workflow
+    assert "ISTANBUL_GFS_API" in report_workflow
+    assert "gfs-watch-web.muhsin-ulusoy.workers.dev/gfs/latest" in report_workflow
+    assert "scripts/poll_istanbul_gfs_10min.py" in report_workflow
+    assert "Cloudflare D1" in report_workflow
+    assert "steps.poll.outputs.f180_ready == 'true'" in report_workflow
+    assert "publish-live-site.yml" in report_workflow
+    assert "telegram:" in report_workflow
+    assert "scripts/send_pending_istanbul_gfs_telegram.py" in report_workflow
+    assert "TELEGRAM_TOKEN" in report_workflow and "CHAT_ID" in report_workflow
+    assert "cancel-in-progress: false" in report_workflow
 
-    collector = (ROOT / "scripts" / "poll_istanbul_gfs_10min.py").read_text(encoding="utf-8")
-    builder = (ROOT / "scripts" / "build_istanbul_gfs_publication.py").read_text(encoding="utf-8")
-    sender = (ROOT / "scripts" / "send_pending_istanbul_gfs_telegram.py").read_text(encoding="utf-8")
-    assert "fetch_cycle" in collector and "normalize" in collector
-    assert "f72_path" in collector and "run_path" in collector
-    assert "not f180_ready" in collector
-    assert "has_publication" in collector
-    assert "F180 ready for report retry" in collector
+    assert "gfs-watch-web.muhsin-ulusoy.workers.dev/gfs/latest" in poller
+    assert "comparison_runs" in poller
+    assert "is_f180_ready" in poller and "is_f72_ready" in poller
+    assert "fetch_cycle" not in poller
+    assert "fetch_istanbul_gfs_meteopt" not in poller
+
+    # Report rendering and exactly-once Telegram delivery remain unchanged.
     assert "GFS_TARGET_RUN_ID" in builder
-    assert "Older delayed cycle" in builder
-    assert "existing_run > utc_dt(current_run)" in builder
     assert "create_valid_time_comparison_assets" in builder
     assert "save_public_notification_svg_image" in builder
     assert "telegram_image_path" in builder
     assert "telegram-sent" in sender
     assert "text_message_id" in sender and "photo_message_id" in sender
     assert "send_photo" in sender
-    assert "for item in items" in sender
 
-    # Cloudflare is limited to station collection and the optional push API.
-    station_deploy = (workflows / "deploy-stations-worker.yml").read_text(encoding="utf-8")
-    assert "station-worker/**" in station_deploy
-    push_config = json.loads((ROOT / "push-worker" / "wrangler.jsonc").read_text(encoding="utf-8"))
-    assert push_config.get("triggers", {}).get("crons") == []
-    assert not (workflows / "deploy-istanbul-gfs-cloudflare.yml").exists()
-    assert not (ROOT / "workers" / "istanbul-gfs").exists()
+    # Cloudflare web host: Static Assets + Service Bindings.
+    web = json.loads(read("web-worker/wrangler.jsonc"))
+    assert web["assets"]["directory"] == "./public"
+    assert web["assets"]["binding"] == "ASSETS"
+    services = {item["binding"]: item["service"] for item in web["services"]}
+    assert services == {
+        "ISTANBUL_GFS": "gfs-watch-istanbul-gfs",
+        "KOY_GFS": "gfs-watch-koy-gfs",
+        "STATIONS": "gfs-watch-stations",
+    }
+    assert "Deploy Cloudflare Worker + Static Assets" in platform_workflow
+    assert "Verify Cloudflare website and proxied APIs" in platform_workflow
 
-    # The frontend now reads GFS JSON and notifications from static Pages files.
-    api_config = (ROOT / "site" / "gfs-api-config.js").read_text(encoding="utf-8")
-    index = (ROOT / "site" / "index.html").read_text(encoding="utf-8")
-    table = (ROOT / "site" / "meteopt-gfs-table.js").read_text(encoding="utf-8")
-    assert 'ISTANBUL_GFS_API_BASE = "";' in api_config
-    assert 'const DATA_URL="./data/istanbul-gfs-latest.json";' in index
-    assert 'const DATA_URL = "./data/istanbul-gfs-latest.json";' in table
+    istanbul = json.loads(read("istanbul-gfs-worker/wrangler.jsonc"))
+    koy = json.loads(read("koy-gfs-worker/wrangler.jsonc"))
+    stations = json.loads(read("station-worker/wrangler.jsonc"))
+    assert istanbul["triggers"]["crons"] == ["*/10 * * * *"]
+    assert koy["triggers"]["crons"] == ["*/10 * * * *"]
+    assert stations["triggers"]["crons"] == ["*/2 * * * *"]
+    assert istanbul["d1_databases"][0]["database_name"] == "gfs-watch-istanbul-gfs"
+    assert koy["d1_databases"][0]["database_name"] == "gfs-watch-koy-gfs"
+    assert stations["d1_databases"][0]["database_name"] == "gfs-watch-stations"
+
+    api_config = read("site/gfs-api-config.js")
+    index = read("site/index.html")
+    koy_page = read("site/koy.js")
+    comparison = read("site/gfs-cycle-compare.html")
+    assert "gfs-watch-web.muhsin-ulusoy.workers.dev" in api_config
+    assert "/gfs/latest" in index
+    assert "/api/koy-gfs/" in koy_page
+    assert 'const stationApi="/api/history/"+' in comparison
+    assert "gfs-watch-stations.muhsin-ulusoy.workers.dev" not in comparison
 
     print(
-        "[GFS/STATION ARCHITECTURE SMOKE] "
-        "Cloudflare owns stations; GitHub Actions owns a 10-minute F72-cache/F180-publication GFS state machine, with independent Telegram delivery and Pages deployment."
+        "[CLOUDFLARE-FIRST PLATFORM] Static Assets, Service Bindings, D1 Cron "
+        "collections, same-origin API routing, Pages fallback and Telegram "
+        "report sidecar contracts passed."
     )
 
 
