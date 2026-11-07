@@ -421,11 +421,103 @@ async function latestPayload(env, bootstrap = true) {
   };
 }
 
+async function getPublicationAsset(env, key) {
+  const row = await env.GFS_DB.prepare(
+    "SELECT asset_key, run_id_utc, content_type, encoding, body, updated_at_utc " +
+    "FROM gfs_publication_assets WHERE asset_key = ?"
+  ).bind(key).first();
+  return row || null;
+}
+
+async function putPublicationAsset(env, asset) {
+  const now = new Date().toISOString();
+  await env.GFS_DB.prepare(
+    "INSERT INTO gfs_publication_assets " +
+    "(asset_key, run_id_utc, content_type, encoding, body, updated_at_utc) " +
+    "VALUES (?, ?, ?, ?, ?, ?) " +
+    "ON CONFLICT(asset_key) DO UPDATE SET " +
+    "run_id_utc=excluded.run_id_utc, content_type=excluded.content_type, " +
+    "encoding=excluded.encoding, body=excluded.body, updated_at_utc=excluded.updated_at_utc"
+  ).bind(
+    asset.key,
+    asset.run_id_utc || null,
+    asset.content_type || "application/octet-stream",
+    asset.encoding || "utf8",
+    asset.body,
+    now
+  ).run();
+}
+
+function decodePublicationAsset(row) {
+  const bytes = row.encoding === "base64"
+    ? Uint8Array.from(atob(row.body), character => character.charCodeAt(0))
+    : new TextEncoder().encode(row.body);
+  const headers = new Headers({
+    "Content-Type": row.content_type || "application/octet-stream",
+    "Cache-Control": row.asset_key === "latest.json"
+      ? "no-store, max-age=0"
+      : "public, max-age=3600, s-maxage=86400",
+    "Access-Control-Allow-Origin": "*",
+    "X-GFS-Publication-Source": "D1"
+  });
+  if (row.updated_at_utc) headers.set("Last-Modified", row.updated_at_utc);
+  return new Response(bytes, { status: 200, headers });
+}
+
+async function handlePublicationUpload(request, env) {
+  if (request.method !== "POST") return json({ ok: false, error: "Method not allowed" }, 405);
+  const token = request.headers.get("Authorization") || "";
+  if (!env.GFS_DISPATCH_TOKEN || token !== "Bearer " + env.GFS_DISPATCH_TOKEN) {
+    return json({ ok: false, error: "Unauthorized" }, 401);
+  }
+
+  let payload;
+  try {
+    payload = await request.json();
+  } catch (_) {
+    return json({ ok: false, error: "Invalid JSON body" }, 400);
+  }
+
+  const key = String(payload?.key || "").replace(/^\/+/, "");
+  const body = typeof payload?.body === "string" ? payload.body : null;
+  const encoding = payload?.encoding === "base64" ? "base64" : "utf8";
+  const contentType = String(payload?.content_type || "application/octet-stream");
+  const runId = payload?.run_id_utc ? String(payload.run_id_utc) : null;
+  if (!key || !body) return json({ ok: false, error: "key and body are required" }, 400);
+  if (key.includes("..") || key.startsWith("/")) return json({ ok: false, error: "Invalid asset key" }, 400);
+  if (!/^(notifications\/|data\/)[A-Za-z0-9._/-]+$/.test(key)) {
+    return json({ ok: false, error: "Unsupported publication asset path" }, 400);
+  }
+  if (body.length > 1900000) return json({ ok: false, error: "Publication asset exceeds D1 row safety limit" }, 413);
+
+  try {
+    await putPublicationAsset(env, { key, body, encoding, content_type: contentType, run_id_utc: runId });
+    return json({ ok: true, key, encoding, bytes: body.length });
+  } catch (error) {
+    return json({ ok: false, error: String(error?.message || error) }, 500);
+  }
+}
+
 async function handleApi(request, env) {
   const url = new URL(request.url);
   const path = url.pathname.replace(/\/+$/, "") || "/";
   if (request.method === "OPTIONS") return json({ ok: true });
   if (request.method !== "GET") return json({ ok: false, error: "Method not allowed" }, 405);
+
+  if (path === "/gfs/publication-upload") {
+    return handlePublicationUpload(request, env);
+  }
+
+  if (path.startsWith("/gfs/publication-asset/")) {
+    const key = decodeURIComponent(path.slice("/gfs/publication-asset/".length)).replace(/^\/+/, "");
+    try {
+      const row = await getPublicationAsset(env, key);
+      if (!row) return json({ ok: false, error: "Publication asset not found" }, 404);
+      return decodePublicationAsset(row);
+    } catch (error) {
+      return json({ ok: false, error: String(error?.message || error) }, 503);
+    }
+  }
 
   if (path === "/api/health") {
     try {
@@ -443,7 +535,7 @@ async function handleApi(request, env) {
         latest_updated_at_utc: current?.updated_at_utc || null,
         archived_runs: Number(count?.count || 0),
         report_dispatch_configured: Boolean(env.GFS_DISPATCH_TOKEN),
-        pending_report_dispatches: Number(pendingDispatch?.count || 0),
+        pending_report_dispatches: Number(pendingDispatch?.count || 0),\n        publication_assets: Number((await env.GFS_DB.prepare("SELECT COUNT(*) AS count FROM gfs_publication_assets").first())?.count || 0),
         location: LOCATION,
       });
     } catch (error) {
