@@ -273,17 +273,17 @@ async function processQueuedReports(env) {
     ).bind(job.run_id_utc).all();
     const runs = (archive.results || []).map(row => JSON.parse(row.payload_json))
       .sort((a, b) => Date.parse(a.run_id_utc) - Date.parse(b.run_id_utc));
-    if (runs.length < 4 || !runs.some(run => run.run_id_utc === job.run_id_utc)) {
+    if (!runs.some(run => run.run_id_utc === job.run_id_utc)) {
       await env.GFS_DB.prepare(
         "UPDATE gfs_report_dispatch_queue SET status = 'pending', attempts = MAX(0, attempts - 1), " +
         "dispatched_at_utc = NULL WHERE run_id_utc = ? AND status = 'processing'"
       ).bind(job.run_id_utc).run();
       console.log(JSON.stringify({
-        event: "istanbul_report_waiting_for_four_cycles",
+        event: "istanbul_report_waiting_for_archived_cycle",
         run_id_utc: job.run_id_utc,
         available_cycles: runs.length,
       }));
-      return { queued: 1, published: 0, failed: 0, waiting_for_four_cycles: true };
+      return { queued: 1, published: 0, failed: 0, waiting_for_archive: true };
     }
 
     const target = runs[runs.length - 1];
@@ -292,7 +292,7 @@ async function processQueuedReports(env) {
     const now = new Date().toISOString();
     const imagePath = chart.key.slice("notifications/".length);
     const images = [{
-      label: "4 GFS döngüsü · aynı geçerlilik saatleri (TSİ)",
+      label: runs.length + " GFS döngüsü · aynı geçerlilik saatleri (TSİ)",
       path: imagePath,
     }];
 
