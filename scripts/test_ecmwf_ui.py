@@ -76,10 +76,14 @@ def main() -> None:
 
     gfs = html[html.index('<div id="gfs-model-view">'):html.index('<div id="ecmwf-model-view"')]
     ecmwf = html[html.index('<div id="ecmwf-model-view"'):html.index("</main>")]
-    for shared_class in ('class="section"', 'class="section-head"', 'class="lower-grid"',
-                         'class="pressure-card"', 'class="daily-grid"'):
-        if shared_class not in gfs or shared_class not in ecmwf:
-            raise AssertionError(f"GFS/ECMWF layout mismatch: {shared_class}")
+    # GFS and ECMWF intentionally use different page layouts: GFS has the
+    # compact 72-hour panel, while ECMWF retains its daily/ensemble sections.
+    if 'id="next-72h-panel"' not in gfs or 'id="next72-temperature"' not in gfs:
+        raise AssertionError("The compact GFS 72-hour panel is missing.")
+    if 'id="basinc"' not in gfs or 'id="pressure-findings"' not in gfs:
+        raise AssertionError("The GFS regional pressure panel is missing.")
+    if 'id="ecmwf-basinc"' not in ecmwf or 'id="ecmwf-tahmin"' not in ecmwf:
+        raise AssertionError("The ECMWF daily/pressure sections are missing.")
     if 'class="info-card"' not in ecmwf:
         raise AssertionError("ECMWF source card is missing.")
     if "Eski NOAA arşivi bu pakete karışmaz." in html:
