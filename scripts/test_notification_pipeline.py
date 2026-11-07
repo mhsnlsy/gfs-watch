@@ -33,7 +33,9 @@ def main() -> None:
     assert "scripts/poll_istanbul_gfs_10min.py" in report_workflow
     assert "Cloudflare D1" in report_workflow
     assert "steps.poll.outputs.f180_ready == 'true'" in report_workflow
-    assert "publish-live-site.yml" in report_workflow
+    assert "publish-live-site.yml" not in report_workflow
+    assert "publish-pages:" not in report_workflow
+    assert "pages: write" not in report_workflow
     assert "telegram:" in report_workflow
     assert "scripts/send_pending_istanbul_gfs_telegram.py" in report_workflow
     assert "TELEGRAM_TOKEN" in report_workflow and "CHAT_ID" in report_workflow
