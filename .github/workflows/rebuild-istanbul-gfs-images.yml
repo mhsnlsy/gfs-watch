@@ -13,7 +13,6 @@ on:
 
 permissions:
   contents: write
-  actions: write
 
 concurrency:
   group: istanbul-gfs-png-rebuild
@@ -190,7 +189,3 @@ jobs:
           PY
           echo "Cloudflare D1 now serves the rebuilt dark SVG and current notification manifest."
 
-      - name: Publish updated images to GitHub Pages
-        env:
-          GH_TOKEN: ${{ github.token }}
-        run: gh workflow run publish-live-site.yml --ref main
