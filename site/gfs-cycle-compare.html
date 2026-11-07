@@ -239,7 +239,15 @@ const num=v=>v==null||v===""||!Number.isFinite(Number(v))?null:Number(v);
 const fmt=(v,d=1)=>v==null?"—":Number(v).toLocaleString("tr-TR",{minimumFractionDigits:d,maximumFractionDigits:d});
 const esc=s=>String(s??"").replace(/[&<>"]/g,c=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;"}[c]));
 const ts=v=>{if(!v)return "—";const d=new Date(v);return Number.isFinite(d.getTime())?new Intl.DateTimeFormat("tr-TR",{timeZone:"Europe/Istanbul",day:"2-digit"}).format(d)+" TSİ":"—"};
-const tsGfsValid=v=>{if(!v)return "—";const d=new Date(v);if(!Number.isFinite(d.getTime()))return "—";const date=new Intl.DateTimeFormat("tr-TR",{timeZone:"Europe/Istanbul",day:"2-digit",month:"2-digit"}).format(d);const weekday=new Intl.DateTimeFormat("tr-TR",{timeZone:"Europe/Istanbul",weekday:"long"}).format(d);const clock=new Intl.DateTimeFormat("tr-TR",{timeZone:"Europe/Istanbul",hour:"2-digit",minute:"2-digit",hourCycle:"h23"}).format(d);return date+" "+weekday+" · "+clock+" TSİ"};
+const tsGfsValid=v=>{
+ if(!v)return "—";
+ const m=String(v).match(/^(\d{4})-(\d{2})-(\d{2})T(\d{2}):(\d{2})/);
+ if(!m)return "—";
+ const d=new Date(Date.UTC(Number(m[1]),Number(m[2])-1,Number(m[3])));
+ const date=new Intl.DateTimeFormat("tr-TR",{timeZone:"UTC",day:"2-digit",month:"2-digit"}).format(d);
+ const weekday=new Intl.DateTimeFormat("tr-TR",{timeZone:"UTC",weekday:"long"}).format(d);
+ return date+" "+weekday+" · "+m[4]+":"+m[5]+" TSİ";
+};
 const pointsOf=(run,max=180)=>(run?.forecast_6_hourly||[]).filter(p=>{const h=Number(p.forecast_hour);return Number.isFinite(h)&&h>=3&&h<=max&&h%3===0}).sort((a,b)=>Number(a.forecast_hour)-Number(b.forecast_hour));
 function realizedErrorStats(runs,samples){
  const obs=Array.isArray(samples?.samples)?samples.samples:[];
