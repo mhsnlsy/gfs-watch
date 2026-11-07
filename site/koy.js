@@ -251,41 +251,52 @@ function bindGfsChartTooltip(containerId){
  tooltip.hidden=true;
  tooltip.setAttribute("role","status");
  tooltip.setAttribute("aria-live","polite");
- host.appendChild(tooltip);
+ document.body.appendChild(tooltip);
  let pinned=false;
- let touchHideTimer=null;
  const targets=[...svg.querySelectorAll(".gfs-point-target")];
  const currentTargets=targets.filter(target=>target.dataset.current==="true");
- function scheduleTouchHide(){
-  if(touchHideTimer!==null)window.clearTimeout(touchHideTimer);
-  touchHideTimer=window.setTimeout(()=>{touchHideTimer=null;hide()},2800);
- }
- function nearestPoint(event,maxDistance){
+ const currentByTime=new Map(currentTargets.map(target=>[target.dataset.validkey,target]));
+ let currentXs=[];
+ const refreshScreenXs=()=>{
   const matrix=svg.getScreenCTM();
-  if(!matrix)return null;
-  let nearest=null,best=maxDistance;
-  const point=svg.createSVGPoint();
-  for(const target of targets){
+  if(!matrix){currentXs=[];return;}
+  currentXs=currentTargets.map(target=>{
+   const point=svg.createSVGPoint();
    point.x=Number(target.getAttribute("cx"));
    point.y=Number(target.getAttribute("cy"));
-   const screen=point.matrixTransform(matrix);
-   const distance=Math.hypot(event.clientX-screen.x,event.clientY-screen.y);
-   if(distance<best){best=distance;nearest=target}
-  }
-  return nearest;
- }
- function latestPointAtSameTime(hit){
-  if(!hit||!currentTargets.length)return null;
-  const validKey=hit.dataset.validkey;
-  if(!validKey)return null;
-  return currentTargets.find(target=>target.dataset.validkey===validKey)||null;
- }
+   return {target,x:point.matrixTransform(matrix).x};
+  }).filter(item=>Number.isFinite(item.x)).sort((a,b)=>a.x-b.x);
+ };
+ refreshScreenXs();
  function hide(){
-  if(touchHideTimer!==null)window.clearTimeout(touchHideTimer);
-  touchHideTimer=null;
   tooltip.hidden=true;
   pinned=false;
   if(activeGfsTooltip?.tooltip===tooltip)activeGfsTooltip=null;
+ }
+ function positionTooltipAbove(event){
+  tooltip.style.position="fixed";
+  tooltip.style.zIndex="2147483647";
+  tooltip.style.pointerEvents="none";
+  tooltip.style.left="0px";
+  tooltip.style.top="0px";
+  const tw=tooltip.offsetWidth,th=tooltip.offsetHeight;
+  const left=Math.max(8,Math.min(window.innerWidth-tw-8,event.clientX-tw/2));
+  const top=Math.max(8,event.clientY-th-14);
+  tooltip.style.left=Math.round(left)+"px";
+  tooltip.style.top=Math.round(top)+"px";
+ }
+ function nearestPoint(event){
+  if(!currentXs.length)refreshScreenXs();
+  if(!currentXs.length)return null;
+  const x=event.clientX;
+  let lo=0,hi=currentXs.length-1;
+  while(lo<hi){const mid=(lo+hi)>>1;if(currentXs[mid].x<x)lo=mid+1;else hi=mid;}
+  let best=currentXs[lo];
+  if(lo>0&&Math.abs(currentXs[lo-1].x-x)<Math.abs(best.x-x))best=currentXs[lo-1];
+  return best.target;
+ }
+ function latestPointAtSameTime(hit){
+  return hit?currentByTime.get(hit.dataset.validkey)||hit:null;
  }
  function show(target,event,lock=false){
   if(!target)return;
@@ -298,54 +309,40 @@ function bindGfsChartTooltip(containerId){
   tooltip.innerHTML='<div class="gfs-point-tooltip-head"><i style="background:'+color+'"></i><strong>Güncel GFS tahmini</strong></div><div class="gfs-point-tooltip-time">Döngü · '+esc(run)+'<br>Geçerlilik · '+esc(valid)+'</div><div class="gfs-point-tooltip-value">'+esc(value)+' <small>'+esc(unit)+'</small></div><div class="gfs-point-tooltip-meta">Tahmin adımı '+esc(step)+'</div>';
   tooltip.hidden=false;
   pinned=lock;
-  const box=host.getBoundingClientRect();
-  const tx=event.clientX-box.left;
-  const ty=event.clientY-box.top;
-  const tw=tooltip.offsetWidth,th=tooltip.offsetHeight;
-  const left=Math.max(6,Math.min(host.clientWidth-tw-6,tx+14));
-  let top=ty-th-13;
-  if(top<6)top=ty+13;
-  top=Math.max(6,Math.min(host.clientHeight-th-6,top));
-  tooltip.style.left=left+"px";
-  tooltip.style.top=top+"px";
+  positionTooltipAbove(event);
   if(lock)activeGfsTooltip={host,tooltip,hide};
  }
+ const updateTouch=event=>{
+  if(!event||!Number.isFinite(event.clientX)||!Number.isFinite(event.clientY))return;
+  pinned=true;
+  const hit=nearestPoint(event),target=latestPointAtSameTime(hit);
+  if(target)show(target,event,true);else hide();
+ };
  svg.style.touchAction="pan-y";
+ svg.style.webkitTapHighlightColor="transparent";
  svg.addEventListener("pointermove",event=>{
-  if(event.pointerType==="touch"){
-   pinned=true;
-   const hit=nearestPoint(event,44);
-   const target=latestPointAtSameTime(hit);
-   if(target)show(target,event,true);else hide();
-   scheduleTouchHide();
-   return;
-  }
+  if(event.pointerType==="touch"){updateTouch(event);return;}
   if(pinned)return;
-  const hit=nearestPoint(event,28);
-  const target=latestPointAtSameTime(hit);
-  if(target)show(target,event,false);
-  else hide();
+  const hit=nearestPoint(event),target=latestPointAtSameTime(hit);
+  if(target)show(target,event,false);else hide();
  });
- svg.addEventListener("pointerleave",()=>{
-  if(!pinned)hide();
- });
+ svg.addEventListener("pointerrawupdate",event=>{if(event.pointerType==="touch")updateTouch(event);},{passive:true});
+ svg.addEventListener("touchmove",event=>{
+  const touch=event.touches?.[0];if(!touch)return;
+  updateTouch({clientX:touch.clientX,clientY:touch.clientY});
+ },{passive:true});
+ svg.addEventListener("pointerleave",()=>{if(!pinned)hide();});
  svg.addEventListener("pointerdown",event=>{
   if(event.pointerType!=="touch"&&event.pointerType!=="pen")return;
-  const hit=nearestPoint(event,44);
-  const target=latestPointAtSameTime(hit);
-  if(target){
-   event.preventDefault();
-   if(event.pointerType==="touch")try{svg.setPointerCapture(event.pointerId);}catch(_){}
-   show(target,event,true);
-   if(event.pointerType==="touch")scheduleTouchHide();
-  }else hide();
+  if(event.pointerType==="touch"){pinned=true;try{svg.setPointerCapture(event.pointerId);}catch(_){}}
+  const hit=nearestPoint(event),target=latestPointAtSameTime(hit);
+  if(target)show(target,event,true);else hide();
  });
- svg.addEventListener("pointerup",event=>{
-  if(event.pointerType==="touch")scheduleTouchHide();
- });
- svg.addEventListener("pointercancel",event=>{
-  if(event.pointerType==="touch")hide();
- });
+ svg.addEventListener("pointerup",event=>{if(event.pointerType==="touch")hide();});
+ svg.addEventListener("pointercancel",event=>{if(event.pointerType==="touch")hide();});
+ svg.addEventListener("lostpointercapture",event=>{if(event.pointerType==="touch")hide();});
+ window.addEventListener("scroll",hide,{passive:true,capture:true});
+ window.addEventListener("resize",()=>{refreshScreenXs();hide();},{passive:true});
 }
 
 function svgDaily(runs,metric,title,unit,mode){
