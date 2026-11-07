@@ -50,7 +50,7 @@ jobs:
           set -euo pipefail
           python source/scripts/build_koy_gfs_interactive_svg.py
           test "$(cat koy-data/gfs/media/.koy-svg-renderer-version)" = "koy-gfs-weekday-axis-v1"
-          SVG="$(find koy-data/gfs/media -maxdepth 1 -type f -name 'koy-gfs-*-comparison.svg' -printf '%T@ %p\\n' | sort -nr | head -n1 | cut -d' ' -f2-)"
+          SVG="$(python -c 'from pathlib import Path; files=list(Path("koy-data/gfs/media").glob("koy-gfs-*-comparison.svg")); print(max(files, key=lambda p: p.stat().st_mtime) if files else "")')"
           test -n "$SVG" && test -s "$SVG"
           grep -q 'gfs-interactive-data' "$SVG"
           python - <<'PY'
