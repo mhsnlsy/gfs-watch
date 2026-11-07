@@ -3900,6 +3900,45 @@ if(typeof renderBriefing==="function")renderBriefing();
       readFrameHeight();
     })();
   </script>
+  <style id="koy-gfs-report-final-match">
+    /* FINAL: homepage GFS report uses the Köy page's exact report-frame geometry. */
+    #bildirimler .notification-list{
+      display:block!important;
+      width:100%!important;
+      max-width:100%!important;
+    }
+    #bildirimler .notification-card.koy-gfs-report-card{
+      box-sizing:border-box!important;
+      width:100%!important;
+      max-width:100%!important;
+      min-width:0!important;
+      margin-left:auto!important;
+      margin-right:auto!important;
+    }
+    #bildirimler .notification-card .koy-gfs-svg-images{
+      width:100%!important;
+      max-width:100%!important;
+      margin:0!important;
+    }
+    #bildirimler .notification-card .koy-gfs-svg-images .gfs-interactive-chart,
+    #bildirimler .notification-card .koy-gfs-svg-images .gfs-mobile-panel-stack{
+      width:90%!important;
+      max-width:90%!important;
+      margin-left:auto!important;
+      margin-right:auto!important;
+    }
+    #bildirimler .notification-card .koy-gfs-svg-images .gfs-mobile-panel-host{
+      width:100%!important;
+      max-width:100%!important;
+    }
+    @media(max-width:700px),(pointer:coarse){
+      #bildirimler .notification-card .koy-gfs-svg-images .gfs-interactive-chart,
+      #bildirimler .notification-card .koy-gfs-svg-images .gfs-mobile-panel-stack{
+        width:100%!important;
+        max-width:100%!important;
+      }
+    }
+  </style>
 </body>
 </html>
 
