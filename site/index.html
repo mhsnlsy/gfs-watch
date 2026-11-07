@@ -2050,7 +2050,7 @@
     }
     function attachStationHistoryTooltip(holder,svg,coords,width,height,top,bottom,color,forecastUTC=false){
       if(!coords.length||typeof document==="undefined")return;
-      const card=holder.closest(".history-chart-card")||holder,tip=document.createElement("div");
+      const card=holder.closest(".next-72h-card,.history-chart-card")||holder,tip=document.createElement("div");
       tip.className="station-history-tooltip";tip.hidden=true;tip.setAttribute("role","tooltip");card.appendChild(tip);
       const ns="http://www.w3.org/2000/svg",line=document.createElementNS(ns,"line"),dot=document.createElementNS(ns,"circle"),hit=document.createElementNS(ns,"rect");
       line.setAttribute("y1",String(top));line.setAttribute("y2",String(height-bottom));line.setAttribute("stroke","#e8fbf7");line.setAttribute("stroke-width","1");line.setAttribute("stroke-dasharray","3 4");line.setAttribute("visibility","hidden");
