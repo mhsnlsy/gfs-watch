@@ -69,6 +69,17 @@ async function callService(binding, request, path) {
   });
 }
 
+async function fetchD1PublicationAsset(request, env, key) {
+  const normalized = String(key || "").replace(/^\\/+/, "");
+  if (!normalized || normalized.split("/").some(part => part === "." || part === "..")) return null;
+  const response = await callService(
+    env.ISTANBUL_GFS,
+    request,
+    "/gfs/publication-asset/" + normalized
+  );
+  return response.ok ? response : null;
+}
+
 export default {
   async fetch(request, env) {
     const url = new URL(request.url);
@@ -80,7 +91,7 @@ export default {
         headers: {
           "Access-Control-Allow-Origin": "*",
           "Access-Control-Allow-Methods": "GET, HEAD, OPTIONS",
-          "Access-Control-Allow-Headers": "Content-Type",
+          "Access-Control-Allow-Headers": "Content-Type, Authorization",
           "Access-Control-Max-Age": "86400",
         },
       });
@@ -105,6 +116,8 @@ export default {
     }
 
     if (path === "/gfs/notification-latest") {
+      const published = await fetchD1PublicationAsset(request, env, "notifications/latest.json");
+      if (published) return published;
       const archived = await fetchArchiveObject(request, env, "/data/notifications/latest.json");
       if (archived) return archived;
       const assetUrl = new URL("/data/notifications/latest.json", url);
@@ -121,6 +134,10 @@ export default {
     // Archive objects are served from R2 first. Static Assets remain as a
     // rollback/fallback copy during the migration and if an object is absent.
     if (isArchivePath(path)) {
+      if (path.startsWith("/data/notifications/")) {
+        const published = await fetchD1PublicationAsset(request, env, path.slice("/data/".length));
+        if (published) return published;
+      }
       const archived = await fetchArchiveObject(request, env, path);
       if (archived) return archived;
     }
