@@ -24,8 +24,8 @@ function internalRequest(request, path) {
 
 async function fetchArchiveObject(request, env, assetPath) {
   if (!env.LIVE_ARCHIVE) return null;
-  const key = String(assetPath || "").replace(/^\\/+/, "");
-  if (!key || key.includes("\\0")) return null;
+  const key = String(assetPath || "").replace(/^\/+/, "");
+  if (!key || key.split("/").some(segment => segment === "." || segment === "..")) return null;
 
   const object = await env.LIVE_ARCHIVE.get(key);
   if (!object) return null;
