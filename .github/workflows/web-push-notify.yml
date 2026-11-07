@@ -66,5 +66,5 @@ jobs:
           NOTIFICATION_ID: ${{ inputs.notification_id }}
           PUSH_TEST_MODE: ${{ inputs.test_mode }}
           NOTIFICATION_FEED_PATH: ../../forecast-data/public/notifications/latest.json
-          VAPID_SUBJECT: "https://mhsnlsy.github.io/gfs-watch/"
+          VAPID_SUBJECT: "https://gfs-watch-web.muhsin-ulusoy.workers.dev/"
         run: node send-notification.mjs
