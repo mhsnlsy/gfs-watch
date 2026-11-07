@@ -178,27 +178,34 @@ jobs:
           const fs = require("fs");
           const doc = JSON.parse(fs.readFileSync(process.argv[2], "utf8"));
           const item = (doc.items || [])[0];
-          const path = (item?.images || []).find(image => /\\.svg$/i.test(image.path || ""))?.path;
+          const path = (item?.images || []).find(image => typeof image.path === "string" && image.path.toLowerCase().endsWith(".svg"))?.path;
           if (!path) throw new Error("Live GFS notification manifest does not reference an SVG.");
-          process.stdout.write(path.replace(/^\\/+/, ""));
+          process.stdout.write(path.startsWith("/") ? path.slice(1) : path);
           NODE
           )"
-          curl --silent --show-error --fail --max-time 30 \\
-            --dump-header "$RUNNER_TEMP/live-gfs-svg-headers.txt" \\
-            "$WEB/data/notifications/$LIVE_SVG_PATH?verify=$(date +%s)" \\
+          curl --silent --show-error --fail --max-time 30 \
+            --dump-header "$RUNNER_TEMP/live-gfs-svg-headers.txt" \
+            "$WEB/data/notifications/$LIVE_SVG_PATH?verify=$(date +%s)" \
             -o "$RUNNER_TEMP/live-gfs-comparison.svg"
           grep -qi '^x-gfs-publication-source: D1' "$RUNNER_TEMP/live-gfs-svg-headers.txt"
           node - "$RUNNER_TEMP/live-gfs-comparison.svg" <<'NODE'
           const fs = require("fs");
           const svg = fs.readFileSync(process.argv[2], "utf8");
-          const required = [
-            ['canvas', /<g id="patch_1">[\\s\\S]*?fill: #0a1b29/i],
-            ['temperature', /<g id="patch_6">[\\s\\S]*?fill: #102a3a/i],
-            ['850 hPa', /<g id="patch_11">[\\s\\S]*?fill: #102a3a/i],
-            ['precipitation', /<g id="patch_16">[\\s\\S]*?fill: #102a3a/i],
-            ['wind', /<g id="patch_21">[\\s\\S]*?fill: #102a3a/i]
+          function svgGroup(id) {
+            const marker = '<g id="' + id + '">';
+            const start = svg.indexOf(marker);
+            if (start < 0) return "";
+            const end = svg.indexOf("</g>", start);
+            return end < 0 ? "" : svg.slice(start, end + 4).toLowerCase();
+          }
+          const checks = [
+            ["canvas", "patch_1", "fill: #0a1b29"],
+            ["temperature", "patch_6", "fill: #102a3a"],
+            ["850 hPa", "patch_11", "fill: #102a3a"],
+            ["precipitation", "patch_16", "fill: #102a3a"],
+            ["wind", "patch_21", "fill: #102a3a"]
           ];
-          const missing = required.filter(([name, pattern]) => !pattern.test(svg)).map(([name]) => name);
+          const missing = checks.filter(([name, id, fill]) => !svgGroup(id).includes(fill)).map(([name]) => name);
           if (missing.length) throw new Error("Live D1 SVG has non-dark surfaces: " + missing.join(", "));
           console.log("Verified live Cloudflare route: D1 source + dark canvas + all four chart panels.");
           NODE
