@@ -419,29 +419,6 @@ function bindTooltip(containerId){
  const tooltip=document.createElement("div");tooltip.className="gfs-point-tooltip";tooltip.hidden=true;tooltip.setAttribute("role","status");host.appendChild(tooltip);
  let pinned=false;let touchHideTimer=null;
  const targets=[...svg.querySelectorAll(".gfs-point-target")],currentTargets=targets.filter(target=>target.dataset.current==="true");
- function scheduleTouchHide(){if(touchHideTimer!==null)window.clearTimeout(touchHideTimer);touchHideTimer=window.setTimeout(()=>{touchHideTimer=null;hide()},2800);}
- const screenXOf=target=>{const matrix=svg.getScreenCTM();if(!matrix)return NaN;const point=svg.createSVGPoint();point.x=Number(target.getAttribute("cx"));point.y=Number(target.getAttribute("cy"));return point.matrixTransform(matrix).x;};
- const currentByTime=new Map(currentTargets.map(target=>[target.dataset.validkey,target]));
- const currentXs=currentTargets.map(target=>({target,x:screenXOf(target)})).filter(item=>Number.isFinite(item.x)).sort((a,b)=>a.x-b.x);
- function nearestPoint(event){
-  if(!currentXs.length)return null;
-  // Touch selection is strictly one-dimensional: the finger's X position
-  // determines the valid time. Y position must never make the tooltip jump
-  // between runs/points while the finger is being dragged.
-  const x=event.clientX;
-  let lo=0,hi=currentXs.length-1;
-  while(lo<hi){
-   const mid=(lo+hi)>>1;
-   if(currentXs[mid].x<x)lo=mid+1;else hi=mid;
-  }
-  let best=currentXs[lo];
-  if(lo>0&&Math.abs(currentXs[lo-1].x-x)<Math.abs(best.x-x))best=currentXs[lo-1];
-  return best.target;
- }
- function latestPointAtSameTime(hit){
-  if(!hit)return null;
-  return currentByTime.get(hit.dataset.validkey)||hit;
- }
  function hide(){if(touchHideTimer!==null)window.clearTimeout(touchHideTimer);touchHideTimer=null;tooltip.hidden=true;pinned=false;if(activeTooltip?.tooltip===tooltip)activeTooltip=null;}
  function positionTooltipAbove(event){
   tooltip.style.position="fixed";
@@ -475,7 +452,6 @@ function bindTooltip(containerId){
   if(!event)return;
   const hit=nearestPoint(event),target=latestPointAtSameTime(hit);
   if(target)show(target,event,true);else hide();
-  scheduleTouchHide();
  };
  const updateTouch=event=>{
   if(!event||!Number.isFinite(event.clientX)||!Number.isFinite(event.clientY))return;
