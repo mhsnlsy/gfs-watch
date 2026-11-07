@@ -292,7 +292,7 @@ async function processQueuedReports(env) {
     const chart = buildIstanbulInteractiveSvg(runs);
     const reportText = buildIstanbulReportText(target, new Date());
     if (!env.ECMWF_ARCHIVE) throw new Error("R2 image archive binding is unavailable");
-    const pngAssetKey = "data/" + chart.key.replace(/^notifications\\//, "notifications/").replace(/\\.svg$/i, ".png");
+    const pngAssetKey = "data/" + chart.key.replace(/^notifications\//, "notifications/").replace(/\.svg$/i, ".png");
     const pngBytes = await renderIstanbulPhotoPng(chart.body);
     await env.ECMWF_ARCHIVE.put(pngAssetKey, pngBytes, {
       httpMetadata: { contentType: "image/png", cacheControl: "public, max-age=3600" },
@@ -480,7 +480,7 @@ async function deliverPendingTelegram(env) {
 
     if (!publication.photo_message_id) {
       const pngKey = publication.png_asset_key ||
-        ("data/" + String(publication.svg_asset_key || "").replace(/^notifications\\//, "notifications/").replace(/\\.svg$/i, ".png"));
+        ("data/" + String(publication.svg_asset_key || "").replace(/^notifications\//, "notifications/").replace(/\.svg$/i, ".png"));
       let object = pngKey ? await env.ECMWF_ARCHIVE.get(pngKey) : null;
       let pngBytes;
       if (object) {
@@ -499,7 +499,7 @@ async function deliverPendingTelegram(env) {
           "WHERE run_id_utc = ? AND status = 'sending'"
         ).bind(pngKey, new Date().toISOString(), publication.run_id_utc).run();
       }
-      const filename = (pngKey.split("/").pop() || "istanbul-gfs-comparison.png").replace(/\\.svg$/i, ".png");
+      const filename = (pngKey.split("/").pop() || "istanbul-gfs-comparison.png").replace(/\.svg$/i, ".png");
       const form = new FormData();
       form.set("chat_id", env.TELEGRAM_CHAT_ID);
       form.set("caption", "📊 İstanbul GFS · dört döngülü geçerlilik saati karşılaştırması");
@@ -882,7 +882,7 @@ function decodePublicationAsset(row) {
   // Live D1 can contain an older SVG generated before the dark report palette.
   // Sanitize only white SVG shape fills at the publication boundary so stale
   // assets cannot reintroduce the two white report boxes.
-  if (/\\.svg$/i.test(row.asset_key)) {
+  if (/\.svg$/i.test(row.asset_key)) {
     body = body
       .replace(/(<(?:rect|path|polygon)\\b[^>]*?)\\sfill=(["'])#(?:fff|ffffff)\\2/gi, "$1 fill=$2#153448$2")
       .replace(/(<(?:rect|path|polygon)\\b[^>]*?style=(["'])[^"']*?)fill\\s*:\\s*#(?:fff|ffffff)/gi, "$1fill: #153448");
