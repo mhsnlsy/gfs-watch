@@ -13,9 +13,6 @@ on:
       - "public/ecmwf/**"
       - "mgm/**"
   workflow_dispatch:
-  workflow_run:
-    workflows: ["Rebuild Köy GFS Interactive SVG"]
-    types: [completed]
 
 permissions:
   contents: read
@@ -26,7 +23,6 @@ concurrency:
 
 jobs:
   deploy:
-    if: github.event_name != 'workflow_run' || github.event.workflow_run.conclusion == 'success'
     name: Deploy Cloudflare website + Static Assets
     runs-on: ubuntu-latest
     timeout-minutes: 20
