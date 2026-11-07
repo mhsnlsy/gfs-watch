@@ -16,6 +16,9 @@ def main() -> None:
     report_workflow = read(".github/workflows/istanbul-gfs-10min.yml")
     platform_workflow = read(".github/workflows/deploy-cloudflare-platform.yml")
     istanbul_deploy = read(".github/workflows/deploy-istanbul-gfs-worker.yml")
+    guardian = read("gfs-guardian/src/index.js")
+    guardian_config = json.loads(read("gfs-guardian/wrangler.jsonc"))
+    gfs_worker = read("istanbul-gfs-worker/src/index.js")
     poller = read("scripts/poll_istanbul_gfs_10min.py")
     builder = read("scripts/build_istanbul_gfs_publication.py")
     sender = read("scripts/send_pending_istanbul_gfs_telegram.py")
@@ -28,8 +31,11 @@ def main() -> None:
     assert "group: live-pages-publisher" in publisher
     assert "push:" not in publisher and "workflow_run:" not in publisher
 
-    # Cloudflare is the only live GFS collector. GitHub syncs D1 for reports.
-    assert 'cron: "*/10 * * * *"' in report_workflow
+    # Cloudflare is the only live GFS collector; report work is event-driven on new F180.
+    assert "schedule:" not in report_workflow
+    assert "workflow_dispatch:" in report_workflow and "inputs:" in report_workflow
+    assert "GFS_TRIGGERED_RUN_ID" in report_workflow
+    assert "inputs.run_id" in report_workflow
     assert "ISTANBUL_GFS_API" in report_workflow
     assert "gfs-watch-web.muhsin-ulusoy.workers.dev/gfs/latest" in report_workflow
     assert "scripts/poll_istanbul_gfs_10min.py" in report_workflow
@@ -48,6 +54,7 @@ def main() -> None:
     assert "is_f180_ready" in poller and "is_f72_ready" in poller
     assert "fetch_cycle" not in poller
     assert "fetch_istanbul_gfs_meteopt" not in poller
+    assert "GFS_TRIGGERED_RUN_ID" in poller
 
     # Report rendering and exactly-once Telegram delivery remain unchanged.
     assert "GFS_TARGET_RUN_ID" in builder
@@ -75,6 +82,16 @@ def main() -> None:
     assert "Deploy Istanbul GFS Worker + D1" in istanbul_deploy
     assert "istanbul-gfs-worker/**" in istanbul_deploy
     assert "Deploy autonomous Istanbul GFS Cron Worker" in istanbul_deploy
+    assert "GFS_DISPATCH_TOKEN" in istanbul_deploy
+    assert "wrangler secret put GFS_DISPATCH_TOKEN" in istanbul_deploy
+    assert "gfs_report_dispatch_queue" in gfs_worker
+    assert "actions/workflows/istanbul-gfs-10min.yml/dispatches" in gfs_worker
+    assert "LIMIT 1" in gfs_worker
+    assert "istanbul-gfs-worker/migrations/0002_create_report_dispatch_queue.sql" in str(ROOT / "istanbul-gfs-worker/migrations/0002_create_report_dispatch_queue.sql")
+    assert guardian_config["triggers"]["crons"] == ["*/30 * * * *"]
+    assert "stale_after_minutes: 480" in guardian
+    assert "dispatch_cooldown_minutes: 60" in guardian
+    assert "fallback-watchdog" in guardian
 
     istanbul = json.loads(read("istanbul-gfs-worker/wrangler.jsonc"))
     koy = json.loads(read("koy-gfs-worker/wrangler.jsonc"))
