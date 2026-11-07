@@ -24,6 +24,7 @@ def main() -> None:
     web_worker = read("web-worker/src/index.js")
     koy_worker = read("koy-gfs-worker/src/index.js")
     koy_svg_workflow = read(".github/workflows/rebuild-koy-gfs-interactive-svg.yml")
+    istanbul_svg_workflow = read(".github/workflows/rebuild-istanbul-gfs-images.yml")
     koy_deploy = read(".github/workflows/deploy-koy-gfs-worker.yml")
     poller = read("scripts/poll_istanbul_gfs_10min.py")
     builder = read("scripts/build_istanbul_gfs_publication.py")
@@ -118,6 +119,12 @@ def main() -> None:
     assert "Publish report assets into Cloudflare D1" in report_workflow
     assert "gfs/publication-upload" in report_workflow
     assert "GFS_DISPATCH_TOKEN" in report_workflow
+    # SVG rebuilds must update the D1-first publication copy that the live web gateway serves.
+    assert "Publish rebuilt report assets to Cloudflare D1" in istanbul_svg_workflow
+    assert "gfs/publication-upload" in istanbul_svg_workflow
+    assert "GFS_DISPATCH_TOKEN" in istanbul_svg_workflow
+    assert "publication-asset/notifications/latest.json" in istanbul_svg_workflow
+    assert "Verified D1 live SVG dark surfaces" in istanbul_svg_workflow
     assert 'path.startsWith("/data/notifications/")' in web_worker
     # ECMWF is calculated in the existing workflow but published and served from D1.
     assert "Publish ECMWF latest payload and report images to Cloudflare D1" in ecmwf_workflow
