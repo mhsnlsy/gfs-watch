@@ -168,6 +168,7 @@ def main() -> int:
     f180_ready = False
     selected_f72_run = ""
     selected_f180_run = ""
+    triggered_run_id = os.getenv("GFS_TRIGGERED_RUN_ID", "").strip()
 
     for document in runs:
         run_id = str(document["run_id_utc"])
@@ -198,6 +199,9 @@ def main() -> int:
             any_new_run = True
             print(f"[GFS REPORT SYNC] Canonical F180 run imported from D1: {run_id}")
 
+        if triggered_run_id and run_id != triggered_run_id:
+            continue
+
         if not f180_ready and not has_publication(run_id):
             f180_ready = True
             selected_f180_run = run_id
@@ -217,6 +221,7 @@ def main() -> int:
     print(
         "[GFS REPORT SYNC] "
         f"source=Cloudflare D1; archived_runs={len(runs)}; "
+        f"triggered_run={triggered_run_id or 'latest'}; "
         f"new_f72={f72_cached}; unpublished_f180={f180_ready}; "
         f"checked_at_utc={datetime.now(timezone.utc).isoformat(timespec='seconds')}"
     )
