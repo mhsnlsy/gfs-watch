@@ -454,7 +454,7 @@ function decodePublicationAsset(row) {
     : new TextEncoder().encode(row.body);
   const headers = new Headers({
     "Content-Type": row.content_type || "application/octet-stream",
-    "Cache-Control": row.asset_key === "latest.json"
+    "Cache-Control": (row.asset_key === "latest.json" || row.asset_key.endsWith("/latest.json"))
       ? "no-store, max-age=0"
       : "public, max-age=3600, s-maxage=86400",
     "Access-Control-Allow-Origin": "*",
