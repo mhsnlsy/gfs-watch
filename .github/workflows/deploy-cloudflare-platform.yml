@@ -133,6 +133,27 @@ jobs:
           if [ -d "$GITHUB_WORKSPACE/koy-data/gfs" ]; then
             cp -a "$GITHUB_WORKSPACE/koy-data/gfs" web-worker/public/koy-data/
           fi
+          python - <<'PY'
+          import json, os
+          from datetime import datetime, timezone
+          from pathlib import Path
+          comparison = Path("$GITHUB_WORKSPACE/koy-data/gfs/comparison.json")
+          if not comparison.is_file():
+              raise SystemExit("Köy comparison.json missing from canonical archive")
+          doc = json.loads(comparison.read_text(encoding="utf-8"))
+          runs = doc.get("runs") or []
+          if not runs:
+              raise SystemExit("Köy comparison archive has no runs")
+          latest = max(runs, key=lambda item: item.get("run_id_utc", ""))
+          stamp = datetime.fromisoformat(latest["run_id_utc"].replace("Z", "+00:00")).astimezone(timezone.utc).strftime("%Y%m%dT%HZ")
+          rel = f"/koy-data/gfs/media/koy-gfs-{stamp}-comparison.svg"
+          asset = Path("web-worker/public") / rel.lstrip("/")
+          if not asset.is_file() or asset.stat().st_size < 10000:
+              raise SystemExit(f"Latest Köy comparison SVG missing after asset assembly: {asset}")
+          with open(os.environ["GITHUB_ENV"], "a", encoding="utf-8") as env:
+              env.write(f"KOY_SVG_REL={rel}\\n")
+          print(f"Verified packaged Köy comparison SVG: {rel} ({asset.stat().st_size} bytes)")
+          PY
           if [ -d "$GITHUB_WORKSPACE/koy-mgm-data/mgm" ]; then
             mkdir -p web-worker/public/koy-data/mgm
             cp -a "$GITHUB_WORKSPACE/koy-mgm-data/mgm/." web-worker/public/koy-data/mgm/
@@ -174,6 +195,17 @@ jobs:
             curl --silent --show-error --fail --max-time 20 "$WEB$path" -o /dev/null
             echo "OK $path"
           done
+          curl --silent --show-error --fail --max-time 30 "$WEB$KOY_SVG_REL?verify=$(date +%s)" -o "$RUNNER_TEMP/koy-comparison.svg"
+          node - "$RUNNER_TEMP/koy-comparison.svg" <<'NODE'
+          const fs = require("fs");
+          const svg = fs.readFileSync(process.argv[2], "utf8");
+          if (!svg.includes("<svg") || !svg.includes('id="gfs-interactive-data"')) {
+            throw new Error("Live Köy SVG is missing SVG root or interaction manifest.");
+          }
+          const size = Buffer.byteLength(svg, "utf8");
+          if (size < 10000) throw new Error("Live Köy SVG is unexpectedly small: " + size);
+          console.log("Live Köy SVG verified: " + size + " bytes.");
+          NODE
 
           curl --silent --show-error --fail --max-time 20 "$WEB/koy.html?verify=$(date +%s)" -o "$RUNNER_TEMP/koy-page.html"
           node - "$RUNNER_TEMP/koy-page.html" <<'NODE'
@@ -189,9 +221,6 @@ jobs:
           ];
           const found = forbidden.filter(text => html.includes(text));
           if (found.length) throw new Error("Legacy Köy GFS report text is still published: " + found.join(" | "));
-          if (!html.includes("koy-remove-legacy-report-copy")) {
-            throw new Error("Köy legacy-report suppression stylesheet is missing.");
-          }
           console.log("Köy page verified: report text removed; chart shell remains.");
           NODE
 
