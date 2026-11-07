@@ -51,11 +51,26 @@ const photoPng = await renderIstanbulPhotoPng(chart.body);
 assert.ok(photoPng.length > 1024);
 assert.deepEqual([...photoPng.slice(0, 8)], [137, 80, 78, 71, 13, 10, 26, 10]);
 
-const report = buildIstanbulReportText(runs[3], new Date("2026-11-01T12:00:00Z"));
+const stationObservation = {
+  station_name: "ENKA Balmumcu",
+  observed_at_utc: "2026-11-01T11:55:00Z",
+  age_minutes: 5,
+  temperature_2m_c: 13.2,
+  humidity_percent: 81,
+  station_pressure_hpa: 1018.4,
+  wind_speed_10m_kmh: 11.1,
+  wind_direction_cardinal: "NE",
+  precipitation_daily_mm: 2.4,
+  is_stale: false,
+};
+const report = buildIstanbulReportText(runs[3], new Date("2026-11-01T12:00:00Z"), stationObservation);
 assert.ok(report.includes("İSTANBUL GFS TAHMİN RAPORU"));
 assert.ok(report.includes("GÜNÜN KALANINDA"));
 assert.ok(report.includes("ÖNÜMÜZDEKİ 3 GÜN"));
 assert.ok(report.includes("SON DÖRT GFS") || report.includes("Son dört GFS") || report.includes("Son 4 GFS"));
+assert.ok(report.includes("ENKA BALMUMCU İSTASYON GÖZLEMİ"));
+assert.ok(report.includes("13.2°C"));
+assert.ok(report.includes("2.4 mm"));
 assert.ok(report.length < 4096, "Telegram report must fit one text message");
 console.log(JSON.stringify({
   ok: true,
