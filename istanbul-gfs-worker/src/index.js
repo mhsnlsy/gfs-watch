@@ -17,8 +17,8 @@ function json(data, status = 200) {
       "Content-Type": "application/json; charset=utf-8",
       "Cache-Control": "no-store, max-age=0",
       "Access-Control-Allow-Origin": "*",
-      "Access-Control-Allow-Methods": "GET, OPTIONS",
-      "Access-Control-Allow-Headers": "Content-Type",
+      "Access-Control-Allow-Methods": "GET, POST, OPTIONS",
+      "Access-Control-Allow-Headers": "Content-Type, Authorization",
     },
   });
 }
@@ -502,11 +502,12 @@ async function handleApi(request, env) {
   const url = new URL(request.url);
   const path = url.pathname.replace(/\/+$/, "") || "/";
   if (request.method === "OPTIONS") return json({ ok: true });
-  if (request.method !== "GET") return json({ ok: false, error: "Method not allowed" }, 405);
 
+  // The authenticated publisher is the only write route; keep it ahead of the GET-only API guard.
   if (path === "/gfs/publication-upload") {
     return handlePublicationUpload(request, env);
   }
+  if (request.method !== "GET") return json({ ok: false, error: "Method not allowed" }, 405);
 
   if (path.startsWith("/gfs/publication-asset/")) {
     const key = decodeURIComponent(path.slice("/gfs/publication-asset/".length)).replace(/^\/+/, "");
@@ -535,7 +536,8 @@ async function handleApi(request, env) {
         latest_updated_at_utc: current?.updated_at_utc || null,
         archived_runs: Number(count?.count || 0),
         report_dispatch_configured: Boolean(env.GFS_DISPATCH_TOKEN),
-        pending_report_dispatches: Number(pendingDispatch?.count || 0),\n        publication_assets: Number((await env.GFS_DB.prepare("SELECT COUNT(*) AS count FROM gfs_publication_assets").first())?.count || 0),
+        pending_report_dispatches: Number(pendingDispatch?.count || 0),
+        publication_assets: Number((await env.GFS_DB.prepare("SELECT COUNT(*) AS count FROM gfs_publication_assets").first())?.count || 0),
         location: LOCATION,
       });
     } catch (error) {
