@@ -433,19 +433,25 @@ function bindTooltip(containerId){
   if(activeTooltip?.tooltip===tooltip)activeTooltip=null;
  }
  function positionTooltipAbove(event){
-  tooltip.style.position="fixed";
+  // The tooltip lives inside the iframe document. Position it against the
+  // chart host, not against the outer page, so its coordinates cannot jump
+  // to the top of the parent viewport.
+  const hostRect=host.getBoundingClientRect();
+  tooltip.style.position="absolute";
   tooltip.style.zIndex="2147483647";
   tooltip.style.pointerEvents="none";
   tooltip.style.left="0px";
   tooltip.style.top="0px";
   const tw=tooltip.offsetWidth,th=tooltip.offsetHeight;
-  const vw=window.innerWidth,vh=window.innerHeight;
   const gap=12;
-  const left=Math.max(8,Math.min(vw-tw-8,event.clientX-tw/2));
-  // Always prefer above the finger, but never let the popup leave the viewport.
-  let top=event.clientY-th-gap;
+  const x=event.clientX-hostRect.left;
+  const y=event.clientY-hostRect.top;
+  const maxLeft=Math.max(8,hostRect.width-tw-8);
+  const left=Math.max(8,Math.min(maxLeft,x-tw/2));
+  const maxTop=Math.max(8,hostRect.height-th-8);
+  let top=y-th-gap;
   if(top<8)top=8;
-  if(top+th>vh-8)top=Math.max(8,vh-th-8);
+  if(top>maxTop)top=maxTop;
   tooltip.style.left=Math.round(left)+"px";
   tooltip.style.top=Math.round(top)+"px";
  }
