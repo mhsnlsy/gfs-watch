@@ -40,7 +40,7 @@ def main() -> None:
     assert "GFS_TRIGGERED_RUN_ID" in report_workflow
     assert "inputs.run_id" in report_workflow
     assert "ISTANBUL_GFS_API" in report_workflow
-    assert "gfs-watch-web.muhsin-ulusoy.workers.dev/gfs/latest" in report_workflow
+    assert "gfs-watch-istanbul-gfs.muhsin-ulusoy.workers.dev/gfs/latest" in report_workflow
     assert "scripts/poll_istanbul_gfs_10min.py" in report_workflow
     assert "Cloudflare D1" in report_workflow
     assert "steps.poll.outputs.f180_ready == 'true'" in report_workflow
