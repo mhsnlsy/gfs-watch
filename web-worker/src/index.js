@@ -50,8 +50,7 @@ async function fetchArchiveObject(request, env, assetPath) {
 function isArchivePath(path) {
   return path.startsWith("/data/notifications/") ||
     path.startsWith("/data/ecmwf/") ||
-    path.startsWith("/koy-data/gfs/") ||
-    path.startsWith("/koy-data/mgm/");
+    path.startsWith("/koy-data/gfs/");
 }
 
 async function callService(binding, request, path) {
