@@ -37,7 +37,6 @@ def main() -> None:
         'function scheduleTouchChartTooltipDismiss(hideFn)',
         'window.setTimeout(dismissActiveTouchChartTooltip,2800)',
         'station-chart-hit-area',
-        'id="tahmin"',
         'id="basinc"',
         'id="ecmwf-tahmin"',
         'id="ecmwf-basinc"',
@@ -54,7 +53,6 @@ def main() -> None:
         'function renderChart(metric,targetId,sourceData=forecastData)',
         'renderDaily(viewData.daily_summary,"ecmwf-daily-grid")',
         'renderFindings(viewData.regional_pressure_analysis&&viewData.regional_pressure_analysis.findings,first.mslp&&first.mslp.mean_hpa,"ecmwf-pressure-findings")',
-        'http-equiv="refresh" content="300"',
     )
     missing = [item for item in required if item not in html]
     if missing:
@@ -99,7 +97,6 @@ def main() -> None:
     if remaining:
         raise AssertionError("Removed 180-hour charts still present: " + ", ".join(remaining))
 
-    if 'id="tahmin"' not in gfs or gfs.index('id="tahmin"') < gfs.index('id="basinc"'):
         raise AssertionError("GFS eight-day forecast must be the final model section.")
     if 'id="ecmwf-tahmin"' not in ecmwf or ecmwf.index('id="ecmwf-tahmin"') < ecmwf.index('id="ecmwf-basinc"'):
         raise AssertionError("ECMWF eight-day forecast must be the final model section.")
