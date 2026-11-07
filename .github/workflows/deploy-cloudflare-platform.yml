@@ -2,7 +2,7 @@ name: Deploy Cloudflare Platform
 
 on:
   push:
-    branches: [main, istanbul-gfs-data, gfs-watch-state, koy-gfs-data, koy-mgm-data]
+    branches: [main, istanbul-gfs-data, gfs-watch-state, koy-gfs-data]
     paths:
       - ".github/workflows/deploy-cloudflare-platform.yml"
       - "site/**"
@@ -57,13 +57,6 @@ jobs:
         with:
           ref: koy-gfs-data
           path: koy-data
-          fetch-depth: 1
-
-      - name: Check out Köy MGM archive
-        uses: actions/checkout@v5
-        with:
-          ref: koy-mgm-data
-          path: koy-mgm-data
           fetch-depth: 1
 
       - name: Set up Node.js
@@ -146,11 +139,6 @@ jobs:
               env.write(f"KOY_SVG_REL={rel}" + chr(10))
           print(f"Verified packaged Köy comparison SVG: {rel} ({asset.stat().st_size} bytes)")
           PY
-          if [ -d "$GITHUB_WORKSPACE/koy-mgm-data/mgm" ]; then
-            mkdir -p web-worker/public/koy-data/mgm
-            cp -a "$GITHUB_WORKSPACE/koy-mgm-data/mgm/." web-worker/public/koy-data/mgm/
-          fi
-
           printf '{"apiBaseUrl":"%s"}' "$PUSH_API_URL" > web-worker/public/push-config.json
           touch web-worker/public/.nojekyll
           test -s web-worker/public/index.html
