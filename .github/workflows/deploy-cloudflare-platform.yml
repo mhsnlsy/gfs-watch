@@ -10,7 +10,6 @@ on:
       - "gfs/notifications/**"
       - "gfs/**"
       - "!gfs/notifications/telegram-sent/**"
-      - "public/ecmwf/**"
       - "mgm/**"
   workflow_dispatch:
 
