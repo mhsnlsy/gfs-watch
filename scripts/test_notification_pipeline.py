@@ -79,6 +79,7 @@ def main() -> None:
     web = json.loads(read("web-worker/wrangler.jsonc"))
     assert web["assets"]["directory"] == "./public"
     assert web["assets"]["binding"] == "ASSETS"
+    assert "/data/notifications/*" in web["assets"]["run_worker_first"]
     services = {item["binding"]: item["service"] for item in web["services"]}
     assert services == {
         "ISTANBUL_GFS": "gfs-watch-istanbul-gfs",
