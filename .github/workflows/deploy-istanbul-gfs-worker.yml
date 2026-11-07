@@ -219,7 +219,7 @@ jobs:
             horizon_hours: doc.forecast_horizon_hours,
             source: doc.forecast_source
           }));
-NODE
+          NODE
               then ecmwf_ok=1; break; fi
             fi
             sleep 8
