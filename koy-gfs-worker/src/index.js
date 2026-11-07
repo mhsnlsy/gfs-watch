@@ -20,7 +20,7 @@ function json(data, status = 200) {
 }
 
 function runKey(value) {
-  const digits = String(value || "").replace(/\\D/g, "");
+  const digits = String(value || "").replace(/\D/g, "");
   return digits.length >= 10 ? digits.slice(0, 10) : digits;
 }
 
