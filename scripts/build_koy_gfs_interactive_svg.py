@@ -4,7 +4,7 @@
 Input:  koy-gfs-data/gfs/comparison.json
 Output: koy-gfs-data/gfs/media/koy-gfs-<run>-comparison.svg
 
-The newest Köy GFS run defines a 72-hour valid-time window. Every older cycle
+The newest Köy GFS run defines a 180-hour valid-time window. Every older cycle
 is sampled only at the exact same UTC valid instants, even when its F-hour
 lead differs. The SVG carries the same browser interaction metadata as the
 Istanbul report, so the shared tooltip script can render it without changing
@@ -106,16 +106,16 @@ def prepare_series(documents: list[dict]) -> tuple[list[dict], list[str]]:
     if len(ordered) < 2:
         raise RuntimeError("Four Köy GFS runs have fewer than two common valid times.")
 
-    # The newest run defines a 72-hour span. Older cycles are not clipped by
+    # The newest run defines a 180-hour span. Older cycles are not clipped by
     # their own lead-hour numbers; they are read by exact UTC valid timestamp.
     start = parse_utc(ordered[0])
-    end = start + timedelta(hours=72)
+    end = start + timedelta(hours=180)
     selected = [
         key for key in ordered
         if start <= parse_utc(key) <= end
     ]
     if len(selected) < 2:
-        raise RuntimeError("The common Köy GFS timeline has fewer than two points in 72h.")
+        raise RuntimeError("The common Köy GFS timeline has fewer than two points in 180h.")
 
     return series, selected
 
