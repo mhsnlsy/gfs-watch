@@ -249,6 +249,19 @@ async function enqueueReportDispatch(env, runId, createdAt) {
   ).bind(runId, createdAt).run();
 }
 
+async function fetchActiveEnkaStationObservation(env) {
+  if (!env.STATIONS?.fetch) throw new Error("Active station Service Binding is unavailable");
+  const response = await env.STATIONS.fetch("https://internal/api/stations/enka?report=" + Date.now(), {
+    headers: { "Cache-Control": "no-cache", "Pragma": "no-cache" }
+  });
+  if (!response.ok) throw new Error("Active ENKA station panel returned HTTP " + response.status);
+  const payload = await response.json();
+  if (payload?.ok !== true || !payload?.station) {
+    throw new Error("Active ENKA station panel returned no current observation");
+  }
+  return payload.station;
+}
+
 async function processQueuedReports(env) {
   const staleBefore = new Date(Date.now() - 10 * 60 * 1000).toISOString();
   const result = await env.GFS_DB.prepare(
@@ -290,7 +303,17 @@ async function processQueuedReports(env) {
 
     const target = runs[runs.length - 1];
     const chart = buildIstanbulInteractiveSvg(runs);
-    const reportText = buildIstanbulReportText(target, new Date());
+    let stationObservation = null;
+    try {
+      stationObservation = await fetchActiveEnkaStationObservation(env);
+    } catch (stationError) {
+      console.error(JSON.stringify({
+        event: "istanbul_report_station_fetch_error",
+        run_id_utc: target.run_id_utc,
+        message: String(stationError?.message || stationError),
+      }));
+    }
+    const reportText = buildIstanbulReportText(target, new Date(), stationObservation);
     if (!env.ECMWF_ARCHIVE) throw new Error("R2 image archive binding is unavailable");
     const pngAssetKey = "data/" + chart.key.replace(/^notifications\//, "notifications/").replace(/\.svg$/i, ".png");
     const pngBytes = await renderIstanbulPhotoPng(chart.body);
