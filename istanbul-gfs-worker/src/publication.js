@@ -68,7 +68,7 @@ function buildSeries(runs) {
     .slice()
     .sort((a, b) => Date.parse(a.run_id_utc) - Date.parse(b.run_id_utc))
     .slice(-4);
-  if (docs.length !== 4) throw new Error("Four complete GFS runs are required; found " + docs.length);
+  if (docs.length < 1) throw new Error("At least one complete GFS run is required; found " + docs.length);
 
   const series = docs.map((document, index) => {
     const points = new Map();
@@ -88,7 +88,7 @@ function buildSeries(runs) {
   let common = [...series[series.length - 1].points.keys()];
   for (const item of series.slice(0, -1)) common = common.filter(key => item.points.has(key));
   common.sort();
-  if (common.length < 2) throw new Error("The four GFS cycles have fewer than two common valid times");
+  if (common.length < 2) throw new Error("The available GFS cycles have fewer than two common valid times");
 
   const firstMs = Date.parse(common[0] + ":00Z");
   const validKeys = common.filter(key => {
@@ -134,10 +134,10 @@ export function buildIstanbulInteractiveSvg(runs) {
     '<desc id="istanbul-gfs-svg-desc">Dört İstanbul GFS tahmin döngüsü aynı geçerlilik saatlerinde hizalanmıştır. Sıcaklık, 850 hPa sıcaklığı, yağış ve 10 metre rüzgârı karşılaştırılır.</desc>',
     '<g id="patch_1"><rect x="0" y="0" width="1152" height="838" style="fill: #0a1b29"/></g>',
     '<text x="63" y="34" fill="#7DD3D7" font-size="12" font-weight="700" letter-spacing="1.5" font-family="' + FONT + '">GFS · İSTANBUL</text>',
-    '<text x="63" y="76" fill="#FFFFFF" font-size="27" font-weight="750" font-family="' + FONT + '">Son GFS raporu · 4’lü döngü karşılaştırması</text>',
+    '<text x="63" y="76" fill="#FFFFFF" font-size="27" font-weight="750" font-family="' + FONT + '">Son GFS raporu · ' + series.length + ' döngü karşılaştırması</text>',
     '<text x="63" y="108" fill="#E7F2F6" font-size="14" font-family="' + FONT + '">Dört GFS çıktısı aynı geçerlilik saatlerinde (TSİ) üst üste karşılaştırılır.</text>',
     '<rect x="850" y="20" width="245" height="36" rx="11" fill="#0A1B29" stroke="#416174" stroke-width="1"/>',
-    '<text x="972.5" y="43" text-anchor="middle" fill="#B8D7DF" font-size="12" font-family="' + FONT + '">4 GFS döngüsü karşılaştırılıyor</text>',
+    '<text x="972.5" y="43" text-anchor="middle" fill="#B8D7DF" font-size="12" font-family="' + FONT + '">' + series.length + ' GFS döngüsü karşılaştırılıyor</text>',
   ];
 
   series.slice().reverse().forEach((item, index) => {
