@@ -432,36 +432,13 @@ function bindTooltip(containerId){
   pinned=false;
   if(activeTooltip?.tooltip===tooltip)activeTooltip=null;
  }
- function positionTooltipAbove(event){
-  // The tooltip lives inside the iframe document. Position it against the
-  // chart host, not against the outer page, so its coordinates cannot jump
-  // to the top of the parent viewport.
-  const hostRect=host.getBoundingClientRect();
-  tooltip.style.setProperty("position","absolute","important");
-  tooltip.style.setProperty("z-index","2147483647","important");
-  tooltip.style.pointerEvents="none";
-  tooltip.style.left="0px";
-  tooltip.style.top="0px";
-  const tw=tooltip.offsetWidth,th=tooltip.offsetHeight;
-  const gap=12;
-  const x=event.clientX-hostRect.left;
-  const y=event.clientY-hostRect.top;
-  const maxLeft=Math.max(8,hostRect.width-tw-8);
-  const left=Math.max(8,Math.min(maxLeft,x-tw/2));
-  const maxTop=Math.max(8,hostRect.height-th-8);
-  let top=y-th-gap;
-  if(top<8)top=8;
-  if(top>maxTop)top=maxTop;
-  tooltip.style.left=Math.round(left)+"px";
-  tooltip.style.top=Math.round(top)+"px";
- }
+
  function show(target,event,lock=false){
   if(!target)return;
   const run=target.dataset.run||"GFS döngüsü",valid=target.dataset.valid||"—",step=target.dataset.step||"",value=target.dataset.value||"—",unit=target.dataset.unit||"",color=target.dataset.color||GFS_CYCLE_THEME.colors[0];
   tooltip.innerHTML='<div class="gfs-point-tooltip-head"><i style="background:'+color+'"></i><strong>Güncel GFS tahmini</strong></div><div class="gfs-point-tooltip-time">Döngü · '+esc(run)+'<br>Geçerlilik · '+esc(valid)+'</div><div class="gfs-point-tooltip-value">'+esc(value)+' <small>'+esc(unit)+'</small></div><div class="gfs-point-tooltip-meta">Tahmin adımı '+esc(step)+'</div>';
   tooltip.hidden=false;
   pinned=lock;
-  positionTooltipAbove(event);
   if(lock)activeTooltip={host,tooltip,hide};
  }
  function nearestPoint(event){
