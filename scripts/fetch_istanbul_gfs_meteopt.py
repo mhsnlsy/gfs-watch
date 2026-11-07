@@ -8,6 +8,7 @@ from __future__ import annotations
 
 import json
 import os
+import time
 from datetime import datetime, timedelta, timezone
 from pathlib import Path
 from urllib.parse import urlencode
@@ -45,13 +46,22 @@ def fetch_cycle(hour: int) -> tuple[dict, str]:
             "Cache-Control": "no-cache",
         },
     )
-    with urlopen(request, timeout=45) as response:
-        if response.status != 200:
-            raise RuntimeError(f"MeteoPT HTTP {response.status} for {hour:02d}Z")
-        document = json.load(response)
-    if not isinstance(document, dict):
-        raise RuntimeError(f"MeteoPT returned an invalid document for {hour:02d}Z")
-    return document, url
+    last_error = None
+    for attempt in range(2):
+        try:
+            with urlopen(request, timeout=30) as response:
+                if response.status != 200:
+                    raise RuntimeError(f"MeteoPT HTTP {response.status} for {hour:02d}Z")
+                document = json.load(response)
+            if not isinstance(document, dict):
+                raise RuntimeError(f"MeteoPT returned an invalid document for {hour:02d}Z")
+            return document, url
+        except Exception as exc:
+            last_error = exc
+            if attempt == 0:
+                print(f"[GFS] {hour:02d}Z probe failed; retrying once: {exc}")
+                time.sleep(2)
+    raise RuntimeError(f"MeteoPT {hour:02d}Z probe failed after 2 attempts: {last_error}")
 
 
 def number(values: list, index: int):
@@ -218,14 +228,13 @@ def main() -> None:
             )
             candidates.append((cycle, document, url, steps))
         except Exception as exc:
-            print(f"[GFS] {hour:02d}Z check failed: {exc}")
+            print(f"::warning::MeteoPT {hour:02d}Z check failed: {exc}")
 
     if not candidates:
-        print("[GFS] No usable MeteoPT cycle returned.")
         write_output("publish", "false")
         write_output("f72_publish", "false")
         write_output("reason", "no_usable_cycle")
-        return
+        raise RuntimeError("All four MeteoPT GFS cycle probes failed or returned mismatched runs.")
 
     candidates.sort(key=lambda item: item[0], reverse=True)
     # Process every returned cycle, not only the newest one. This mirrors the
