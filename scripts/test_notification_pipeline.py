@@ -21,6 +21,11 @@ def main() -> None:
     guardian = read("gfs-guardian/src/index.js")
     guardian_config = json.loads(read("gfs-guardian/wrangler.jsonc"))
     gfs_worker = read("istanbul-gfs-worker/src/index.js")
+    assert "api.meteopt.com/ecmwf/json" in gfs_worker
+    assert '41.0901' in gfs_worker and '28.9436' in gfs_worker
+    assert 'ECMWF_ARCHIVE' in gfs_worker
+    assert '/ecmwf/latest' in gfs_worker
+    assert '/ecmwf/comparison' in gfs_worker
     gfs_publication = read("istanbul-gfs-worker/src/publication.js")
     web_worker = read("web-worker/src/index.js")
     web_config = json.loads(read("web-worker/wrangler.jsonc"))
