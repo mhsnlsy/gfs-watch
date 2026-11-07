@@ -1,4 +1,4 @@
-const DEFAULT_ORIGIN = "https://mhsnlsy.github.io";
+const DEFAULT_ORIGIN = "https://gfs-watch-web.muhsin-ulusoy.workers.dev";
 
 function corsHeaders(request, env) {
   const headers = new Headers({
