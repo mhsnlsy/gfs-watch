@@ -15,7 +15,42 @@ let busy=false, f72=null, comparison=null, stationHistory=null, rainHistory=null
 // Köy Ev is the only initial state. Do not derive the initial station from DOM, cache, or prior UI state.
 window.__KOY_DEFAULT_STATION="home";
 async function get(path){const url=path.startsWith("./")?path:BASE+path;const r=await fetch(url+"?v="+Date.now(),{cache:"no-store"});if(!r.ok)throw Error("HTTP "+r.status+" · "+url);return r.json()}
-async function getStation(path){const url=STATIONS_API+path+(path.includes("?")?"&":"?")+"v="+Date.now();const r=await fetch(url,{cache:"no-store"});if(!r.ok)throw Error("HTTP "+r.status+" · "+url);return r.json()}
+async function getStation(path){
+ const url=STATIONS_API+path+(path.includes("?")?"&":"?")+"v="+Date.now();
+ const r=await fetch(url,{cache:"no-store"});
+ if(!r.ok)throw Error("HTTP "+r.status+" · "+url);
+ const doc=await r.json();
+ if(path.includes("/history/")&&Array.isArray(doc.samples)){
+  doc.samples=doc.samples.map(s=>({...s,
+   temperature_2m_c:s.temperature_2m_c??s.temperature_c,
+   humidity_percent:s.humidity_percent,
+   pressure_hpa:s.pressure_hpa,
+   wind_speed_10m_kmh:s.wind_speed_10m_kmh??s.wind_speed_kmh,
+   wind_direction_deg:s.wind_direction_deg??s.wind_direction,
+   precipitation_1h_mm:s.precipitation_1h_mm??s.rain_1h_mm,
+   precipitation_10m_mm:s.precipitation_10m_mm??s.rain_10m_mm,
+   precipitation_6h_mm:s.precipitation_6h_mm??s.rain_6h_mm,
+   precipitation_12h_mm:s.precipitation_12h_mm??s.rain_12h_mm,
+   precipitation_24h_mm:s.precipitation_24h_mm??s.rain_24h_mm
+  }));
+ }
+ if(path==="/stations/canakci"&&doc.station){
+  const s=doc.station;
+  doc.station={...s,
+   temperature_2m_c:s.temperature_2m_c??s.temperature_c,
+   humidity_percent:s.humidity_percent,
+   pressure_hpa:s.pressure_hpa,
+   wind_speed_10m_kmh:s.wind_speed_10m_kmh??s.wind_speed_kmh,
+   wind_direction_degrees:s.wind_direction_degrees??s.wind_direction,
+   precipitation_1h_mm:s.precipitation_1h_mm??s.rain_1h_mm,
+   precipitation_10m_mm:s.precipitation_10m_mm??s.rain_10m_mm,
+   precipitation_6h_mm:s.precipitation_6h_mm??s.rain_6h_mm,
+   precipitation_12h_mm:s.precipitation_12h_mm??s.rain_12h_mm,
+   precipitation_24h_mm:s.precipitation_24h_mm??s.rain_24h_mm
+  };
+ }
+ return doc;
+}
 function pointsOf(run,max=180){return (run?.forecast_6_hourly||[]).filter(p=>{const h=Number(p.forecast_hour);return Number.isFinite(h)&&h>=3&&h<=max&&h%3===0}).sort((a,b)=>Number(a.forecast_hour)-Number(b.forecast_hour))}
 const HOME_ELEVATION_M=363;
 const MGM_STATION_ELEVATION_M=146;
