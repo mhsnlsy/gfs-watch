@@ -165,7 +165,7 @@ def main_publish() -> None:
         raise RuntimeError("The SVG report or its matching Telegram image could not be archived.")
 
     images = [{
-        "label": "4 GFS döngüsü · 72 saat · aynı geçerlilik saatleri (TSİ)",
+        "label": "4 GFS döngüsü · 180 saat · aynı geçerlilik saatleri (TSİ)",
         "path": svg_image_path,
     }]
     report_entry = main.publish_public_notification(
