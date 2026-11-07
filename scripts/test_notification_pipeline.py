@@ -103,8 +103,8 @@ def main() -> None:
     assert "CREATE TABLE IF NOT EXISTS gfs_report_dispatch_queue" in dispatch_migration
     assert "status TEXT NOT NULL DEFAULT 'pending'" in dispatch_migration
     assert guardian_config["triggers"]["crons"] == ["*/30 * * * *"]
-    assert "stale_after_minutes: 480" in guardian
-    assert "dispatch_cooldown_minutes: 60" in guardian
+    assert "stale_after_minutes: 45" in guardian
+    assert "dispatch_cooldown_minutes: 10" in guardian
     assert "fallback-watchdog" in guardian
 
     istanbul = json.loads(read("istanbul-gfs-worker/wrangler.jsonc"))
