@@ -22,6 +22,7 @@ def main() -> None:
     poller = read("scripts/poll_istanbul_gfs_10min.py")
     builder = read("scripts/build_istanbul_gfs_publication.py")
     sender = read("scripts/send_pending_istanbul_gfs_telegram.py")
+    dispatch_migration = read("istanbul-gfs-worker/migrations/0002_create_report_dispatch_queue.sql")
 
     # Pages remains an on-demand/source-change fallback, not a 5-minute publisher.
     assert "Publish GitHub Pages Fallback" in publisher
@@ -33,6 +34,7 @@ def main() -> None:
 
     # Cloudflare is the only live GFS collector; report work is event-driven on new F180.
     assert "schedule:" not in report_workflow
+    assert "push:" not in report_workflow
     assert "workflow_dispatch:" in report_workflow and "inputs:" in report_workflow
     assert "GFS_TRIGGERED_RUN_ID" in report_workflow
     assert "inputs.run_id" in report_workflow
@@ -87,7 +89,8 @@ def main() -> None:
     assert "gfs_report_dispatch_queue" in gfs_worker
     assert "actions/workflows/istanbul-gfs-10min.yml/dispatches" in gfs_worker
     assert "LIMIT 1" in gfs_worker
-    assert "istanbul-gfs-worker/migrations/0002_create_report_dispatch_queue.sql" in str(ROOT / "istanbul-gfs-worker/migrations/0002_create_report_dispatch_queue.sql")
+    assert "CREATE TABLE IF NOT EXISTS gfs_report_dispatch_queue" in dispatch_migration
+    assert "status TEXT NOT NULL DEFAULT 'pending'" in dispatch_migration
     assert guardian_config["triggers"]["crons"] == ["*/30 * * * *"]
     assert "stale_after_minutes: 480" in guardian
     assert "dispatch_cooldown_minutes: 60" in guardian
