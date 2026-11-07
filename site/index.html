@@ -1390,7 +1390,7 @@
 
       </div>
       <section class="next-72h-panel" id="next-72h-panel" aria-label="Önümüzdeki 72 saatlik hava tahmini">
-        <iframe id="gfs-cycle-compare-frame" class="gfs-cycle-compare-frame" src="./gfs-cycle-compare.html?v=20261107-cloudflare-edge-3" title="İstanbul · Son dört GFS döngüsünün 72 saatlik karşılaştırması" loading="eager" scrolling="auto"></iframe>
+        <iframe id="gfs-cycle-compare-frame" class="gfs-cycle-compare-frame" src="./gfs-cycle-compare.html?v=20261107-cloudflare-edge-3" title="İstanbul · Son dört GFS döngüsünün 72 saatlik karşılaştırması" loading="eager" scrolling="auto" frameborder="0" border="0" style="border:0!important;outline:0!important;box-shadow:none!important;background:transparent!important;"></iframe>
         <div hidden aria-hidden="true">
           <span id="next-72h-meta">Model verisi bekleniyor</span>
           <div id="next72-temperature"></div>
@@ -4030,6 +4030,24 @@ if(typeof renderBriefing==="function")renderBriefing();
       background:transparent!important;
       appearance:none!important;
       -webkit-appearance:none!important;
+    }
+  </style>
+  <style id="koy-iframe-frame-clone">
+    /* Köy GFS rapor kuralı: tek koyu yüzey, iframe içinde beyaz/nested frame yok. */
+    #gfs-cycle-compare-frame{
+      display:block!important;
+      box-sizing:border-box!important;
+      width:100%!important;
+      max-width:100%!important;
+      min-width:0!important;
+      margin:0!important;
+      padding:0!important;
+      border:0!important;
+      outline:0!important;
+      box-shadow:none!important;
+      border-radius:0!important;
+      background:transparent!important;
+      color-scheme:dark!important;
     }
   </style>
 </body>
