@@ -122,7 +122,7 @@ jobs:
 
           wrangler r2 bucket list > "$RUNNER_TEMP/r2-buckets.txt"
           if ! grep -Fq "$R2_BUCKET" "$RUNNER_TEMP/r2-buckets.txt"; then
-            wrangler r2 bucket create "$R2_BUCKET" --location eeur
+            wrangler r2 bucket create "$R2_BUCKET"
           fi
 
           uploaded=0
