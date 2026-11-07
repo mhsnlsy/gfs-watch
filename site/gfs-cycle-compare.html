@@ -3,7 +3,7 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width,initial-scale=1">
-<title>GFS · İstanbul · Önümüzdeki 72 saat</title>
+<title>GFS · İstanbul · Önümüzdeki 180 saat</title>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;500;600;700&family=Manrope:wght@400;500;600;700;800&display=swap" rel="stylesheet">
@@ -219,7 +219,7 @@ html,body{margin:0;padding:0;background:transparent;color:var(--text);font-famil
 </head>
 <body>
 <div class="next-72h-head">
- <div><div class="section-kicker">GFS · İSTANBUL</div><h2>Önümüzdeki 72 saat</h2><p>Dört GFS çıktısı aynı geçerlilik saatlerinde (TSİ) üst üste karşılaştırılır.</p></div>
+ <div><div class="section-kicker">GFS · İSTANBUL</div><h2>Önümüzdeki 180 saat</h2><p>Dört GFS çıktısı aynı geçerlilik saatlerinde (TSİ) üst üste karşılaştırılır · F180'e kadar.</p></div>
  <span class="next-72h-badge" id="next-72h-meta">Model verisi bekleniyor</span>
 </div>
 <div class="next-72h-grid">
@@ -240,7 +240,7 @@ const fmt=(v,d=1)=>v==null?"—":Number(v).toLocaleString("tr-TR",{minimumFracti
 const esc=s=>String(s??"").replace(/[&<>"]/g,c=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;"}[c]));
 const ts=v=>{if(!v)return "—";const d=new Date(v);return Number.isFinite(d.getTime())?new Intl.DateTimeFormat("tr-TR",{timeZone:"Europe/Istanbul",day:"2-digit",month:"2-digit",hour:"2-digit",minute:"2-digit"}).format(d)+" TSİ":"—"};
 const tsGfsValid=v=>{if(!v)return "—";const d=new Date(v);return Number.isFinite(d.getTime())?new Intl.DateTimeFormat("tr-TR",{timeZone:"Europe/Istanbul",day:"2-digit",month:"2-digit",hour:"2-digit",minute:"2-digit",hourCycle:"h23"}).format(d)+" TSİ":"—"};
-const pointsOf=(run,max=72)=>(run?.forecast_6_hourly||[]).filter(p=>{const h=Number(p.forecast_hour);return Number.isFinite(h)&&h>=3&&h<=max&&h%3===0}).sort((a,b)=>Number(a.forecast_hour)-Number(b.forecast_hour));
+const pointsOf=(run,max=180)=>(run?.forecast_6_hourly||[]).filter(p=>{const h=Number(p.forecast_hour);return Number.isFinite(h)&&h>=3&&h<=max&&h%3===0}).sort((a,b)=>Number(a.forecast_hour)-Number(b.forecast_hour));
 function realizedErrorStats(runs,samples){
  const obs=Array.isArray(samples?.samples)?samples.samples:[];
  if(!obs.length)return null;
@@ -280,7 +280,7 @@ function svgLine(runs,metric,title,unit,verification=null){
  // The newest run defines the valid-time axis. Every older run is sampled
  // at those exact UTC instants, so F48 from one cycle can align with F36
  // (or another lead) from a different cycle for the same Istanbul clock time.
- const reference=pointsOf(runs[0],72)
+ const reference=pointsOf(runs[0],180)
   .map(p=>({...p,stamp:Date.parse(p.valid_time_utc||"")}))
   .filter(p=>Number.isFinite(p.stamp))
   .sort((a,b)=>a.stamp-b.stamp);
