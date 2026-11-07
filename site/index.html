@@ -1407,7 +1407,7 @@
       </section>
     </section>
     <div id="gfs-model-view">
-    <section class="section gfs-report-section" id="bildirimler">
+    <section class="section" id="bildirimler">
       <div class="section-head report-head">
         <div><div class="section-kicker">SON GFS RAPORU</div><h2>Son hava raporu</h2></div>
         <div class="notification-controls">
@@ -1415,7 +1415,15 @@
           <span id="notification-status" class="notification-status" aria-live="polite">Yalnızca yeni GFS raporları için bildirim</span>
         </div>
       </div>
-      <div id="notifications-list" class="notification-list" aria-live="polite"><div class="chart-empty">Son raporlar yükleniyor…</div></div>
+      <div id="notifications-list" class="notification-list" aria-live="polite">
+  <article class="notification-card koy-gfs-report-card">
+    <div class="notification-images koy-fullframe-images koy-gfs-svg-images" id="koy-gfs-comparison-container" data-svg-src="">
+      <div class="notification-image-item">
+        <div class="gfs-chart-loading">İstanbul GFS dört döngülü etkileşimli SVG raporu bekleniyor…</div>
+      </div>
+    </div>
+  </article>
+</div>
     </section>
     </div>
     <div id="ecmwf-model-view" hidden aria-label="ECMWF tahmin görünümü">
@@ -4048,6 +4056,150 @@ if(typeof renderBriefing==="function")renderBriefing();
       border-radius:0!important;
       background:transparent!important;
       color-scheme:dark!important;
+    }
+  </style>
+  <style id="homepage-koy-gfs-exact-rules">
+    /* ANA SAYFA GFS RAPORU = KÖY GFS RAPORU
+       Aynı shell, aynı SVG yüzeyi, aynı 90% grafik ölçeği ve aynı mobil davranış. */
+
+    #bildirimler .notification-list{
+      display:block!important;
+      width:100%!important;
+      max-width:100%!important;
+    }
+
+    #bildirimler .notification-card.koy-gfs-report-card{
+      box-sizing:border-box!important;
+      width:100%!important;
+      max-width:100%!important;
+      min-width:0!important;
+      margin-left:auto!important;
+      margin-right:auto!important;
+      padding:20px!important;
+      background:linear-gradient(145deg,rgba(18,43,61,.94),rgba(12,31,46,.96))!important;
+      border:1px solid var(--line)!important;
+      border-radius:19px!important;
+      box-shadow:none!important;
+      overflow:hidden!important;
+    }
+
+    #bildirimler .koy-gfs-svg-images{
+      display:grid!important;
+      grid-template-columns:minmax(0,1fr)!important;
+      width:100%!important;
+      max-width:100%!important;
+      margin:0!important;
+      gap:0!important;
+      background:transparent!important;
+    }
+
+    #bildirimler .koy-gfs-svg-images .notification-image-item{
+      width:100%!important;
+      min-width:0!important;
+    }
+
+    #bildirimler .koy-gfs-svg-images .gfs-interactive-chart{
+      position:relative!important;
+      width:90%!important;
+      max-width:90%!important;
+      min-width:0!important;
+      margin-left:auto!important;
+      margin-right:auto!important;
+      line-height:0!important;
+      overflow:visible!important;
+      background:transparent!important;
+      border:0!important;
+      outline:0!important;
+      box-shadow:none!important;
+      touch-action:auto!important;
+      -webkit-user-select:none!important;
+      user-select:none!important;
+    }
+
+    #bildirimler .koy-gfs-svg-images .gfs-interactive-svg{
+      display:block!important;
+      width:100%!important;
+      height:auto!important;
+      max-width:100%!important;
+      overflow:visible!important;
+      background:transparent!important;
+      border:0!important;
+      outline:0!important;
+      box-shadow:none!important;
+    }
+
+    /* Köy ile aynı koyu SVG/panel yüzeyleri. */
+    #bildirimler .koy-gfs-svg-images .gfs-interactive-svg #patch_1 path{
+      fill:#0A1B29!important;
+      stroke:#0A1B29!important;
+    }
+    #bildirimler .koy-gfs-svg-images .gfs-interactive-svg #patch_2 path,
+    #bildirimler .koy-gfs-svg-images .gfs-interactive-svg #patch_3 path,
+    #bildirimler .koy-gfs-svg-images .gfs-interactive-svg #patch_4 path,
+    #bildirimler .koy-gfs-svg-images .gfs-interactive-svg #patch_5 path{
+      fill:#102A3A!important;
+      stroke:#416174!important;
+    }
+    #bildirimler .koy-gfs-svg-images .gfs-interactive-svg #axes_1 #patch_6 path,
+    #bildirimler .koy-gfs-svg-images .gfs-interactive-svg #axes_2 #patch_11 path,
+    #bildirimler .koy-gfs-svg-images .gfs-interactive-svg #axes_3 #patch_16 path,
+    #bildirimler .koy-gfs-svg-images .gfs-interactive-svg #axes_4 #patch_21 path{
+      fill:#102A3A!important;
+    }
+
+    #bildirimler .koy-gfs-svg-images .gfs-chart-loading{
+      color:#9bb0bc!important;
+      font:12px/1.5 "DM Sans",sans-serif!important;
+    }
+
+    /* Köy'deki mobil dört-panel davranışı. */
+    #bildirimler .gfs-mobile-panel-stack{
+      display:grid!important;
+      grid-template-columns:minmax(0,1fr)!important;
+      gap:14px!important;
+      width:100%!important;
+      max-width:100%!important;
+      min-width:0!important;
+      margin:0!important;
+      padding:0!important;
+    }
+    #bildirimler .gfs-mobile-panel-host{
+      width:100%!important;
+      max-width:100%!important;
+      min-width:0!important;
+      margin:0!important;
+      padding:0!important;
+      position:relative!important;
+      line-height:0!important;
+      overflow:hidden!important;
+    }
+    #bildirimler .gfs-mobile-panel-host .gfs-mobile-panel-svg{
+      display:block!important;
+      width:100%!important;
+      max-width:100%!important;
+      min-width:0!important;
+      height:auto!important;
+      margin:0!important;
+    }
+
+    @media(max-width:700px),(pointer:coarse){
+      #bildirimler .notification-card.koy-gfs-report-card{
+        width:100%!important;
+        max-width:100%!important;
+        padding:0!important;
+        border-radius:15px!important;
+      }
+      #bildirimler .koy-gfs-svg-images{
+        gap:0!important;
+      }
+      #bildirimler .koy-gfs-svg-images .gfs-interactive-chart,
+      #bildirimler .gfs-mobile-panel-stack{
+        width:100%!important;
+        max-width:100%!important;
+      }
+      #bildirimler .gfs-mobile-panel-stack{
+        gap:12px!important;
+      }
     }
   </style>
 </body>
