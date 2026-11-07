@@ -612,7 +612,7 @@ function renderRuns(d,f72){
   ? [tableRun,...historyRuns.filter(run=>run.run_id_utc!==tableRun.run_id_utc)].slice(0,4)
   : historyRuns;
  const runs=historyRuns;
- $("report-meta").textContent=source.length?"Son döngü: "+ts(source[0].run_id_utc)+" · "+source.length+" çıktı hazır":"Son model döngüsü bekleniyor";
+ $("report-meta").textContent=source.length?"Son döngü: "+tsGfsValid(source[0].run_id_utc)+" · "+source.length+" çıktı hazır":"Son model döngüsü bekleniyor";
  const svgContainer=$("koy-gfs-comparison-container");
  if(svgContainer){
   const svgRuns=historyRuns.slice(0,4);
