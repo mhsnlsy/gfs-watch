@@ -13,7 +13,7 @@ def read(path: str) -> str:
 
 def main() -> None:
     publisher = read(".github/workflows/publish-live-site.yml")
-    report_workflow = read(".github/workflows/istanbul-gfs-10min.yml")
+    report_workflow_path = ROOT / ".github/workflows/istanbul-gfs-10min.yml"
     platform_workflow = read(".github/workflows/deploy-cloudflare-platform.yml")
     archive_sync = read(".github/workflows/sync-cloudflare-live-archive.yml")
     istanbul_deploy = read(".github/workflows/deploy-istanbul-gfs-worker.yml")
@@ -48,24 +48,9 @@ def main() -> None:
     # GitHub Pages is a manual-only rollback path, never an automatic workflow_run deployment.
     assert "workflow_run:" not in publisher
 
-    # Cloudflare collects GFS and now builds/delivers F180 reports without a GitHub runtime dispatch.
-    assert "schedule:" not in report_workflow
-    assert "push:" not in report_workflow
-    assert "workflow_dispatch:" in report_workflow and "inputs:" in report_workflow
-    assert "GFS_TRIGGERED_RUN_ID" in report_workflow
-    assert "inputs.run_id" in report_workflow
-    assert "ISTANBUL_GFS_API" in report_workflow
-    assert "gfs-watch-istanbul-gfs.muhsin-ulusoy.workers.dev/gfs/latest" in report_workflow
-    assert "scripts/poll_istanbul_gfs_10min.py" in report_workflow
-    assert "Cloudflare D1" in report_workflow
-    assert "steps.poll.outputs.f180_ready == 'true'" in report_workflow
-    assert "publish-live-site.yml" not in report_workflow
-    assert "publish-pages:" not in report_workflow
-    assert "pages: write" not in report_workflow
-    assert "telegram:" in report_workflow
-    assert "scripts/send_pending_istanbul_gfs_telegram.py" in report_workflow
-    assert "TELEGRAM_TOKEN" in report_workflow and "CHAT_ID" in report_workflow
-    assert "cancel-in-progress: false" in report_workflow
+    # Istanbul GFS collection, F180 report generation and Telegram delivery are now
+    # fully Cloudflare-native. GitHub has no runtime GFS update workflow.
+    assert not report_workflow_path.exists()
 
     assert "gfs-watch-web.muhsin-ulusoy.workers.dev/gfs/latest" in poller
     assert "comparison_runs" in poller
@@ -130,11 +115,6 @@ def main() -> None:
     assert "R2" in web_worker
     assert "fetchD1PublicationAsset" in web_worker
     assert '"/gfs/publication-asset/" + normalized' in web_worker
-    assert "curl --fail" in report_workflow and "--data-binary" in report_workflow
-    assert "GFS_DISPATCH_TOKEN" in gfs_worker
-    assert "Publish report assets into Cloudflare D1" in report_workflow
-    assert "gfs/publication-upload" in report_workflow
-    assert "GFS_DISPATCH_TOKEN" in report_workflow
     # SVG rebuilds must update the D1-first publication copy that the live web gateway serves.
     assert "Publish rebuilt report assets to Cloudflare D1" in istanbul_svg_workflow
     assert "gfs/publication-upload" in istanbul_svg_workflow
