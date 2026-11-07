@@ -121,6 +121,17 @@ function rainSample(minutesAgo, rain10m) {
     precipitation_10m_mm: rain10m
   };
 }
+const completedHourAnchor = Math.floor(Date.now() / 3600000) * 3600000;
+function hourlyRainSample(minutesBeforeCurrentHour, precipitation1h) {
+  const stamp = new Date(completedHourAnchor - minutesBeforeCurrentHour * 60000).toISOString();
+  return {
+    logged_at_utc: stamp,
+    observed_at_utc: stamp,
+    temperature_2m_c: 11,
+    precipitation_daily_mm: 0.8,
+    precipitation_1h_mm: precipitation1h
+  };
+}
 
 sandbox.enkaStationHistorySamples = [
   sample(22, 7.1, 0.2),
@@ -137,6 +148,11 @@ sandbox.eyupsultanStationHistorySamples = [
 ];
 sandbox.eyupsultanStationObservation.observed_at_utc = new Date(rainAnchor).toISOString();
 sandbox.eyupsultanStationObservation.precipitation_10m_mm = 0.3;
+// The current chart plots the latest reading from each completed hour.
+// Keep separate MGM rainfall archives so ENKA and Eyüpsultan source isolation
+// is exercised without depending on the still-collecting 10-minute series.
+sandbox.eyupsultanStationRainHistorySamples = [hourlyRainSample(30, 0.6)];
+sandbox.sisliStationRainHistorySamples = [hourlyRainSample(30, 0.4)];
 
 vm.createContext(sandbox);
 vm.runInContext(html.slice(functionStart, functionEnd), sandbox, {
@@ -155,11 +171,12 @@ assert.equal(node("station-history-panel").attributes["aria-label"], "Eyüpsulta
 assert.match(node("station-trend-meta").textContent, /Eyüpsultan/);
 assert.match(node("station-rain-meta").textContent, /Eyüpsultan/);
 assert.match(node("station-temperature-trend").innerHTML, /Eyüpsultan son 24 saat sıcaklık geçmişi/);
-assert.match(node("station-rain-trend").innerHTML, /ENKA Balmumcu son 24 saatteki kayan 30 dakika yağış toplamı/);
-assert.match(node("station-rain-trend").innerHTML, /0,6 mm \/ 30 dk/);
-assert.match(node("station-rain-meta").textContent, /0,6 mm \/ 30 dk/);
+assert.match(node("station-rain-trend").innerHTML, /Eyüpsultan son 24 saatteki kayan bir saatlik yağış toplamı/);
+assert.match(node("station-rain-trend").innerHTML, /0,6 mm \/ 1 saat/);
+assert.match(node("station-rain-meta").textContent, /0,6 mm \/ 1 saat/);
 assert.match(node("station-trend-meta").textContent, /30 dk ortalama/);
-assert.match(node("station-rain-meta").textContent, /üç çakışmayan 10 dk ölçüm/);
+assert.match(node("station-rain-meta").textContent, /son tamamlanan saat/);
+assert.match(node("history-source-note").textContent, /MGM Eyüpsultan ölçümleri/);
 assert.doesNotMatch(node("station-trend-meta").textContent, /ENKA/);
 assert.doesNotMatch(node("station-rain-meta").textContent, /ENKA/);
 
@@ -170,15 +187,15 @@ assert.equal(node("temperature").textContent, "8,4°");
 assert.equal(node("history-station-source").textContent, "ENKA BALMUMCU · GERÇEK ÖLÇÜMLER");
 assert.equal(node("station-history-panel").attributes["aria-label"], "ENKA Balmumcu son 24 saat geçmişi");
 assert.match(node("station-trend-meta").textContent, /ENKA Balmumcu/);
-assert.match(node("station-rain-meta").textContent, /ENKA Balmumcu · MGM Eyüpsultan/);
+assert.match(node("station-rain-meta").textContent, /ENKA Balmumcu · MGM · son tamamlanan saat/);
 assert.match(node("station-temperature-trend").innerHTML, /ENKA Balmumcu son 24 saat sıcaklık geçmişi/);
-assert.match(node("station-rain-trend").innerHTML, /Eyüpsultan son 24 saatteki kayan 30 dakika yağış toplamı/);
-assert.match(node("station-rain-trend").innerHTML, /0,6 mm \/ 30 dk/);
-assert.match(node("station-rain-meta").textContent, /0,6 mm \/ 30 dk/);
+assert.match(node("station-rain-trend").innerHTML, /ENKA Balmumcu son 24 saatteki kayan bir saatlik yağış toplamı/);
+assert.match(node("station-rain-trend").innerHTML, /0,4 mm \/ 1 saat/);
+assert.match(node("station-rain-meta").textContent, /0,4 mm \/ 1 saat/);
 assert.match(node("station-trend-meta").textContent, /30 dk ortalama/);
-assert.match(node("station-rain-meta").textContent, /üç çakışmayan 10 dk ölçüm/);
+assert.match(node("station-rain-meta").textContent, /son tamamlanan saat/);
 assert.doesNotMatch(node("station-trend-meta").textContent, /Eyüpsultan/);
-assert.match(node("station-rain-meta").textContent, /MGM Eyüpsultan/);
+assert.match(node("history-source-note").textContent, /Yağış: MGM Şişli ölçümleri/);
 
 assert.match(html, /function attachStationHistoryTooltip/);
 assert.match(html, /station-history-tooltip-value/);
