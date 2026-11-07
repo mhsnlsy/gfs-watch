@@ -182,6 +182,12 @@ def main() -> None:
     assert "/api/koy-gfs/" in koy_page
     assert 'const stationApi=(window.GFS_WATCH_API_BASE||window.location.origin)+"/api/history/"+' in comparison
     assert "gfs-watch-stations.muhsin-ulusoy.workers.dev" not in comparison
+    # Köy report SVG is served at the existing URL from its D1 Service Binding,
+    # so the web deployment no longer packages or checks out the archive branch.
+    assert "Check out Köy GFS archive" not in platform_workflow
+    assert "ref: koy-gfs-data" not in platform_workflow
+    assert "GITHUB_WORKSPACE/koy-data" not in platform_workflow
+    assert "KOY_SVG_REL" not in platform_workflow
 
     print(
         "[CLOUDFLARE-FIRST PLATFORM] Static Assets, Service Bindings, D1 Cron "
