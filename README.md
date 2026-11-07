@@ -88,7 +88,7 @@ GFS ana JSON'u `site/data/istanbul-gfs-latest.json`, rapor arşivi `site/data/no
 
 ## Telegram bildirimleri
 
-Her yeni F180-hazır GFS döngüsünde rapor ve dört karşılaştırma görseli Telegram'a gönderilir.
+Her yeni F180-hazır GFS döngüsünde rapor ve aynı dört panelli karşılaştırmanın tek kompozit görseli Telegram'a gönderilir.
 
 Gerekli GitHub Actions secrets:
 
@@ -119,18 +119,14 @@ MeteoPT GFS (00Z / 06Z / 12Z / 18Z)
 GitHub Actions · F180 kapısı
        │
        ▼
-Canonical GFS JSON + rapor + dört PNG
-       │
-       ├────────► Telegram
+Canonical GFS JSON + rapor + SVG/PNG + Telegram kuyruğu
        │
        ▼
 istanbul-gfs-data
        │
-       ▼
-Tek GitHub Pages Publisher
+       ├────────► Tek GitHub Pages Publisher ─────► GitHub Pages
        │
-       ▼
-GitHub Pages
+       └────────► Bağımsız Telegram işi ──────────► Telegram
 ```
 
 ## Sürüm yönetimi
