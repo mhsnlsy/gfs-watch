@@ -28,7 +28,11 @@ function node(id) {
         contains(name) { return classes.has(name); }
       },
       setAttribute(name, value) { this.attributes[name] = String(value); },
-      addEventListener(name, callback) { this.listeners[name] = callback; }
+      addEventListener(name, callback) { this.listeners[name] = callback; },
+      children: [],
+      appendChild(child) { this.children.push(child); return child; },
+      replaceChildren(...children) { this.children = children; this.innerHTML = ""; },
+      querySelector() { return null; }
     });
   }
   return nodes.get(id);
@@ -37,6 +41,22 @@ function node(id) {
 const sandbox = {
   $: node,
   window: { addEventListener() {} },
+  document: {
+    querySelector() { return null; },
+    createElement(tagName) {
+      return {
+        tagName,
+        className: "",
+        textContent: "",
+        children: [],
+        style: {},
+        setAttribute() {},
+        addEventListener() {},
+        appendChild(child) { this.children.push(child); return child; },
+        classList: { add() {}, toggle() {} }
+      };
+    }
+  },
   activeStation: "enka",
   enkaStationObservation: {
     station_name: "ENKA Balmumcu",
