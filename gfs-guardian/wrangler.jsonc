@@ -6,6 +6,6 @@
   "workers_dev": true,
   "observability": { "enabled": true },
   "triggers": {
-    "crons": ["*/9 * * * *"]
+    "crons": ["*/30 * * * *"]
   }
 }
