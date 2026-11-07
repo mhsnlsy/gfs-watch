@@ -1019,3 +1019,15 @@
     margin-right: auto !important;
   }
 }
+
+/* FINAL LEFT ALIGNMENT FOR TABLE META */
+@media (min-width: 851px) and (pointer: fine) {
+  #meteopt-gfs-table .meteopt-table-toolbar {
+    justify-content: flex-start !important;
+    text-align: left !important;
+  }
+  #meteopt-gfs-table .meteopt-table-toolbar > * {
+    margin-left: 0 !important;
+    margin-right: 0 !important;
+  }
+}
