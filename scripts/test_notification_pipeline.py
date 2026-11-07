@@ -108,7 +108,7 @@ def main() -> None:
     assert gfs_worker.index('if (path === "/gfs/publication-upload")') < gfs_worker.index('if (request.method !== "GET")')
     assert '"Access-Control-Allow-Methods": "GET, POST, OPTIONS"' in gfs_worker
     assert "fetchD1PublicationAsset" in web_worker
-    assert '"gfs/publication-asset/" + normalized' in web_worker
+    assert '"/gfs/publication-asset/" + normalized' in web_worker
     assert "curl --fail" in report_workflow and "--data-binary" in report_workflow
     assert "GFS_DISPATCH_TOKEN" in gfs_worker
     assert "Publish report assets into Cloudflare D1" in report_workflow
