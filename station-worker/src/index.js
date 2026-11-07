@@ -434,6 +434,7 @@ function apiStation(key, payload, status, lastError, lastSuccess, lastAttempt) {
     source_url: payload.source_url,
     observed_at_utc: payload.observed_at_utc,
     fetched_at_utc: payload.fetched_at_utc,
+    // Canonical panel fields.
     temperature_c: payload.temperature_2m_c,
     humidity_percent: payload.humidity_percent,
     pressure_hpa: payload.station_pressure_hpa,
@@ -447,6 +448,18 @@ function apiStation(key, payload, status, lastError, lastSuccess, lastAttempt) {
     rain_12h_mm: payload.precipitation_12h_mm,
     rain_24h_mm: payload.precipitation_24h_mm,
     rain_00_now_mm: payload.precipitation_daily_mm,
+    // Report/API compatibility aliases: the GFS report consumes the same
+    // active station panel payload without maintaining a second station model.
+    temperature_2m_c: payload.temperature_2m_c,
+    station_pressure_hpa: payload.station_pressure_hpa,
+    wind_speed_10m_kmh: payload.wind_speed_10m_kmh,
+    wind_direction_degrees: payload.wind_direction_degrees,
+    precipitation_1h_mm: payload.precipitation_1h_mm,
+    precipitation_10m_mm: payload.precipitation_10m_mm,
+    precipitation_6h_mm: payload.precipitation_6h_mm,
+    precipitation_12h_mm: payload.precipitation_12h_mm,
+    precipitation_24h_mm: payload.precipitation_24h_mm,
+    precipitation_daily_mm: payload.precipitation_daily_mm,
     feels_like_c: payload.feels_like_c,
     dew_point_c: payload.dew_point_c,
     feels_like_c: payload.feels_like_c,
