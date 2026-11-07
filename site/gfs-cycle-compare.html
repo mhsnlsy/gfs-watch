@@ -416,10 +416,22 @@ function renderCharts(){
 }
 function bindTooltip(containerId){
  const host=$(containerId),svg=host?.querySelector("svg.koy-svg");if(!host||!svg)return;
- const tooltip=document.createElement("div");tooltip.className="gfs-point-tooltip";tooltip.hidden=true;tooltip.setAttribute("role","status");host.appendChild(tooltip);
- let pinned=false;let touchHideTimer=null;
+ const tooltip=document.createElement("div");
+ tooltip.className="gfs-point-tooltip";
+ tooltip.hidden=true;
+ tooltip.setAttribute("role","status");
+ document.body.appendChild(tooltip);
+ let pinned=false;
  const targets=[...svg.querySelectorAll(".gfs-point-target")],currentTargets=targets.filter(target=>target.dataset.current==="true");
- function hide(){if(touchHideTimer!==null)window.clearTimeout(touchHideTimer);touchHideTimer=null;tooltip.hidden=true;pinned=false;if(activeTooltip?.tooltip===tooltip)activeTooltip=null;}
+ const screenXOf=target=>{const matrix=svg.getScreenCTM();if(!matrix)return NaN;const point=svg.createSVGPoint();point.x=Number(target.getAttribute("cx"));point.y=Number(target.getAttribute("cy"));return point.matrixTransform(matrix).x;};
+ const currentByTime=new Map(currentTargets.map(target=>[target.dataset.validkey,target]));
+ let currentXs=currentTargets.map(target=>({target,x:screenXOf(target)})).filter(item=>Number.isFinite(item.x)).sort((a,b)=>a.x-b.x);
+ function refreshScreenXs(){currentXs=currentTargets.map(target=>({target,x:screenXOf(target)})).filter(item=>Number.isFinite(item.x)).sort((a,b)=>a.x-b.x);}
+ function hide(){
+  tooltip.hidden=true;
+  pinned=false;
+  if(activeTooltip?.tooltip===tooltip)activeTooltip=null;
+ }
  function positionTooltipAbove(event){
   tooltip.style.position="fixed";
   tooltip.style.zIndex="2147483647";
@@ -428,8 +440,7 @@ function bindTooltip(containerId){
   tooltip.style.top="0px";
   const tw=tooltip.offsetWidth,th=tooltip.offsetHeight;
   const left=Math.max(8,Math.min(window.innerWidth-tw-8,event.clientX-tw/2));
-  // Always above the touch/cursor point. Never flip below the finger.
-  const top=event.clientY-th-14;
+  const top=Math.max(8,event.clientY-th-14);
   tooltip.style.left=Math.round(left)+"px";
   tooltip.style.top=Math.round(top)+"px";
  }
@@ -437,62 +448,53 @@ function bindTooltip(containerId){
   if(!target)return;
   const run=target.dataset.run||"GFS döngüsü",valid=target.dataset.valid||"—",step=target.dataset.step||"",value=target.dataset.value||"—",unit=target.dataset.unit||"",color=target.dataset.color||GFS_CYCLE_THEME.colors[0];
   tooltip.innerHTML='<div class="gfs-point-tooltip-head"><i style="background:'+color+'"></i><strong>Güncel GFS tahmini</strong></div><div class="gfs-point-tooltip-time">Döngü · '+esc(run)+'<br>Geçerlilik · '+esc(valid)+'</div><div class="gfs-point-tooltip-value">'+esc(value)+' <small>'+esc(unit)+'</small></div><div class="gfs-point-tooltip-meta">Tahmin adımı '+esc(step)+'</div>';
-  tooltip.hidden=false;pinned=lock;
+  tooltip.hidden=false;
+  pinned=lock;
   positionTooltipAbove(event);
   if(lock)activeTooltip={host,tooltip,hide};
  }
- let lastTouchX=null;
- let lastTouchY=null;
- let touchRaf=0;
- let pendingTouch=null;
- const processTouch=()=>{
-  touchRaf=0;
-  const event=pendingTouch;
-  pendingTouch=null;
-  if(!event)return;
-  const hit=nearestPoint(event),target=latestPointAtSameTime(hit);
-  if(target)show(target,event,true);else hide();
- };
+ function nearestPoint(event){
+  if(!currentXs.length)refreshScreenXs();
+  if(!currentXs.length)return null;
+  const x=event.clientX;
+  let lo=0,hi=currentXs.length-1;
+  while(lo<hi){const mid=(lo+hi)>>1;if(currentXs[mid].x<x)lo=mid+1;else hi=mid;}
+  let best=currentXs[lo];
+  if(lo>0&&Math.abs(currentXs[lo-1].x-x)<Math.abs(best.x-x))best=currentXs[lo-1];
+  return best.target;
+ }
+ function latestPointAtSameTime(hit){return hit?currentByTime.get(hit.dataset.validkey)||hit:null;}
  const updateTouch=event=>{
   if(!event||!Number.isFinite(event.clientX)||!Number.isFinite(event.clientY))return;
   pinned=true;
-  lastTouchX=event.clientX;
-  lastTouchY=event.clientY;
-  pendingTouch={clientX:lastTouchX,clientY:lastTouchY};
-  if(!touchRaf)touchRaf=requestAnimationFrame(processTouch);
+  const hit=nearestPoint(event),target=latestPointAtSameTime(hit);
+  if(target)show(target,event,true);else hide();
  };
  svg.style.touchAction="pan-y";
  svg.style.webkitTapHighlightColor="transparent";
  svg.addEventListener("pointermove",event=>{
   if(event.pointerType==="touch"){updateTouch(event);return;}
   if(pinned)return;
-  const hit=nearestPoint(event,28),target=latestPointAtSameTime(hit);
+  const hit=nearestPoint(event),target=latestPointAtSameTime(hit);
   if(target)show(target,event,false);else hide();
  });
- svg.addEventListener("pointerrawupdate",event=>{
-  if(event.pointerType==="touch")updateTouch(event);
- });
+ svg.addEventListener("pointerrawupdate",event=>{if(event.pointerType==="touch")updateTouch(event);},{passive:true});
  svg.addEventListener("touchmove",event=>{
-  const touch=event.touches?.[0];
-  if(!touch||!pinned)return;
-  // Once a scrub has started, keep the browser from scrolling the page
-  // underneath the chart and feed every native touch position into the
-  // single RAF-coalesced selector.
-  if(event.cancelable)event.preventDefault();
+  const touch=event.touches?.[0];if(!touch)return;
   updateTouch({clientX:touch.clientX,clientY:touch.clientY});
- },{passive:false});
+ },{passive:true});
  svg.addEventListener("pointerleave",()=>{if(!pinned)hide();});
  svg.addEventListener("pointerdown",event=>{
   if(event.pointerType!=="touch"&&event.pointerType!=="pen")return;
-  event.preventDefault();
   if(event.pointerType==="touch"){pinned=true;try{svg.setPointerCapture(event.pointerId);}catch(_){}}
-  const hit=nearestPoint(event,56),target=latestPointAtSameTime(hit);
+  const hit=nearestPoint(event),target=latestPointAtSameTime(hit);
   if(target)show(target,event,true);else hide();
-  if(event.pointerType==="touch")scheduleTouchHide();
  });
- svg.addEventListener("pointerup",event=>{if(event.pointerType==="touch")scheduleTouchHide();});
- svg.addEventListener("pointercancel",event=>{if(event.pointerType==="touch"){pinned=false;hide();}});
- svg.addEventListener("lostpointercapture",event=>{if(event.pointerType==="touch")scheduleTouchHide();});
+ svg.addEventListener("pointerup",event=>{if(event.pointerType==="touch")hide();});
+ svg.addEventListener("pointercancel",event=>{if(event.pointerType==="touch")hide();});
+ svg.addEventListener("lostpointercapture",event=>{if(event.pointerType==="touch")hide();});
+ window.addEventListener("scroll",hide,{passive:true,capture:true});
+ window.addEventListener("resize",()=>{refreshScreenXs();hide();},{passive:true});
 }
 document.addEventListener("pointerdown",event=>{if(activeTooltip&&!activeTooltip.host.contains(event.target))activeTooltip.hide();},true);
 async function load(){
