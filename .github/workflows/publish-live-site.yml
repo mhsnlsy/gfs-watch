@@ -1,8 +1,12 @@
 name: Publish GitHub Pages Fallback (Manual)
 
 on:
-  # Emergency rollback only. The primary website is Cloudflare Workers Static Assets.
+  # GitHub Pages remains the public fallback and is also kept synchronized
+  # automatically after a successful canonical Istanbul GFS publication.
   workflow_dispatch:
+  workflow_run:
+    workflows: ["Istanbul GFS · Event-Driven Report Pipeline"]
+    types: [completed]
 
 permissions:
   contents: read
