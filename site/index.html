@@ -1494,7 +1494,7 @@
   </main>
   <footer class="shell footer"><span><strong data-app-name>İstanbul'un Havası</strong> <span data-app-version>4.0</span></span><span>Veri kaynakları: ENKA Balmumcu kamera OCR · MGM Eyüpsultan 18101 · MGM Şişli 18401 · MeteoPT GFS · ECMWF · Otomatik kontrol: 5 dakika</span></footer>
   <script src="./gfs-api-config.js?v=20261107-cloudflare-edge-2"></script>
-  <script src="./gfs-comparison-tooltip.js?v=20261108-mobile-touch-scrub-1"></script>
+  <script src="./gfs-comparison-tooltip.js?v=20261108-mobile-touch-scrub-stack-1"></script>
     <script>
     const DATA_URL=(window.ISTANBUL_GFS_API_BASE||window.location.origin)+"/gfs/latest";
     const ECMWF_DATA_URL="./data/ecmwf/latest.json";
@@ -4284,6 +4284,35 @@ if(typeof renderBriefing==="function")renderBriefing();
       }
     }
   </style>
-</body>
+    /* FINAL: homepage GFS report mobile panels must be vertically stacked. */
+    @media(max-width:700px),(pointer:coarse){
+      #bildirimler .gfs-mobile-panel-stack{
+        display:grid!important;
+        grid-template-columns:minmax(0,1fr)!important;
+        grid-auto-flow:row!important;
+        gap:12px!important;
+        width:100%!important;
+        max-width:100%!important;
+        min-width:0!important;
+        margin:0!important;
+        padding:0!important;
+      }
+      #bildirimler .gfs-mobile-panel-host{
+        display:block!important;
+        width:100%!important;
+        max-width:100%!important;
+        min-width:0!important;
+        margin:0!important;
+        padding:0!important;
+        overflow:hidden!important;
+      }
+      #bildirimler .gfs-mobile-panel-host .gfs-mobile-panel-svg{
+        display:block!important;
+        width:100%!important;
+        max-width:100%!important;
+        min-width:0!important;
+        height:auto!important;
+      }
+    }\n</body>
 </html>
 
