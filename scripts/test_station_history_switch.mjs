@@ -41,6 +41,7 @@ function node(id) {
 const sandbox = {
   $: node,
   window: { addEventListener() {} },
+  attachStationHistoryTooltip() {},
   document: {
     querySelector() { return null; },
     createElement(tagName) {
