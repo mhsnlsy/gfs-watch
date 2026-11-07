@@ -1426,7 +1426,7 @@
       document.querySelectorAll("[data-app-version]").forEach(node=>{node.textContent=doc.version;});
     }
     fetch("./version.json",{cache:"no-store"}).then(response=>response.ok?response.json():null).then(applyAppVersion).catch(()=>{});
-    const STATIONS_API="/api/stations";
+    const STATIONS_API="/api";
     const STATIONS_URL=STATIONS_API+"/stations";
     const STATION_HISTORY_API=key=>STATIONS_API+"/history/"+encodeURIComponent(key)+"?hours=72";
     const VERIFY_URL="./data/forecast-verification.json";
