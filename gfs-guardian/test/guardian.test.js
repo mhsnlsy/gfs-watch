@@ -52,8 +52,8 @@ test("dispatches the existing workflow when the last success is stale", async ()
     event: "schedule",
     status: "completed",
     conclusion: "success",
-    completed_at: isoMinutesAgo(22, now),
-    created_at: isoMinutesAgo(23, now),
+    completed_at: isoMinutesAgo(50, now),
+    created_at: isoMinutesAgo(51, now),
   }], calls);
 
   await worker.scheduled({ scheduledTime: now }, { GFS_DISPATCH_TOKEN: "test-token" });
@@ -113,6 +113,6 @@ test("exposes a minimal health response without exposing secrets", async () => {
 
   assert.equal(response.status, 200);
   assert.equal(body.ok, true);
-  assert.equal(body.cron, "*/9 * * * *");
+  assert.equal(body.cron, "*/30 * * * *");
   assert.equal("GFS_DISPATCH_TOKEN" in body, false);
 });
