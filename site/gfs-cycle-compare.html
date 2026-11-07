@@ -301,7 +301,7 @@ function svgLine(runs,metric,title,unit,verification=null){
    const value=num(p?.[metric]);
    if(value==null)return null;
    return {
-    h:(target.stamp-startTime)/3600000,
+    h:Number(p.forecast_hour),
     lead:Number(p.forecast_hour),
     v:value,
     validTime:p.valid_time_utc,
@@ -342,10 +342,11 @@ function svgLine(runs,metric,title,unit,verification=null){
  const x=h=>L+(hours.length===1?PW/2:(h-hours[0])/(hours[hours.length-1]-hours[0]||1))*PW;
  const y=v=>T+(hi-v)*PH/(hi-lo);
  const axisLabel=h=>{
-  const d=new Date(startTime+h*3600000);
+  const p=reference.find(x=>Number(x.forecast_hour)===Number(h));
+  const d=new Date(p?.stamp||startTime+h*3600000);
   const day=new Intl.DateTimeFormat("tr-TR",{timeZone:"Europe/Istanbul",day:"2-digit"}).format(d);
   const weekday=new Intl.DateTimeFormat("tr-TR",{timeZone:"Europe/Istanbul",weekday:"short"}).format(d).replace(/\.$/,"");
-  return {day,weekday};
+  return {day,weekday,lead:Number(h)};
  };
  let out='<svg class="koy-svg" viewBox="0 0 '+W+' '+H+'" preserveAspectRatio="xMidYMid meet" text-rendering="optimizeLegibility" role="img" aria-label="'+esc(title)+' · aynı geçerlilik saatleri TSİ">';
  for(let j=0;j<=3;j++){
