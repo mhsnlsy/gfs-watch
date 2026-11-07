@@ -158,6 +158,40 @@ function isMobileGfsLayout(){
   return window.matchMedia("(max-width:700px)").matches ||
     window.matchMedia("(pointer:coarse)").matches;
 }
+
+// Apply the dark report palette directly to the SVG nodes after parsing.
+// This protects the live DOM even when a parent stylesheet or old cached CSS wins.
+function forceDarkGfsSvg(svg){
+  if(!svg)return;
+  svg.style.setProperty("background-color","#0A1B29","important");
+  svg.style.setProperty("background","#0A1B29","important");
+  const fills = new Map([
+    ["patch_1","#0A1B29"],
+    ["patch_2","#102A3A"],
+    ["patch_3","#102A3A"],
+    ["patch_4","#102A3A"],
+    ["patch_5","#102A3A"],
+    ["patch_6","#102A3A"],
+    ["patch_11","#102A3A"],
+    ["patch_16","#102A3A"],
+    ["patch_21","#102A3A"]
+  ]);
+  fills.forEach((fill,id)=>{
+    const group=svg.querySelector("#"+id);
+    if(!group)return;
+    group.querySelectorAll("path,rect,polygon").forEach(shape=>{
+      shape.style.setProperty("fill",fill,"important");
+      if(id==="patch_2"||id==="patch_3"||id==="patch_4"||id==="patch_5"){
+        shape.style.setProperty("stroke","#416174","important");
+      }
+    });
+  });
+  const card=svg.closest(".notification-chart-only");
+  if(card){
+    card.style.setProperty("background","#0A1B29","important");
+    card.style.setProperty("border-color","#17384A","important");
+  }
+}
 function buildMobileGfsPanelViews(sourceSvg,metadata){
   const panels=Array.isArray(metadata.panels)?metadata.panels:[];
   if(panels.length!==4)return null;
@@ -217,6 +251,10 @@ async function loadInteractiveGfsCharts(root){
       if(!Array.isArray(metadata.panels)||metadata.panels.length!==4)throw new Error("Dört grafik paneli bulunamadı");
       manifestNode.remove();
       svg.classList.add("gfs-interactive-svg");
+      forceDarkGfsSvg(svg);
+      host.style.setProperty("background","#0A1B29","important");
+      host.closest(".notification-image-item")?.style.setProperty("background","#0A1B29","important");
+      host.closest(".notification-images")?.style.setProperty("background","#0A1B29","important");
       svg.setAttribute("role","group");
       svg.setAttribute("aria-label",host.dataset.chartLabel||"İstanbul GFS dört panelli etkileşimli valid-time karşılaştırması");
       svg.setAttribute("focusable","true");
@@ -229,6 +267,8 @@ async function loadInteractiveGfsCharts(root){
           mobileViews.forEach(({svg:panelSvg,metadata:panelMetadata})=>{
             const panelHost=document.createElement("div");
             panelHost.className="gfs-mobile-panel-host";
+            forceDarkGfsSvg(panelSvg);
+            panelHost.style.setProperty("background","#0A1B29","important");
             panelHost.appendChild(panelSvg);
             host.appendChild(panelHost);
             attachGfsSvgInteractions(panelHost,panelSvg,panelMetadata);
@@ -249,6 +289,8 @@ async function loadInteractiveGfsCharts(root){
       fallback.target="_blank";
       fallback.rel="noopener";
       fallback.className="gfs-svg-static-fallback";
+      fallback.style.setProperty("background","#0A1B29","important");
+      host.style.setProperty("background","#0A1B29","important");
       const image=document.createElement("img");
       image.src=source;
       image.alt="Köy GFS dört döngü karşılaştırması";
