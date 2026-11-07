@@ -240,12 +240,24 @@ async function enqueueReportDispatch(env, runId, createdAt) {
 }
 
 async function processQueuedReports(env) {
+  const staleBefore = new Date(Date.now() - 10 * 60 * 1000).toISOString();
   const result = await env.GFS_DB.prepare(
     "SELECT run_id_utc, attempts FROM gfs_report_dispatch_queue " +
-    "WHERE status = 'pending' AND attempts < 12 ORDER BY run_id_utc ASC LIMIT 1"
-  ).all();
+    "WHERE attempts < 12 AND (status = 'pending' OR (status = 'processing' AND dispatched_at_utc < ?)) " +
+    "ORDER BY run_id_utc ASC LIMIT 1"
+  ).bind(staleBefore).all();
   const job = (result.results || [])[0];
   if (!job) return { queued: 0, published: 0, failed: 0 };
+
+  const claimTime = new Date().toISOString();
+  const claim = await env.GFS_DB.prepare(
+    "UPDATE gfs_report_dispatch_queue SET status = 'processing', attempts = attempts + 1, " +
+    "dispatched_at_utc = ?, last_error = NULL WHERE run_id_utc = ? AND " +
+    "(status = 'pending' OR (status = 'processing' AND dispatched_at_utc < ?))"
+  ).bind(claimTime, job.run_id_utc, staleBefore).run();
+  if (Number(claim.meta?.changes || 0) !== 1) {
+    return { queued: 1, published: 0, failed: 0, claimed: false };
+  }
 
   try {
     const archive = await env.GFS_DB.prepare(
@@ -254,6 +266,10 @@ async function processQueuedReports(env) {
     const runs = (archive.results || []).map(row => JSON.parse(row.payload_json))
       .sort((a, b) => Date.parse(a.run_id_utc) - Date.parse(b.run_id_utc));
     if (runs.length < 4 || !runs.some(run => run.run_id_utc === job.run_id_utc)) {
+      await env.GFS_DB.prepare(
+        "UPDATE gfs_report_dispatch_queue SET status = 'pending', attempts = MAX(0, attempts - 1), " +
+        "dispatched_at_utc = NULL WHERE run_id_utc = ? AND status = 'processing'"
+      ).bind(job.run_id_utc).run();
       console.log(JSON.stringify({
         event: "istanbul_report_waiting_for_four_cycles",
         run_id_utc: job.run_id_utc,
@@ -329,8 +345,8 @@ async function processQueuedReports(env) {
     ).bind(target.run_id_utc, reportText, chart.key, now, now).run();
 
     await env.GFS_DB.prepare(
-      "UPDATE gfs_report_dispatch_queue SET status = 'published', attempts = attempts + 1, " +
-      "dispatched_at_utc = ?, last_error = NULL WHERE run_id_utc = ? AND status = 'pending'"
+      "UPDATE gfs_report_dispatch_queue SET status = 'published', dispatched_at_utc = ?, " +
+      "last_error = NULL WHERE run_id_utc = ? AND status = 'processing'"
     ).bind(now, job.run_id_utc).run();
 
     console.log(JSON.stringify({
@@ -350,8 +366,8 @@ async function processQueuedReports(env) {
   } catch (error) {
     const message = String(error?.message || error).slice(0, 500);
     await env.GFS_DB.prepare(
-      "UPDATE gfs_report_dispatch_queue SET attempts = attempts + 1, last_error = ? " +
-      "WHERE run_id_utc = ? AND status = 'pending'"
+      "UPDATE gfs_report_dispatch_queue SET status = 'pending', dispatched_at_utc = NULL, last_error = ? " +
+      "WHERE run_id_utc = ? AND status = 'processing'"
     ).bind(message, job.run_id_utc).run();
     console.error(JSON.stringify({
       event: "istanbul_native_report_retry",
@@ -383,16 +399,28 @@ async function deliverPendingTelegram(env) {
   if (!env.TELEGRAM_TOKEN || !env.TELEGRAM_CHAT_ID) {
     return { configured: false, delivered: 0, waiting: true };
   }
+  const nowDate = new Date();
+  const now = nowDate.toISOString();
+  const leaseUntil = new Date(nowDate.getTime() + 5 * 60 * 1000).toISOString();
   const result = await env.GFS_DB.prepare(
     "SELECT run_id_utc, report_text, svg_asset_key, status, attempts, " +
     "text_message_id, document_message_id FROM gfs_report_publications " +
-    "WHERE status IN ('pending', 'partial') AND attempts < 12 " +
+    "WHERE attempts < 12 AND (status IN ('pending', 'partial') OR " +
+    "(status = 'sending' AND lease_until_utc < ?)) " +
     "ORDER BY created_at_utc ASC LIMIT 1"
-  ).all();
+  ).bind(now).all();
   const publication = (result.results || [])[0];
   if (!publication) return { configured: true, delivered: 0 };
 
-  const now = new Date().toISOString();
+  const claimed = await env.GFS_DB.prepare(
+    "UPDATE gfs_report_publications SET status = 'sending', attempts = attempts + 1, " +
+    "lease_until_utc = ?, updated_at_utc = ? WHERE run_id_utc = ? AND attempts < 12 AND " +
+    "(status IN ('pending', 'partial') OR (status = 'sending' AND lease_until_utc < ?))"
+  ).bind(leaseUntil, now, publication.run_id_utc, now).run();
+  if (Number(claimed.meta?.changes || 0) !== 1) {
+    return { configured: true, delivered: 0, claimed: false };
+  }
+
   try {
     if (!publication.text_message_id) {
       const message = await telegramApi(env, "sendMessage", {
@@ -402,9 +430,9 @@ async function deliverPendingTelegram(env) {
       });
       publication.text_message_id = String(message.message_id);
       await env.GFS_DB.prepare(
-        "UPDATE gfs_report_publications SET text_message_id = ?, status = 'partial', updated_at_utc = ? " +
-        "WHERE run_id_utc = ?"
-      ).bind(publication.text_message_id, now, publication.run_id_utc).run();
+        "UPDATE gfs_report_publications SET text_message_id = ?, updated_at_utc = ? " +
+        "WHERE run_id_utc = ? AND status = 'sending'"
+      ).bind(publication.text_message_id, new Date().toISOString(), publication.run_id_utc).run();
     }
 
     if (!publication.document_message_id) {
@@ -424,7 +452,8 @@ async function deliverPendingTelegram(env) {
     const sentAt = new Date().toISOString();
     await env.GFS_DB.prepare(
       "UPDATE gfs_report_publications SET document_message_id = ?, status = 'sent', " +
-      "updated_at_utc = ?, sent_at_utc = ?, last_error = NULL WHERE run_id_utc = ?"
+      "lease_until_utc = NULL, updated_at_utc = ?, sent_at_utc = ?, last_error = NULL " +
+      "WHERE run_id_utc = ? AND status = 'sending'"
     ).bind(publication.document_message_id, sentAt, sentAt, publication.run_id_utc).run();
     await env.GFS_DB.prepare(
       "UPDATE gfs_report_dispatch_queue SET status = 'completed', dispatched_at_utc = ?, last_error = NULL " +
@@ -441,8 +470,8 @@ async function deliverPendingTelegram(env) {
   } catch (error) {
     const message = String(error?.message || error).slice(0, 500);
     await env.GFS_DB.prepare(
-      "UPDATE gfs_report_publications SET status = ?, attempts = attempts + 1, " +
-      "updated_at_utc = ?, last_error = ? WHERE run_id_utc = ?"
+      "UPDATE gfs_report_publications SET status = ?, lease_until_utc = NULL, " +
+      "updated_at_utc = ?, last_error = ? WHERE run_id_utc = ? AND status = 'sending'"
     ).bind(publication.text_message_id ? "partial" : "pending", new Date().toISOString(),
       message, publication.run_id_utc).run();
     console.error(JSON.stringify({
