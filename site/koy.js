@@ -621,7 +621,7 @@ function renderRuns(d,f72){
    const latestSvgRun=svgRuns[0];
    const runDate=new Date(latestSvgRun.run_id_utc);
    const runStamp=runDate.getUTCFullYear()+String(runDate.getUTCMonth()+1).padStart(2,"0")+String(runDate.getUTCDate()).padStart(2,"0")+"T"+String(runDate.getUTCHours()).padStart(2,"0")+"Z";
-   const version=encodeURIComponent((d?.updated_at_utc||latestSvgRun.published_at_utc||latestSvgRun.run_id_utc)+"|koy-svg-fallback-v3");
+   const version=encodeURIComponent((d?.updated_at_utc||latestSvgRun.published_at_utc||latestSvgRun.run_id_utc)+"|koy-svg-fallback-v4");
    const svgUrl=`./koy-data/gfs/media/koy-gfs-${runStamp}-comparison.svg?v=${version}`;
    if(svgContainer.dataset.svgSrc!==svgUrl){
     svgContainer.dataset.svgSrc=svgUrl;
