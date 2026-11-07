@@ -29,7 +29,7 @@ function buildGfsTooltipMarkup(panel,index,validTime){
     '<div class="gfs-chart-tooltip-time">'+escapeGfsTooltip(String(validTime.label||"").replace(/\s*UTC\b/g,""))+'</div></div></div>'+
     rows+'<div class="gfs-chart-tooltip-hint">Dört döngü · aynı geçerlilik anı · TSİ</div>';
 }
-function positionGfsTooltip(host,tooltip,clientX,clientY){
+function positionGfsTooltip(host,tooltip,clientX,clientY,bounds){
   if(!Number.isFinite(clientX)||!Number.isFinite(clientY))return;
   tooltip.hidden=false;
   tooltip.style.position="fixed";
@@ -39,10 +39,38 @@ function positionGfsTooltip(host,tooltip,clientX,clientY){
   tooltip.style.top="0px";
   const margin=8,gap=12;
   const width=tooltip.offsetWidth,height=tooltip.offsetHeight;
-  const left=Math.max(margin,Math.min(window.innerWidth-width-margin,clientX-width/2));
-  const top=Math.max(margin,clientY-height-gap);
+  const b=bounds||{left:0,top:0,right:window.innerWidth,bottom:window.innerHeight};
+  // The popup belongs to the active chart panel. Never let it escape into
+  // the panel above/below it (e.g. precipitation must stay inside precipitation).
+  const minLeft=Math.max(margin,b.left+margin);
+  const maxLeft=Math.max(minLeft,Math.min(window.innerWidth-width-margin,b.right-width-margin));
+  const left=Math.max(minLeft,Math.min(maxLeft,clientX-width/2));
+  const minTop=Math.max(margin,b.top+margin);
+  const maxTop=Math.max(minTop,Math.min(window.innerHeight-height-margin,b.bottom-height-margin));
+  let top=clientY-height-gap;
+  if(top<minTop)top=minTop;
+  if(top>maxTop)top=maxTop;
   tooltip.style.left=Math.round(left)+"px";
   tooltip.style.top=Math.round(top)+"px";
+}
+function getGfsPanelClientBounds(host,svg,panel){
+  // On mobile each panel has its own host; on desktop derive the panel
+  // rectangle from the SVG viewBox so each tooltip remains in its own chart.
+  const hostRect=host.getBoundingClientRect();
+  const panelCount=(metadata?.panels||[]).length;
+  if(panelCount===1)return hostRect;
+  const rect=svg.getBoundingClientRect();
+  const vb=svg.viewBox.baseVal;
+  const plot=panel?.plot||{};
+  const x=Number(plot.x||0),y=Number(plot.y||0),w=Number(plot.width||0),h=Number(plot.height||0);
+  if(!rect.width||!rect.height||!vb.width||!vb.height||!w||!h)return hostRect;
+  const sx=rect.width/vb.width,sy=rect.height/vb.height;
+  return {
+    left:rect.left+(x-vb.x)*sx,
+    top:rect.top+(y-vb.y)*sy,
+    right:rect.left+(x+w-vb.x)*sx,
+    bottom:rect.top+(y+h-vb.y)*sy
+  };
 }
 function attachGfsSvgInteractions(host,svg,metadata){
   const tooltip=document.createElement("div");
@@ -103,7 +131,8 @@ function attachGfsSvgInteractions(host,svg,metadata){
       markerGroup.appendChild(marker);
     });
     tooltip.innerHTML=buildGfsTooltipMarkup(panel,index,validTime);
-    positionGfsTooltip(host,tooltip,event?.clientX,event?.clientY);
+    const panelBounds=getGfsPanelClientBounds(host,svg,panel);
+    positionGfsTooltip(host,tooltip,event?.clientX,event?.clientY,panelBounds);
   }
   function selectNearest(event){
     const panel=panelAtEvent(event);
