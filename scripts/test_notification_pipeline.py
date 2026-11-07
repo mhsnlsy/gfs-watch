@@ -45,6 +45,8 @@ def main() -> None:
     assert "fetch_cycle" in collector and "normalize" in collector
     assert "f72_path" in collector and "run_path" in collector
     assert "not f180_ready" in collector
+    assert "has_publication" in collector
+    assert "F180 ready for report retry" in collector
     assert "GFS_TARGET_RUN_ID" in builder
     assert "Older delayed cycle" in builder
     assert "existing_run > utc_dt(current_run)" in builder
