@@ -1047,7 +1047,7 @@
       .briefing-row { padding:4px 6px!important; }
     }
 </style>
-  <link rel="stylesheet" href="./meteopt-gfs-table.css?v=20261105-compact-columns-gray-zero">
+  <link rel="stylesheet" href="./meteopt-gfs-table.css?v=20261107-single-panel-compact-1">
 
   <style id="mobile-scroll-recovery">
     /* Keep the document itself as the vertical scroll container on Android WebView. */
@@ -1434,15 +1434,18 @@
 <section class="section" id="ecmwf-tahmin"><div class="section-head"><div><div class="section-kicker">ECMWF IFS · MODEL TAHMİNİ</div><h2>8 günlük tahmin</h2></div><div class="section-note"><span id="ecmwf-daily-cycle-chip">ECMWF döngüsü yükleniyor</span><br><span id="ecmwf-daily-updated-chip">Yayın zamanı bekleniyor</span><br>Günlük en düşük / en yüksek sıcaklık · HRES yüzey tahmini</div></div><div class="daily-grid" id="ecmwf-daily-grid"><div class="loading">ECMWF tahmini yükleniyor…</div></div></section>
     </div>
     <div class="gfs-table-pressure-layout">
-    <section class="section" id="meteopt-gfs-table" aria-label="MeteoPT GFS ham model tablosu">
-      <div class="section-head">
-        <div>
-          <div class="section-kicker">METEOPT GFS</div>
-          <h2>GFS · Önümüzdeki 72 saat</h2>
-        </div>
-        <div class="section-note"><span id="meteopt-table-run">Model döngüsü bekleniyor</span><br><span id="meteopt-table-updated">Veri bekleniyor</span></div>
-      </div>
+    <section class="section gfs-table-section" id="meteopt-gfs-table" aria-label="MeteoPT GFS ham model tablosu">
       <article class="meteopt-table-card">
+        <div class="meteopt-table-panel-head">
+          <div class="meteopt-table-title">
+            <div class="section-kicker">METEOPT GFS</div>
+            <h2>GFS · Önümüzdeki 72 saat</h2>
+          </div>
+          <div class="meteopt-table-cycle">
+            <span id="meteopt-table-run">Model döngüsü bekleniyor</span>
+            <span id="meteopt-table-updated">Veri bekleniyor</span>
+          </div>
+        </div>
         <div class="meteopt-table-toolbar">
           <span class="meteopt-table-source"><span class="meteopt-table-dot"></span> Kaynak: MeteoPT GFS</span>
           <span id="meteopt-table-status" role="status" aria-live="polite">Veri yükleniyor…</span>
@@ -1455,7 +1458,6 @@
             <tbody id="meteopt-table-body"><tr><td colspan="7" class="meteopt-table-empty">MeteoPT verisi yükleniyor…</td></tr></tbody>
           </table>
         </div>
-
       </article>
     </section>
       <aside class="section gfs-pressure-panel" id="basinc">
