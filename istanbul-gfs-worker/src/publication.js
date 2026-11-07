@@ -329,7 +329,7 @@ export function buildIstanbulInteractiveSvg(runs) {
   };
 }
 
-export function buildIstanbulReportText(document, now = new Date()) {
+export function buildIstanbulReportText(document, now = new Date(), stationObservation = null) {
   const run = new Date(document.run_id_utc);
   if (!Number.isFinite(run.getTime())) throw new Error("Invalid Istanbul GFS report run");
   const nowLocal = localDate(now);
@@ -343,7 +343,30 @@ export function buildIstanbulReportText(document, now = new Date()) {
     "🕒 Rapor zamanı: " + formatTrDate(nowLocal) + " TSİ",
     "📍 Konum: İstanbul, Türkiye",
     "",
-    "📡 ENKA BALMUMCU İSTASYON GÖZLEMİ: Bu rapor hazırlanırken istasyon verisi rapor hattına bağlı değil.",
+    "📡 ENKA BALMUMCU İSTASYON GÖZLEMİ",
+    "",
+    "",
+    stationObservation && stationObservation.temperature_2m_c !== null && stationObservation.temperature_2m_c !== undefined
+      ? "🌡 Sıcaklık: " + formatNumber(stationObservation.temperature_2m_c) + "°C"
+      : "🌡 Sıcaklık: —",
+    stationObservation && stationObservation.humidity_percent !== null && stationObservation.humidity_percent !== undefined
+      ? "💧 Nem: " + formatNumber(stationObservation.humidity_percent) + "%"
+      : "💧 Nem: —",
+    stationObservation && stationObservation.station_pressure_hpa !== null && stationObservation.station_pressure_hpa !== undefined
+      ? "🧭 İstasyon basıncı: " + formatNumber(stationObservation.station_pressure_hpa) + " hPa"
+      : "🧭 İstasyon basıncı: —",
+    stationObservation && stationObservation.wind_speed_10m_kmh !== null && stationObservation.wind_speed_10m_kmh !== undefined
+      ? "💨 Rüzgâr: " + formatNumber(stationObservation.wind_speed_10m_kmh) + " km/sa" + (stationObservation.wind_direction_cardinal ? " " + stationObservation.wind_direction_cardinal : "")
+      : "💨 Rüzgâr: —",
+    stationObservation && stationObservation.observed_at_utc
+      ? "🕒 Ölçüm: " + formatTrDate(localDate(stationObservation.observed_at_utc)) + " TSİ" +
+        (Number.isFinite(Number(stationObservation.age_minutes)) ? " · " + Math.round(Number(stationObservation.age_minutes)) + " dk önce" : "")
+      : "🕒 Ölçüm zamanı: —",
+    stationObservation && stationObservation.is_stale
+      ? "⚠️ İstasyon verisi 20 dakikadan eski; paneldeki son başarılı ölçüm kullanıldı."
+      : stationObservation
+        ? "✅ Veri: aktif ENKA Balmumcu istasyon panosundan alındı."
+        : "⚠️ Aktif istasyon panosuna erişilemedi; istasyon verisi eklenemedi.",
     "",
     "🌆 GÜNÜN KALANINDA",
   ];
