@@ -143,7 +143,7 @@ jobs:
           if (!runs.length) throw new Error("Köy comparison archive has no runs.");
           const latest = runs.slice().sort((a,b) => String(b.run_id_utc).localeCompare(String(a.run_id_utc)))[0];
           const stamp = new Date(latest.run_id_utc).toISOString().replace(/[-:]/g, "").replace(/\.\d{3}Z$/, "Z");
-          const relative = "koy-gfs-" + stamp.slice(0, 11) + "-comparison.svg";
+          const relative = "koy-gfs-" + stamp.slice(0, 11) + "Z-comparison.svg";
           const svgPath = path.join(process.argv[3], relative);
           if (!fs.existsSync(svgPath) || fs.statSync(svgPath).size < 10000) {
             throw new Error("Latest Köy SVG missing from Pages artifact: " + svgPath);
