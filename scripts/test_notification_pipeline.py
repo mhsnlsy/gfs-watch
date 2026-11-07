@@ -22,6 +22,7 @@ def main() -> None:
     guardian_config = json.loads(read("gfs-guardian/wrangler.jsonc"))
     gfs_worker = read("istanbul-gfs-worker/src/index.js")
     web_worker = read("web-worker/src/index.js")
+    web_config = json.loads(read("web-worker/wrangler.jsonc"))
     koy_worker = read("koy-gfs-worker/src/index.js")
     koy_svg_workflow = read(".github/workflows/rebuild-koy-gfs-interactive-svg.yml")
     istanbul_svg_workflow = read(".github/workflows/rebuild-istanbul-gfs-images.yml")
@@ -146,6 +147,7 @@ def main() -> None:
     assert "/api/publication-upload" not in koy_worker
     assert "GFS_DISPATCH_TOKEN" not in koy_worker and "GFS_DISPATCH_TOKEN" not in koy_deploy
     assert 'path.startsWith("/koy-data/gfs/media/")' in web_worker
+    assert "/koy-data/gfs/media/*" in web_config["assets"]["run_worker_first"]
     assert '"/api/publication-asset/" + assetKey' in web_worker
     assert "workflow_dispatch:" in koy_svg_workflow
     assert "schedule:" not in koy_svg_workflow
