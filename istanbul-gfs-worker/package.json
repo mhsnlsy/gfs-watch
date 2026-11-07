@@ -1,5 +1,8 @@
 {
   "name": "gfs-watch-istanbul-worker",
   "private": true,
-  "type": "module"
+  "type": "module",
+  "dependencies": {
+    "@cf-wasm/resvg": "0.4.0"
+  }
 }
