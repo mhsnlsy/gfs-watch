@@ -3192,7 +3192,7 @@ if(typeof renderBriefing==="function")renderBriefing();
         const imagesHtml=imageItems.length>0
           ? '<div class="notification-images koy-fullframe-images koy-gfs-svg-images" style="background:#0A1B29!important">'+imageItems.map(image=>{
               const media=image.isSvg
-                ? '<div class="gfs-interactive-chart" data-svg-src="'+esc(image.url)+'" data-chart-label="İstanbul GFS · dört panelli etkileşimli valid-time karşılaştırması" style="background:#0A1B29!important"><div class="gfs-chart-loading">Etkileşimli grafik yükleniyor…</div></div>'
+                ? '<img class="notification-image koy-gfs-report-svg" src="'+image.url+'" alt="İstanbul GFS dört döngü valid-time karşılaştırması" loading="eager" decoding="async" fetchpriority="high">'
                 : '<a class="notification-image-link" href="'+image.url+'" target="_blank" rel="noopener"><img class="notification-image" src="'+image.url+'" alt="İstanbul GFS dört döngü karşılaştırması" loading="eager" decoding="async" fetchpriority="high"></a>';
               return '<div class="notification-image-item">'+media+'</div>';
             }).join("")+'</div>'
@@ -4295,6 +4295,78 @@ if(typeof renderBriefing==="function")renderBriefing();
         border-radius:15px!important;
       }
       #bildirimler .notification-card.koy-gfs-report-card .gfs-interactive-chart{
+        width:100%!important;
+        max-width:100%!important;
+      }
+    }
+  </style>
+  <style id="homepage-gfs-report-target-exact">
+    /* ANA SAYFA — Köy sayfasındaki SON GFS RAPORU görselinin birebir shell'i.
+       SVG doğrudan yüzeye basılır; iframe/nested frame kullanılmaz. */
+    #bildirimler .notification-list{
+      display:block!important;
+      width:100%!important;
+      max-width:100%!important;
+      margin:0!important;
+      padding:0!important;
+    }
+    #bildirimler .notification-card.koy-gfs-report-card{
+      display:block!important;
+      box-sizing:border-box!important;
+      width:100%!important;
+      max-width:100%!important;
+      min-width:0!important;
+      margin:0!important;
+      padding:0!important;
+      background:#102A3A!important;
+      border:1px solid #17384A!important;
+      border-radius:19px!important;
+      box-shadow:none!important;
+      outline:0!important;
+      overflow:hidden!important;
+    }
+    #bildirimler .koy-gfs-svg-images{
+      display:block!important;
+      width:100%!important;
+      max-width:100%!important;
+      margin:0!important;
+      padding:0!important;
+      background:#102A3A!important;
+      border:0!important;
+    }
+    #bildirimler .koy-gfs-svg-images .notification-image-item{
+      display:flex!important;
+      width:100%!important;
+      max-width:100%!important;
+      min-width:0!important;
+      margin:0!important;
+      padding:0!important;
+      justify-content:center!important;
+      align-items:center!important;
+      border:0!important;
+      background:#102A3A!important;
+    }
+    #bildirimler .koy-gfs-svg-images .koy-gfs-report-svg{
+      display:block!important;
+      width:90%!important;
+      max-width:90%!important;
+      height:auto!important;
+      min-width:0!important;
+      margin:0 auto!important;
+      padding:0!important;
+      object-fit:contain!important;
+      border:0!important;
+      outline:0!important;
+      box-shadow:none!important;
+      border-radius:0!important;
+      background:#0A1B29!important;
+    }
+    @media(max-width:700px),(pointer:coarse){
+      #bildirimler .notification-card.koy-gfs-report-card{
+        width:100%!important;
+        border-radius:15px!important;
+      }
+      #bildirimler .koy-gfs-svg-images .koy-gfs-report-svg{
         width:100%!important;
         max-width:100%!important;
       }
