@@ -132,6 +132,19 @@ jobs:
           test -n "$GFS_DISPATCH_TOKEN" || { echo "::error::GFS_DISPATCH_TOKEN is required for event-driven F180 report delivery"; exit 1; }
           printf '%s' "$GFS_DISPATCH_TOKEN" | wrangler secret put GFS_DISPATCH_TOKEN --config wrangler.jsonc
 
+      - name: Configure Cloudflare-native Telegram delivery secrets
+        working-directory: source/istanbul-gfs-worker
+        env:
+          CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+          CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
+          TELEGRAM_TOKEN: ${{ secrets.TELEGRAM_TOKEN }}
+          TELEGRAM_CHAT_ID: ${{ secrets.CHAT_ID }}
+        run: |
+          set -euo pipefail
+          test -n "$TELEGRAM_TOKEN" || { echo "::error::TELEGRAM_TOKEN is required for native Cloudflare report delivery"; exit 1; }
+          test -n "$TELEGRAM_CHAT_ID" || { echo "::error::CHAT_ID is required for native Cloudflare report delivery"; exit 1; }
+          printf '%s' "$TELEGRAM_TOKEN" | wrangler secret put TELEGRAM_TOKEN --config wrangler.jsonc
+          printf '%s' "$TELEGRAM_CHAT_ID" | wrangler secret put TELEGRAM_CHAT_ID --config wrangler.jsonc
 
       - name: Verify Istanbul GFS Worker, D1 and four-cycle API
         env:
@@ -145,7 +158,8 @@ jobs:
           const fs = require("fs");
           const doc = JSON.parse(fs.readFileSync(process.argv[2], "utf8"));
           if (doc.ok !== true || doc.service !== "gfs-watch-istanbul-gfs" || doc.storage !== "D1" ||
-              doc.cron !== "*/10 * * * *" || doc.report_dispatch_configured !== true) {
+              doc.cron !== "*/10 * * * *" || doc.report_dispatch_configured !== true ||
+              doc.native_report_generation !== true || doc.telegram_configured !== true) {
             throw new Error("Istanbul GFS health contract failed");
           }
           console.log(JSON.stringify(doc));
