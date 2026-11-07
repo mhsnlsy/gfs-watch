@@ -1,4 +1,4 @@
-const SHELL_CACHE = "istanbul-hava-shell-v11";
+const SHELL_CACHE = "istanbul-hava-shell-v12";
 const DATA_CACHE = "istanbul-hava-data-v1";
 const APP_SHELL = ["./", "./manifest.webmanifest", "./icon.svg"];
 const MAX_DATA_ENTRIES = 180;
