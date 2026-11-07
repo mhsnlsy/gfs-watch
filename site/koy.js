@@ -642,12 +642,12 @@ function renderRuns(d,f72){
   }
  }
  renderRunLegend(source);
- $("next-72h-meta").textContent=source.length?source.length+" GFS döngüsü karşılaştırılıyor":"MeteoPT GFS verisi bekleniyor";
+ $("next-72h-meta").textContent=source.length?source.length+" GFS döngüsü · F180'e kadar karşılaştırılıyor":"MeteoPT GFS verisi bekleniyor";
  // Both charts align all four MeteoPT runs by exact valid_time_utc; older cycles may use different F-hour numbers.
  const chartSource=source;
  const realized=realizedErrorStats(runs,stationHistory,"temperature_2m_c");
- $("next72-temperature").innerHTML=svgLine(chartSource,"temperature_2m_c","2 m sıcaklık · aynı geçerlilik saatleri TSİ","°C",72,realized);
- $("next72-precipitation").innerHTML=svgLine(chartSource,"precipitation_6h_mm","3 saatlik yağış · aynı geçerlilik saatleri TSİ","mm / 3 saat",72);
+ $("next72-temperature").innerHTML=svgLine(chartSource,"temperature_2m_c","2 m sıcaklık · aynı geçerlilik saatleri TSİ","°C",180,realized);
+ $("next72-precipitation").innerHTML=svgLine(chartSource,"precipitation_6h_mm","3 saatlik yağış · aynı geçerlilik saatleri TSİ","mm / 3 saat",180);
  bindGfsChartTooltip("next72-temperature");
  bindGfsChartTooltip("next72-precipitation");
  const first=source[0],p=first?pointsOf(first,180):[];
