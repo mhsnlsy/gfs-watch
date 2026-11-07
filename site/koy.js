@@ -1,7 +1,8 @@
 (() => {
 "use strict";
 const GFS_CYCLE_THEME=window.GFS_CYCLE_THEME;
-const BASE="./koy-data/gfs/", MGM_BASE="./koy-data/mgm/", COLORS=GFS_CYCLE_THEME.colors;
+const BASE="./koy-data/gfs/", COLORS=GFS_CYCLE_THEME.colors;
+const STATIONS_API="https://gfs-watch-stations.muhsin-ulusoy.workers.dev/api";
 const $=id=>document.getElementById(id);
 const num=v=>v==null||v===""||!Number.isFinite(Number(v))?null:Number(v);
 const fmt=(v,d=1)=>v==null?"—":Number(v).toLocaleString("tr-TR",{minimumFractionDigits:d,maximumFractionDigits:d});
@@ -14,6 +15,7 @@ let busy=false, f72=null, comparison=null, stationHistory=null, rainHistory=null
 // Köy Ev is the only initial state. Do not derive the initial station from DOM, cache, or prior UI state.
 window.__KOY_DEFAULT_STATION="home";
 async function get(path){const url=path.startsWith("./")?path:BASE+path;const r=await fetch(url+"?v="+Date.now(),{cache:"no-store"});if(!r.ok)throw Error("HTTP "+r.status+" · "+url);return r.json()}
+async function getStation(path){const url=STATIONS_API+path+(path.includes("?")?"&":"?")+"v="+Date.now();const r=await fetch(url,{cache:"no-store"});if(!r.ok)throw Error("HTTP "+r.status+" · "+url);return r.json()}
 function pointsOf(run,max=180){return (run?.forecast_6_hourly||[]).filter(p=>{const h=Number(p.forecast_hour);return Number.isFinite(h)&&h>=3&&h<=max&&h%3===0}).sort((a,b)=>Number(a.forecast_hour)-Number(b.forecast_hour))}
 const HOME_ELEVATION_M=363;
 const MGM_STATION_ELEVATION_M=146;
@@ -671,9 +673,9 @@ function renderRuns(d,f72){
 }
 async function refresh(){if(busy)return;busy=true;
  const results=await Promise.allSettled([
-  get("f72/latest.json"),get("comparison.json"),get(MGM_BASE+"history.json"),
-  get(MGM_BASE+"rain-history-72h.json"),get(MGM_BASE+"observation.json"),
-  get(MGM_BASE+"ev-history.json"),get(MGM_BASE+"ev-observation.json")
+  get("f72/latest.json"),get("comparison.json"),getStation("/history/canakci?hours=72"),
+  getStation("/history/canakci?hours=72"),getStation("/stations/canakci"),
+  Promise.resolve(null),Promise.resolve(null)
  ]);
  if(results[1].status==="fulfilled")comparison=results[1].value;else comparison=null;
  if(results[0].status==="fulfilled"){
@@ -699,11 +701,11 @@ async function refresh(){if(busy)return;busy=true;
   $("station-temperature-trend").innerHTML='<div class="station-trend-empty">'+(stationMode==="home"?"Köy Ev sanal istasyon geçmişi bekleniyor…":"MGM istasyon geçmişi bekleniyor…")+'</div>';
   $("station-rain-trend").innerHTML='<div class="station-trend-empty">'+(stationMode==="home"?"Köy Ev sanal yağış arşivi bekleniyor…":"MGM yağış arşivi bekleniyor…")+'</div>';
  }
- if(results[4].status==="fulfilled"){
-  window.__koyMgmObservation=results[4].value;
+ if(results[4].status==="fulfilled"&&results[4].value?.station){
+  window.__koyMgmObservation=results[4].value.station;
   if(!evObservation)evObservation=buildVirtualHomeObservation(window.__koyMgmObservation);
-  window.__koyCurrentTemp=num(results[4].value.temperature_2m_c);
-  const o=results[4].value;
+  window.__koyCurrentTemp=num(results[4].value.station.temperature_c ?? results[4].value.station.temperature_2m_c);
+  const o=window.__koyMgmObservation;
   $("mgm-status-date").textContent=ts(o.observed_at_utc);
   $("mgm-source-temp").innerHTML=fmt(o.temperature_2m_c)+"<small>°C</small>";
   $("mgm-source-status").textContent="Canlı MGM ölçümü · son 1 saat yağış "+fmt(o.precipitation_1h_mm)+" mm";
