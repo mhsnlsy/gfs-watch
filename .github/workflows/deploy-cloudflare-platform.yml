@@ -138,6 +138,14 @@ jobs:
             curl --silent --show-error --fail --max-time 20 "$WEB$path" -o /dev/null
             echo "OK $path"
           done
+          curl --silent --show-error --fail --max-time 20 "$WEB/?verify=$(date +%s)" -o "$RUNNER_TEMP/live-index.html"
+          grep -q 'gfs-comparison-tooltip.js?v=20261107-svg-dom-force-dark-3' "$RUNNER_TEMP/live-index.html"
+          curl --silent --show-error --fail --max-time 20 "$WEB/gfs-comparison-tooltip.js?v=20261107-svg-dom-force-dark-3" -o "$RUNNER_TEMP/live-gfs-tooltip.js"
+          grep -q 'function forceDarkGfsSvg(svg)' "$RUNNER_TEMP/live-gfs-tooltip.js"
+          curl --silent --show-error --fail --max-time 20 "$WEB/service-worker.js?verify=$(date +%s)" -o "$RUNNER_TEMP/live-service-worker.js"
+          grep -q 'istanbul-hava-shell-v13' "$RUNNER_TEMP/live-service-worker.js"
+          grep -q 'istanbul-hava-data-v2' "$RUNNER_TEMP/live-service-worker.js"
+          echo "Verified live renderer, cache-busted script and refreshed service-worker caches."
 
           # Verify the production notification path is served Worker-first from D1,
           # not from the stale Static Assets copy.
