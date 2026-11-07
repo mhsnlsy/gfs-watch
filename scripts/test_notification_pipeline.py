@@ -20,6 +20,7 @@ def main() -> None:
     guardian = read("gfs-guardian/src/index.js")
     guardian_config = json.loads(read("gfs-guardian/wrangler.jsonc"))
     gfs_worker = read("istanbul-gfs-worker/src/index.js")
+    web_worker = read("web-worker/src/index.js")
     poller = read("scripts/poll_istanbul_gfs_10min.py")
     builder = read("scripts/build_istanbul_gfs_publication.py")
     sender = read("scripts/send_pending_istanbul_gfs_telegram.py")
@@ -104,11 +105,16 @@ def main() -> None:
     assert "gfs_publication_assets" in gfs_worker
     assert "/gfs/publication-upload" in gfs_worker
     assert "/gfs/publication-asset/" in gfs_worker
+    assert gfs_worker.index('if (path === "/gfs/publication-upload")') < gfs_worker.index('if (request.method !== "GET")')
+    assert '"Access-Control-Allow-Methods": "GET, POST, OPTIONS"' in gfs_worker
+    assert "fetchD1PublicationAsset" in web_worker
+    assert '"gfs/publication-asset/" + normalized' in web_worker
+    assert "curl --fail" in report_workflow and "--data-binary" in report_workflow
     assert "GFS_DISPATCH_TOKEN" in gfs_worker
     assert "Publish report assets into Cloudflare D1" in report_workflow
     assert "gfs/publication-upload" in report_workflow
     assert "GFS_DISPATCH_TOKEN" in report_workflow
-    assert "path.startsWith(\"/data/notifications/\")" in read("web-worker/src/index.js")
+    assert 'path.startsWith("/data/notifications/")' in web_worker
     assert "actions/workflows/istanbul-gfs-10min.yml/dispatches" in gfs_worker
     assert "LIMIT 1" in gfs_worker
     assert "CREATE TABLE IF NOT EXISTS gfs_report_dispatch_queue" in dispatch_migration
