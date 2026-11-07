@@ -439,8 +439,13 @@ function bindTooltip(containerId){
   tooltip.style.left="0px";
   tooltip.style.top="0px";
   const tw=tooltip.offsetWidth,th=tooltip.offsetHeight;
-  const left=Math.max(8,Math.min(window.innerWidth-tw-8,event.clientX-tw/2));
-  const top=Math.max(8,event.clientY-th-14);
+  const vw=window.innerWidth,vh=window.innerHeight;
+  const gap=12;
+  const left=Math.max(8,Math.min(vw-tw-8,event.clientX-tw/2));
+  // Always prefer above the finger, but never let the popup leave the viewport.
+  let top=event.clientY-th-gap;
+  if(top<8)top=8;
+  if(top+th>vh-8)top=Math.max(8,vh-th-8);
   tooltip.style.left=Math.round(left)+"px";
   tooltip.style.top=Math.round(top)+"px";
  }
@@ -472,13 +477,32 @@ function bindTooltip(containerId){
  };
  svg.style.touchAction="pan-y";
  svg.style.webkitTapHighlightColor="transparent";
+ let touchStartX=NaN,touchStartY=NaN,touchScrolling=false;
+ const beginTouch=event=>{
+  if(event.pointerType!=="touch")return;
+  touchStartX=event.clientX;touchStartY=event.clientY;touchScrolling=false;
+ };
+ const shouldReleaseForScroll=event=>{
+  if(!Number.isFinite(touchStartX)||!Number.isFinite(touchStartY))return false;
+  const dx=Math.abs(event.clientX-touchStartX),dy=Math.abs(event.clientY-touchStartY);
+  return dy>10 && dy>dx*1.15;
+ };
  svg.addEventListener("pointermove",event=>{
-  if(event.pointerType==="touch"){updateTouch(event);return;}
+  if(event.pointerType==="touch"){
+   if(shouldReleaseForScroll(event)){touchScrolling=true;hide();return;}
+   if(!touchScrolling){updateTouch(event);}
+   return;
+  }
   if(pinned)return;
   const hit=nearestPoint(event),target=latestPointAtSameTime(hit);
   if(target)show(target,event,false);else hide();
  });
- svg.addEventListener("pointerrawupdate",event=>{if(event.pointerType==="touch")updateTouch(event);},{passive:true});
+ svg.addEventListener("pointerrawupdate",event=>{
+  if(event.pointerType==="touch"&&!touchScrolling){
+   if(shouldReleaseForScroll(event)){touchScrolling=true;hide();return;}
+   updateTouch(event);
+  }
+},{passive:true});
  svg.addEventListener("touchmove",event=>{
   const touch=event.touches?.[0];if(!touch)return;
   updateTouch({clientX:touch.clientX,clientY:touch.clientY});
@@ -486,13 +510,14 @@ function bindTooltip(containerId){
  svg.addEventListener("pointerleave",()=>{if(!pinned)hide();});
  svg.addEventListener("pointerdown",event=>{
   if(event.pointerType!=="touch"&&event.pointerType!=="pen")return;
+  beginTouch(event);
   if(event.pointerType==="touch"){pinned=true;try{svg.setPointerCapture(event.pointerId);}catch(_){}}
   const hit=nearestPoint(event),target=latestPointAtSameTime(hit);
   if(target)show(target,event,true);else hide();
  });
- svg.addEventListener("pointerup",event=>{if(event.pointerType==="touch")hide();});
- svg.addEventListener("pointercancel",event=>{if(event.pointerType==="touch")hide();});
- svg.addEventListener("lostpointercapture",event=>{if(event.pointerType==="touch")hide();});
+ svg.addEventListener("pointerup",event=>{if(event.pointerType==="touch"){hide();touchScrolling=false;touchStartX=touchStartY=NaN;}});
+ svg.addEventListener("pointercancel",event=>{if(event.pointerType==="touch"){hide();touchScrolling=false;touchStartX=touchStartY=NaN;}});
+ svg.addEventListener("lostpointercapture",event=>{if(event.pointerType==="touch"){hide();touchScrolling=false;touchStartX=touchStartY=NaN;}});
  window.addEventListener("scroll",hide,{passive:true,capture:true});
  window.addEventListener("resize",()=>{refreshScreenXs();hide();},{passive:true});
 }
