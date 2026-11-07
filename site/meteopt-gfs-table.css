@@ -821,3 +821,41 @@
     padding-right: 1.62px !important;
   }
 }
+
+
+/* AGGRESSIVE COLUMN COMPRESSION:
+   Keep the panel/table width unchanged, but substantially reduce horizontal
+   whitespace inside every column and value pill. */
+@media (min-width: 701px) {
+  #meteopt-gfs-table .meteopt-data-table th,
+  #meteopt-gfs-table .meteopt-data-table td {
+    padding-left: 1.6px !important;
+    padding-right: 1.6px !important;
+  }
+  #meteopt-gfs-table .meteopt-data-table th:nth-child(2),
+  #meteopt-gfs-table .meteopt-data-table td:nth-child(2) {
+    padding-left: 2.4px !important;
+    padding-right: 2.4px !important;
+  }
+  #meteopt-gfs-table .meteopt-value {
+    padding-left: 2px !important;
+    padding-right: 2px !important;
+  }
+}
+
+@media (max-width: 700px) {
+  #meteopt-gfs-table .meteopt-data-table th,
+  #meteopt-gfs-table .meteopt-data-table td {
+    padding-left: 0.8px !important;
+    padding-right: 0.8px !important;
+  }
+  #meteopt-gfs-table .meteopt-data-table th:nth-child(2),
+  #meteopt-gfs-table .meteopt-data-table td:nth-child(2) {
+    padding-left: 1.2px !important;
+    padding-right: 1.2px !important;
+  }
+  #meteopt-gfs-table .meteopt-value {
+    padding-left: 1px !important;
+    padding-right: 1px !important;
+  }
+}
