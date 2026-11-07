@@ -32,22 +32,22 @@ function buildGfsTooltipMarkup(panel,index,validTime){
 function positionGfsTooltip(host,tooltip,clientX,clientY,bounds){
   if(!Number.isFinite(clientX)||!Number.isFinite(clientY))return;
   tooltip.hidden=false;
-  tooltip.style.position="fixed";
-  tooltip.style.zIndex="2147483647";
+  tooltip.style.position="absolute";
+  tooltip.style.zIndex="40";
   tooltip.style.pointerEvents="none";
   tooltip.style.left="0px";
   tooltip.style.top="0px";
   const margin=8,gap=12;
   const width=tooltip.offsetWidth,height=tooltip.offsetHeight;
-  const b=bounds||{left:0,top:0,right:window.innerWidth,bottom:window.innerHeight};
-  // The popup belongs to the active chart panel. Never let it escape into
-  // the panel above/below it (e.g. precipitation must stay inside precipitation).
-  const minLeft=Math.max(margin,b.left+margin);
-  const maxLeft=Math.max(minLeft,Math.min(window.innerWidth-width-margin,b.right-width-margin));
-  const left=Math.max(minLeft,Math.min(maxLeft,clientX-width/2));
-  const minTop=Math.max(margin,b.top+margin);
-  const maxTop=Math.max(minTop,Math.min(window.innerHeight-height-margin,b.bottom-height-margin));
-  let top=clientY-height-gap;
+  const hostRect=host.getBoundingClientRect();
+  const x=clientX-hostRect.left;
+  const y=clientY-hostRect.top;
+  const minLeft=margin;
+  const maxLeft=Math.max(minLeft,hostRect.width-width-margin);
+  const left=Math.max(minLeft,Math.min(maxLeft,x-width/2));
+  const minTop=margin;
+  const maxTop=Math.max(minTop,hostRect.height-height-margin);
+  let top=y-height-gap;
   if(top<minTop)top=minTop;
   if(top>maxTop)top=maxTop;
   tooltip.style.left=Math.round(left)+"px";
@@ -79,7 +79,7 @@ function attachGfsSvgInteractions(host,svg,metadata){
   tooltip.setAttribute("role","status");
   tooltip.setAttribute("aria-live","polite");
   tooltip.setAttribute("aria-atomic","true");
-  document.body.appendChild(tooltip);
+  host.appendChild(tooltip);
   const panels=new Map((metadata.panels||[]).map(panel=>[panel.id,panel]));
   const panelList=Array.from(panels.values());
   const activeIndexes=new Map();
@@ -131,8 +131,7 @@ function attachGfsSvgInteractions(host,svg,metadata){
       markerGroup.appendChild(marker);
     });
     tooltip.innerHTML=buildGfsTooltipMarkup(panel,index,validTime);
-    const panelBounds=getGfsPanelClientBounds(host,svg,panel);
-    positionGfsTooltip(host,tooltip,event?.clientX,event?.clientY,panelBounds);
+    positionGfsTooltip(host,tooltip,event?.clientX,event?.clientY);
   }
   function selectNearest(event){
     const panel=panelAtEvent(event);
