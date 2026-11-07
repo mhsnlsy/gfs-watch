@@ -1,7 +1,7 @@
 (() => {
 "use strict";
 const GFS_CYCLE_THEME=window.GFS_CYCLE_THEME;
-const BASE="./koy-data/gfs/", COLORS=GFS_CYCLE_THEME.colors;
+const BASE="https://gfs-watch-koy-gfs.muhsin-ulusoy.workers.dev/api/", COLORS=GFS_CYCLE_THEME.colors;
 const STATIONS_API="https://gfs-watch-stations.muhsin-ulusoy.workers.dev/api";
 const $=id=>document.getElementById(id);
 const num=v=>v==null||v===""||!Number.isFinite(Number(v))?null:Number(v);
@@ -14,7 +14,7 @@ const dayLabel=k=>{const p=k.split("-");return p[2]+"."+p[1]};
 let busy=false, f72=null, comparison=null, stationHistory=null, rainHistory=null, evObservation=null, evHistory=null, stationMode="home";
 // Köy Ev is the only initial state. Do not derive the initial station from DOM, cache, or prior UI state.
 window.__KOY_DEFAULT_STATION="home";
-async function get(path){const url=path.startsWith("./")?path:BASE+path;const r=await fetch(url+"?v="+Date.now(),{cache:"no-store"});if(!r.ok)throw Error("HTTP "+r.status+" · "+url);return r.json()}
+async function get(path){const url=BASE+path;const r=await fetch(url+"?v="+Date.now(),{cache:"no-store"});if(!r.ok)throw Error("HTTP "+r.status+" · "+url);return r.json()}
 async function getStation(path){
  const url=STATIONS_API+path+(path.includes("?")?"&":"?")+"v="+Date.now();
  const r=await fetch(url,{cache:"no-store"});
@@ -709,7 +709,7 @@ function renderRuns(d,f72){
 }
 async function refresh(){if(busy)return;busy=true;
  const results=await Promise.allSettled([
-  get("f72/latest.json"),get("comparison.json"),getStation("/history/canakci?hours=72"),
+  get("f72"),get("comparison"),getStation("/history/canakci?hours=72"),
   getStation("/stations/canakci")
  ]);
  if(results[1].status==="fulfilled")comparison=results[1].value;else comparison=null;
