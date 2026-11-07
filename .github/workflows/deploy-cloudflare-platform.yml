@@ -162,6 +162,26 @@ jobs:
             echo "OK $path"
           done
 
+          curl --silent --show-error --fail --max-time 20 "$WEB/koy.html?verify=$(date +%s)" -o "$RUNNER_TEMP/koy-page.html"
+          node - "$RUNNER_TEMP/koy-page.html" <<'NODE'
+          const fs = require("fs");
+          const html = fs.readFileSync(process.argv[2], "utf8");
+          const forbidden = [
+            "GFS MODEL BİLDİRİMİ",
+            "Giresun Çanakçı GFS tahmin raporu",
+            "Son döngü:",
+            "İlk GFS tahmin adımı:",
+            "SON 4 GFS DÖNGÜSÜ",
+            "AYNI GEÇERLİLİK SAATLERİ"
+          ];
+          const found = forbidden.filter(text => html.includes(text));
+          if (found.length) throw new Error("Legacy Köy GFS report text is still published: " + found.join(" | "));
+          if (!html.includes("koy-remove-legacy-report-copy")) {
+            throw new Error("Köy legacy-report suppression stylesheet is missing.");
+          }
+          console.log("Köy page verified: report text removed; chart shell remains.");
+          NODE
+
           echo "Checking Istanbul GFS through internal Service Binding..."
           curl --silent --show-error --fail --max-time 45 "$WEB/gfs/latest?check=$(date +%s)" -o "$RUNNER_TEMP/web-gfs.json"
           echo "Checking Köy GFS through internal Service Binding..."
