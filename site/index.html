@@ -2050,8 +2050,9 @@
     }
     function attachStationHistoryTooltip(holder,svg,coords,width,height,top,bottom,color,forecastUTC=false){
       if(!coords.length||typeof document==="undefined")return;
-      const card=holder.closest(".next-72h-card,.history-chart-card")||holder,tip=document.createElement("div");
-      tip.className="station-history-tooltip";tip.hidden=true;tip.setAttribute("role","tooltip");card.appendChild(tip);
+      const tip=document.createElement("div");
+      tip.className="station-history-tooltip";tip.hidden=true;tip.setAttribute("role","tooltip");
+      document.body.appendChild(tip);
       const ns="http://www.w3.org/2000/svg",line=document.createElementNS(ns,"line"),dot=document.createElementNS(ns,"circle"),hit=document.createElementNS(ns,"rect");
       line.setAttribute("y1",String(top));line.setAttribute("y2",String(height-bottom));line.setAttribute("stroke","#e8fbf7");line.setAttribute("stroke-width","1");line.setAttribute("stroke-dasharray","3 4");line.setAttribute("visibility","hidden");
       dot.setAttribute("r","5");dot.setAttribute("fill",color);dot.setAttribute("stroke","#f4ffff");dot.setAttribute("stroke-width","2");dot.setAttribute("visibility","hidden");
@@ -2061,36 +2062,51 @@
         clearScheduledTouchChartTooltip(hide);
         tip.hidden=true;line.setAttribute("visibility","hidden");dot.setAttribute("visibility","hidden");
       };
-      const show=p=>{
+      const positionAboveTouch=e=>{
+        const tw=tip.offsetWidth,th=tip.offsetHeight,margin=8,gap=14;
+        const left=Math.max(margin,Math.min(window.innerWidth-tw-margin,e.clientX-tw/2));
+        const topPx=e.clientY-th-gap;
+        tip.style.position="fixed";
+        tip.style.zIndex="2147483647";
+        tip.style.pointerEvents="none";
+        tip.style.left=Math.round(left)+"px";
+        tip.style.top=Math.round(Math.max(margin,topPx))+"px";
+      };
+      const show=(p,e)=>{
         line.setAttribute("x1",String(p.x));line.setAttribute("x2",String(p.x));dot.setAttribute("cx",String(p.x));dot.setAttribute("cy",String(p.y));line.setAttribute("visibility","visible");dot.setAttribute("visibility","visible");
         const stampLabel=forecastUTC?forecastDateTimeTSI(p.time):chartDateTimeTR(p.time)+" TSİ";
-         tip.innerHTML='<div class="station-history-tooltip-time">'+esc(stampLabel)+'</div><div class="station-history-tooltip-value">'+esc(p.valueLabel)+'</div>'+(p.detail?'<div class="station-history-tooltip-detail">'+esc(p.detail)+'</div>':"");tip.hidden=false;
-        const cr=card.getBoundingClientRect(),sr=svg.getBoundingClientRect(),px=p.x/width*sr.width+sr.left-cr.left,py=p.y/height*sr.height+sr.top-cr.top,tw=tip.offsetWidth,th=tip.offsetHeight;
-        let left=px-tw/2;if(left<8)left=px+10;if(left+tw>cr.width-8)left=px-tw-10;
-        tip.style.left=Math.max(8,Math.min(cr.width-tw-8,left))+"px";tip.style.top=Math.max(8,Math.min(cr.height-th-8,py-th-10))+"px";
+        tip.innerHTML='<div class="station-history-tooltip-time">'+esc(stampLabel)+'</div><div class="station-history-tooltip-value">'+esc(p.valueLabel)+'</div>'+(p.detail?'<div class="station-history-tooltip-detail">'+esc(p.detail)+'</div>':"");
+        tip.hidden=false;
+        positionAboveTouch(e);
       };
-      const nearest=e=>{const r=svg.getBoundingClientRect();if(!r.width)return;const x=(e.clientX-r.left)*width/r.width;let p=coords[0];for(const q of coords)if(Math.abs(q.x-x)<Math.abs(p.x-x))p=q;show(p);};
+      const nearest=e=>{const r=svg.getBoundingClientRect();if(!r.width)return;const x=(e.clientX-r.left)*width/r.width;let p=coords[0];for(const q of coords)if(Math.abs(q.x-x)<Math.abs(p.x-x))p=q;show(p,e);};
+      const handleTouch=e=>{
+        if(!e||!e.clientX&&!e.clientY)return;
+        nearest(e);
+        scheduleTouchChartTooltipDismiss(hide);
+      };
       hit.addEventListener("pointermove",e=>{
-        if(e.pointerType==="touch"){
-          nearest(e);
-          scheduleTouchChartTooltipDismiss(hide);
-          return;
-        }
+        if(e.pointerType==="touch"){handleTouch(e);return;}
         nearest(e);
       });
+      hit.addEventListener("pointerrawupdate",e=>{if(e.pointerType==="touch")handleTouch(e);});
+      hit.addEventListener("touchmove",e=>{
+        if(!e.touches[0])return;
+        e.preventDefault();
+        handleTouch({clientX:e.touches[0].clientX,clientY:e.touches[0].clientY});
+      },{passive:false});
       hit.addEventListener("pointerdown",e=>{
-        nearest(e);
-        if(e.pointerType==="touch"){
+        if(e.pointerType==="touch"||e.pointerType==="pen"){
+          e.preventDefault();
           try{hit.setPointerCapture(e.pointerId);}catch(_){}
-          scheduleTouchChartTooltipDismiss(hide);
         }
-      });
-      hit.addEventListener("pointerup",e=>{
+        nearest(e);
         if(e.pointerType==="touch")scheduleTouchChartTooltipDismiss(hide);
       });
+      hit.addEventListener("pointerup",e=>{if(e.pointerType==="touch")scheduleTouchChartTooltipDismiss(hide);});
       hit.addEventListener("pointerleave",e=>{if(e.pointerType!=="touch")hide();});
       hit.addEventListener("pointercancel",hide);
-      hit.addEventListener("keydown",e=>{if(!["ArrowLeft","ArrowRight"].includes(e.key))return;e.preventDefault();let i=coords.findIndex(p=>p.x===Number(dot.getAttribute("cx")));if(i<0)i=0;i=Math.max(0,Math.min(coords.length-1,i+(e.key==="ArrowRight"?1:-1)));show(coords[i]);});
+      hit.addEventListener("keydown",e=>{if(!["ArrowLeft","ArrowRight"].includes(e.key))return;e.preventDefault();let i=coords.findIndex(p=>p.x===Number(dot.getAttribute("cx")));if(i<0)i=0;i=Math.max(0,Math.min(coords.length-1,i+(e.key==="ArrowRight"?1:-1)));show(coords[i],{clientX:window.innerWidth/2,clientY:Math.max(80,window.innerHeight/2)});});
     }
     function renderStationTemperatureTrend(samples,stationName){
       stationName=stationName||"İstasyon";const holder=$("station-temperature-trend"),meta=$("station-trend-meta");if(!holder)return;
