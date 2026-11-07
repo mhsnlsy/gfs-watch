@@ -5,7 +5,7 @@
 İstanbul ve Çanakçı için GFS/ECMWF tahminleri, canlı meteoroloji istasyonları ve yağış radarını bir araya getiren meteoroloji panosu.
 
 - **Canlı site (Cloudflare):** https://gfs-watch-web.muhsin-ulusoy.workers.dev/
-- **Yedek site (GitHub Pages):** https://mhsnlsy.github.io/gfs-watch/
+- **GitHub Pages:** artık üretim/yedek yayın hedefi değildir; yalnızca tarihsel geri dönüş kaynağı olarak korunur.
 - **GitHub deposu:** https://github.com/mhsnlsy/gfs-watch
 
 ## Üretim mimarisi
