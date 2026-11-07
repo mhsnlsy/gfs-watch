@@ -27,13 +27,20 @@ async function fetchArchiveObject(request, env, assetPath) {
   const key = String(assetPath || "").replace(/^\/+/, "");
   if (!key || key.split("/").some(segment => segment === "." || segment === "..")) return null;
 
-  const object = await env.LIVE_ARCHIVE.get(key);
+  let object;
+  try {
+    object = await env.LIVE_ARCHIVE.get(key);
+  } catch (error) {
+    console.error("R2 archive read failed:", String(error?.message || error));
+    return null;
+  }
   if (!object) return null;
 
   const headers = new Headers();
   object.writeHttpMetadata(headers);
   headers.set("ETag", object.httpEtag);
   headers.set("Access-Control-Allow-Origin", "*");
+  headers.set("X-GFS-Archive-Source", "R2");
   headers.set(
     "Cache-Control",
     key.endsWith("/latest.json") || key.endsWith("latest.json")
@@ -50,6 +57,8 @@ async function fetchArchiveObject(request, env, assetPath) {
 function isArchivePath(path) {
   return path.startsWith("/data/notifications/") ||
     path.startsWith("/data/ecmwf/") ||
+    path === "/data/istanbul-gfs-latest.json" ||
+    path === "/data/istanbul-gfs-comparison.json" ||
     path.startsWith("/koy-data/gfs/");
 }
 
@@ -116,6 +125,8 @@ export default {
     }
 
     if (path === "/gfs/notification-latest") {
+      // The latest manifest is mutable: D1 is authoritative so a delayed R2
+      // archive sync can never overwrite a newer native Worker publication.
       const published = await fetchD1PublicationAsset(request, env, "notifications/latest.json");
       if (published) return published;
       const archived = await fetchArchiveObject(request, env, "/data/notifications/latest.json");
@@ -131,10 +142,19 @@ export default {
       return new Response(asset.body, { status: asset.status, headers });
     }
 
-    // Archive objects are served from R2 first. Static Assets remain as a
-    // rollback/fallback copy during the migration and if an object is absent.
+    // Immutable archives are served from R2 first. Mutable notification
+    // manifests keep D1 first; all other stores are fallback layers.
     if (isArchivePath(path)) {
-      if (path.startsWith("/data/notifications/")) {
+      const isMutableNotificationManifest = path === "/data/notifications/latest.json";
+      if (isMutableNotificationManifest) {
+        const published = await fetchD1PublicationAsset(request, env, "notifications/latest.json");
+        if (published) return published;
+      }
+
+      const archived = await fetchArchiveObject(request, env, path);
+      if (archived) return archived;
+
+      if (path.startsWith("/data/notifications/") && !isMutableNotificationManifest) {
         const published = await fetchD1PublicationAsset(request, env, path.slice("/data/".length));
         if (published) return published;
       }
@@ -142,7 +162,7 @@ export default {
         const published = await fetchD1PublicationAsset(request, env, path.slice(1));
         if (published) return published;
       }
-      if (path.startsWith("/koy-data/gfs/media/")) {
+      if (path.startsWith("/koy-data/gfs/")) {
         const assetKey = path.slice("/koy-data/gfs/".length);
         const published = await callService(
           env.KOY_GFS,
@@ -151,8 +171,18 @@ export default {
         );
         if (published.ok) return published;
       }
-      const archived = await fetchArchiveObject(request, env, path);
-      if (archived) return archived;
+
+      const isStaticAssetFallback = await env.ASSETS.fetch(new Request(new URL(path, url), request));
+      if (isStaticAssetFallback.ok) {
+        const headers = new Headers(isStaticAssetFallback.headers);
+        headers.set("X-GFS-Archive-Source", "Static-Assets-Fallback");
+        return new Response(isStaticAssetFallback.body, {
+          status: isStaticAssetFallback.status,
+          statusText: isStaticAssetFallback.statusText,
+          headers,
+        });
+      }
+      return isStaticAssetFallback;
     }
 
     if (path === "/gfs/latest" || path === "/api/latest" || path === "/api/health" ||
