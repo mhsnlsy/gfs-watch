@@ -1619,3 +1619,39 @@ html,body{
   -webkit-overflow-scrolling:auto!important;
   scrollbar-width:auto!important;
 }
+
+/* Native document scrolling: the GFS table wrapper must not become a scroll container. */
+#meteopt-gfs-table .meteopt-table-scroll{
+  display:block!important;
+  width:100%!important;
+  max-width:100%!important;
+  height:auto!important;
+  max-height:none!important;
+  overflow-x:clip!important;
+  overflow-y:visible!important;
+  overflow:clip visible!important;
+  overscroll-behavior-x:auto!important;
+  overscroll-behavior-y:auto!important;
+  overscroll-behavior:auto!important;
+  touch-action:auto!important;
+  -webkit-overflow-scrolling:auto!important;
+  contain:none!important;
+  scrollbar-width:none!important;
+}
+#meteopt-gfs-table .meteopt-table-card,
+#meteopt-gfs-table{
+  height:auto!important;
+  max-height:none!important;
+  overflow:visible!important;
+  overscroll-behavior:auto!important;
+  touch-action:auto!important;
+}
+@media(max-width:850px),(pointer:coarse){
+  #meteopt-gfs-table .meteopt-table-scroll{
+    overflow-x:clip!important;
+    overflow-y:visible!important;
+    overflow:clip visible!important;
+    overscroll-behavior:auto!important;
+    touch-action:auto!important;
+  }
+}
