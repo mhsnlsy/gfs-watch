@@ -1,11 +1,6 @@
 name: Istanbul GFS · Event-Driven Report Pipeline
 
 on:
-  push:
-    branches: [main]
-    paths:
-      - "scripts/test_notification_pipeline.py"
-      - ".github/workflows/istanbul-gfs-10min.yml"
   workflow_dispatch:
     inputs:
       run_id:
