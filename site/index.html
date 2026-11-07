@@ -1047,38 +1047,9 @@
       .briefing-row { padding:4px 6px!important; }
     }
 </style>
-  <link rel="stylesheet" href="./meteopt-gfs-table.css?v=20261108-mobile-single-screen-2">
+  <link rel="stylesheet" href="./meteopt-gfs-table.css?v=20261108-mobile-single-screen-3">
 
-  <style id="mobile-scroll-recovery">
-    /* Keep the document itself as the vertical scroll container on Android WebView. */
-    html, body {
-      height: auto !important;
-      min-height: 100% !important;
-      overflow-x: auto !important;
-      overflow-y: auto !important;
-      touch-action: auto !important;
-    }
-    body, main, .shell, #meteopt-gfs-table {
-      position: relative;
-      overflow-y: visible !important;
-      touch-action: auto !important;
-    }
-    .meteopt-table-card { min-width: 0; max-width: 100%; }
-    .meteopt-table-scroll {
-      display: block;
-      width: 100%;
-      max-width: 100%;
-      overflow: visible !important;
-      overflow-x: visible !important;
-      overflow-y: visible !important;
-      -webkit-overflow-scrolling: auto;
-      overscroll-behavior: auto;
-      touch-action: pan-y pinch-zoom !important;
-    }
-    .meteopt-data-table { width: 100% !important; min-width: 0 !important; max-width: 100% !important; table-layout: fixed !important; }
-  </style>
-
-  <style id="single-gfs-comparison-image">
+    <style id="single-gfs-comparison-image">
     .notification-images .notification-image-item:only-child{grid-column:1/-1}
     .notification-images .notification-image-item:only-child .notification-image{max-height:none}
   </style>
@@ -1323,24 +1294,6 @@
 </style>
 
 
-<style id="meteopt-table-native-scroll-fix">
-@media (max-width:700px), (pointer:coarse){
-  #meteopt-gfs-table,
-  #meteopt-gfs-table .meteopt-table-card,
-  #meteopt-gfs-table .meteopt-table-scroll,
-  #meteopt-gfs-table .meteopt-data-table,
-  #meteopt-gfs-table .meteopt-data-table tbody,
-  #meteopt-gfs-table .meteopt-data-table tr,
-  #meteopt-gfs-table .meteopt-data-table td,
-  #meteopt-gfs-table .meteopt-data-table th{
-    touch-action: pan-y pinch-zoom !important;
-  }
-  #meteopt-gfs-table .meteopt-table-scroll{
-    overscroll-behavior: auto !important;
-    -webkit-overflow-scrolling: touch !important;
-  }
-}
-</style>
 </head>
 <body>
   <header class="shell topbar">
