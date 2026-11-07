@@ -148,13 +148,11 @@ jobs:
           PY
           }
 
-          find "$GFS_STATE_DIR/notifications" -type f \( -name '*.json' -o -name '*.svg' -o -name '*.png' \) -print0 |
+          find "$GFS_STATE_DIR/notifications" -type f \( -name '*.json' -o -name '*.svg' -o -name '*.png' \) -print0 | while IFS= read -r -d '' file; do upload_asset "$file"; done
 
           # Read the latest manifest and its SVG back from D1, the exact source
           # used by the live website, and verify the four chart surfaces are dark.
-          curl --fail --silent --show-error --max-time 30 \\
-            "$ISTANBUL_GFS_API/gfs/publication-asset/notifications/latest.json?verify=$(date +%s)" \\
-            --output "$RUNNER_TEMP/d1-notification-latest.json"
+          curl --fail --silent --show-error --max-time 30 "$ISTANBUL_GFS_API/gfs/publication-asset/notifications/latest.json?verify=$(date +%s)" --output "$RUNNER_TEMP/d1-notification-latest.json"
           SVG_KEY="$(python - "$RUNNER_TEMP/d1-notification-latest.json" <<'PY'
           import json, sys
           from pathlib import Path
@@ -168,19 +166,17 @@ jobs:
           print("notifications/" + path.lstrip("/"))
           PY
           )"
-          curl --fail --silent --show-error --max-time 30 \\
-            "$ISTANBUL_GFS_API/gfs/publication-asset/$SVG_KEY?verify=$(date +%s)" \\
-            --output "$RUNNER_TEMP/d1-current-comparison.svg"
+          curl --fail --silent --show-error --max-time 30 "$ISTANBUL_GFS_API/gfs/publication-asset/$SVG_KEY?verify=$(date +%s)" --output "$RUNNER_TEMP/d1-current-comparison.svg"
           python - "$RUNNER_TEMP/d1-current-comparison.svg" <<'PY'
           import re, sys
           from pathlib import Path
           svg = Path(sys.argv[1]).read_text(encoding="utf-8")
           required = {
-              "canvas": r'<g id="patch_1">[\\s\\S]*?fill: #0a1b29',
-              "temperature": r'<g id="patch_6">[\\s\\S]*?fill: #102a3a',
-              "850 hPa": r'<g id="patch_11">[\\s\\S]*?fill: #102a3a',
-              "precipitation": r'<g id="patch_16">[\\s\\S]*?fill: #102a3a',
-              "wind": r'<g id="patch_21">[\\s\\S]*?fill: #102a3a',
+              "canvas": r'<g id="patch_1">[\s\S]*?fill: #0a1b29',
+              "temperature": r'<g id="patch_6">[\s\S]*?fill: #102a3a',
+              "850 hPa": r'<g id="patch_11">[\s\S]*?fill: #102a3a',
+              "precipitation": r'<g id="patch_16">[\s\S]*?fill: #102a3a',
+              "wind": r'<g id="patch_21">[\s\S]*?fill: #102a3a',
           }
           missing = [name for name, pattern in required.items() if not re.search(pattern, svg, re.I)]
           if missing:
