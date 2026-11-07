@@ -642,7 +642,8 @@ function renderRuns(d,f72){
   }
  }
  renderRunLegend(source);
- $("next-72h-meta").textContent=source.length?source.length+" GFS döngüsü · F180'e kadar karşılaştırılıyor":"MeteoPT GFS verisi bekleniyor";
+ const next72Meta=$("next-72h-meta");
+ if(next72Meta)next72Meta.textContent=source.length?source.length+" GFS döngüsü · F180'e kadar karşılaştırılıyor":"MeteoPT GFS verisi bekleniyor";
  // Both charts align all four MeteoPT runs by exact valid_time_utc; older cycles may use different F-hour numbers.
  const chartSource=source;
  const realized=realizedErrorStats(runs,stationHistory,"temperature_2m_c");
