@@ -125,6 +125,17 @@ jobs:
           CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
         run: wrangler deploy --config wrangler.jsonc
 
+      - name: Configure authenticated D1 publication uploads
+        working-directory: koy-gfs-worker
+        env:
+          CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+          CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
+          GFS_DISPATCH_TOKEN: ${{ secrets.GFS_DISPATCH_TOKEN }}
+        run: |
+          set -euo pipefail
+          test -n "$GFS_DISPATCH_TOKEN" || { echo "::error::GFS_DISPATCH_TOKEN is required for Köy D1 SVG publication"; exit 1; }
+          printf '%s' "$GFS_DISPATCH_TOKEN" | wrangler secret put GFS_DISPATCH_TOKEN --config wrangler.jsonc
+
       - name: Verify live Köy GFS API and autonomous Cron
         env:
           KOY_GFS_API: https://gfs-watch-koy-gfs.muhsin-ulusoy.workers.dev/api
