@@ -1213,3 +1213,13 @@
     margin-right: 0 !important;
   }
 }
+
+
+/* FINAL KOY PALETTE: exact value-band colors used by /koy. */
+#meteopt-gfs-table .meteopt-value.mt-blue{color:#8fd7ff !important;background:rgba(42,145,218,.17) !important}
+#meteopt-gfs-table .meteopt-value.mt-green{color:#8ce2b5 !important;background:rgba(39,166,105,.17) !important}
+#meteopt-gfs-table .meteopt-value.mt-yellow{color:#ffe08a !important;background:rgba(220,174,48,.17) !important}
+#meteopt-gfs-table .meteopt-value.mt-orange{color:#ffb477 !important;background:rgba(232,117,50,.18) !important}
+#meteopt-gfs-table .meteopt-value.mt-red{color:#ff9292 !important;background:rgba(220,65,65,.18) !important}
+#meteopt-gfs-table .meteopt-value.mt-purple{color:#d7a6ff !important;background:rgba(151,82,205,.20) !important}
+#meteopt-gfs-table .meteopt-value.mt-gray{color:#b7c2ca !important;background:rgba(145,158,168,.16) !important}
