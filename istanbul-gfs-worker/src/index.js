@@ -648,9 +648,20 @@ async function putPublicationAsset(env, asset) {
 }
 
 function decodePublicationAsset(row) {
-  const bytes = row.encoding === "base64"
-    ? Uint8Array.from(atob(row.body), character => character.charCodeAt(0))
-    : new TextEncoder().encode(row.body);
+  let body = row.encoding === "base64"
+    ? new TextDecoder().decode(Uint8Array.from(atob(row.body), character => character.charCodeAt(0)))
+    : row.body;
+
+  // Live D1 can contain an older SVG generated before the dark report palette.
+  // Sanitize only white SVG shape fills at the publication boundary so stale
+  // assets cannot reintroduce the two white report boxes.
+  if (/\\.svg$/i.test(row.asset_key)) {
+    body = body
+      .replace(/(<(?:rect|path|polygon)\\b[^>]*?)\\sfill=(["'])#(?:fff|ffffff)\\2/gi, "$1 fill=$2#153448$2")
+      .replace(/(<(?:rect|path|polygon)\\b[^>]*?style=(["'])[^"']*?)fill\\s*:\\s*#(?:fff|ffffff)/gi, "$1fill: #153448");
+  }
+
+  const bytes = new TextEncoder().encode(body);
   const headers = new Headers({
     "Content-Type": row.content_type || "application/octet-stream",
     "Cache-Control": (row.asset_key === "latest.json" || row.asset_key.endsWith("/latest.json") || /\\.(svg|png)$/i.test(row.asset_key))
