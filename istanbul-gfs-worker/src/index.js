@@ -230,6 +230,93 @@ async function listRuns(env, limit = 4) {
   return (result.results || []).map(row => JSON.parse(row.payload_json));
 }
 
+async function enqueueReportDispatch(env, runId, createdAt) {
+  await env.GFS_DB.prepare(
+    "INSERT OR IGNORE INTO gfs_report_dispatch_queue (run_id_utc, status, attempts, created_at_utc) " +
+    "VALUES (?, 'pending', 0, ?)"
+  ).bind(runId, createdAt).run();
+}
+
+async function dispatchQueuedReports(env) {
+  const result = await env.GFS_DB.prepare(
+    "SELECT run_id_utc FROM gfs_report_dispatch_queue " +
+    "WHERE status = 'pending' ORDER BY run_id_utc ASC LIMIT 4"
+  ).all();
+  const jobs = result.results || [];
+  if (!jobs.length) return { queued: 0, dispatched: 0, failed: 0 };
+  if (!env.GFS_DISPATCH_TOKEN) {
+    console.error(JSON.stringify({
+      event: "gfs_report_dispatch_secret_missing",
+      queued: jobs.length,
+    }));
+    return { queued: jobs.length, dispatched: 0, failed: jobs.length };
+  }
+
+  let dispatched = 0;
+  let failed = 0;
+  for (const job of jobs) {
+    try {
+      const response = await fetch(
+        "https://api.github.com/repos/mhsnlsy/gfs-watch/actions/workflows/istanbul-gfs-10min.yml/dispatches",
+        {
+          method: "POST",
+          headers: {
+            "Accept": "application/vnd.github+json",
+            "Authorization": "Bearer " + env.GFS_DISPATCH_TOKEN,
+            "X-GitHub-Api-Version": "2022-11-28",
+            "Content-Type": "application/json",
+            "User-Agent": "gfs-watch-istanbul-gfs-worker",
+          },
+          body: JSON.stringify({
+            ref: "main",
+            inputs: { run_id: job.run_id_utc },
+          }),
+          signal: AbortSignal.timeout(12000),
+        },
+      );
+      if (!response.ok) {
+        throw new Error("GitHub workflow dispatch HTTP " + response.status);
+      }
+
+      const dispatchedAt = new Date().toISOString();
+      await env.GFS_DB.prepare(
+        "UPDATE gfs_report_dispatch_queue " +
+        "SET status = 'dispatched', attempts = attempts + 1, dispatched_at_utc = ?, last_error = NULL " +
+        "WHERE run_id_utc = ? AND status = 'pending'"
+      ).bind(dispatchedAt, job.run_id_utc).run();
+      dispatched += 1;
+      console.log(JSON.stringify({
+        event: "gfs_report_dispatch_accepted",
+        run_id_utc: job.run_id_utc,
+        dispatched_at_utc: dispatchedAt,
+      }));
+    } catch (error) {
+      const message = String(error?.message || error).slice(0, 500);
+      await env.GFS_DB.prepare(
+        "UPDATE gfs_report_dispatch_queue " +
+        "SET attempts = attempts + 1, last_error = ? " +
+        "WHERE run_id_utc = ? AND status = 'pending'"
+      ).bind(message, job.run_id_utc).run();
+      failed += 1;
+      console.error(JSON.stringify({
+        event: "gfs_report_dispatch_retry",
+        run_id_utc: job.run_id_utc,
+        message,
+      }));
+    }
+  }
+
+  const remaining = await env.GFS_DB.prepare(
+    "SELECT COUNT(*) AS count FROM gfs_report_dispatch_queue WHERE status = 'pending'"
+  ).first();
+  return {
+    queued: jobs.length,
+    dispatched,
+    failed,
+    pending: Number(remaining?.count || 0),
+  };
+}
+
 async function collect(env) {
   const started = new Date();
   const settled = await Promise.allSettled(CYCLES.map(hour => fetchCycle(hour)));
@@ -279,7 +366,10 @@ async function collect(env) {
         f72Updated = true;
       }
     }
-    if (entry.result.hasF180 && await archiveRun(env, payload)) archived += 1;
+    if (entry.result.hasF180 && await archiveRun(env, payload)) {
+      archived += 1;
+      await enqueueReportDispatch(env, payload.run_id_utc, started.toISOString());
+    }
   }
 
   const latestRuns = await listRuns(env, 1);
@@ -294,6 +384,11 @@ async function collect(env) {
     "DELETE FROM gfs_runs WHERE run_id_utc < ?"
   ).bind(new Date(started.getTime() - RETENTION_DAYS * 86400000).toISOString()).run();
 
+  await env.GFS_DB.prepare(
+    "DELETE FROM gfs_report_dispatch_queue WHERE status = 'dispatched' AND dispatched_at_utc < ?"
+  ).bind(new Date(started.getTime() - 30 * 86400000).toISOString()).run();
+
+  const reportDispatch = await dispatchQueuedReports(env);
   const runs = await listRuns(env, 4);
   const latest = runs[0] || null;
   const result = {
@@ -302,6 +397,7 @@ async function collect(env) {
     fetched_cycles: candidates.length,
     archived_runs_changed: archived,
     archived_runs: runs.length,
+    report_dispatch: reportDispatch,
     f72_updated: f72Updated,
     f180_ready: normalized.some(item => item.result.hasF180),
     warnings,
@@ -335,6 +431,9 @@ async function handleApi(request, env) {
     try {
       const current = await getCurrent(env, "latest");
       const count = await env.GFS_DB.prepare("SELECT COUNT(*) AS count FROM gfs_runs").first();
+      const pendingDispatch = await env.GFS_DB.prepare(
+        "SELECT COUNT(*) AS count FROM gfs_report_dispatch_queue WHERE status = 'pending'"
+      ).first();
       return json({
         ok: true,
         service: "gfs-watch-istanbul-gfs",
@@ -343,6 +442,8 @@ async function handleApi(request, env) {
         latest_run_id_utc: current?.run_id_utc || null,
         latest_updated_at_utc: current?.updated_at_utc || null,
         archived_runs: Number(count?.count || 0),
+        report_dispatch_configured: Boolean(env.GFS_DISPATCH_TOKEN),
+        pending_report_dispatches: Number(pendingDispatch?.count || 0),
         location: LOCATION,
       });
     } catch (error) {
