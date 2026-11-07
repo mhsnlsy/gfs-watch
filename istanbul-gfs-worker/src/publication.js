@@ -358,6 +358,9 @@ export function buildIstanbulReportText(document, now = new Date(), stationObser
     stationObservation && stationObservation.wind_speed_10m_kmh !== null && stationObservation.wind_speed_10m_kmh !== undefined
       ? "💨 Rüzgâr: " + formatNumber(stationObservation.wind_speed_10m_kmh) + " km/sa" + (stationObservation.wind_direction_cardinal ? " " + stationObservation.wind_direction_cardinal : "")
       : "💨 Rüzgâr: —",
+    stationObservation && stationObservation.precipitation_daily_mm !== null && stationObservation.precipitation_daily_mm !== undefined
+      ? "🌧️ Bugünkü yağış: " + formatNumber(stationObservation.precipitation_daily_mm) + " mm"
+      : "🌧️ Bugünkü yağış: —",
     stationObservation && stationObservation.observed_at_utc
       ? "🕒 Ölçüm: " + formatTrDate(localDate(stationObservation.observed_at_utc)) + " TSİ" +
         (Number.isFinite(Number(stationObservation.age_minutes)) ? " · " + Math.round(Number(stationObservation.age_minutes)) + " dk önce" : "")
