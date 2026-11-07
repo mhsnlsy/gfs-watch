@@ -8,6 +8,8 @@ on:
       - "scripts/poll_istanbul_gfs_10min.py"
       - "scripts/build_istanbul_gfs_publication.py"
       - "scripts/send_pending_istanbul_gfs_telegram.py"
+      - "scripts/test_notification_pipeline.py"
+      - "scripts/test_gfs_svg_comparison.py"
   schedule:
     - cron: "*/10 * * * *"
   workflow_dispatch:
