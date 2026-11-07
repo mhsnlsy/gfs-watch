@@ -148,7 +148,7 @@ jobs:
           PY
           }
 
-          find "$GFS_STATE_DIR/notifications" -type f \\( -name '*.json' -o -name '*.svg' -o -name '*.png' \\) -print0 |
+          find "$GFS_STATE_DIR/notifications" -type f \( -name '*.json' -o -name '*.svg' -o -name '*.png' \) -print0 |
 
           # Read the latest manifest and its SVG back from D1, the exact source
           # used by the live website, and verify the four chart surfaces are dark.
