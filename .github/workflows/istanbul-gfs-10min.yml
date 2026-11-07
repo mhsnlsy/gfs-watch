@@ -1,4 +1,4 @@
-name: Istanbul GFS · 10 Minute Pipeline
+name: Istanbul GFS · Event-Driven Report Pipeline
 
 on:
   push:
@@ -10,9 +10,12 @@ on:
       - "scripts/send_pending_istanbul_gfs_telegram.py"
       - "scripts/test_notification_pipeline.py"
       - "scripts/test_gfs_svg_comparison.py"
-  schedule:
-    - cron: "*/10 * * * *"
   workflow_dispatch:
+    inputs:
+      run_id:
+        description: "Cloudflare D1 üzerinden raporlanacak tam F180 döngüsünün UTC kimliği"
+        required: false
+        type: string
 
 permissions:
   contents: write
@@ -23,7 +26,7 @@ concurrency:
 
 jobs:
   poll-and-publish:
-    name: Sync Cloudflare D1 → F72 archive → F180 report
+    name: Process event-triggered Cloudflare D1 F180 report
     runs-on: ubuntu-latest
     timeout-minutes: 12
     outputs:
@@ -63,6 +66,7 @@ jobs:
         id: poll
         env:
           ISTANBUL_GFS_API: https://gfs-watch-web.muhsin-ulusoy.workers.dev/gfs/latest
+          GFS_TRIGGERED_RUN_ID: ${{ inputs.run_id }}
         run: python scripts/poll_istanbul_gfs_10min.py
 
       - name: Install publication dependencies for a new F180 report
