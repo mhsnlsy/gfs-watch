@@ -56,7 +56,6 @@ function attachGfsSvgInteractions(host,svg,metadata){
   const panelList=Array.from(panels.values());
   const activeIndexes=new Map();
   function hide(){
-    clearTouchHideTimer();
     tooltip.hidden=true;
     host.removeAttribute("data-pinned");
     svg.querySelectorAll(".gfs-tooltip-crosshair").forEach(line=>line.setAttribute("visibility","hidden"));
@@ -128,7 +127,6 @@ function attachGfsSvgInteractions(host,svg,metadata){
     if(event.pointerType&&event.pointerType!=="touch")return;
     if(!host.hasAttribute("data-pinned"))host.setAttribute("data-pinned","true");
     selectNearest(event);
-    scheduleTouchHide();
   };
   svg.addEventListener("pointermove",event=>{
     if(event.pointerType==="touch"){
@@ -138,7 +136,7 @@ function attachGfsSvgInteractions(host,svg,metadata){
     if(host.hasAttribute("data-pinned"))return;
     selectNearest(event);
   });
-  svg.addEventListener("pointerrawupdate",handleTouchMove,{passive:false});
+  svg.addEventListener("pointerrawupdate",handleTouchMove,{passive:true});
   svg.addEventListener("touchmove",event=>{
     const touch=event.touches?.[0];
     if(!touch)return;
@@ -149,7 +147,6 @@ function attachGfsSvgInteractions(host,svg,metadata){
     host.setAttribute("data-pinned","true");
     try{svg.setPointerCapture(event.pointerId);}catch(_){}
     selectNearest(event);
-    if(event.pointerType==="touch")scheduleTouchHide();
   });
   svg.addEventListener("pointerup",event=>{
     if(event.pointerType==="touch")hide();
