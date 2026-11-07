@@ -1,9 +1,8 @@
-"""Build an Istanbul ECMWF IFS view from official Open Data.
+"""Build the Istanbul ECMWF forecast exclusively from the MeteoPT point API.
 
-Surface weather fields come from deterministic IFS HRES (oper/fc). The
-850 hPa fields and mean-sea-level pressure come from IFS ENS (enfo/em/es).
-Only compact values at the nearest 0.25-degree Istanbul grid point are
-published; raw global GRIB2 files are temporary and deleted afterwards.
+MeteoPT is the single ECMWF source for this application. The point series
+provides 2 m temperature, 10 m wind, precipitation, 850 hPa fields and MSLP;
+no ECMWF Open Data GRIB2 download or secondary ECMWF source is used.
 """
 from __future__ import annotations
 
@@ -17,13 +16,12 @@ from pathlib import Path
 from zoneinfo import ZoneInfo
 
 ISTANBUL_TZ = ZoneInfo("Europe/Istanbul")
-LATITUDE = 41.014
-LONGITUDE = 28.950
+LATITUDE = 41.0901
+LONGITUDE = 28.9436
 MAX_FORECAST_HOUR = 180
 SCHEMA = "gfs-watch.ecmwf-eps.v1"
-ATTRIBUTION = "Contains modified Copernicus Climate Change Service information and ECMWF Open Data. © ECMWF. Licensed under CC BY 4.0."
-SOURCE_URL = "https://data.ecmwf.int/forecasts/"
-LICENSE_URL = "https://creativecommons.org/licenses/by/4.0/"
+SOURCE_URL = "https://www.meteopt.com/modelos/ecmwf?lat=41.0901&lon=28.9436"
+LICENSE_URL = "https://www.meteopt.com/modelos/ecmwf"
 
 
 def forecast_steps(max_hour: int = MAX_FORECAST_HOUR) -> list[int]:
@@ -730,7 +728,7 @@ def fetch_meteopt_ecmwf_document(run_dt: datetime) -> dict:
         "attribution": "ECMWF nokta serisi MeteoPT üzerinden alınır.",
         "license": "MeteoPT",
         "license_url": "https://www.meteopt.com/modelos/ecmwf",
-        "source_url": f"https://www.meteopt.com/modelos/ecmwf?lat={LATITUDE:.3f}&lon={LONGITUDE:.3f}",
+        "source_url": SOURCE_URL,
         "notes": [
             "Sıcaklık, rüzgâr, yağış, 850 hPa ve basınç aynı MeteoPT ECMWF noktasından gelir.",
             "Seri 3 saatte bir. Ensemble sapması ve bölgesel basınç merkezi bu kaynakta yok.",
