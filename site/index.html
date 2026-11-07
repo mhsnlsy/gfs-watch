@@ -3939,6 +3939,88 @@ if(typeof renderBriefing==="function")renderBriefing();
       }
     }
   </style>
+  <style id="homepage-gfs-report-redesign">
+    /* Ana sayfa GFS raporu: sayfanın genel koyu yüzeyiyle bütünleşen, çerçevesiz
+       ve kontrollü ölçekte tek bir rapor yüzeyi. */
+    #bildirimler .notification-list{
+      display:flex!important;
+      justify-content:center!important;
+      width:100%!important;
+      max-width:100%!important;
+      margin:0!important;
+    }
+    #bildirimler .notification-card.koy-gfs-report-card,
+    #bildirimler .notification-card.notification-chart-only{
+      box-sizing:border-box!important;
+      width:92%!important;
+      max-width:1120px!important;
+      min-width:0!important;
+      margin:0 auto!important;
+      padding:0!important;
+      border:0!important;
+      outline:0!important;
+      border-radius:18px!important;
+      background:rgba(10,27,41,.72)!important;
+      box-shadow:none!important;
+      overflow:hidden!important;
+    }
+    #bildirimler .notification-card.notification-chart-only .notification-images,
+    #bildirimler .notification-card.koy-gfs-report-card .koy-gfs-svg-images{
+      width:100%!important;
+      max-width:100%!important;
+      margin:0!important;
+      padding:0!important;
+      background:transparent!important;
+    }
+    #bildirimler .notification-card.notification-chart-only .notification-image-item{
+      width:100%!important;
+      max-width:100%!important;
+      margin:0!important;
+      padding:0!important;
+      display:flex!important;
+      justify-content:center!important;
+      align-items:center!important;
+    }
+    #bildirimler .notification-card.notification-chart-only .gfs-interactive-chart,
+    #bildirimler .notification-card.koy-gfs-report-card .gfs-interactive-chart{
+      width:94%!important;
+      max-width:1120px!important;
+      margin:0 auto!important;
+      background:transparent!important;
+      border:0!important;
+      outline:0!important;
+      box-shadow:none!important;
+    }
+    #bildirimler .notification-card.notification-chart-only .gfs-interactive-svg{
+      display:block!important;
+      width:100%!important;
+      max-width:100%!important;
+      height:auto!important;
+      background:#0A1B29!important;
+      border:0!important;
+      outline:0!important;
+      box-shadow:none!important;
+    }
+    #gfs-cycle-compare-frame{
+      border:0!important;
+      outline:0!important;
+      box-shadow:none!important;
+      background:transparent!important;
+    }
+    @media(max-width:700px),(pointer:coarse){
+      #bildirimler .notification-card.koy-gfs-report-card,
+      #bildirimler .notification-card.notification-chart-only{
+        width:100%!important;
+        max-width:100%!important;
+        border-radius:14px!important;
+      }
+      #bildirimler .notification-card.notification-chart-only .gfs-interactive-chart,
+      #bildirimler .notification-card.koy-gfs-report-card .gfs-interactive-chart{
+        width:100%!important;
+        max-width:100%!important;
+      }
+    }
+  </style>
 </body>
 </html>
 
