@@ -1,3 +1,4 @@
+import { buildIstanbulInteractiveSvg, buildIstanbulReportText } from "./publication.js";
 // Istanbul GFS Worker: canonical MeteoPT collector + D1 event dispatcher\nconst API_BASE = "https://api.meteopt.com/gfs/json";
 const LOCATION = {
   name: "Istanbul",
@@ -237,84 +238,219 @@ async function enqueueReportDispatch(env, runId, createdAt) {
   ).bind(runId, createdAt).run();
 }
 
-async function dispatchQueuedReports(env) {
+async function processQueuedReports(env) {
   const result = await env.GFS_DB.prepare(
     "SELECT run_id_utc, attempts FROM gfs_report_dispatch_queue " +
-    "WHERE status = 'pending' AND attempts < 5 ORDER BY run_id_utc ASC LIMIT 1"
+    "WHERE status = 'pending' AND attempts < 12 ORDER BY run_id_utc ASC LIMIT 1"
   ).all();
-  const jobs = result.results || [];
-  if (!jobs.length) return { queued: 0, dispatched: 0, failed: 0 };
-  if (!env.GFS_DISPATCH_TOKEN) {
-    console.error(JSON.stringify({
-      event: "gfs_report_dispatch_secret_missing",
-      queued: jobs.length,
-    }));
-    return { queued: jobs.length, dispatched: 0, failed: jobs.length };
-  }
+  const job = (result.results || [])[0];
+  if (!job) return { queued: 0, published: 0, failed: 0 };
 
-  let dispatched = 0;
-  let failed = 0;
-  for (const job of jobs) {
-    try {
-      const response = await fetch(
-        "https://api.github.com/repos/mhsnlsy/gfs-watch/actions/workflows/istanbul-gfs-10min.yml/dispatches",
-        {
-          method: "POST",
-          headers: {
-            "Accept": "application/vnd.github+json",
-            "Authorization": "Bearer " + env.GFS_DISPATCH_TOKEN,
-            "X-GitHub-Api-Version": "2022-11-28",
-            "Content-Type": "application/json",
-            "User-Agent": "gfs-watch-istanbul-gfs-worker",
-          },
-          body: JSON.stringify({
-            ref: "main",
-            inputs: { run_id: job.run_id_utc },
-          }),
-          signal: AbortSignal.timeout(12000),
-        },
-      );
-      if (!response.ok) {
-        throw new Error("GitHub workflow dispatch HTTP " + response.status);
-      }
-
-      const dispatchedAt = new Date().toISOString();
-      await env.GFS_DB.prepare(
-        "UPDATE gfs_report_dispatch_queue " +
-        "SET status = 'dispatched', attempts = attempts + 1, dispatched_at_utc = ?, last_error = NULL " +
-        "WHERE run_id_utc = ? AND status = 'pending'"
-      ).bind(dispatchedAt, job.run_id_utc).run();
-      dispatched += 1;
+  try {
+    const archive = await env.GFS_DB.prepare(
+      "SELECT payload_json FROM gfs_runs WHERE run_id_utc <= ? ORDER BY run_id_utc DESC LIMIT 4"
+    ).bind(job.run_id_utc).all();
+    const runs = (archive.results || []).map(row => JSON.parse(row.payload_json))
+      .sort((a, b) => Date.parse(a.run_id_utc) - Date.parse(b.run_id_utc));
+    if (runs.length < 4 || !runs.some(run => run.run_id_utc === job.run_id_utc)) {
       console.log(JSON.stringify({
-        event: "gfs_report_dispatch_accepted",
+        event: "istanbul_report_waiting_for_four_cycles",
         run_id_utc: job.run_id_utc,
-        dispatched_at_utc: dispatchedAt,
+        available_cycles: runs.length,
       }));
-    } catch (error) {
-      const message = String(error?.message || error).slice(0, 500);
-      await env.GFS_DB.prepare(
-        "UPDATE gfs_report_dispatch_queue " +
-        "SET attempts = attempts + 1, last_error = ? " +
-        "WHERE run_id_utc = ? AND status = 'pending'"
-      ).bind(message, job.run_id_utc).run();
-      failed += 1;
-      console.error(JSON.stringify({
-        event: "gfs_report_dispatch_retry",
-        run_id_utc: job.run_id_utc,
-        message,
-      }));
+      return { queued: 1, published: 0, failed: 0, waiting_for_four_cycles: true };
     }
-  }
 
-  const remaining = await env.GFS_DB.prepare(
-    "SELECT COUNT(*) AS count FROM gfs_report_dispatch_queue WHERE status = 'pending'"
-  ).first();
-  return {
-    queued: jobs.length,
-    dispatched,
-    failed,
-    pending: Number(remaining?.count || 0),
-  };
+    const target = runs[runs.length - 1];
+    const chart = buildIstanbulInteractiveSvg(runs);
+    const reportText = buildIstanbulReportText(target, new Date());
+    const now = new Date().toISOString();
+    const imagePath = chart.key.slice("notifications/".length);
+    const images = [{
+      label: "4 GFS döngüsü · aynı geçerlilik saatleri (TSİ)",
+      path: imagePath,
+    }];
+
+    await putPublicationAsset(env, {
+      key: chart.key,
+      run_id_utc: chart.run_id_utc,
+      content_type: "image/svg+xml; charset=utf-8",
+      encoding: "utf8",
+      body: chart.body,
+    });
+
+    const existingLatest = await getPublicationAsset(env, "notifications/latest.json");
+    let shouldUpdateLatest = true;
+    if (existingLatest?.body) {
+      try {
+        const existing = JSON.parse(existingLatest.body);
+        if (existing.run_id_utc && Date.parse(existing.run_id_utc) > Date.parse(target.run_id_utc)) {
+          shouldUpdateLatest = false;
+        }
+      } catch (_) {
+        // Replace a malformed legacy manifest with the validated native manifest.
+      }
+    }
+
+    const manifest = {
+      schema: "gfs-watch.notifications.v1",
+      updated_at_utc: now,
+      run_id_utc: target.run_id_utc,
+      published_at_utc: now,
+      title: "İstanbul GFS · F180 tamamlandı",
+      cycle_label: "MeteoPT GFS",
+      report_text: reportText,
+      images,
+      items: [{
+        id: target.run_id_utc,
+        run_id_utc: target.run_id_utc,
+        published_at_utc: now,
+        title: "İstanbul GFS · F180 tamamlandı",
+        cycle_label: "MeteoPT GFS",
+        report_text: reportText,
+        images,
+      }],
+    };
+    if (shouldUpdateLatest) {
+      await putPublicationAsset(env, {
+        key: "notifications/latest.json",
+        run_id_utc: target.run_id_utc,
+        content_type: "application/json; charset=utf-8",
+        encoding: "utf8",
+        body: JSON.stringify(manifest),
+      });
+    }
+
+    await env.GFS_DB.prepare(
+      "INSERT OR IGNORE INTO gfs_report_publications " +
+      "(run_id_utc, report_text, svg_asset_key, status, attempts, created_at_utc, updated_at_utc) " +
+      "VALUES (?, ?, ?, 'pending', 0, ?, ?)"
+    ).bind(target.run_id_utc, reportText, chart.key, now, now).run();
+
+    await env.GFS_DB.prepare(
+      "UPDATE gfs_report_dispatch_queue SET status = 'published', attempts = attempts + 1, " +
+      "dispatched_at_utc = ?, last_error = NULL WHERE run_id_utc = ? AND status = 'pending'"
+    ).bind(now, job.run_id_utc).run();
+
+    console.log(JSON.stringify({
+      event: "istanbul_report_published_in_cloudflare",
+      run_id_utc: target.run_id_utc,
+      svg_asset_key: chart.key,
+      common_valid_time_count: chart.common_valid_time_count,
+      latest_manifest_updated: shouldUpdateLatest,
+    }));
+    return {
+      queued: 1,
+      published: 1,
+      failed: 0,
+      run_id_utc: target.run_id_utc,
+      common_valid_time_count: chart.common_valid_time_count,
+    };
+  } catch (error) {
+    const message = String(error?.message || error).slice(0, 500);
+    await env.GFS_DB.prepare(
+      "UPDATE gfs_report_dispatch_queue SET attempts = attempts + 1, last_error = ? " +
+      "WHERE run_id_utc = ? AND status = 'pending'"
+    ).bind(message, job.run_id_utc).run();
+    console.error(JSON.stringify({
+      event: "istanbul_native_report_retry",
+      run_id_utc: job.run_id_utc,
+      message,
+    }));
+    return { queued: 1, published: 0, failed: 1, error: message };
+  }
+}
+
+async function telegramApi(env, method, body, isForm = false) {
+  const token = env.TELEGRAM_TOKEN;
+  const url = "https://api.telegram.org/bot" + token + "/" + method;
+  const response = await fetch(url, {
+    method: "POST",
+    headers: isForm ? undefined : { "Content-Type": "application/json" },
+    body: isForm ? body : JSON.stringify(body),
+    signal: AbortSignal.timeout(20000),
+  });
+  const payload = await response.json().catch(() => ({}));
+  if (!response.ok || payload.ok !== true) {
+    throw new Error("Telegram " + method + " failed: HTTP " + response.status + " " +
+      String(payload.description || "unknown error").slice(0, 300));
+  }
+  return payload.result || {};
+}
+
+async function deliverPendingTelegram(env) {
+  if (!env.TELEGRAM_TOKEN || !env.TELEGRAM_CHAT_ID) {
+    return { configured: false, delivered: 0, waiting: true };
+  }
+  const result = await env.GFS_DB.prepare(
+    "SELECT run_id_utc, report_text, svg_asset_key, status, attempts, " +
+    "text_message_id, document_message_id FROM gfs_report_publications " +
+    "WHERE status IN ('pending', 'partial') AND attempts < 12 " +
+    "ORDER BY created_at_utc ASC LIMIT 1"
+  ).all();
+  const publication = (result.results || [])[0];
+  if (!publication) return { configured: true, delivered: 0 };
+
+  const now = new Date().toISOString();
+  try {
+    if (!publication.text_message_id) {
+      const message = await telegramApi(env, "sendMessage", {
+        chat_id: env.TELEGRAM_CHAT_ID,
+        text: publication.report_text,
+        disable_web_page_preview: true,
+      });
+      publication.text_message_id = String(message.message_id);
+      await env.GFS_DB.prepare(
+        "UPDATE gfs_report_publications SET text_message_id = ?, status = 'partial', updated_at_utc = ? " +
+        "WHERE run_id_utc = ?"
+      ).bind(publication.text_message_id, now, publication.run_id_utc).run();
+    }
+
+    if (!publication.document_message_id) {
+      const asset = await getPublicationAsset(env, publication.svg_asset_key);
+      if (!asset || typeof asset.body !== "string") {
+        throw new Error("Published SVG asset is missing from D1: " + publication.svg_asset_key);
+      }
+      const filename = publication.svg_asset_key.split("/").pop() || "istanbul-gfs-comparison.svg";
+      const form = new FormData();
+      form.set("chat_id", env.TELEGRAM_CHAT_ID);
+      form.set("caption", "📊 İstanbul GFS · dört döngülü valid-time karşılaştırması");
+      form.set("document", new Blob([asset.body], { type: "image/svg+xml" }), filename);
+      const message = await telegramApi(env, "sendDocument", form, true);
+      publication.document_message_id = String(message.message_id);
+    }
+
+    const sentAt = new Date().toISOString();
+    await env.GFS_DB.prepare(
+      "UPDATE gfs_report_publications SET document_message_id = ?, status = 'sent', " +
+      "updated_at_utc = ?, sent_at_utc = ?, last_error = NULL WHERE run_id_utc = ?"
+    ).bind(publication.document_message_id, sentAt, sentAt, publication.run_id_utc).run();
+    await env.GFS_DB.prepare(
+      "UPDATE gfs_report_dispatch_queue SET status = 'completed', dispatched_at_utc = ?, last_error = NULL " +
+      "WHERE run_id_utc = ?"
+    ).bind(sentAt, publication.run_id_utc).run();
+
+    console.log(JSON.stringify({
+      event: "istanbul_telegram_report_delivered",
+      run_id_utc: publication.run_id_utc,
+      text_message_id: publication.text_message_id,
+      document_message_id: publication.document_message_id,
+    }));
+    return { configured: true, delivered: 1, run_id_utc: publication.run_id_utc };
+  } catch (error) {
+    const message = String(error?.message || error).slice(0, 500);
+    await env.GFS_DB.prepare(
+      "UPDATE gfs_report_publications SET status = ?, attempts = attempts + 1, " +
+      "updated_at_utc = ?, last_error = ? WHERE run_id_utc = ?"
+    ).bind(publication.text_message_id ? "partial" : "pending", new Date().toISOString(),
+      message, publication.run_id_utc).run();
+    console.error(JSON.stringify({
+      event: "istanbul_telegram_delivery_retry",
+      run_id_utc: publication.run_id_utc,
+      message,
+    }));
+    return { configured: true, delivered: 0, failed: 1, error: message };
+  }
 }
 
 async function collect(env) {
@@ -388,7 +524,8 @@ async function collect(env) {
     "DELETE FROM gfs_report_dispatch_queue WHERE status = 'dispatched' AND dispatched_at_utc < ?"
   ).bind(new Date(started.getTime() - 30 * 86400000).toISOString()).run();
 
-  const reportDispatch = await dispatchQueuedReports(env);
+  const reportDispatch = await processQueuedReports(env);
+  const telegramDelivery = await deliverPendingTelegram(env);
   const runs = await listRuns(env, 4);
   const latest = runs[0] || null;
   const result = {
@@ -398,6 +535,7 @@ async function collect(env) {
     archived_runs_changed: archived,
     archived_runs: runs.length,
     report_dispatch: reportDispatch,
+    telegram_delivery: telegramDelivery,
     f72_updated: f72Updated,
     f180_ready: normalized.some(item => item.result.hasF180),
     warnings,
@@ -536,6 +674,8 @@ async function handleApi(request, env) {
         latest_updated_at_utc: current?.updated_at_utc || null,
         archived_runs: Number(count?.count || 0),
         report_dispatch_configured: Boolean(env.GFS_DISPATCH_TOKEN),
+        native_report_generation: true,
+        telegram_configured: Boolean(env.TELEGRAM_TOKEN && env.TELEGRAM_CHAT_ID),
         pending_report_dispatches: Number(pendingDispatch?.count || 0),
         publication_assets: Number((await env.GFS_DB.prepare("SELECT COUNT(*) AS count FROM gfs_publication_assets").first())?.count || 0),
         location: LOCATION,
