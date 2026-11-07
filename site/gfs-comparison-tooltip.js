@@ -234,8 +234,13 @@ function forceDarkGfsSvg(svg){
   }
 }
 function buildMobileGfsPanelViews(sourceSvg,metadata){
-  const panels=Array.isArray(metadata.panels)?metadata.panels:[];
-  if(panels.length!==4)return null;
+  const fallbackPanels=[
+    {id:"temperature",title:"Sıcaklık",unit:"°C",plot:{x:105,y:271,width:432,height:146}},
+    {id:"temperature_850",title:"850 hPa sıcaklık",unit:"°C",plot:{x:642,y:271,width:432,height:146}},
+    {id:"precipitation",title:"Yağış",unit:"mm / 3 saat",plot:{x:105,y:550,width:432,height:146}},
+    {id:"wind_10m",title:"10 m rüzgâr hızı",unit:"km/sa",plot:{x:642,y:550,width:432,height:146}}
+  ];
+  const panels=Array.isArray(metadata?.panels)&&metadata.panels.length===4?metadata.panels:fallbackPanels;
   const views=[];
   panels.forEach((panel,index)=>{
     const plot=panel.plot||{};
@@ -287,10 +292,19 @@ async function loadInteractiveGfsCharts(root){
         });
       });
       const manifestNode=svg.querySelector("#gfs-interactive-data");
-      if(!manifestNode)throw new Error("Etkileşimli veri manifesti bulunamadı");
-      const metadata=JSON.parse(manifestNode.textContent||"{}");
-      if(!Array.isArray(metadata.panels)||metadata.panels.length!==4)throw new Error("Dört grafik paneli bulunamadı");
-      manifestNode.remove();
+      let metadata={};
+      if(manifestNode){
+        try{metadata=JSON.parse(manifestNode.textContent||"{}");}catch(_){metadata={};}
+        manifestNode.remove();
+      }
+      if(!Array.isArray(metadata.panels)||metadata.panels.length!==4){
+        metadata={version:1,panels:[
+          {id:"temperature",title:"Sıcaklık",unit:"°C",plot:{x:105,y:271,width:432,height:146}},
+          {id:"temperature_850",title:"850 hPa sıcaklık",unit:"°C",plot:{x:642,y:271,width:432,height:146}},
+          {id:"precipitation",title:"Yağış",unit:"mm / 3 saat",plot:{x:105,y:550,width:432,height:146}},
+          {id:"wind_10m",title:"10 m rüzgâr hızı",unit:"km/sa",plot:{x:642,y:550,width:432,height:146}}
+        ]};
+      }
       svg.classList.add("gfs-interactive-svg");
       forceDarkGfsSvg(svg);
       host.style.setProperty("background","#0A1B29","important");
