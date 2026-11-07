@@ -211,6 +211,8 @@ def main_publish() -> None:
         latest["report"] = report_entry
     elif latest_path.is_file():
         latest = json.loads(latest_path.read_text(encoding="utf-8"))
+        if utc_dt(latest.get("run_id_utc", "1970-01-01T00:00:00+00:00")) < utc_dt(newest_doc["run_id_utc"]):
+            latest = dict(newest_doc)
     else:
         latest = dict(newest_doc)
 
