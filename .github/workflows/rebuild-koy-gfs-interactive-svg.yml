@@ -12,6 +12,7 @@ on:
 
 permissions:
   contents: write
+  actions: write
 
 concurrency:
   group: koy-gfs-interactive-svg-builder
@@ -88,6 +89,7 @@ jobs:
           PY
 
       - name: Persist regenerated SVG to koy-gfs-data
+        id: persist
         working-directory: koy-data
         run: |
           set -euo pipefail
@@ -96,7 +98,15 @@ jobs:
           git add gfs/media/*.svg gfs/media/.koy-svg-renderer-version
           if git diff --cached --quiet; then
             echo "The canonical Köy SVG already has Turkish weekday labels."
+            echo "changed=false" >> "$GITHUB_OUTPUT"
           else
             git commit -m "Rebuild Köy GFS SVG with Turkish weekday axis"
             git push origin HEAD:koy-gfs-data
+            echo "changed=true" >> "$GITHUB_OUTPUT"
           fi
+
+      - name: Deploy newly generated Köy SVG to Cloudflare
+        if: steps.persist.outputs.changed == 'true'
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: gh workflow run deploy-cloudflare-platform.yml --ref main
