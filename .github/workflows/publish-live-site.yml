@@ -135,6 +135,25 @@ jobs:
 
           touch _site/.nojekyll
           test -s _site/index.html
+          node - _site/koy-data/gfs/comparison.json _site/koy-data/gfs/media <<'NODE'
+          const fs = require("fs");
+          const path = require("path");
+          const doc = JSON.parse(fs.readFileSync(process.argv[2], "utf8"));
+          const runs = doc.runs || [];
+          if (!runs.length) throw new Error("Köy comparison archive has no runs.");
+          const latest = runs.slice().sort((a,b) => String(b.run_id_utc).localeCompare(String(a.run_id_utc)))[0];
+          const stamp = new Date(latest.run_id_utc).toISOString().replace(/[-:]/g, "").replace(/\.\d{3}Z$/, "Z");
+          const relative = "koy-gfs-" + stamp.slice(0, 11) + "-comparison.svg";
+          const svgPath = path.join(process.argv[3], relative);
+          if (!fs.existsSync(svgPath) || fs.statSync(svgPath).size < 10000) {
+            throw new Error("Latest Köy SVG missing from Pages artifact: " + svgPath);
+          }
+          const svg = fs.readFileSync(svgPath, "utf8");
+          if (!svg.includes("<svg") || !svg.includes('id="gfs-interactive-data"')) {
+            throw new Error("Latest Köy SVG manifest missing from Pages artifact.");
+          }
+          console.log("Pages Köy SVG verified: " + relative);
+          NODE
           node - _site/koy.html <<'NODE'
           const fs = require("fs");
           const html = fs.readFileSync(process.argv[2], "utf8");
