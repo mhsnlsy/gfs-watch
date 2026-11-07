@@ -120,10 +120,12 @@ def main_publish() -> None:
 
     docs = [json.loads(path.read_text(encoding="utf-8")) for path in run_files]
     docs.sort(key=lambda d: utc_dt(d["run_id_utc"]))
-    current_doc = next(
-        (doc for doc in docs if target_run and utc_dt(doc["run_id_utc"]) == utc_dt(target_run)),
-        docs[-1],
-    )
+    if target_run:
+        target_dt = utc_dt(target_run)
+        docs = [doc for doc in docs if utc_dt(doc["run_id_utc"]) <= target_dt][-4:]
+        current_doc = docs[-1]
+    else:
+        current_doc = docs[-1]
     current_run = utc_dt(current_doc["run_id_utc"]).isoformat(timespec="seconds")
 
     payloads = [(d["run_id_utc"], to_main_payload(d)) for d in docs]
