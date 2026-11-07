@@ -98,6 +98,17 @@ def main() -> None:
     assert "GFS_DISPATCH_TOKEN" in istanbul_deploy
     assert "wrangler secret put GFS_DISPATCH_TOKEN" in istanbul_deploy
     assert "gfs_report_dispatch_queue" in gfs_worker
+    # Live report assets are now published into Istanbul D1; the web gateway
+    # serves them through the Istanbul Service Binding instead of requiring
+    # the GitHub archive branch on the primary Cloudflare site.
+    assert "gfs_publication_assets" in gfs_worker
+    assert "/gfs/publication-upload" in gfs_worker
+    assert "/gfs/publication-asset/" in gfs_worker
+    assert "GFS_DISPATCH_TOKEN" in gfs_worker
+    assert "Publish report assets into Cloudflare D1" in report_workflow
+    assert "gfs/publication-upload" in report_workflow
+    assert "GFS_DISPATCH_TOKEN" in report_workflow
+    assert "path.startsWith(\"/data/notifications/\")" in read("web-worker/src/index.js")
     assert "actions/workflows/istanbul-gfs-10min.yml/dispatches" in gfs_worker
     assert "LIMIT 1" in gfs_worker
     assert "CREATE TABLE IF NOT EXISTS gfs_report_dispatch_queue" in dispatch_migration
