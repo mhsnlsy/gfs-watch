@@ -1261,7 +1261,22 @@
     }
   </style>
 
-  </head>
+  <style id="home-gfs-report-scale-90">
+  /* Match the Köy report: same 90% SVG scale, centered in its report frame. */
+  .notification-chart-only .notification-image-item{
+    display:flex!important;
+    align-items:center!important;
+    justify-content:center!important;
+  }
+  .notification-chart-only .gfs-interactive-chart,
+  .notification-chart-only .gfs-mobile-panel-stack{
+    width:90%!important;
+    max-width:90%!important;
+    margin-left:auto!important;
+    margin-right:auto!important;
+  }
+</style>
+</head>
 <body>
   <header class="shell topbar">
     <a class="brand" href="./#balmumcu" aria-label="İstanbul anasayfası · Balmumcu istasyon gözlemi"><span class="brand-mark">☀</span><span>İstanbul'un Havası<small>Şehir için hava tahmini</small></span></a>
