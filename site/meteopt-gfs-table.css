@@ -1573,3 +1573,40 @@
 html,body{
   overflow-x:hidden!important;
 }
+
+/* 20261108: MeteoPT GFS header — locked to viewport, compact on mobile. */
+#meteopt-gfs-table .meteopt-table-panel-head{
+  width:100%!important;
+  max-width:100%!important;
+  min-width:0!important;
+  display:grid!important;
+  grid-template-columns:minmax(0,1fr) minmax(118px,42%)!important;
+  align-items:center!important;
+  gap:8px!important;
+  overflow:hidden!important;
+  touch-action:pan-y!important;
+}
+#meteopt-gfs-table .meteopt-table-title,
+#meteopt-gfs-table .meteopt-table-cycle{min-width:0!important;max-width:100%!important;overflow:hidden!important}
+#meteopt-gfs-table .meteopt-table-title .section-kicker,
+#meteopt-gfs-table .meteopt-table-title h2,
+#meteopt-gfs-table .meteopt-table-cycle span{
+  max-width:100%!important;
+  overflow:hidden!important;
+  text-overflow:ellipsis!important;
+}
+#meteopt-gfs-table .meteopt-table-title h2{white-space:nowrap!important}
+#meteopt-gfs-table .meteopt-table-cycle{display:grid!important;grid-template-columns:minmax(0,1fr);gap:2px!important;justify-items:end!important;text-align:right!important;white-space:nowrap!important}
+#meteopt-gfs-table .meteopt-table-cycle span{display:block!important;width:100%!important;white-space:nowrap!important}
+@media(max-width:560px){
+  #meteopt-gfs-table .meteopt-table-panel-head{grid-template-columns:minmax(0,1fr) minmax(108px,43%)!important;gap:6px!important;margin-bottom:5px!important}
+  #meteopt-gfs-table .meteopt-table-title .section-kicker{font-size:7.5px!important;line-height:1!important;letter-spacing:.1em!important;margin-bottom:2px!important}
+  #meteopt-gfs-table .meteopt-table-title h2{font-size:15px!important;line-height:1.08!important;letter-spacing:-.025em!important}
+  #meteopt-gfs-table .meteopt-table-cycle{font-size:7.5px!important;line-height:1.15!important;gap:1px!important}
+  #meteopt-gfs-table .meteopt-table-card{padding:7px 8px!important}
+}
+@media(max-width:370px){
+  #meteopt-gfs-table .meteopt-table-panel-head{grid-template-columns:minmax(0,1fr) minmax(96px,42%)!important}
+  #meteopt-gfs-table .meteopt-table-title h2{font-size:14px!important}
+  #meteopt-gfs-table .meteopt-table-cycle{font-size:7px!important}
+}
