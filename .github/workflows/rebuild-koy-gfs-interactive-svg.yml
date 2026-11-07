@@ -7,6 +7,8 @@ on:
       - "scripts/build_koy_gfs_interactive_svg.py"
       - ".github/workflows/rebuild-koy-gfs-interactive-svg.yml"
   workflow_dispatch:
+  schedule:
+    - cron: "*/10 * * * *"
 
 permissions:
   contents: write
@@ -42,6 +44,27 @@ jobs:
 
       - name: Install SVG renderer dependency
         run: python -m pip install --disable-pip-version-check matplotlib
+
+      - name: Refresh Köy comparison from live D1 archive
+        env:
+          KOY_GFS_DIR: ${{ github.workspace }}/koy-data/gfs
+          KOY_GFS_API: https://gfs-watch-koy-gfs.muhsin-ulusoy.workers.dev/api
+        run: |
+          set -euo pipefail
+          mkdir -p "$KOY_GFS_DIR"
+          curl --silent --show-error --fail --retry 3 --retry-delay 2 --max-time 60 \
+            "$KOY_GFS_API/comparison?asset_refresh=$(date +%s)" \
+            -o "$KOY_GFS_DIR/comparison.json"
+          python - <<'PY'
+          import json, os
+          from pathlib import Path
+          doc = json.loads((Path(os.environ["KOY_GFS_DIR"]) / "comparison.json").read_text(encoding="utf-8"))
+          runs = doc.get("runs") or []
+          if len(runs) < 4:
+              raise SystemExit(f"Live Köy comparison has only {len(runs)} runs; four are required.")
+          latest = max(runs, key=lambda item: item.get("run_id_utc", ""))
+          print("Live Köy comparison refreshed:", latest["run_id_utc"], "cycles:", len(runs))
+          PY
 
       - name: Rebuild four-panel SVG from canonical valid-time archive
         env:
