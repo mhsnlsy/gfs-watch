@@ -270,11 +270,11 @@ async function handlePublicationUpload(request, env) {
     return json({ ok: false, error: "Invalid JSON body" }, 400);
   }
 
-  const key = String(payload?.key || "").replace(/^\\/+/, "");
+  const key = String(payload?.key || "").replace(/^\/+/, "");
   const body = typeof payload?.body === "string" ? payload.body : "";
   const contentType = String(payload?.content_type || "image/svg+xml; charset=utf-8");
   const runId = payload?.run_id_utc ? String(payload.run_id_utc) : null;
-  if (!/^media\\/koy-gfs-[0-9]{8}T[0-9]{2}Z-comparison\\.svg$/.test(key)) {
+  if (!/^media\/koy-gfs-[0-9]{8}T[0-9]{2}Z-comparison\.svg$/.test(key)) {
     return json({ ok: false, error: "Unsupported Köy publication asset path" }, 400);
   }
   if (!body || body.length > 1900000) {
@@ -366,7 +366,7 @@ async function api(request, env) {
   if (request.method !== "GET") return json({ ok: false, error: "Method not allowed" }, 405);
 
   if (path.startsWith("/api/publication-asset/")) {
-    const key = decodeURIComponent(path.slice("/api/publication-asset/".length)).replace(/^\\/+/, "");
+    const key = decodeURIComponent(path.slice("/api/publication-asset/".length)).replace(/^\/+/, "");
     try {
       const row = await getPublicationAsset(env, key);
       if (!row) return json({ ok: false, error: "Publication asset not found" }, 404);
