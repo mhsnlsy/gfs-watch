@@ -51,6 +51,21 @@ def save_atomic(path: Path, document: dict) -> None:
     temp.replace(path)
 
 
+def has_publication(run_id: str) -> bool:
+    manifest_path = GFS_DIR / "notifications" / "latest.json"
+    if not manifest_path.is_file():
+        return False
+    try:
+        manifest = json.loads(manifest_path.read_text(encoding="utf-8"))
+    except (OSError, ValueError, TypeError):
+        return False
+    return any(
+        item.get("run_id_utc") == run_id
+        for item in (manifest.get("items") or [])
+        if isinstance(item, dict)
+    )
+
+
 def main() -> int:
     (GFS_DIR / "runs").mkdir(parents=True, exist_ok=True)
     (GFS_DIR / "milestones" / "f72").mkdir(parents=True, exist_ok=True)
@@ -112,13 +127,19 @@ def main() -> int:
             selected_f72_run = selected_f72_run or run_id
             print(f"[GFS 10M] F72 cached: {run_id}")
 
-        if 180 in steps and not run_path.exists() and not f180_ready:
-            full = normalize(document, url, cycle, require_f180=True)
-            save_atomic(run_path, full)
-            f180_ready = True
-            any_new_run = True
-            selected_f180_run = run_id
-            print(f"[GFS 10M] F180 ready and canonical run archived: {run_id}")
+        if 180 in steps and not f180_ready:
+            if not run_path.exists():
+                full = normalize(document, url, cycle, require_f180=True)
+                save_atomic(run_path, full)
+                any_new_run = True
+                print(f"[GFS 10M] F180 canonical run archived: {run_id}")
+
+            # A raw run file can survive a failed validation/build. Retry report
+            # generation until that run has an entry in the durable manifest.
+            if not has_publication(run_id):
+                f180_ready = True
+                selected_f180_run = run_id
+                print(f"[GFS 10M] F180 ready for report retry: {run_id}")
 
     output("new_run", "true" if any_new_run else "false")
     output("f72_cached", "true" if f72_cached else "false")
