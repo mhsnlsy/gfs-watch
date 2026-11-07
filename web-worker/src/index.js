@@ -22,6 +22,38 @@ function internalRequest(request, path) {
   return new Request(target, request);
 }
 
+async function fetchArchiveObject(request, env, assetPath) {
+  if (!env.LIVE_ARCHIVE) return null;
+  const key = String(assetPath || "").replace(/^\\/+/, "");
+  if (!key || key.includes("\\0")) return null;
+
+  const object = await env.LIVE_ARCHIVE.get(key);
+  if (!object) return null;
+
+  const headers = new Headers();
+  object.writeHttpMetadata(headers);
+  headers.set("ETag", object.httpEtag);
+  headers.set("Access-Control-Allow-Origin", "*");
+  headers.set(
+    "Cache-Control",
+    key.endsWith("/latest.json") || key.endsWith("latest.json")
+      ? "no-store, max-age=0"
+      : "public, max-age=3600, s-maxage=86400"
+  );
+
+  return new Response(request.method === "HEAD" ? null : object.body, {
+    status: 200,
+    headers,
+  });
+}
+
+function isArchivePath(path) {
+  return path.startsWith("/data/notifications/") ||
+    path.startsWith("/data/ecmwf/") ||
+    path.startsWith("/koy-data/gfs/") ||
+    path.startsWith("/koy-data/mgm/");
+}
+
 async function callService(binding, request, path) {
   if (!binding || typeof binding.fetch !== "function") {
     return responseJson({ ok: false, error: "Cloudflare service binding is not configured" }, 503);
@@ -60,6 +92,7 @@ export default {
         istanbul: Boolean(env.ISTANBUL_GFS?.fetch),
         koy: Boolean(env.KOY_GFS?.fetch),
         stations: Boolean(env.STATIONS?.fetch),
+        archive: Boolean(env.LIVE_ARCHIVE?.get),
       };
       return responseJson({
         ok: Object.values(bindings).every(Boolean),
@@ -68,11 +101,14 @@ export default {
         api_gateway: "Cloudflare Service Bindings",
         services: SERVICES,
         bindings,
+        archive_bucket: "gfs-watch-live-archive",
         checked_at_utc: new Date().toISOString(),
       }, Object.values(bindings).every(Boolean) ? 200 : 503);
     }
 
     if (path === "/gfs/notification-latest") {
+      const archived = await fetchArchiveObject(request, env, "/data/notifications/latest.json");
+      if (archived) return archived;
       const assetUrl = new URL("/data/notifications/latest.json", url);
       const asset = await env.ASSETS.fetch(new Request(assetUrl, request));
       if (!asset.ok) {
@@ -82,6 +118,13 @@ export default {
       headers.set("Cache-Control", "no-store, max-age=0");
       headers.set("Access-Control-Allow-Origin", "*");
       return new Response(asset.body, { status: asset.status, headers });
+    }
+
+    // Archive objects are served from R2 first. Static Assets remain as a
+    // rollback/fallback copy during the migration and if an object is absent.
+    if (isArchivePath(path)) {
+      const archived = await fetchArchiveObject(request, env, path);
+      if (archived) return archived;
     }
 
     if (path === "/gfs/latest" || path === "/api/latest" || path === "/api/health" ||
