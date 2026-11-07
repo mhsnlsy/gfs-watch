@@ -76,7 +76,6 @@ def main() -> None:
 
     gfs = html[html.index('<div id="gfs-model-view">'):html.index('<div id="ecmwf-model-view"')]
     ecmwf = html[html.index('<div id="ecmwf-model-view"'):html.index("</main>")]
-        raise AssertionError("The ECMWF daily/pressure sections are missing.")
     if 'class="info-card"' not in ecmwf:
         raise AssertionError("ECMWF source card is missing.")
     if "Eski NOAA arşivi bu pakete karışmaz." in html:
@@ -94,7 +93,6 @@ def main() -> None:
     if remaining:
         raise AssertionError("Removed 180-hour charts still present: " + ", ".join(remaining))
 
-        raise AssertionError("GFS eight-day forecast must be the final model section.")
     if 'id="ecmwf-tahmin"' not in ecmwf or ecmwf.index('id="ecmwf-tahmin"') < ecmwf.index('id="ecmwf-basinc"'):
         raise AssertionError("ECMWF eight-day forecast must be the final model section.")
     if 'class="chart-stack"' in gfs:
