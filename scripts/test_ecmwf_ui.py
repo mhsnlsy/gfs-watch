@@ -47,7 +47,7 @@ def main() -> None:
         'localStorage.getItem("istanbul-hava-model-view")',
         'document.forecasts.length<8',
         'MeteoPT ECMWF',
-        'İstanbul noktası 41.014°N 28.950°E',
+        'İstanbul ECMWF noktası 41.0901°N 28.9436°E',
         'Ensemble sapması bu kaynakta yok.',
         'function renderDaily(items,targetId="daily-grid")',
         'function renderChart(metric,targetId,sourceData=forecastData)',
