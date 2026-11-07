@@ -161,7 +161,7 @@ def main() -> None:
     assert "/api/publication-upload" not in koy_worker
     assert "GFS_DISPATCH_TOKEN" not in koy_worker and "GFS_DISPATCH_TOKEN" not in koy_deploy
     assert 'path.startsWith("/koy-data/gfs/")' in web_worker
-    assert "/koy-data/gfs/media/*" in web_config["assets"]["run_worker_first"]
+    assert "/koy-data/gfs/*" in web_config["assets"]["run_worker_first"]
     assert '"/api/publication-asset/" + assetKey' in web_worker
     assert "workflow_dispatch:" in koy_svg_workflow
     assert "schedule:" not in koy_svg_workflow
