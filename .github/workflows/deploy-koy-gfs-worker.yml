@@ -72,25 +72,6 @@ jobs:
           process.stdout.write(walk(data) || "");
           NODE
 
-          ARCHIVED_RUNS="$(node - "$RUNNER_TEMP/koy-health.json" <<'NODE'
-          const fs = require("fs");
-          const doc = JSON.parse(fs.readFileSync(process.argv[2], "utf8"));
-          process.stdout.write(String(Number(doc.archived_runs || 0)));
-          NODE
-          )"
-          if [ "$ARCHIVED_RUNS" -ge 4 ]; then
-            echo "Testing Worker-native four-panel SVG rendering and D1 persistence..."
-            curl --silent --show-error --fail --max-time 45 \
-              "$KOY_GFS_API/comparison.svg?deploy_check=$(date +%s)" \
-              --dump-header "$RUNNER_TEMP/koy-svg-headers.txt" \
-              --output "$RUNNER_TEMP/koy-comparison.svg"
-            grep -qi '^x-gfs-publication-source: D1' "$RUNNER_TEMP/koy-svg-headers.txt"
-            grep -q 'id="gfs-renderer-version">cloudflare-js-v1</metadata>' "$RUNNER_TEMP/koy-comparison.svg"
-            grep -q 'id="gfs-interactive-data"' "$RUNNER_TEMP/koy-comparison.svg"
-            echo "Worker-native Köy SVG is generated and stored in D1."
-          else
-            echo "::notice::Four archived cycles are not available yet; Köy SVG generation will activate automatically when D1 has four cycles."
-          fi
           )"
 
           if [ -z "$D1_ID" ]; then
@@ -203,3 +184,23 @@ jobs:
             last_valid_time_utc: doc.forecast_6_hourly.at(-1)?.valid_time_utc || null
           }));
           NODE
+          
+          ARCHIVED_RUNS="$(node - "$RUNNER_TEMP/koy-health.json" <<'NODE'
+          const fs = require("fs");
+          const doc = JSON.parse(fs.readFileSync(process.argv[2], "utf8"));
+          process.stdout.write(String(Number(doc.archived_runs || 0)));
+          NODE
+          )"
+          if [ "$ARCHIVED_RUNS" -ge 4 ]; then
+            echo "Testing Worker-native four-panel SVG rendering and D1 persistence..."
+            curl --silent --show-error --fail --max-time 45 \
+              "$KOY_GFS_API/comparison.svg?deploy_check=$(date +%s)" \
+              --dump-header "$RUNNER_TEMP/koy-svg-headers.txt" \
+              --output "$RUNNER_TEMP/koy-comparison.svg"
+            grep -qi '^x-gfs-publication-source: D1' "$RUNNER_TEMP/koy-svg-headers.txt"
+            grep -q 'id="gfs-renderer-version">cloudflare-js-v1</metadata>' "$RUNNER_TEMP/koy-comparison.svg"
+            grep -q 'id="gfs-interactive-data"' "$RUNNER_TEMP/koy-comparison.svg"
+            echo "Worker-native Köy SVG is generated and stored in D1."
+          else
+            echo "::notice::Four archived cycles are not available yet; Köy SVG generation will activate automatically when D1 has four cycles."
+          fi
