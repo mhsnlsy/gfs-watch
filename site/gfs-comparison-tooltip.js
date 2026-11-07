@@ -195,7 +195,7 @@ async function loadInteractiveGfsCharts(root){
     host.dataset.loaded="true";
     const source=host.dataset.svgSrc;
     try{
-      const response=await fetch(source,{cache:"force-cache",credentials:"same-origin"});
+      const response=await fetch(source,{cache:"no-store",credentials:"same-origin"});
       if(!response.ok)throw new Error("SVG HTTP "+response.status);
       let sourceText=await response.text();
       sourceText=sourceText.replace(/^\s*<\?xml[^>]*\?>\s*/i,"").replace(/<!DOCTYPE[\s\S]*?>/i,"");
@@ -243,7 +243,29 @@ async function loadInteractiveGfsCharts(root){
       }
     }catch(error){
       console.error("[GFS SVG TOOLTIP]",error);
-      host.innerHTML='<div class="gfs-chart-error">Etkileşimli grafik yüklenemedi. <a href="'+escapeGfsTooltip(source)+'" target="_blank" rel="noopener">SVG dosyasını aç</a></div>';
+      host.innerHTML="";
+      const fallback=document.createElement("a");
+      fallback.href=source;
+      fallback.target="_blank";
+      fallback.rel="noopener";
+      fallback.className="gfs-svg-static-fallback";
+      const image=document.createElement("img");
+      image.src=source;
+      image.alt="Köy GFS dört döngü karşılaştırması";
+      image.loading="eager";
+      image.decoding="async";
+      image.style.cssText="display:block;width:100%;height:auto;max-width:100%;";
+      fallback.appendChild(image);
+      host.appendChild(fallback);
+      const note=document.createElement("div");
+      note.className="gfs-chart-error";
+      note.textContent="Etkileşimli araç yüklenemedi; grafik statik olarak gösteriliyor."+
+        (error&&error.message?" ("+error.message+")":"");
+      host.appendChild(note);
+      image.addEventListener("error",()=>{
+        note.textContent="SVG dosyası alınamadı ("+(error&&error.message?error.message:"yükleme hatası")+"). Dosya adresi: "+source;
+        fallback.removeAttribute("href");
+      },{once:true});
     }
   }));
 }
