@@ -1661,6 +1661,8 @@
       hitArea.setAttribute("height",String(height-top-bottom));
       hitArea.setAttribute("aria-label","Grafikte bir noktaya dokunarak tarih, saat ve tahmin değerini görüntüleyin");
       hitArea.setAttribute("tabindex","0");
+      hitArea.style.touchAction="pan-y";
+      hitArea.style.webkitTapHighlightColor="transparent";
       svg.appendChild(hitArea);
 
       const hideTooltip=()=>{
@@ -1738,10 +1740,21 @@
       };
 
       hitArea.addEventListener("pointermove",event=>{
-        if(event.pointerType!=="touch")selectNearestPoint(event);
+        if(event.pointerType==="touch"){
+          selectNearestPoint(event);
+          scheduleTouchChartTooltipDismiss(hideTooltip);
+          return;
+        }
+        selectNearestPoint(event);
       });
       hitArea.addEventListener("pointerdown",event=>{
         selectNearestPoint(event);
+        if(event.pointerType==="touch"){
+          try{hitArea.setPointerCapture(event.pointerId);}catch(_){}
+          scheduleTouchChartTooltipDismiss(hideTooltip);
+        }
+      });
+      hitArea.addEventListener("pointerup",event=>{
         if(event.pointerType==="touch")scheduleTouchChartTooltipDismiss(hideTooltip);
       });
       hitArea.addEventListener("pointerleave",event=>{
@@ -2057,9 +2070,22 @@
         tip.style.left=Math.max(8,Math.min(cr.width-tw-8,left))+"px";tip.style.top=Math.max(8,Math.min(cr.height-th-8,py-th-10))+"px";
       };
       const nearest=e=>{const r=svg.getBoundingClientRect();if(!r.width)return;const x=(e.clientX-r.left)*width/r.width;let p=coords[0];for(const q of coords)if(Math.abs(q.x-x)<Math.abs(p.x-x))p=q;show(p);};
-      hit.addEventListener("pointermove",e=>{if(e.pointerType!=="touch")nearest(e);});
+      hit.addEventListener("pointermove",e=>{
+        if(e.pointerType==="touch"){
+          nearest(e);
+          scheduleTouchChartTooltipDismiss(hide);
+          return;
+        }
+        nearest(e);
+      });
       hit.addEventListener("pointerdown",e=>{
         nearest(e);
+        if(e.pointerType==="touch"){
+          try{hit.setPointerCapture(e.pointerId);}catch(_){}
+          scheduleTouchChartTooltipDismiss(hide);
+        }
+      });
+      hit.addEventListener("pointerup",e=>{
         if(e.pointerType==="touch")scheduleTouchChartTooltipDismiss(hide);
       });
       hit.addEventListener("pointerleave",e=>{if(e.pointerType!=="touch")hide();});
