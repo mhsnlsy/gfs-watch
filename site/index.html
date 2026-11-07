@@ -1138,43 +1138,7 @@
       .gfs-chart-tooltip-row{gap:5px;padding:2px 0}
     }
   </style>
-  <style id="unrestricted-mobile-gestures">
-    /* Final gesture layer: page and panels must not capture/clip touch navigation. */
-    html, body, main, .shell, .section, .hero, .dashboard-top, .dashboard-left,
-    .dashboard-right, .lower-grid, .notification-list, .notification-card,
-    .chart-stack, .chart-card, .chart-wrap, .pressure-card, .info-card,
-    .next-72h-panel, .next-72h-card, .next-72h-chart, .notification-images,
-    .notification-image-item, .gfs-interactive-chart, .gfs-interactive-svg {
-      touch-action: auto !important;
-    }
-    html, body {
-      overflow-x: auto !important;
-      overflow-y: auto !important;
-      overscroll-behavior: auto !important;
-    }
-    main, .shell, .section, .hero, .dashboard-top, .dashboard-left,
-    .dashboard-right, .lower-grid, .notification-list, .notification-card,
-    .chart-stack, .chart-card, .chart-wrap, .pressure-card, .info-card,
-    .next-72h-panel, .next-72h-card, .next-72h-chart,
-    .notification-images, .notification-image-item, .gfs-interactive-chart {
-      overflow: visible !important;
-      overscroll-behavior: auto !important;
-    }
-    iframe, .gfs-cycle-compare-frame {
-      touch-action: auto !important;
-      overflow: visible !important;
-      overscroll-behavior: auto !important;
-    }
-    @media (max-width: 600px) {
-      #gfs-cycle-compare-frame {
-        width: 100% !important;
-        max-width: 100% !important;
-        margin-left: 0 !important;
-        display: block !important;
-      }
-    }
-  </style>
-
+  
   <style id="gfs-mobile-svg-stack">
     /* Mobile: crop the four internal SVG panels into a vertical stack.
        The outer report frame remains the single scaling container. */
