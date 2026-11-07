@@ -73,7 +73,7 @@ jobs:
 
       - name: Publish validated ECMWF archive to Cloudflare R2
         env:
-          CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_R2_API_TOKEN }}
+          CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
           CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
           ECMWF_PUBLIC_DIR: ${{ github.workspace }}/state/public/ecmwf
           R2_BUCKET: gfs-watch-live-archive
