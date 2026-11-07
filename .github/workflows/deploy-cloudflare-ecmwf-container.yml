@@ -44,6 +44,10 @@ jobs:
           set -euo pipefail
           test -n "$CLOUDFLARE_API_TOKEN" || { echo "::error::CLOUDFLARE_API_TOKEN is required"; exit 1; }
           test -n "$CLOUDFLARE_ACCOUNT_ID" || { echo "::error::CLOUDFLARE_ACCOUNT_ID is required"; exit 1; }
+          wrangler --version
+          echo "Checking Cloudflare account authentication and Containers access..."
+          wrangler whoami
+          wrangler containers list --config wrangler.jsonc
           wrangler deploy --config wrangler.jsonc
 
       - name: Verify deployed worker
