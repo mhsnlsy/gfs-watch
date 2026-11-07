@@ -213,9 +213,10 @@ assert.match(node("history-source-note").textContent, /Yağış: MGM Şişli öl
 assert.match(html, /function attachStationHistoryTooltip/);
 assert.match(html, /station-history-tooltip-value/);
 assert.match(html, /bucketMs=1800000/);
-assert.match(html, /EYUPSULTAN_STATION_HISTORY_URL/);
-assert.match(html, /fetch\(EYUPSULTAN_STATION_HISTORY_URL/);
-assert.match(html, /String\(historyDocument\.station_id\)==="18101"/);
+assert.match(html, /const STATION_HISTORY_API=key=>STATIONS_API\+"\/history\/"\+encodeURIComponent\(key\)\+"\?hours=72"/);
+assert.match(html, /historyKeys=stationKey==="enka"\?\["enka","sisli"\]:\[stationKey\]/);
+assert.match(html, /fetch\(STATION_HISTORY_API\(key\)/);
+assert.match(html, /if\(station\.station_id==="18101"\)eyupsultanStationObservation=station/);
 assert.match(eyupsultanCollector, /precipitation_10m_mm: observation\.precipitation_10m_mm/);
 assert.match(eyupsultanCollector, /last\.precipitation_10m_mm = sample\.precipitation_10m_mm/);
 console.log("Station history switch smoke tests passed: card, temperature trend, rainfall trend, source labels, and station isolation.");
