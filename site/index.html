@@ -1068,13 +1068,14 @@
       display: block;
       width: 100%;
       max-width: 100%;
-      overflow-x: auto !important;
+      overflow: visible !important;
+      overflow-x: visible !important;
       overflow-y: visible !important;
-      -webkit-overflow-scrolling: touch;
-      overscroll-behavior-x: contain;
-      touch-action: pan-x pan-y pinch-zoom !important;
+      -webkit-overflow-scrolling: auto;
+      overscroll-behavior: auto;
+      touch-action: pan-y pinch-zoom !important;
     }
-    .meteopt-data-table { width: 705px !important; min-width: 705px !important; max-width: 705px !important; table-layout: fixed !important; }
+    .meteopt-data-table { width: 100% !important; min-width: 0 !important; max-width: 100% !important; table-layout: fixed !important; }
   </style>
 
   <style id="single-gfs-comparison-image">
