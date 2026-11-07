@@ -82,14 +82,15 @@ GitHub Actions artık canlı İstanbul GFS veya istasyon verisini toplamaz.
 
 | İş akışı | Görev |
 |---|---|
-| `deploy-cloudflare-platform.yml` | Cloudflare İstanbul GFS Worker'ını ve Static Assets web katmanını dağıtır; sağlık ve API testlerini yapar. |
+| `deploy-cloudflare-platform.yml` | Yalnızca Cloudflare web Worker + Static Assets katmanını dağıtır; Service Binding ve API smoke testlerini yapar. GFS Worker'larını yeniden dağıtmaz. |
+| `deploy-istanbul-gfs-worker.yml` | İstanbul GFS Worker + D1 migration ve Cron dağıtımını bağımsız yapar. |
 | `deploy-koy-gfs-worker.yml` | Köy GFS Worker + D1 dağıtımını yapar ve doğrular. |
 | `deploy-stations-worker.yml` | İstasyon Worker + D1 dağıtımını yapar ve Cron/D1 geçmişini doğrular. |
 | `istanbul-gfs-10min.yml` | Yalnızca Cloudflare D1 verisini senkronize eder; yeni F180 çıktısında rapor/PNG ve Telegram teslimatını yürütür. MeteoPT'ye doğrudan istek göndermez. |
-| `publish-live-site.yml` | GitHub Pages yedek kopyasını manuel veya kaynak değişikliklerinde yayımlar. Beş dakikalık zamanlayıcısı kaldırılmıştır. |
+| `publish-live-site.yml` | GitHub Pages yedek kopyasını yalnızca manuel tetiklemeyle yayımlar. Üretim güncellemelerini bekletmez. |
 | `ecmwf-eps.yml` | ECMWF EPS veri hazırlığını yürütür; henüz Cloudflare Cron'a taşınmamıştır. |
 
-Kod değişikliklerinde Cloudflare deployment'ı GitHub üzerinden başlatılır; bu yalnızca dağıtım adımıdır. Canlı GFS ve istasyon güncellemeleri bu dağıtıma bağlı değildir.
+Kod değişikliklerinde Cloudflare deployment'ı GitHub üzerinden başlatılır; bu yalnızca dağıtım adımıdır. Web arayüzü değişikliği artık İstanbul GFS Worker + D1 deployment'ını tetiklemez. GitHub Pages, yeni GFS raporlarında yeniden oluşturulmaz. Canlı GFS ve istasyon güncellemeleri web deployment'ına bağlı değildir.
 
 ## Veri saklama
 
