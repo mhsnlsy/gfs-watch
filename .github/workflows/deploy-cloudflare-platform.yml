@@ -199,11 +199,16 @@ jobs:
           )"
           test -n "$KOY_LIVE_SVG_STAMP"
           echo "Checking latest Köy SVG: $KOY_LIVE_SVG_STAMP"
-          curl --silent --show-error --fail --max-time 30 "$WEB/koy-data/gfs/media/koy-gfs-$KOY_LIVE_SVG_STAMP-comparison.svg?verify=$(date +%s)" -o "$RUNNER_TEMP/live-koy-latest.svg"
+          curl --silent --show-error --fail --max-time 30 \
+            --dump-header "$RUNNER_TEMP/live-koy-svg-headers.txt" \
+            "$WEB/koy-data/gfs/media/koy-gfs-$KOY_LIVE_SVG_STAMP-comparison.svg?verify=$(date +%s)" \
+            -o "$RUNNER_TEMP/live-koy-latest.svg"
+          grep -qi '^x-gfs-publication-source: D1' "$RUNNER_TEMP/live-koy-svg-headers.txt"
+          grep -qi '^x-gfs-watch-gateway: service-binding' "$RUNNER_TEMP/live-koy-svg-headers.txt"
           node - "$RUNNER_TEMP/live-koy-latest.svg" "$KOY_LIVE_SVG_STAMP" <<'NODE'
           const fs = require("fs");
           const svg = fs.readFileSync(process.argv[2], "utf8");
-          if (!svg.includes("<svg") || !svg.includes('id="gfs-interactive-data"') || Buffer.byteLength(svg, "utf8") < 10000) {
+          if (!svg.includes("<svg") || !svg.includes('id="gfs-interactive-data"') || !svg.includes('id="gfs-renderer-version">cloudflare-js-v1</metadata>') || Buffer.byteLength(svg, "utf8") < 10000) {
             throw new Error("Latest live Köy SVG is missing or malformed: " + process.argv[3]);
           }
           console.log("Latest live Köy SVG verified: " + process.argv[3] + " (" + Buffer.byteLength(svg, "utf8") + " bytes).");
