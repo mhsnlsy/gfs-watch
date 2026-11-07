@@ -50,7 +50,7 @@ Canlı web arayüzü, API geçidi ve veri toplama servisleri Cloudflare üzerind
 - Worker 00Z, 06Z, 12Z ve 18Z seçicilerini kontrol eder; kullanılabilir döngüleri D1'e arşivler.
 - F72 güncel paketi ve F180 tamamlanmış döngü arşivi D1'de tutulur.
 - API: `/gfs/latest`, `/gfs/comparison`, `/api/health`.
-- GitHub Actions artık MeteoPT'yi tekrar sorgulamaz. Rapor üretim iş akışı Cloudflare API'sinden D1'deki son dört tam döngüyü alır; mevcut SVG/PNG raporunu ve Telegram mesajını üretir. Raporun SVG/PNG çıktılarının R2'ye taşınması sonraki aşamadır.
+- F180 tamamlandığında İstanbul GFS Worker, D1'deki son dört tam döngüyü aynı UTC geçerlilik saatlerine hizalar; rapor metnini ve etkileşimli dört panelli SVG'yi kendi içinde üretir, D1 yayın arşivine yazar ve Telegram'a metin + SVG dosyası gönderir. Teslimat adımları D1 outbox tablosunda tutulur; yarım kalan teslimatlar sonraki Cron çalışmasında kaldığı adımdan sürdürülür. Python/Matplotlib PNG hattı yalnızca manuel geri dönüş aracı olarak korunur.
 
 ### Köy GFS
 
@@ -91,7 +91,7 @@ GitHub Actions artık canlı İstanbul GFS veya istasyon verisini toplamaz.
 | `rebuild-koy-gfs-interactive-svg.yml` | Yalnızca manuel doğrulama; zamanlanmış SVG üretimi artık Cloudflare Worker içinde yapılır. |
 | `deploy-stations-worker.yml` | İstasyon Worker + D1 dağıtımını yapar ve Cron/D1 geçmişini doğrular. |
 | `deploy-gfs-guardian.yml` | 30 dakikalık düşük sıklıklı yedek watchdog; rapor akışı 8 saat sessiz kalırsa kurtarma tetiklemesi yapar. |
-| `istanbul-gfs-10min.yml` | Cloudflare Worker yeni F180 döngüsünü D1'e yazınca olay tabanlı tetiklenir; rapor/PNG ve Telegram teslimatını yürütür. 10 dakikalık boş polling yoktur. |
+| `istanbul-gfs-10min.yml` | Yalnızca manuel acil durum/geri dönüş çalıştırması; normal F180 rapor üretimi ve Telegram teslimatı Cloudflare GFS Worker içinde yapılır. |
 | `publish-live-site.yml` | GitHub Pages yedek kopyasını yalnızca manuel tetiklemeyle yayımlar. Üretim güncellemelerini bekletmez. |
 | `ecmwf-eps.yml` | ECMWF EPS veri hazırlığını yürütür; henüz Cloudflare Cron'a taşınmamıştır. |
 
@@ -110,7 +110,7 @@ Kod değişikliklerinde Cloudflare deployment'ı GitHub üzerinden başlatılır
 
 ## Telegram
 
-İstanbul GFS için yeni F180 raporunda mevcut rapor metni ve karşılaştırma görseli Telegram'a gönderilir. Teslimat işaretleri `telegram-sent` altında tutulur; başarısız kısmi teslimatlar yeniden denenebilir.
+İstanbul GFS için yeni F180 raporunda Cloudflare Worker rapor metnini ve dört döngülü SVG karşılaştırmasını üretir; Telegram'a metin ve SVG dosyası gönderir. Teslimat kayıtları İstanbul GFS D1 içindeki `gfs_report_publications` outbox tablosunda tutulur; metin gönderilmiş ancak SVG gönderimi başarısız olmuşsa sonraki Cron yalnızca SVG adımını tekrarlar. Python/Matplotlib ile PNG gönderen GitHub workflow'u manuel geri dönüş seçeneği olarak kalır.
 
 Gerekli GitHub Actions secrets:
 - `TELEGRAM_TOKEN`
