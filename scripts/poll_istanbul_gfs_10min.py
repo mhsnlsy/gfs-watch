@@ -140,6 +140,8 @@ def main() -> int:
                 f180_ready = True
                 selected_f180_run = run_id
                 print(f"[GFS 10M] F180 ready for report retry: {run_id}")
+            else:
+                print(f"[GFS 10M] F180 already published: {run_id}")
 
     output("new_run", "true" if any_new_run else "false")
     output("f72_cached", "true" if f72_cached else "false")
