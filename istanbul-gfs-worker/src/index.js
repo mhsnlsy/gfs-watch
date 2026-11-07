@@ -11,6 +11,14 @@ const LOCATION = {
 const CYCLES = [18, 12, 6, 0];
 const RETENTION_DAYS = 14;
 const UTC_OFFSET_MS = 3 * 60 * 60 * 1000;
+const ECMWF_API_BASE = "https://api.meteopt.com/ecmwf/json";
+const ECMWF_SOURCE_URL = "https://www.meteopt.com/modelos/ecmwf?lat=41.0901&lon=28.9436";
+const ECMWF_LOCATION = {
+  name: "Istanbul",
+  latitude: 41.0901,
+  longitude: 28.9436,
+};
+const ECMWF_SCHEMA = "gfs-watch.ecmwf-eps.v1";
 
 function json(data, status = 200) {
   return new Response(JSON.stringify(data), {
@@ -511,8 +519,176 @@ async function deliverPendingTelegram(env) {
   }
 }
 
+function ecmwfRunCandidate(now = new Date()) {
+  const hour = now.getUTCHours() >= 12 ? 12 : 0;
+  return new Date(Date.UTC(now.getUTCFullYear(), now.getUTCMonth(), now.getUTCDate(), hour));
+}
+
+function ecmwfNumber(value) {
+  const n = Number(value);
+  return Number.isFinite(n) ? n : null;
+}
+
+function ecmwfSeries(document, name) {
+  const values = document?.data?.[name]?.values;
+  return Array.isArray(values) ? values : [];
+}
+
+async function fetchEcmwfDocument(runDt) {
+  const url = new URL(ECMWF_API_BASE);
+  url.searchParams.set("lat", ECMWF_LOCATION.latitude.toFixed(4));
+  url.searchParams.set("lon", ECMWF_LOCATION.longitude.toFixed(4));
+  url.searchParams.set("date", runDt.toISOString().slice(0, 10).replaceAll("-", ""));
+  url.searchParams.set("run", String(runDt.getUTCHours()).padStart(2, "0"));
+  url.searchParams.set("lang", "en");
+  const response = await fetch(url.toString(), {
+    headers: { "User-Agent": "GFS-Watch-Istanbul-Cloudflare/1.0", "Cache-Control": "no-cache" },
+    signal: AbortSignal.timeout(30000),
+  });
+  if (!response.ok) throw new Error("MeteoPT ECMWF HTTP " + response.status);
+  const raw = await response.json();
+  const expected = runDt.toISOString().slice(0, 13).replace(/[-:T]/g, "");
+  if (String(raw?.run || "") !== expected) {
+    throw new Error("MeteoPT ECMWF returned run " + String(raw?.run || "empty") + ", expected " + expected);
+  }
+  const steps = (raw?.steps?.values || [])
+    .map(value => Number(value))
+    .filter(value => Number.isInteger(value) && value > 0 && value % 3 === 0);
+  const temperature = ecmwfSeries(raw, "tmp2m");
+  const temperature850 = ecmwfSeries(raw, "tmp850mb");
+  const wind = ecmwfSeries(raw, "wind10m");
+  const windDirection = ecmwfSeries(raw, "wind10mdir");
+  const wind850 = ecmwfSeries(raw, "wind850");
+  const rain = ecmwfSeries(raw, "apcp");
+  const pressure = ecmwfSeries(raw, "prmsl");
+  const forecasts = [];
+  let previousHour = 0;
+  for (let i = 0; i < steps.length; i += 1) {
+    const values = {
+      temperature: ecmwfNumber(temperature[i]),
+      temperature850: ecmwfNumber(temperature850[i]),
+      wind: ecmwfNumber(wind[i]),
+      windDirection: ecmwfNumber(windDirection[i]),
+      wind850: ecmwfNumber(wind850[i]),
+      rain: ecmwfNumber(rain[i]),
+      pressure: ecmwfNumber(pressure[i]),
+    };
+    if (Object.values(values).some(value => value === null)) continue;
+    const valid = new Date(runDt.getTime() + steps[i] * 3600000);
+    const local = new Date(valid.getTime() + UTC_OFFSET_MS);
+    forecasts.push({
+      forecast_hour: steps[i],
+      valid_time_utc: valid.toISOString().replace(".000Z", "+00:00"),
+      valid_time_istanbul: local.toISOString().slice(0, 16) + "+03:00",
+      temperature_2m_c: Math.round(values.temperature * 100) / 100,
+      temperature_2m_stddev_c: null,
+      wind_speed_10m_kmh: Math.round(Math.max(0, values.wind) * 100) / 100,
+      wind_direction_10m_deg: Math.round(((values.windDirection % 360) + 360) % 360),
+      wind_speed_10m_stddev_kmh: null,
+      precipitation_interval_mm: Math.round(Math.max(0, values.rain) * 1000) / 1000,
+      precipitation_interval_stddev_mm: null,
+      precipitation_accumulated_mm: null,
+      temperature_850hpa: { mean_c: Math.round(values.temperature850 * 100) / 100, stddev_c: null },
+      wind_850hpa: { mean_kmh: Math.round(Math.max(0, values.wind850) * 100) / 100, stddev_kmh: null },
+      mslp: { mean_hpa: Math.round(values.pressure * 10) / 10, stddev_hpa: null },
+      precipitation_interval_hours: steps[i] - previousHour,
+    });
+    previousHour = steps[i];
+  }
+  if (forecasts.length < 8) throw new Error("MeteoPT ECMWF usable forecast is too short: " + forecasts.length);
+  const daily = {};
+  for (const item of forecasts) {
+    const date = item.valid_time_istanbul.slice(0, 10);
+    daily[date] ||= { t: [], p: [], w: [], w850: [] };
+    daily[date].t.push(item.temperature_2m_c);
+    daily[date].p.push(item.precipitation_interval_mm);
+    daily[date].w.push(item.wind_speed_10m_kmh);
+    daily[date].w850.push(item.wind_850hpa.mean_kmh);
+  }
+  const dailySummary = Object.entries(daily).map(([date, d]) => ({
+    date_istanbul: date,
+    temperature_min_c: Math.round(Math.min(...d.t) * 10) / 10,
+    temperature_max_c: Math.round(Math.max(...d.t) * 10) / 10,
+    precipitation_total_mm: Math.round(d.p.reduce((a, b) => a + b, 0) * 10) / 10,
+    wind_speed_max_10m_kmh: Math.round(Math.max(...d.w) * 10) / 10,
+    wind_speed_max_850hpa_kmh: Math.round(Math.max(...d.w850) * 10) / 10,
+  }));
+  const timeline = forecasts.map(item => ({
+    forecast_hour: item.forecast_hour,
+    valid_time_utc: item.valid_time_utc,
+    valid_time_istanbul: item.valid_time_istanbul,
+    temperature_2m_c: item.temperature_2m_c,
+    temperature_850hpa_c: item.temperature_850hpa.mean_c,
+    wind_speed_10m_kmh: item.wind_speed_10m_kmh,
+    wind_direction_10m_deg: item.wind_direction_10m_deg,
+    wind_speed_850hpa_kmh: item.wind_850hpa.mean_kmh,
+    precipitation_6h_mm: item.precipitation_interval_mm,
+    precipitation_interval_hours: item.precipitation_interval_hours,
+  }));
+  const first = forecasts[0];
+  return {
+    schema: ECMWF_SCHEMA,
+    status: "ready",
+    forecast_source: "meteopt",
+    model: "ECMWF via MeteoPT",
+    product: "MeteoPT ECMWF 3-hour point",
+    surface_forecast_source: "MeteoPT ECMWF point",
+    ensemble_forecast_source: "MeteoPT ECMWF point",
+    surface_ensemble_spread_available: false,
+    resolution: "MeteoPT nokta",
+    forecast_horizon_hours: forecasts[forecasts.length - 1].forecast_hour,
+    run_id_utc: runDt.toISOString().replace(".000Z", "+00:00"),
+    updated_at_utc: new Date().toISOString(),
+    forecast_valid_until_utc: forecasts[forecasts.length - 1].valid_time_utc,
+    location: { name: raw?.geodata?.place || "İstanbul", latitude: ECMWF_LOCATION.latitude, longitude: ECMWF_LOCATION.longitude, nearest_grid_latitude: ECMWF_LOCATION.latitude, nearest_grid_longitude: ECMWF_LOCATION.longitude },
+    units: { temperature_850hpa: "°C", wind_850hpa: "km/sa", mslp: "hPa", spread: "MeteoPT noktasında ensemble sapması yok" },
+    attribution: "ECMWF nokta serisi MeteoPT üzerinden alınır.",
+    license: "MeteoPT",
+    license_url: "https://www.meteopt.com/modelos/ecmwf",
+    source_url: ECMWF_SOURCE_URL,
+    notes: ["Sıcaklık, rüzgâr, yağış, 850 hPa ve basınç aynı MeteoPT ECMWF noktasından gelir.", "Seri 3 saatte bir. Ensemble sapması ve bölgesel basınç merkezi bu kaynakta yok."],
+    forecasts,
+    daily_summary: dailySummary,
+    forecast_6_hourly: timeline,
+    current_conditions: {
+      temperature_2m_c: first.temperature_2m_c,
+      wind_speed_10m_kmh: first.wind_speed_10m_kmh,
+      precipitation_mm: first.precipitation_interval_mm,
+      mean_sea_level_pressure_hpa: first.mslp.mean_hpa,
+    },
+    regional_pressure_analysis: {
+      valid_time_utc: first.valid_time_utc,
+      diameter_km: null,
+      findings: ["İstanbul deniz seviyesi basıncı " + first.mslp.mean_hpa.toFixed(1) + " hPa. MeteoPT ECMWF noktası; bölgesel basınç merkezi bu kaynakta yok."],
+    },
+  };
+}
+
+async function collectEcmwf(env) {
+  const runDt = ecmwfRunCandidate();
+  const runId = runDt.toISOString().replace(".000Z", "+00:00");
+  const current = await env.GFS_DB.prepare("SELECT run_id_utc, payload_json FROM ecmwf_current WHERE key = 'latest'").first();
+  if (current && current.run_id_utc === runId) {
+    return { updated: false, run_id_utc: runId, source: "meteopt" };
+  }
+  const payload = await fetchEcmwfDocument(runDt);
+  await env.GFS_DB.prepare(
+    "INSERT INTO ecmwf_runs (run_id_utc, payload_json, published_at_utc, stored_at_utc) VALUES (?, ?, ?, ?) ON CONFLICT(run_id_utc) DO UPDATE SET payload_json=excluded.payload_json, published_at_utc=excluded.published_at_utc, stored_at_utc=excluded.stored_at_utc"
+  ).bind(runId, JSON.stringify(payload), runId, new Date().toISOString()).run();
+  await env.GFS_DB.prepare(
+    "INSERT INTO ecmwf_current (key, run_id_utc, payload_json, updated_at_utc) VALUES ('latest', ?, ?, ?) ON CONFLICT(key) DO UPDATE SET run_id_utc=excluded.run_id_utc, payload_json=excluded.payload_json, updated_at_utc=excluded.updated_at_utc"
+  ).bind(runId, JSON.stringify(payload), new Date().toISOString()).run();
+  if (env.ECMWF_ARCHIVE) {
+    await env.ECMWF_ARCHIVE.put("data/ecmwf/latest.json", JSON.stringify(payload));
+    await env.ECMWF_ARCHIVE.put("data/ecmwf/" + runId.replaceAll(":", "").replaceAll("+", "") + ".json", JSON.stringify(payload));
+  }
+  return { updated: true, run_id_utc: runId, source: "meteopt", forecast_horizon_hours: payload.forecast_horizon_hours };
+}
+
 async function collect(env) {
   const started = new Date();
+  let ecmwf = null;
+  try { ecmwf = await collectEcmwf(env); } catch (error) { ecmwf = { updated: false, error: String(error?.message || error), source: "meteopt" }; console.error(JSON.stringify({ event: "ecmwf_collect_error", ...ecmwf })); }
   const settled = await Promise.allSettled(CYCLES.map(hour => fetchCycle(hour)));
   const candidates = [];
   const warnings = [];
@@ -599,6 +775,7 @@ async function collect(env) {
     telegram_delivery: telegramDelivery,
     f72_updated: f72Updated,
     f180_ready: normalized.some(item => item.result.hasF180),
+    ecmwf,
     warnings,
     checked_at_utc: started.toISOString(),
   };
@@ -767,6 +944,24 @@ async function handleApi(request, env) {
         publication_assets: Number((await env.GFS_DB.prepare("SELECT COUNT(*) AS count FROM gfs_publication_assets").first())?.count || 0),
         location: LOCATION,
       });
+    } catch (error) {
+      return json({ ok: false, error: String(error?.message || error) }, 503);
+    }
+  }
+
+  if (path === "/ecmwf/latest" || path === "/api/ecmwf/latest") {
+    try {
+      const row = await env.GFS_DB.prepare("SELECT payload_json FROM ecmwf_current WHERE key = 'latest'").first();
+      if (!row) return json({ ok: false, error: "No MeteoPT ECMWF run is available yet" }, 503);
+      return json(JSON.parse(row.payload_json));
+    } catch (error) {
+      return json({ ok: false, error: String(error?.message || error) }, 503);
+    }
+  }
+  if (path === "/ecmwf/comparison" || path === "/api/ecmwf/comparison") {
+    try {
+      const rows = await env.GFS_DB.prepare("SELECT payload_json FROM ecmwf_runs ORDER BY run_id_utc DESC LIMIT 4").all();
+      return json({ schema: "gfs-watch.ecmwf.comparison.v1", source: ECMWF_SOURCE_URL, runs: (rows.results || []).map(row => JSON.parse(row.payload_json)) });
     } catch (error) {
       return json({ ok: false, error: String(error?.message || error) }, 503);
     }
