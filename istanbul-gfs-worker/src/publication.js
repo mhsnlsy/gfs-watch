@@ -365,7 +365,7 @@ export function buildIstanbulReportText(document, now = new Date(), stationObser
       ? "🕒 Ölçüm: " + formatTrDate(localDate(stationObservation.observed_at_utc)) + " TSİ" +
         (Number.isFinite(Number(stationObservation.age_minutes)) ? " · " + Math.round(Number(stationObservation.age_minutes)) + " dk önce" : "")
       : "🕒 Ölçüm zamanı: —",
-    stationObservation && stationObservation.is_stale
+    stationObservation && Number.isFinite(Number(stationObservation.age_minutes)) && Number(stationObservation.age_minutes) > 20
       ? "⚠️ İstasyon verisi 20 dakikadan eski; paneldeki son başarılı ölçüm kullanıldı."
       : stationObservation
         ? "✅ Veri: aktif ENKA Balmumcu istasyon panosundan alındı."
