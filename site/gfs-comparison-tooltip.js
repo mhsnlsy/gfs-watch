@@ -30,22 +30,25 @@ function buildGfsTooltipMarkup(panel,index,validTime){
     rows+'<div class="gfs-chart-tooltip-hint">Dört döngü · aynı geçerlilik anı · TSİ</div>';
 }
 function positionGfsTooltip(host,tooltip,clientX,clientY){
-  const hostRect=host.getBoundingClientRect();
-  let left=12,top=12;
-  if(Number.isFinite(clientX))left=clientX-hostRect.left+14;
-  if(Number.isFinite(clientY))top=clientY-hostRect.top+14;
+  if(!Number.isFinite(clientX)||!Number.isFinite(clientY))return;
   tooltip.hidden=false;
-  tooltip.style.left=Math.max(8,left)+"px";
-  tooltip.style.top=Math.max(8,top)+"px";
+  // Tooltips are always positioned above the actual touch/cursor point.
+  // Use viewport-fixed positioning so clipping inside the chart/card cannot push
+  // the popup below the finger.
+  tooltip.style.position="fixed";
+  tooltip.style.zIndex="2147483647";
+  tooltip.style.pointerEvents="none";
+  tooltip.style.left="0px";
+  tooltip.style.top="0px";
   requestAnimationFrame(()=>{
-    const maxLeft=Math.max(8,host.clientWidth-tooltip.offsetWidth-8);
-    const maxTop=Math.max(8,host.clientHeight-tooltip.offsetHeight-8);
-    let nextLeft=Math.min(maxLeft,Math.max(8,left));
-    let nextTop=top;
-    if(nextTop+tooltip.offsetHeight>host.clientHeight-8)nextTop=top-tooltip.offsetHeight-28;
-    nextTop=Math.min(maxTop,Math.max(8,nextTop));
-    tooltip.style.left=nextLeft+"px";
-    tooltip.style.top=nextTop+"px";
+    const margin=10;
+    const gap=14;
+    const width=tooltip.offsetWidth;
+    const height=tooltip.offsetHeight;
+    const left=Math.max(margin,Math.min(window.innerWidth-width-margin,clientX-width/2));
+    const top=clientY-height-gap;
+    tooltip.style.left=Math.round(left)+"px";
+    tooltip.style.top=Math.round(Math.max(margin,top))+"px";
   });
 }
 function attachGfsSvgInteractions(host,svg,metadata){
@@ -55,8 +58,9 @@ function attachGfsSvgInteractions(host,svg,metadata){
   tooltip.setAttribute("role","status");
   tooltip.setAttribute("aria-live","polite");
   tooltip.setAttribute("aria-atomic","true");
-  host.appendChild(tooltip);
+  document.body.appendChild(tooltip);
   const panels=new Map((metadata.panels||[]).map(panel=>[panel.id,panel]));
+  const panelList=Array.from(panels.values());
   const activeIndexes=new Map();
   let touchHideTimer=null;
   function clearTouchHideTimer(){
@@ -76,6 +80,20 @@ function attachGfsSvgInteractions(host,svg,metadata){
     host.removeAttribute("data-pinned");
     svg.querySelectorAll(".gfs-tooltip-crosshair").forEach(line=>line.setAttribute("visibility","hidden"));
     svg.querySelectorAll(".gfs-tooltip-markers").forEach(group=>group.replaceChildren());
+  }
+  function panelAtEvent(event){
+    const rect=svg.getBoundingClientRect();
+    const sx=Number(svg.viewBox?.baseVal?.width||0);
+    const sy=Number(svg.viewBox?.baseVal?.height||0);
+    if(!sx||!sy)return null;
+    const localX=(event.clientX-rect.left)*(sx/rect.width)+(svg.viewBox.baseVal.x||0);
+    const localY=(event.clientY-rect.top)*(sy/rect.height)+(svg.viewBox.baseVal.y||0);
+    for(const panel of panelList){
+      const plot=panel.plot||{};
+      const x=Number(plot.x||0),y=Number(plot.y||0),w=Number(plot.width||0),h=Number(plot.height||0);
+      if(localX>=x-28&&localX<=x+w+28&&localY>=y-48&&localY<=y+h+48)return panel;
+    }
+    return panelList.length===1?panelList[0]:null;
   }
   function show(panel,index,event){
     if(!panel||!panel.valid_times?.[index])return;
@@ -105,95 +123,61 @@ function attachGfsSvgInteractions(host,svg,metadata){
       markerGroup.appendChild(marker);
     });
     tooltip.innerHTML=buildGfsTooltipMarkup(panel,index,validTime);
-    positionGfsTooltip(
-      host,tooltip,
-      event&&Number.isFinite(event.clientX)?event.clientX:NaN,
-      event&&Number.isFinite(event.clientY)?event.clientY:NaN
-    );
+    positionGfsTooltip(host,tooltip,event?.clientX,event?.clientY);
   }
-  svg.querySelectorAll(".gfs-hit-area").forEach(hit=>{
-    const panel=panels.get(hit.getAttribute("data-panel-id"));
+  function selectNearest(event){
+    const panel=panelAtEvent(event);
     if(!panel)return;
-    const selectNearest=event=>{
-      const point=svg.createSVGPoint();
-      point.x=event.clientX;
-      point.y=event.clientY;
-      const local=point.matrixTransform(svg.getScreenCTM().inverse());
-      let nearest=0,best=Infinity;
-      panel.x_positions.forEach((x,index)=>{
-        const distance=Math.abs(x-local.x);
-        if(distance<best){best=distance;nearest=index;}
-      });
-      show(panel,nearest,event);
-    };
-    hit.style.touchAction="pan-y";
-    hit.style.webkitTapHighlightColor="transparent";
-    const handleTouchMove=event=>{
-      if(event.pointerType!=="touch")return;
-      if(!host.hasAttribute("data-pinned"))return;
+    const rect=svg.getBoundingClientRect();
+    const vb=svg.viewBox.baseVal;
+    const localX=(event.clientX-rect.left)*(vb.width/rect.width)+vb.x;
+    let nearest=0,best=Infinity;
+    panel.x_positions.forEach((x,index)=>{
+      const distance=Math.abs(x-localX);
+      if(distance<best){best=distance;nearest=index;}
+    });
+    show(panel,nearest,event);
+  }
+  svg.style.touchAction="pan-y";
+  svg.style.webkitTapHighlightColor="transparent";
+  svg.addEventListener("pointermove",event=>{
+    if(event.pointerType==="touch"){
+      if(!host.hasAttribute("data-pinned"))host.setAttribute("data-pinned","true");
       selectNearest(event);
       scheduleTouchHide();
-    };
-    hit.addEventListener("pointermove",event=>{
-      if(event.pointerType==="touch"){
-        host.setAttribute("data-pinned","true");
-        selectNearest(event);
-        scheduleTouchHide();
-        return;
-      }
-      if(host.hasAttribute("data-pinned"))return;
-      selectNearest(event);
-    });
-    hit.addEventListener("pointerrawupdate",handleTouchMove);
-    hit.addEventListener("pointerdown",event=>{
-      if(event.pointerType!=="touch")return;
-      host.setAttribute("data-pinned","true");
-      try{hit.setPointerCapture(event.pointerId);}catch(_){}
-      selectNearest(event);
-      scheduleTouchHide();
-    });
-    hit.addEventListener("touchmove",event=>{
-      if(!host.hasAttribute("data-pinned")||!event.touches[0])return;
-      event.preventDefault();
-      const touch=event.touches[0];
-      selectNearest({
-        clientX:touch.clientX,
-        clientY:touch.clientY
-      });
-      scheduleTouchHide();
-    },{passive:false});
-    hit.addEventListener("pointerup",event=>{
-      if(event.pointerType==="touch")scheduleTouchHide();
-    });
-    hit.addEventListener("pointercancel",event=>{
-      if(event.pointerType==="touch")hide();
-    });
-    hit.addEventListener("pointerleave",()=>{
-      if(!host.hasAttribute("data-pinned"))hide();
-    });
-    hit.addEventListener("focus",()=>{
-      const index=activeIndexes.get(panel.id)??Math.floor(panel.valid_times.length/2);
-      show(panel,index,null);
-    });
-    hit.addEventListener("keydown",event=>{
-      if(event.key==="Escape"){event.preventDefault();hide();return;}
-      if(event.key!=="ArrowLeft"&&event.key!=="ArrowRight")return;
-      event.preventDefault();
-      const current=activeIndexes.get(panel.id)??0;
-      const next=Math.max(0,Math.min(panel.valid_times.length-1,current+(event.key==="ArrowRight"?1:-1)));
-      show(panel,next,null);
-    });
+      return;
+    }
+    if(host.hasAttribute("data-pinned"))return;
+    selectNearest(event);
   });
-  host.addEventListener("pointerleave",()=>{
+  svg.addEventListener("pointerdown",event=>{
+    if(event.pointerType!=="touch"&&event.pointerType!=="pen")return;
+    event.preventDefault();
+    host.setAttribute("data-pinned","true");
+    try{svg.setPointerCapture(event.pointerId);}catch(_){}
+    selectNearest(event);
+    if(event.pointerType==="touch")scheduleTouchHide();
+  });
+  svg.addEventListener("pointerup",event=>{
+    if(event.pointerType==="touch")scheduleTouchHide();
+  });
+  svg.addEventListener("pointercancel",event=>{
+    if(event.pointerType==="touch")hide();
+  });
+  svg.addEventListener("pointerleave",()=>{
     if(!host.hasAttribute("data-pinned"))hide();
   });
-  host.addEventListener("pointerdown",event=>{
-    if(event.target.closest(".gfs-hit-area"))return;
-    if(!event.target.closest(".gfs-chart-tooltip"))hide();
+  svg.addEventListener("keydown",event=>{
+    if(event.key==="Escape"){event.preventDefault();hide();return;}
+    if(event.key!=="ArrowLeft"&&event.key!=="ArrowRight")return;
+    const panel=panelList[0];
+    if(!panel)return;
+    const current=activeIndexes.get(panel.id)??0;
+    const next=Math.max(0,Math.min(panel.valid_times.length-1,current+(event.key==="ArrowRight"?1:-1)));
+    show(panel,next,{clientX:svg.getBoundingClientRect().left+svg.getBoundingClientRect().width/2,clientY:svg.getBoundingClientRect().top+40});
   });
   host.gfsHideTooltip=hide;
 }
-
 function isMobileGfsLayout(){
   const viewportWidth=Math.min(
     Number(window.innerWidth||0),
