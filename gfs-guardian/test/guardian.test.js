@@ -1,118 +1,88 @@
-import test, { afterEach } from "node:test";
+import test from "node:test";
 import assert from "node:assert/strict";
 import worker from "../src/index.js";
 
-const originalFetch = globalThis.fetch;
 const originalLog = console.log;
 const originalError = console.error;
 
-afterEach(() => {
-  globalThis.fetch = originalFetch;
+test.afterEach(() => {
   console.log = originalLog;
   console.error = originalError;
 });
 
-function isoMinutesAgo(minutes, now = Date.now()) {
-  return new Date(now - minutes * 60_000).toISOString();
-}
-
-function mockRuns(runs, calls) {
-  globalThis.fetch = async (url, options = {}) => {
-    calls.push({ url: String(url), options });
-    if (String(url).includes("/runs?")) {
-      return Response.json({ workflow_runs: runs });
-    }
-    return new Response(null, { status: 204 });
+function binding(health, calls) {
+  return {
+    async fetch(request) {
+      const url = new URL(request.url);
+      calls.push({ url: url.pathname, method: request.method, authorization: request.headers.get("Authorization") });
+      if (url.pathname === "/api/health") return Response.json(health);
+      if (url.pathname === "/internal/reconcile") {
+        return Response.json({ ok: true, result: { run_id_utc: "2026-11-08T00:00:00+00:00" } });
+      }
+      return new Response("not found", { status: 404 });
+    },
   };
 }
 
-test("does not dispatch when the GFS pipeline has a recent successful heartbeat", async () => {
+test("does not trigger recovery while the Cloudflare primary Cron is healthy", async () => {
   const now = Date.now();
   const calls = [];
-  mockRuns([{
-    id: 101,
-    event: "schedule",
-    status: "completed",
-    conclusion: "success",
-    completed_at: isoMinutesAgo(4, now),
-    created_at: isoMinutesAgo(5, now),
-  }], calls);
-
-  await worker.scheduled({ scheduledTime: now }, { GFS_DISPATCH_TOKEN: "test-token" });
-
+  const env = {
+    ISTANBUL_GFS: binding({
+      ok: true,
+      service: "gfs-watch-istanbul-gfs",
+      last_cron_started_at_utc: new Date(now - 2 * 60000).toISOString(),
+      last_cron_success_at_utc: new Date(now - 1 * 60000).toISOString(),
+    }, calls),
+    GFS_DISPATCH_TOKEN: "worker-token",
+  };
+  await worker.scheduled({ scheduledTime: now }, env, { waitUntil: promise => promise });
   assert.equal(calls.length, 1);
-  assert.match(calls[0].url, /actions\/workflows\/istanbul-gfs-10min\.yml\/runs/);
+  assert.equal(calls[0].url, "/api/health");
 });
 
-test("dispatches the existing workflow when the last success is stale", async () => {
+test("recovers a stale primary Cron through Cloudflare Service Binding", async () => {
   const now = Date.now();
   const calls = [];
-  mockRuns([{
-    id: 102,
-    event: "schedule",
-    status: "completed",
-    conclusion: "success",
-    completed_at: isoMinutesAgo(50, now),
-    created_at: isoMinutesAgo(51, now),
-  }], calls);
-
-  await worker.scheduled({ scheduledTime: now }, { GFS_DISPATCH_TOKEN: "test-token" });
-
+  const env = {
+    ISTANBUL_GFS: binding({
+      ok: true,
+      service: "gfs-watch-istanbul-gfs",
+      last_cron_started_at_utc: new Date(now - 40 * 60000).toISOString(),
+      last_cron_success_at_utc: new Date(now - 45 * 60000).toISOString(),
+      last_cron_error: "temporary source timeout",
+    }, calls),
+    GFS_DISPATCH_TOKEN: "worker-token",
+  };
+  await worker.scheduled({ scheduledTime: now }, env, { waitUntil: promise => promise });
   assert.equal(calls.length, 2);
-  assert.match(calls[1].url, /actions\/workflows\/istanbul-gfs-10min\.yml\/dispatches$/);
-  assert.equal(calls[1].options.method, "POST");
-  assert.deepEqual(JSON.parse(calls[1].options.body), { ref: "main" });
+  assert.equal(calls[1].url, "/internal/reconcile");
+  assert.equal(calls[1].method, "POST");
+  assert.equal(calls[1].authorization, "Bearer worker-token");
 });
 
-test("does not dispatch while a GFS workflow run is active", async () => {
+test("does not race a recently started primary collection", async () => {
   const now = Date.now();
   const calls = [];
-  mockRuns([{
-    id: 103,
-    event: "schedule",
-    status: "in_progress",
-    conclusion: null,
-    created_at: isoMinutesAgo(2, now),
-  }], calls);
-
-  await worker.scheduled({ scheduledTime: now }, { GFS_DISPATCH_TOKEN: "test-token" });
-
+  const env = {
+    ISTANBUL_GFS: binding({
+      ok: true,
+      service: "gfs-watch-istanbul-gfs",
+      last_cron_started_at_utc: new Date(now - 5 * 60000).toISOString(),
+      last_cron_success_at_utc: new Date(now - 50 * 60000).toISOString(),
+    }, calls),
+    GFS_DISPATCH_TOKEN: "worker-token",
+  };
+  await worker.scheduled({ scheduledTime: now }, env, { waitUntil: promise => promise });
   assert.equal(calls.length, 1);
 });
 
-test("applies the cooldown after a previous fallback dispatch", async () => {
-  const now = Date.now();
-  const calls = [];
-  mockRuns([
-    {
-      id: 104,
-      event: "workflow_dispatch",
-      status: "completed",
-      conclusion: "failure",
-      created_at: isoMinutesAgo(6, now),
-      completed_at: isoMinutesAgo(5, now),
-    },
-    {
-      id: 105,
-      event: "schedule",
-      status: "completed",
-      conclusion: "success",
-      created_at: isoMinutesAgo(60, now),
-      completed_at: isoMinutesAgo(59, now),
-    },
-  ], calls);
-
-  await worker.scheduled({ scheduledTime: now }, { GFS_DISPATCH_TOKEN: "test-token" });
-
-  assert.equal(calls.length, 1);
-});
-
-test("exposes a minimal health response without exposing secrets", async () => {
+test("health endpoint exposes its Cloudflare-only recovery design without secrets", async () => {
   const response = await worker.fetch(new Request("https://guardian.example/health"));
   const body = await response.json();
-
   assert.equal(response.status, 200);
   assert.equal(body.ok, true);
-  assert.equal(body.cron, "*/30 * * * *");
+  assert.equal(body.cron, "5,15,25,35,45,55 * * * *");
+  assert.equal(body.github_runtime_dependency, false);
   assert.equal("GFS_DISPATCH_TOKEN" in body, false);
 });
