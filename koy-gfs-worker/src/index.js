@@ -256,7 +256,7 @@ async function collect(env) {
 
 async function api(request, env) {
   const url = new URL(request.url);
-  const path = url.pathname.replace(/\\/+$/, "");
+  const path = url.pathname.replace(/\/+$/, "");
 
   if (request.method === "OPTIONS") return json({ ok: true });
   if (request.method !== "GET") return json({ ok: false, error: "Method not allowed" }, 405);
