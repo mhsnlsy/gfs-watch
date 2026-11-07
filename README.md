@@ -50,7 +50,7 @@ Canlı web arayüzü, API geçidi ve veri toplama servisleri Cloudflare üzerind
 - Worker 00Z, 06Z, 12Z ve 18Z seçicilerini kontrol eder; kullanılabilir döngüleri D1'e arşivler.
 - F72 güncel paketi ve F180 tamamlanmış döngü arşivi D1'de tutulur.
 - API: `/gfs/latest`, `/gfs/comparison`, `/api/health`.
-- F180 tamamlandığında İstanbul GFS Worker, D1'deki son dört tam döngüyü aynı UTC geçerlilik saatlerine hizalar; rapor metnini ve etkileşimli dört panelli SVG'yi kendi içinde üretir, D1 yayın arşivine yazar ve Telegram'a metin + SVG dosyası gönderir. Teslimat adımları D1 outbox tablosunda tutulur; süreli atomik lease eşzamanlı Cron tekrarlarının aynı raporu göndermesini önler ve yarım kalan teslimatlar lease süresi dolduğunda kaldığı adımdan sürdürülür. Python/Matplotlib PNG hattı yalnızca manuel geri dönüş aracı olarak korunur.
+- F180 tamamlandığında İstanbul GFS Worker, D1'deki son dört tam döngüyü aynı UTC geçerlilik saatlerine hizalar; rapor metnini ve web için etkileşimli dört panelli SVG'yi üretir. Aynı SVG Cloudflare Worker içinde PNG'ye dönüştürülür, R2'ye arşivlenir ve Telegram'a metin + gerçek fotoğraf (sendPhoto) olarak gönderilir. D1 outbox ve gönderim lease'leri yarım kalan teslimatları kaldığı adımdan sürdürür; gönderim hataları 288 denemeye kadar otomatik tekrarlanır.
 
 ### Köy GFS
 
@@ -90,11 +90,10 @@ GitHub Actions artık canlı İstanbul GFS, ECMWF veya istasyon verisini toplama
 | `deploy-koy-gfs-worker.yml` | Köy GFS Worker + D1 dağıtımını yapar; Worker-native SVG üretimini ve D1 yayınını doğrular. |
 | `rebuild-koy-gfs-interactive-svg.yml` | Yalnızca manuel doğrulama; zamanlanmış SVG üretimi artık Cloudflare Worker içinde yapılır. |
 | `deploy-stations-worker.yml` | İstasyon Worker + D1 dağıtımını yapar ve Cron/D1 geçmişini doğrular. |
-| `deploy-gfs-guardian.yml` | 30 dakikalık düşük sıklıklı yedek watchdog; rapor akışı 8 saat sessiz kalırsa kurtarma tetiklemesi yapar. |
-| `istanbul-gfs-10min.yml` | Yalnızca manuel acil durum/geri dönüş çalıştırması; normal F180 rapor üretimi ve Telegram teslimatı Cloudflare GFS Worker içinde yapılır. |
+| `deploy-gfs-guardian.yml` | Ana GFS Worker sağlık zaman damgasını denetleyen, gerektiğinde Cloudflare Service Binding ile doğrudan yeniden toplama başlatan bağımsız yedek Cron. |
 | `publish-live-site.yml` | GitHub Pages yedek kopyasını yalnızca manuel tetiklemeyle yayımlar. Üretim güncellemelerini bekletmez. |
 
-Kod değişikliklerinde Cloudflare deployment'ı GitHub üzerinden başlatılır; bu yalnızca dağıtım adımıdır. Web arayüzü değişikliği artık İstanbul GFS Worker + D1 deployment'ını tetiklemez. GitHub Pages üretim ortamında kullanılmaz; eski yayın workflow'u yalnızca elle çalıştırılabilir. İstanbul GFS F180 raporu, dört döngülü etkileşimli SVG ve Telegram teslimatı artık İstanbul GFS Worker'ın 10 dakikalık Cron'u içinde çalışır; GitHub Actions rapor üretiminde veya normal Telegram teslimatında runner açmaz. D1 outbox lease'leri yarım kalan ve çakışan teslimatları yönetir. GFS Guardian 30 dakikada bir çalışan yedek kontroldür; 8 saatlik sessizlikte devreye girer. Canlı GFS ve istasyon güncellemeleri web deployment'ına bağlı değildir. R2 üretim arşivi etkin; web Worker arşivleri R2-first sunar ve yalnızca nesne bulunamadığında D1/Static Assets fallback kullanır. Köy SVG'si çalışma anında Köy Worker tarafından D1'e üretilir; yeni/eskimiş SVG için Service Binding fallback'i korunur.
+Kod değişikliklerinde Cloudflare deployment'ı GitHub üzerinden başlatılır; bu yalnızca dağıtım adımıdır. Web arayüzü değişikliği artık İstanbul GFS Worker + D1 deployment'ını tetiklemez. GitHub Pages üretim ortamında kullanılmaz; eski yayın workflow'u yalnızca elle çalıştırılabilir. İstanbul GFS F180 raporu, dört döngülü etkileşimli SVG ve Telegram teslimatı artık İstanbul GFS Worker'ın 10 dakikalık Cron'u içinde çalışır; GitHub Actions rapor üretiminde veya normal Telegram teslimatında runner açmaz. D1 outbox lease'leri yarım kalan ve çakışan teslimatları yönetir. GFS Guardian saat başına 05, 15, 25, 35, 45 ve 55. dakikalarda ana Worker'ın D1 heartbeat kaydını denetler; son başarılı toplama 25 dakikayı aşarsa GitHub kullanmadan Cloudflare Service Binding ile ana Worker'ı yeniden tetikler. Canlı GFS ve istasyon güncellemeleri web deployment'ına bağlı değildir. R2 üretim arşivi etkin; web Worker arşivleri R2-first sunar ve yalnızca nesne bulunamadığında D1/Static Assets fallback kullanır. Köy SVG'si çalışma anında Köy Worker tarafından D1'e üretilir; yeni/eskimiş SVG için Service Binding fallback'i korunur.
 
 ## Veri saklama
 
@@ -109,7 +108,7 @@ Kod değişikliklerinde Cloudflare deployment'ı GitHub üzerinden başlatılır
 
 ## Telegram
 
-İstanbul GFS için yeni F180 raporunda Cloudflare Worker rapor metnini ve dört döngülü SVG karşılaştırmasını üretir; Telegram'a metin ve SVG dosyası gönderir. Teslimat kayıtları İstanbul GFS D1 içindeki `gfs_report_publications` outbox tablosunda tutulur; metin gönderilmiş ancak SVG gönderimi başarısız olmuşsa sonraki Cron yalnızca SVG adımını tekrarlar. Python/Matplotlib ile PNG gönderen GitHub workflow'u manuel geri dönüş seçeneği olarak kalır.
+İstanbul GFS için yeni F180 raporunda Cloudflare Worker rapor metnini ve web için dört döngülü SVG karşılaştırmasını üretir; aynı SVG'yi PNG'ye dönüştürerek Telegram'a metin ve fotoğraf olarak gönderir. Teslimat kayıtları İstanbul GFS D1 içindeki `gfs_report_publications` outbox tablosunda tutulur; metin gönderilmiş ancak fotoğraf gönderimi başarısız olmuşsa sonraki Cron yalnızca fotoğraf adımını tekrarlar. PNG, `gfs-watch-live-archive` R2 bucket'ında saklanır.
 
 Gerekli GitHub Actions secrets:
 - `TELEGRAM_TOKEN`
