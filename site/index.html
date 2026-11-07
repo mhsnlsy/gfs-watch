@@ -4021,6 +4021,20 @@ if(typeof renderBriefing==="function")renderBriefing();
       }
     }
   </style>
+  <style id="homepage-gfs-iframe-border-dark">
+    /* GFS rapor iframe dış bordürü: sayfanın koyu temasına uyumlu */
+    #bildirimler iframe,
+    #bildirimler .gfs-cycle-compare-frame,
+    #bildirimler .gfs-interactive-chart{
+      border:1px solid rgba(125,211,215,.22)!important;
+      outline:none!important;
+      box-shadow:0 0 0 1px rgba(2,15,24,.72), 0 10px 30px rgba(0,0,0,.18)!important;
+      border-radius:18px!important;
+    }
+    #bildirimler .gfs-interactive-chart{
+      overflow:hidden!important;
+    }
+  </style>
 </body>
 </html>
 
