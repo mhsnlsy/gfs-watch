@@ -3750,6 +3750,44 @@ if(typeof renderBriefing==="function")renderBriefing();
       }
     }
   </style>
+  <style id="home-force-koy-gfs-report">
+    /* FORCE: Ana sayfadaki GFS raporu, Köy sayfasındaki çalışan rapor davranışını aynen kullanır. */
+    #bildirimler .notification-list{
+      display:block!important;
+      width:100%!important;
+      max-width:100%!important;
+    }
+    #bildirimler .notification-card.notification-chart-only{
+      box-sizing:border-box!important;
+      width:100%!important;
+      max-width:100%!important;
+      min-width:0!important;
+      margin-left:auto!important;
+      margin-right:auto!important;
+    }
+    #bildirimler .notification-card.notification-chart-only .notification-images{
+      width:100%!important;
+      max-width:100%!important;
+      margin:0!important;
+    }
+    #bildirimler .notification-card.notification-chart-only .notification-images .notification-image-item{
+      width:100%!important;
+      max-width:100%!important;
+      min-width:0!important;
+      margin:0!important;
+    }
+    #bildirimler .notification-card.notification-chart-only .gfs-interactive-chart,
+    #bildirimler .notification-card.notification-chart-only .gfs-mobile-panel-stack{
+      width:90%!important;
+      max-width:90%!important;
+      margin-left:auto!important;
+      margin-right:auto!important;
+    }
+    #bildirimler .notification-card.notification-chart-only .gfs-mobile-panel-host{
+      width:100%!important;
+      max-width:100%!important;
+    }
+  </style>
   <script>
     (() => {
       const frame = document.getElementById("gfs-cycle-compare-frame");
