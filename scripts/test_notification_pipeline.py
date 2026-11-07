@@ -143,8 +143,8 @@ def main() -> None:
     assert "comparison_svg_published" in koy_worker
     assert "svg_renderer: KOY_SVG_RENDERER_VERSION" in koy_worker
     assert "/api/publication-asset/" in koy_worker
-    assert koy_worker.index('if (path === "/api/publication-upload")') < koy_worker.index('if (request.method !== "GET")')
-    assert "GFS_DISPATCH_TOKEN" in koy_worker and "wrangler secret put GFS_DISPATCH_TOKEN" in koy_deploy
+    assert "/api/publication-upload" not in koy_worker
+    assert "GFS_DISPATCH_TOKEN" not in koy_worker and "GFS_DISPATCH_TOKEN" not in koy_deploy
     assert 'path.startsWith("/koy-data/gfs/media/")' in web_worker
     assert '"/api/publication-asset/" + assetKey' in web_worker
     assert "workflow_dispatch:" in koy_svg_workflow
