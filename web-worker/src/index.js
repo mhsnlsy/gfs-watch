@@ -138,6 +138,15 @@ export default {
         const published = await fetchD1PublicationAsset(request, env, path.slice("/data/".length));
         if (published) return published;
       }
+      if (path.startsWith("/koy-data/gfs/media/")) {
+        const assetKey = path.slice("/koy-data/gfs/".length);
+        const published = await callService(
+          env.KOY_GFS,
+          request,
+          "/api/publication-asset/" + assetKey
+        );
+        if (published.ok) return published;
+      }
       const archived = await fetchArchiveObject(request, env, path);
       if (archived) return archived;
     }
