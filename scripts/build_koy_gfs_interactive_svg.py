@@ -90,7 +90,7 @@ def prepare_series(documents: list[dict]) -> tuple[list[dict], list[str]]:
 
         run_time = parse_utc(document["run_id_utc"])
         local_run = run_time.astimezone(TZ)
-        label = f"{run_time:%H}Z | {local_run:%d.%m %H:%M}"
+        label = f"{run_time:%H}Z | {run_time:%d.%m %H:%M}"
         if document["run_id_utc"] == documents[-1]["run_id_utc"]:
             label = "YENİ · " + label
         series.append({
@@ -126,7 +126,8 @@ def value_for(item: dict, key: str, field: str):
 
 
 def label_time(key: str) -> str:
-    return parse_utc(key).astimezone(TZ).strftime("%d")
+    # MeteoPT reference clock: display raw GFS UTC valid time without +3 conversion.
+    return parse_utc(key).strftime("%d")
 
 
 def render_svg(series: list[dict], valid_keys: list[str], comparison: dict) -> bytes:
@@ -357,10 +358,9 @@ def render_svg(series: list[dict], valid_keys: list[str], comparison: dict) -> b
 
                 valid_time_records = []
                 for key in valid_keys:
-                    local_time = parse_utc(key).astimezone(TZ)
                     valid_time_records.append({
-                        "local_key": local_time.strftime("%Y-%m-%dT%H:%M"),
-                        "label": local_time.strftime("%d.%m.%Y %H:%M") + " TSİ",
+                        "local_key": parse_utc(key).strftime("%Y-%m-%dT%H:%M"),
+                        "label": parse_utc(key).strftime("%d.%m.%Y %H:%M") + " TSİ",
                         "utc_label": parse_utc(key).strftime("%Y-%m-%d %H:%M UTC"),
                     })
 
