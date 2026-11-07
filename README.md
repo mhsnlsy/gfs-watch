@@ -60,6 +60,8 @@ Canlı web arayüzü, API geçidi ve veri toplama servisleri Cloudflare üzerind
 - Konum: Giresun / Çanakçı, 40.9557°N / 39.0065°E.
 - API: `/api/koy-gfs/f72`, `/api/koy-gfs/comparison`, `/api/koy-gfs/latest`, `/api/koy-gfs/health`.
 - Dört kullanılabilir döngü D1'e yazılır. Karşılaştırma API'si eksik arşivi ihtiyaç anında yeniden doldurmayı dener.
+- Dört panelli etkileşimli Köy SVG'si aynı Worker içinde JavaScript ile üretilir ve `gfs_publication_assets` tablosuna kaydedilir; GitHub Actions/Matplotlib üretimi canlı akıştan çıkarılmıştır.
+- SVG uçları: `/api/comparison.svg` (yeniden üretim/doğrulama) ve `/api/publication-asset/{key}` (D1'den yayın). Web Worker mevcut `/koy-data/gfs/media/...` adresini Service Binding üzerinden sunar.
 
 ### İstasyonlar
 
@@ -85,14 +87,15 @@ GitHub Actions artık canlı İstanbul GFS veya istasyon verisini toplamaz.
 |---|---|
 | `deploy-cloudflare-platform.yml` | Yalnızca Cloudflare web Worker + Static Assets katmanını dağıtır; Service Binding ve API smoke testlerini yapar. GFS Worker'larını yeniden dağıtmaz. |
 | `deploy-istanbul-gfs-worker.yml` | İstanbul GFS Worker + D1 migration ve Cron dağıtımını bağımsız yapar. |
-| `deploy-koy-gfs-worker.yml` | Köy GFS Worker + D1 dağıtımını yapar ve doğrular. |
+| `deploy-koy-gfs-worker.yml` | Köy GFS Worker + D1 dağıtımını yapar; Worker-native SVG üretimini ve D1 yayınını doğrular. |
+| `rebuild-koy-gfs-interactive-svg.yml` | Yalnızca manuel doğrulama; zamanlanmış SVG üretimi artık Cloudflare Worker içinde yapılır. |
 | `deploy-stations-worker.yml` | İstasyon Worker + D1 dağıtımını yapar ve Cron/D1 geçmişini doğrular. |
 | `deploy-gfs-guardian.yml` | 30 dakikalık düşük sıklıklı yedek watchdog; rapor akışı 8 saat sessiz kalırsa kurtarma tetiklemesi yapar. |
 | `istanbul-gfs-10min.yml` | Cloudflare Worker yeni F180 döngüsünü D1'e yazınca olay tabanlı tetiklenir; rapor/PNG ve Telegram teslimatını yürütür. 10 dakikalık boş polling yoktur. |
 | `publish-live-site.yml` | GitHub Pages yedek kopyasını yalnızca manuel tetiklemeyle yayımlar. Üretim güncellemelerini bekletmez. |
 | `ecmwf-eps.yml` | ECMWF EPS veri hazırlığını yürütür; henüz Cloudflare Cron'a taşınmamıştır. |
 
-Kod değişikliklerinde Cloudflare deployment'ı GitHub üzerinden başlatılır; bu yalnızca dağıtım adımıdır. Web arayüzü değişikliği artık İstanbul GFS Worker + D1 deployment'ını tetiklemez. GitHub Pages otomatik yayın akışından çıkarılmıştır; yalnızca manuel geri dönüş seçeneğidir. İstanbul GFS rapor/Telegram pipeline'ı 10 dakikada bir boş yere runner açmaz; yeni F180 geldiğinde Worker doğrudan workflow dispatch yapar. D1 outbox kuyruğu başarısız dispatch denemelerini sonraki Cron'a bırakır. GFS Guardian 30 dakikada bir çalışan yedek kontroldür; 8 saatlik sessizlikte devreye girer. Canlı GFS ve istasyon güncellemeleri web deployment'ına bağlı değildir. Arşivler R2'ye aktarılana kadar bildirim/ECMWF/Köy SVG dosyalarının Static Assets paketi için ilgili veri branch'leri deployment sırasında alınmaya devam eder.
+Kod değişikliklerinde Cloudflare deployment'ı GitHub üzerinden başlatılır; bu yalnızca dağıtım adımıdır. Web arayüzü değişikliği artık İstanbul GFS Worker + D1 deployment'ını tetiklemez. GitHub Pages otomatik yayın akışından çıkarılmıştır; yalnızca manuel geri dönüş seçeneğidir. İstanbul GFS rapor/Telegram pipeline'ı 10 dakikada bir boş yere runner açmaz; yeni F180 geldiğinde Worker doğrudan workflow dispatch yapar. D1 outbox kuyruğu başarısız dispatch denemelerini sonraki Cron'a bırakır. GFS Guardian 30 dakikada bir çalışan yedek kontroldür; 8 saatlik sessizlikte devreye girer. Canlı GFS ve istasyon güncellemeleri web deployment'ına bağlı değildir. Arşivler R2'ye aktarılana kadar İstanbul bildirim/ECMWF varlıklarının Static Assets yedekleri korunur. Köy SVG'si artık çalışma anında Köy Worker tarafından D1'e üretilir; canlı sayfanın SVG sunumu için Köy veri branch'ine veya Static Assets derlemesine ihtiyaç duyulmaz.
 
 ## Veri saklama
 
@@ -101,7 +104,7 @@ Kod değişikliklerinde Cloudflare deployment'ı GitHub üzerinden başlatılır
 - İstasyon geçmişi: `gfs-watch-stations` D1.
 - İstanbul Telegram/SVG/PNG bildirim arşivi: geçiş sürecinde `istanbul-gfs-data` dalı ve Cloudflare Static Assets; R2 aktarımı bekliyor.
 - ECMWF EPS: `gfs-watch-state/public/ecmwf`; R2 aktarımı bekliyor.
-- Köy GFS rapor SVG'leri: `koy-gfs-data` dalı ve Cloudflare Static Assets; R2 aktarımı bekliyor.
+- Köy GFS rapor SVG'leri: Köy Worker tarafından üretilir ve `gfs-watch-koy-gfs` D1 içinde saklanır.
 - Köy MGM statik arşivi web paketinden çıkarıldı; güncel ölçümler Station Worker/D1 API'sinden alınır.
 - GitHub dalları gerektiğinde geri yükleme ve arşiv kaynağı olarak korunur.
 
