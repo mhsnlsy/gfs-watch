@@ -176,7 +176,7 @@ jobs:
             echo "OK $path"
           done
           curl --silent --show-error --fail --max-time 30 "$WEB/api/koy-gfs/comparison?verify=$(date +%s)" -o "$RUNNER_TEMP/live-koy-comparison.json"
-          node - "$RUNNER_TEMP/live-koy-comparison.json" >> "$GITHUB_ENV" <<'NODE'
+          KOY_LIVE_SVG_STAMP="$(node - "$RUNNER_TEMP/live-koy-comparison.json" <<'NODE'
           const fs = require("fs");
           const doc = JSON.parse(fs.readFileSync(process.argv[2], "utf8"));
           const runs = (doc.runs || []).slice().sort((a,b) => String(b.run_id_utc).localeCompare(String(a.run_id_utc)));
@@ -184,9 +184,11 @@ jobs:
           const latest = new Date(runs[0].run_id_utc);
           if (!Number.isFinite(latest.getTime())) throw new Error("Live Köy latest run timestamp is invalid.");
           const stamp = latest.getUTCFullYear()+String(latest.getUTCMonth()+1).padStart(2,"0")+String(latest.getUTCDate()).padStart(2,"0")+"T"+String(latest.getUTCHours()).padStart(2,"0")+"Z";
-          console.log("KOY_LIVE_SVG_STAMP="+stamp);
+          process.stdout.write(stamp);
           NODE
+          )"
           test -n "$KOY_LIVE_SVG_STAMP"
+          echo "Checking latest Köy SVG: $KOY_LIVE_SVG_STAMP"
           curl --silent --show-error --fail --max-time 30 "$WEB/koy-data/gfs/media/koy-gfs-$KOY_LIVE_SVG_STAMP-comparison.svg?verify=$(date +%s)" -o "$RUNNER_TEMP/live-koy-latest.svg"
           node - "$RUNNER_TEMP/live-koy-latest.svg" "$KOY_LIVE_SVG_STAMP" <<'NODE'
           const fs = require("fs");
