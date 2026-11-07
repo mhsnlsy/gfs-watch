@@ -126,7 +126,7 @@ def value_for(item: dict, key: str, field: str):
 
 
 def label_time(key: str) -> str:
-    return parse_utc(key).astimezone(TZ).strftime("%d/%m %H:%M")
+    return parse_utc(key).astimezone(TZ).strftime("%d")
 
 
 def render_svg(series: list[dict], valid_keys: list[str], comparison: dict) -> bytes:
