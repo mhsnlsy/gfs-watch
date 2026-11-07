@@ -177,28 +177,49 @@ def main_publish() -> None:
         images=images,
     )
 
-    # Canonical latest.json must be the newest document, not the oldest file
-    # in the descending filename list used to select the four most recent runs.
-    latest = dict(current_doc)
-    latest["schema"] = "gfs-watch.forecast.v1"
-    latest["forecast_source"] = "meteopt"
-    latest["report"] = report_entry
-    latest["comparison_runs"] = list(reversed(docs))
-    (GFS_DIR / "latest.json").write_text(
-        json.dumps(latest, ensure_ascii=False, indent=2) + "\n",
-        encoding="utf-8",
-    )
+    # Delayed F180 cycles are archived and announced, but must never roll the
+    # live homepage backward over a chronologically newer canonical run.
+    latest_path = GFS_DIR / "latest.json"
+    existing_latest = None
+    if latest_path.is_file():
+        try:
+            existing_latest = json.loads(latest_path.read_text(encoding="utf-8"))
+        except (OSError, ValueError, TypeError):
+            existing_latest = None
 
-    comparison = {
-        "schema": "istanbul-gfs.comparison.v1",
-        "location": {"name": "Istanbul", "latitude": 41.014, "longitude": 28.950},
-        "updated_at_utc": latest.get("published_at_utc"),
-        "runs": list(reversed(docs)),
-    }
-    (GFS_DIR / "comparison.json").write_text(
-        json.dumps(comparison, ensure_ascii=False, indent=2) + "\n",
-        encoding="utf-8",
-    )
+    existing_run = None
+    if isinstance(existing_latest, dict) and existing_latest.get("run_id_utc"):
+        try:
+            existing_run = utc_dt(existing_latest["run_id_utc"])
+        except (TypeError, ValueError):
+            existing_run = None
+
+    if existing_run is not None and existing_run > utc_dt(current_run):
+        print(
+            f"[ISTANBUL GFS BUNDLE] Older delayed cycle {current_run} "
+            f"archived to notifications; homepage remains on {existing_latest['run_id_utc']}."
+        )
+    else:
+        latest = dict(current_doc)
+        latest["schema"] = "gfs-watch.forecast.v1"
+        latest["forecast_source"] = "meteopt"
+        latest["report"] = report_entry
+        latest["comparison_runs"] = list(reversed(docs))
+        latest_path.write_text(
+            json.dumps(latest, ensure_ascii=False, indent=2) + "\n",
+            encoding="utf-8",
+        )
+
+        comparison = {
+            "schema": "istanbul-gfs.comparison.v1",
+            "location": {"name": "Istanbul", "latitude": 41.014, "longitude": 28.950},
+            "updated_at_utc": latest.get("published_at_utc"),
+            "runs": list(reversed(docs)),
+        }
+        (GFS_DIR / "comparison.json").write_text(
+            json.dumps(comparison, ensure_ascii=False, indent=2) + "\n",
+            encoding="utf-8",
+        )
 
     print(
         f"[ISTANBUL GFS BUNDLE] run={current_run}; "
