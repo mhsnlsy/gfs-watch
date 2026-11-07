@@ -86,11 +86,12 @@ GitHub Actions artık canlı İstanbul GFS veya istasyon verisini toplamaz.
 | `deploy-istanbul-gfs-worker.yml` | İstanbul GFS Worker + D1 migration ve Cron dağıtımını bağımsız yapar. |
 | `deploy-koy-gfs-worker.yml` | Köy GFS Worker + D1 dağıtımını yapar ve doğrular. |
 | `deploy-stations-worker.yml` | İstasyon Worker + D1 dağıtımını yapar ve Cron/D1 geçmişini doğrular. |
-| `istanbul-gfs-10min.yml` | Yalnızca Cloudflare D1 verisini senkronize eder; yeni F180 çıktısında rapor/PNG ve Telegram teslimatını yürütür. MeteoPT'ye doğrudan istek göndermez. |
+| `deploy-gfs-guardian.yml` | 30 dakikalık düşük sıklıklı yedek watchdog; rapor akışı 8 saat sessiz kalırsa kurtarma tetiklemesi yapar. |
+| `istanbul-gfs-10min.yml` | Cloudflare Worker yeni F180 döngüsünü D1'e yazınca olay tabanlı tetiklenir; rapor/PNG ve Telegram teslimatını yürütür. 10 dakikalık boş polling yoktur. |
 | `publish-live-site.yml` | GitHub Pages yedek kopyasını yalnızca manuel tetiklemeyle yayımlar. Üretim güncellemelerini bekletmez. |
 | `ecmwf-eps.yml` | ECMWF EPS veri hazırlığını yürütür; henüz Cloudflare Cron'a taşınmamıştır. |
 
-Kod değişikliklerinde Cloudflare deployment'ı GitHub üzerinden başlatılır; bu yalnızca dağıtım adımıdır. Web arayüzü değişikliği artık İstanbul GFS Worker + D1 deployment'ını tetiklemez. GitHub Pages, yeni GFS raporlarında yeniden oluşturulmaz. Canlı GFS ve istasyon güncellemeleri web deployment'ına bağlı değildir.
+Kod değişikliklerinde Cloudflare deployment'ı GitHub üzerinden başlatılır; bu yalnızca dağıtım adımıdır. Web arayüzü değişikliği artık İstanbul GFS Worker + D1 deployment'ını tetiklemez. GitHub Pages, yeni GFS raporlarında yeniden oluşturulmaz. İstanbul GFS rapor/Telegram pipeline'ı 10 dakikada bir boş yere runner açmaz; yeni F180 geldiğinde Worker doğrudan workflow dispatch yapar. D1 outbox kuyruğu başarısız dispatch denemelerini sonraki Cron'a bırakır. GFS Guardian 30 dakikada bir çalışan yedek kontroldür; 8 saatlik sessizlikte devreye girer. Canlı GFS ve istasyon güncellemeleri web deployment'ına bağlı değildir.
 
 ## Veri saklama
 
