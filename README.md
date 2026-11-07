@@ -122,6 +122,6 @@ Gerekli GitHub Actions secrets:
 
 **Kaynak kodu ve sürüm kontrolü:** GitHub.
 
-**Yedek yayın:** GitHub Pages.
+**Yayın:** Cloudflare Workers + Static Assets.
 
 Canlı GFS/istasyon verisinin güncellenmesi için GitHub Pages build'i veya GitHub Actions deployment'ı beklenmez.
