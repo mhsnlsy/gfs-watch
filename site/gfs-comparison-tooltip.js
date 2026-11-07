@@ -190,10 +190,13 @@ function attachGfsSvgInteractions(host,svg,metadata,syncGroup){
     selectNearest(event);
   });
   svg.addEventListener("pointerup",event=>{
-    if(event.pointerType==="touch")hide();
+    // Do not close the selected tooltip when the finger is lifted.
+    // The selected valid time must remain visible across all four mobile panels.
+    if(event.pointerType==="touch")host.setAttribute("data-pinned","true");
   });
   svg.addEventListener("pointercancel",event=>{
-    if(event.pointerType==="touch")hide();
+    // Keep the synchronized selection visible after a cancelled touch sequence.
+    if(event.pointerType==="touch")host.setAttribute("data-pinned","true");
   });
   svg.addEventListener("pointerleave",()=>{
     if(!host.hasAttribute("data-pinned"))hide();
