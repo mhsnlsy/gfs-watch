@@ -3,7 +3,7 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width,initial-scale=1">
-<title>GFS · İstanbul · Önümüzdeki 180 saat</title>
+<title>GFS · Giresun Çanakçı · Önümüzdeki 72 saat</title>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;500;600;700&family=Manrope:wght@400;500;600;700;800&display=swap" rel="stylesheet">
@@ -194,7 +194,7 @@ async function load(){
   }
   runs.sort((a,b)=>Date.parse(b.run_id_utc||"")-Date.parse(a.run_id_utc||""));
   const source=runs.slice(0,4);
-  $("next-72h-meta").textContent=source.length?source.length+" GFS döngüsü · F180'e kadar karşılaştırılıyor":"Model verisi bekleniyor";
+  $("next-72h-meta").textContent=source.length?source.length+" GFS döngüsü · F72'ye kadar karşılaştırılıyor":"Model verisi bekleniyor";
   renderRunLegend(source);
   const verification=null;
   activeChartSource=source;
