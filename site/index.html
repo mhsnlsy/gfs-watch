@@ -1540,9 +1540,10 @@
     // Step 3 (15Z) is displayed as 15 TSİ, not 18 TSİ.
     const forecastDateTimeTSI=value=>{
       const date=new Date(value);
-      const dayMonth=new Intl.DateTimeFormat("tr-TR",{timeZone:"UTC",day:"2-digit"}).format(date);
+      const dayMonth=new Intl.DateTimeFormat("tr-TR",{timeZone:"UTC",day:"2-digit",month:"2-digit"}).format(date);
+      const weekday=new Intl.DateTimeFormat("tr-TR",{timeZone:"UTC",weekday:"long"}).format(date);
       const clock=new Intl.DateTimeFormat("tr-TR",{timeZone:"UTC",hour:"2-digit",minute:"2-digit",hourCycle:"h23"}).format(date);
-      return dayMonth+" "+clock+" TSİ";
+      return dayMonth+" "+weekday+" · "+clock+" TSİ";
     };
     function attachForecastChartTooltip(container,svg,coords,temperature,width,height,top,bottom,isEcmwf=false){
       const ns="http://www.w3.org/2000/svg";
