@@ -1,0 +1,18 @@
+{
+  "$schema": "node_modules/wrangler/config-schema.json",
+  "name": "gfs-watch-web",
+  "main": "src/index.js",
+  "compatibility_date": "2026-11-07",
+  "workers_dev": true,
+  "observability": { "enabled": true },
+  "assets": {
+    "directory": "./public",
+    "binding": "ASSETS",
+    "run_worker_first": [
+      "/__health",
+      "/gfs/*",
+      "/api/*"
+    ],
+    "not_found_handling": "404-page"
+  }
+}
