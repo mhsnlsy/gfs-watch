@@ -703,3 +703,33 @@
     width: 13.2% !important;
   }
 }
+
+
+/* FINAL PANEL BOUNDARY FIX:
+   Keep the single GFS board at its original compact panel width.
+   Expand ONLY the forecast table inside that board into the unused right-side
+   space. Do not let the board itself span the page. */
+@media (min-width: 851px) and (pointer: fine) {
+  .gfs-table-pressure-layout > #meteopt-gfs-table {
+    width: 100% !important;
+    max-width: 860px !important;
+    min-width: 0 !important;
+    margin: 0 auto !important;
+    align-self: center !important;
+  }
+
+  .gfs-table-pressure-layout > #meteopt-gfs-table .meteopt-table-card,
+  .gfs-table-pressure-layout > #meteopt-gfs-table .meteopt-table-scroll {
+    width: 100% !important;
+    max-width: 100% !important;
+    min-width: 0 !important;
+    box-sizing: border-box !important;
+  }
+
+  .gfs-table-pressure-layout > #meteopt-gfs-table .meteopt-data-table {
+    width: 100% !important;
+    max-width: 100% !important;
+    min-width: 0 !important;
+    table-layout: fixed !important;
+  }
+}
