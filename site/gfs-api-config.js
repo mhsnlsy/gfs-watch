@@ -1,4 +1,4 @@
-// Live API gateway shared by the Cloudflare site and the temporary GitHub Pages fallback.
+// Live API gateway shared by the Cloudflare site; GitHub Pages, if opened, uses the same Cloudflare API.
 (() => {
   const cloudflareWeb = "https://gfs-watch-web.muhsin-ulusoy.workers.dev";
   const isGitHubPages = window.location.hostname === "github.io" ||
