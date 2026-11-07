@@ -1138,3 +1138,14 @@
     margin-right: 0 !important;
   }
 }
+
+
+/* FINAL: hard-pin the GFS panel to the page's left edge without changing its own width. */
+@media (min-width: 851px) and (pointer: fine) {
+  #meteopt-gfs-table.gfs-table-section {
+    position: relative !important;
+    left: calc((100vw - min(1120px, calc(100vw - 40px))) / -2) !important;
+    margin-left: 0 !important;
+    margin-right: auto !important;
+  }
+}
