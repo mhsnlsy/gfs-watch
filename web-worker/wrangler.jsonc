@@ -30,11 +30,5 @@
       "binding": "STATIONS",
       "service": "gfs-watch-stations"
     }
-  ],
-  "r2_buckets": [
-    {
-      "binding": "LIVE_ARCHIVE",
-      "bucket_name": "gfs-watch-live-archive"
-    }
   ]
 }
