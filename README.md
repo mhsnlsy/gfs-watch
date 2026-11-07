@@ -81,7 +81,7 @@ Canlı web arayüzü, API geçidi ve veri toplama servisleri Cloudflare üzerind
 
 ## GitHub Actions'ın kalan görevleri
 
-GitHub Actions artık canlı İstanbul GFS veya istasyon verisini toplamaz.
+GitHub Actions artık canlı İstanbul GFS, ECMWF veya istasyon verisini toplamaz.
 
 | İş akışı | Görev |
 |---|---|
@@ -93,9 +93,8 @@ GitHub Actions artık canlı İstanbul GFS veya istasyon verisini toplamaz.
 | `deploy-gfs-guardian.yml` | 30 dakikalık düşük sıklıklı yedek watchdog; rapor akışı 8 saat sessiz kalırsa kurtarma tetiklemesi yapar. |
 | `istanbul-gfs-10min.yml` | Yalnızca manuel acil durum/geri dönüş çalıştırması; normal F180 rapor üretimi ve Telegram teslimatı Cloudflare GFS Worker içinde yapılır. |
 | `publish-live-site.yml` | GitHub Pages yedek kopyasını yalnızca manuel tetiklemeyle yayımlar. Üretim güncellemelerini bekletmez. |
-| `ecmwf-eps.yml` | MeteoPT ECMWF nokta verisini alır, doğrular ve D1/R2 arşivine yayımlar. |
 
-Kod değişikliklerinde Cloudflare deployment'ı GitHub üzerinden başlatılır; bu yalnızca dağıtım adımıdır. Web arayüzü değişikliği artık İstanbul GFS Worker + D1 deployment'ını tetiklemez. GitHub Pages üretim ortamında kullanılmaz; eski yayın workflow'u yalnızca elle çalıştırılabilir. İstanbul GFS F180 raporu, dört döngülü etkileşimli SVG ve Telegram teslimatı artık İstanbul GFS Worker'ın 10 dakikalık Cron'u içinde çalışır; GitHub Actions rapor üretiminde veya normal Telegram teslimatında runner açmaz. D1 outbox lease'leri yarım kalan ve çakışan teslimatları yönetir. GFS Guardian 30 dakikada bir çalışan yedek kontroldür; 8 saatlik sessizlikte devreye girer. Canlı GFS ve istasyon güncellemeleri web deployment'ına bağlı değildir. R2 token tanımlanana kadar arşiv okumaları D1/Static Assets fallback ile sürer. Köy SVG'si çalışma anında Köy Worker tarafından D1'e üretilir; yeni/eskimiş SVG için Service Binding fallback'i korunur.
+Kod değişikliklerinde Cloudflare deployment'ı GitHub üzerinden başlatılır; bu yalnızca dağıtım adımıdır. Web arayüzü değişikliği artık İstanbul GFS Worker + D1 deployment'ını tetiklemez. GitHub Pages üretim ortamında kullanılmaz; eski yayın workflow'u yalnızca elle çalıştırılabilir. İstanbul GFS F180 raporu, dört döngülü etkileşimli SVG ve Telegram teslimatı artık İstanbul GFS Worker'ın 10 dakikalık Cron'u içinde çalışır; GitHub Actions rapor üretiminde veya normal Telegram teslimatında runner açmaz. D1 outbox lease'leri yarım kalan ve çakışan teslimatları yönetir. GFS Guardian 30 dakikada bir çalışan yedek kontroldür; 8 saatlik sessizlikte devreye girer. Canlı GFS ve istasyon güncellemeleri web deployment'ına bağlı değildir. R2 üretim arşivi etkin; web Worker arşivleri R2-first sunar ve yalnızca nesne bulunamadığında D1/Static Assets fallback kullanır. Köy SVG'si çalışma anında Köy Worker tarafından D1'e üretilir; yeni/eskimiş SVG için Service Binding fallback'i korunur.
 
 ## Veri saklama
 
@@ -103,7 +102,7 @@ Kod değişikliklerinde Cloudflare deployment'ı GitHub üzerinden başlatılır
 - Köy GFS: `gfs-watch-koy-gfs` D1.
 - İstasyon geçmişi: `gfs-watch-stations` D1.
 - İstanbul Telegram/SVG bildirim arşivi: canlı raporlar İstanbul GFS D1'de; geçmiş arşivlerin R2'ye toplu kopyası `CLOUDFLARE_R2_API_TOKEN` eklendiğinde etkinleşir.
-- ECMWF: MeteoPT nokta serisinden doğrulanmış son veri ve rapor görselleri İstanbul D1'e yazılır; aynı dosyalar R2'ye yansıtılır.
+- ECMWF: MeteoPT nokta serisinden doğrulanmış son veri İstanbul GFS Worker tarafından toplanır; D1'e yazılır ve R2 üretim arşivine aynı anda yansıtılır.
 - Köy GFS rapor SVG'leri: Köy Worker tarafından üretilir ve `gfs-watch-koy-gfs` D1 içinde saklanır.
 - Köy MGM statik arşivi web paketinden çıkarıldı; güncel ölçümler Station Worker/D1 API'sinden alınır.
 - GitHub dalları gerektiğinde geri yükleme ve arşiv kaynağı olarak korunur.
