@@ -1,10 +1,6 @@
 name: Sync Live Archives to Cloudflare R2
 
 on:
-  push:
-    branches: [main]
-    paths:
-      - ".github/workflows/sync-cloudflare-live-archive.yml"
   workflow_dispatch:
 
 permissions:
