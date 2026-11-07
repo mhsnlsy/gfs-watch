@@ -219,7 +219,7 @@ html,body{margin:0;padding:0;background:transparent;color:var(--text);font-famil
 </head>
 <body>
 <div class="next-72h-head">
- <div><div class="section-kicker">GFS · İSTANBUL</div><h2>Önümüzdeki 180 saat</h2><p>Dört GFS çıktısı aynı geçerlilik saatlerinde (TSİ) üst üste karşılaştırılır · F180'e kadar.</p></div>
+ <div><div class="section-kicker">GFS · İSTANBUL</div><h2>Önümüzdeki 72 saat</h2><p>Dört GFS çıktısı aynı geçerlilik saatlerinde (TSİ) üst üste karşılaştırılır · F72'ye kadar.</p></div>
  <span class="next-72h-badge" id="next-72h-meta">Model verisi bekleniyor</span>
 </div>
 <div class="next-72h-grid">
@@ -280,7 +280,7 @@ function svgLine(runs,metric,title,unit,verification=null){
  // The newest run defines the valid-time axis. Every older run is sampled
  // at those exact UTC instants, so F48 from one cycle can align with F36
  // (or another lead) from a different cycle for the same Istanbul clock time.
- const reference=pointsOf(runs[0],180)
+ const reference=pointsOf(runs[0],72)
   .map(p=>({...p,stamp:Date.parse(p.valid_time_utc||"")}))
   .filter(p=>Number.isFinite(p.stamp))
   .sort((a,b)=>a.stamp-b.stamp);
@@ -351,7 +351,8 @@ function svgLine(runs,metric,title,unit,verification=null){
   if(offset===0||(offset%12!==0&&h!==hours[hours.length-1]))return;
   const label=axisLabel(h);
   const anchor=h===hours[hours.length-1]?"end":"middle";
-  out+='<text x="'+x(h)+'" y="'+(H-8)+'" text-anchor="'+anchor+'" fill="#c5d3dc" font-size="18" font-weight="500" font-family="system-ui, -apple-system, BlinkMacSystemFont, Segoe UI, sans-serif">'+esc(label)+'</text>';
+  out+='<text x="'+x(h)+'" y="'+(H-24)+'" text-anchor="'+anchor+'" fill="#c5d3dc" font-size="18" font-weight="500" font-family="system-ui, -apple-system, BlinkMacSystemFont, Segoe UI, sans-serif">'+esc(label.day)+'</text>';
+  out+='<text x="'+x(h)+'" y="'+(H-7)+'" text-anchor="'+anchor+'" fill="#8fa6b3" font-size="13" font-weight="600" font-family="system-ui, -apple-system, BlinkMacSystemFont, Segoe UI, sans-serif">'+esc(label.weekday)+'</text>';
  });
  const lookup=usable.map(item=>new Map(item.points.map(p=>[p.h,p.v])));
  const upper=[],lower=[];
