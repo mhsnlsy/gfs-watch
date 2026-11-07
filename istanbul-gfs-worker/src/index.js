@@ -951,7 +951,7 @@ async function handleApi(request, env) {
       return json({ ok: false, error: "Unauthorized" }, 401);
     }
     try {
-      const result = await collect(env, "guardian-service-binding");
+      const result = await collect(env, "authenticated-internal-reconcile");
       return json({ ok: true, result });
     } catch (error) {
       return json({ ok: false, error: String(error?.message || error) }, 503);
