@@ -723,9 +723,11 @@ async function refresh(){if(busy)return;busy=true;
  }
  if(f72)renderF72(stationMode==="home"?homeGfsDocument(f72):f72);
  if(results[2].status==="fulfilled")stationHistory=results[2].value;else stationHistory=null;
- if(results[3].status==="fulfilled")rainHistory=results[3].value;else rainHistory=null;
- if(results[5].status==="fulfilled")evHistory=results[5].value;else evHistory=null;
- if(results[6].status==="fulfilled")evObservation=results[6].value;else evObservation=null;
+ // The MGM history is the canonical source for both temperature and rainfall.
+ // Keep a single request so the page cannot render two different history snapshots.
+ rainHistory=stationHistory;
+ evHistory=null;
+ evObservation=null;
  // During the publish gap, derive the same virtual station locally from the canonical MGM payload.
  if(!evHistory&&stationHistory)evHistory=buildVirtualHomeHistory(stationHistory);
  const initialHistory=stationMode==="home"?evHistory:stationHistory;
@@ -736,7 +738,7 @@ async function refresh(){if(busy)return;busy=true;
   $("station-temperature-trend").innerHTML='<div class="station-trend-empty">'+(stationMode==="home"?"Köy Ev sanal istasyon geçmişi bekleniyor…":"MGM istasyon geçmişi bekleniyor…")+'</div>';
   $("station-rain-trend").innerHTML='<div class="station-trend-empty">'+(stationMode==="home"?"Köy Ev sanal yağış arşivi bekleniyor…":"MGM yağış arşivi bekleniyor…")+'</div>';
  }
- if(results[4].status==="fulfilled"&&results[4].value?.station){
+ if(results[3].status==="fulfilled"&&results[3].value?.station){
   window.__koyMgmObservation=results[4].value.station;
   if(!evObservation)evObservation=buildVirtualHomeObservation(window.__koyMgmObservation);
   window.__koyCurrentTemp=num(results[4].value.station.temperature_c ?? results[4].value.station.temperature_2m_c);
