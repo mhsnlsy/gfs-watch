@@ -1196,3 +1196,20 @@
     grid-template-columns: minmax(0, 1fr) !important;
   }
 }
+
+
+/* FINAL: align homepage GFS panel with the station-observation panel's left edge. */
+@media (min-width: 851px) and (pointer: fine) {
+  #meteopt-gfs-table.gfs-table-section {
+    position: static !important;
+    left: auto !important;
+    margin-left: 0 !important;
+    margin-right: 0 !important;
+  }
+  .water-gfs-layout {
+    width: 100% !important;
+    max-width: 100% !important;
+    margin-left: 0 !important;
+    margin-right: 0 !important;
+  }
+}
