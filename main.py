@@ -3020,7 +3020,7 @@ def _apply_dark_report_theme():
         "xtick.labelcolor": GFS_REPORT_MUTED,
         "ytick.labelcolor": GFS_REPORT_MUTED,
         "axes.edgecolor": GFS_REPORT_SPINE,
-        "figure.facecolor": GFS_REPORT_FIGURE_BG,
+        "figure.facecolor": GFS_REPORT_PANEL_BG,
         "axes.facecolor": GFS_REPORT_AXIS_BG,
         "savefig.facecolor": GFS_REPORT_FIGURE_BG,
         "savefig.edgecolor": GFS_REPORT_FIGURE_BG,
