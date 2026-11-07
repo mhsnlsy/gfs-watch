@@ -70,6 +70,127 @@ jobs:
             git push origin HEAD:istanbul-gfs-data
           fi
 
+      - name: Publish rebuilt report assets to Cloudflare D1
+        env:
+          ISTANBUL_GFS_API: https://gfs-watch-istanbul-gfs.muhsin-ulusoy.workers.dev
+          GFS_DISPATCH_TOKEN: ${{ secrets.GFS_DISPATCH_TOKEN }}
+          GFS_STATE_DIR: ${{ github.workspace }}/gfs-state/gfs
+        run: |
+          set -euo pipefail
+          test -n "$GFS_DISPATCH_TOKEN" || { echo "::error::GFS_DISPATCH_TOKEN is not configured"; exit 1; }
+          test -s "$GFS_STATE_DIR/notifications/latest.json" || { echo "::error::Notification manifest is missing"; exit 1; }
+
+          GFS_TARGET_RUN_ID="$(python - "$GFS_STATE_DIR/latest.json" <<'PY'
+          import json, sys
+          from pathlib import Path
+          doc = json.loads(Path(sys.argv[1]).read_text(encoding="utf-8"))
+          run_id = doc.get("run_id_utc")
+          if not run_id:
+              raise SystemExit("Canonical latest.json has no run_id_utc")
+          print(run_id)
+          PY
+          )"
+          export GFS_TARGET_RUN_ID
+
+          upload_asset() {
+            local file="$1"
+            local key="${file#"$GFS_STATE_DIR"/}"
+            local content_type
+            local encoding="utf8"
+            local payload_file="$RUNNER_TEMP/gfs-d1-publication-asset.json"
+            local response_file="$RUNNER_TEMP/gfs-d1-publication-response.json"
+
+            case "$file" in
+              *.json) content_type="application/json; charset=utf-8" ;;
+              *.svg) content_type="image/svg+xml; charset=utf-8" ;;
+              *.png) content_type="image/png"; encoding="base64" ;;
+              *) return 0 ;;
+            esac
+
+            python - "$file" "$key" "$GFS_TARGET_RUN_ID" "$content_type" "$encoding" "$payload_file" <<'PY'
+          import base64
+          import json
+          import sys
+          from pathlib import Path
+
+          source, key, run_id, content_type, encoding, destination = sys.argv[1:]
+          raw = Path(source).read_bytes()
+          body = base64.b64encode(raw).decode("ascii") if encoding == "base64" else raw.decode("utf-8")
+          if len(body) > 1900000:
+              raise SystemExit(f"D1 publication asset exceeds row limit: {source}")
+          payload = {
+              "key": key,
+              "run_id_utc": run_id,
+              "content_type": content_type,
+              "encoding": encoding,
+              "body": body,
+          }
+          Path(destination).write_text(json.dumps(payload, ensure_ascii=False, separators=(",", ":")), encoding="utf-8")
+          PY
+
+            curl --fail --silent --show-error --max-time 45 \
+              --request POST \
+              --url "$ISTANBUL_GFS_API/gfs/publication-upload" \
+              --header "Authorization: Bearer $GFS_DISPATCH_TOKEN" \
+              --header "Content-Type: application/json" \
+              --header "Accept: application/json" \
+              --data-binary "@$payload_file" \
+              --output "$response_file"
+
+            python - "$response_file" "$key" <<'PY'
+          import json, sys
+          from pathlib import Path
+          response_path, key = sys.argv[1:]
+          doc = json.loads(Path(response_path).read_text(encoding="utf-8"))
+          if doc.get("ok") is not True or doc.get("key") != key:
+              raise SystemExit(f"D1 publication upload rejected for {key}: {doc}")
+          print(f"Uploaded D1 report asset: {key} ({doc.get('bytes', 0)} characters)")
+          PY
+          }
+
+          find "$GFS_STATE_DIR/notifications" -type f \\
+            \\( -name '*.json' -o -name '*.svg' -o -name '*.png' \\) -print0 |
+            while IFS= read -r -d '' file; do upload_asset "$file"; done
+
+          # Read the latest manifest and its SVG back from D1, the exact source
+          # used by the live website, and verify the four chart surfaces are dark.
+          curl --fail --silent --show-error --max-time 30 \\
+            "$ISTANBUL_GFS_API/gfs/publication-asset/notifications/latest.json?verify=$(date +%s)" \\
+            --output "$RUNNER_TEMP/d1-notification-latest.json"
+          SVG_KEY="$(python - "$RUNNER_TEMP/d1-notification-latest.json" <<'PY'
+          import json, sys
+          from pathlib import Path
+          doc = json.loads(Path(sys.argv[1]).read_text(encoding="utf-8"))
+          items = doc.get("items") or []
+          if not items or not (items[0].get("images") or []):
+              raise SystemExit("D1 latest notification does not reference an SVG")
+          path = items[0]["images"][0].get("path", "")
+          if not path.endswith(".svg"):
+              raise SystemExit(f"D1 latest report is not an SVG: {path}")
+          print("notifications/" + path.lstrip("/"))
+          PY
+          )"
+          curl --fail --silent --show-error --max-time 30 \\
+            "$ISTANBUL_GFS_API/gfs/publication-asset/$SVG_KEY?verify=$(date +%s)" \\
+            --output "$RUNNER_TEMP/d1-current-comparison.svg"
+          python - "$RUNNER_TEMP/d1-current-comparison.svg" <<'PY'
+          import re, sys
+          from pathlib import Path
+          svg = Path(sys.argv[1]).read_text(encoding="utf-8")
+          required = {
+              "canvas": r'<g id="patch_1">[\\s\\S]*?fill: #0a1b29',
+              "temperature": r'<g id="patch_6">[\\s\\S]*?fill: #102a3a',
+              "850 hPa": r'<g id="patch_11">[\\s\\S]*?fill: #102a3a',
+              "precipitation": r'<g id="patch_16">[\\s\\S]*?fill: #102a3a',
+              "wind": r'<g id="patch_21">[\\s\\S]*?fill: #102a3a',
+          }
+          missing = [name for name, pattern in required.items() if not re.search(pattern, svg, re.I)]
+          if missing:
+              raise SystemExit("D1 SVG still has non-dark/missing surfaces: " + ", ".join(missing))
+          print("Verified D1 live SVG dark surfaces: canvas + four chart panels.")
+          PY
+          echo "Cloudflare D1 now serves the rebuilt dark SVG and current notification manifest."
+
       - name: Publish updated images to GitHub Pages
         env:
           GH_TOKEN: ${{ github.token }}
