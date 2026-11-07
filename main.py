@@ -3617,13 +3617,16 @@ def create_valid_time_comparison_assets(current_run_id, payload, previous_runs):
                 point = newest_timeline.get(key) or {}
                 raw_utc = point.get("valid_time_utc")
                 if raw_utc:
-                    valid_dt = _parse_utc_datetime(raw_utc).astimezone(TR_TZ)
+                    # MeteoPT reference clock: keep the raw UTC valid time.
+                    # Do NOT apply Europe/Istanbul (+3) conversion here.
+                    valid_dt = _parse_utc_datetime(raw_utc)
                     local_label = valid_dt.strftime("%d.%m.%Y %H:%M")
-                    utc_label = _parse_utc_datetime(raw_utc).strftime("%Y-%m-%d %H:%M UTC")
+                    utc_label = valid_dt.strftime("%Y-%m-%d %H:%M UTC")
                 else:
                     local_dt = datetime.fromisoformat(key).replace(tzinfo=TR_TZ)
-                    local_label = local_dt.strftime("%d.%m.%Y %H:%M")
-                    utc_label = local_dt.astimezone(timezone.utc).strftime("%Y-%m-%d %H:%M UTC")
+                    valid_dt = local_dt.astimezone(timezone.utc)
+                    local_label = valid_dt.strftime("%d.%m.%Y %H:%M")
+                    utc_label = valid_dt.strftime("%Y-%m-%d %H:%M UTC")
                 valid_time_records.append({
                     "local_key": key,
                     "label": local_label + " TSİ",
