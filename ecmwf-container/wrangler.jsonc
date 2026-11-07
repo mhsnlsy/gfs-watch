@@ -1,0 +1,35 @@
+{
+  "$schema": "../node_modules/wrangler/config-schema.json",
+  "name": "gfs-watch-ecmwf",
+  "main": "./src/index.js",
+  "compatibility_date": "2026-11-07",
+  "workers_dev": true,
+  "observability": { "enabled": true },
+  "triggers": { "crons": ["15 10,22 * * *"] },
+  "containers": [
+    {
+      "class_name": "ECMWFContainer",
+      "image": "./Dockerfile",
+      "image_build_context": "..",
+      "instance_type": "basic",
+      "max_instances": 1
+    }
+  ],
+  "durable_objects": {
+    "bindings": [
+      { "name": "ECMWF_CONTAINER", "class_name": "ECMWFContainer" }
+    ]
+  },
+  "migrations": [
+    {
+      "tag": "v1",
+      "new_sqlite_classes": ["ECMWFContainer"]
+    }
+  ],
+  "r2_buckets": [
+    {
+      "binding": "LIVE_ARCHIVE",
+      "bucket_name": "gfs-watch-live-archive"
+    }
+  ]
+}
