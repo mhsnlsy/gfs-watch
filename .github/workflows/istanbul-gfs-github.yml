@@ -3,9 +3,8 @@ name: Istanbul GFS · MeteoPT
 on:
   push:
     branches: [main]
-  # Poll every 5 minutes so a newly available F180 is published immediately.
-  # The fetcher checks all four GFS cycles and publishes only the newest
-  # previously unpublished F180-ready cycle.
+  # Poll every 5 minutes. The collector drains one outstanding F180 cycle
+  # oldest-first, so delayed 18Z/00Z runs are recovered automatically.
   schedule:
     - cron: "*/5 * * * *"
   workflow_dispatch:
@@ -99,8 +98,10 @@ jobs:
             git push origin HEAD:istanbul-gfs-data
           fi
 
-      - name: Build report, shared SVG comparison and Pages bundle
+      - name: Build report, shared SVG comparison and durable Telegram outbox
         if: steps.fetch.outputs.publish == 'true'
+        env:
+          GFS_TARGET_RUN_ID: ${{ steps.fetch.outputs.run_id }}
         run: python scripts/build_istanbul_gfs_publication.py
 
       - name: Commit canonical GFS archive before notification
@@ -122,31 +123,6 @@ jobs:
             git push origin HEAD:istanbul-gfs-data
           fi
 
-      - name: Send the canonical report and one composite photo to Telegram
-        if: steps.fetch.outputs.publish == 'true'
-        env:
-          TELEGRAM_TOKEN: ${{ secrets.TELEGRAM_TOKEN }}
-          CHAT_ID: ${{ secrets.CHAT_ID }}
-        run: |
-          set -euo pipefail
-          python scripts/send_canonical_istanbul_gfs_telegram.py
-          test -s "gfs/notifications/telegram-sent/${{ steps.fetch.outputs.run_id }}.json"
-
-      - name: Commit Telegram delivery marker
-        if: steps.fetch.outputs.publish == 'true'
-        working-directory: gfs-state
-        env:
-          GFS_RUN_ID: ${{ steps.fetch.outputs.run_id }}
-        run: |
-          set -euo pipefail
-          cp -a "${GITHUB_WORKSPACE}/gfs/notifications/telegram-sent/." gfs/notifications/telegram-sent/
-          git add gfs/notifications/telegram-sent
-          if git diff --cached --quiet; then
-            echo "Telegram delivery marker already present."
-          else
-            git commit -m "Mark Istanbul GFS Telegram delivery ${GFS_RUN_ID}"
-            git push origin HEAD:istanbul-gfs-data
-          fi
 
   publish-pages:
     name: Publish the canonical bundle to GitHub Pages
@@ -158,3 +134,71 @@ jobs:
       id-token: write
     uses: ./.github/workflows/publish-live-site.yml
 
+
+  notify-telegram:
+    name: Deliver pending Telegram notifications independently
+    needs: publish
+    if: needs.publish.result == 'success'
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    permissions:
+      contents: write
+    steps:
+      - name: Check out application source
+        uses: actions/checkout@v5
+        with:
+          ref: main
+          fetch-depth: 1
+
+      - name: Check out canonical GFS data branch
+        id: checkout_state
+        uses: actions/checkout@v5
+        with:
+          ref: istanbul-gfs-data
+          path: gfs-state
+          fetch-depth: 0
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+
+      - name: Install Telegram dependency
+        run: python -m pip install --upgrade pip && python -m pip install python-telegram-bot
+
+      - name: Restore durable Telegram outbox
+        run: |
+          set -euo pipefail
+          mkdir -p gfs
+          if [ -d gfs-state/gfs ]; then
+            cp -a gfs-state/gfs/. gfs/
+          fi
+          mkdir -p gfs/notifications/telegram-sent gfs/telegram-outbox
+
+      - name: Send every pending canonical report
+        env:
+          TELEGRAM_TOKEN: \${{ secrets.TELEGRAM_TOKEN }}
+          CHAT_ID: \${{ secrets.CHAT_ID }}
+        run: python scripts/send_canonical_istanbul_gfs_telegram.py
+
+      - name: Persist Telegram acknowledgements and outbox cleanup
+        if: always() && steps.checkout_state.outcome == 'success'
+        working-directory: gfs-state
+        run: |
+          set -euo pipefail
+          mkdir -p gfs/notifications/telegram-sent gfs/telegram-outbox
+          if [ -d "\${GITHUB_WORKSPACE}/gfs/notifications/telegram-sent" ]; then
+            cp -a "\${GITHUB_WORKSPACE}/gfs/notifications/telegram-sent/." gfs/notifications/telegram-sent/
+          fi
+          if [ -d "\${GITHUB_WORKSPACE}/gfs/telegram-outbox" ]; then
+            cp -a "\${GITHUB_WORKSPACE}/gfs/telegram-outbox/." gfs/telegram-outbox/
+          fi
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add -A gfs/notifications/telegram-sent gfs/telegram-outbox
+          if git diff --cached --quiet; then
+            echo "No Telegram acknowledgements or outbox changes."
+          else
+            git commit -m "Persist Istanbul GFS Telegram outbox delivery state"
+            git push origin HEAD:istanbul-gfs-data
+          fi
