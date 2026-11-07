@@ -1,61 +1,69 @@
-"""Deliver all unsent Istanbul GFS reports from the canonical Pages manifest.
+"""Deliver unsent Istanbul GFS reports from the canonical publication manifest.
 
-Telegram delivery is deliberately outside the GFS publication job. A Telegram
-failure can therefore never block the Pages deployment. Each run is marked
-only after both text and image are accepted by Telegram.
+The --check mode uses only the Python standard library and exposes a pending
+GitHub Actions output. The Telegram dependency is imported only when at least
+one complete report actually needs delivery.
 """
 from __future__ import annotations
 
 import asyncio
 import json
 import os
+import sys
 from datetime import datetime, timezone
 from pathlib import Path
 
-from telegram import Bot
+
+def set_output(name: str, value: str) -> None:
+    target = os.getenv("GITHUB_OUTPUT")
+    if target:
+        with open(target, "a", encoding="utf-8") as handle:
+            handle.write(f"{name}={value}\n")
 
 
-def main() -> None:
-    root = Path.cwd()
+def pending_reports(root: Path) -> list[tuple[str, str, Path, Path, dict]]:
     manifest_path = root / "gfs" / "notifications" / "latest.json"
     if not manifest_path.is_file():
         print("[GFS TELEGRAM] No notification manifest yet.")
-        return
+        return []
 
-    manifest = json.loads(manifest_path.read_text(encoding="utf-8"))
-    items = manifest.get("items") or []
-    if not items:
+    try:
+        manifest = json.loads(manifest_path.read_text(encoding="utf-8"))
+    except (OSError, ValueError, TypeError) as exc:
+        raise RuntimeError(f"Invalid GFS notification manifest: {exc}") from exc
+
+    items = manifest.get("items") if isinstance(manifest, dict) else []
+    if not isinstance(items, list) or not items:
         print("[GFS TELEGRAM] Manifest has no reports.")
-        return
-
-    token = os.getenv("TELEGRAM_TOKEN", "").strip()
-    chat_id = os.getenv("CHAT_ID", "").strip()
-    if not token or not chat_id:
-        raise RuntimeError("TELEGRAM_TOKEN or CHAT_ID secret is missing.")
+        return []
 
     marker_dir = root / "gfs" / "notifications" / "telegram-sent"
     marker_dir.mkdir(parents=True, exist_ok=True)
-
     pending = []
+
     for item in items:
+        if not isinstance(item, dict):
+            continue
         run_id = item.get("run_id_utc")
         report = (item.get("report_text") or "").strip()
         if not run_id or not report:
             continue
+
         marker = marker_dir / f"{run_id}.json"
         marker_state = {}
         if marker.exists():
             try:
-                marker_state = json.loads(marker.read_text(encoding="utf-8"))
+                loaded = json.loads(marker.read_text(encoding="utf-8"))
+                marker_state = loaded if isinstance(loaded, dict) else {}
             except (OSError, ValueError, TypeError):
                 marker_state = {}
-            # Only our explicit partial marker is resumable. Legacy markers
-            # without a status are historical acknowledgements and stay untouched.
+            # Only an explicit partial delivery is resumable. Legacy markers
+            # without a status are historical acknowledgements.
             if marker_state.get("status") != "partial":
                 continue
 
-        image_relative = item.get("image_path")
         image = None
+        image_relative = item.get("image_path")
         if isinstance(image_relative, str) and image_relative.lower().endswith(".png"):
             candidate = root / "gfs" / "notifications" / image_relative
             if candidate.is_file():
@@ -74,13 +82,34 @@ def main() -> None:
             print(f"::warning::Telegram image missing for {run_id}; retrying later.")
             continue
 
-        pending.append((run_id, report, image, marker, marker_state))
+        pending.append((str(run_id), report, image, marker, marker_state))
+
+    return pending
+
+
+def main() -> None:
+    root = Path.cwd()
+    check_only = "--check" in sys.argv[1:]
+    pending = pending_reports(root)
+
+    if check_only:
+        set_output("pending", "true" if pending else "false")
+        set_output("pending_count", str(len(pending)))
+        print(f"[GFS TELEGRAM CHECK] pending_reports={len(pending)}")
+        return
 
     if not pending:
         print("[GFS TELEGRAM] No pending reports.")
         return
 
+    token = os.getenv("TELEGRAM_TOKEN", "").strip()
+    chat_id = os.getenv("CHAT_ID", "").strip()
+    if not token or not chat_id:
+        raise RuntimeError("TELEGRAM_TOKEN or CHAT_ID secret is missing.")
+
     async def deliver() -> None:
+        from telegram import Bot
+
         async with Bot(token=token) as bot:
             for run_id, report, image, marker, state in pending:
                 state.setdefault("run_id_utc", run_id)
