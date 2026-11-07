@@ -21,6 +21,9 @@ def main() -> None:
     guardian_config = json.loads(read("gfs-guardian/wrangler.jsonc"))
     gfs_worker = read("istanbul-gfs-worker/src/index.js")
     web_worker = read("web-worker/src/index.js")
+    koy_worker = read("koy-gfs-worker/src/index.js")
+    koy_svg_workflow = read(".github/workflows/rebuild-koy-gfs-interactive-svg.yml")
+    koy_deploy = read(".github/workflows/deploy-koy-gfs-worker.yml")
     poller = read("scripts/poll_istanbul_gfs_10min.py")
     builder = read("scripts/build_istanbul_gfs_publication.py")
     sender = read("scripts/send_pending_istanbul_gfs_telegram.py")
@@ -115,6 +118,19 @@ def main() -> None:
     assert "gfs/publication-upload" in report_workflow
     assert "GFS_DISPATCH_TOKEN" in report_workflow
     assert 'path.startsWith("/data/notifications/")' in web_worker
+    # Köy interactive SVG is now stored and served from Köy D1 without redeploying Static Assets.
+    assert "gfs_publication_assets" in koy_worker
+    assert "/api/publication-upload" in koy_worker
+    assert "/api/publication-asset/" in koy_worker
+    assert koy_worker.index('if (path === "/api/publication-upload")') < koy_worker.index('if (request.method !== "GET")')
+    assert "GFS_DISPATCH_TOKEN" in koy_worker and "wrangler secret put GFS_DISPATCH_TOKEN" in koy_deploy
+    assert 'path.startsWith("/koy-data/gfs/media/")' in web_worker
+    assert '"\/api/publication-asset/" + assetKey' in web_worker
+    assert "Upload generated Köy SVG to D1 publication assets" in koy_svg_workflow
+    assert "--data-binary" in koy_svg_workflow and "GFS_DISPATCH_TOKEN" in koy_svg_workflow
+    assert "git push origin HEAD:koy-gfs-data" not in koy_svg_workflow
+    assert "gh workflow run deploy-cloudflare-platform.yml" not in koy_svg_workflow
+    assert "workflow_run:" not in platform_workflow
     assert "actions/workflows/istanbul-gfs-10min.yml/dispatches" in gfs_worker
     assert "LIMIT 1" in gfs_worker
     assert "CREATE TABLE IF NOT EXISTS gfs_report_dispatch_queue" in dispatch_migration
