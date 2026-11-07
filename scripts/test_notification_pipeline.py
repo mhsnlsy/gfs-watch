@@ -220,10 +220,10 @@ def main() -> None:
     assert 'const stationApi=(window.GFS_WATCH_API_BASE||window.location.origin)+"/api/history/"+' in comparison
     assert "gfs-watch-stations.muhsin-ulusoy.workers.dev" not in comparison
     # Köy report SVG is served at the existing URL from its D1 Service Binding,
-    # so the web deployment no longer packages or checks out the archive branch.
-    assert "x-gfs-publication-source: D1" in platform_workflow
-    assert "x-gfs-watch-gateway: service-binding" in platform_workflow
-    assert 'id="gfs-renderer-version">cloudflare-js-v1</metadata>' in platform_workflow
+    # while the live site verifies the production notification path directly.
+    assert "Verify the production notification path is served Worker-first from D1" in platform_workflow
+    assert "/gfs/notification-latest?verify=" in platform_workflow
+    assert "/data/notifications/$LIVE_SVG_PATH" in platform_workflow
     assert "Check out Köy GFS archive" not in platform_workflow
     assert "ref: koy-gfs-data" not in platform_workflow
     assert "GITHUB_WORKSPACE/koy-data" not in platform_workflow
