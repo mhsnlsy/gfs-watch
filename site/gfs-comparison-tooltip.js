@@ -178,8 +178,14 @@ function attachGfsSvgInteractions(host,svg,metadata){
 }
 
 function isMobileGfsLayout(){
-  return window.matchMedia("(max-width:700px)").matches ||
-    window.matchMedia("(pointer:coarse)").matches;
+  const viewportWidth=Math.min(
+    Number(window.innerWidth||0),
+    Number(document.documentElement?.clientWidth||0)||Infinity
+  );
+  return viewportWidth<=700 ||
+    window.matchMedia("(max-width:700px)").matches ||
+    window.matchMedia("(pointer:coarse)").matches ||
+    Number(navigator.maxTouchPoints||0)>0;
 }
 
 // Apply the dark report palette directly to the SVG nodes after parsing.
@@ -299,6 +305,10 @@ async function loadInteractiveGfsCharts(root){
         if(mobileViews){
           host.dataset.mobilePanels="true";
           host.classList.add("gfs-mobile-panel-stack");
+          host.style.setProperty("display","grid","important");
+          host.style.setProperty("grid-template-columns","minmax(0,1fr)","important");
+          host.style.setProperty("grid-auto-flow","row","important");
+          host.style.setProperty("gap","12px","important");
           mobileViews.forEach(({svg:panelSvg,metadata:panelMetadata})=>{
             const panelHost=document.createElement("div");
             panelHost.className="gfs-mobile-panel-host";
