@@ -81,7 +81,7 @@ def main_rebuild() -> None:
     if not telegram_image_path or not svg_image_path:
         raise RuntimeError("The SVG report or its matching Telegram image could not be archived.")
     images = [{
-        "label": "4 GFS döngüsü · 72 saat · aynı geçerlilik saatleri (TSİ)",
+        "label": "4 GFS döngüsü · 180 saat · aynı geçerlilik saatleri (TSİ)",
         "path": svg_image_path,
     }]
 
