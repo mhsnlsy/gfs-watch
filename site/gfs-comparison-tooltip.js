@@ -139,8 +139,12 @@ function attachGfsSvgInteractions(host,svg,metadata,syncGroup){
       });
       return;
     }
-    const panel=panelList[0];
-    if(panel)show(panel,index,event);
+    // Desktop: one SVG contains all four panels, so activate all four
+    // tooltips at the same valid timestamp.
+    panelList.forEach(panel=>{
+      if(!panel?.valid_times?.[index])return;
+      show(panel,index,anchorForIndex(panel,index)||event);
+    });
   }
   function selectNearest(event){
     const panel=panelAtEvent(event);
