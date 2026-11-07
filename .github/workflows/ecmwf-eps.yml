@@ -1,9 +1,8 @@
-name: Build and publish ECMWF EPS forecast
+name: Build and publish MeteoPT ECMWF forecast
 
 on:
   schedule:
-    # ECMWF Open Data products typically appear 7–9 hours after cycle time.
-    # Check after the 00Z and 12Z ENS dissemination windows.
+    # MeteoPT ECMWF point data is checked after the 00Z and 12Z model cycles.
     - cron: "15 10,22 * * *"
   workflow_dispatch:
     inputs:
@@ -22,7 +21,7 @@ concurrency:
 
 jobs:
   fetch-and-publish:
-    name: Fetch, validate and cache ECMWF EPS for Istanbul
+    name: Fetch, validate and cache MeteoPT ECMWF for Istanbul
     runs-on: ubuntu-latest
     timeout-minutes: 120
     steps:
@@ -197,7 +196,7 @@ jobs:
           for attempt in 1 2 3 4 5; do
             git pull --rebase origin gfs-watch-state
             if git push origin HEAD:gfs-watch-state; then
-              echo 'ECMWF EPS forecast cache published.'
+              echo 'MeteoPT ECMWF forecast cache published.'
               exit 0
             fi
             sleep $((attempt * 2))
