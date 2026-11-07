@@ -90,6 +90,9 @@ def main() -> int:
     f180_ready = False
     selected_run = ""
 
+    # F72 is a cache milestone and may be recorded for every newly visible cycle.
+    # F180 publication is intentionally one cycle per poll. If an older F180 was
+    # missed, it becomes the next target after the newest unseen run is archived.
     for cycle, document, url, steps in candidates:
         run_id = cycle.isoformat(timespec="seconds")
         f72_path = GFS_DIR / "milestones" / "f72" / f"{run_id}.json"
@@ -109,7 +112,7 @@ def main() -> int:
             selected_run = run_id
             print(f"[GFS 10M] F72 cached: {run_id}")
 
-        if 180 in steps and not run_path.exists():
+        if 180 in steps and not run_path.exists() and not f180_ready:
             full = normalize(document, url, cycle, require_f180=True)
             save_atomic(run_path, full)
             f180_ready = True
