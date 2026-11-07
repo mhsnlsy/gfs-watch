@@ -50,18 +50,22 @@ function positionGfsTooltip(host,tooltip,clientX,clientY){
   tooltip.style.top=Math.round(top)+"px";
 }
 function attachGfsSvgInteractions(host,svg,metadata,syncGroup){
-  const tooltip=document.createElement("div");
-  tooltip.className="gfs-chart-tooltip";
-  tooltip.hidden=true;
-  tooltip.setAttribute("role","status");
-  tooltip.setAttribute("aria-live","polite");
-  tooltip.setAttribute("aria-atomic","true");
-  host.appendChild(tooltip);
   const panels=new Map((metadata.panels||[]).map(panel=>[panel.id,panel]));
   const panelList=Array.from(panels.values());
+  const tooltips=new Map();
+  panelList.forEach(panel=>{
+    const tip=document.createElement("div");
+    tip.className="gfs-chart-tooltip";
+    tip.hidden=true;
+    tip.setAttribute("role","status");
+    tip.setAttribute("aria-live","polite");
+    tip.setAttribute("aria-atomic","true");
+    host.appendChild(tip);
+    tooltips.set(panel.id,tip);
+  });
   const activeIndexes=new Map();
   function hide(){
-    tooltip.hidden=true;
+    tooltips.forEach(tip=>tip.hidden=true);
     host.removeAttribute("data-pinned");
     svg.querySelectorAll(".gfs-tooltip-crosshair").forEach(line=>line.setAttribute("visibility","hidden"));
     svg.querySelectorAll(".gfs-tooltip-markers").forEach(group=>group.replaceChildren());
@@ -119,10 +123,12 @@ function attachGfsSvgInteractions(host,svg,metadata,syncGroup){
       marker.setAttribute("class","gfs-tooltip-marker");
       markerGroup.appendChild(marker);
     });
-    tooltip.innerHTML=buildGfsTooltipMarkup(panel,index,validTime);
+    const panelTooltip=tooltips.get(panel.id);
+    if(!panelTooltip)return;
+    panelTooltip.innerHTML=buildGfsTooltipMarkup(panel,index,validTime);
     const anchor=event&&Number.isFinite(event.clientX)&&Number.isFinite(event.clientY)
       ? event : (anchorForIndex(panel,index)||event);
-    positionGfsTooltip(host,tooltip,anchor?.clientX,anchor?.clientY);
+    positionGfsTooltip(host,panelTooltip,anchor?.clientX,anchor?.clientY);
   }
   function showSynchronized(index,event){
     if(syncGroup?.members?.length){
