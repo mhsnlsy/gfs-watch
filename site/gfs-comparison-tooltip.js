@@ -32,24 +32,17 @@ function buildGfsTooltipMarkup(panel,index,validTime){
 function positionGfsTooltip(host,tooltip,clientX,clientY){
   if(!Number.isFinite(clientX)||!Number.isFinite(clientY))return;
   tooltip.hidden=false;
-  // Tooltips are always positioned above the actual touch/cursor point.
-  // Use viewport-fixed positioning so clipping inside the chart/card cannot push
-  // the popup below the finger.
   tooltip.style.position="fixed";
   tooltip.style.zIndex="2147483647";
   tooltip.style.pointerEvents="none";
   tooltip.style.left="0px";
   tooltip.style.top="0px";
-  requestAnimationFrame(()=>{
-    const margin=10;
-    const gap=14;
-    const width=tooltip.offsetWidth;
-    const height=tooltip.offsetHeight;
-    const left=Math.max(margin,Math.min(window.innerWidth-width-margin,clientX-width/2));
-    const top=clientY-height-gap;
-    tooltip.style.left=Math.round(left)+"px";
-    tooltip.style.top=Math.round(Math.max(margin,top))+"px";
-  });
+  const margin=8,gap=12;
+  const width=tooltip.offsetWidth,height=tooltip.offsetHeight;
+  const left=Math.max(margin,Math.min(window.innerWidth-width-margin,clientX-width/2));
+  const top=Math.max(margin,clientY-height-gap);
+  tooltip.style.left=Math.round(left)+"px";
+  tooltip.style.top=Math.round(top)+"px";
 }
 function attachGfsSvgInteractions(host,svg,metadata){
   const tooltip=document.createElement("div");
@@ -62,18 +55,6 @@ function attachGfsSvgInteractions(host,svg,metadata){
   const panels=new Map((metadata.panels||[]).map(panel=>[panel.id,panel]));
   const panelList=Array.from(panels.values());
   const activeIndexes=new Map();
-  let touchHideTimer=null;
-  function clearTouchHideTimer(){
-    if(touchHideTimer!==null)window.clearTimeout(touchHideTimer);
-    touchHideTimer=null;
-  }
-  function scheduleTouchHide(){
-    clearTouchHideTimer();
-    touchHideTimer=window.setTimeout(()=>{
-      touchHideTimer=null;
-      hide();
-    },2800);
-  }
   function hide(){
     clearTouchHideTimer();
     tooltip.hidden=true;
@@ -145,7 +126,6 @@ function attachGfsSvgInteractions(host,svg,metadata){
   svg.style.webkitTapHighlightColor="transparent";
   const handleTouchMove=event=>{
     if(event.pointerType&&event.pointerType!=="touch")return;
-    if(event.cancelable)event.preventDefault();
     if(!host.hasAttribute("data-pinned"))host.setAttribute("data-pinned","true");
     selectNearest(event);
     scheduleTouchHide();
@@ -162,18 +142,17 @@ function attachGfsSvgInteractions(host,svg,metadata){
   svg.addEventListener("touchmove",event=>{
     const touch=event.touches?.[0];
     if(!touch)return;
-    handleTouchMove({clientX:touch.clientX,clientY:touch.clientY,pointerType:"touch",cancelable:event.cancelable,preventDefault:()=>event.preventDefault()});
-  },{passive:false});
+    handleTouchMove({clientX:touch.clientX,clientY:touch.clientY,pointerType:"touch"});
+  },{passive:true});
   svg.addEventListener("pointerdown",event=>{
     if(event.pointerType!=="touch"&&event.pointerType!=="pen")return;
-    event.preventDefault();
     host.setAttribute("data-pinned","true");
     try{svg.setPointerCapture(event.pointerId);}catch(_){}
     selectNearest(event);
     if(event.pointerType==="touch")scheduleTouchHide();
   });
   svg.addEventListener("pointerup",event=>{
-    if(event.pointerType==="touch")scheduleTouchHide();
+    if(event.pointerType==="touch")hide();
   });
   svg.addEventListener("pointercancel",event=>{
     if(event.pointerType==="touch")hide();
@@ -181,6 +160,8 @@ function attachGfsSvgInteractions(host,svg,metadata){
   svg.addEventListener("pointerleave",()=>{
     if(!host.hasAttribute("data-pinned"))hide();
   });
+  window.addEventListener("scroll",hide,{passive:true,capture:true});
+  window.addEventListener("resize",hide,{passive:true});
   svg.addEventListener("keydown",event=>{
     if(event.key==="Escape"){event.preventDefault();hide();return;}
     if(event.key!=="ArrowLeft"&&event.key!=="ArrowRight")return;
