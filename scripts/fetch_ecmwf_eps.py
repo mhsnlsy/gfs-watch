@@ -51,6 +51,45 @@ def _normalise_datetime(value) -> datetime:
     return parsed.astimezone(timezone.utc).replace(minute=0, second=0, microsecond=0)
 
 
+def _validate_meteopt_document(document: dict) -> None:
+    """Validate the canonical MeteoPT ECMWF point-series contract."""
+    if document.get("schema") != SCHEMA or document.get("status") != "ready":
+        raise ValueError("ECMWF IFS document schema/status is invalid.")
+    forecasts = document.get("forecasts")
+    if not isinstance(forecasts, list) or len(forecasts) < 8:
+        raise ValueError("MeteoPT ECMWF series is too short.")
+    hours = [item.get("forecast_hour") for item in forecasts]
+    if hours != sorted(hours) or len(set(hours)) != len(hours):
+        raise ValueError("MeteoPT ECMWF steps are duplicated or out of order.")
+    if any(not isinstance(hour, int) or hour <= 0 or hour % 3 != 0 for hour in hours):
+        raise ValueError("MeteoPT ECMWF steps must be positive 3-hour marks.")
+    for item in forecasts:
+        for key in ("temperature_2m_c", "wind_speed_10m_kmh", "precipitation_interval_mm"):
+            value = item.get(key)
+            if not isinstance(value, (int, float)) or not math.isfinite(value):
+                raise ValueError(f"MeteoPT ECMWF field is invalid: {key}.")
+        if not (-80 <= item["temperature_2m_c"] <= 60):
+            raise ValueError("MeteoPT ECMWF 2 m temperature is outside sanity bounds.")
+        if item["wind_speed_10m_kmh"] < 0 or item["precipitation_interval_mm"] < 0:
+            raise ValueError("MeteoPT ECMWF wind or precipitation cannot be negative.")
+        temperature = (item.get("temperature_850hpa") or {}).get("mean_c")
+        wind = (item.get("wind_850hpa") or {}).get("mean_kmh")
+        pressure = (item.get("mslp") or {}).get("mean_hpa")
+        if not isinstance(temperature, (int, float)) or not (-80 <= temperature <= 40):
+            raise ValueError("MeteoPT ECMWF 850 hPa temperature is invalid.")
+        if not isinstance(wind, (int, float)) or not (0 <= wind <= 250):
+            raise ValueError("MeteoPT ECMWF 850 hPa wind is invalid.")
+        if not isinstance(pressure, (int, float)) or not (900 <= pressure <= 1080):
+            raise ValueError("MeteoPT ECMWF pressure is invalid.")
+    timeline = document.get("forecast_6_hourly")
+    if not isinstance(timeline, list) or len(timeline) != len(forecasts):
+        raise ValueError("MeteoPT ECMWF timeline does not match the forecast series.")
+    if not isinstance(document.get("daily_summary"), list) or not document["daily_summary"]:
+        raise ValueError("MeteoPT ECMWF daily summary is missing.")
+    if "meteopt.com" not in str(document.get("source_url") or ""):
+        raise ValueError("MeteoPT ECMWF source URL is missing.")
+
+
 def _meteopt_number(value):
     try:
         number = float(value)
