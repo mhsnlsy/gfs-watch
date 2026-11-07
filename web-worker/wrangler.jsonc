@@ -15,7 +15,10 @@
       "/gfs/*",
       "/api/*",
       "/data/notifications/*",
-      "/koy-data/gfs/media/*"
+      "/koy-data/gfs/media/*",
+      "/data/ecmwf/*",
+      "/data/istanbul-gfs-*",
+      "/koy-data/gfs/*"
     ],
     "not_found_handling": "404-page"
   },
@@ -31,6 +34,12 @@
     {
       "binding": "STATIONS",
       "service": "gfs-watch-stations"
+    }
+  ],
+  "r2_buckets": [
+    {
+      "binding": "LIVE_ARCHIVE",
+      "bucket_name": "gfs-watch-live-archive"
     }
   ]
 }
