@@ -429,7 +429,6 @@ function renderF72(d){
  $("meteopt-table-run").textContent="Model döngüsü: "+ts(d.run_id_utc);
  $("meteopt-table-updated").textContent="Yayın: "+ts(d.published_at_utc);
  const first=pts[0];
- if(first) $("report-summary").textContent=(stationMode==="home"?"Köy Ev 363 m için rakım düzeltilmiş MeteoPT GFS tahmini.":"MGM Çanakçı gerçek istasyon ölçümü ile MeteoPT GFS model tahmini ayrı kaynaklardır.")+" İlk GFS tahmin adımı: "+tsGfsValid(first.valid_time_utc)+" · "+fmt(num(first.temperature_2m_c))+" °C · yağış "+fmt(num(first.precipitation_6h_mm))+" mm / 6 saat.";
 }
 function svgStationHistory(samples,metric,title,unit){
  const now=Date.now();
@@ -612,7 +611,6 @@ function renderRuns(d,f72){
   ? [tableRun,...historyRuns.filter(run=>run.run_id_utc!==tableRun.run_id_utc)].slice(0,4)
   : historyRuns;
  const runs=historyRuns;
- $("report-meta").textContent=source.length?"Son döngü: "+tsGfsValid(source[0].run_id_utc)+" · "+source.length+" çıktı hazır":"Son model döngüsü bekleniyor";
  const svgContainer=$("koy-gfs-comparison-container");
  if(svgContainer){
   const svgRuns=historyRuns.slice(0,4);
