@@ -55,6 +55,9 @@ jobs:
           node --check /tmp/site-script.js
           node --check site/koy.js
           node --check web-worker/src/index.js
+          node --check istanbul-gfs-worker/src/index.js
+          node --check istanbul-gfs-worker/src/publication.js
+          node scripts/test_istanbul_worker_publication.mjs
           python - <<'PY'
           from pathlib import Path
           import re
