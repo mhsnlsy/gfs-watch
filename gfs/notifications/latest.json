@@ -1,7 +1,25 @@
 {
   "schema": "gfs-watch.notifications.v1",
-  "updated_at_utc": "2026-11-07T08:17:54+00:00",
+  "updated_at_utc": "2026-11-07T10:19:41+00:00",
   "items": [
+    {
+      "id": "20261107T06Z",
+      "title": "İstanbul GFS tahmin raporu",
+      "run_id_utc": "2026-11-07T06:00:00+00:00",
+      "published_at_utc": "2026-11-07T10:19:41+00:00",
+      "published_at_istanbul": "Cumartesi 7 Kasım 2026 13:19",
+      "cycle_label": "06Z · 07.11.2026 06:00 UTC",
+      "summary": "📡 yerel istasyon İSTASYON GÖZLEMİ: Bu rapor hazırlanırken ENKA verisi alınamadı.\n🌆 GÜNÜN KALANINDA\n⏳ Süre: Cumartesi 7 Kasım 2026 13:19 – Pazar 8 Kasım 2026 00:00 TSİ\n🌡 Sıcaklık: 9.5–11.2°C\n💨 Rüzgâr: en fazla 26.0 km/sa\n🌧 Beklenen yağış: 0.1 mm",
+      "report_text": "🌦 İstanbul'un Havası 1.4.3\nİSTANBUL GFS TAHMİN RAPORU\n🛰 Model döngüsü: 07.11.2026 06:00 UTC (06Z)\n🕒 Rapor zamanı: Cumartesi 7 Kasım 2026 13:19 TSİ\n📍 Konum: İstanbul, Türkiye\n\n\n📡 YEREL İSTASYON İSTASYON GÖZLEMİ: Bu rapor hazırlanırken ENKA verisi alınamadı.\n\n🌆 GÜNÜN KALANINDA\n⏳ Süre: Cumartesi 7 Kasım 2026 13:19 – Pazar 8 Kasım 2026 00:00 TSİ\n🌡 Sıcaklık: 9.5–11.2°C\n💨 Rüzgâr: en fazla 26.0 km/sa\n🌧 Beklenen yağış: 0.1 mm\n📈 En belirgin yağış aralığı: 09:00–12:00 UTC (model noktası: 0.1 mm / 3 saat)\n\n📅 ÖNÜMÜZDEKİ 3 GÜN\n• Pazar 8 Kasım: 8.9–11.5°C | Yağış: 0.3 mm | Maks. rüzgâr: 15.0 km/sa\n  ↳ Yağışın yoğunlaştığı saatler: 00:00–03:00 UTC (0.1 mm/3 sa)\n• Pazartesi 9 Kasım: 8.2–12.3°C | Yağış: 0.0 mm | Maks. rüzgâr: 13.0 km/sa\n  ↳ Belirgin yağış beklenmiyor.\n• Salı 10 Kasım: 9.4–11.8°C | Yağış: 1.9 mm | Maks. rüzgâr: 10.0 km/sa\n  ↳ Yağışın yoğunlaştığı saatler: 00:00–03:00 UTC (1.4 mm/3 sa)",
+      "image_path": "media/gfs-20261107T06Z-comparison.png",
+      "images": [
+        {
+          "label": "4 GFS döngüsü · 72 saat · aynı geçerlilik saatleri (TSİ)",
+          "path": "media/gfs-20261107T06Z-comparison.svg"
+        }
+      ],
+      "audio_path": null
+    },
     {
       "id": "20261107T00Z",
       "title": "İstanbul GFS tahmin raporu",
@@ -52,24 +70,6 @@
         {
           "label": "4 GFS döngüsü · 72 saat · aynı geçerlilik saatleri (TSİ)",
           "path": "media/gfs-20261106T12Z-comparison.svg"
-        }
-      ],
-      "audio_path": null
-    },
-    {
-      "id": "20261106T06Z",
-      "title": "İstanbul GFS tahmin raporu",
-      "run_id_utc": "2026-11-06T06:00:00+00:00",
-      "published_at_utc": "2026-11-06T11:20:07+00:00",
-      "published_at_istanbul": "Cuma 6 Kasım 2026 14:20",
-      "cycle_label": "06Z · 06.11.2026 06:00 UTC",
-      "summary": "📡 yerel istasyon İSTASYON GÖZLEMİ: Bu rapor hazırlanırken ENKA verisi alınamadı.\n🌆 GÜNÜN KALANINDA\n⏳ Süre: Cuma 6 Kasım 2026 14:20 – Cumartesi 7 Kasım 2026 00:00 TSİ\n🌡 Sıcaklık: 10.6–11.8°C\n💨 Rüzgâr: en fazla 15.0 km/sa\n🌧 Beklenen yağış: 0.0 mm",
-      "report_text": "🌦 İstanbul'un Havası 1.4.3\nİSTANBUL GFS TAHMİN RAPORU\n🛰 Model döngüsü: 06.11.2026 06:00 UTC (06Z)\n🕒 Rapor zamanı: Cuma 6 Kasım 2026 14:20 TSİ\n📍 Konum: İstanbul, Türkiye\n\n\n📡 YEREL İSTASYON İSTASYON GÖZLEMİ: Bu rapor hazırlanırken ENKA verisi alınamadı.\n\n🌆 GÜNÜN KALANINDA\n⏳ Süre: Cuma 6 Kasım 2026 14:20 – Cumartesi 7 Kasım 2026 00:00 TSİ\n🌡 Sıcaklık: 10.6–11.8°C\n💨 Rüzgâr: en fazla 15.0 km/sa\n🌧 Beklenen yağış: 0.0 mm\n\n📅 ÖNÜMÜZDEKİ 3 GÜN\n• Cumartesi 7 Kasım: 9.5–11.9°C | Yağış: 0.8 mm | Maks. rüzgâr: 26.0 km/sa | Rüzgârlı\n  ↳ Yağışın yoğunlaştığı saatler: 03:00–06:00 UTC (0.4 mm/3 sa)\n• Pazar 8 Kasım: 8.7–11.3°C | Yağış: 0.3 mm | Maks. rüzgâr: 16.0 km/sa\n  ↳ Yağışın yoğunlaştığı saatler: 03:00–06:00 UTC (0.1 mm/3 sa)\n• Pazartesi 9 Kasım: 8.5–12.5°C | Yağış: 0.0 mm | Maks. rüzgâr: 17.0 km/sa\n  ↳ Belirgin yağış beklenmiyor.",
-      "image_path": "media/gfs-20261106T06Z-comparison.png",
-      "images": [
-        {
-          "label": "4 GFS döngüsü · 72 saat · aynı geçerlilik saatleri (TSİ)",
-          "path": "media/gfs-20261106T06Z-comparison.svg"
         }
       ],
       "audio_path": null
