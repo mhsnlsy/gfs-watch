@@ -8,7 +8,7 @@
     "enabled": true
   },
   "vars": {
-    "ALLOWED_ORIGIN": "https://mhsnlsy.github.io"
+    "ALLOWED_ORIGIN": "https://gfs-watch-web.muhsin-ulusoy.workers.dev"
   },
   "d1_databases": [
     {
