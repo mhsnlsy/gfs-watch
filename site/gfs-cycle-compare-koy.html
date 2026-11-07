@@ -66,7 +66,7 @@ const fmt=(v,d=1)=>v==null?"—":Number(v).toLocaleString("tr-TR",{minimumFracti
 const esc=s=>String(s??"").replace(/[&<>"]/g,c=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;"}[c]));
 const ts=v=>{if(!v)return "—";const d=new Date(v);return Number.isFinite(d.getTime())?new Intl.DateTimeFormat("tr-TR",{timeZone:"Europe/Istanbul",day:"2-digit"}).format(d)+" TSİ":"—"};
 const tsGfsValid=v=>{if(!v)return "—";const d=new Date(v);return Number.isFinite(d.getTime())?new Intl.DateTimeFormat("tr-TR",{timeZone:"UTC",day:"2-digit"}).format(d)+" TSİ":"—"};
-const pointsOf=(run,max=180)=>(run?.forecast_6_hourly||[]).filter(p=>{const h=Number(p.forecast_hour);return Number.isFinite(h)&&h>=3&&h<=max&&h%3===0}).sort((a,b)=>Number(a.forecast_hour)-Number(b.forecast_hour));
+const pointsOf=(run,max=72)=>(run?.forecast_6_hourly||[]).filter(p=>{const h=Number(p.forecast_hour);return Number.isFinite(h)&&h>=3&&h<=max&&h%3===0}).sort((a,b)=>Number(a.forecast_hour)-Number(b.forecast_hour));
 function realizedErrorStats(runs,samples){
  const obs=Array.isArray(samples?.samples)?samples.samples:[];
  if(!obs.length)return null;
@@ -103,7 +103,7 @@ function renderRunLegend(source){
  }).join("");
 }
 function svgLine(runs,metric,title,unit,verification=null){
- const usable=runs.map((run,runIndex)=>({run,runIndex,points:pointsOf(run,180).map(p=>({h:Number(p.forecast_hour),v:num(p[metric]),validTime:p.valid_time_utc})).filter(p=>p.v!=null)})).filter(item=>item.points.length);
+ const usable=runs.map((run,runIndex)=>({run,runIndex,points:pointsOf(run,72).map(p=>({h:Number(p.forecast_hour),v:num(p[metric]),validTime:p.valid_time_utc})).filter(p=>p.v!=null)})).filter(item=>item.points.length);
  if(!usable.length)return '<div class="chart-empty">Tahmin verisi bekleniyor…</div>';
  const hours=Array.from(new Set(usable.flatMap(item=>item.points.map(p=>p.h)))).sort((a,b)=>a-b);
  const values=usable.flatMap(item=>item.points.map(p=>p.v));
