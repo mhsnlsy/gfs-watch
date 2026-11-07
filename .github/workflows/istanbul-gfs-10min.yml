@@ -1,6 +1,10 @@
 name: Istanbul GFS · Event-Driven Report Pipeline
 
 on:
+  push:
+    branches: [main]
+    paths:
+      - ".github/workflows/istanbul-gfs-10min.yml"
   workflow_dispatch:
     inputs:
       run_id:
