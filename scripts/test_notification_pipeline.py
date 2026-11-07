@@ -140,7 +140,7 @@ def main() -> None:
     assert 'path.startsWith("/data/notifications/")' in web_worker
     # ECMWF is calculated in the existing workflow but published and served from D1.
     assert "Publish validated ECMWF archive to Cloudflare R2" in ecmwf_workflow
-    assert "CLOUDFLARE_R2_API_TOKEN" in ecmwf_workflow
+    assert "CLOUDFLARE_API_TOKEN" in ecmwf_workflow
     assert "data/ecmwf/$relative" in ecmwf_workflow
     assert "Verified ECMWF R2 archive" in ecmwf_workflow
     assert "Publish ECMWF latest payload and report images to Cloudflare D1" in ecmwf_workflow
@@ -160,7 +160,7 @@ def main() -> None:
     assert "/api/publication-asset/" in koy_worker
     assert "/api/publication-upload" not in koy_worker
     assert "GFS_DISPATCH_TOKEN" not in koy_worker and "GFS_DISPATCH_TOKEN" not in koy_deploy
-    assert 'path.startsWith("/koy-data/gfs/media/")' in web_worker
+    assert 'path.startsWith("/koy-data/gfs/")' in web_worker
     assert "/koy-data/gfs/media/*" in web_config["assets"]["run_worker_first"]
     assert '"/api/publication-asset/" + assetKey' in web_worker
     assert "workflow_dispatch:" in koy_svg_workflow
