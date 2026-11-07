@@ -269,8 +269,6 @@
     overflow: visible !important;
     overflow-x: visible !important;
     overflow-y: visible !important;
-    touch-action: auto !important;
-    overscroll-behavior: auto !important;
   }
   #meteopt-gfs-table .meteopt-table-scroll {
     display: block !important;
