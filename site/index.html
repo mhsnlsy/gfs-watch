@@ -3709,48 +3709,36 @@ if(typeof renderBriefing==="function")renderBriefing();
       touch-action:auto;
     }
   </style>
-  <style id="desktop-gfs-tooltip-chart-size">
-    /* Masaüstünde rapor kartının tamamını daraltıp tam ortala.
-       Mobil görünüm bu kuralların dışında kalır. */
+    <style id="desktop-gfs-tooltip-chart-size">
+    /* FINAL DESKTOP SIZE: the homepage GFS report uses the full report panel width.
+       Do not apply the old 79.35% / 90% shrinking rules. */
     @media (min-width: 851px) and (hover: hover) {
-      .notification-list .notification-card.notification-chart-only,
-      .notification-card.notification-chart-only {
-        display: block !important;
-        box-sizing: border-box !important;
-        width: 79.35% !important;
-        max-width: 79.35% !important;
-        min-width: 0 !important;
-        margin-left: auto !important;
-        margin-right: auto !important;
-        justify-self: center !important;
+      #bildirimler .notification-list,
+      #bildirimler .notification-card.notification-chart-only,
+      #bildirimler .notification-card.notification-chart-only .notification-images,
+      #bildirimler .notification-card.notification-chart-only .notification-image-item,
+      #bildirimler .notification-card.notification-chart-only .gfs-interactive-chart {
+        display:block !important;
+        box-sizing:border-box !important;
+        width:100% !important;
+        max-width:100% !important;
+        min-width:0 !important;
+        margin-left:0 !important;
+        margin-right:0 !important;
+        justify-self:stretch !important;
       }
-      .notification-chart-only .notification-images {
-        display: grid !important;
-        grid-template-columns: minmax(0, 1fr) !important;
-        width: 100% !important;
-        max-width: 100% !important;
-        margin: 0 auto !important;
-        justify-items: stretch !important;
-      }
-      .notification-chart-only .notification-image-item,
-      .notification-chart-only .gfs-interactive-chart {
-        display: block !important;
-        box-sizing: border-box !important;
-        width: 100% !important;
-        max-width: 100% !important;
-        min-width: 0 !important;
-        margin: 0 !important;
-        aspect-ratio: 1.58166 !important;
-      }
-      .notification-chart-only .gfs-interactive-svg {
-        display: block !important;
-        width: 100% !important;
-        max-width: 100% !important;
-        height: 100% !important;
+      #bildirimler .notification-card.notification-chart-only .gfs-interactive-svg {
+        display:block !important;
+        box-sizing:border-box !important;
+        width:100% !important;
+        max-width:100% !important;
+        height:auto !important;
+        border:0 !important;
+        outline:0 !important;
+        background:#0A1B29 !important;
       }
     }
-  </style>
-  <style id="home-force-koy-gfs-report">
+  </style> <style id="home-force-koy-gfs-report">
     /* FORCE: Ana sayfadaki GFS raporu, Köy sayfasındaki çalışan rapor davranışını aynen kullanır. */
     #bildirimler .notification-list{
       display:block!important;
