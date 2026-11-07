@@ -188,7 +188,7 @@ def main() -> None:
     # so the web deployment no longer packages or checks out the archive branch.
     assert "x-gfs-publication-source: D1" in platform_workflow
     assert "x-gfs-watch-gateway: service-binding" in platform_workflow
-    assert "gfs-renderer-version">cloudflare-js-v1</metadata>" in platform_workflow
+    assert 'id="gfs-renderer-version">cloudflare-js-v1</metadata>' in platform_workflow
     assert "Check out Köy GFS archive" not in platform_workflow
     assert "ref: koy-gfs-data" not in platform_workflow
     assert "GITHUB_WORKSPACE/koy-data" not in platform_workflow
