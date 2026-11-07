@@ -2,10 +2,11 @@ name: Publish GitHub Pages Fallback
 
 on:
   push:
-    branches: [main, koy-mgm-data]
+    branches: [main, koy-gfs-data, koy-mgm-data]
     paths:
       - ".github/workflows/publish-live-site.yml"
       - "site/**"
+      - "gfs/**"
       - "mgm/**"
   workflow_dispatch:
   workflow_call:
