@@ -253,8 +253,13 @@ function bindGfsChartTooltip(containerId){
  tooltip.setAttribute("aria-live","polite");
  host.appendChild(tooltip);
  let pinned=false;
+ let touchHideTimer=null;
  const targets=[...svg.querySelectorAll(".gfs-point-target")];
  const currentTargets=targets.filter(target=>target.dataset.current==="true");
+ function scheduleTouchHide(){
+  if(touchHideTimer!==null)window.clearTimeout(touchHideTimer);
+  touchHideTimer=window.setTimeout(()=>{touchHideTimer=null;hide()},2800);
+ }
  function nearestPoint(event,maxDistance){
   const matrix=svg.getScreenCTM();
   if(!matrix)return null;
@@ -276,6 +281,8 @@ function bindGfsChartTooltip(containerId){
   return currentTargets.find(target=>target.dataset.validkey===validKey)||null;
  }
  function hide(){
+  if(touchHideTimer!==null)window.clearTimeout(touchHideTimer);
+  touchHideTimer=null;
   tooltip.hidden=true;
   pinned=false;
   if(activeGfsTooltip?.tooltip===tooltip)activeGfsTooltip=null;
@@ -303,8 +310,17 @@ function bindGfsChartTooltip(containerId){
   tooltip.style.top=top+"px";
   if(lock)activeGfsTooltip={host,tooltip,hide};
  }
+ svg.style.touchAction="pan-y";
  svg.addEventListener("pointermove",event=>{
-  if(event.pointerType==="touch"||pinned)return;
+  if(event.pointerType==="touch"){
+   pinned=true;
+   const hit=nearestPoint(event,44);
+   const target=latestPointAtSameTime(hit);
+   if(target)show(target,event,true);else hide();
+   scheduleTouchHide();
+   return;
+  }
+  if(pinned)return;
   const hit=nearestPoint(event,28);
   const target=latestPointAtSameTime(hit);
   if(target)show(target,event,false);
@@ -317,8 +333,18 @@ function bindGfsChartTooltip(containerId){
   if(event.pointerType!=="touch"&&event.pointerType!=="pen")return;
   const hit=nearestPoint(event,44);
   const target=latestPointAtSameTime(hit);
-  if(target){event.preventDefault();show(target,event,true)}
-  else hide();
+  if(target){
+   event.preventDefault();
+   if(event.pointerType==="touch")try{svg.setPointerCapture(event.pointerId);}catch(_){}
+   show(target,event,true);
+   if(event.pointerType==="touch")scheduleTouchHide();
+  }else hide();
+ });
+ svg.addEventListener("pointerup",event=>{
+  if(event.pointerType==="touch")scheduleTouchHide();
+ });
+ svg.addEventListener("pointercancel",event=>{
+  if(event.pointerType==="touch")hide();
  });
 }
 
