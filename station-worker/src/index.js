@@ -630,7 +630,7 @@ async function handleApi(request, env) {
         ok: true,
         service: "gfs-watch-stations",
         storage: "D1",
-        cron: "* * * * *",
+        cron: "*/2 * * * *",
         station_count: rows.length,
         latest_fetch_at_utc: latest,
         stations: rows.map(row => ({ key: row.station_key, status: row.status, fetched_at_utc: row.fetched_at_utc, last_success_utc: row.last_success_utc, last_attempt_utc: row.last_attempt_utc, last_error: row.last_error }))
