@@ -3182,14 +3182,14 @@ if(typeof renderBriefing==="function")renderBriefing();
           ? item.images.filter(image=>image&&typeof image.path==="string"&&/\.(?:png|svg)$/i.test(image.path)).map(image=>({url:notificationAsset(image.path,cacheVersion),isSvg:/\.svg$/i.test(image.path)}))
           : legacyImage&&/\.(?:png|svg)(?:[?#]|$)/i.test(item.image_path||"")?[{url:legacyImage,isSvg:/\.svg(?:[?#]|$)/i.test(item.image_path||"")}]:[];
         const imagesHtml=imageItems.length>0
-          ? '<div class="notification-images">'+imageItems.map(image=>{
+          ? '<div class="notification-images koy-fullframe-images koy-gfs-svg-images" style="background:#0A1B29!important">'+imageItems.map(image=>{
               const media=image.isSvg
-                ? '<div class="gfs-interactive-chart" data-svg-src="'+esc(image.url)+'"><div class="gfs-chart-loading">Etkileşimli grafik yükleniyor…</div></div>'
+                ? '<div class="gfs-interactive-chart" data-svg-src="'+esc(image.url)+'" style="background:#0A1B29!important"><div class="gfs-chart-loading">Etkileşimli grafik yükleniyor…</div></div>'
                 : '<a class="notification-image-link" href="'+image.url+'" target="_blank" rel="noopener"><img class="notification-image" src="'+image.url+'" alt="İstanbul GFS dört döngü karşılaştırması" loading="eager" decoding="async" fetchpriority="high"></a>';
               return '<div class="notification-image-item">'+media+'</div>';
             }).join("")+'</div>'
           : '<div class="media-pending">GFS karşılaştırma grafiği hazırlanıyor.</div>';
-        return '<article class="notification-card notification-chart-only home-gfs-report-card">'+imagesHtml+'</article>';
+        return '<article class="notification-card notification-chart-only koy-gfs-report-card">'+imagesHtml+'</article>';
       }).join("");
       loadInteractiveGfsCharts(list);
     }
@@ -3709,6 +3709,56 @@ if(typeof renderBriefing==="function")renderBriefing();
       touch-action:auto;
     }
   </style>
+    <style id="koy-gfs-report-rules-home">
+      /* Exact layout rules from the working Köy GFS report. */
+      .koy-gfs-report-card{
+        width:79.35%!important;
+        margin-left:auto!important;
+        margin-right:auto!important;
+      }
+      .koy-gfs-report-card .koy-gfs-svg-images{
+        width:100%!important;
+      }
+      .koy-fullframe-images{
+        grid-template-columns:repeat(2,minmax(0,1fr))!important;
+        align-items:start!important;
+      }
+      .koy-fullframe-images .notification-image-item{
+        min-width:0!important;
+      }
+      .koy-fullframe-images .gfs-interactive-chart{
+        width:100%!important;
+        margin:0!important;
+        overflow:visible!important;
+      }
+      .koy-fullframe-images .notification-image-link{
+        display:block!important;
+        width:100%!important;
+        margin:0!important;
+        border:1px solid var(--line)!important;
+        border-radius:12px!important;
+        overflow:hidden!important;
+        background:#0b1c29!important;
+      }
+      .koy-fullframe-images .notification-image{
+        display:block!important;
+        width:100%!important;
+        height:auto!important;
+        max-width:100%!important;
+        max-height:none!important;
+        object-fit:contain!important;
+        margin:0!important;
+      }
+      @media(max-width:560px){
+        .koy-fullframe-images{
+          grid-template-columns:minmax(0,1fr)!important;
+          gap:10px!important;
+        }
+        .koy-fullframe-images .notification-image-caption{
+          margin-bottom:5px!important;
+        }
+      }
+    </style>
     <style id="desktop-gfs-tooltip-chart-size">
     /* HOMEPAGE = KÖY GFS REPORT RULES
        Outer report card stays full width; the actual four-panel SVG report is
