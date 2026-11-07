@@ -218,6 +218,20 @@ html,body{margin:0;padding:0;background:transparent;color:var(--text);font-famil
 
 /* GFS 72 saat: tooltip aktif grafik hostu içinde kalır. */
 .gfs-point-tooltip{position:absolute!important;z-index:40!important;pointer-events:none!important;}
+/* Tooltip görünürlük katmanı: kart sınırını aşabilir, fakat iframe viewportunda kalır. */
+.next-72h-card,
+.next-72h-chart{
+  overflow:visible!important;
+}
+.next-72h-chart{
+  contain:none!important;
+  isolation:auto!important;
+}
+.gfs-point-tooltip{
+  position:absolute!important;
+  z-index:999999!important;
+  pointer-events:none!important;
+}
 </style>
 </head>
 <body>
