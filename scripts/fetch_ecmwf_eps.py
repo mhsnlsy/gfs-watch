@@ -226,7 +226,7 @@ def _pressure_region_name(latitude: float, longitude: float) -> str:
 def _distance_direction_from_istanbul(latitude: float, longitude: float) -> str:
     import math
 
-    lat1, lon1 = math.radians(41.014), math.radians(28.950)
+    lat1, lon1 = math.radians(LATITUDE), math.radians(LONGITUDE)
     lat2 = math.radians(float(latitude))
     lon2 = math.radians(float(longitude))
     delta_lon = (lon2 - lon1 + math.pi) % (2 * math.pi) - math.pi
