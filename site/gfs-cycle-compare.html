@@ -433,12 +433,22 @@ function bindTooltip(containerId){
   if(activeTooltip?.tooltip===tooltip)activeTooltip=null;
  }
 
+ function positionTooltipAtTouch(event){
+  if(!event||!Number.isFinite(event.clientX)||!Number.isFinite(event.clientY))return;
+  const rect=host.getBoundingClientRect();
+  const gap=10;
+  const left=event.clientX-rect.left;
+  const top=event.clientY-rect.top-tooltip.offsetHeight-gap;
+  tooltip.style.left=Math.round(left-tooltip.offsetWidth/2)+"px";
+  tooltip.style.top=Math.round(top)+"px";
+ }
  function show(target,event,lock=false){
   if(!target)return;
   const run=target.dataset.run||"GFS döngüsü",valid=target.dataset.valid||"—",step=target.dataset.step||"",value=target.dataset.value||"—",unit=target.dataset.unit||"",color=target.dataset.color||GFS_CYCLE_THEME.colors[0];
   tooltip.innerHTML='<div class="gfs-point-tooltip-head"><i style="background:'+color+'"></i><strong>Güncel GFS tahmini</strong></div><div class="gfs-point-tooltip-time">Döngü · '+esc(run)+'<br>Geçerlilik · '+esc(valid)+'</div><div class="gfs-point-tooltip-value">'+esc(value)+' <small>'+esc(unit)+'</small></div><div class="gfs-point-tooltip-meta">Tahmin adımı '+esc(step)+'</div>';
   tooltip.hidden=false;
   pinned=lock;
+  positionTooltipAtTouch(event);
   if(lock)activeTooltip={host,tooltip,hide};
  }
  function nearestPoint(event){
