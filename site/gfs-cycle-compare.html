@@ -285,7 +285,10 @@ function svgLine(runs,metric,title,unit,verification=null){
   .filter(p=>Number.isFinite(p.stamp))
   .sort((a,b)=>a.stamp-b.stamp);
  if(!reference.length)return '<div class="chart-empty">Tahmin verisi bekleniyor…</div>';
- const startTime=reference[0].stamp;
+ const cycleStart=new Date(runs[0]?.run_id_utc||reference[0].valid_time_utc);
+ cycleStart.setUTCMinutes(0,0,0);
+ cycleStart.setUTCHours(0);
+ const startTime=cycleStart.getTime();
  const hours=reference.map(p=>(p.stamp-startTime)/3600000);
  const usable=runs.map((run,runIndex)=>{
   const byValidTime=new Map();
