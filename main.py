@@ -3448,7 +3448,7 @@ def create_valid_time_comparison_assets(current_run_id, payload, previous_runs):
         if tick_indices[-1] != len(x_values) - 1:
             tick_indices.append(len(x_values) - 1)
         tick_labels = [
-            local_times[index].strftime("%d/%m %H:%M")
+            local_times[index].strftime("%d")
             for index in tick_indices
         ]
 
