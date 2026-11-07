@@ -1097,3 +1097,12 @@
     font-size: 10px !important;
   }
 }
+
+
+/* FINAL: center Date/Hour column content horizontally. */
+@media (min-width: 851px) and (pointer: fine) {
+  #meteopt-gfs-table .meteopt-data-table th:nth-child(2),
+  #meteopt-gfs-table .meteopt-data-table td:nth-child(2) {
+    text-align: center !important;
+  }
+}
