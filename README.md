@@ -10,7 +10,7 @@
 
 ## Üretim mimarisi
 
-Canlı web arayüzü, API geçidi ve veri toplama servisleri Cloudflare üzerinde çalışır. GitHub, kaynak kodu ve sürüm geçmişi için kullanılır. GitHub Pages yalnızca yedek yayın hedefidir.
+Canlı web arayüzü, API geçidi ve veri toplama servisleri Cloudflare üzerinde çalışır. GitHub, kaynak kodu ve sürüm geçmişi için kullanılır. GitHub Pages üretim ve yedek yayın hedefi değildir; yalnızca kaynak/depo geçmişinde korunur.
 
 ```text
                          Cloudflare CDN
