@@ -1,8 +1,8 @@
 (() => {
 "use strict";
 const GFS_CYCLE_THEME=window.GFS_CYCLE_THEME;
-const BASE="/api/koy-gfs/", COLORS=GFS_CYCLE_THEME.colors;
-const STATIONS_API="/api";
+const BASE=(window.GFS_WATCH_API_BASE||window.location.origin)+"/api/koy-gfs/", COLORS=GFS_CYCLE_THEME.colors;
+const STATIONS_API=(window.GFS_WATCH_API_BASE||window.location.origin)+"/api";
 const $=id=>document.getElementById(id);
 const num=v=>v==null||v===""||!Number.isFinite(Number(v))?null:Number(v);
 const fmt=(v,d=1)=>v==null?"—":Number(v).toLocaleString("tr-TR",{minimumFractionDigits:d,maximumFractionDigits:d});
