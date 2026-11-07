@@ -128,22 +128,27 @@ jobs:
           Path(destination).write_text(json.dumps(payload, ensure_ascii=False, separators=(",", ":")), encoding="utf-8")
           PY
 
-            curl --fail --silent --show-error --max-time 45 \
+            http_code="$(curl --silent --show-error --max-time 45 \
               --request POST \
               --url "$ISTANBUL_GFS_API/gfs/publication-upload" \
               --header "Authorization: Bearer $GFS_DISPATCH_TOKEN" \
               --header "Content-Type: application/json" \
               --header "Accept: application/json" \
               --data-binary "@$payload_file" \
-              --output "$response_file"
+              --output "$response_file" \
+              --write-out '%{http_code}')"
 
-            python - "$response_file" "$key" <<'PY'
+            python - "$response_file" "$key" "$http_code" <<'PY'
           import json, sys
           from pathlib import Path
-          response_path, key = sys.argv[1:]
-          doc = json.loads(Path(response_path).read_text(encoding="utf-8"))
-          if doc.get("ok") is not True or doc.get("key") != key:
-              raise SystemExit(f"D1 publication upload rejected for {key}: {doc}")
+          response_path, key, http_code = sys.argv[1:]
+          raw = Path(response_path).read_text(encoding="utf-8")
+          try:
+              doc = json.loads(raw)
+          except Exception:
+              raise SystemExit(f"D1 upload returned HTTP {http_code} with non-JSON body: {raw[:500]}")
+          if http_code != "200" or doc.get("ok") is not True or doc.get("key") != key:
+              raise SystemExit(f"D1 publication upload rejected for {key}; HTTP {http_code}: {doc}")
           print(f"Uploaded D1 report asset: {key} ({doc.get('bytes', 0)} characters)")
           PY
           }
