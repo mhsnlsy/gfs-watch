@@ -1,11 +1,11 @@
-import test from "node:test";
+import test, { afterEach } from "node:test";
 import assert from "node:assert/strict";
 import worker from "../src/index.js";
 
 const originalLog = console.log;
 const originalError = console.error;
 
-test.afterEach(() => {
+afterEach(() => {
   console.log = originalLog;
   console.error = originalError;
 });
