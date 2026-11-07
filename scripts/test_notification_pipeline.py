@@ -84,7 +84,7 @@ def main() -> None:
     assert "gfs-watch-web.muhsin-ulusoy.workers.dev" in api_config
     assert "/gfs/latest" in index
     assert "/api/koy-gfs/" in koy_page
-    assert 'const stationApi="/api/history/"+' in comparison
+    assert 'const stationApi=(window.GFS_WATCH_API_BASE||window.location.origin)+"/api/history/"+' in comparison
     assert "gfs-watch-stations.muhsin-ulusoy.workers.dev" not in comparison
 
     print(
