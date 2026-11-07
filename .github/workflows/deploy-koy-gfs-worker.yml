@@ -131,9 +131,10 @@ jobs:
           KOY_GFS_API: https://gfs-watch-koy-gfs.muhsin-ulusoy.workers.dev/api
         run: |
           set -euo pipefail
+          HEALTH_OK=0
           for attempt in $(seq 1 8); do
             if curl --silent --show-error --fail --max-time 15 "$KOY_GFS_API/health?check=$(date +%s)" -o "$RUNNER_TEMP/koy-health.json"; then
-              node - "$RUNNER_TEMP/koy-health.json" <<'NODE'
+              if node - "$RUNNER_TEMP/koy-health.json" <<'NODE'
           const fs = require("fs");
           const doc = JSON.parse(fs.readFileSync(process.argv[2], "utf8"));
           if (doc.ok !== true || doc.service !== "gfs-watch-koy-gfs" || doc.cron !== "*/10 * * * *") {
@@ -144,15 +145,17 @@ jobs:
           }
           console.log(JSON.stringify(doc));
           NODE
-              break
+              then
+                HEALTH_OK=1
+                break
+              fi
             fi
-            echo "Waiting for Köy GFS Worker deployment/health..."
+            echo "Waiting for Köy GFS Worker deployment/health... ($attempt/8)"
             sleep 10
           done
-          echo "::error::Köy GFS Worker health endpoint did not become available."
-          [ -s "$RUNNER_TEMP/koy-health.json" ] && cat "$RUNNER_TEMP/koy-health.json" || true
-          if [ ! -s "$RUNNER_TEMP/koy-health.json" ]; then
-            echo "::error::Köy GFS Worker health endpoint did not become available."
+          if [ "$HEALTH_OK" -ne 1 ]; then
+            echo "::error::Köy GFS Worker health endpoint did not become available or failed its contract."
+            [ -s "$RUNNER_TEMP/koy-health.json" ] && cat "$RUNNER_TEMP/koy-health.json" || true
             exit 1
           fi
 
