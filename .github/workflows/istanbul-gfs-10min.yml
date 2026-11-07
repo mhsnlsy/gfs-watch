@@ -1,6 +1,13 @@
 name: Istanbul GFS · 10 Minute Pipeline
 
 on:
+  push:
+    branches: [main]
+    paths:
+      - ".github/workflows/istanbul-gfs-10min.yml"
+      - "scripts/poll_istanbul_gfs_10min.py"
+      - "scripts/build_istanbul_gfs_publication.py"
+      - "scripts/send_pending_istanbul_gfs_telegram.py"
   schedule:
     - cron: "*/10 * * * *"
   workflow_dispatch:
