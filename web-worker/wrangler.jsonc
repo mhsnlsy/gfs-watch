@@ -4,7 +4,9 @@
   "main": "src/index.js",
   "compatibility_date": "2026-11-07",
   "workers_dev": true,
-  "observability": { "enabled": true },
+  "observability": {
+    "enabled": true
+  },
   "assets": {
     "directory": "./public",
     "binding": "ASSETS",
@@ -14,5 +16,19 @@
       "/api/*"
     ],
     "not_found_handling": "404-page"
-  }
+  },
+  "services": [
+    {
+      "binding": "ISTANBUL_GFS",
+      "service": "gfs-watch-istanbul-gfs"
+    },
+    {
+      "binding": "KOY_GFS",
+      "service": "gfs-watch-koy-gfs"
+    },
+    {
+      "binding": "STATIONS",
+      "service": "gfs-watch-stations"
+    }
+  ]
 }
