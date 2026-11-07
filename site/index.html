@@ -3788,6 +3788,30 @@ if(typeof renderBriefing==="function")renderBriefing();
       max-width:100%!important;
     }
   </style>
+  <style id="home-gfs-report-frame-v2">
+    /* HOME GFS REPORT — inner frame: replace the browser/legacy white rectangle
+       with the same dark, rounded panel language used across the dashboard. */
+    #gfs-model-view #gfs-cycle-compare-frame{
+      display:block!important;
+      width:100%!important;
+      max-width:100%!important;
+      min-width:0!important;
+      min-height:0!important;
+      border:1px solid rgba(125,211,215,.22)!important;
+      outline:0!important;
+      border-radius:20px!important;
+      background:#0b1f2e!important;
+      box-shadow:0 12px 34px rgba(0,0,0,.18)!important;
+      overflow:hidden!important;
+      overflow-x:hidden!important;
+      overflow-y:hidden!important;
+    }
+    @media(max-width:700px){
+      #gfs-model-view #gfs-cycle-compare-frame{
+        border-radius:16px!important;
+      }
+    }
+  </style>
   <style id="home-gfs-report-redesign-v1">
     /* HOME GFS REPORT — new shell only. The SVG/chart DOM is intentionally untouched. */
     #bildirimler.gfs-report-section{
