@@ -9,6 +9,7 @@ from __future__ import annotations
 
 import json
 import os
+import shutil
 import sys
 from datetime import datetime, timedelta, timezone
 from pathlib import Path
@@ -98,18 +99,38 @@ def to_main_payload(doc: dict) -> dict:
 
 
 def main_publish() -> None:
-    # Like the Köy renderer, publish what is available instead of blocking
-    # the first F180 publication until four complete cycles have accumulated.
-    run_files = sorted((GFS_DIR / "runs").glob("*.json"), reverse=True)[:4]
-    if not run_files:
+    all_run_files = sorted((GFS_DIR / "runs").glob("*.json"))
+    if not all_run_files:
         raise RuntimeError("No canonical Istanbul GFS run is available.")
 
-    docs = [json.loads(path.read_text(encoding="utf-8")) for path in run_files]
-    docs.sort(key=lambda d: utc_dt(d["run_id_utc"]))
-    current_doc = docs[-1]
-    current_run = utc_dt(current_doc["run_id_utc"]).isoformat(timespec="seconds")
+    all_docs = [json.loads(path.read_text(encoding="utf-8")) for path in all_run_files]
+    all_docs.sort(key=lambda d: utc_dt(d["run_id_utc"]))
 
-    payloads = [(d["run_id_utc"], to_main_payload(d)) for d in docs]
+    target_raw = os.getenv("GFS_TARGET_RUN_ID", "").strip()
+    if target_raw:
+        target_dt = utc_dt(target_raw)
+        matching = [
+            doc for doc in all_docs
+            if utc_dt(doc["run_id_utc"]) == target_dt
+        ]
+        if not matching:
+            raise RuntimeError(f"Requested GFS target run is not archived: {target_raw}")
+        current_doc = matching[-1]
+        comparison_docs = [
+            doc for doc in all_docs
+            if utc_dt(doc["run_id_utc"]) <= target_dt
+        ][-4:]
+    else:
+        current_doc = all_docs[-1]
+        comparison_docs = all_docs[-4:]
+
+    if len(comparison_docs) < 2:
+        raise RuntimeError(
+            "At least two archived GFS cycles are required for the shared comparison."
+        )
+
+    current_run = utc_dt(current_doc["run_id_utc"]).isoformat(timespec="seconds")
+    payloads = [(doc["run_id_utc"], to_main_payload(doc)) for doc in comparison_docs]
     current_payload = payloads[-1][1]
     previous_runs = [
         (run_id, json.dumps(payload, ensure_ascii=False))
@@ -158,14 +179,45 @@ def main_publish() -> None:
         images=images,
     )
 
-    # Canonical latest.json must be the newest document, not the oldest file
-    # in the descending filename list used to select the four most recent runs.
-    latest = dict(current_doc)
+    # Preserve the exact Telegram photo outside the Pages media directory.
+    # The Pages feed intentionally prunes older media; a pending notification
+    # must remain deliverable even after its feed entry ages out.
+    run_key = utc_dt(current_run).strftime("%Y%m%dT%HZ")
+    outbox_dir = GFS_DIR / "telegram-outbox"
+    outbox_media_dir = outbox_dir / "media"
+    outbox_media_dir.mkdir(parents=True, exist_ok=True)
+    source_image = GFS_DIR / "notifications" / telegram_image_path
+    if not source_image.is_file():
+        raise RuntimeError(f"Telegram source photo is missing: {source_image}")
+    outbox_image_name = f"gfs-{run_key}-comparison.png"
+    outbox_image = outbox_media_dir / outbox_image_name
+    shutil.copy2(source_image, outbox_image)
+
+    outbox_item = dict(report_entry)
+    outbox_item["image_path"] = f"media/{outbox_image_name}"
+    outbox_item["image_path_scope"] = "outbox"
+    outbox_file = outbox_dir / f"{run_key}.json"
+    outbox_file.write_text(
+        json.dumps(outbox_item, ensure_ascii=False, indent=2) + "\n",
+        encoding="utf-8",
+    )
+
+    # A delayed historical cycle may be published after a newer forecast.
+    # Never roll the homepage forecast backwards while recovering its report.
+    newest_doc = all_docs[-1]
+    latest_path = GFS_DIR / "latest.json"
+    if utc_dt(newest_doc["run_id_utc"]) == utc_dt(current_doc["run_id_utc"]):
+        latest = dict(current_doc)
+        latest["report"] = report_entry
+    elif latest_path.is_file():
+        latest = json.loads(latest_path.read_text(encoding="utf-8"))
+    else:
+        latest = dict(newest_doc)
+
     latest["schema"] = "gfs-watch.forecast.v1"
     latest["forecast_source"] = "meteopt"
-    latest["report"] = report_entry
-    latest["comparison_runs"] = list(reversed(docs))
-    (GFS_DIR / "latest.json").write_text(
+    latest["comparison_runs"] = list(reversed(all_docs[-4:]))
+    latest_path.write_text(
         json.dumps(latest, ensure_ascii=False, indent=2) + "\n",
         encoding="utf-8",
     )
@@ -173,8 +225,8 @@ def main_publish() -> None:
     comparison = {
         "schema": "istanbul-gfs.comparison.v1",
         "location": {"name": "Istanbul", "latitude": 41.014, "longitude": 28.950},
-        "updated_at_utc": latest.get("published_at_utc"),
-        "runs": list(reversed(docs)),
+        "updated_at_utc": newest_doc.get("published_at_utc"),
+        "runs": list(reversed(all_docs[-4:])),
     }
     (GFS_DIR / "comparison.json").write_text(
         json.dumps(comparison, ensure_ascii=False, indent=2) + "\n",
@@ -182,8 +234,9 @@ def main_publish() -> None:
     )
 
     print(
-        f"[ISTANBUL GFS BUNDLE] run={current_run}; "
-        f"cycles={len(run_files)}; pages_svg={len(images)}; telegram_photo=1; "
+        f"[ISTANBUL GFS BUNDLE] target_run={current_run}; "
+        f"latest_run={newest_doc['run_id_utc']}; "
+        f"cycles={len(comparison_docs)}; pages_svg=1; telegram_outbox=1; "
         f"valid_times={assets.get('valid_time_count')}; report=1; source=MeteoPT"
     )
 
