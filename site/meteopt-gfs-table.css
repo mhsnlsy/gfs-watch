@@ -1149,3 +1149,50 @@
     margin-right: auto !important;
   }
 }
+
+
+/* HOMEPAGE: use the same GFS layout rules as /koy. */
+.water-gfs-layout {
+  display: grid !important;
+  grid-template-columns: minmax(0, 1fr) !important;
+  gap: 18px !important;
+  align-items: start !important;
+}
+#meteopt-gfs-table {
+  width: 100% !important;
+  max-width: 100% !important;
+  min-width: 0 !important;
+}
+#meteopt-gfs-table .meteopt-table-card {
+  min-width: 0 !important;
+  max-width: 100% !important;
+  width: 100% !important;
+  margin-left: 0 !important;
+  margin-right: 0 !important;
+}
+#meteopt-gfs-table .meteopt-table-scroll {
+  display: block !important;
+  width: 100% !important;
+  max-width: 100% !important;
+  margin-left: 0 !important;
+  margin-right: 0 !important;
+  overflow-x: auto !important;
+  overflow-y: visible !important;
+}
+#meteopt-gfs-table .meteopt-data-table {
+  width: 100% !important;
+  min-width: 680px !important;
+  max-width: 100% !important;
+  margin-left: 0 !important;
+  margin-right: 0 !important;
+}
+@media (min-width: 900px) {
+  .water-gfs-layout {
+    grid-template-columns: minmax(0, 1.55fr) minmax(280px, .75fr) !important;
+  }
+}
+@media (max-width: 899px) {
+  .water-gfs-layout {
+    grid-template-columns: minmax(0, 1fr) !important;
+  }
+}
