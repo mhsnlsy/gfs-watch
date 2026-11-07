@@ -311,11 +311,17 @@ async function fetchMgmStation(stationKey) {
   const urls = stationKey === "eyupsultan"
     ? [
         "https://servis.mgm.gov.tr/web/sondurumlar/ilTumSondurum?ilPlaka=34",
-        "https://servis.mgm.gov.tr/api/sondurumlar/ilTumSondurum?ilPlaka=34"
+        "https://servis.mgm.gov.tr/api/sondurumlar/ilTumSondurum?ilPlaka=34",
+        "https://servis.mgm.gov.tr/web/sondurumlar?istno=18101",
+        "https://servis.mgm.gov.tr/api/sondurumlar?istno=18101"
       ]
     : [
-        "https://servis.mgm.gov.tr/api/sondurumlar?merkezid=18401",
+        // Prefer the direct station-number endpoints. They avoid the
+        // merkezid route that is currently returning 403 from MGM.
+        "https://servis.mgm.gov.tr/web/sondurumlar?istno=18401",
+        "https://servis.mgm.gov.tr/api/sondurumlar?istno=18401",
         "https://servis.mgm.gov.tr/web/sondurumlar?merkezid=18401",
+        "https://servis.mgm.gov.tr/api/sondurumlar?merkezid=18401",
         "https://servis.mgm.gov.tr/web/sondurumlar/ilTumSondurum?ilPlaka=34",
         "https://servis.mgm.gov.tr/api/sondurumlar/ilTumSondurum?ilPlaka=34"
       ];
@@ -353,22 +359,32 @@ async function fetchMgm(stationKey) {
   // without replacing station pressure with sea-level pressure.
   if (stationKey === "sisli" && pressure === null) {
     const pressureUrls = [
+      "https://servis.mgm.gov.tr/web/sondurumlar?istno=18401",
+      "https://servis.mgm.gov.tr/api/sondurumlar?istno=18401",
+      "https://servis.mgm.gov.tr/web/sondurumlar?merkezid=18401",
       "https://servis.mgm.gov.tr/api/sondurumlar?merkezid=18401",
+      "https://servis.mgm.gov.tr/web/sondurumlar/ilTumSondurum?ilPlaka=34",
       "https://servis.mgm.gov.tr/api/sondurumlar/ilTumSondurum?ilPlaka=34"
     ];
-    for (const url of pressureUrls) {
-      try {
-        const rows = await fetchMgmArray(url);
-        const pressureRow = rows.find(item => Number(item.istNo) === Number(STATION_DEFS.sisli.station_id));
-        const candidate = pressureRow ? asNumber(pressureRow.aktuelBasinc) : null;
-        if (candidate !== null && candidate >= 800 && candidate <= 1100) {
-          pressure = candidate;
-          pressureSourceUrl = url;
-          break;
-        }
-      } catch (error) {
-        console.warn("[MGM PRESSURE FALLBACK]", stationKey, url, String(error.message || error));
+    const pressureAttempts = await Promise.allSettled(pressureUrls.map(async url => {
+      const rows = await fetchMgmArray(url);
+      const pressureRow = rows.find(item => Number(item.istNo) === Number(STATION_DEFS.sisli.station_id));
+      const candidate = pressureRow ? asNumber(pressureRow.aktuelBasinc) : null;
+      if (candidate === null || candidate < 800 || candidate > 1100) {
+        throw new Error("Şişli basınç değeri yok/geçersiz");
       }
+      return { candidate, url };
+    }));
+    const pressureSuccess = pressureAttempts.find(item => item.status === "fulfilled");
+    if (pressureSuccess) {
+      pressure = pressureSuccess.value.candidate;
+      pressureSourceUrl = pressureSuccess.value.url;
+    } else {
+      const pressureErrors = pressureAttempts
+        .filter(item => item.status === "rejected")
+        .map(item => String(item.reason && item.reason.message || item.reason))
+        .filter(Boolean);
+      console.warn("[MGM PRESSURE FALLBACK]", stationKey, "all sources failed", pressureErrors.join(" | "));
     }
   }
   const dailyRain = asNumber(row.yagis00Now);
