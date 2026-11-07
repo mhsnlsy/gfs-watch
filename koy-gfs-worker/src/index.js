@@ -282,7 +282,13 @@ async function api(request, env) {
 
   if (path === "/api/f72") {
     try {
-      const current = await currentRun(env, "f72");
+      let current = await currentRun(env, "f72");
+      // Bootstrap the first dataset on demand. This removes the cold-start gap
+      // between Worker deployment and the first 10-minute Cron tick.
+      if (!current) {
+        await collect(env);
+        current = await currentRun(env, "f72");
+      }
       if (!current) return json({ ok: false, error: "F72 data not collected yet" }, 404);
       return json(current.payload);
     } catch (error) {
@@ -309,7 +315,12 @@ async function api(request, env) {
 
   if (path === "/api/latest") {
     try {
-      const current = await currentRun(env, "f72");
+      let current = await currentRun(env, "f72");
+      // Same cold-start bootstrap for clients that use the aggregate endpoint.
+      if (!current) {
+        await collect(env);
+        current = await currentRun(env, "f72");
+      }
       const comparison = await env.GFS_DB.prepare(
         "SELECT payload_json FROM gfs_runs ORDER BY run_id_utc DESC LIMIT 4"
       ).all();
