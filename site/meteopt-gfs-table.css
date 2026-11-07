@@ -941,43 +941,39 @@
   }
 }
 
-/* FINAL COLUMN-PROXIMITY FIX:
-   The marked gaps are caused by oversized fixed column widths, not font size.
-   Keep typography unchanged; make the actual columns narrower and let the
-   table occupy only the width needed by its content. */
+/* FINAL EXACT COLUMN WIDTHS — desktop:
+   Reduce only the physical column widths. Typography remains unchanged. */
 @media (min-width: 851px) and (pointer: fine) {
   #meteopt-gfs-table .meteopt-data-table {
-    width: auto !important;
-    min-width: 0 !important;
-    max-width: none !important;
-    table-layout: auto !important;
+    width: 705px !important;
+    min-width: 705px !important;
+    max-width: 705px !important;
+    table-layout: fixed !important;
     margin-left: 0 !important;
     margin-right: auto !important;
-  }
-
-  #meteopt-gfs-table .meteopt-data-table th,
-  #meteopt-gfs-table .meteopt-data-table td {
-    width: auto !important;
-    min-width: 0 !important;
-    white-space: nowrap !important;
   }
 
   #meteopt-gfs-table .meteopt-data-table th:first-child,
   #meteopt-gfs-table .meteopt-data-table td:first-child {
     width: 80px !important;
+    min-width: 80px !important;
+    max-width: 80px !important;
   }
 
   #meteopt-gfs-table .meteopt-data-table th:nth-child(2),
   #meteopt-gfs-table .meteopt-data-table td:nth-child(2) {
     width: 85px !important;
+    min-width: 85px !important;
+    max-width: 85px !important;
   }
 
   #meteopt-gfs-table .meteopt-data-table th:nth-child(n+3),
   #meteopt-gfs-table .meteopt-data-table td:nth-child(n+3) {
     width: 90px !important;
+    min-width: 90px !important;
+    max-width: 90px !important;
   }
 
-  /* Keep the existing font sizes exactly as designed. */
   #meteopt-gfs-table .meteopt-data-table {
     font-size: 11px !important;
   }
