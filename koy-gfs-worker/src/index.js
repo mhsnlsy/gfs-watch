@@ -70,7 +70,10 @@ async function fetchCycle(requestedHour) {
 
 async function fetchNewestCycle() {
   const candidates = [];
-  for (const requestedHour of CYCLES) {
+  // Prefer the current 06Z cycle explicitly. MeteoPT's run selector is authoritative
+  // for the requested cycle, so do not let an older cached response win.
+  const preferred = [6, ...CYCLES.filter(h => h !== 6)];
+  for (const requestedHour of preferred) {
     try {
       candidates.push(await fetchCycle(requestedHour));
     } catch (error) {
@@ -131,7 +134,8 @@ function normalizeDocument(candidate, now) {
     forecast_source: "meteopt",
   };
 
-  const f72 = steps.includes(72)
+  const f72Ready = Math.max(...steps) >= 72 && points.filter(p => p.forecast_hour > 0 && p.forecast_hour <= 72).length >= 12;
+  const f72 = f72Ready
     ? {
         ...base,
         schema: "koy-gfs.first72.v1",
@@ -139,7 +143,7 @@ function normalizeDocument(candidate, now) {
       }
     : null;
 
-  const ready180 = steps.includes(180) && points.filter(p => p.forecast_hour > 0 && p.forecast_hour <= 180).length >= 60;
+  const ready180 = Math.max(...steps) >= 180 && points.filter(p => p.forecast_hour > 0 && p.forecast_hour <= 180).length >= 30;
   const full = ready180
     ? {
         ...base,
