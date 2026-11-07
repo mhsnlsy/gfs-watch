@@ -653,8 +653,8 @@ function decodePublicationAsset(row) {
     : new TextEncoder().encode(row.body);
   const headers = new Headers({
     "Content-Type": row.content_type || "application/octet-stream",
-    "Cache-Control": (row.asset_key === "latest.json" || row.asset_key.endsWith("/latest.json"))
-      ? "no-store, max-age=0"
+    "Cache-Control": (row.asset_key === "latest.json" || row.asset_key.endsWith("/latest.json") || /\\.(svg|png)$/i.test(row.asset_key))
+      ? "no-store, max-age=0, must-revalidate"
       : "public, max-age=3600, s-maxage=86400",
     "Access-Control-Allow-Origin": "*",
     "X-GFS-Publication-Source": "D1"
