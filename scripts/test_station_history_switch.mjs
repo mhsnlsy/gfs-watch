@@ -85,6 +85,19 @@ const sandbox = {
     observed_at_utc: new Date().toISOString(),
     is_stale: false
   },
+  sisliStationObservation: {
+    station_name: "Şişli",
+    station_id: "18401",
+    temperature_2m_c: 14.2,
+    wind_speed_10m_kmh: 7.1,
+    wind_direction_tr: "Kuzeybatı",
+    precipitation_daily_mm: 0.4,
+    precipitation_1h_mm: 0,
+    humidity_percent: 81,
+    station_pressure_hpa: 1016.2,
+    observed_at_utc: new Date().toISOString(),
+    is_stale: false
+  },
   enkaStationHistorySamples: [],
   eyupsultanStationHistorySamples: [],
   sisliStationHistorySamples: [],
