@@ -103,6 +103,70 @@ jobs:
           GFS_TARGET_RUN_ID: ${{ steps.poll.outputs.run_id }}
         run: python scripts/build_istanbul_gfs_publication.py
 
+      - name: Publish report assets into Cloudflare D1
+        if: steps.poll.outputs.f180_ready == 'true'
+        env:
+          ISTANBUL_GFS_API: https://gfs-watch-istanbul-gfs.muhsin-ulusoy.workers.dev
+          GFS_DISPATCH_TOKEN: ${{ secrets.GFS_DISPATCH_TOKEN }}
+          GFS_TARGET_RUN_ID: ${{ steps.poll.outputs.run_id }}
+        run: |
+          set -euo pipefail
+          test -n "$GFS_DISPATCH_TOKEN" || { echo "::error::GFS_DISPATCH_TOKEN is not configured"; exit 1; }
+          test -d gfs/notifications || { echo "::error::Publication notification directory is missing"; exit 1; }
+
+          upload_asset() {
+            local file="$1"
+            local key="${file#gfs/}"
+            local content_type
+            local encoding="utf8"
+            local body
+
+            case "$file" in
+              *.json) content_type="application/json; charset=utf-8" ;;
+              *.svg) content_type="image/svg+xml; charset=utf-8" ;;
+              *.png) content_type="image/png"; encoding="base64" ;;
+              *) return 0 ;;
+            esac
+
+            if [ "$encoding" = "base64" ]; then
+              body="$(base64 -w0 "$file")"
+            else
+              body="$(cat "$file")"
+            fi
+
+            if [ "$(printf '%s' "$body" | wc -c)" -gt 1900000 ]; then
+              echo "::warning::Skipping oversized D1 publication asset: $file"
+              return 0
+            fi
+
+            node - "$ISTANBUL_GFS_API/gfs/publication-upload" "$GFS_DISPATCH_TOKEN" "$key" "$GFS_TARGET_RUN_ID" "$content_type" "$encoding" "$body" <<'NODE'
+          const [url, token, key, runId, contentType, encoding, body] = process.argv.slice(2);
+          const payload = { key, run_id_utc: runId, content_type: contentType, encoding, body };
+          fetch(url, {
+            method: "POST",
+            headers: {
+              "Authorization": "Bearer " + token,
+              "Content-Type": "application/json",
+              "Accept": "application/json"
+            },
+            body: JSON.stringify(payload)
+          }).then(async response => {
+            const text = await response.text();
+            if (!response.ok) throw new Error("Publication upload failed HTTP " + response.status + ": " + text);
+            const doc = JSON.parse(text);
+            if (doc.ok !== true) throw new Error("Publication upload rejected: " + text);
+            console.log("Uploaded D1 publication asset:", key, doc.bytes);
+          }).catch(error => {
+            console.error(error.message || error);
+            process.exit(1);
+          });
+          NODE
+          }
+
+          find gfs/notifications -type f \( -name '*.json' -o -name '*.svg' -o -name '*.png' \) -print0 |
+            while IFS= read -r -d '' file; do upload_asset "$file"; done
+
+          echo "Cloudflare D1 publication assets uploaded for $GFS_TARGET_RUN_ID."
       - name: Trigger Cloudflare website deployment for the new Istanbul cycle
         if: steps.poll.outputs.f180_ready == 'true'
         env:
