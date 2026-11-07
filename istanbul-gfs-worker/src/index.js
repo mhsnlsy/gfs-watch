@@ -1,5 +1,6 @@
 import { buildIstanbulInteractiveSvg, buildIstanbulReportText } from "./publication.js";
-// Istanbul GFS Worker: canonical MeteoPT collector + D1 event dispatcher\nconst API_BASE = "https://api.meteopt.com/gfs/json";
+// Istanbul GFS Worker: canonical MeteoPT collector + D1 event dispatcher
+const API_BASE = "https://api.meteopt.com/gfs/json";
 const LOCATION = {
   name: "Istanbul",
   latitude: 41.014,
@@ -521,7 +522,7 @@ async function collect(env) {
   ).bind(new Date(started.getTime() - RETENTION_DAYS * 86400000).toISOString()).run();
 
   await env.GFS_DB.prepare(
-    "DELETE FROM gfs_report_dispatch_queue WHERE status = 'dispatched' AND dispatched_at_utc < ?"
+    "DELETE FROM gfs_report_dispatch_queue WHERE status IN ('dispatched', 'completed') AND dispatched_at_utc < ?"
   ).bind(new Date(started.getTime() - 30 * 86400000).toISOString()).run();
 
   const reportDispatch = await processQueuedReports(env);
