@@ -62,6 +62,51 @@ jobs:
       - name: Validate the downloaded ECMWF forecast payload
         working-directory: source
         run: python scripts/test_ecmwf_eps.py ../state/public/ecmwf/latest.json
+
+      - name: Set up Node.js for Cloudflare R2 publication
+        uses: actions/setup-node@v5
+        with:
+          node-version: "22"
+
+      - name: Install Wrangler for R2 publication
+        run: npm install --global wrangler@4
+
+      - name: Publish validated ECMWF archive to Cloudflare R2
+        env:
+          CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_R2_API_TOKEN }}
+          CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
+          ECMWF_PUBLIC_DIR: ${{ github.workspace }}/state/public/ecmwf
+          R2_BUCKET: gfs-watch-live-archive
+        run: |
+          set -euo pipefail
+          test -n "$CLOUDFLARE_API_TOKEN" || { echo "::error::CLOUDFLARE_R2_API_TOKEN is required for ECMWF R2 publication"; exit 1; }
+          test -s "$ECMWF_PUBLIC_DIR/latest.json" || { echo "::error::ECMWF latest.json is missing"; exit 1; }
+
+          wrangler r2 bucket list > "$RUNNER_TEMP/r2-buckets.txt"
+          if ! grep -Fq "$R2_BUCKET" "$RUNNER_TEMP/r2-buckets.txt"; then
+            wrangler r2 bucket create "$R2_BUCKET"
+          fi
+
+          uploaded=0
+          while IFS= read -r -d '' file; do
+            relative="${file#"$ECMWF_PUBLIC_DIR"/}"
+            key="data/ecmwf/$relative"
+            mime="$(file --brief --mime-type "$file")"
+            cache_control="public, max-age=3600, s-maxage=86400"
+            case "$key" in
+              *.json|*/latest.json) cache_control="no-store, max-age=0" ;;
+            esac
+            wrangler r2 object put "$R2_BUCKET/$key" --file "$file" --remote \
+              --content-type "$mime" --cache-control "$cache_control" --force
+            uploaded=$((uploaded + 1))
+          done < <(find "$ECMWF_PUBLIC_DIR" -type f \( -name '*.json' -o -name '*.png' \) -print0)
+
+          test "$uploaded" -gt 0 || { echo "::error::No ECMWF objects were uploaded to R2"; exit 1; }
+          wrangler r2 object get "$R2_BUCKET/data/ecmwf/latest.json" \
+            --file "$RUNNER_TEMP/r2-ecmwf-latest.json" --remote
+          cmp -s "$ECMWF_PUBLIC_DIR/latest.json" "$RUNNER_TEMP/r2-ecmwf-latest.json"
+          echo "Verified ECMWF R2 archive: $uploaded objects; latest.json byte-for-byte."
+
       - name: Publish ECMWF latest payload and report images to Cloudflare D1
         env:
           ECMWF_PUBLIC_DIR: ${{ github.workspace }}/state/public/ecmwf
