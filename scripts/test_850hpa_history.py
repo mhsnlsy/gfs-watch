@@ -24,7 +24,8 @@ def main() -> None:
     save_at = history_loader.index("save_run, previous_run_id, fetched_payload")
     export_at = history_loader.index("export_public_forecast_json, previous_run_id, fetched_payload, False")
     assert fetch_at < save_at < export_at
-    assert "yeniden indirilmiyor" in history_loader
+    assert "if not use_meteopt:" in history_loader
+    assert "SQLite kaydı kullanılıyor" in history_loader
 
     backfill = (ROOT / "scripts/backfill_850hpa_comparison.py").read_text(encoding="utf-8")
     assert "archive.export_public_forecast_json(run_id, payload, update_latest=False)" in backfill
