@@ -15,6 +15,7 @@ def main() -> None:
     publisher = read(".github/workflows/publish-live-site.yml")
     report_workflow = read(".github/workflows/istanbul-gfs-10min.yml")
     platform_workflow = read(".github/workflows/deploy-cloudflare-platform.yml")
+    archive_sync = read(".github/workflows/sync-cloudflare-live-archive.yml")
     istanbul_deploy = read(".github/workflows/deploy-istanbul-gfs-worker.yml")
     guardian = read("gfs-guardian/src/index.js")
     guardian_config = json.loads(read("gfs-guardian/wrangler.jsonc"))
@@ -80,6 +81,15 @@ def main() -> None:
     }
     assert "Deploy Cloudflare Worker + Static Assets" in platform_workflow
     assert "Verify Cloudflare website and proxied APIs" in platform_workflow
+    # MGM observations are D1/API-only; do not check out or ship their old static branch.
+    assert "koy-mgm-data" not in platform_workflow
+    assert "koy-mgm-data/mgm" not in platform_workflow
+    assert "koy-mgm-data" not in publisher
+    # R2 migration is staged independently and uses a dedicated least-privilege token.
+    assert "workflow_dispatch:" in archive_sync
+    assert "push:" not in archive_sync
+    assert "CLOUDFLARE_R2_API_TOKEN" in archive_sync
+    assert "koy-mgm-data" not in archive_sync
     assert "istanbul-gfs-worker/**" not in platform_workflow
     assert "Locate or create Istanbul GFS D1" not in platform_workflow
     assert "Deploy Istanbul GFS Worker + D1" in istanbul_deploy
