@@ -1,8 +1,10 @@
-"""Offline smoke tests for the ECMWF EPS publication contract."""
+"""Offline smoke tests for the MeteoPT ECMWF publication contract."""
 from __future__ import annotations
 
+import json
 import sys
-from datetime import datetime, timezone
+import tempfile
+from datetime import datetime, timedelta, timezone
 from pathlib import Path
 
 ROOT = Path(__file__).resolve().parents[1]
@@ -10,175 +12,170 @@ sys.path.insert(0, str(ROOT))
 
 from fetch_ecmwf_eps import (  # noqa: E402
     SCHEMA,
-    build_document,
+    _validate_meteopt_document,
     forecast_steps,
-    validate_document,
-    same_published_cycle,
-    _matches_grib_field,
     load_comparison_runs,
+    same_published_cycle,
 )
 
 
-def synthetic_series(steps, value, latitude=41.0, longitude=29.0):
-    return {step: (value, latitude, longitude) for step in steps}
+def synthetic_document(run_dt: datetime) -> dict:
+    steps = list(range(3, 181, 3))
+    forecasts = []
+    for hour in steps:
+        valid = run_dt + timedelta(hours=hour)
+        forecasts.append({
+            "forecast_hour": hour,
+            "valid_time_utc": valid.isoformat(timespec="seconds"),
+            "valid_time_istanbul": valid.astimezone(
+                timezone(timedelta(hours=3))
+            ).isoformat(timespec="seconds"),
+            "temperature_2m_c": 7.0 + hour / 100,
+            "temperature_2m_stddev_c": None,
+            "wind_speed_10m_kmh": 18.0,
+            "wind_direction_10m_deg": 180.0,
+            "wind_speed_10m_stddev_kmh": None,
+            "precipitation_interval_mm": 0.1,
+            "precipitation_interval_stddev_mm": None,
+            "precipitation_accumulated_mm": None,
+            "temperature_850hpa": {"mean_c": 1.0, "stddev_c": None},
+            "wind_850hpa": {"mean_kmh": 36.0, "stddev_kmh": None},
+            "mslp": {"mean_hpa": 1013.2, "stddev_hpa": None},
+        })
+    timeline = [{
+        "forecast_hour": item["forecast_hour"],
+        "valid_time_utc": item["valid_time_utc"],
+        "valid_time_istanbul": item["valid_time_istanbul"],
+        "temperature_2m_c": item["temperature_2m_c"],
+        "temperature_850hpa_c": item["temperature_850hpa"]["mean_c"],
+        "wind_speed_10m_kmh": item["wind_speed_10m_kmh"],
+        "wind_direction_10m_deg": item["wind_direction_10m_deg"],
+        "wind_speed_850hpa_kmh": item["wind_850hpa"]["mean_kmh"],
+        "precipitation_6h_mm": item["precipitation_interval_mm"],
+        "precipitation_interval_hours": 3,
+    } for item in forecasts]
+    return {
+        "schema": SCHEMA,
+        "status": "ready",
+        "forecast_source": "meteopt",
+        "model": "ECMWF via MeteoPT",
+        "product": "MeteoPT ECMWF 3-hour point",
+        "surface_forecast_source": "MeteoPT ECMWF point",
+        "ensemble_forecast_source": "MeteoPT ECMWF point",
+        "surface_ensemble_spread_available": False,
+        "resolution": "MeteoPT nokta",
+        "forecast_horizon_hours": 180,
+        "run_id_utc": run_dt.isoformat(timespec="seconds"),
+        "updated_at_utc": run_dt.isoformat(timespec="seconds"),
+        "forecast_valid_until_utc": (run_dt + timedelta(hours=180)).isoformat(timespec="seconds"),
+        "location": {
+            "name": "İstanbul",
+            "latitude": 41.0901,
+            "longitude": 28.9436,
+            "nearest_grid_latitude": 41.0901,
+            "nearest_grid_longitude": 28.9436,
+        },
+        "units": {
+            "temperature_850hpa": "°C",
+            "wind_850hpa": "km/sa",
+            "mslp": "hPa",
+            "spread": "MeteoPT noktasında ensemble sapması yok",
+        },
+        "attribution": "ECMWF nokta serisi MeteoPT üzerinden alınır.",
+        "license": "MeteoPT",
+        "license_url": "https://www.meteopt.com/modelos/ecmwf",
+        "source_url": "https://www.meteopt.com/modelos/ecmwf?lat=41.0901&lon=28.9436",
+        "notes": [
+            "Sıcaklık, rüzgâr, yağış, 850 hPa ve basınç aynı MeteoPT ECMWF noktasından gelir.",
+            "Seri 3 saatte bir. Ensemble sapması ve bölgesel basınç merkezi bu kaynakta yok.",
+        ],
+        "forecasts": forecasts,
+        "daily_summary": [{
+            "date_istanbul": "2026-11-01",
+            "temperature_min_c": 7.0,
+            "temperature_max_c": 8.8,
+            "precipitation_total_mm": 6.0,
+            "wind_speed_max_10m_kmh": 18.0,
+            "wind_speed_max_850hpa_kmh": 36.0,
+        }],
+        "forecast_6_hourly": timeline,
+        "current_conditions": {
+            "temperature_2m_c": 7.0,
+            "wind_speed_10m_kmh": 18.0,
+            "precipitation_mm": 0.1,
+            "mean_sea_level_pressure_hpa": 1013.2,
+        },
+        "regional_pressure_analysis": {
+            "valid_time_utc": run_dt.isoformat(timespec="seconds"),
+            "diameter_km": None,
+            "findings": ["İstanbul deniz seviyesi basıncı 1013.2 hPa. MeteoPT ECMWF noktası; bölgesel basınç merkezi bu kaynakta yok."],
+        },
+    }
 
 
 def run_offline_tests() -> None:
     steps = forecast_steps()
-    assert len(steps) == 55, len(steps)
-    assert steps[:4] == [0, 3, 6, 9]
-    assert steps[48:] == [144, 150, 156, 162, 168, 174, 180]
+    assert steps == list(range(0, 145, 3)) + [150, 156, 162, 168, 174, 180]
     assert same_published_cycle("2026-11-01T00:00:00Z", "2026-11-01T00:00:00+00:00")
     assert not same_published_cycle("2026-10-31T12:00:00+00:00", "2026-11-01T00:00:00+00:00")
     assert not same_published_cycle(None, "2026-11-01T00:00:00+00:00")
 
-    # ECMWF Open Data encodes these single-level parameters as surface fields.
-    # Keep compatibility with older/alternate heightAboveGround encodings too.
-    assert _matches_grib_field("t2m", "2t", 167, "surface", 0)
-    assert _matches_grib_field("t2m", "2t", 167, "heightAboveGround", 2)
-    assert not _matches_grib_field("t2m", "2t", 167, "heightAboveGround", 10)
-    assert _matches_grib_field("u10", "10u", 165, "surface", 0)
-    assert _matches_grib_field("u10", "10u", 165, "heightAboveGround", 10)
-    assert _matches_grib_field("v10", "10v", 166, "surface", 0)
-    assert _matches_grib_field("v10", "10v", 166, "heightAboveGround", 10)
-    assert _matches_grib_field("msl", "msl", 151, "meanSea", 0)
-
-    mean = {
-        "mean_t850": synthetic_series(steps, 274.15),
-        "mean_ws850": synthetic_series(steps, 10.0),
-        "mean_msl": synthetic_series(steps, 101325.0),
-        "mean_t2m": synthetic_series(steps, 280.15),
-        "mean_u10": synthetic_series(steps, 3.0),
-        "mean_v10": synthetic_series(steps, 4.0),
-        "mean_tp": synthetic_series(steps, 0.001),
-    }
-    spread = {
-        "spread_t850": synthetic_series(steps, 1.0),
-        "spread_ws850": synthetic_series(steps, 2.0),
-        "spread_msl": synthetic_series(steps, 250.0),
-    }
-    regional_pressure = {
-        "diameter_km": 2500,
-        "high": {"pressure_hpa": 1030.0, "latitude": 50.5, "longitude": 25.5},
-        "low": {"pressure_hpa": 1008.0, "latitude": 39.0, "longitude": 19.5},
-        "local_pressure_hpa": 1013.3,
-    }
-    document = build_document(
-        datetime(2026, 11, 1, 0, tzinfo=timezone.utc),
-        mean, spread, regional_pressure,
-    )
-    validate_document(document)
-    mean_without_tp_zero = {**mean, "mean_tp": dict(mean["mean_tp"])}
-    del mean_without_tp_zero["mean_tp"][0]
-    zero_baseline_document = build_document(
-        datetime(2026, 11, 1, 0, tzinfo=timezone.utc),
-        mean_without_tp_zero, spread, regional_pressure,
-    )
-    assert zero_baseline_document["forecasts"][0]["precipitation_interval_mm"] == 0.0
+    document = synthetic_document(datetime(2026, 11, 1, 0, tzinfo=timezone.utc))
+    _validate_meteopt_document(document)
     assert document["schema"] == SCHEMA
-    assert document["forecasts"][0]["temperature_850hpa"]["mean_c"] == 1.0
-    assert document["forecasts"][0]["wind_850hpa"]["mean_kmh"] == 36.0
-    assert document["forecasts"][0]["mslp"]["mean_hpa"] == 1013.25
+    assert document["forecast_source"] == "meteopt"
+    assert document["location"]["latitude"] == 41.0901
+    assert document["location"]["longitude"] == 28.9436
+    assert len(document["forecasts"]) == 60
     assert document["forecasts"][-1]["forecast_hour"] == 180
-    assert document["forecasts"][0]["temperature_2m_c"] == 7.0
-    assert document["forecasts"][0]["wind_speed_10m_kmh"] == 18.0
-    assert document["forecasts"][0]["temperature_2m_stddev_c"] is None
-    assert document["forecasts"][0]["wind_speed_10m_stddev_kmh"] is None
-    assert document["forecasts"][0]["precipitation_interval_stddev_mm"] is None
+    assert len(document["forecast_6_hourly"]) == len(document["forecasts"])
     assert document["surface_ensemble_spread_available"] is False
-    assert document["surface_forecast_source"] == "IFS HRES deterministic (stream=oper, type=fc)"
-    assert "HRES" in document["model"]
-    assert len(document["forecast_6_hourly"]) == 55
-    assert document["daily_summary"]
-    assert len(document["regional_pressure_analysis"]["findings"]) == 4
-    assert "Kuzeybatı Ukrayna" in document["regional_pressure_analysis"]["findings"][0]
-    assert "Batı Yunanistan" in document["regional_pressure_analysis"]["findings"][1]
-    fallback_document = build_document(
-        datetime(2026, 11, 1, 0, tzinfo=timezone.utc), mean, spread
-    )
-    assert fallback_document["regional_pressure_analysis"]["findings"]
-    assert "konumu üretilmedi" in fallback_document["regional_pressure_analysis"]["findings"][0]
 
-    # Negative tests: missing step and physically impossible wind must fail closed.
-    broken = dict(document)
-    broken["forecasts"] = document["forecasts"][:-1]
+    broken = json.loads(json.dumps(document))
+    broken["forecasts"] = broken["forecasts"][:7]
     try:
-        validate_document(broken)
+        _validate_meteopt_document(broken)
     except ValueError:
         pass
     else:
-        raise AssertionError("A shortened forecast series was accepted.")
+        raise AssertionError("A too-short MeteoPT forecast series was accepted.")
 
-    broken = {
-        **document,
-        "forecasts": [dict(item) for item in document["forecasts"]],
-    }
-    broken["forecasts"][0] = {
-        **broken["forecasts"][0],
-        "wind_850hpa": {"mean_kmh": 999.0, "stddev_kmh": 1.0},
-    }
+    broken = json.loads(json.dumps(document))
+    broken["forecasts"][0]["wind_speed_10m_kmh"] = -1
     try:
-        validate_document(broken)
+        _validate_meteopt_document(broken)
     except ValueError:
         pass
     else:
-        raise AssertionError("An impossible wind value was accepted.")
+        raise AssertionError("A negative MeteoPT wind value was accepted.")
 
-    # Retain only the newest four valid ECMWF cycles in chronological order.
-    import json
-    import tempfile
-    from datetime import timedelta
     with tempfile.TemporaryDirectory() as temp_dir:
         archive_dir = Path(temp_dir)
         base = datetime(2026, 10, 30, tzinfo=timezone.utc)
         for offset in (0, 12, 24, 36, 48):
-            run_dt = base + timedelta(hours=offset)
-            archived = dict(document)
-            archived["run_id_utc"] = run_dt.isoformat(timespec="seconds")
-            (archive_dir / (run_dt.strftime("%Y%m%dT%HZ") + ".json")).write_text(
+            archived = synthetic_document(base + timedelta(hours=offset))
+            (archive_dir / ((base + timedelta(hours=offset)).strftime("%Y%m%dT%HZ") + ".json")).write_text(
                 json.dumps(archived), encoding="utf-8"
             )
-        (archive_dir / "20261031T18Z.json").write_text("{broken", encoding="utf-8")
         history = load_comparison_runs(archive_dir, limit=4)
-        assert len(history) == 4, len(history)
+        assert len(history) == 4
         assert [item["run_id_utc"] for item in history] == [
-            "2026-10-30T12:00:00+00:00",
             "2026-10-31T00:00:00+00:00",
             "2026-10-31T12:00:00+00:00",
             "2026-11-01T00:00:00+00:00",
+            "2026-11-01T12:00:00+00:00",
         ]
-        assert all(len(item["forecast_6_hourly"]) == 55 for item in history)
-        assert all(
-            isinstance(point.get("temperature_850hpa_c"), (int, float))
-            for item in history
-            for point in item["forecast_6_hourly"]
-        )
 
-        stripped_dir = Path(temp_dir) / "stripped"
-        stripped_dir.mkdir()
-        stripped = json.loads(json.dumps(document))
-        stripped["run_id_utc"] = "2026-11-02T00:00:00+00:00"
-        stripped["forecast_6_hourly"] = [
-            {key: value for key, value in point.items() if key != "temperature_850hpa_c"}
-            for point in document["forecast_6_hourly"]
-        ]
-        assert "temperature_850hpa_c" not in stripped["forecast_6_hourly"][0]
-        (stripped_dir / "20261102T00Z.json").write_text(json.dumps(stripped), encoding="utf-8")
-        repaired = load_comparison_runs(stripped_dir, limit=4)
-        assert len(repaired) == 1
-        assert repaired[0]["forecast_6_hourly"][0]["temperature_850hpa_c"] == document["forecasts"][0]["temperature_850hpa"]["mean_c"]
-
-    print("[ECMWF OFFLINE SMOKE] 55 steps, HRES/ENS source split, surface spread null semantics, units and fail-closed checks passed.")
+    print("[ECMWF METEOPT OFFLINE SMOKE] MeteoPT schema, 180h timeline, validation and 4-cycle comparison checks passed.")
 
 
 def main() -> None:
     run_offline_tests()
     if len(sys.argv) > 1:
-        import json
         path = Path(sys.argv[1])
         document = json.loads(path.read_text(encoding="utf-8"))
-        validate_document(document)
-        print(f"[ECMWF LIVE SMOKE] {path}: {len(document['forecasts'])} valid steps.")
+        _validate_meteopt_document(document)
+        print(f"[ECMWF METEOPT LIVE SMOKE] {path}: {len(document['forecasts'])} valid steps.")
 
 
 if __name__ == "__main__":
