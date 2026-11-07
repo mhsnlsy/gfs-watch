@@ -16,4 +16,4 @@ This is intentionally staged separately from the existing GitHub Actions
 publisher. The GitHub publisher remains active until a live Container ->
 R2 -> web verification succeeds.
 
-Deployment token note: the Container deploy workflow uses CLOUDFLARE_R2_API_TOKEN, which was configured for broad account access.
+Deployment token note: the Container deploy workflow uses CLOUDFLARE_CONTAINER_API_TOKEN, which was configured for broad account access.
