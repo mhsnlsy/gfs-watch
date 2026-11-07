@@ -1,4 +1,5 @@
 import { buildIstanbulInteractiveSvg, buildIstanbulReportText } from "./publication.js";
+import { renderIstanbulPhotoPng } from "./photo.js";
 // Istanbul GFS Worker: canonical MeteoPT collector + D1 event dispatcher
 const API_BASE = "https://api.meteopt.com/gfs/json";
 const LOCATION = {
@@ -75,6 +76,7 @@ async function fetchCycle(requestedHour) {
       "User-Agent": "GFS-Watch-Istanbul-Cloudflare/1.0",
       "Cache-Control": "no-cache",
     },
+    signal: AbortSignal.timeout(45000),
   });
   if (!response.ok) throw new Error("MeteoPT HTTP " + response.status);
 
@@ -251,7 +253,7 @@ async function processQueuedReports(env) {
   const staleBefore = new Date(Date.now() - 10 * 60 * 1000).toISOString();
   const result = await env.GFS_DB.prepare(
     "SELECT run_id_utc, attempts FROM gfs_report_dispatch_queue " +
-    "WHERE attempts < 12 AND (status = 'pending' OR (status = 'processing' AND dispatched_at_utc < ?)) " +
+    "WHERE attempts < 288 AND (status = 'pending' OR (status = 'processing' AND dispatched_at_utc < ?)) " +
     "ORDER BY run_id_utc ASC LIMIT 1"
   ).bind(staleBefore).all();
   const job = (result.results || [])[0];
@@ -289,6 +291,12 @@ async function processQueuedReports(env) {
     const target = runs[runs.length - 1];
     const chart = buildIstanbulInteractiveSvg(runs);
     const reportText = buildIstanbulReportText(target, new Date());
+    if (!env.ECMWF_ARCHIVE) throw new Error("R2 image archive binding is unavailable");
+    const pngAssetKey = "data/" + chart.key.replace(/^notifications\\//, "notifications/").replace(/\\.svg$/i, ".png");
+    const pngBytes = await renderIstanbulPhotoPng(chart.body);
+    await env.ECMWF_ARCHIVE.put(pngAssetKey, pngBytes, {
+      httpMetadata: { contentType: "image/png", cacheControl: "public, max-age=3600" },
+    });
     const now = new Date().toISOString();
     const imagePath = chart.key.slice("notifications/".length);
     const images = [{
@@ -332,9 +340,12 @@ async function processQueuedReports(env) {
 
     await env.GFS_DB.prepare(
       "INSERT OR IGNORE INTO gfs_report_publications " +
-      "(run_id_utc, report_text, svg_asset_key, status, attempts, created_at_utc, updated_at_utc) " +
-      "VALUES (?, ?, ?, 'pending', 0, ?, ?)"
-    ).bind(target.run_id_utc, reportText, chart.key, now, now).run();
+      "(run_id_utc, report_text, svg_asset_key, png_asset_key, status, attempts, created_at_utc, updated_at_utc) " +
+      "VALUES (?, ?, ?, ?, 'pending', 0, ?, ?) " +
+      "ON CONFLICT(run_id_utc) DO UPDATE SET report_text=excluded.report_text, " +
+      "svg_asset_key=excluded.svg_asset_key, png_asset_key=excluded.png_asset_key, " +
+      "updated_at_utc=excluded.updated_at_utc WHERE gfs_report_publications.status <> 'sent'"
+    ).bind(target.run_id_utc, reportText, chart.key, pngAssetKey, now, now).run();
 
     const currentItem = {
       id: target.run_id_utc,
@@ -435,9 +446,9 @@ async function deliverPendingTelegram(env) {
   const now = nowDate.toISOString();
   const leaseUntil = new Date(nowDate.getTime() + 5 * 60 * 1000).toISOString();
   const result = await env.GFS_DB.prepare(
-    "SELECT run_id_utc, report_text, svg_asset_key, status, attempts, " +
-    "text_message_id, document_message_id FROM gfs_report_publications " +
-    "WHERE attempts < 12 AND (status IN ('pending', 'partial') OR " +
+    "SELECT run_id_utc, report_text, svg_asset_key, png_asset_key, status, attempts, " +
+    "text_message_id, photo_message_id FROM gfs_report_publications " +
+    "WHERE attempts < 288 AND (status IN ('pending', 'partial') OR " +
     "(status = 'sending' AND lease_until_utc < ?)) " +
     "ORDER BY created_at_utc ASC LIMIT 1"
   ).bind(now).all();
@@ -446,7 +457,7 @@ async function deliverPendingTelegram(env) {
 
   const claimed = await env.GFS_DB.prepare(
     "UPDATE gfs_report_publications SET status = 'sending', attempts = attempts + 1, " +
-    "lease_until_utc = ?, updated_at_utc = ? WHERE run_id_utc = ? AND attempts < 12 AND " +
+    "lease_until_utc = ?, updated_at_utc = ? WHERE run_id_utc = ? AND attempts < 288 AND " +
     "(status IN ('pending', 'partial') OR (status = 'sending' AND lease_until_utc < ?))"
   ).bind(leaseUntil, now, publication.run_id_utc, now).run();
   if (Number(claimed.meta?.changes || 0) !== 1) {
@@ -467,30 +478,46 @@ async function deliverPendingTelegram(env) {
       ).bind(publication.text_message_id, new Date().toISOString(), publication.run_id_utc).run();
     }
 
-    if (!publication.document_message_id) {
-      const asset = await getPublicationAsset(env, publication.svg_asset_key);
-      if (!asset || typeof asset.body !== "string") {
-        throw new Error("Published SVG asset is missing from D1: " + publication.svg_asset_key);
+    if (!publication.photo_message_id) {
+      const pngKey = publication.png_asset_key ||
+        ("data/" + String(publication.svg_asset_key || "").replace(/^notifications\\//, "notifications/").replace(/\\.svg$/i, ".png"));
+      let object = pngKey ? await env.ECMWF_ARCHIVE.get(pngKey) : null;
+      let pngBytes;
+      if (object) {
+        pngBytes = new Uint8Array(await object.arrayBuffer());
+      } else {
+        const asset = await getPublicationAsset(env, publication.svg_asset_key);
+        if (!asset || typeof asset.body !== "string") {
+          throw new Error("Published SVG asset is missing from D1: " + publication.svg_asset_key);
+        }
+        pngBytes = await renderIstanbulPhotoPng(asset.body);
+        await env.ECMWF_ARCHIVE.put(pngKey, pngBytes, {
+          httpMetadata: { contentType: "image/png", cacheControl: "public, max-age=3600" },
+        });
+        await env.GFS_DB.prepare(
+          "UPDATE gfs_report_publications SET png_asset_key = ?, updated_at_utc = ? " +
+          "WHERE run_id_utc = ? AND status = 'sending'"
+        ).bind(pngKey, new Date().toISOString(), publication.run_id_utc).run();
       }
-      const filename = publication.svg_asset_key.split("/").pop() || "istanbul-gfs-comparison.svg";
+      const filename = (pngKey.split("/").pop() || "istanbul-gfs-comparison.png").replace(/\\.svg$/i, ".png");
       const form = new FormData();
       form.set("chat_id", env.TELEGRAM_CHAT_ID);
-      form.set("caption", "📊 İstanbul GFS · dört döngülü valid-time karşılaştırması");
-      form.set("document", new Blob([asset.body], { type: "image/svg+xml" }), filename);
-      const message = await telegramApi(env, "sendDocument", form, true);
-      publication.document_message_id = String(message.message_id);
+      form.set("caption", "📊 İstanbul GFS · dört döngülü geçerlilik saati karşılaştırması");
+      form.set("photo", new Blob([pngBytes], { type: "image/png" }), filename);
+      const message = await telegramApi(env, "sendPhoto", form, true);
+      publication.photo_message_id = String(message.message_id);
       await env.GFS_DB.prepare(
-        "UPDATE gfs_report_publications SET document_message_id = ?, updated_at_utc = ? " +
+        "UPDATE gfs_report_publications SET photo_message_id = ?, updated_at_utc = ? " +
         "WHERE run_id_utc = ? AND status = 'sending'"
-      ).bind(publication.document_message_id, new Date().toISOString(), publication.run_id_utc).run();
+      ).bind(publication.photo_message_id, new Date().toISOString(), publication.run_id_utc).run();
     }
 
     const sentAt = new Date().toISOString();
     await env.GFS_DB.prepare(
-      "UPDATE gfs_report_publications SET document_message_id = ?, status = 'sent', " +
+      "UPDATE gfs_report_publications SET photo_message_id = ?, status = 'sent', " +
       "lease_until_utc = NULL, updated_at_utc = ?, sent_at_utc = ?, last_error = NULL " +
       "WHERE run_id_utc = ? AND status = 'sending'"
-    ).bind(publication.document_message_id, sentAt, sentAt, publication.run_id_utc).run();
+    ).bind(publication.photo_message_id, sentAt, sentAt, publication.run_id_utc).run();
     await env.GFS_DB.prepare(
       "UPDATE gfs_report_dispatch_queue SET status = 'completed', dispatched_at_utc = ?, last_error = NULL " +
       "WHERE run_id_utc = ?"
@@ -500,7 +527,7 @@ async function deliverPendingTelegram(env) {
       event: "istanbul_telegram_report_delivered",
       run_id_utc: publication.run_id_utc,
       text_message_id: publication.text_message_id,
-      document_message_id: publication.document_message_id,
+      photo_message_id: publication.photo_message_id,
     }));
     return { configured: true, delivered: 1, run_id_utc: publication.run_id_utc };
   } catch (error) {
@@ -685,7 +712,7 @@ async function collectEcmwf(env) {
   return { updated: true, run_id_utc: runId, source: "meteopt", forecast_horizon_hours: payload.forecast_horizon_hours };
 }
 
-async function collect(env) {
+async function collectData(env) {
   const started = new Date();
   let ecmwf = null;
   try { ecmwf = await collectEcmwf(env); } catch (error) { ecmwf = { updated: false, error: String(error?.message || error), source: "meteopt" }; console.error(JSON.stringify({ event: "ecmwf_collect_error", ...ecmwf })); }
@@ -783,6 +810,29 @@ async function collect(env) {
   return result;
 }
 
+async function collect(env, trigger = "unknown") {
+  const startedAt = new Date().toISOString();
+  await env.GFS_DB.prepare(
+    "INSERT INTO gfs_worker_heartbeat (singleton, last_started_at_utc, updated_at_utc) VALUES (1, ?, ?) " +
+    "ON CONFLICT(singleton) DO UPDATE SET last_started_at_utc=excluded.last_started_at_utc, updated_at_utc=excluded.updated_at_utc"
+  ).bind(startedAt, startedAt).run();
+  try {
+    const result = await collectData(env);
+    const successAt = new Date().toISOString();
+    await env.GFS_DB.prepare(
+      "UPDATE gfs_worker_heartbeat SET last_success_at_utc=?, last_error_at_utc=NULL, last_error=NULL, " +
+      "last_run_id_utc=?, last_trigger=?, updated_at_utc=? WHERE singleton=1"
+    ).bind(successAt, result.run_id_utc || null, trigger, successAt).run();
+    return result;
+  } catch (error) {
+    const failedAt = new Date().toISOString();
+    const message = String(error?.message || error).slice(0, 500);
+    await env.GFS_DB.prepare(
+      "UPDATE gfs_worker_heartbeat SET last_error_at_utc=?, last_error=?, last_trigger=?, updated_at_utc=? WHERE singleton=1"
+    ).bind(failedAt, message, trigger, failedAt).run();
+    throw error;
+  }
+}
 async function latestPayload(env, bootstrap = true) {
   let current = await getCurrent(env, "latest");
   if (!current && bootstrap) {
@@ -894,6 +944,19 @@ async function handleApi(request, env) {
   if (path === "/gfs/publication-upload") {
     return handlePublicationUpload(request, env);
   }
+  if (path === "/internal/reconcile") {
+    if (request.method !== "POST") return json({ ok: false, error: "Method not allowed" }, 405);
+    const token = request.headers.get("Authorization") || "";
+    if (!env.GFS_DISPATCH_TOKEN || token !== "Bearer " + env.GFS_DISPATCH_TOKEN) {
+      return json({ ok: false, error: "Unauthorized" }, 401);
+    }
+    try {
+      const result = await collect(env, "guardian-service-binding");
+      return json({ ok: true, result });
+    } catch (error) {
+      return json({ ok: false, error: String(error?.message || error) }, 503);
+    }
+  }
   if (request.method !== "GET") return json({ ok: false, error: "Method not allowed" }, 405);
 
   if (path.startsWith("/gfs/publication-asset/")) {
@@ -910,6 +973,7 @@ async function handleApi(request, env) {
   if (path === "/api/health") {
     try {
       const current = await getCurrent(env, "latest");
+      const heartbeat = await env.GFS_DB.prepare("SELECT last_started_at_utc, last_success_at_utc, last_error_at_utc, last_error, last_run_id_utc, last_trigger FROM gfs_worker_heartbeat WHERE singleton = 1").first();
       const ecmwfCurrent = await env.GFS_DB.prepare("SELECT run_id_utc, updated_at_utc FROM ecmwf_current WHERE key = 'latest'").first();
       const count = await env.GFS_DB.prepare("SELECT COUNT(*) AS count FROM gfs_runs").first();
       const pendingDispatch = await env.GFS_DB.prepare(
@@ -917,7 +981,7 @@ async function handleApi(request, env) {
       ).first();
       const publicationStats = await env.GFS_DB.prepare(
         "SELECT " +
-        "SUM(CASE WHEN status IN ('pending', 'partial', 'sending') AND attempts < 12 THEN 1 ELSE 0 END) AS pending, " +
+        "SUM(CASE WHEN status IN ('pending', 'partial', 'sending') AND attempts < 288 THEN 1 ELSE 0 END) AS pending, " +
         "SUM(CASE WHEN status = 'sent' THEN 1 ELSE 0 END) AS sent, " +
         "SUM(CASE WHEN attempts >= 12 AND status <> 'sent' THEN 1 ELSE 0 END) AS exhausted " +
         "FROM gfs_report_publications"
@@ -937,6 +1001,15 @@ async function handleApi(request, env) {
         report_dispatch_configured: Boolean(env.GFS_DISPATCH_TOKEN),
         native_report_generation: true,
         telegram_configured: Boolean(env.TELEGRAM_TOKEN && env.TELEGRAM_CHAT_ID),
+        photo_archive_configured: Boolean(env.ECMWF_ARCHIVE),
+        telegram_photo_mode: "sendPhoto/png",
+        internal_reconcile_configured: Boolean(env.GFS_DISPATCH_TOKEN),
+        last_cron_started_at_utc: heartbeat?.last_started_at_utc || null,
+        last_cron_success_at_utc: heartbeat?.last_success_at_utc || null,
+        last_cron_error_at_utc: heartbeat?.last_error_at_utc || null,
+        last_cron_error: heartbeat?.last_error || null,
+        last_cron_run_id_utc: heartbeat?.last_run_id_utc || null,
+        last_cron_trigger: heartbeat?.last_trigger || null,
         pending_report_dispatches: Number(pendingDispatch?.count || 0),
         pending_report_publications: Number(publicationStats?.pending || 0),
         sent_report_publications: Number(publicationStats?.sent || 0),
