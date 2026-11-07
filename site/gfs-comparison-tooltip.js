@@ -128,6 +128,12 @@ function attachGfsSvgInteractions(host,svg,metadata){
     };
     hit.style.touchAction="pan-y";
     hit.style.webkitTapHighlightColor="transparent";
+    const handleTouchMove=event=>{
+      if(event.pointerType!=="touch")return;
+      if(!host.hasAttribute("data-pinned"))return;
+      selectNearest(event);
+      scheduleTouchHide();
+    };
     hit.addEventListener("pointermove",event=>{
       if(event.pointerType==="touch"){
         host.setAttribute("data-pinned","true");
@@ -138,6 +144,7 @@ function attachGfsSvgInteractions(host,svg,metadata){
       if(host.hasAttribute("data-pinned"))return;
       selectNearest(event);
     });
+    hit.addEventListener("pointerrawupdate",handleTouchMove);
     hit.addEventListener("pointerdown",event=>{
       if(event.pointerType!=="touch")return;
       host.setAttribute("data-pinned","true");
@@ -145,6 +152,16 @@ function attachGfsSvgInteractions(host,svg,metadata){
       selectNearest(event);
       scheduleTouchHide();
     });
+    hit.addEventListener("touchmove",event=>{
+      if(!host.hasAttribute("data-pinned")||!event.touches[0])return;
+      event.preventDefault();
+      const touch=event.touches[0];
+      selectNearest({
+        clientX:touch.clientX,
+        clientY:touch.clientY
+      });
+      scheduleTouchHide();
+    },{passive:false});
     hit.addEventListener("pointerup",event=>{
       if(event.pointerType==="touch")scheduleTouchHide();
     });
