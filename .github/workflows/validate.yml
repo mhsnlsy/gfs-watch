@@ -1,6 +1,19 @@
 name: Validate GFS Watch
 
 on:
+  push:
+    branches: [main]
+    paths:
+      - ".github/workflows/validate.yml"
+      - ".github/workflows/istanbul-gfs-10min.yml"
+      - ".github/workflows/publish-live-site.yml"
+      - ".github/workflows/deploy-cloudflare-platform.yml"
+      - "scripts/**"
+      - "site/**"
+      - "web-worker/**"
+      - "istanbul-gfs-worker/**"
+      - "koy-gfs-worker/**"
+      - "station-worker/**"
   workflow_dispatch:
 
 jobs:
@@ -14,7 +27,7 @@ jobs:
         with:
           python-version: "3.12"
       - name: Validate Python syntax
-        run: python -m py_compile main.py scripts/fetch_istanbul_gfs_meteopt.py scripts/build_istanbul_gfs_publication.py scripts/send_canonical_istanbul_gfs_telegram.py scripts/fetch_ecmwf_eps.py scripts/test_ecmwf_eps.py scripts/test_ecmwf_ui.py scripts/test_notification_pipeline.py scripts/test_850hpa_history.py scripts/backfill_gfs_wind_direction.py scripts/test_gfs_wind_direction.py scripts/test_gfs_report_chart_theme.py
+        run: python -m py_compile main.py scripts/fetch_istanbul_gfs_meteopt.py scripts/build_istanbul_gfs_publication.py scripts/send_canonical_istanbul_gfs_telegram.py scripts/fetch_ecmwf_eps.py scripts/test_ecmwf_eps.py scripts/test_ecmwf_ui.py scripts/test_notification_pipeline.py scripts/test_850hpa_history.py scripts/poll_istanbul_gfs_10min.py scripts/backfill_gfs_wind_direction.py scripts/test_gfs_wind_direction.py scripts/test_gfs_report_chart_theme.py
       - name: Run ECMWF offline and UI contract smoke tests
         run: |
           python scripts/test_ecmwf_eps.py
@@ -37,3 +50,23 @@ jobs:
           Path("/tmp/site-script.js").write_text(match.group(1), encoding="utf-8")
           PY
           node --check /tmp/site-script.js
+          node --check site/koy.js
+          node --check web-worker/src/index.js
+          python - <<'PY'
+          from pathlib import Path
+          import re
+          for source, prefix in (
+              ("site/index.html", "index"),
+              ("site/gfs-cycle-compare.html", "comparison"),
+          ):
+              html = Path(source).read_text(encoding="utf-8")
+              scripts = re.findall(r"<script(?:\\s[^>]*)?>(.*?)</script>", html, re.S)
+              inline = [script for script in scripts if script.strip()]
+              if not inline:
+                  raise SystemExit(f"No inline script found in {source}")
+              for index, script in enumerate(inline):
+                  Path(f"/tmp/{prefix}-inline-{index}.js").write_text(script, encoding="utf-8")
+          PY
+          for file in /tmp/index-inline-*.js /tmp/comparison-inline-*.js; do
+            node --check "$file"
+          done
