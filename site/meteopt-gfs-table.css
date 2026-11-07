@@ -1070,3 +1070,30 @@
     table-layout: fixed !important;
   }
 }
+
+
+/* FINAL: tighten the horizontal distance between forecast columns without changing typography. */
+@media (min-width: 851px) and (pointer: fine) {
+  #meteopt-gfs-table .meteopt-table-scroll {
+    width: 640px !important;
+    max-width: 640px !important;
+    margin-left: auto !important;
+    margin-right: auto !important;
+  }
+  #meteopt-gfs-table .meteopt-data-table {
+    width: 640px !important;
+    min-width: 640px !important;
+    max-width: 640px !important;
+    table-layout: fixed !important;
+    margin-left: auto !important;
+    margin-right: auto !important;
+    font-size: 11px !important;
+  }
+  #meteopt-gfs-table .meteopt-data-table th,
+  #meteopt-gfs-table .meteopt-data-table td {
+    font-size: inherit !important;
+  }
+  #meteopt-gfs-table .meteopt-value {
+    font-size: 10px !important;
+  }
+}
