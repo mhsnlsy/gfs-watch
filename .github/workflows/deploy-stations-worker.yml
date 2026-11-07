@@ -118,14 +118,14 @@ jobs:
           set -euo pipefail
           baseline="$(date -u +%s)"
           verified=0
-          echo "Waiting for the autonomous one-minute Cron to collect all three stations..."
+          echo "Waiting for the autonomous one-minute Cron to collect all four stations..."
           for attempt in $(seq 1 17); do
             if curl --silent --show-error --fail --max-time 12 "$STATIONS_API/health?check=$(date +%s)" -o "$RUNNER_TEMP/station-health.json"; then
               if node - "$RUNNER_TEMP/station-health.json" "$baseline" <<'NODE'
           const fs = require("fs");
           const doc = JSON.parse(fs.readFileSync(process.argv[2], "utf8"));
           const baseline = Number(process.argv[3]) * 1000;
-          const required = ["enka", "eyupsultan", "sisli"];
+          const required = ["enka", "eyupsultan", "sisli", "canakci"];
           const rows = doc.stations || [];
           const good = doc.ok === true && doc.storage === "D1" && required.every(key => {
             const row = rows.find(item => item.key === key);
@@ -149,12 +149,12 @@ jobs:
           done
 
           if [ "$verified" -ne 1 ]; then
-            echo "::error::Autonomous Cloudflare Cron did not collect all three fresh station readings into D1. The old collector remains enabled."
+            echo "::error::Autonomous Cloudflare Cron did not collect all three fresh station readings into D1. The old GitHub MGM collector remains enabled until Cloudflare verification succeeds."
             [ -s "$RUNNER_TEMP/station-health.json" ] && cat "$RUNNER_TEMP/station-health.json" || true
             exit 1
           fi
 
-          for key in enka eyupsultan sisli; do
+          for key in enka eyupsultan sisli canakci; do
             curl --silent --show-error --fail --max-time 12 "$STATIONS_API/history/$key?hours=72" -o "$RUNNER_TEMP/history-$key.json"
             node - "$RUNNER_TEMP/history-$key.json" "$key" <<'NODE'
           const fs = require("fs");
