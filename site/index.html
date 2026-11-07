@@ -3244,7 +3244,7 @@ if(typeof renderBriefing==="function")renderBriefing();
         const document=await response.json();
         if(gfsApi){
           document.schema="gfs-watch.notifications.v1";
-          document.items=[{run_id_utc:document.run_id_utc,published_at_utc:document.run_id_utc,title:"İstanbul GFS · F180 tamamlandı",cycle_label:"MeteoPT GFS",report_text:document.report_text,images:(document.images||[]).map((x,i)=>({label:["2 m sıcaklık","850 hPa sıcaklık","Yağış","10 m rüzgâr"][i]||"GFS grafiği",path:x.url}))}];
+          document.items=[{run_id_utc:document.run_id_utc,published_at_utc:document.run_id_utc,title:"İstanbul GFS · F180 tamamlandı",cycle_label:"MeteoPT GFS",report_text:document.report_text,images:((document.images||document.items?.[0]?.images||[])).map((x,i)=>({label:x.label||["2 m sıcaklık","850 hPa sıcaklık","Yağış","10 m rüzgâr"][i]||"GFS grafiği",path:x.url||x.path}))}];
         }
         if(document.schema!=="gfs-watch.notifications.v1"||!Array.isArray(document.items)||!document.items.length){
           throw new Error("Rapor arşivi biçimi geçersiz veya boş.");
