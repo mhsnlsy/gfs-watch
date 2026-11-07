@@ -1,0 +1,150 @@
+name: Deploy Cloudflare Köy GFS Service
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - "koy-gfs-worker/**"
+      - ".github/workflows/deploy-koy-gfs-worker.yml"
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: cloudflare-koy-gfs-service
+  cancel-in-progress: true
+
+jobs:
+  deploy:
+    name: Deploy Köy GFS Worker + D1
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    steps:
+      - name: Check out repository
+        uses: actions/checkout@v5
+        with:
+          ref: main
+          fetch-depth: 1
+
+      - name: Set up Node.js
+        uses: actions/setup-node@v5
+        with:
+          node-version: "22"
+
+      - name: Verify Cloudflare credentials
+        env:
+          CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+          CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
+        run: |
+          set -euo pipefail
+          test -n "$CLOUDFLARE_API_TOKEN" || { echo "::error::CLOUDFLARE_API_TOKEN is not configured"; exit 1; }
+          test -n "$CLOUDFLARE_ACCOUNT_ID" || { echo "::error::CLOUDFLARE_ACCOUNT_ID is not configured"; exit 1; }
+
+      - name: Install Wrangler
+        run: npm install --global wrangler@4
+
+      - name: Create or locate production D1
+        working-directory: koy-gfs-worker
+        env:
+          CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+          CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
+        run: |
+          set -euo pipefail
+          wrangler d1 list --json > "$RUNNER_TEMP/d1-list.json"
+
+          D1_ID="$(node - "$RUNNER_TEMP/d1-list.json" <<'NODE'
+          const fs = require("fs");
+          const data = JSON.parse(fs.readFileSync(process.argv[2], "utf8"));
+          function walk(value) {
+            if (!value) return null;
+            if (Array.isArray(value)) {
+              for (const item of value) { const found = walk(item); if (found) return found; }
+              return null;
+            }
+            if (typeof value !== "object") return null;
+            const name = value.name || value.database_name || value.databaseName;
+            const id = value.uuid || value.database_id || value.databaseId;
+            if (name === "gfs-watch-koy-gfs" && id) return String(id);
+            for (const child of Object.values(value)) { const found = walk(child); if (found) return found; }
+            return null;
+          }
+          process.stdout.write(walk(data) || "");
+          NODE
+          )"
+
+          if [ -z "$D1_ID" ]; then
+            echo "Creating production D1 database..."
+            wrangler d1 create gfs-watch-koy-gfs --location eeur
+            wrangler d1 list --json > "$RUNNER_TEMP/d1-list.json"
+            D1_ID="$(node - "$RUNNER_TEMP/d1-list.json" <<'NODE'
+          const fs = require("fs");
+          const data = JSON.parse(fs.readFileSync(process.argv[2], "utf8"));
+          function walk(value) {
+            if (!value) return null;
+            if (Array.isArray(value)) {
+              for (const item of value) { const found = walk(item); if (found) return found; }
+              return null;
+            }
+            if (typeof value !== "object") return null;
+            const name = value.name || value.database_name || value.databaseName;
+            const id = value.uuid || value.database_id || value.databaseId;
+            if (name === "gfs-watch-koy-gfs" && id) return String(id);
+            for (const child of Object.values(value)) { const found = walk(child); if (found) return found; }
+            return null;
+          }
+          process.stdout.write(walk(data) || "");
+          NODE
+            )"
+          fi
+
+          test -n "$D1_ID" || { echo "::error::Could not resolve gfs-watch-koy-gfs D1 database ID"; exit 1; }
+
+          node - "$D1_ID" wrangler.jsonc <<'NODE'
+          const fs = require("fs");
+          const id = process.argv[2];
+          const file = process.argv[3];
+          const config = JSON.parse(fs.readFileSync(file, "utf8"));
+          const binding = (config.d1_databases || []).find(item => item.database_name === "gfs-watch-koy-gfs");
+          if (!binding) throw new Error("GFS_DB binding missing in wrangler config");
+          binding.database_id = id;
+          fs.writeFileSync(file, JSON.stringify(config, null, 2) + "\n");
+          NODE
+
+      - name: Apply D1 migrations
+        working-directory: koy-gfs-worker
+        env:
+          CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+          CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
+        run: wrangler d1 migrations apply gfs-watch-koy-gfs --remote --config wrangler.jsonc
+
+      - name: Deploy the ten-minute Köy GFS Worker
+        working-directory: koy-gfs-worker
+        env:
+          CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+          CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
+        run: wrangler deploy --config wrangler.jsonc
+
+      - name: Verify live Köy GFS API and autonomous Cron
+        env:
+          KOY_GFS_API: https://gfs-watch-koy-gfs.muhsin-ulusoy.workers.dev/api
+        run: |
+          set -euo pipefail
+          for attempt in $(seq 1 8); do
+            if curl --silent --show-error --fail --max-time 15 "$KOY_GFS_API/health?check=$(date +%s)" -o "$RUNNER_TEMP/koy-health.json"; then
+              node - "$RUNNER_TEMP/koy-health.json" <<'NODE'
+          const fs = require("fs");
+          const doc = JSON.parse(fs.readFileSync(process.argv[2], "utf8"));
+          if (doc.ok !== true || doc.service !== "gfs-watch-koy-gfs" || doc.cron !== "*/10 * * * *") {
+            throw new Error("Köy GFS Worker health contract failed");
+          }
+          console.log(JSON.stringify(doc));
+          NODE
+              exit 0
+            fi
+            echo "Waiting for Köy GFS Worker deployment/health..."
+            sleep 10
+          done
+          echo "::error::Köy GFS Worker health endpoint did not become available."
+          [ -s "$RUNNER_TEMP/koy-health.json" ] && cat "$RUNNER_TEMP/koy-health.json" || true
+          exit 1
