@@ -16,9 +16,6 @@ on:
 
 permissions:
   contents: write
-  actions: write
-  pages: write
-  id-token: write
 
 concurrency:
   group: istanbul-gfs-10min-pipeline
@@ -126,16 +123,6 @@ jobs:
             git commit -m "Publish Istanbul GFS F180 report"
             git push origin HEAD:istanbul-gfs-data
           fi
-
-  publish-pages:
-    name: Deploy the new GFS bundle to Pages
-    needs: poll-and-publish
-    if: needs.poll-and-publish.result == 'success' && needs.poll-and-publish.outputs.f180_ready == 'true'
-    permissions:
-      contents: read
-      pages: write
-      id-token: write
-    uses: ./.github/workflows/publish-live-site.yml
 
   telegram:
     name: Deliver pending GFS Telegram reports
