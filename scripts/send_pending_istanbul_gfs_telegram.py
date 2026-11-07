@@ -43,8 +43,15 @@ def main() -> None:
         if not run_id or not report:
             continue
         marker = marker_dir / f"{run_id}.json"
+        marker_state = {}
         if marker.exists():
-            continue
+            try:
+                marker_state = json.loads(marker.read_text(encoding="utf-8"))
+            except (OSError, ValueError, TypeError):
+                marker_state = {}
+            # Legacy markers without a status are treated as already delivered.
+            if marker_state.get("status") == "sent" or not marker_state:
+                continue
 
         image_relative = item.get("image_path")
         image = None
@@ -66,7 +73,7 @@ def main() -> None:
             print(f"::warning::Telegram image missing for {run_id}; retrying later.")
             continue
 
-        pending.append((run_id, report, image, marker))
+        pending.append((run_id, report, image, marker, marker_state))
 
     if not pending:
         print("[GFS TELEGRAM] No pending reports.")
@@ -74,26 +81,41 @@ def main() -> None:
 
     async def deliver() -> None:
         async with Bot(token=token) as bot:
-            for run_id, report, image, marker in pending:
-                await bot.send_message(
-                    chat_id=chat_id,
-                    text=report,
-                    disable_web_page_preview=True,
-                )
-                with image.open("rb") as photo:
-                    await bot.send_photo(
+            for run_id, report, image, marker, state in pending:
+                state.setdefault("run_id_utc", run_id)
+                if not state.get("text_message_id"):
+                    sent_text = await bot.send_message(
                         chat_id=chat_id,
-                        photo=photo,
-                        caption="📊 İstanbul GFS · dört panelli valid-time karşılaştırması",
+                        text=report,
+                        disable_web_page_preview=True,
                     )
-                marker.write_text(
-                    json.dumps({
-                        "run_id_utc": run_id,
-                        "sent_at_utc": datetime.now(timezone.utc).isoformat(timespec="seconds"),
-                        "status": "sent",
-                    }, ensure_ascii=False, indent=2) + "\n",
+                    state["text_message_id"] = sent_text.message_id
+                    state["status"] = "partial"
+                    state["updated_at_utc"] = datetime.now(timezone.utc).isoformat(timespec="seconds")
+                    temporary = marker.with_suffix(".json.tmp")
+                    temporary.write_text(
+                        json.dumps(state, ensure_ascii=False, indent=2) + "\n",
+                        encoding="utf-8",
+                    )
+                    temporary.replace(marker)
+
+                if not state.get("photo_message_id"):
+                    with image.open("rb") as photo:
+                        sent_photo = await bot.send_photo(
+                            chat_id=chat_id,
+                            photo=photo,
+                            caption="📊 İstanbul GFS · dört panelli valid-time karşılaştırması",
+                        )
+                    state["photo_message_id"] = sent_photo.message_id
+
+                state["status"] = "sent"
+                state["sent_at_utc"] = datetime.now(timezone.utc).isoformat(timespec="seconds")
+                temporary = marker.with_suffix(".json.tmp")
+                temporary.write_text(
+                    json.dumps(state, ensure_ascii=False, indent=2) + "\n",
                     encoding="utf-8",
                 )
+                temporary.replace(marker)
                 print(f"[GFS TELEGRAM] delivered {run_id}")
 
     asyncio.run(deliver())
