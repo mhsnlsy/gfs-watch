@@ -897,3 +897,46 @@
     padding-right: 0.8px !important;
   }
 }
+
+
+/* FINAL SPACING-ONLY FIX:
+   Keep typography unchanged. Reduce horizontal whitespace only. */
+@media (min-width: 701px) {
+  #meteopt-gfs-table .meteopt-data-table {
+    font-size: 11px !important;
+  }
+  #meteopt-gfs-table .meteopt-data-table th {
+    font-size: 9px !important;
+    padding-left: 2px !important;
+    padding-right: 2px !important;
+  }
+  #meteopt-gfs-table .meteopt-data-table td {
+    padding-left: 2px !important;
+    padding-right: 2px !important;
+  }
+  #meteopt-gfs-table .meteopt-value {
+    font-size: 10px !important;
+    padding-left: 2px !important;
+    padding-right: 2px !important;
+  }
+}
+
+@media (max-width: 700px) {
+  #meteopt-gfs-table .meteopt-data-table {
+    font-size: 9px !important;
+  }
+  #meteopt-gfs-table .meteopt-data-table th {
+    font-size: 8px !important;
+    padding-left: 1px !important;
+    padding-right: 1px !important;
+  }
+  #meteopt-gfs-table .meteopt-data-table td {
+    padding-left: 1px !important;
+    padding-right: 1px !important;
+  }
+  #meteopt-gfs-table .meteopt-value {
+    font-size: 8.5px !important;
+    padding-left: 1px !important;
+    padding-right: 1px !important;
+  }
+}
