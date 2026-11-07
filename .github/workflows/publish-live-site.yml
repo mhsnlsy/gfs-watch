@@ -10,12 +10,6 @@ on:
       - "gfs/**"
       - "mgm/**"
   workflow_dispatch:
-  workflow_run:
-    workflows:
-      - "Istanbul GFS · Event-Driven Report Pipeline"
-      - "Rebuild Köy GFS Interactive SVG"
-    types: [completed]
-
 permissions:
   contents: read
   pages: write
@@ -28,7 +22,6 @@ concurrency:
 jobs:
   publish:
     name: Assemble and deploy latest live data
-    if: github.event_name != 'workflow_run' || github.event.workflow_run.conclusion == 'success'
     runs-on: ubuntu-latest
     timeout-minutes: 10
     steps:
