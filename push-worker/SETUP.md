@@ -53,7 +53,7 @@ Ardından Actions → **Deploy İstanbul'un Havası** → Run workflow ile Pages
 
 ## 5. iPhone
 
-1. Safari'de https://mhsnlsy.github.io/gfs-watch/ adresini aç.
+1. Safari'de https://gfs-watch-web.muhsin-ulusoy.workers.dev/ adresini aç.
 2. Paylaş → Ana Ekrana Ekle. “Web Uygulaması Olarak Aç” seçeneği görünüyorsa açık olsun.
 3. Ana ekrandaki GFS Watch ikonunu aç.
 4. “Arka plan bildirimlerini aç” düğmesine bas ve iOS bildirim iznini onayla.
