@@ -49,7 +49,7 @@ function positionGfsTooltip(host,tooltip,clientX,clientY){
   tooltip.style.left=Math.round(left)+"px";
   tooltip.style.top=Math.round(top)+"px";
 }
-function attachGfsSvgInteractions(host,svg,metadata){
+function attachGfsSvgInteractions(host,svg,metadata,syncGroup){
   const tooltip=document.createElement("div");
   tooltip.className="gfs-chart-tooltip";
   tooltip.hidden=true;
@@ -80,6 +80,18 @@ function attachGfsSvgInteractions(host,svg,metadata){
     }
     return panelList.length===1?panelList[0]:null;
   }
+  function anchorForIndex(panel,index){
+    const rect=svg.getBoundingClientRect();
+    const vb=svg.viewBox.baseVal;
+    const x=Number(panel.x_positions?.[index]);
+    const plot=panel.plot||{};
+    const y=Number(plot.y||0)+Number(plot.height||0)*0.45;
+    if(!rect.width||!rect.height||!vb.width||!vb.height||!Number.isFinite(x))return null;
+    return {
+      clientX:rect.left+(x-vb.x)*(rect.width/vb.width),
+      clientY:rect.top+(y-vb.y)*(rect.height/vb.height)
+    };
+  }
   function show(panel,index,event){
     if(!panel||!panel.valid_times?.[index])return;
     const validTime=panel.valid_times[index];
@@ -108,7 +120,21 @@ function attachGfsSvgInteractions(host,svg,metadata){
       markerGroup.appendChild(marker);
     });
     tooltip.innerHTML=buildGfsTooltipMarkup(panel,index,validTime);
-    positionGfsTooltip(host,tooltip,event?.clientX,event?.clientY);
+    const anchor=event&&Number.isFinite(event.clientX)&&Number.isFinite(event.clientY)
+      ? event : (anchorForIndex(panel,index)||event);
+    positionGfsTooltip(host,tooltip,anchor?.clientX,anchor?.clientY);
+  }
+  function showSynchronized(index,event){
+    if(syncGroup?.members?.length){
+      syncGroup.members.forEach(member=>{
+        const panel=member.panelList[0];
+        if(!panel||!panel.valid_times?.[index])return;
+        member.show(panel,index,member===api ? event : (member.anchorForIndex(panel,index)||event));
+      });
+      return;
+    }
+    const panel=panelList[0];
+    if(panel)show(panel,index,event);
   }
   function selectNearest(event){
     const panel=panelAtEvent(event);
@@ -121,7 +147,7 @@ function attachGfsSvgInteractions(host,svg,metadata){
       const distance=Math.abs(x-localX);
       if(distance<best){best=distance;nearest=index;}
     });
-    show(panel,nearest,event);
+    showSynchronized(nearest,event);
   }
   // Touch scrub is handled at both Pointer Events and the native touch layer.
   // This is deliberate: some mobile WebViews/Safari builds do not continuously
@@ -173,6 +199,10 @@ function attachGfsSvgInteractions(host,svg,metadata){
     const next=Math.max(0,Math.min(panel.valid_times.length-1,current+(event.key==="ArrowRight"?1:-1)));
     show(panel,next,{clientX:svg.getBoundingClientRect().left+svg.getBoundingClientRect().width/2,clientY:svg.getBoundingClientRect().top+40});
   });
+  const api={host,panelList,show,anchorForIndex};
+  if(syncGroup){
+    syncGroup.members.push(api);
+  }
   host.gfsHideTooltip=hide;
 }
 function isMobileGfsLayout(){
@@ -328,7 +358,8 @@ async function loadInteractiveGfsCharts(root){
             panelHost.style.setProperty("background","#0A1B29","important");
             panelHost.appendChild(panelSvg);
             host.appendChild(panelHost);
-            attachGfsSvgInteractions(panelHost,panelSvg,panelMetadata);
+            const syncGroup=host.__gfsMobileSyncGroup||(host.__gfsMobileSyncGroup={members:[]});
+            attachGfsSvgInteractions(panelHost,panelSvg,panelMetadata,syncGroup);
           });
         }else{
           host.appendChild(svg);
