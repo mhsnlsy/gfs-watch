@@ -47,7 +47,7 @@ def main() -> None:
     assert "f72_publish" in collector
     assert 'series["wind10mdir"]' in collector or 'values_for(document, key)' in collector
     assert "latest = dict(current_doc)" in builder
-    assert 'latest["comparison_runs"] = list(reversed(docs))' in builder
+    assert 'latest["comparison_runs"] = list(reversed(all_docs[-4:]))' in builder
     assert "create_valid_time_comparison_assets" in builder
     assert "save_public_notification_svg_image" in builder
     assert "telegram_image_path" in builder
