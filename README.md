@@ -68,6 +68,19 @@ GFS kaynak kodu:
 - `scripts/build_istanbul_gfs_publication.py` — canonical rapor, JSON ve dört PNG.
 - `scripts/send_canonical_istanbul_gfs_telegram.py` — canonical rapor ve görsellerin Telegram gönderimi.
 
+### Köy GFS — Cloudflare
+
+Köy GFS veri toplama artık GitHub Actions üzerinde çalışmaz. `gfs-watch-koy-gfs` Cloudflare Worker'ı İstanbul GFS ile aynı **10 dakikalık polling döngüsünde** MeteoPT GFS'yi kontrol eder.
+
+- Worker: `gfs-watch-koy-gfs`
+- Cron: `*/10 * * * *` UTC.
+- D1: `gfs-watch-koy-gfs` — son F72 ve F180-hazır döngü arşivi.
+- Konum: 40.9557°N / 39.0065°E.
+- API: `/api/f72`, `/api/comparison`, `/api/latest`, `/api/health`.
+- F72 yeni döngü geldiğinde hemen D1'e yazılır; F180 hazır olduğunda aynı canonical döngü arşivlenir.
+- Köy sayfası GFS JSON'unu doğrudan Cloudflare Worker API'sinden okur; GitHub Pages build'i beklemez.
+- Eski `.github/workflows/koy-gfs.yml` zamanlayıcısı kaldırıldı; böylece aynı veriyi iki ayrı collector çekmez.
+
 ### GitHub Pages
 
 `.github/workflows/publish-live-site.yml` tek Pages deployment noktasıdır.
