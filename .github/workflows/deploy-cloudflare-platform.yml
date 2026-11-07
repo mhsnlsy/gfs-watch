@@ -275,8 +275,11 @@ jobs:
           node - "$RUNNER_TEMP/web-health.json" <<'NODE'
           const fs = require("fs");
           const doc = JSON.parse(fs.readFileSync(process.argv[2], "utf8"));
-          if (doc.ok !== true || doc.service !== "gfs-watch-web" || doc.delivery !== "Cloudflare Workers Static Assets") {
-            throw new Error("Cloudflare web Worker health contract failed");
+          if (doc.ok !== true || doc.service !== "gfs-watch-web" ||
+              doc.delivery !== "Cloudflare Workers Static Assets" ||
+              doc.api_gateway !== "Cloudflare Service Bindings" ||
+              Object.values(doc.bindings || {}).some(value => value !== true)) {
+            throw new Error("Cloudflare web Worker/static assets/service bindings health contract failed");
           }
           console.log(JSON.stringify(doc));
           NODE
@@ -286,20 +289,31 @@ jobs:
             echo "OK $path"
           done
 
+          echo "Checking Istanbul GFS through internal Service Binding..."
           curl --silent --show-error --fail --max-time 45 "$WEB/gfs/latest?check=$(date +%s)" -o "$RUNNER_TEMP/web-gfs.json"
+          echo "Checking Köy GFS through internal Service Binding..."
           curl --silent --show-error --fail --max-time 45 "$WEB/api/koy-gfs/f72?check=$(date +%s)" -o "$RUNNER_TEMP/web-koy.json"
-          curl --silent --show-error --fail --max-time 20 "$WEB/api/stations/health?check=$(date +%s)" -o "$RUNNER_TEMP/web-stations.json"
-          node - "$RUNNER_TEMP/web-gfs.json" "$RUNNER_TEMP/web-koy.json" "$RUNNER_TEMP/web-stations.json" <<'NODE'
+          echo "Checking station D1 health through internal Service Binding..."
+          curl --silent --show-error --fail --max-time 20 "$WEB/api/stations/health?check=$(date +%s)" -o "$RUNNER_TEMP/web-stations-health.json"
+          curl --silent --show-error --fail --max-time 20 "$WEB/api/stations?check=$(date +%s)" -o "$RUNNER_TEMP/web-stations.json"
+          curl --silent --show-error --fail --max-time 20 "$WEB/api/history/canakci?hours=72&check=$(date +%s)" -o "$RUNNER_TEMP/web-station-history.json"
+          node - "$RUNNER_TEMP/web-gfs.json" "$RUNNER_TEMP/web-koy.json" "$RUNNER_TEMP/web-stations-health.json" "$RUNNER_TEMP/web-stations.json" "$RUNNER_TEMP/web-station-history.json" <<'NODE'
           const fs = require("fs");
-          const [gfs, koy, stations] = process.argv.slice(2).map(file => JSON.parse(fs.readFileSync(file, "utf8")));
-          if (gfs.schema !== "gfs-watch.forecast.v1" || !Array.isArray(gfs.comparison_runs)) throw new Error("Istanbul GFS gateway failed");
+          const [gfs, koy, health, stations, history] = process.argv.slice(2).map(file => JSON.parse(fs.readFileSync(file, "utf8")));
+          if (gfs.schema !== "gfs-watch.forecast.v1" || !Array.isArray(gfs.comparison_runs) ||
+              !Array.isArray(gfs.forecast_6_hourly) || gfs.forecast_6_hourly.length < 40) {
+            throw new Error("Istanbul GFS gateway failed");
+          }
           if (!Array.isArray(koy.forecast_6_hourly) || koy.forecast_6_hourly.length < 12) throw new Error("Köy GFS gateway failed");
-          if (stations.ok !== true || stations.storage !== "D1") throw new Error("Station D1 gateway failed");
+          if (health.ok !== true || health.storage !== "D1" || health.cron !== "*/2 * * * *") throw new Error("Station D1 health gateway failed");
+          if (stations.ok !== true || !Array.isArray(stations.stations) || stations.stations.length < 4) throw new Error("Station current values gateway failed");
+          if (history.ok !== true || !Array.isArray(history.samples)) throw new Error("Station history gateway failed");
           console.log(JSON.stringify({
             istanbul_run: gfs.run_id_utc,
             istanbul_comparison_runs: gfs.comparison_runs.length,
             koy_run: koy.run_id_utc,
             koy_points: koy.forecast_6_hourly.length,
-            stations: stations.stations?.map(item => ({key: item.key, status: item.status}))
+            station_count: stations.stations.length,
+            canakci_history_samples: history.samples.length
           }));
           NODE
