@@ -3184,7 +3184,7 @@ if(typeof renderBriefing==="function")renderBriefing();
         const imagesHtml=imageItems.length>0
           ? '<div class="notification-images koy-fullframe-images koy-gfs-svg-images" style="background:#0A1B29!important">'+imageItems.map(image=>{
               const media=image.isSvg
-                ? '<div class="gfs-interactive-chart" data-svg-src="'+esc(image.url)+'" style="background:#0A1B29!important"><div class="gfs-chart-loading">Etkileşimli grafik yükleniyor…</div></div>'
+                ? '<div class="gfs-interactive-chart" data-svg-src="'+esc(image.url)+'" data-chart-label="İstanbul GFS · dört panelli etkileşimli valid-time karşılaştırması" style="background:#0A1B29!important"><div class="gfs-chart-loading">Etkileşimli grafik yükleniyor…</div></div>'
                 : '<a class="notification-image-link" href="'+image.url+'" target="_blank" rel="noopener"><img class="notification-image" src="'+image.url+'" alt="İstanbul GFS dört döngü karşılaştırması" loading="eager" decoding="async" fetchpriority="high"></a>';
               return '<div class="notification-image-item">'+media+'</div>';
             }).join("")+'</div>'
