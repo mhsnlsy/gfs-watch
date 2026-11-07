@@ -200,3 +200,28 @@ jobs:
             sleep 10
           done
           test "$latest_ok" -eq 1 || { echo "::error::Istanbul GFS API did not return a validated F180 forecast."; cat "$RUNNER_TEMP/istanbul-latest.json" 2>/dev/null || true; exit 1; }
+
+          ecmwf_ok=0
+          for attempt in $(seq 1 5); do
+            if curl --silent --show-error --fail --max-time 45 "$ISTANBUL_GFS_API/ecmwf/latest?check=$(date +%s)" -o "$RUNNER_TEMP/ecmwf-latest.json"; then
+              if node - "$RUNNER_TEMP/ecmwf-latest.json" <<'NODE'
+          const fs = require("fs");
+          const doc = JSON.parse(fs.readFileSync(process.argv[2], "utf8"));
+          if (doc.schema !== "gfs-watch.ecmwf-eps.v1" || doc.forecast_source !== "meteopt" ||
+              doc.source_url !== "https://www.meteopt.com/modelos/ecmwf?lat=41.0901&lon=28.9436" ||
+              !Array.isArray(doc.forecasts) || doc.forecasts.length < 8 ||
+              !Array.isArray(doc.forecast_6_hourly) || doc.forecast_6_hourly.length < 8) {
+            throw new Error("MeteoPT ECMWF live contract failed");
+          }
+          console.log(JSON.stringify({
+            run_id_utc: doc.run_id_utc,
+            forecast_points: doc.forecasts.length,
+            horizon_hours: doc.forecast_horizon_hours,
+            source: doc.forecast_source
+          }));
+NODE
+              then ecmwf_ok=1; break; fi
+            fi
+            sleep 8
+          done
+          test "$ecmwf_ok" -eq 1 || { echo "::error::MeteoPT ECMWF API did not return a validated live forecast."; cat "$RUNNER_TEMP/ecmwf-latest.json" 2>/dev/null || true; exit 1; }
