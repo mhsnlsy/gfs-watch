@@ -80,6 +80,7 @@ export default {
       }
       const headers = new Headers(asset.headers);
       headers.set("Cache-Control", "no-store, max-age=0");
+      headers.set("Access-Control-Allow-Origin", "*");
       return new Response(asset.body, { status: asset.status, headers });
     }
 
