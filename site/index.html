@@ -1299,6 +1299,26 @@
       background: #0A1B29 !important;
     }
 
+    /* Hard fallback: keep the full report card dark even when the browser
+       renders the SVG as an external image or its transparent regions show through. */
+    .notification-chart-only,
+    .notification-chart-only .notification-images,
+    .notification-chart-only .notification-image-item,
+    .notification-chart-only .gfs-interactive-chart,
+    .notification-chart-only .gfs-mobile-panel-stack,
+    .notification-chart-only .gfs-mobile-panel-host,
+    .notification-chart-only .gfs-svg-static-fallback {
+      background: #0A1B29 !important;
+    }
+    .notification-chart-only {
+      border-color: #17384A !important;
+    }
+    .notification-chart-only .gfs-svg-static-fallback,
+    .notification-chart-only .gfs-svg-static-fallback img {
+      display: block !important;
+      background-color: #0A1B29 !important;
+    }
+
 </style>
 </head>
 <body>
