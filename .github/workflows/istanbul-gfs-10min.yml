@@ -1,11 +1,6 @@
 name: Istanbul GFS · Event-Driven Report Pipeline
 
 on:
-  # TEMPORARY RECOVERY TRIGGER: remove after the recovery run starts.
-  push:
-    branches: [main]
-    paths:
-      - ".github/workflows/istanbul-gfs-10min.yml"
   workflow_dispatch:
     inputs:
       run_id:
