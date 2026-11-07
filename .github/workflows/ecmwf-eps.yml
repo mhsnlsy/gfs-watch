@@ -62,6 +62,79 @@ jobs:
       - name: Validate the downloaded ECMWF forecast payload
         working-directory: source
         run: python scripts/test_ecmwf_eps.py ../state/public/ecmwf/latest.json
+      - name: Publish ECMWF latest payload and report images to Cloudflare D1
+        env:
+          ECMWF_PUBLIC_DIR: ${{ github.workspace }}/state/public/ecmwf
+          ISTANBUL_GFS_API: https://gfs-watch-istanbul-gfs.muhsin-ulusoy.workers.dev
+          GFS_DISPATCH_TOKEN: ${{ secrets.GFS_DISPATCH_TOKEN }}
+        run: |
+          set -euo pipefail
+          test -n "$GFS_DISPATCH_TOKEN" || { echo "::error::GFS_DISPATCH_TOKEN is required for ECMWF D1 publication"; exit 1; }
+          test -s "$ECMWF_PUBLIC_DIR/latest.json" || { echo "::error::ECMWF latest.json is missing"; exit 1; }
+          mkdir -p "$RUNNER_TEMP/ecmwf-d1"
+
+          while IFS= read -r -d '' file; do
+            relative="${file#"$ECMWF_PUBLIC_DIR"/}"
+            key="data/ecmwf/$relative"
+            case "$file" in
+              *.png) encoding="base64"; content_type="image/png" ;;
+              *.json) encoding="utf8"; content_type="application/json; charset=utf-8" ;;
+              *) continue ;;
+            esac
+
+            python - "$file" "$key" "$encoding" "$content_type" "$ECMWF_PUBLIC_DIR/latest.json" "$RUNNER_TEMP/ecmwf-d1/payload.json" <<'PY'
+          import base64
+          import json
+          import sys
+          from pathlib import Path
+
+          source, key, encoding, content_type, latest_path, output_path = sys.argv[1:]
+          latest = json.loads(Path(latest_path).read_text(encoding="utf-8"))
+          run_id = latest.get("run_id_utc")
+          if not run_id:
+              raise SystemExit("ECMWF latest.json has no run_id_utc")
+          raw = Path(source).read_bytes()
+          body = base64.b64encode(raw).decode("ascii") if encoding == "base64" else raw.decode("utf-8")
+          if len(body) > 1900000:
+              raise SystemExit(f"ECMWF D1 asset exceeds row safety limit: {source}")
+          payload = {
+              "key": key,
+              "run_id_utc": run_id,
+              "content_type": content_type,
+              "encoding": encoding,
+              "body": body,
+          }
+          Path(output_path).write_text(
+              json.dumps(payload, ensure_ascii=False, separators=(",", ":")),
+              encoding="utf-8",
+          )
+          PY
+
+            curl --fail --silent --show-error --max-time 60 --request POST --url "$ISTANBUL_GFS_API/gfs/publication-upload" --header "Authorization: Bearer $GFS_DISPATCH_TOKEN" --header "Content-Type: application/json" --header "Accept: application/json" --data-binary "@$RUNNER_TEMP/ecmwf-d1/payload.json" --output "$RUNNER_TEMP/ecmwf-d1/response.json"
+
+            python - "$RUNNER_TEMP/ecmwf-d1/response.json" "$key" <<'PY'
+          import json
+          import sys
+          from pathlib import Path
+          response = json.loads(Path(sys.argv[1]).read_text(encoding="utf-8"))
+          if response.get("ok") is not True:
+              raise SystemExit(f"ECMWF D1 publication failed for {sys.argv[2]}: {response}")
+          print("Published ECMWF D1 asset:", response.get("key"), response.get("bytes"), "body characters")
+          PY
+          done < <(find "$ECMWF_PUBLIC_DIR" -type f \( -name 'latest.json' -o -name '*.png' \) -print0)
+
+          curl --fail --silent --show-error --max-time 30 "$ISTANBUL_GFS_API/gfs/publication-asset/data/ecmwf/latest.json?verify=$(date +%s)" -o "$RUNNER_TEMP/ecmwf-d1/verified-latest.json"
+          python - "$ECMWF_PUBLIC_DIR/latest.json" "$RUNNER_TEMP/ecmwf-d1/verified-latest.json" <<'PY'
+          import json
+          import sys
+          from pathlib import Path
+          expected = json.loads(Path(sys.argv[1]).read_text(encoding="utf-8"))
+          actual = json.loads(Path(sys.argv[2]).read_text(encoding="utf-8"))
+          if actual.get("run_id_utc") != expected.get("run_id_utc"):
+              raise SystemExit("ECMWF D1 read-after-write verification returned a different model run")
+          print("Verified ECMWF latest.json read back from Istanbul D1:", actual["run_id_utc"])
+          PY
+
       - name: Commit forecast cache to state branch
         working-directory: state
         run: |
