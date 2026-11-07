@@ -40,14 +40,6 @@ jobs:
           path: koy-data
           fetch-depth: 1
 
-      - name: Check out Köy MGM archive
-        if: github.ref == 'refs/heads/main' || github.ref == 'refs/heads/koy-mgm-data'
-        uses: actions/checkout@v5
-        with:
-          ref: koy-mgm-data
-          path: koy-mgm-data
-          fetch-depth: 1
-
       - name: Set up Node.js
         uses: actions/setup-node@v5
         with:
@@ -58,14 +50,14 @@ jobs:
 
       - name: Ensure R2 bucket and upload archives
         env:
-          CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+          CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_R2_API_TOKEN }}
           CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
           R2_BUCKET: gfs-watch-live-archive
         run: |
           set -euo pipefail
 
           if ! wrangler r2 bucket list > "$RUNNER_TEMP/r2-buckets.txt"; then
-            echo "::error::CLOUDFLARE_API_TOKEN needs account-level Workers R2 Storage: Edit permission."
+            echo "::error::Create GitHub secret CLOUDFLARE_R2_API_TOKEN using an account-scoped Cloudflare API token with Workers R2 Storage: Edit permission."
             exit 1
           fi
           if ! grep -Fq "$R2_BUCKET" "$RUNNER_TEMP/r2-buckets.txt"; then
@@ -119,7 +111,6 @@ jobs:
           upload_file "istanbul-gfs-data/gfs/comparison.json" "data/istanbul-gfs-comparison.json"
           upload_tree "istanbul-gfs-data/gfs/notifications" "data/notifications"
           upload_tree "koy-data/gfs" "koy-data/gfs"
-          upload_tree "koy-mgm-data/mgm" "koy-data/mgm"
 
           if [ "$uploaded" -eq 0 ]; then
             echo "::error::No archive files were uploaded. Check the selected branch and source directories."
