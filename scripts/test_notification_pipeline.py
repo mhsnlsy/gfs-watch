@@ -31,7 +31,7 @@ def main() -> None:
     assert "actions/deploy-pages@v4" in publisher
     assert "schedule:" not in publisher
     assert "group: live-pages-publisher" in publisher
-    # The Pages fallback is intentionally source-change driven; push is valid here.
+    # GitHub Pages is a manual-only rollback path, never an automatic workflow_run deployment.
     assert "workflow_run:" not in publisher
 
     # Cloudflare is the only live GFS collector; report work is event-driven on new F180.
