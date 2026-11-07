@@ -142,6 +142,9 @@ vm.createContext(sandbox);
 vm.runInContext(html.slice(functionStart, functionEnd), sandbox, {
   filename: "site/index.html#station-history-functions"
 });
+// This test covers station switching and history charts only. Keep the separate
+// forecast briefing renderer out of this DOM-light browser simulation.
+sandbox.renderBriefing = () => {};
 
 sandbox.selectStation("eyupsultan");
 assert.equal(sandbox.activeStation, "eyupsultan");
