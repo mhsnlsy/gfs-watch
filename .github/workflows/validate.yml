@@ -8,6 +8,7 @@ on:
       - ".github/workflows/istanbul-gfs-10min.yml"
       - ".github/workflows/publish-live-site.yml"
       - ".github/workflows/deploy-cloudflare-platform.yml"
+      - ".github/workflows/deploy-istanbul-gfs-worker.yml"
       - "scripts/**"
       - "site/**"
       - "web-worker/**"
