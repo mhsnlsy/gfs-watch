@@ -56,7 +56,7 @@ def seed_outbox_from_pages_manifest(root: Path, outbox_dir: Path) -> None:
             marker = json.loads(marker_path.read_text(encoding="utf-8")) if marker_path.is_file() else {}
         except (OSError, ValueError, TypeError):
             marker = {}
-        if marker.get("status") == "sent":
+        if marker.get("status") == "sent" or marker.get("sent_at_utc"):
             continue
 
         destination = outbox_dir / f"{run_key(run_id)}.json"
@@ -147,7 +147,7 @@ async def send_pending(root: Path, outbox_dir: Path, token: str, chat_id: str) -
                     except (OSError, ValueError, TypeError):
                         marker = {}
 
-                if marker.get("status") == "sent":
+                if marker.get("status") == "sent" or marker.get("sent_at_utc"):
                     for photo_path in resolve_photos(root, outbox_dir, item):
                         try:
                             photo_path.relative_to(outbox_dir)
