@@ -98,13 +98,16 @@ export default {
       return callService(env.KOY_GFS, request, "/api/health");
     }
 
-    if (path.startsWith("/api/stations/")) {
-      const suffix = path.slice("/api/stations".length);
-      return callService(env.STATIONS, request, "/api" + suffix);
+    if (path === "/api/stations/health") {
+      return callService(env.STATIONS, request, "/api/health");
     }
 
-    if (path === "/api/stations") {
-      return callService(env.STATIONS, request, "/api/stations");
+    if (path === "/api/stations" || path.startsWith("/api/stations/")) {
+      return callService(env.STATIONS, request, path);
+    }
+
+    if (path.startsWith("/api/history/")) {
+      return callService(env.STATIONS, request, path);
     }
 
     if (path.startsWith("/api/")) {
