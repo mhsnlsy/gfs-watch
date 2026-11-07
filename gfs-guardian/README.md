@@ -1,27 +1,21 @@
 # GFS Cloudflare Guardian
 
-This Worker is a watchdog for the Istanbul GFS pipeline. It does not download model data, build reports, publish Pages, or send Telegram messages. GitHub Actions remains the only producer.
+The Guardian is an independent Cloudflare Worker that watches the primary Istanbul GFS Worker. It has no GitHub API or GitHub Actions runtime dependency.
 
 ## Behaviour
 
-- Runs on the Cloudflare Cron Trigger every nine minutes (UTC).
-- Reads the latest runs of `.github/workflows/istanbul-gfs-10min.yml` on `main`.
-- Does nothing while the GFS workflow is queued or running.
-- Treats a successful workflow completion in the last 15 minutes as a healthy heartbeat.
-- If the last successful completion is older than 15 minutes (or none exists), dispatches that same GitHub workflow on `main`.
-- Applies an 18-minute cooldown after a fallback dispatch to avoid rapid retry storms.
-- Existing workflow concurrency and publication/Telegram idempotency remain authoritative.
+- Runs at minutes 05, 15, 25, 35, 45 and 55 of every hour.
+- Reads the primary Worker's D1-backed /api/health endpoint through a Cloudflare Service Binding.
+- Waits while the primary collection is recent or has started within the last 18 minutes.
+- If the last successful collection is older than 25 minutes, it calls the primary Worker's authenticated /internal/reconcile route through the same Service Binding.
+- The primary Worker remains the only collector, publisher and Telegram sender. The Guardian only requests a recovery collection.
 
-## Required secret
+## Bindings and secret
 
-Set the GitHub Actions repository secret `GFS_DISPATCH_TOKEN` before deployment. Use a fine-grained PAT restricted to `mhsnlsy/gfs-watch` with **Actions: Read and write** permission. The token is stored as the Cloudflare Worker secret `GFS_DISPATCH_TOKEN` by the deployment workflow; it is never written to the repository.
-
-The existing repository secrets `CLOUDFLARE_API_TOKEN` and `CLOUDFLARE_ACCOUNT_ID` are also required by the deployment workflow.
+The ISTANBUL_GFS service binding targets gfs-watch-istanbul-gfs. The GFS_DISPATCH_TOKEN Worker secret is used only as a shared Worker-to-Worker authentication token; this Worker does not call GitHub.
 
 ## Health check
 
-After deployment:
+https://gfs-watch-gfs-guardian.muhsin-ulusoy.workers.dev/health
 
-`https://gfs-watch-gfs-guardian.muhsin-ulusoy.workers.dev/health`
-
-The Worker exposes only static configuration metadata on this route. It does not expose the GitHub token or pipeline state.
+The health endpoint exposes configuration metadata only, not secrets or live pipeline state.
