@@ -530,8 +530,16 @@ function bindStationHistoryTooltip(containerId){
  tooltip.hidden=true;
  tooltip.setAttribute("role","status");
  tooltip.setAttribute("aria-live","polite");
- host.appendChild(tooltip);
+ document.body.appendChild(tooltip);
+ tooltip.style.position="fixed";
+ tooltip.style.zIndex="2147483647";
+ tooltip.style.pointerEvents="none";
  let pinned=false;
+ let touchHideTimer=null;
+ function scheduleTouchHide(){
+  if(touchHideTimer!==null)window.clearTimeout(touchHideTimer);
+  touchHideTimer=window.setTimeout(()=>{touchHideTimer=null;hide()},2800);
+ }
  function nearestByTime(event,maxDistance){
   const matrix=svg.getScreenCTM();
   if(!matrix)return null;
@@ -547,6 +555,8 @@ function bindStationHistoryTooltip(containerId){
   return nearest;
  }
  function hide(){
+  if(touchHideTimer!==null)window.clearTimeout(touchHideTimer);
+  touchHideTimer=null;
   tooltip.hidden=true;
   pinned=false;
   if(activeStationTooltip?.tooltip===tooltip)activeStationTooltip=null;
@@ -556,29 +566,57 @@ function bindStationHistoryTooltip(containerId){
   tooltip.innerHTML='<div class="station-history-tooltip-time">'+esc(stationMode==="home"?"Köy Ev · 363 m · Rakım düzeltilmiş":"MGM Çanakçı · Gerçek ölçüm")+'<br>'+esc(target.dataset.period||"—")+'</div><div class="station-history-tooltip-value">'+esc(target.dataset.value||"—")+' <small>'+esc(target.dataset.unit||"")+'</small></div><div class="station-history-tooltip-detail">'+esc(target.dataset.detail||"")+'</div>';
   tooltip.hidden=false;
   pinned=lock;
-  const box=host.getBoundingClientRect();
-  const tx=event.clientX-box.left,ty=event.clientY-box.top;
   const tw=tooltip.offsetWidth,th=tooltip.offsetHeight;
-  const left=Math.max(5,Math.min(host.clientWidth-tw-5,tx+12));
-  let top=ty-th-12;
-  if(top<5)top=ty+14;
-  top=Math.max(5,Math.min(host.clientHeight-th-5,top));
+  const margin=8;
+  const left=Math.max(margin,Math.min(window.innerWidth-tw-margin,event.clientX+12));
+  const top=Math.max(margin,event.clientY-th-14);
   tooltip.style.left=left+"px";
   tooltip.style.top=top+"px";
   if(lock)activeStationTooltip={host,tooltip,hide};
  }
+ svg.style.touchAction="pan-y";
+ const handleTouchMove=event=>{
+  if(event.pointerType&&event.pointerType!=="touch")return;
+  if(event.cancelable)event.preventDefault();
+  pinned=true;
+  const target=nearestByTime(event,64);
+  if(target){
+   show(target,event,true);
+   scheduleTouchHide();
+  }else hide();
+ };
  svg.addEventListener("pointermove",event=>{
-  if(event.pointerType==="touch"||pinned)return;
+  if(event.pointerType==="touch"){
+   handleTouchMove(event);
+   return;
+  }
+  if(pinned)return;
   const target=nearestByTime(event,48);
   if(target)show(target,event,false);
   else hide();
  });
+ svg.addEventListener("pointerrawupdate",handleTouchMove,{passive:false});
+ svg.addEventListener("touchmove",event=>{
+  const touch=event.touches?.[0];
+  if(!touch)return;
+  handleTouchMove({clientX:touch.clientX,clientY:touch.clientY,pointerType:"touch"});
+ },{passive:false});
  svg.addEventListener("pointerleave",()=>{if(!pinned)hide()});
  svg.addEventListener("pointerdown",event=>{
   if(event.pointerType!=="touch"&&event.pointerType!=="pen")return;
-  const target=nearestByTime(event,54);
-  if(target){event.preventDefault();show(target,event,true)}
-  else hide();
+  const target=nearestByTime(event,64);
+  if(target){
+   event.preventDefault();
+   if(event.pointerType==="touch")try{svg.setPointerCapture(event.pointerId)}catch(_){}
+   show(target,event,true);
+   if(event.pointerType==="touch")scheduleTouchHide();
+  }else hide();
+ });
+ svg.addEventListener("pointerup",event=>{
+  if(event.pointerType==="touch")scheduleTouchHide();
+ });
+ svg.addEventListener("pointercancel",event=>{
+  if(event.pointerType==="touch")hide();
  });
 }
 function renderStationHistory(doc,rainDoc){
