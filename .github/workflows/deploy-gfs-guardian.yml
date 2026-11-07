@@ -41,7 +41,7 @@ jobs:
           set -euo pipefail
           test -n "$CLOUDFLARE_API_TOKEN" || { echo "::error::CLOUDFLARE_API_TOKEN is not configured"; exit 1; }
           test -n "$CLOUDFLARE_ACCOUNT_ID" || { echo "::error::CLOUDFLARE_ACCOUNT_ID is not configured"; exit 1; }
-          test -n "$GFS_DISPATCH_TOKEN" || { echo "::error::Add repository secret GFS_DISPATCH_TOKEN (fine-grained token with Actions: read/write) before deploying the Guardian."; exit 1; }
+          test -n "$GFS_DISPATCH_TOKEN" || { echo "::error::Add repository secret GFS_DISPATCH_TOKEN for authenticated Cloudflare Worker-to-Worker recovery."; exit 1; }
 
       - name: Install dependencies and validate Worker source
         working-directory: gfs-guardian
@@ -50,7 +50,7 @@ jobs:
           npm install
           npm run check
 
-      - name: Upload GitHub dispatch token to Cloudflare Worker secret
+      - name: Upload Worker-to-Worker recovery token to Cloudflare
         working-directory: gfs-guardian
         env:
           CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
@@ -60,7 +60,7 @@ jobs:
           set -euo pipefail
           printf '%s' "$GFS_DISPATCH_TOKEN" | npx wrangler secret put GFS_DISPATCH_TOKEN --config wrangler.jsonc
 
-      - name: Deploy the 30-minute fallback Guardian Cron
+      - name: Deploy the staggered Cloudflare recovery Guardian Cron
         working-directory: gfs-guardian
         env:
           CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
@@ -78,9 +78,9 @@ jobs:
           const health = JSON.parse(fs.readFileSync(process.argv[2], "utf8"));
           if (health.ok !== true ||
               health.service !== "gfs-watch-gfs-guardian" ||
-              health.cron !== "*/30 * * * *" ||
-              health.stale_after_minutes !== 45 ||
-              health.dispatch_cooldown_minutes !== 10) {
+              health.cron !== "5,15,25,35,45,55 * * * *" ||
+              health.stale_after_minutes !== 25 ||
+              health.github_runtime_dependency !== false) {
             throw new Error("Guardian health response did not match the expected deployment");
           }
           console.log(JSON.stringify(health, null, 2));
