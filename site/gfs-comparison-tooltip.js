@@ -67,6 +67,7 @@ function attachGfsSvgInteractions(host,svg,metadata,syncGroup){
   function hide(){
     tooltips.forEach(tip=>tip.hidden=true);
     host.removeAttribute("data-pinned");
+    host.style.removeProperty("z-index");
     svg.querySelectorAll(".gfs-tooltip-crosshair").forEach(line=>line.setAttribute("visibility","hidden"));
     svg.querySelectorAll(".gfs-tooltip-markers").forEach(group=>group.replaceChildren());
   }
@@ -132,10 +133,22 @@ function attachGfsSvgInteractions(host,svg,metadata,syncGroup){
   }
   function showSynchronized(index,event){
     if(syncGroup?.members?.length){
+      const sourcePanel=panelList[0];
+      const sourceTime=sourcePanel?.valid_times?.[index];
+      const sourceKey=sourceTime?.localKey||sourceTime?.utcLabel||sourceTime?.label||null;
       syncGroup.members.forEach(member=>{
         const panel=member.panelList[0];
-        if(!panel||!panel.valid_times?.[index])return;
-        member.show(panel,index,member===api ? event : (member.anchorForIndex(panel,index)||event));
+        if(!panel)return;
+        let targetIndex=index;
+        if(sourceKey){
+          const found=panel.valid_times?.findIndex(item=>
+            (item?.localKey||item?.utcLabel||item?.label||null)===sourceKey
+          );
+          if(found>=0)targetIndex=found;
+        }
+        if(!panel.valid_times?.[targetIndex])return;
+        member.host.style.setProperty("z-index","20","important");
+        member.show(panel,targetIndex,member===api ? event : (member.anchorForIndex(panel,targetIndex)||event));
       });
       return;
     }
