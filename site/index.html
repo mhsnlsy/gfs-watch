@@ -3396,9 +3396,12 @@ renderBriefing();
       if(!Array.isArray(rows))return [];
       const toNumber=value=>(value===null||value===undefined||value==="")?null:Number(value);
       return rows.map(row=>{
-        const temp=toNumber(row.temperature_c == null ? row.temperature_2m_c : row.temperature_2m_c);
-        const rain1=toNumber(row.rain_1h_mm == null ? row.precipitation_1h_mm : row.precipitation_1h_mm);
-        const rain10=toNumber(row.rain_10m_mm == null ? row.precipitation_10m_mm : row.precipitation_10m_mm);
+        // Station D1 stores canonical history fields as temperature_c/rain_1h_mm.
+        // Keep both canonical and legacy aliases because the temperature and
+        // rainfall charts consume the same sample array.
+        const temp=toNumber(row.temperature_c == null ? row.temperature_2m_c : row.temperature_c);
+        const rain1=toNumber(row.rain_1h_mm == null ? row.precipitation_1h_mm : row.rain_1h_mm);
+        const rain10=toNumber(row.rain_10m_mm == null ? row.precipitation_10m_mm : row.rain_10m_mm);
         return {
           station_id:String(row.station_id||""),
           observed_at_utc:row.observed_at_utc||row.fetched_at_utc||null,
@@ -3406,15 +3409,15 @@ renderBriefing();
           temperature_2m_c:temp,
           precipitation_1h_mm:rain1,
           precipitation_10m_mm:rain10,
-          precipitation_6h_mm:toNumber(row.rain_6h_mm),
-          precipitation_12h_mm:toNumber(row.rain_12h_mm),
-          precipitation_24h_mm:toNumber(row.rain_24h_mm),
+          precipitation_6h_mm:toNumber(row.rain_6h_mm == null ? row.precipitation_6h_mm : row.rain_6h_mm),
+          precipitation_12h_mm:toNumber(row.rain_12h_mm == null ? row.precipitation_12h_mm : row.rain_12h_mm),
+          precipitation_24h_mm:toNumber(row.rain_24h_mm == null ? row.precipitation_24h_mm : row.rain_24h_mm),
           station_pressure_hpa:toNumber(row.pressure_hpa),
           humidity_percent:toNumber(row.humidity_percent),
           wind_speed_10m_kmh:toNumber(row.wind_speed_kmh),
           feels_like_c:toNumber(row.feels_like_c)
         };
-      }).filter(row=>row.observed_at_utc&&row.temperature_2m_c!==null);
+      }).filter(row=>row.observed_at_utc);
     }
     // Station observations refresh independently from forecast/model data.
 
