@@ -79,6 +79,9 @@
     .station-current .temp-meta{margin-top:6px}
     .delta-badge{display:inline-flex;align-items:center;gap:4px;margin-top:6px;padding:3px 9px;border-radius:999px;background:rgba(125,211,215,.12);border:1px solid rgba(125,211,215,.28);color:var(--cyan);font-size:11px;font-weight:600;letter-spacing:.01em;min-height:22px}
     .delta-badge:empty{display:none}
+    .station-temp-compare{display:inline-flex;align-items:center;justify-content:center;align-self:center;white-space:nowrap;max-width:180px;box-sizing:border-box;padding:4px 8px;border-radius:999px;background:rgba(125,211,215,.10);border:1px solid rgba(125,211,215,.28);color:var(--cyan);font-size:10px;line-height:1.2;font-weight:600;letter-spacing:.01em}
+    .station-temp-compare[hidden]{display:none}
+    @media(max-width:560px){.station-temp-compare{max-width:145px;padding:3px 7px;font-size:9px}}
     .feels-like-stat{min-width:0}
     .feels-like-24h-badge{display:inline-flex;align-items:center;justify-content:center;white-space:nowrap;width:max-content;max-width:100%;box-sizing:border-box;margin:5px auto 0;padding:3px 7px;border-radius:999px;background:rgba(125,211,215,.09);border:1px solid rgba(125,211,215,.24);color:#a9c8d2;font-size:9px;line-height:1.25;font-weight:600;letter-spacing:.01em}
     .feels-like-24h-badge[hidden]{display:none}
@@ -1722,6 +1725,7 @@ html.ios12 .footer > *{
     <div class="temp-row">
       <div class="temperature" id="temperature">—°</div>
       <div class="weather-symbol" id="weather-symbol" aria-hidden="true">☁️</div>
+      <div class="station-temp-compare" id="station-temp-compare" hidden aria-live="polite"></div>
     </div>
     <div class="temp-meta">
       <div class="temp-caption" id="station-observation-meta">Son istasyon ölçümü bekleniyor</div>
@@ -2820,14 +2824,15 @@ html.ios12 .footer > *{
       fitStationStats();
     }
     function renderStationGap(){
-      const node=$("station-gap");
+      const node=$("station-temp-compare");
       if(!node)return;
       const stationMap={
         enka:enkaStationObservation,
         eyupsultan:eyupsultanStationObservation,
         sisli:sisliStationObservation
       };
-      const otherKey=activeStation==="eyupsultan"?"sisli":"eyupsultan";
+      // Compare against the adjacent station button: ENKA→Eyüpsultan, Eyüpsultan→Şişli, Şişli→Eyüpsultan.
+      const otherKey=activeStation==="enka"?"eyupsultan":activeStation==="eyupsultan"?"sisli":"eyupsultan";
       const hereStation=stationMap[activeStation];
       const otherStation=stationMap[otherKey];
       const hide=()=>{node.hidden=true;node.textContent="";};
@@ -2838,7 +2843,7 @@ html.ios12 .footer > *{
       const here=Number(hereStation.temperature_2m_c);
       const there=Number(otherStation.temperature_2m_c);
       if(!Number.isFinite(here)||!Number.isFinite(there)){hide();return;}
-      const other=otherKey==="sisli"?"Şişli":"Eyüpsultan";
+      const other=otherKey==="sisli"?"Şişli":otherKey==="enka"?"ENKA Balmumcu":"Eyüpsultan";
       const delta=here-there;
       const gap=Math.abs(delta);
       node.hidden=false;
