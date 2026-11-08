@@ -451,7 +451,7 @@ async function loadInteractiveGfsCharts(root){
             // into this card on mobile.
             panelHost.style.setProperty("overflow","hidden","important");
             panelHost.style.setProperty("position","relative","important");
-            addMobileGfsCycleLabels(panelHost,panel);
+            addMobileGfsCycleLabels(panelHost,panelMetadata.panels && panelMetadata.panels[0]);
             panelSvg.style.setProperty("overflow","hidden","important");
             panelHost.appendChild(panelSvg);
             host.appendChild(panelHost);
