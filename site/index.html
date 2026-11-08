@@ -1918,7 +1918,7 @@ html[data-default-station="eyupsultan"] #station-eyupsultan-button{
       }else if(upcoming.length){
         const next=upcoming[0],hours=Math.max(0,(next.start-now)/3600000);
         const lead=hours<1?"1 saatten az":Math.round(hours)+" saat";
-        forecast.textContent="MeteoPT GFS tahminine göre yaklaşık "+lead+" içinde ("+dateTime(next.start)+") yağmur bekleniyor.";
+        forecast.innerHTML="MeteoPT GFS tahminine göre yaklaşık "+lead+" içinde<br>("+dateTime(next.start)+") yağmur bekleniyor.";
       }else{
         forecast.textContent="MeteoPT GFS tahmininde mevcut zamandan sonra belirgin yağış görünmüyor.";
       }
