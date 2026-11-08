@@ -1,0 +1,29 @@
+name: Temporary tomorrow weather push test
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - "push-worker/src/index.js"
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  test:
+    if: ${{ vars.CLOUDFLARE_DEPLOY_ENABLED == 'true' }}
+    runs-on: ubuntu-latest
+    steps:
+      - name: Wait for Worker deployment
+        run: sleep 30
+
+      - name: Send real tomorrow weather push
+        env:
+          PUSH_ADMIN_TOKEN: ${{ secrets.PUSH_ADMIN_TOKEN }}
+        run: |
+          set -euo pipefail
+          curl --fail-with-body --silent --show-error \
+            -X POST \
+            -H "Authorization: Bearer $PUSH_ADMIN_TOKEN" \
+            https://gfs-watch-push.muhsin-ulusoy.workers.dev/admin/test-tomorrow-weather-push
