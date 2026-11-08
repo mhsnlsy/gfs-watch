@@ -42,7 +42,7 @@ const ts=v=>{if(!v)return "—";const d=new Date(v);return Number.isFinite(d.get
 const tsGfsValid=v=>{if(!v)return "—";const d=new Date(v);if(!Number.isFinite(d.getTime()))return "—";const date=new Intl.DateTimeFormat("en-GB",{timeZone:"UTC",day:"2-digit",month:"2-digit"}).format(d);const weekday=new Intl.DateTimeFormat("en-GB",{timeZone:"UTC",weekday:"short"}).format(d);const clock=new Intl.DateTimeFormat("en-GB",{timeZone:"UTC",hour:"2-digit",minute:"2-digit",hourCycle:"h23"}).format(d);return date+" "+weekday+" · "+clock+" TSİ"};
 const dayKey=v=>{const d=new Date(v);return Number.isFinite(d.getTime())?new Intl.DateTimeFormat("en-CA",{timeZone:"UTC",year:"numeric",month:"2-digit",day:"2-digit"}).format(d):"—"};
 const dayLabel=k=>{const p=k.split("-");return p[2]+"."+p[1]};
-let busy=false, f72=null, comparison=null, stationHistory=null, rainHistory=null, evObservation=null, evHistory=null, stationMode="home";
+let busy=false, f180=null, comparison=null, stationHistory=null, rainHistory=null, evObservation=null, evHistory=null, stationMode="home";
 // Köy Ev is the only initial state. Do not derive the initial station from DOM, cache, or prior UI state.
 window.__KOY_DEFAULT_STATION="home";
 async function get(path){const url=BASE+path;const r=await fetch(url+"?v="+Date.now(),{cache:"no-store"});if(!r.ok)throw Error("HTTP "+r.status+" · "+url);return r.json()}
@@ -400,7 +400,7 @@ function svgDaily(runs,metric,title,unit,mode){
 function windDir(deg){const n=Number(deg);if(!Number.isFinite(n))return "—";const dirs=["K","KKD","KD","DKD","D","DGD","GD","GBD","B","GBB","KB","KKB"];return dirs[Math.round(n/30)%12]||"—"}
 function feelsLike(t,rh,wind){const T=Number(t),H=Number(rh),W=Number(wind);if(!Number.isFinite(T)||!Number.isFinite(H))return null;if(T>=20)return Number((-8.784+1.611*T+2.338*H-0.146*T*H-0.0123*T*T-0.0164*H*H+0.00221*T*T*H+0.000725*T*H*H-0.00000358*T*T*H*H).toFixed(1));if(T<=10&&Number.isFinite(W)){if(W<=4.8)return Number(T.toFixed(1));return Number((13.12+0.6215*T-11.37*Math.pow(W,0.16)+0.3965*T*Math.pow(W,0.16)).toFixed(1));}return Number(T.toFixed(1));}
 function dewpoint(t,rh){const T=Number(t),H=Number(rh);if(!Number.isFinite(T)||!Number.isFinite(H)||H<=0)return null;const a=17.62,b=243.12,g=Math.log(H/100)+a*T/(b+T);return b*g/(a-g)}
-function renderMgmObservation(o,history,f72){
+function renderMgmObservation(o,history,f180){
  if(!o)return;
  const isHome=stationMode==="home";
  const stationName=isHome?"Köy Ev":"Çanakçı MGM";
@@ -479,7 +479,7 @@ function renderMgmObservation(o,history,f72){
  if(precipitationPhase==="snow")$("rain-brief-current").textContent="Kar yağışı tespit edildi · Çanakçı MGM ("+fmt(mgmRain)+" mm/son 1 saat).";
  else if(precipitationPhase==="rain")$("rain-brief-current").textContent="Yağışlı.";
  else $("rain-brief-current").textContent="Çanakçı MGM ölçümünde son 1 saatte yağış yok.";
- const pts=pointsOf(f72||{},72),future=pts.filter(p=>num(p.precipitation_6h_mm)>0.1);
+ const pts=pointsOf(f180||{},72),future=pts.filter(p=>num(p.precipitation_6h_mm)>0.1);
  if(future.length){
   const firstRainIndex=pts.findIndex(p=>num(p.precipitation_6h_mm)>0.1);
   const firstDry=pts.slice(firstRainIndex+1).find(p=>{const rain=num(p.precipitation_6h_mm);return rain!=null&&Number(rain.toFixed(1))===0;});
@@ -510,14 +510,15 @@ function meteoptTableValue(value,field,digits=1){
  const band=meteoptTableBand(field,value);
  return '<span class="meteopt-value '+band+'">'+fmt(value,digits)+'</span>';
 }
-function renderF72(d){
- const pts=pointsOf(d,72);
+function renderF180(d){
+ const pts=pointsOf(d,180);
  const body=$("meteopt-table-body");
- body.innerHTML=pts.length?pts.map(p=>'<tr><td>F'+p.forecast_hour+'</td><td>'+tsGfsValid(p.valid_time_utc)+'</td><td>'+meteoptTableValue(num(p.temperature_2m_c),"t2m")+'</td><td>'+meteoptTableValue(num(p.precipitation_6h_mm),"precip")+'</td><td>'+meteoptTableValue(num(p.wind_speed_10m_kmh),"wind",0)+'</td><td>'+meteoptTableValue(num(p.temperature_850hpa_c),"t850")+'</td><td>'+meteoptTableValue(num(p.wind_speed_850hpa_kmh),"wind",0)+'</td><td>'+meteoptTableValue(num(p.humidity_2m_percent),"rh2m",0)+'</td><td>'+meteoptTableValue(dewpoint(num(p.temperature_2m_c),num(p.humidity_2m_percent)),"dewpoint")+'</td><td>'+meteoptTableValue(num(p.snowln),"snowln",0)+'</td></tr>').join(""):'<tr><td colspan="10" class="meteopt-table-empty">F72 adımları henüz yok.</td></tr>';
- $("meteopt-table-status").textContent=pts.length+" / 24 adım";
+ body.innerHTML=pts.length?pts.map(p=>'<tr><td>F'+p.forecast_hour+'</td><td>'+tsGfsValid(p.valid_time_utc)+'</td><td>'+meteoptTableValue(num(p.temperature_2m_c),"t2m")+'</td><td>'+meteoptTableValue(num(p.precipitation_6h_mm),"precip")+'</td><td>'+meteoptTableValue(num(p.wind_speed_10m_kmh),"wind",0)+'</td><td>'+meteoptTableValue(num(p.temperature_850hpa_c),"t850")+'</td><td>'+meteoptTableValue(num(p.wind_speed_850hpa_kmh),"wind",0)+'</td><td>'+meteoptTableValue(num(p.humidity_2m_percent),"rh2m",0)+'</td><td>'+meteoptTableValue(dewpoint(num(p.temperature_2m_c),num(p.humidity_2m_percent)),"dewpoint")+'</td><td>'+meteoptTableValue(num(p.snowln),"snowln",0)+'</td></tr>').join(""):'<tr><td colspan="10" class="meteopt-table-empty">F180 tahmin adımları henüz yok.</td></tr>';
+ const intervals=Array.from(new Set(pts.slice(1).map((point,index)=>Number(point.forecast_hour)-Number(pts[index].forecast_hour)).filter(value=>Number.isFinite(value)&&value>0))).sort((a,b)=>a-b);
+ const cadence=intervals.length?intervals.map(value=>value+" saat").join("/"):"model";
+ $("meteopt-table-status").textContent=pts.length+" adım · "+cadence+" aralıklı · 180. saate kadar";
  $("meteopt-table-run").textContent="Model döngüsü: "+ts(d.run_id_utc);
  $("meteopt-table-updated").textContent="Yayın: "+ts(d.published_at_utc);
- const first=pts[0];
 }
 function svgStationHistory(samples,metric,title,unit){
  const now=Date.now();
@@ -726,13 +727,13 @@ function renderRunLegend(source){
   return '<span class="next-72h-legend-item'+(latest?' is-latest':'')+'" role="listitem"><i class="next-72h-legend-line" style="--run-color:'+color+'" aria-hidden="true"></i><span>'+esc(gfsRunLabel(run))+'</span>'+(latest?'<b class="next-72h-legend-tag">EN GÜNCEL</b>':'')+'</span>';
  }).join("");
 }
-function renderRuns(d,f72){
+function renderRuns(d,f180){
  const historyRuns=(Array.isArray(d && d.runs)?d.runs:[])
   .filter(run=>run&&Array.isArray(run.forecast_6_hourly)&&run.forecast_source==="meteopt")
   .sort((a,b)=>Date.parse(b.run_id_utc||"")-Date.parse(a.run_id_utc||""))
   .slice(0,4);
- const tableRun=f72&&Array.isArray(f72.forecast_6_hourly)&&f72.forecast_source==="meteopt"?f72:null;
- // The latest series is the exact same object used by renderF72() for the MeteoPT table.
+ const tableRun=f180&&Array.isArray(f180.forecast_6_hourly)&&f180.forecast_source==="meteopt"?f180:null;
+ // The latest F180-ready series is the exact same object used by renderF180() for the MeteoPT table.
  // Older lines come from the archived MeteoPT comparison bundle.
  const source=tableRun
   ? [tableRun,...historyRuns.filter(run=>run.run_id_utc!==tableRun.run_id_utc)].slice(0,4)
@@ -837,20 +838,28 @@ function renderRuns(d,f72){
 }
 async function refresh(){if(busy)return;busy=true;
  const results=await Promise.allSettled([
-  get("f72"),get("comparison"),getStation("/history/canakci?hours=72"),
+  get("comparison"),getStation("/history/canakci?hours=72"),
   getStation("/stations/canakci")
  ]);
- if(results[1].status==="fulfilled")comparison=results[1].value;else comparison=null;
- if(results[0].status==="fulfilled"){
-  f72=results[0].value;
+ if(results[0].status==="fulfilled")comparison=results[0].value;
+ const archivedF180=(comparison&&Array.isArray(comparison.runs)?comparison.runs:[])
+  .filter(run=>{
+   if(!run||run.forecast_source!=="meteopt"||!Array.isArray(run.forecast_6_hourly))return false;
+   const pts=pointsOf(run,180);
+   return pts.length>=30&&pts.some(point=>Number(point.forecast_hour)>=180);
+  })
+  .sort((a,b)=>Date.parse(b.run_id_utc||"")-Date.parse(a.run_id_utc||""));
+ f180=archivedF180[0]||null;
+ if(f180){
+  renderF180(stationMode==="home"?homeGfsDocument(f180):f180);
  }else{
-  // If the short F72 pointer is temporarily missing, recover the exact latest MeteoPT run
-  // from the comparison archive so the table and charts continue from one canonical payload.
-  const archivedLatest=(comparison && comparison.runs||[]).find(run=>run&&run.forecast_source==="meteopt"&&Array.isArray(run.forecast_6_hourly));
-  if(archivedLatest)f72=archivedLatest;
+  const body=$("meteopt-table-body");
+  if(body)body.innerHTML='<tr><td colspan="10" class="meteopt-table-empty">F180 tamamlanmış MeteoPT GFS döngüsü bekleniyor.</td></tr>';
+  $("meteopt-table-status").textContent="F180 çıktısı bekleniyor";
+  $("meteopt-table-run").textContent="F180 döngüsü bekleniyor";
+  $("meteopt-table-updated").textContent="180. saat tamamlanınca yayınlanacak";
  }
- if(f72)renderF72(stationMode==="home"?homeGfsDocument(f72):f72);
- if(results[2].status==="fulfilled")stationHistory=results[2].value;else stationHistory=null;
+ if(results[1].status==="fulfilled")stationHistory=results[1].value;else stationHistory=null;
  // The MGM history is the canonical source for both temperature and rainfall.
  // Keep a single request so the page cannot render two different history snapshots.
  rainHistory=stationHistory;
@@ -866,10 +875,10 @@ async function refresh(){if(busy)return;busy=true;
   $("station-temperature-trend").innerHTML='<div class="station-trend-empty">'+(stationMode==="home"?"Köy Ev sanal istasyon geçmişi bekleniyor…":"MGM istasyon geçmişi bekleniyor…")+'</div>';
   $("station-rain-trend").innerHTML='<div class="station-trend-empty">'+(stationMode==="home"?"Köy Ev sanal yağış arşivi bekleniyor…":"MGM yağış arşivi bekleniyor…")+'</div>';
  }
- if(results[3].status==="fulfilled"&&results[3].value && results[3].value.station){
-  window.__koyMgmObservation=results[3].value.station;
+ if(results[2].status==="fulfilled"&&results[2].value && results[2].value.station){
+  window.__koyMgmObservation=results[2].value.station;
   if(!evObservation)evObservation=buildVirtualHomeObservation(window.__koyMgmObservation);
-  window.__koyCurrentTemp=num(results[3].value.station.temperature_c == null ? results[3].value.station.temperature_2m_c : results[3].value.station.temperature_c);
+  window.__koyCurrentTemp=num(results[2].value.station.temperature_c == null ? results[2].value.station.temperature_2m_c : results[2].value.station.temperature_c);
   const o=window.__koyMgmObservation;
   $("mgm-status-date").textContent=ts(o.last_attempt_utc||o.fetched_at_utc||o.observed_at_utc);
   $("mgm-source-temp").innerHTML=fmt(o.temperature_2m_c)+"<small>°C</small>";
@@ -880,8 +889,8 @@ async function refresh(){if(busy)return;busy=true;
  // This is important for Köy Ev: its derived payload is a separate artifact.
  const selectedObservation=stationMode==="home"?evObservation:window.__koyMgmObservation;
  const selectedHistory=stationMode==="home"?evHistory:stationHistory;
- if(selectedObservation)renderMgmObservation(selectedObservation,selectedHistory,f72);
- renderRuns(stationMode==="home"?homeGfsComparison(comparison):comparison,stationMode==="home"?homeGfsDocument(f72):f72);
+ if(selectedObservation)renderMgmObservation(selectedObservation,selectedHistory,f180);
+ renderRuns(stationMode==="home"?homeGfsComparison(comparison):comparison,stationMode==="home"?homeGfsDocument(f180):f180);
  busy=false;
 }
 function setStationMode(mode){
@@ -893,8 +902,8 @@ function setStationMode(mode){
  const o=stationMode==="home"?evObservation:window.__koyMgmObservation;
  const h=stationMode==="home"?evHistory:stationHistory;
  if(h)renderStationHistory(h,stationMode==="home"?h:rainHistory);
- if(o)renderMgmObservation(o,h,stationMode==="home"?homeGfsDocument(f72):f72);
- renderRuns(stationMode==="home"?homeGfsComparison(comparison):comparison,stationMode==="home"?homeGfsDocument(f72):f72);
+ if(o)renderMgmObservation(o,h,stationMode==="home"?homeGfsDocument(f180):f180);
+ renderRuns(stationMode==="home"?homeGfsComparison(comparison):comparison,stationMode==="home"?homeGfsDocument(f180):f180);
 }
 $("station-enka-button") && $("station-enka-button").addEventListener("click",()=>setStationMode("mgm"));
 $("station-home-button") && $("station-home-button").addEventListener("click",()=>setStationMode("home"));
