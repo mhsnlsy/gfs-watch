@@ -2469,16 +2469,23 @@
     function renderStationGap(){
       const node=$("station-gap");
       if(!node)return;
-      const balmumcu=enkaStationObservation,eyup=eyupsultanStationObservation;
+      const stationMap={
+        enka:enkaStationObservation,
+        eyupsultan:eyupsultanStationObservation,
+        sisli:sisliStationObservation
+      };
+      const otherKey=activeStation==="eyupsultan"?"sisli":"eyupsultan";
+      const hereStation=stationMap[activeStation];
+      const otherStation=stationMap[otherKey];
       const hide=()=>{node.hidden=true;node.textContent="";};
-      if(!stationObservationIsFresh(balmumcu)||!stationObservationIsFresh(eyup)){hide();return;}
-      const balmumcuAt=Date.parse(balmumcu.observed_at_utc||"");
-      const eyupAt=Date.parse(eyup.observed_at_utc||"");
-      if(!Number.isFinite(balmumcuAt)||!Number.isFinite(eyupAt)||Math.abs(balmumcuAt-eyupAt)>30*60000){hide();return;}
-      const viewingEyup=activeStation==="eyupsultan";
-      const here=viewingEyup?Number(eyup.temperature_2m_c):Number(balmumcu.temperature_2m_c);
-      const there=viewingEyup?Number(balmumcu.temperature_2m_c):Number(eyup.temperature_2m_c);
-      const other=viewingEyup?"Balmumcu":"Eyüpsultan";
+      if(!stationObservationIsFresh(hereStation)||!stationObservationIsFresh(otherStation)){hide();return;}
+      const hereAt=Date.parse(hereStation.observed_at_utc||"");
+      const otherAt=Date.parse(otherStation.observed_at_utc||"");
+      if(!Number.isFinite(hereAt)||!Number.isFinite(otherAt)||Math.abs(hereAt-otherAt)>30*60000){hide();return;}
+      const here=Number(hereStation.temperature_2m_c);
+      const there=Number(otherStation.temperature_2m_c);
+      if(!Number.isFinite(here)||!Number.isFinite(there)){hide();return;}
+      const other=otherKey==="sisli"?"Şişli":"Eyüpsultan";
       const delta=here-there;
       const gap=Math.abs(delta);
       node.hidden=false;
