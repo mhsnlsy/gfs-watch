@@ -1,4 +1,8 @@
-function clearGfsSvgGroup(group){\n  if(!group)return;\n  while(group.firstChild)group.removeChild(group.firstChild);\n}\nfunction escapeGfsTooltip(value){
+function clearGfsSvgGroup(group){
+  if(!group)return;
+  while(group.firstChild)group.removeChild(group.firstChild);
+}
+function escapeGfsTooltip(value){
   return String(value == null ? "" : value).replace(/[&<>"']/g,char=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[char]));
 }
 function formatGfsTooltipNumber(value){
