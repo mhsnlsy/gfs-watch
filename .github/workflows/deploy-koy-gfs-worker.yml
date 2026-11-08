@@ -164,6 +164,8 @@ jobs:
           curl --silent --show-error --fail --max-time 60 "$KOY_GFS_API/f72?check=$(date +%s)" -o "$RUNNER_TEMP/koy-f72.json"
 
       - name: Verify live F72 MeteoPT snow-line contract
+        env:
+          KOY_GFS_API: https://gfs-watch-koy-gfs.muhsin-ulusoy.workers.dev/api
         run: |
           set -euo pipefail
           node - "$RUNNER_TEMP/koy-f72.json" <<'NODE'
