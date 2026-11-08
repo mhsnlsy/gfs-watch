@@ -1,4 +1,6 @@
-const API_BASE = "https://api.meteopt.com/gfs/json";
+import { METEOPT_GFS_API, METEOPT_SOURCE_POLICY, meteoptSourceMetadata } from "../../shared/meteopt-source.js";
+
+const API_BASE = METEOPT_GFS_API;
 const LOCATION = {
   name: "Giresun / Çanakçı",
   latitude: 40.9557,
@@ -142,6 +144,8 @@ function normalizeDocument(candidate, now) {
   const base = {
     location: LOCATION,
     source: "MeteoPT GFS",
+    source_policy: METEOPT_SOURCE_POLICY,
+    sources: meteoptSourceMetadata({ gfs_source_url: candidate.url }),
     source_url: candidate.url,
     run_id_utc: cycle.toISOString(),
     published_at_utc: new Date(now).toISOString(),
