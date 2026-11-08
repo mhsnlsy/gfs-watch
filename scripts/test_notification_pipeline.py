@@ -99,6 +99,7 @@ def main() -> None:
     # R2 migration is staged independently and uses a dedicated least-privilege token.
     assert "workflow_dispatch:" in archive_sync
     assert "push:" not in archive_sync
+    assert "push:" not in archive_sync
     assert "CLOUDFLARE_R2_API_TOKEN" in archive_sync
     assert "koy-mgm-data" not in archive_sync
     assert "istanbul-gfs-worker/**" not in platform_workflow
@@ -122,7 +123,9 @@ def main() -> None:
     assert "R2" in web_worker
     assert "fetchD1PublicationAsset" in web_worker
     assert '"/gfs/publication-asset/" + normalized' in web_worker
-    # SVG rebuilds must update the D1-first publication copy that the live web gateway serves.
+    # Legacy SVG rebuild remains manual-only; production SVG generation is Cloudflare-native.
+    assert "workflow_dispatch:" in istanbul_svg_workflow
+    assert "push:" not in istanbul_svg_workflow
     assert "Publish rebuilt report assets to Cloudflare D1" in istanbul_svg_workflow
     assert "gfs/publication-upload" in istanbul_svg_workflow
     assert "GFS_DISPATCH_TOKEN" in istanbul_svg_workflow
