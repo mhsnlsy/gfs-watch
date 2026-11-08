@@ -1368,6 +1368,281 @@ html.ios12 .backdrop-filter{display:none}
   html.ios12 .notification-list>.notification-card{margin-bottom:13px}
 }
 </style>
+<style id="ios12-homepage-legacy-layout">
+/* iOS 12 / Safari 12: use a conservative layout path.
+   No min()/max()/clamp()/env()/gap-dependent sizing is required here. */
+html.ios12{
+  -webkit-text-size-adjust:100%;
+  text-size-adjust:100%;
+  overflow-x:hidden;
+  scroll-behavior:auto;
+}
+html.ios12 body{
+  width:100%;
+  min-width:0;
+  min-height:100%;
+  overflow-x:hidden;
+  padding-left:0;
+  padding-right:0;
+  font-family:-apple-system,BlinkMacSystemFont,"Helvetica Neue",Arial,sans-serif;
+}
+html.ios12 .shell{
+  width:calc(100% - 24px)!important;
+  max-width:1120px!important;
+  margin-left:auto!important;
+  margin-right:auto!important;
+}
+html.ios12 .topbar{
+  display:flex!important;
+  min-height:64px!important;
+  height:auto!important;
+  padding:8px 0!important;
+  gap:10px!important;
+}
+html.ios12 .brand{
+  gap:8px!important;
+  font-family:-apple-system,BlinkMacSystemFont,"Helvetica Neue",Arial,sans-serif;
+}
+html.ios12 .top-right{
+  margin-left:auto!important;
+}
+html.ios12 .model-picker{
+  display:flex!important;
+  flex-shrink:0!important;
+}
+html.ios12 .model-picker button{
+  min-height:36px!important;
+  padding:7px 9px!important;
+}
+html.ios12 .hero{
+  display:block!important;
+  padding:28px 0 16px!important;
+}
+html.ios12 .hero > *{
+  display:block!important;
+  width:100%!important;
+  margin-bottom:16px!important;
+}
+html.ios12 h1{
+  font-size:48px!important;
+  line-height:1.08!important;
+  max-width:570px!important;
+}
+html.ios12 .weather-card{
+  width:100%!important;
+  min-height:0!important;
+  padding:18px!important;
+}
+html.ios12 .weather-stats{
+  display:flex!important;
+  flex-wrap:wrap!important;
+  width:100%!important;
+  margin-top:14px!important;
+}
+html.ios12 .weather-stats .stat{
+  flex:1 1 30%!important;
+  width:30%!important;
+  min-width:0!important;
+  margin:0 4px 7px 0!important;
+}
+html.ios12 .dashboard-top{
+  display:block!important;
+  width:100%!important;
+  margin:0!important;
+  padding:12px 0!important;
+}
+html.ios12 .dashboard-top > .dashboard-left,
+html.ios12 .dashboard-top > .dashboard-briefing,
+html.ios12 .dashboard-top > .enka-camera-panel{
+  display:block!important;
+  width:100%!important;
+  max-width:100%!important;
+  min-width:0!important;
+  margin:0 0 12px 0!important;
+  padding:0!important;
+}
+html.ios12 .dashboard-top > .dashboard-briefing{
+  padding-top:0!important;
+}
+html.ios12 .dashboard-top .station-card{
+  display:block!important;
+  width:100%!important;
+  height:auto!important;
+  min-height:0!important;
+  padding:15px!important;
+}
+html.ios12 .dashboard-top .station-card > *{
+  display:block!important;
+  width:100%!important;
+  margin-left:0!important;
+  margin-right:0!important;
+}
+html.ios12 .dashboard-top .station-card .station-overview{
+  display:block!important;
+}
+html.ios12 .dashboard-top .station-card .station-current{
+  display:block!important;
+  width:100%!important;
+}
+html.ios12 .dashboard-top .station-card > .weather-stats{
+  display:flex!important;
+  flex-wrap:wrap!important;
+  width:100%!important;
+  margin-top:10px!important;
+  padding:0!important;
+}
+html.ios12 .dashboard-top .station-card > .weather-stats .stat{
+  flex:1 1 30%!important;
+  width:30%!important;
+  margin:0 5px 8px 0!important;
+  padding:4px 5px!important;
+}
+html.ios12 .station-history-inline{
+  display:block!important;
+  width:100%!important;
+  height:auto!important;
+  min-height:0!important;
+  margin-top:10px!important;
+}
+html.ios12 .station-history-inline .history-charts{
+  display:block!important;
+  width:100%!important;
+}
+html.ios12 .station-history-inline .history-chart-card{
+  display:block!important;
+  width:100%!important;
+  margin-bottom:10px!important;
+}
+html.ios12 .station-history-inline .history-chart{
+  width:100%!important;
+  height:120px!important;
+}
+html.ios12 .enka-camera-panel{
+  width:100%!important;
+}
+html.ios12 .enka-camera-frame{
+  width:100%!important;
+  height:auto!important;
+  min-height:180px!important;
+}
+html.ios12 .daily-grid{
+  display:flex!important;
+  flex-wrap:wrap!important;
+  width:100%!important;
+}
+html.ios12 .daily-grid .day{
+  flex:1 1 11%!important;
+  width:11%!important;
+  margin:0 5px 7px 0!important;
+}
+html.ios12 .lower-grid{
+  display:block!important;
+  width:100%!important;
+}
+html.ios12 .lower-grid > *{
+  width:100%!important;
+  margin-bottom:12px!important;
+}
+html.ios12 .chart-stack{
+  display:block!important;
+}
+html.ios12 .chart-stack > .chart-card{
+  display:block!important;
+  width:100%!important;
+  margin-bottom:12px!important;
+}
+html.ios12 .chart-wrap{
+  width:100%!important;
+  overflow-x:auto!important;
+  -webkit-overflow-scrolling:touch;
+}
+html.ios12 .chart-wrap svg{
+  width:100%!important;
+  min-width:560px!important;
+  max-width:none!important;
+}
+html.ios12 .notification-images{
+  display:block!important;
+  width:100%!important;
+}
+html.ios12 .notification-image-item{
+  display:block!important;
+  width:100%!important;
+  margin-bottom:12px!important;
+}
+html.ios12 .notification-image{
+  display:block!important;
+  width:100%!important;
+  height:auto!important;
+}
+html.ios12 .gfs-interactive-chart,
+html.ios12 .gfs-mobile-panel-stack{
+  width:100%!important;
+  max-width:100%!important;
+}
+html.ios12 .gfs-mobile-panel-stack{
+  display:block!important;
+}
+html.ios12 .gfs-mobile-panel-host{
+  display:block!important;
+  width:100%!important;
+  margin-bottom:10px!important;
+}
+html.ios12 .gfs-mobile-panel-host .gfs-mobile-panel-svg{
+  width:100%!important;
+  height:auto!important;
+}
+html.ios12 .gfs-chart-tooltip{
+  max-width:calc(100% - 16px)!important;
+  -webkit-backdrop-filter:none!important;
+  backdrop-filter:none!important;
+}
+html.ios12 .footer{
+  display:block!important;
+}
+html.ios12 .footer > *{
+  display:block!important;
+  margin-bottom:7px!important;
+}
+@media(max-width:700px){
+  html.ios12 .shell{width:calc(100% - 20px)!important}
+  html.ios12 .topbar{flex-wrap:wrap!important}
+  html.ios12 .brand{font-size:14px!important}
+  html.ios12 .brand small{font-size:8px!important}
+  html.ios12 .top-right{margin-left:auto!important}
+  html.ios12 .topbar nav{
+    display:flex!important;
+    order:3!important;
+    width:100%!important;
+    overflow-x:auto!important;
+    gap:14px!important;
+    padding:5px 0!important;
+    white-space:nowrap!important;
+  }
+  html.ios12 .topbar nav a{font-size:11px!important}
+  html.ios12 h1{font-size:40px!important}
+  html.ios12 .temperature{font-size:58px!important}
+  html.ios12 .weather-symbol{font-size:34px!important}
+  html.ios12 .weather-card{padding:15px!important}
+  html.ios12 .dashboard-top .station-card > .weather-stats .stat{
+    flex:1 1 46%!important;
+    width:46%!important;
+    margin-right:4px!important;
+  }
+  html.ios12 .daily-grid .day{
+    flex:1 1 46%!important;
+    width:46%!important;
+  }
+  html.ios12 .chart-wrap svg{min-width:520px!important}
+  html.ios12 .notification-image{max-height:none!important}
+}
+@media(max-width:390px){
+  html.ios12 h1{font-size:36px!important}
+  html.ios12 .temperature{font-size:52px!important}
+  html.ios12 .dashboard-top .station-card .stat .name{font-size:9px!important}
+  html.ios12 .dashboard-top .station-card .stat .value{font-size:15px!important}
+}
+</style>
 </head>
 <body>
   <header class="shell topbar">
@@ -2074,7 +2349,7 @@ html.ios12 .backdrop-filter{display:none}
       const edge=(value,mae,sign)=>{const next=value+sign*(numeric(mae)?mae:0);return rainChart?Math.max(0,next):next;};
       const usual=p=>numeric(p.bias)?(rainChart?Math.max(0,p.value-p.bias):p.value-p.bias):p.value;
       const banded=data.flatMap(p=>numeric(p.mae)?[edge(p.value,p.mae,-1),edge(p.value,p.mae,1),usual(p)]:[usual(p)]);
-      const minimum=Math.min(...values,...banded),maximum=Math.max(...values,...banded),span=(maximum-minimum)||1,low=rainChart?0:minimum-span*.12,high=maximum+span*(rainChart?.16:.12);
+      const minimum=Math.min(...values,...banded),maximum=Math.max(...values,...banded),span=(maximum-minimum)||1,low=rainChart?0:minimum-span*.12,high=maximum+span*(rainChart ? .16 : .12);
       const x=lead=>left+lead/72*pw,y=value=>top+(high-value)/(high-low)*ph,coords=data.map(p=>({x:x(p.lead),y:y(p.value),time:p.time,valueLabel:p.label,detail:p.detail||("Tahmin adımı: +"+p.lead+" saat")}));
       const grid=[0,1,2].map(i=>{const value=low+(high-low)*i/2,yy=y(value);return '<line x1="'+left+'" y1="'+yy+'" x2="'+(width-right)+'" y2="'+yy+'" stroke="rgba(190,218,228,.14)" stroke-dasharray="3 5"/><text x="'+(left-6)+'" y="'+(yy+3)+'" fill="#91a9b8" font-size="9" text-anchor="end">'+fmt(value,label.startsWith("Yağış")?1:0)+'</text>';}).join("");
       // GFS 72 saatlik eksen: modelin gerçek geçerlilik saatlerini TSİ olarak göster.
