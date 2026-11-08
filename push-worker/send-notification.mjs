@@ -65,7 +65,7 @@ if (!subscriptions.length) {
 webPush.setVapidDetails(subject, publicKey, privateKey);
 
 const payload = JSON.stringify({
-  title: item.title || "İstanbul'un Havası",
+  title: item.title || "İstanbul Havası",
   body: String(item.summary || "Yeni İstanbul GFS hava raporu yayımlandı.").slice(0, 180),
   tag: testMode ? item.id : "gfs-" + item.id,
   url: "https://gfs-watch-web.muhsin-ulusoy.workers.dev/#bildirimler"
