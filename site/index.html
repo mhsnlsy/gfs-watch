@@ -1143,6 +1143,9 @@
       overflow:hidden!important;
       visibility:hidden!important;
     }
+    /* Never render an empty rainfall-warning pill. */
+    #rain-brief-heavy[hidden],
+    #rain-brief-heavy:empty{display:none!important}
 </style>
   <link rel="stylesheet" href="./meteopt-gfs-table.css?v=20261108-text-only-values-2">
 
@@ -1726,7 +1729,7 @@ html.ios12 .footer > *{
       <div class="rain-brief" id="rain-brief" aria-live="polite">
         <div class="delta-badge" id="rain-brief-current" data-source="live-station">Yağış yok</div>
         <div class="delta-badge" id="rain-brief-forecast">MeteoPT GFS tahmini bekleniyor.</div>
-        <div class="delta-badge" id="rain-brief-heavy"></div>
+        <div class="delta-badge" id="rain-brief-heavy" hidden></div>
       </div>
       
     </div>
@@ -2319,7 +2322,7 @@ html.ios12 .footer > *{
       const points=latestRainForecastPoints.filter(p=>p.modelLead>0&&numeric(p.precipitation_6h_mm)&&Number.isFinite(p.stamp)).sort((a,b)=>a.stamp-b.stamp);
       if(points.length<2){
         forecast.textContent="MeteoPT GFS verisi yeterli değil; yağış zamanı hesaplanamıyor.";
-        if(heavy)heavy.textContent="";
+        if(heavy){heavy.textContent="";heavy.hidden=true;}
         return;
       }
       const gaps=points.slice(1).map((p,i)=>(p.stamp-points[i].stamp)/3600000).filter(v=>v>0&&v<=12).sort((a,b)=>a-b);
@@ -2366,6 +2369,7 @@ html.ios12 .footer > *{
         const target=heavyActive[0]||heavyNext[0];
         if(target){
           const when=target.start<=now?"Şu anda":" "+dateTime(target.start)+" itibarıyla";
+          heavy.hidden=false;
           heavy.textContent="Kuvvetli yağış uyarısı: "+when+" "+fmt(target.mm,2)+" mm / 3 saat (2,00 mm üzeri) tahmin ediliyor.";
         }else{
           heavy.textContent="";
