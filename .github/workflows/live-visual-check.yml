@@ -85,7 +85,7 @@ jobs:
                 await page.goto(base+"/?visual-check="+Date.now(),{waitUntil:"domcontentloaded",timeout:45000});
                 await page.waitForFunction(()=>{
                   const s=document.querySelector("#meteopt-table-status")?.textContent||"";
-                  return /^\s*24\s*\/\s*24/.test(s);
+                  return s.includes("180. saate kadar");
                 },{timeout:45000});
                 await page.waitForFunction(()=>{
                   const title=document.querySelector("#station-card-title")?.textContent||"";
@@ -101,12 +101,13 @@ jobs:
                   status:document.querySelector("#meteopt-table-status")?.textContent||"",
                   run:document.querySelector("#meteopt-table-run")?.textContent||"",
                   rows:document.querySelectorAll("#meteopt-table-body tr").length,
+                  last_step:Number.parseInt((document.querySelector("#meteopt-table-body tr:last-child td:first-child")?.textContent||"").replace(/^F/i,""),10),
                   station_title:document.querySelector("#station-card-title")?.textContent||"",
                   station_temperature:document.querySelector("#temperature")?.textContent||"",
                   station_freshness:document.querySelector("#freshness")?.textContent||"",
                   horizontal_overflow_px:Math.max(0,document.documentElement.scrollWidth-window.innerWidth)
                 }));
-                if(result.rows!==24)throw new Error(view.name+": MeteoPT table has "+result.rows+" rows, expected 24.");
+                if(result.rows<30||result.last_step<180)throw new Error(view.name+": MeteoPT table did not reach F180 ("+result.rows+" rows; last step F"+result.last_step+").");
                 if(result.horizontal_overflow_px>2)throw new Error(view.name+": horizontal overflow "+result.horizontal_overflow_px+"px.");
 
                 await page.locator("#meteopt-gfs-table").scrollIntoViewIfNeeded();
