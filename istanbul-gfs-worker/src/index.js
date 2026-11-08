@@ -270,7 +270,7 @@ async function processQueuedReports(env) {
   const result = await env.GFS_DB.prepare(
     "SELECT run_id_utc, attempts FROM gfs_report_dispatch_queue " +
     "WHERE attempts < 288 AND (status = 'pending' OR (status = 'processing' AND dispatched_at_utc < ?)) " +
-    "ORDER BY run_id_utc ASC LIMIT 1"
+    "ORDER BY run_id_utc DESC LIMIT 1"
   ).bind(staleBefore).all();
   const job = (result.results || [])[0];
   if (!job) return { queued: 0, published: 0, failed: 0 };
@@ -861,9 +861,26 @@ async function collect(env, trigger = "unknown") {
 }
 async function latestPayload(env, bootstrap = true) {
   let current = await getCurrent(env, "latest");
-  if (!current && bootstrap) {
-    await collect(env);
-    current = await getCurrent(env, "latest");
+  // The homepage is a live data consumer. If the autonomous 10-minute Cron
+  // has fallen behind, refresh on read instead of serving an hours-old model
+  // run. This is intentionally Cloudflare-native and does not depend on GitHub.
+  const staleAfterMs = 20 * 60 * 1000;
+  const currentAgeMs = current?.updated_at_utc
+    ? Date.now() - Date.parse(current.updated_at_utc)
+    : Number.POSITIVE_INFINITY;
+  if (bootstrap && (!current || !Number.isFinite(currentAgeMs) || currentAgeMs > staleAfterMs)) {
+    try {
+      await collect(env, "live-read-refresh");
+      current = await getCurrent(env, "latest");
+    } catch (error) {
+      // Keep a known-good current payload available if the upstream source is
+      // temporarily unavailable during a page request.
+      if (!current) throw error;
+      console.error(JSON.stringify({
+        event: "istanbul_live_read_refresh_error",
+        message: String(error?.message || error),
+      }));
+    }
   }
   if (!current) return null;
   const runs = await listRuns(env, 4);
