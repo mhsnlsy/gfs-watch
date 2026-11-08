@@ -1734,7 +1734,7 @@ html,body{
 }
 
 @media(max-width:390px){
-  #meteopt-gfs-table .meteopt-data-table{font-size:8px!important}
+  #meteopt-gfs-table .meteopt-data-table{font-size:10px!important}
   #meteopt-gfs-table .meteopt-data-table th{font-size:9.5px!important}
   #meteopt-gfs-table .meteopt-data-table td{font-size:10px!important}
   #meteopt-gfs-table .meteopt-data-table .meteopt-value{font-size:11px!important}
