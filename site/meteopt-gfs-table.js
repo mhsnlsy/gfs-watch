@@ -1,8 +1,12 @@
 (() => {
   "use strict";
   const ROOT = "meteopt-gfs-table";
-  // Homepage table reads the same independent Istanbul GFS payload used by the live homepage.
-  const DATA_URL = "./data/istanbul-gfs-latest.json";
+  // The MeteoPT 72-hour table must follow the newest F72-ready cycle,
+  // independently from the slower F180 report/archive publication.
+  const DATA_URL = () => {
+    const base = String(window.ISTANBUL_GFS_API_BASE || window.location.origin || "").replace(/\/+$/, "");
+    return base + "/gfs/f72";
+  };
   const $ = (id) => document.getElementById(id);
   const finite = (value) => value !== null && value !== undefined && value !== "" && Number.isFinite(Number(value));
   const number = (value) => finite(value) ? Number(value) : null;
@@ -142,7 +146,7 @@
     const status = $("meteopt-table-status");
 
     try {
-      const response = await fetch(DATA_URL + "?meteopt-table=" + Date.now(), {
+      const response = await fetch(DATA_URL() + "?meteopt-table=" + Date.now(), {
         cache: "no-store"
       });
 
