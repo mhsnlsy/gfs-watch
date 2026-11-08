@@ -3342,8 +3342,7 @@ def create_valid_time_comparison_assets(current_run_id, payload, previous_runs):
 
         # Series are oldest -> newest. Reverse the shared web palette so the
         # newest line is lilac, then amber, blue, and turquoise.
-        cycle_palette = ["#8ABCE8", "#7DD3D7", "#F1C98B", "#B38BE8"]
-        active_palette = cycle_palette[-len(series):]
+        cycle_palette = {"06Z": "#B38BE8", "00Z": "#F1C98B", "18Z": "#7DD3D7", "12Z": "#8ABCE8"}
         metrics = (
             ("temp", "Sıcaklık", "°C"),
             ("temp_850", "850 hPa sıcaklık", "°C"),
@@ -3374,7 +3373,7 @@ def create_valid_time_comparison_assets(current_run_id, payload, previous_runs):
         legend_handles = []
         for series_index in reversed(range(len(series))):
             item = series[series_index]
-            color = active_palette[series_index]
+            color = cycle_palette.get(str(item["run_id"])[11:13] + "Z", "#B38BE8")
             is_latest = series_index == len(series) - 1
             legend_handles.append(Line2D(
                 [], [],
@@ -3461,7 +3460,7 @@ def create_valid_time_comparison_assets(current_run_id, payload, previous_runs):
                 axis.plot(
                     x_values,
                     y_values,
-                    color=active_palette[series_index],
+                    color=cycle_palette.get(str(item["run_id"])[11:13] + "Z", "#B38BE8"),
                     linewidth=3.2 if is_latest else 1.8,
                     linestyle="-" if is_latest else (0, (4, 3)),
                     marker="o" if is_latest else None,
