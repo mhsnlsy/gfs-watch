@@ -38,7 +38,7 @@ function positionGfsTooltip(host,tooltip,clientX,clientY){
   const rect=host.getBoundingClientRect();
   tooltip.hidden=false;
   tooltip.style.position="absolute";
-  tooltip.style.zIndex="2147483647";
+  tooltip.style.zIndex="1000";
   tooltip.style.pointerEvents="none";
   tooltip.style.left="0px";
   tooltip.style.top="0px";
@@ -294,66 +294,65 @@ function forceDarkGfsSvg(svg){
 function addMobileGfsCycleLabels(panelHost,panel,panelSvg){
   if(!panelHost||!panel)return;
   const series=Array.isArray(panel.series)?panel.series:[];
-  const cycles=[];
-  const seen=new Set();
+  if(!series.length)return;
 
-  series.forEach(item=>{
-    const label=String(item && item.label||"");
+  // The Cloudflare renderer writes the same run id onto the plotted SVG path
+  // and the interaction metadata. Match by that id and read the actual stroke
+  // painted by the graph. Never assign colors from a separate cycle palette.
+  const plottedLines=new Map();
+  if(panelSvg){
+    panelSvg.querySelectorAll("[data-gfs-series-run-id]").forEach(line=>{
+      const runId=String(line.getAttribute("data-gfs-series-run-id")||"");
+      if(runId)plottedLines.set(runId,line);
+    });
+  }
+
+  const cycles=series.map((item,index)=>{
+    const label=String(item&&item.label||"");
     const match=label.match(/(00|06|12|18)Z/i);
-    if(!match)return;
-    const cycle=match[1].toUpperCase()+"Z";
-    if(seen.has(cycle))return;
-    seen.add(cycle);
-    cycles.push({cycle,run_id_utc:String((item && (item.run_id_utc||item.runIdUtc||item.run_id))||""),color:String((item && item.color)||"#d9a7f5")});
-  });
+    if(!match)return null;
+    const runId=String(item&&item.run_id_utc||"");
+    const plotted=plottedLines.get(runId);
+    const actualStroke=plotted
+      ? String(plotted.getAttribute("stroke")||"").trim()
+      : "";
+    const metadataColor=String(item&&item.color||"").trim();
+    const color=/^#[0-9a-f]{6}$/i.test(actualStroke)
+      ? actualStroke
+      : (/^#[0-9a-f]{6}$/i.test(metadataColor)?metadataColor:"#8EAEB7");
+    const runTime=Date.parse(runId);
+    return {
+      cycle:match[1].toUpperCase()+"Z",
+      runId,
+      runTime:Number.isFinite(runTime)?runTime:null,
+      index,
+      color
+    };
+  }).filter(Boolean);
 
   if(!cycles.length)return;
 
-  // Use an HTML legend rather than modifying the SVG title. This is deliberately
-  // outside the SVG so mobile WebViews cannot clip or discard the labels.
-  // Sort by the actual model run timestamp, newest -> oldest.
-  // Never sort by cycle label: across midnight, 00Z/06Z/12Z/18Z labels
-  // are not an age ordering. The newest run must receive lilac.
+  // Newest -> oldest. The worker's series list is oldest -> newest, so the
+  // index fallback also preserves the true graph chronology for legacy SVGs.
   cycles.sort((a,b)=>{
-    const at=Date.parse(String(a.run_id_utc||""));
-    const bt=Date.parse(String(b.run_id_utc||""));
-    if(Number.isFinite(at)&&Number.isFinite(bt))return bt-at;
-    return 0;
+    if(a.runTime!==null&&b.runTime!==null)return b.runTime-a.runTime;
+    return b.index-a.index;
   });
 
-  // Build the legend FROM THE ACTUAL GRAPH LINES.
-  // The SVG renderer tags every plotted series as #gfs-series-N. We read the
-  // stroke that is actually painted in the graph instead of reconstructing
-  // colors from cycle names, timestamps, or a separate palette.
-  const graphColors=[];
-  const seriesNodes=panelSvg ? panelSvg.querySelectorAll('[id^="gfs-series-"]') : [];
-  seriesNodes.forEach((node,index)=>{
-    const line=node.querySelector ? (node.querySelector("path,polyline,line")||node) : node;
-    const stroke=(line.getAttribute("stroke")||"").trim();
-    const style=(line.getAttribute("style")||"");
-    const styleMatch=style.match(/(?:^|;)\\s*stroke\\s*:\\s*([^;]+)/i);
-    graphColors[index]=(stroke || (styleMatch ? styleMatch[1].trim() : "")).trim();
-  });
-  // Legend order is newest -> oldest. Keep that order and make the
-  // newest cycle unconditionally lilac.
-  const agePalette=["#B38BE8","#F1C98B","#7DD3D7","#8ABCE8"];
-  cycles.forEach((item,index)=>{
-    item.color=agePalette[Math.min(index,agePalette.length-1)] || graphColors[index] || "#B38BE8";
-  });
   const legend=document.createElement("div");
   legend.className="gfs-mobile-cycle-legend";
-  legend.setAttribute("aria-label","GFS döngüleri");
+  legend.setAttribute("aria-label","GFS döngüleri · grafikteki çizgilerin renkleri");
 
   Object.assign(legend.style,{
     position:"absolute",
     top:"8px",
     left:"108px",
-    right:"56px",
-    zIndex:"30",
+    right:"8px",
+    zIndex:"1100",
     display:"flex",
     alignItems:"center",
     justifyContent:"flex-start",
-    gap:"9px",
+    gap:"8px",
     flexWrap:"nowrap",
     pointerEvents:"none",
     fontFamily:"inherit",
@@ -362,16 +361,32 @@ function addMobileGfsCycleLabels(panelHost,panel,panelSvg){
   });
 
   cycles.forEach(item=>{
-    const span=document.createElement("span");
-    span.textContent=item.cycle;
-    Object.assign(span.style,{
+    const entry=document.createElement("span");
+    entry.setAttribute("aria-label",item.cycle);
+    Object.assign(entry.style,{
       color:item.color,
-      fontSize:"11px",
+      fontSize:"10.5px",
       fontWeight:"800",
-      textShadow:"0 1px 2px rgba(0,0,0,.55)",
-      display:"inline-block"
+      textShadow:"0 1px 2px rgba(0,0,0,.7)",
+      display:"inline-flex",
+      alignItems:"center",
+      gap:"4px",
+      flex:"0 0 auto"
     });
-    legend.appendChild(span);
+    const swatch=document.createElement("i");
+    Object.assign(swatch.style,{
+      display:"inline-block",
+      width:"10px",
+      height:"3px",
+      borderRadius:"2px",
+      backgroundColor:item.color,
+      flex:"0 0 10px"
+    });
+    const text=document.createElement("span");
+    text.textContent=item.cycle;
+    entry.appendChild(swatch);
+    entry.appendChild(text);
+    legend.appendChild(entry);
   });
 
   panelHost.appendChild(legend);
