@@ -228,7 +228,7 @@ jobs:
           curl --silent --show-error --fail --max-time 20 "$WEB/gfs-comparison-tooltip.js?v=20261108-180h-layout-clipping-1" -o "$RUNNER_TEMP/live-gfs-tooltip.js"
           grep -q 'function forceDarkGfsSvg(svg)' "$RUNNER_TEMP/live-gfs-tooltip.js"
           curl --silent --show-error --fail --max-time 20 "$WEB/service-worker.js?verify=$(date +%s)" -o "$RUNNER_TEMP/live-service-worker.js"
-          grep -q 'istanbul-hava-shell-v31-eyupsultan' "$RUNNER_TEMP/live-service-worker.js"
+          grep -q 'istanbul-hava-shell-v32-station-same-origin' "$RUNNER_TEMP/live-service-worker.js"
           grep -q 'istanbul-hava-data-v4' "$RUNNER_TEMP/live-service-worker.js"
           echo "Verified live renderer, cache-busted script and refreshed service-worker caches."
 
@@ -401,6 +401,34 @@ jobs:
           grep -Fq 'function dewpoint(' "$RUNNER_TEMP/public-meteopt-gfs-table.js" || { echo "::error::Public domain table script is missing Magnus dew point calculation."; exit 1; }
           grep -Fq 'valueCell(snowln, "snowln", 0)' "$RUNNER_TEMP/public-meteopt-gfs-table.js" || { echo "::error::Public domain table script is missing Snowln rendering."; exit 1; }
           echo "Public domain homepage, F72 API and MeteoPT table script verified."
+
+          echo "Checking the apex domain used by visitors and its same-origin station API..."
+          APEX_SITE="https://istanbulunhavasi.com"
+          curl --silent --show-error --fail --max-time 30 "$APEX_SITE/?station-check=$(date +%s)" -o "$RUNNER_TEMP/apex-homepage.html"
+          grep -Fq 'responsive-2026-11-08-station-same-origin-v1' "$RUNNER_TEMP/apex-homepage.html" || { echo "::error::Apex domain is not serving the current station-enabled homepage."; exit 1; }
+          curl --silent --show-error --fail --max-time 20 "$APEX_SITE/api/stations/health?check=$(date +%s)" -o "$RUNNER_TEMP/apex-station-health.json"
+          curl --silent --show-error --fail --max-time 20 "$APEX_SITE/api/stations?check=$(date +%s)" -o "$RUNNER_TEMP/apex-stations.json"
+          node - "$RUNNER_TEMP/apex-station-health.json" "$RUNNER_TEMP/apex-stations.json" <<'NODE'
+          const fs = require("fs");
+          const [health, stations] = process.argv.slice(2).map(file => JSON.parse(fs.readFileSync(file, "utf8")));
+          const rows = stations.stations || [];
+          const required = ["enka", "eyupsultan", "sisli"];
+          const summary = required.map(key => {
+            const row = rows.find(item => item.station_key === key);
+            return {
+              key,
+              station_id: row?.station_id || null,
+              status: row?.status || null,
+              temperature_c: row?.temperature_c ?? row?.temperature_2m_c ?? null,
+              observed_at_utc: row?.observed_at_utc || null,
+              last_error: row?.last_error || null
+            };
+          });
+          if (health.ok !== true || stations.ok !== true || summary.some(row => !row.station_id)) {
+            throw new Error("Apex station API contract failed: " + JSON.stringify({health, summary}));
+          }
+          console.log("Apex station API diagnostics:", JSON.stringify(summary));
+          NODE
 
           echo "Checking Istanbul GFS through internal Service Binding..."
           curl --silent --show-error --fail --max-time 45 "$WEB/gfs/latest?check=$(date +%s)" -o "$RUNNER_TEMP/web-gfs.json"
