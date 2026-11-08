@@ -3,10 +3,9 @@
   const ROOT = "meteopt-gfs-table";
   // The MeteoPT 72-hour table must follow the newest F72-ready cycle,
   // independently from the slower F180 report/archive publication.
-  const DATA_URL = () => {
-    const base = String(window.ISTANBUL_GFS_API_BASE || window.location.origin || "").replace(/\/+$/, "");
-    return base + "/gfs/f72";
-  };
+  const API_BASE = () => String(window.ISTANBUL_GFS_API_BASE || window.location.origin || "").replace(/\/+$/, "");
+  const DATA_URL = () => API_BASE() + "/gfs/f72";
+  const FALLBACK_DATA_URL = () => API_BASE() + "/gfs/latest";
   const $ = (id) => document.getElementById(id);
   const finite = (value) => value !== null && value !== undefined && value !== "" && Number.isFinite(Number(value));
   const number = (value) => finite(value) ? Number(value) : null;
@@ -160,11 +159,20 @@
     const status = $("meteopt-table-status");
 
     try {
-      const response = await fetch(DATA_URL() + "?meteopt-table=" + Date.now(), {
+      let response = await fetch(DATA_URL() + "?meteopt-table=" + Date.now(), {
         cache: "no-store"
       });
 
-      if (!response.ok) throw new Error("HTTP " + response.status);
+      // Keep the public table alive if the dedicated F72 D1 row is temporarily
+      // unavailable. The canonical /gfs/latest payload contains the same
+      // MeteoPT run and a full forecast; we expose only the first 72h below.
+      if (!response.ok) {
+        const f72Status = response.status;
+        response = await fetch(FALLBACK_DATA_URL() + "?meteopt-table-fallback=" + Date.now(), {
+          cache: "no-store"
+        });
+        if (!response.ok) throw new Error("F72 HTTP " + f72Status + " / latest HTTP " + response.status);
+      }
 
       const document = await response.json();
 
@@ -175,6 +183,10 @@
       ) {
         throw new Error("MeteoPT GFS verisi henüz yayınlanmadı.");
       }
+
+      // /gfs/latest is the canonical F180 payload. Normalize it into the
+      // same F72 presentation contract so the rest of this renderer stays
+      // identical and the visible table never mixes sources.
 
       // Publish the exact normalized points used by the visible 72-hour table.
       // The homepage rain badges listen to this event and therefore cannot drift
