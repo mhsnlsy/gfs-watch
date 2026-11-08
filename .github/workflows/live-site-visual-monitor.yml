@@ -2,12 +2,12 @@ name: Live Site Visual Monitor
 
 on:
   workflow_dispatch:
-  push:
+  workflow_run:
+    workflows:
+      - "Deploy Cloudflare Platform"
+      - "Deploy Cloudflare Istanbul GFS Service"
+    types: [completed]
     branches: [main]
-    paths:
-      - ".github/workflows/live-site-visual-monitor.yml"
-      - "site/**"
-      - "web-worker/**"
   schedule:
     - cron: "17 */6 * * *"
 
@@ -21,6 +21,7 @@ concurrency:
 jobs:
   visual-monitor:
     name: Inspect production site in Chromium
+    if: ${{ github.event_name != 'workflow_run' || github.event.workflow_run.conclusion == 'success' }}
     runs-on: ubuntu-latest
     timeout-minutes: 15
     steps:
