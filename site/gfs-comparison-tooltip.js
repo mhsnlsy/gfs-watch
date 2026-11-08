@@ -306,7 +306,7 @@ function addMobileGfsCycleLabels(panelSvg,panel,metadata){
 
   series.slice().reverse().forEach(item=>{
     const label=String(item?.label||"");
-    const match=label.match(/(?:^|\b)(00|06|12|18)Z(?:\b|$)/i);
+    const match=label.match(/(00|06|12|18)Z/i);
     if(!match)return;
 
     const cycle=match[1].toUpperCase()+"Z";
