@@ -1,4 +1,4 @@
-# İstanbul'un Havası
+# İstanbul Havası
 
 **Resmî sürüm: 1.4.3**
 
