@@ -797,7 +797,7 @@ function renderRuns(d,f72){
  }
 }
 async function refresh(){if(busy)return;busy=true;
- const results=await Promise.all([
+ const results=await Promise.allSettled([
   get("f72"),get("comparison"),getStation("/history/canakci?hours=72"),
   getStation("/stations/canakci")
  ]);
