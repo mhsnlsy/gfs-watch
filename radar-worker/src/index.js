@@ -204,7 +204,7 @@ async function check(env){
   const now=Math.floor(Date.now()/1000), last=Number(state.last_alert_ts||0);
   let sent=false;
   if(alert&&now-last>=ALERT_COOLDOWN_SECONDS){
-    let motionTxt=m.speed!=null?`Hız: ~${m.speed} km/sa, yön: ${m.heading}°${m.eta?`, tahmini varış: ~${m.eta} dk`:""${m.towards?" (konuma doğru)":""}`:"";
+    let motionTxt=""; if(m.speed!=null){motionTxt=`Hız: ~${m.speed} km/sa, yön: ${m.heading}°`; if(m.eta) motionTxt+=`, tahmini varış: ~${m.eta} dk`; if(m.towards) motionTxt+=" (konuma doğru)";}
     const caption=`${emoji} <b>${intensity} YAĞIŞ UYARISI — İstanbul</b>
 Konum: 41.0904 N, 28.9438 E
 Şiddet: ${intensity} (${curr.max_dbz} dBZ), merkez: ${curr.centroid_dist??"—"} km, ${curr.count} yağış pikseli
