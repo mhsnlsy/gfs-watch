@@ -214,6 +214,8 @@ assert.doesNotMatch(node("station-trend-meta").textContent, /Eyüpsultan/);
 assert.match(node("history-source-note").textContent, /Yağış: MGM Şişli ölçümleri/);
 
 assert.match(html, /function attachStationHistoryTooltip/);
+assert.match(html, /station-briefing-inline/, "Observation and forecast briefing must share the station panel.");
+assert.match(html, /current hour visible as a provisional point|current hour.*provisional/i, "Hourly rain chart must keep the current hour visible.");
 assert.match(html, /station-history-tooltip-value/);
 assert.match(html, /bucketMs=1800000/);
 assert.match(html, /const STATION_HISTORY_API=key=>STATIONS_API\+"\/history\/"\+encodeURIComponent\(key\)\+"\?hours=72"/);
