@@ -363,11 +363,11 @@ jobs:
           test "$f72_ok" -eq 1 || { echo "::error::Public web F72 gateway failed."; cat "$RUNNER_TEMP/web-gfs-f72.json" 2>/dev/null || true; exit 1; }
 
           curl --silent --show-error --fail --max-time 20 "$WEB/meteopt-gfs-table.js?verify=$(date +%s)" -o "$RUNNER_TEMP/meteopt-gfs-table.js"
-          grep -Fq '"/gfs/f72"' "$RUNNER_TEMP/meteopt-gfs-table.js" || { echo "::error::Live MeteoPT table asset is not wired to /gfs/f72."; exit 1; }
+          grep -Fq '"/gfs/latest"' "$RUNNER_TEMP/meteopt-gfs-table.js" || { echo "::error::Live MeteoPT table asset is not wired to /gfs/latest."; exit 1; }
           grep -Fq 'rh2m-warm-1' "$RUNNER_TEMP/meteopt-gfs-table.js" || { echo "::error::Live MeteoPT table asset is missing the RH.2m colour scale."; exit 1; }
           grep -Fq 'function dewpoint(' "$RUNNER_TEMP/meteopt-gfs-table.js" || { echo "::error::Live MeteoPT table asset is missing Magnus dew point calculation."; exit 1; }
           grep -Fq 'valueCell(snowln, "snowln", 0)' "$RUNNER_TEMP/meteopt-gfs-table.js" || { echo "::error::Live MeteoPT table asset is missing Snowln rendering."; exit 1; }
-          echo "Verified homepage MeteoPT table asset uses /gfs/f72."
+          echo "Verified homepage MeteoPT table asset uses the F180-ready /gfs/latest endpoint."
 
           echo "Checking the real public domain: https://www.istanbulunhavasi.com ..."
           PUBLIC_SITE="https://www.istanbulunhavasi.com"
@@ -401,11 +401,11 @@ jobs:
           }));
           NODE
           curl --silent --show-error --fail --max-time 20 "$PUBLIC_SITE/meteopt-gfs-table.js?verify=$(date +%s)" -o "$RUNNER_TEMP/public-meteopt-gfs-table.js"
-          grep -Fq '"/gfs/f72"' "$RUNNER_TEMP/public-meteopt-gfs-table.js" || { echo "::error::Public domain serves an old MeteoPT table script."; exit 1; }
+          grep -Fq '"/gfs/latest"' "$RUNNER_TEMP/public-meteopt-gfs-table.js" || { echo "::error::Public domain serves an old MeteoPT table script."; exit 1; }
           grep -Fq 'rh2m-warm-1' "$RUNNER_TEMP/public-meteopt-gfs-table.js" || { echo "::error::Public domain table script is missing the RH.2m colour scale."; exit 1; }
           grep -Fq 'function dewpoint(' "$RUNNER_TEMP/public-meteopt-gfs-table.js" || { echo "::error::Public domain table script is missing Magnus dew point calculation."; exit 1; }
           grep -Fq 'valueCell(snowln, "snowln", 0)' "$RUNNER_TEMP/public-meteopt-gfs-table.js" || { echo "::error::Public domain table script is missing Snowln rendering."; exit 1; }
-          echo "Public domain homepage, F72 API and MeteoPT table script verified."
+          echo "Public domain homepage, legacy F72 API and F180-ready MeteoPT table script verified."
 
           echo "Checking the apex domain used by visitors and its same-origin station API..."
           APEX_SITE="https://istanbulunhavasi.com"
@@ -439,18 +439,25 @@ jobs:
           curl --silent --show-error --fail --max-time 45 "$WEB/gfs/latest?check=$(date +%s)" -o "$RUNNER_TEMP/web-gfs.json"
           echo "Checking Köy GFS through internal Service Binding..."
           curl --silent --show-error --fail --max-time 45 "$WEB/api/koy-gfs/f72?check=$(date +%s)" -o "$RUNNER_TEMP/web-koy.json"
+          curl --silent --show-error --fail --max-time 45 "$WEB/api/koy-gfs/comparison?check=$(date +%s)" -o "$RUNNER_TEMP/web-koy-comparison.json"
           echo "Checking station D1 health through internal Service Binding..."
           curl --silent --show-error --fail --max-time 20 "$WEB/api/stations/health?check=$(date +%s)" -o "$RUNNER_TEMP/web-stations-health.json"
           curl --silent --show-error --fail --max-time 20 "$WEB/api/stations?check=$(date +%s)" -o "$RUNNER_TEMP/web-stations.json"
           curl --silent --show-error --fail --max-time 20 "$WEB/api/history/canakci?hours=72&check=$(date +%s)" -o "$RUNNER_TEMP/web-station-history.json"
-          node - "$RUNNER_TEMP/web-gfs.json" "$RUNNER_TEMP/web-koy.json" "$RUNNER_TEMP/web-stations-health.json" "$RUNNER_TEMP/web-stations.json" "$RUNNER_TEMP/web-station-history.json" <<'NODE'
+          node - "$RUNNER_TEMP/web-gfs.json" "$RUNNER_TEMP/web-koy.json" "$RUNNER_TEMP/web-koy-comparison.json" "$RUNNER_TEMP/web-stations-health.json" "$RUNNER_TEMP/web-stations.json" "$RUNNER_TEMP/web-station-history.json" <<'NODE'
           const fs = require("fs");
-          const [gfs, koy, health, stations, history] = process.argv.slice(2).map(file => JSON.parse(fs.readFileSync(file, "utf8")));
+          const [gfs, koy, koyComparison, health, stations, history] = process.argv.slice(2).map(file => JSON.parse(fs.readFileSync(file, "utf8")));
           if (gfs.schema !== "gfs-watch.forecast.v1" || !Array.isArray(gfs.comparison_runs) ||
               !Array.isArray(gfs.forecast_6_hourly) || gfs.forecast_6_hourly.length < 40) {
             throw new Error("Istanbul GFS gateway failed");
           }
-          if (!Array.isArray(koy.forecast_6_hourly) || koy.forecast_6_hourly.length < 12) throw new Error("Köy GFS gateway failed");
+          if (!Array.isArray(koy.forecast_6_hourly) || koy.forecast_6_hourly.length < 12) throw new Error("Köy legacy F72 gateway failed");
+          const koyFullRuns = (koyComparison.runs || []).filter(run => {
+            const points = Array.isArray(run.forecast_6_hourly) ? run.forecast_6_hourly : [];
+            const maxHour = Math.max(0, ...points.map(point => Number(point.forecast_hour)).filter(Number.isFinite));
+            return run.forecast_source === "meteopt" && points.filter(point => Number(point.forecast_hour) > 0 && Number(point.forecast_hour) <= 180 && Number(point.forecast_hour) % 3 === 0).length >= 30 && maxHour >= 180;
+          });
+          if (!Array.isArray(koyComparison.runs) || !koyFullRuns.length) throw new Error("Köy F180 comparison archive gateway failed");
           if (health.ok !== true || health.storage !== "D1" || health.cron !== "*/2 * * * *") throw new Error("Station D1 health gateway failed");
           if (stations.ok !== true || !Array.isArray(stations.stations) || stations.stations.length < 4) throw new Error("Station current values gateway failed");
           if (history.ok !== true || !Array.isArray(history.samples)) throw new Error("Station history gateway failed");
@@ -458,7 +465,9 @@ jobs:
             istanbul_run: gfs.run_id_utc,
             istanbul_comparison_runs: gfs.comparison_runs.length,
             koy_run: koy.run_id_utc,
-            koy_points: koy.forecast_6_hourly.length,
+            koy_f72_points: koy.forecast_6_hourly.length,
+            koy_f180_runs: koyFullRuns.length,
+            koy_latest_f180_run: koyFullRuns.sort((a,b) => Date.parse(b.run_id_utc) - Date.parse(a.run_id_utc))[0]?.run_id_utc || null,
             station_count: stations.stations.length,
             canakci_history_samples: history.samples.length
           }));
