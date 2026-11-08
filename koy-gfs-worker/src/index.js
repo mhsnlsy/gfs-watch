@@ -327,16 +327,14 @@ async function persistF72(env, f72) {
       ? f72.forecast_6_hourly
       : [];
 
-    // Keep an existing F180 document intact while refreshing the overlapping F72
-    // points with newly available MeteoPT fields such as snowln.
-    if (previousPoints.length > incomingPoints.length) {
-      payload = {
-        ...stored.payload,
-        ...f72,
-        schema: stored.payload.schema || f72.schema,
-        forecast_6_hourly: mergeForecastPoints(previousPoints, incomingPoints),
-      };
-    }
+    // Merge every same-run refresh, preserving the F180 horizon and filling
+    // newly available MeteoPT fields such as snowln even when the point count matches.
+    payload = {
+      ...stored.payload,
+      ...f72,
+      schema: stored.payload.schema || f72.schema,
+      forecast_6_hourly: mergeForecastPoints(previousPoints, incomingPoints),
+    };
 
     const comparable = document => {
       const copy = { ...document };
