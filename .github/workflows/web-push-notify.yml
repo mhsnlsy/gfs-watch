@@ -13,16 +13,6 @@ on:
         required: false
         type: boolean
         default: false
-    inputs:
-      notification_id:
-        description: "Optional notification ID; blank sends the latest feed item"
-        required: false
-        type: string
-      test_mode:
-        description: "Send a one-off test notification without marking a GFS report as sent"
-        required: false
-        type: boolean
-        default: false
 
 permissions:
   contents: read
