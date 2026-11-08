@@ -67,11 +67,11 @@ const stationObservation = {
   is_stale: false,
 };
 const report = buildIstanbulReportText(runs[3], new Date("2026-11-01T12:00:00Z"), stationObservation);
-assert.ok(report.includes("İSTANBUL GFS TAHMİN RAPORU"));
-assert.ok(report.includes("GÜNÜN KALANINDA"));
-assert.ok(report.includes("ÖNÜMÜZDEKİ 3 GÜN"));
-assert.ok(report.includes("SON DÖRT GFS") || report.includes("Son dört GFS") || report.includes("Son 4 GFS"));
-assert.ok(report.includes("ENKA BALMUMCU İSTASYON GÖZLEMİ"));
+assert.ok(report.includes("İSTANBUL GFS · 12Z"));
+assert.ok(report.includes("ÖNÜMÜZDEKİ 24 SAAT"));
+assert.ok(report.includes("5 GÜNLÜK TAHMİN"));
+assert.ok(report.includes("Kaynak: MeteoPT GFS"));
+assert.ok(report.includes("ENKA BALMUMCU"));
 assert.ok(report.includes("13,2°C"));
 assert.ok(report.includes("2,4 mm"));
 assert.ok(report.includes("ÖNÜMÜZDEKİ 24 SAAT"));
