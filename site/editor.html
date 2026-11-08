@@ -1,0 +1,55 @@
+<!doctype html>
+<html lang="tr">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<title>İstanbul'un Havası · Site Editor</title>
+<link rel="stylesheet" href="editor.css">
+</head>
+<body>
+<header class="topbar">
+  <div class="brand">İSTANBUL'UN HAVASI <span>EDITOR</span></div>
+  <div class="actions">
+    <button id="undoBtn">↶ Geri al</button>
+    <button id="redoBtn">↷ İleri al</button>
+    <button id="previewBtn">Önizle</button>
+    <button id="saveBtn" class="ghost">Taslağı kaydet</button>
+    <button id="publishBtn" class="primary">Yayınla</button>
+  </div>
+</header>
+<div class="toolbar">
+  <div class="device">
+    <button data-device="desktop" class="active">🖥 Masaüstü</button>
+    <button data-device="tablet">▣ Tablet</button>
+    <button data-device="mobile">📱 Telefon</button>
+  </div>
+  <div id="status">Hazır · canlı siteyi düzenleme modu</div>
+</div>
+<main class="layout">
+  <aside class="left">
+    <h3>Sayfa</h3>
+    <button class="page active" data-page="/">Ana sayfa</button>
+    <button class="page" data-page="/koy.html">Köy</button>
+    <h3>Bölümler</h3>
+    <div id="elementList" class="element-list">
+      <div class="hint">Önizlemedeki bir karta tıklayın. Seçilen öğe burada görünecek.</div>
+    </div>
+    <div class="small-note">Değişiklikler önce tarayıcıda taslak olarak tutulur. Canlıya almak için <b>Yayınla</b> kullanılır.</div>
+  </aside>
+  <section class="canvas-wrap">
+    <div id="canvas" class="canvas desktop"><iframe id="preview" title="Site önizleme"></iframe></div>
+  </section>
+  <aside class="right">
+    <h3>Özellikler</h3>
+    <div id="inspector" class="inspector">
+      <div class="empty">Bir öğe seç.</div>
+    </div>
+    <h3>Kod</h3>
+    <textarea id="codeBox" spellcheck="false" placeholder="Seçilen öğenin HTML'i"></textarea>
+    <button id="applyCode" class="apply">HTML'yi uygula</button>
+  </aside>
+</main>
+<div id="toast" class="toast"></div>
+<script src="editor.js"></script>
+</body>
+</html>
