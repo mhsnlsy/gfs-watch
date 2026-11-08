@@ -314,10 +314,25 @@ function addMobileGfsCycleLabels(panelHost,panel){
   const order={"06Z":0,"00Z":1,"18Z":2,"12Z":3};
   cycles.sort((a,b)=>((order[a.cycle] == null ? 99 : order[a.cycle]))-(order[b.cycle] == null ? 99 : order[b.cycle]));
 
-  // The plotted series already carry the authoritative age-based color.
-  // Keep that exact color on the legend; do not remap by cycle hour here.
+  // Derive legend colors from the actual run timestamp in each series label.
+  // This guarantees newest=lilac regardless of array ordering or cycle hour.
+  const agePalette=["#B38BE8","#F1C98B","#7DD3D7","#8ABCE8"];
+  const parseRunTime=(label)=>{
+    const m=String(label||"").match(/(?:YENİ\s*·\s*)?(00|06|12|18)Z\s*\|\s*(\d{2})\.(\d{2})\s+(\d{2}):\d{2}/i);
+    if(!m)return null;
+    const year=new Date().getUTCFullYear();
+    return Date.UTC(year,Number(m[2])-1,Number(m[3]),Number(m[1]));
+  };
+  const rankedSeries=series.map((item,index)=>({item,index,ts:parseRunTime(item.label)}))
+    .sort((a,b)=>(b.ts??-Infinity)-(a.ts??-Infinity));
+  const colorByCycle={};
+  rankedSeries.forEach((entry,rank)=>{
+    const label=String(entry.item && entry.item.label||"");
+    const match=label.match(/(00|06|12|18)Z/i);
+    if(match) colorByCycle[match[1].toUpperCase()+"Z"]=agePalette[Math.min(rank,agePalette.length-1)];
+  });
   cycles.forEach(item=>{
-    item.color=item.color || "#B38BE8";
+    item.color=colorByCycle[item.cycle] || item.color || agePalette[3];
   });
 
   const legend=document.createElement("div");
