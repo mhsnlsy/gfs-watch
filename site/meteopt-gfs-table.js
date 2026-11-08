@@ -92,10 +92,12 @@
       const wind850 = point ? number(point.wind_speed_850hpa_kmh) : null;
       const precip = point ? number(point.precipitation_6h_mm) : null;
       const temp2 = point ? number(point.temperature_2m_c) : null;
+      const rh2m = point ? number(point.humidity_2m_percent) : null;
       const temp850 = point ? number(point.temperature_850hpa_c) : null;
 
       const values = [
         valueCell(temp2, "t2m"),
+        valueCell(rh2m, "rh2m", 0),
         valueCell(precip, "precip"),
         valueCell(wind10, "wind", 0),
         valueCell(wind850, "wind", 0),
@@ -109,7 +111,7 @@
     }
 
     if (!rows.length) {
-      body.innerHTML = '<tr><td colspan="7" class="meteopt-table-empty">Bu GFS çıktısında tablo satırı bulunamadı.</td></tr>';
+      body.innerHTML = '<tr><td colspan="8" class="meteopt-table-empty">Bu GFS çıktısında tablo satırı bulunamadı.</td></tr>';
       $("meteopt-table-status").textContent = "Tahmin adımı bulunamadı";
       return;
     }

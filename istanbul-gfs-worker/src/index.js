@@ -106,6 +106,7 @@ function normalize(candidate, now) {
 
   const names = {
     tmp2m: "temperature_2m_c",
+    rh2m: "humidity_2m_percent",
     tmp850mb: "temperature_850hpa_c",
     wind10m: "wind_speed_10m_kmh",
     winddir10m: "wind_direction_10m_deg",
@@ -778,7 +779,16 @@ async function collectData(env) {
     const { payload } = entry.result;
     if (entry.result.hasF72) {
       const currentF72 = await getCurrent(env, "f72");
-      if (!currentF72 || Date.parse(payload.run_id_utc) > Date.parse(currentF72.run_id_utc)) {
+      const sameRunNeedsHumidity = currentF72?.run_id_utc === payload.run_id_utc &&
+        (currentF72.payload?.forecast_6_hourly || []).some(point =>
+          Number(point.forecast_hour) > 0 &&
+          Number(point.forecast_hour) <= 72 &&
+          Number(point.forecast_hour) % 3 === 0 &&
+          (point.humidity_2m_percent === null || point.humidity_2m_percent === undefined)
+        );
+      if (!currentF72 ||
+          Date.parse(payload.run_id_utc) > Date.parse(currentF72.run_id_utc) ||
+          sameRunNeedsHumidity) {
         const f72Points = payload.forecast_6_hourly.filter(point => point.forecast_hour > 0 && point.forecast_hour <= 72);
         const f72 = {
           ...payload,
