@@ -97,7 +97,25 @@ export default {
           return json({ ok: true }, 200, headers);
         }
 
-        if (url.pathname === "/admin/notification-sent" && request.method === "GET") {
+        if (url.pathname === "/admin/test-tomorrow-weather-push" && request.method === "POST") {
+        const rows = await env.DB.prepare("SELECT subscription_json FROM push_subscriptions ORDER BY created_at ASC LIMIT 500").all();
+        const subscriptions = (rows.results || []).map(row => { try { return JSON.parse(row.subscription_json); } catch (_) { return null; } }).filter(Boolean);
+        if (!env.VAPID_PUBLIC_KEY || !env.VAPID_PRIVATE_KEY) return json({ error: "VAPID keys not configured" }, 503, headers);
+        webPush.setVapidDetails(env.VAPID_SUBJECT || DEFAULT_ORIGIN + "/", env.VAPID_PUBLIC_KEY, env.VAPID_PRIVATE_KEY);
+        const payload = JSON.stringify({ title: "İstanbul · Web Push test", body: "Web Push bağlantısı çalışıyor.", tag: "gfs-test-" + Date.now(), url: DEFAULT_ORIGIN + "/#bildirimler" });
+        let delivered = 0;
+        for (const sub of subscriptions) {
+          try { await webPush.sendNotification(sub, payload, { TTL: 3600, urgency: "normal" }); delivered++; }
+          catch (error) {
+            const status = Number(error.statusCode || 0);
+            console.error("Test push failed:", status || error.message);
+            if (status === 404 || status === 410) await env.DB.prepare("DELETE FROM push_subscriptions WHERE endpoint = ?").bind(sub.endpoint).run();
+          }
+        }
+        return json({ ok: true, subscriptions: subscriptions.length, delivered }, 200, headers);
+      }
+
+      if (url.pathname === "/admin/notification-sent" && request.method === "GET") {
           const id = url.searchParams.get("id") || "";
           if (!id || id.length > 200) return json({ error: "Invalid notification id" }, 400, headers);
           const row = await env.DB.prepare("SELECT id, sent_at, recipient_count FROM sent_notifications WHERE id = ?").bind(id).first();
