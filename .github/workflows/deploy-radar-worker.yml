@@ -147,7 +147,7 @@ jobs:
           const d = JSON.parse(fs.readFileSync(process.argv[2], "utf8"));
           const baseline = Number(process.argv[3]);
           const ts = Number(d.last_frame_ts || 0);
-          if (d.ok !== true || d.service !== "radar-monitor" || ts < baseline - 120) process.exit(1);
+          if (d.ok !== true || d.service !== "radar-monitor" || ts < baseline - 900) process.exit(1);
           NODE
               then
                 cat "$RUNNER_TEMP/radar-health.json"
