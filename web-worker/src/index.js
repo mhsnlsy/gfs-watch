@@ -120,10 +120,10 @@ export default {
     }
 
     if (path === "/favicon.svg" || path === "/favicon.ico") {
-      const asset = await env.ASSETS.fetch(new Request(new URL("/istanbul-havasi-icon-20261108.svg", url), request));
+      const asset = await env.ASSETS.fetch(new Request(new URL("/favicon-48x48.png", url), request));
       if (!asset.ok) return asset;
       const headers = new Headers(asset.headers);
-      headers.set("Content-Type", "image/svg+xml; charset=utf-8");
+      headers.set("Content-Type", "image/png");
       headers.set("Cache-Control", "public, max-age=300, must-revalidate");
       return new Response(request.method === "HEAD" ? null : asset.body, { status: asset.status, headers });
     }
