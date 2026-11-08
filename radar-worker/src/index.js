@@ -1,5 +1,4 @@
 // RADAR CRON LIVE — Cloudflare Paid
-// LIVE SYNTHETIC RADAR DRILL ENABLED: 30 km N / 25 dBZ / 20 px / 30 km/h / ~60 min ETA
 const LAT = 41.0904;
 const LON = 28.9438;
 const RADIUS_KM = 90;
@@ -242,22 +241,6 @@ async function makeSyntheticRadarPng(){
   return out;
 }
 
-async function runSyntheticTest(env){
-  const text=`⚠️ TEST / TATBİKAT — GERÇEK YAĞIŞ DEĞİL
-
-SENTETİK RADAR SENARYOSU
-Kütle: 30 km kuzeyden geliyor
-Şiddet: 25 dBZ
-Yağış pikseli: 20
-Hız: 30 km/sa
-Tahmini varış: ~60 dk
-Yön: GÜNEY / İstanbul'a doğru
-
-BU MESAJ YALNIZCA SİSTEM TESTİDİR. GERÇEK YAĞIŞ ALARMI DEĞİLDİR.`;
-  const sent=await telegramText(env,text);
-  return {status:sent?"test_sent":"telegram_send_failed",telegram_sent:sent,scenario:{distance_km:30,dbz:25,pixels:20,speed_kmh:30,eta_minutes:60},mode:"text_only_test"};
-}
-
 async function check(env){
   const timeline=await (await fetch("https://api.rainviewer.com/public/weather-maps.json",{cf:{cacheTtl:0}})).json();
   const past=timeline?.radar?.past||[];
@@ -324,6 +307,6 @@ ${new Date(ts*1000).toLocaleString("tr-TR",{timeZone:"Europe/Istanbul"})}`;
 }
 
 export default {
-  async fetch(request,env){const url=new URL(request.url);if(url.pathname==="/test-radar"){return new Response(JSON.stringify(await runSyntheticTest(env)),{headers:{"content-type":"application/json"}});}if(url.pathname==="/health"){const s=await getState(env.RADAR_DB);return new Response(JSON.stringify({ok:true,service:"radar-monitor",interval:"6m",build:RADAR_BUILD,pixel_threshold:MIN_ALERT_PIXELS,cooldown_minutes:ALERT_COOLDOWN_SECONDS/60,last_frame_ts:Number(s.last_frame_ts||0),last_alert_ts:Number(s.last_alert_ts||0),last_intensity:s.last_intensity||""}),{headers:{"content-type":"application/json"}});}return new Response(JSON.stringify({ok:true,service:"radar-monitor",interval:"6m"}),{headers:{"content-type":"application/json"}});},
+  async fetch(request,env){const url=new URL(request.url);if(url.pathname==="/health"){const s=await getState(env.RADAR_DB);return new Response(JSON.stringify({ok:true,service:"radar-monitor",interval:"6m",build:RADAR_BUILD,pixel_threshold:MIN_ALERT_PIXELS,cooldown_minutes:ALERT_COOLDOWN_SECONDS/60,last_frame_ts:Number(s.last_frame_ts||0),last_alert_ts:Number(s.last_alert_ts||0),last_intensity:s.last_intensity||""}),{headers:{"content-type":"application/json"}});}return new Response(JSON.stringify({ok:true,service:"radar-monitor",interval:"6m"}),{headers:{"content-type":"application/json"}});},
   async scheduled(event,env,ctx){ctx.waitUntil(check(env).then(r=>console.log(JSON.stringify(r))).catch(e=>console.error(e.stack||e.message||e)));}
 };
