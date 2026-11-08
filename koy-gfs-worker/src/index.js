@@ -216,6 +216,7 @@ function normalizeDocument(candidate, now) {
       forecast_hour: lead,
       valid_time_utc: valid.toISOString(),
       temperature_2m_c: asNumber(series("tmp2m"), i),
+      humidity_2m_percent: asNumber(series("rh2m"), i),
       temperature_850hpa_c: asNumber(series("tmp850mb"), i),
       wind_speed_10m_kmh: asNumber(series("wind10m"), i),
       wind_speed_850hpa_kmh: asNumber(series("wind850"), i),
@@ -901,7 +902,8 @@ async function api(request, env) {
           current.payload.forecast_6_hourly.some(point => {
             const hour = Number(point?.forecast_hour);
             return hour > 0 && hour <= 72 &&
-              (point.snowln === null || point.snowln === undefined);
+              (point.snowln === null || point.snowln === undefined ||
+               point.humidity_2m_percent === null || point.humidity_2m_percent === undefined);
           })));
       if (!current || needsSnowlineEnrichment) {
         await collect(env);
