@@ -314,17 +314,10 @@ function addMobileGfsCycleLabels(panelHost,panel){
   const order={"06Z":0,"00Z":1,"18Z":2,"12Z":3};
   cycles.sort((a,b)=>((order[a.cycle] == null ? 99 : order[a.cycle]))-(order[b.cycle] == null ? 99 : order[b.cycle]));
 
-  // The source series are ordered oldest -> newest. Preserve that order to
-  // derive age colors, then sort only the displayed legend labels.
-  const agePalette=["#B38BE8","#F1C98B","#7DD3D7","#8ABCE8"];
-  const ageByCycle={};
-  series.forEach((item,index)=>{
-    const label=String(item && item.label||"");
-    const match=label.match(/(00|06|12|18)Z/i);
-    if(match) ageByCycle[match[1].toUpperCase()+"Z"]=agePalette[Math.max(0,series.length-1-index)] || agePalette[3];
-  });
+  // The plotted series already carry the authoritative age-based color.
+  // Keep that exact color on the legend; do not remap by cycle hour here.
   cycles.forEach(item=>{
-    item.color=ageByCycle[item.cycle] || item.color || agePalette[3];
+    item.color=item.color || "#B38BE8";
   });
 
   const legend=document.createElement("div");
