@@ -779,11 +779,14 @@ async function collectData(env) {
     if (entry.result.hasF72) {
       const currentF72 = await getCurrent(env, "f72");
       if (!currentF72 || Date.parse(payload.run_id_utc) > Date.parse(currentF72.run_id_utc)) {
+        const f72Points = payload.forecast_6_hourly.filter(point => point.forecast_hour > 0 && point.forecast_hour <= 72);
         const f72 = {
           ...payload,
           milestone: "F72",
+          f72: { ...payload.f72, available: true, forecast_hour: 72 },
           forecast_horizon_hours: Math.min(72, payload.forecast_horizon_hours),
-          forecast_6_hourly: payload.forecast_6_hourly.filter(point => point.forecast_hour <= 72),
+          forecast_6_hourly: f72Points,
+          forecast_valid_until_utc: f72Points[f72Points.length - 1]?.valid_time_utc || payload.forecast_valid_until_utc,
         };
         await writeCurrent(env, "f72", f72);
         f72Updated = true;
@@ -887,6 +890,35 @@ async function latestPayload(env, bootstrap = true) {
   return {
     ...current.payload,
     comparison_runs: runs,
+  };
+}
+
+async function latestF72Payload(env, bootstrap = true) {
+  let current = await getCurrent(env, "f72");
+  const staleAfterMs = 20 * 60 * 1000;
+  const currentAgeMs = current?.updated_at_utc
+    ? Date.now() - Date.parse(current.updated_at_utc)
+    : Number.POSITIVE_INFINITY;
+
+  if (bootstrap && (!current || !Number.isFinite(currentAgeMs) || currentAgeMs > staleAfterMs)) {
+    try {
+      await collect(env, "live-f72-read-refresh");
+      current = await getCurrent(env, "f72");
+    } catch (error) {
+      if (!current) throw error;
+      console.error(JSON.stringify({
+        event: "istanbul_live_f72_refresh_error",
+        message: String(error?.message || error),
+      }));
+    }
+  }
+
+  if (!current) return null;
+  const runs = await listRuns(env, 4);
+  return {
+    ...current.payload,
+    comparison_runs: runs,
+    f72_updated_at_utc: current.updated_at_utc,
   };
 }
 
@@ -1086,6 +1118,16 @@ async function handleApi(request, env) {
     try {
       const rows = await env.GFS_DB.prepare("SELECT payload_json FROM ecmwf_runs ORDER BY run_id_utc DESC LIMIT 4").all();
       return json({ schema: "gfs-watch.ecmwf.comparison.v1", source: ECMWF_SOURCE_URL, runs: (rows.results || []).map(row => JSON.parse(row.payload_json)) });
+    } catch (error) {
+      return json({ ok: false, error: String(error?.message || error) }, 503);
+    }
+  }
+
+  if (path === "/gfs/f72" || path === "/api/f72") {
+    try {
+      const latest = await latestF72Payload(env);
+      if (!latest) return json({ ok: false, error: "No F72-ready Istanbul GFS run is available yet" }, 503);
+      return json(latest);
     } catch (error) {
       return json({ ok: false, error: String(error?.message || error) }, 503);
     }
