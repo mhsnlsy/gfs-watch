@@ -229,6 +229,9 @@ jobs:
                   !report.f72.run_id_utc || report.f72.horizon_hours < 72) {
                 throw new Error("The browser did not receive a valid live F72 payload: " + JSON.stringify(report.f72));
               }
+              if (report.page_errors.length) {
+                throw new Error("The live site emitted JavaScript page errors: " + JSON.stringify(report.page_errors));
+              }
 
               fs.writeFileSync(path.join(out, "diagnostics.json"), JSON.stringify(report, null, 2));
               console.log(JSON.stringify({
