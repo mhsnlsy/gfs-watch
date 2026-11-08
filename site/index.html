@@ -2411,6 +2411,14 @@ html[data-default-station="eyupsultan"] #station-eyupsultan-button{
       const rainSource=activeStation==="enka"||activeStation==="sisli"?sisliStationObservation:eyupsultanStationObservation;
       const rain1h=rainSource&&typeof rainSource.precipitation_1h_mm==="number"?rainSource.precipitation_1h_mm:null;
       $("rain").innerHTML=numeric(rain1h)?fmt(rain1h,1)+'<span class="unit">mm</span>':'—<span class="unit">mm</span>';
+      const rainBriefCurrent=$("rain-brief-current");
+      if(rainBriefCurrent){
+        if(numeric(rain1h)){
+          rainBriefCurrent.textContent="Anlık istasyon yağışı: "+fmt(rain1h,1)+" mm / son 1 saat";
+        }else{
+          rainBriefCurrent.textContent="Anlık istasyon yağış ölçümü bekleniyor.";
+        }
+      }
       const rainDetail=$("rain-detail");
       if(rainDetail)rainDetail.textContent="Son 1 saat";
       $("humidity").innerHTML=isFresh&&numeric(station.humidity_percent)?fmt(station.humidity_percent,0)+'<span class="unit">%</span>':'—<span class="unit">%</span>';
