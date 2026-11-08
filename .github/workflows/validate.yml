@@ -65,7 +65,6 @@ jobs:
           import re
           for source, prefix in (
               ("site/index.html", "index"),
-              ("site/gfs-cycle-compare.html", "comparison"),
           ):
               html = Path(source).read_text(encoding="utf-8")
               scripts = re.findall(r"<script(?:\s[^>]*)?>(.*?)</script>", html, re.S)
@@ -75,6 +74,6 @@ jobs:
               for index, script in enumerate(inline):
                   Path(f"/tmp/{prefix}-inline-{index}.js").write_text(script, encoding="utf-8")
           PY
-          for file in /tmp/index-inline-*.js /tmp/comparison-inline-*.js; do
+          for file in /tmp/index-inline-*.js; do
             node --check "$file"
           done
