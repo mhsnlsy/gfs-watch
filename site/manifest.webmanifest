@@ -11,6 +11,6 @@
   "background_color": "#071521",
   "theme_color": "#081827",
   "icons": [
-    { "src": "./istanbul-havasi-icon-20261108.svg?v=5", "sizes": "any", "type": "image/svg+xml", "purpose": "any maskable" }
+    { "src": "./istanbul-havasi-icon-20261108.svg?v=6", "sizes": "any", "type": "image/svg+xml", "purpose": "any maskable" }
   ]
 }
