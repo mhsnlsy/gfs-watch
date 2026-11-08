@@ -3,6 +3,9 @@ import fs from "node:fs";
 import vm from "node:vm";
 
 const html = fs.readFileSync("site/index.html", "utf8");
+assert.match(html, /const STATIONS_API=\(window\.GFS_WATCH_API_BASE\|\|window\.location\.origin\)\+"\/api";/, "Station reads must use same-origin Cloudflare API gateway.");
+assert.doesNotMatch(html, /gfs-watch-stations\.muhsin-ulusoy\.workers\.dev/, "Homepage must not make cross-origin station API calls.");
+assert.match(html, /Start weather data lanes immediately and independently/, "Station startup must not wait for PWA/push setup.");
 const eyupsultanCollector = fs.readFileSync("scripts/eyupsultan_weather.mjs", "utf8");
 const functionStart = html.indexOf("function renderStationTemperatureTrend");
 const functionEnd = html.indexOf("function render(data)", functionStart);
