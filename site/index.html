@@ -2459,7 +2459,7 @@ html[data-default-station="eyupsultan"] #station-sisli-button{
       const feels = isFresh ? calculateFeelsLike(station.temperature_2m_c, station.humidity_percent, station.wind_speed_10m_kmh) : null;
       const feelsEl = $("feels-like");
       if (feelsEl) {
-        const archivedFeels = numeric(station.feels_like_c) ? Number(station.feels_like_c) : feels;
+        const archivedFeels = station && numeric(station.feels_like_c) ? Number(station.feels_like_c) : feels;
         feelsEl.innerHTML = (archivedFeels !== null) ? fmt(archivedFeels, 1) + '<span class="unit">°</span>' : '—<span class="unit">°</span>';
       }
       const feelsRangeEl = $("feels-like-24h");
