@@ -28,8 +28,15 @@ jobs:
       - name: Install Playwright Chromium
         run: |
           set -euo pipefail
-          npm install --prefix "$RUNNER_TEMP/live-visual" --no-save --no-audit --no-fund playwright@1.56.1
-          "$RUNNER_TEMP/live-visual/node_modules/.bin/playwright" install --with-deps chromium
+          LIVE_VISUAL="$RUNNER_TEMP/live-visual"
+          rm -rf "$LIVE_VISUAL"
+          mkdir -p "$LIVE_VISUAL"
+          cd "$LIVE_VISUAL"
+          npm init -y >/dev/null 2>&1
+          npm install --no-audit --no-fund --omit=dev playwright@1.56.1
+          test -f "$LIVE_VISUAL/node_modules/playwright/package.json"
+          "$LIVE_VISUAL/node_modules/.bin/playwright" install --with-deps chromium
+          node -e 'console.log("Playwright:", require("$LIVE_VISUAL/node_modules/playwright/package.json").version)'
 
       - name: Verify production homepage in desktop and mobile browsers
         env:
