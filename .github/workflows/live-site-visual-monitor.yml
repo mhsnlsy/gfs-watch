@@ -19,15 +19,16 @@ permissions:
   contents: read
 
 concurrency:
+  # Let an active production inspection finish when a later run is queued.
   group: live-site-visual-monitor
-  cancel-in-progress: true
+  cancel-in-progress: false
 
 jobs:
   visual-monitor:
     name: Inspect production site in Chromium
     if: ${{ github.event_name != 'workflow_run' || github.event.workflow_run.conclusion == 'success' }}
     runs-on: ubuntu-latest
-    timeout-minutes: 15
+    timeout-minutes: 25
     steps:
       - name: Set up Node.js
         uses: actions/setup-node@v5
@@ -37,12 +38,18 @@ jobs:
       - name: Install Playwright Chromium
         run: |
           set -euo pipefail
-          npm install --prefix "$RUNNER_TEMP/live-visual" --no-save playwright@1.56.1
-          "$RUNNER_TEMP/live-visual/node_modules/.bin/playwright" install --with-deps chromium
+          LIVE_VISUAL="$RUNNER_TEMP/live-site-monitor"
+          mkdir -p "$LIVE_VISUAL"
+          cd "$LIVE_VISUAL"
+          npm init -y >/dev/null 2>&1
+          npm install --no-audit --no-fund --omit=dev playwright@1.56.1
+          test -f "$LIVE_VISUAL/node_modules/playwright/package.json"
+          "$LIVE_VISUAL/node_modules/.bin/playwright" install chromium
+          node -e 'console.log("Monitor Playwright:", require(process.cwd() + "/node_modules/playwright/package.json").version)'
 
       - name: Open live site in desktop and mobile browsers
         env:
-          PLAYWRIGHT_PACKAGE: ${{ runner.temp }}/live-visual/node_modules/playwright
+          PLAYWRIGHT_PACKAGE: ${{ runner.temp }}/live-site-monitor/node_modules/playwright
           PUBLIC_SITE: https://www.istanbulunhavasi.com
         run: |
           set -euo pipefail
