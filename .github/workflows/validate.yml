@@ -1,4 +1,5 @@
 name: Validate GFS Watch
+# Trigger validation on the current main HEAD after repository changes.
 
 on:
   push:
