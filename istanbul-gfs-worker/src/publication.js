@@ -7,6 +7,8 @@ const PANELS = [
 ];
 const TR_OFFSET_MS = 3 * 60 * 60 * 1000;
 const FONT = "system-ui,-apple-system,BlinkMacSystemFont,Segoe UI,sans-serif";
+const APP_NAME = "İstanbul'un Havası";
+const APP_VERSION = "1.5.0";
 
 function numeric(value) {
   if (value === null || value === undefined || value === "") return null;
@@ -337,7 +339,7 @@ export function buildIstanbulReportText(document, now = new Date(), stationObser
   const todayKey = nowLocal.getUTCFullYear() + "-" + pad2(nowLocal.getUTCMonth() + 1) + "-" + pad2(nowLocal.getUTCDate());
 
   const lines = [
-    "🌦 İstanbul'un Havası",
+    "🌦 " + APP_NAME + " v" + APP_VERSION,
     "İSTANBUL GFS TAHMİN RAPORU",
     "🛰 Model döngüsü: " + formatUtcDate(run) + " UTC (" + pad2(run.getUTCHours()) + "Z)",
     "🕒 Rapor zamanı: " + formatTrDate(nowLocal) + " TSİ",
