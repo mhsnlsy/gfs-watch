@@ -166,6 +166,14 @@ jobs:
                     columns: document.querySelectorAll("#meteopt-gfs-table thead th").length,
                     humidity_values: humidityValues,
                     numeric_humidity_count: humidityValues.filter(value => value && value !== "—" && Number.isFinite(Number(value.replace(",", ".")))).length,
+                    humidity_scale_valid: rows.every(row => {
+                      const valueText = row.cells[7]?.querySelector(".meteopt-value")?.textContent.trim() || "";
+                      const value = Number(valueText.replace(",", "."));
+                      const expected = value < 30 ? "rh2m-warm-1" : value < 45 ? "rh2m-warm-2" :
+                        value < 60 ? "rh2m-warm-3" : value < 75 ? "rh2m-cool-1" :
+                        value < 90 ? "rh2m-cool-2" : "rh2m-cool-3";
+                      return Number.isFinite(value) && row.cells[7]?.querySelector(".meteopt-value")?.classList.contains(expected);
+                    }),
                     first_row: rows[0]?.innerText || "",
                     last_row: rows[rows.length - 1]?.innerText || "",
                     viewport_width: window.innerWidth,
@@ -229,6 +237,14 @@ jobs:
                     headers,
                     humidity_values: humidityValues,
                     numeric_humidity_count: humidityValues.filter(value => value && value !== "—" && Number.isFinite(Number(value.replace(",", ".")))).length,
+                    humidity_scale_valid: rows.every(row => {
+                      const valueText = row.cells[7]?.querySelector(".meteopt-value")?.textContent.trim() || "";
+                      const value = Number(valueText.replace(",", "."));
+                      const expected = value < 30 ? "rh2m-warm-1" : value < 45 ? "rh2m-warm-2" :
+                        value < 60 ? "rh2m-warm-3" : value < 75 ? "rh2m-cool-1" :
+                        value < 90 ? "rh2m-cool-2" : "rh2m-cool-3";
+                      return Number.isFinite(value) && row.cells[7]?.querySelector(".meteopt-value")?.classList.contains(expected);
+                    }),
                     dew_point_values: dewPoints,
                     numeric_dew_point_count: dewPoints.filter(value => value && value !== "—" && Number.isFinite(Number(value.replace(",", ".")))).length,
                     snowln_first_row: rows[0]?.cells[9]?.innerText.trim() || "",
@@ -251,14 +267,14 @@ jobs:
               for (const viewport of ["desktop", "mobile"]) {
                 const istanbul = report.viewports[viewport];
                 if (!istanbul || istanbul.rows !== 24 || istanbul.columns !== 8 ||
-                    istanbul.numeric_humidity_count !== 24 ||
+                    istanbul.numeric_humidity_count !== 24 || !istanbul.humidity_scale_valid ||
                     JSON.stringify(istanbul.headers) !== JSON.stringify(expectedIstanbulHeaders)) {
                   throw new Error("The Istanbul GFS table must render the requested 8-column order and 24 RH.2m values on " +
                     viewport + ": " + JSON.stringify(istanbul));
                 }
                 const koy = report.koy_viewports[viewport];
                 if (!koy || koy.rows !== 24 || koy.columns !== 10 ||
-                    koy.numeric_humidity_count !== 24 || koy.numeric_dew_point_count !== 24 ||
+                    koy.numeric_humidity_count !== 24 || !koy.humidity_scale_valid || koy.numeric_dew_point_count !== 24 ||
                     JSON.stringify(koy.headers) !== JSON.stringify(expectedKoyHeaders)) {
                   throw new Error("The Köy table must render the requested 10-column order, 24 RH.2m values and 24 dew points on " +
                     viewport + ": " + JSON.stringify(koy));

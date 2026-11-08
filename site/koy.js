@@ -460,6 +460,7 @@ function meteoptTableBand(field,value){
  if(!Number.isFinite(v))return "";
  if(field==="wind")return v<10?"mt-blue":v<20?"mt-green":v<30?"mt-yellow":v<45?"mt-orange":v<60?"mt-red":"mt-purple";
  if(field==="precip")return Number(v.toFixed(1))===0?"mt-gray":v<.1?"mt-blue":v<1?"mt-green":v<2.5?"mt-yellow":v<5?"mt-orange":v<10?"mt-red":"mt-purple";
+ if(field==="rh2m")return v<30?"rh2m-warm-1":v<45?"rh2m-warm-2":v<60?"rh2m-warm-3":v<75?"rh2m-cool-1":v<90?"rh2m-cool-2":"rh2m-cool-3";
  if(field==="t2m"||field==="dewpoint")return v<0?"mt-blue":v<8?"mt-green":v<16?"mt-yellow":v<24?"mt-orange":v<32?"mt-red":"mt-purple";
  if(field==="t850")return v< -10?"mt-blue":v< -2?"mt-green":v<6?"mt-yellow":v<14?"mt-orange":v<22?"mt-red":"mt-purple";
  if(field==="snowln")return v<1000?"mt-blue":v<1500?"mt-green":v<2000?"mt-yellow":v<2500?"mt-orange":v<3000?"mt-red":"mt-purple";

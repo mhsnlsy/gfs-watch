@@ -19,7 +19,7 @@
     else if (field === "precip") band = Number(v.toFixed(1)) === 0 ? "mt-gray" : v < .1 ? "mt-blue" : v < 1 ? "mt-green" : v < 2.5 ? "mt-yellow" : v < 5 ? "mt-orange" : v < 10 ? "mt-red" : "mt-purple";
     else if (field === "li") band = v <= -6 ? "mt-purple" : v <= -4 ? "mt-red" : v <= -2 ? "mt-orange" : v <= 0 ? "mt-yellow" : v <= 2 ? "mt-green" : "mt-blue";
     else if (field === "t2m") band = v < 0 ? "mt-blue" : v < 8 ? "mt-green" : v < 16 ? "mt-yellow" : v < 24 ? "mt-orange" : v < 32 ? "mt-red" : "mt-purple";
-    else if (field === "rh2m") band = v < 30 ? "mt-blue" : v < 50 ? "mt-green" : v < 70 ? "mt-yellow" : v < 85 ? "mt-orange" : v < 95 ? "mt-red" : "mt-purple";
+    else if (field === "rh2m") band = v < 30 ? "rh2m-warm-1" : v < 45 ? "rh2m-warm-2" : v < 60 ? "rh2m-warm-3" : v < 75 ? "rh2m-cool-1" : v < 90 ? "rh2m-cool-2" : "rh2m-cool-3";
     else if (field === "t850") band = v < -10 ? "mt-blue" : v < -2 ? "mt-green" : v < 6 ? "mt-yellow" : v < 14 ? "mt-orange" : v < 22 ? "mt-red" : "mt-purple";
     else if (field === "t500") band = v < -35 ? "mt-blue" : v < -25 ? "mt-green" : v < -15 ? "mt-yellow" : v < -5 ? "mt-orange" : v < 5 ? "mt-red" : "mt-purple";
     else if (field === "clouds") band = v < 10 ? "mt-blue" : v < 30 ? "mt-green" : v < 50 ? "mt-yellow" : v < 75 ? "mt-orange" : v < 90 ? "mt-red" : "mt-purple";

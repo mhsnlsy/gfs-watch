@@ -22,6 +22,13 @@
 #meteopt-gfs-table .mt-orange{color:#ffb477;background:rgba(232,117,50,.18)}
 #meteopt-gfs-table .mt-red{color:#ff9292;background:rgba(220,65,65,.18)}
 #meteopt-gfs-table .mt-purple{color:#d7a6ff;background:rgba(151,82,205,.2)}
+/* RH.2m humidity ramp: dry air is warm; increasing humidity shifts green, teal and blue. */
+#meteopt-gfs-table .rh2m-warm-1{color:#ff9b86;background:rgba(224,75,57,.22);border:1px solid rgba(255,120,90,.2)}
+#meteopt-gfs-table .rh2m-warm-2{color:#ffb477;background:rgba(229,117,50,.2);border:1px solid rgba(255,174,105,.18)}
+#meteopt-gfs-table .rh2m-warm-3{color:#ffe08a;background:rgba(220,174,48,.19);border:1px solid rgba(255,224,138,.16)}
+#meteopt-gfs-table .rh2m-cool-1{color:#b7e58c;background:rgba(111,177,73,.18);border:1px solid rgba(183,229,140,.15)}
+#meteopt-gfs-table .rh2m-cool-2{color:#82dfbe;background:rgba(39,166,145,.18);border:1px solid rgba(130,223,190,.16)}
+#meteopt-gfs-table .rh2m-cool-3{color:#8fd7ff;background:rgba(42,145,218,.2);border:1px solid rgba(143,215,255,.18)}
 #meteopt-gfs-table .meteopt-table-empty{padding:14px!important;text-align:center!important;color:var(--muted)!important}
 @media(max-width:560px){#meteopt-gfs-table .meteopt-table-card{padding:8px;border-radius:12px}#meteopt-gfs-table .meteopt-table-toolbar{align-items:flex-start;flex-direction:column;gap:4px}#meteopt-gfs-table .meteopt-data-table{font-size:9px;min-width:560px!important}#meteopt-gfs-table .meteopt-data-table th{padding:6px 3px}#meteopt-gfs-table .meteopt-data-table td{padding:4px 3px}#meteopt-gfs-table .meteopt-data-table th:nth-child(2),#meteopt-gfs-table .meteopt-data-table td:nth-child(2){padding-left:6px;padding-right:6px}}
 
