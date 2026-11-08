@@ -2934,8 +2934,7 @@ html[data-default-station="eyupsultan"] #station-eyupsultan-button{
 
     function render(data){
       forecastData=data;
-      renderNext72Hours();
-      renderBriefing();
+renderBriefing();
       if(data.report&&data.report.report_text){
         renderNotifications([data.report], (data.published_at_utc||data.report.published_at_utc)+"-svgcenter1");
       }
