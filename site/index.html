@@ -2588,7 +2588,8 @@ html.ios12 .footer > *{
       }).join("");
       holder.innerHTML='<svg viewBox="0 0 '+width+' '+height+'" role="img" aria-label="'+esc(stationName)+' son 24 saatteki saatlik kayan yağış toplamı; her saatten bir ölçüm">'+grid+'<path d="'+line+'" fill="none" stroke="#83c9eb" stroke-width="1.9" stroke-linejoin="round"/>'+dots+labels+'</svg>';
 
-      const latest=points[points.length-1];
+      const completedPoints=points.filter(point=>((Math.floor(point.time/hourMs)+1)*hourMs<=now));
+      const latest=completedPoints.length?completedPoints[completedPoints.length-1]:points[points.length-1];
       const rainMaxBadge=$( "station-rain-max" );
       if(rainMaxBadge){
         const peak=points.reduce((best,p)=>!best||p.mm>best.mm?p:best,null);
