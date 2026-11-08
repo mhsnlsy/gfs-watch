@@ -1128,7 +1128,22 @@
       .station-card>.station-briefing-inline{padding-top:7px!important}
     }
 
-    /* Station comparison badge removed from the temperature row. */</style>
+    /* Station comparison badge removed from the temperature row. */    /* Remove legacy empty station comparison pill from cached/older markup. */
+    #station-gap,
+    .station-gap-inline{
+      display:none!important;
+      width:0!important;
+      min-width:0!important;
+      max-width:0!important;
+      height:0!important;
+      min-height:0!important;
+      padding:0!important;
+      margin:0!important;
+      border:0!important;
+      overflow:hidden!important;
+      visibility:hidden!important;
+    }
+</style>
   <link rel="stylesheet" href="./meteopt-gfs-table.css?v=20261108-text-only-values-2">
 
     <style id="single-gfs-comparison-image">
@@ -2799,7 +2814,6 @@ html.ios12 .footer > *{
         $("station-alert").textContent="⚠ "+stationName+" istasyon verisi alınamadı. Kartta güncel ölçüm bulunmuyor.";
       }
       fitStationStats();
-      renderStationGap();
     }
     function renderStationGap(){
       const node=$("station-gap");
