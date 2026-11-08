@@ -118,6 +118,13 @@ jobs:
                           p.humidity_2m_percent !== null &&
                           p.humidity_2m_percent !== undefined &&
                           Number.isFinite(Number(p.humidity_2m_percent))
+                        ).length,
+                        snowln_numeric_points: (doc.forecast_6_hourly || []).filter(p =>
+                          Number(p.forecast_hour) > 0 &&
+                          Number(p.forecast_hour) <= 72 &&
+                          Number(p.forecast_hour) % 3 === 0 &&
+                          p.snowln !== null && p.snowln !== undefined &&
+                          Number.isFinite(Number(p.snowln))
                         ).length
                       };
                     } catch (error) {
@@ -157,6 +164,8 @@ jobs:
                   const headers = [...document.querySelectorAll("#meteopt-gfs-table thead th")]
                     .map(cell => cell.innerText.replace(/\s+/g, " ").trim());
                   const humidityValues = rows.map(row => row.cells[7]?.innerText.trim() || "");
+                  const dewPoints = rows.map(row => row.cells[8]?.innerText.trim() || "");
+                  const snowlines = rows.map(row => row.cells[9]?.innerText.trim() || "");
                   return {
                     title: document.title,
                     headers,
@@ -166,6 +175,10 @@ jobs:
                     columns: document.querySelectorAll("#meteopt-gfs-table thead th").length,
                     humidity_values: humidityValues,
                     numeric_humidity_count: humidityValues.filter(value => value && value !== "—" && Number.isFinite(Number(value.replace(",", ".")))).length,
+                    numeric_dew_point_count: dewPoints.filter(value => value && value !== "—" && Number.isFinite(Number(value.replace(",", ".")))).length,
+                    numeric_snowln_count: snowlines.filter(value => value && value !== "—" && Number.isFinite(Number(value.replace(",", ".")))).length,
+                    dew_point_values: dewPoints,
+                    snowln_values: snowlines,
                     humidity_scale_valid: rows.every(row => {
                       const valueText = row.cells[7]?.querySelector(".meteopt-value")?.textContent.trim() || "";
                       const value = Number(valueText.replace(",", "."));
@@ -259,17 +272,19 @@ jobs:
                 throw new Error("The real homepage did not render 24 forecast rows on desktop and mobile.");
               }
               const expectedIstanbulHeaders = [
-                "Steps", "Date/Hour (TSİ)", "T.2m", "Prec.", "W.10m", "T.850", "W.850", "RH.2m (%)"
+                "Steps", "Date/Hour (TSİ)", "T.2m", "Prec.", "W.10m", "T.850",
+                "W.850", "RH.2m (%)", "Dew Point (°C)", "Snowln (m)"
               ];
               const expectedKoyHeaders = [
                 ...expectedIstanbulHeaders, "Dew Point (°C)", "Snowln (m)"
               ];
               for (const viewport of ["desktop", "mobile"]) {
                 const istanbul = report.viewports[viewport];
-                if (!istanbul || istanbul.rows !== 24 || istanbul.columns !== 8 ||
+                if (!istanbul || istanbul.rows !== 24 || istanbul.columns !== 10 ||
                     istanbul.numeric_humidity_count !== 24 || !istanbul.humidity_scale_valid ||
+                    istanbul.numeric_dew_point_count !== 24 || istanbul.numeric_snowln_count !== 24 ||
                     JSON.stringify(istanbul.headers) !== JSON.stringify(expectedIstanbulHeaders)) {
-                  throw new Error("The Istanbul GFS table must render the requested 8-column order and 24 RH.2m values on " +
+                  throw new Error("The Istanbul GFS table must render the requested 10-column order and 24 RH.2m, Dew Point and Snowln values on " +
                     viewport + ": " + JSON.stringify(istanbul));
                 }
                 const koy = report.koy_viewports[viewport];
@@ -282,6 +297,7 @@ jobs:
               }
               if (!report.f72 || report.f72.status !== 200 || report.f72.points !== 24 ||
                   report.f72.rh2m_numeric_points !== 24 ||
+                  report.f72.snowln_numeric_points !== 24 ||
                   !report.f72.run_id_utc || report.f72.horizon_hours < 72) {
                 throw new Error("The browser did not receive a valid live F72 payload: " + JSON.stringify(report.f72));
               }

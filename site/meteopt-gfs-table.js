@@ -18,7 +18,7 @@
     if (field === "wind") band = v < 10 ? "mt-blue" : v < 20 ? "mt-green" : v < 30 ? "mt-yellow" : v < 45 ? "mt-orange" : v < 60 ? "mt-red" : "mt-purple";
     else if (field === "precip") band = Number(v.toFixed(1)) === 0 ? "mt-gray" : v < .1 ? "mt-blue" : v < 1 ? "mt-green" : v < 2.5 ? "mt-yellow" : v < 5 ? "mt-orange" : v < 10 ? "mt-red" : "mt-purple";
     else if (field === "li") band = v <= -6 ? "mt-purple" : v <= -4 ? "mt-red" : v <= -2 ? "mt-orange" : v <= 0 ? "mt-yellow" : v <= 2 ? "mt-green" : "mt-blue";
-    else if (field === "t2m") band = v < 0 ? "mt-blue" : v < 8 ? "mt-green" : v < 16 ? "mt-yellow" : v < 24 ? "mt-orange" : v < 32 ? "mt-red" : "mt-purple";
+    else if (field === "t2m" || field === "dewpoint") band = v < 0 ? "mt-blue" : v < 8 ? "mt-green" : v < 16 ? "mt-yellow" : v < 24 ? "mt-orange" : v < 32 ? "mt-red" : "mt-purple";
     else if (field === "rh2m") band = v < 30 ? "rh2m-warm-1" : v < 45 ? "rh2m-warm-2" : v < 60 ? "rh2m-warm-3" : v < 75 ? "rh2m-cool-1" : v < 90 ? "rh2m-cool-2" : "rh2m-cool-3";
     else if (field === "t850") band = v < -10 ? "mt-blue" : v < -2 ? "mt-green" : v < 6 ? "mt-yellow" : v < 14 ? "mt-orange" : v < 22 ? "mt-red" : "mt-purple";
     else if (field === "t500") band = v < -35 ? "mt-blue" : v < -25 ? "mt-green" : v < -15 ? "mt-yellow" : v < -5 ? "mt-orange" : v < 5 ? "mt-red" : "mt-purple";
@@ -29,6 +29,15 @@
 
   function display(value, digits = 1) {
     return value === null ? "—" : value.toLocaleString("en-GB", { minimumFractionDigits: digits, maximumFractionDigits: digits });
+  }
+
+  function dewpoint(temp, humidity) {
+    if (temp === null || humidity === null || humidity <= 0 || humidity > 100) return null;
+    const a = 17.62;
+    const b = 243.12;
+    const gamma = Math.log(humidity / 100) + (a * temp) / (b + temp);
+    const result = (b * gamma) / (a - gamma);
+    return Number.isFinite(result) ? result : null;
   }
 
   function valueCell(value, field, digits = 1) {
@@ -94,6 +103,7 @@
       const temp2 = point ? number(point.temperature_2m_c) : null;
       const rh2m = point ? number(point.humidity_2m_percent) : null;
       const temp850 = point ? number(point.temperature_850hpa_c) : null;
+      const snowln = point ? number(point.snowln) : null;
 
       const values = [
         valueCell(temp2, "t2m"),
@@ -101,7 +111,9 @@
         valueCell(wind10, "wind", 0),
         valueCell(temp850, "t850"),
         valueCell(wind850, "wind", 0),
-        valueCell(rh2m, "rh2m", 0)
+        valueCell(rh2m, "rh2m", 0),
+        valueCell(dewpoint(temp2, rh2m), "dewpoint"),
+        valueCell(snowln, "snowln", 0)
       ];
 
       rows.push(
@@ -111,7 +123,7 @@
     }
 
     if (!rows.length) {
-      body.innerHTML = '<tr><td colspan="8" class="meteopt-table-empty">Bu GFS çıktısında tablo satırı bulunamadı.</td></tr>';
+      body.innerHTML = '<tr><td colspan="10" class="meteopt-table-empty">Bu GFS çıktısında tablo satırı bulunamadı.</td></tr>';
       $("meteopt-table-status").textContent = "Tahmin adımı bulunamadı";
       return;
     }
@@ -170,7 +182,7 @@
 
       const body = $("meteopt-table-body");
       if (body && !body.querySelector("tr")) {
-        body.innerHTML = '<tr><td colspan="12" class="meteopt-table-empty">Veri bekleniyor…</td></tr>';
+        body.innerHTML = '<tr><td colspan="10" class="meteopt-table-empty">Veri bekleniyor…</td></tr>';
       }
     }
   }
