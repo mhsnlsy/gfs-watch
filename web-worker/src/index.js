@@ -120,7 +120,7 @@ export default {
     }
 
     if (path === "/favicon.svg" || path === "/favicon.ico") {
-      const asset = await env.ASSETS.fetch(new Request(new URL("/favicon-48x48.png", url), request));
+      const asset = await env.ASSETS.fetch(new Request(new URL("/favicon-192x192.png", url), request));
       if (!asset.ok) return asset;
       const headers = new Headers(asset.headers);
       headers.set("Content-Type", "image/png");
