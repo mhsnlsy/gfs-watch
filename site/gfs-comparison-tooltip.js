@@ -1,5 +1,5 @@
 function escapeGfsTooltip(value){
-  return String(value??"").replace(/[&<>"']/g,char=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[char]));
+  return String(value == null ? "" : value).replace(/[&<>"']/g,char=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[char]));
 }
 function formatGfsTooltipNumber(value){
   if(value===null||value===undefined||!Number.isFinite(Number(value)))return "—";
@@ -12,9 +12,9 @@ function gfsWindCardinal(degrees){
 }
 function buildGfsTooltipMarkup(panel,index,validTime){
   const rows=(panel.series||[]).slice().reverse().map(series=>{
-    const value=series.values?.[index];
-    const lead=series.lead_hours?.[index];
-    const direction=series.directions_deg?.[index];
+    const value=series.values == null ? void 0 : series.values[index];
+    const lead=series.lead_hours == null ? void 0 : series.lead_hours[index];
+    const direction=series.directions_deg == null ? void 0 : series.directions_deg[index];
     const formatted=value===null||value===undefined?"—":formatGfsTooltipNumber(value);
     const directionText=panel.id==="wind_10m"&&direction!==null&&direction!==undefined
       ? " · "+gfsWindCardinal(direction)+" ("+Math.round(direction)+"°)" : "";
@@ -73,8 +73,8 @@ function attachGfsSvgInteractions(host,svg,metadata,syncGroup){
   }
   function panelAtEvent(event){
     const rect=svg.getBoundingClientRect();
-    const sx=Number(svg.viewBox?.baseVal?.width||0);
-    const sy=Number(svg.viewBox?.baseVal?.height||0);
+    const sx=Number(svg.viewBox && svg.viewBox.baseVal ? svg.viewBox.baseVal.width : void 0||0);
+    const sy=Number(svg.viewBox && svg.viewBox.baseVal ? svg.viewBox.baseVal.height : void 0||0);
     if(!sx||!sy)return null;
     const localX=(event.clientX-rect.left)*(sx/rect.width)+(svg.viewBox.baseVal.x||0);
     const localY=(event.clientY-rect.top)*(sy/rect.height)+(svg.viewBox.baseVal.y||0);
@@ -88,7 +88,7 @@ function attachGfsSvgInteractions(host,svg,metadata,syncGroup){
   function anchorForIndex(panel,index){
     const rect=svg.getBoundingClientRect();
     const vb=svg.viewBox.baseVal;
-    const x=Number(panel.x_positions?.[index]);
+    const x=Number(panel.x_positions == null ? void 0 : panel.x_positions[index]);
     const plot=panel.plot||{};
     const y=Number(plot.y||0)+Number(plot.height||0)*0.45;
     if(!rect.width||!rect.height||!vb.width||!vb.height||!Number.isFinite(x))return null;
@@ -98,7 +98,7 @@ function attachGfsSvgInteractions(host,svg,metadata,syncGroup){
     };
   }
   function show(panel,index,event){
-    if(!panel||!panel.valid_times?.[index])return;
+    if(!panel||!panel.valid_times == null ? void 0 : panel.valid_times[index])return;
     const validTime=panel.valid_times[index];
     const overlay=svg.querySelector('.gfs-panel-interaction[data-panel-id="'+panel.id+'"]');
     if(!overlay)return;
@@ -112,7 +112,7 @@ function attachGfsSvgInteractions(host,svg,metadata,syncGroup){
     markerGroup.replaceChildren();
     (panel.series||[]).forEach(series=>{
       const y=series.y_positions?.[index];
-      const value=series.values?.[index];
+      const value=series.values == null ? void 0 : series.values[index];
       if(y===null||y===undefined||value===null||value===undefined)return;
       const marker=document.createElementNS("http://www.w3.org/2000/svg","circle");
       marker.setAttribute("cx",x);
@@ -129,20 +129,20 @@ function attachGfsSvgInteractions(host,svg,metadata,syncGroup){
     panelTooltip.innerHTML=buildGfsTooltipMarkup(panel,index,validTime);
     const anchor=event&&Number.isFinite(event.clientX)&&Number.isFinite(event.clientY)
       ? event : (anchorForIndex(panel,index)||event);
-    positionGfsTooltip(host,panelTooltip,anchor?.clientX,anchor?.clientY);
+    positionGfsTooltip(host,panelTooltip,anchor && anchor.clientX,anchor && anchor.clientY);
   }
   function showSynchronized(index,event){
-    if(syncGroup?.members?.length){
+    if(syncGroup && syncGroup.members && syncGroup.members.length){
       const sourcePanel=panelList[0];
-      const sourceTime=sourcePanel?.valid_times?.[index];
-      const sourceKey=sourceTime?.localKey||sourceTime?.utcLabel||sourceTime?.label||null;
+      const sourceTime=sourcePanel && sourcePanel.valid_times != null ? sourcePanel.valid_times[index] : void 0;
+      const sourceKey=sourceTime && sourceTime.localKey||sourceTime && sourceTime.utcLabel||sourceTime && sourceTime.label||null;
       syncGroup.members.forEach(member=>{
         const panel=member.panelList[0];
         if(!panel)return;
         let targetIndex=index;
         if(sourceKey){
-          const found=panel.valid_times?.findIndex(item=>
-            (item?.localKey||item?.utcLabel||item?.label||null)===sourceKey
+          const found=panel.valid_times && panel.valid_times.findIndex(item=>
+            (item && item.localKey||item && item.utcLabel||item && item.label||null)===sourceKey
           );
           if(found>=0)targetIndex=found;
         }
@@ -192,7 +192,7 @@ function attachGfsSvgInteractions(host,svg,metadata,syncGroup){
   });
   svg.addEventListener("pointerrawupdate",handleTouchMove,{passive:true});
   svg.addEventListener("touchmove",event=>{
-    const touch=event.touches?.[0];
+    const touch=event.touches && event.touches[0];
     if(!touch)return;
     handleTouchMove({clientX:touch.clientX,clientY:touch.clientY,pointerType:"touch"});
   },{passive:true});
@@ -221,7 +221,7 @@ function attachGfsSvgInteractions(host,svg,metadata,syncGroup){
     if(event.key!=="ArrowLeft"&&event.key!=="ArrowRight")return;
     const panel=panelList[0];
     if(!panel)return;
-    const current=activeIndexes.get(panel.id)??0;
+    const current=(activeIndexes.get(panel.id) == null ? 0 : activeIndexes.get(panel.id));
     const next=Math.max(0,Math.min(panel.valid_times.length-1,current+(event.key==="ArrowRight"?1:-1)));
     show(panel,next,{clientX:svg.getBoundingClientRect().left+svg.getBoundingClientRect().width/2,clientY:svg.getBoundingClientRect().top+40});
   });
@@ -234,7 +234,7 @@ function attachGfsSvgInteractions(host,svg,metadata,syncGroup){
 function isMobileGfsLayout(){
   const viewportWidth=Math.min(
     Number(window.innerWidth||0),
-    Number(document.documentElement?.clientWidth||0)||Infinity
+    Number(document.documentElement && document.documentElement.clientWidth || 0)||Infinity
   );
   return viewportWidth<=700 ||
     window.matchMedia("(max-width:700px)").matches ||
@@ -294,13 +294,13 @@ function addMobileGfsCycleLabels(panelHost,panel){
   const seen=new Set();
 
   series.forEach(item=>{
-    const label=String(item?.label||"");
+    const label=String(item && item.label||"");
     const match=label.match(/(00|06|12|18)Z/i);
     if(!match)return;
     const cycle=match[1].toUpperCase()+"Z";
     if(seen.has(cycle))return;
     seen.add(cycle);
-    cycles.push({cycle,color:String(item?.color||"#d9a7f5")});
+    cycles.push({cycle,color:String((item && item.color)||"#d9a7f5")});
   });
 
   if(!cycles.length)return;
@@ -308,7 +308,7 @@ function addMobileGfsCycleLabels(panelHost,panel){
   // Use an HTML legend rather than modifying the SVG title. This is deliberately
   // outside the SVG so mobile WebViews cannot clip or discard the labels.
   const order={"06Z":0,"12Z":1,"18Z":2,"00Z":3};
-  cycles.sort((a,b)=>(order[a.cycle]??99)-(order[b.cycle]??99));
+  cycles.sort((a,b)=>((order[a.cycle] == null ? 99 : order[a.cycle]))-(order[b.cycle]??99));
 
   const legend=document.createElement("div");
   legend.className="gfs-mobile-cycle-legend";
@@ -353,7 +353,7 @@ function buildMobileGfsPanelViews(sourceSvg,metadata){
     {id:"precipitation",title:"Yağış",unit:"mm / 3 saat",plot:{x:105,y:550,width:432,height:146}},
     {id:"wind_10m",title:"10 m rüzgâr hızı",unit:"km/sa",plot:{x:642,y:550,width:432,height:146}}
   ];
-  const panels=Array.isArray(metadata?.panels)&&metadata.panels.length===4?metadata.panels:fallbackPanels;
+  const panels=Array.isArray(metadata && metadata.panels)&&metadata.panels.length===4?metadata.panels:fallbackPanels;
   const views=[];
   panels.forEach((panel,index)=>{
     const plot=panel.plot||{};
@@ -422,12 +422,12 @@ async function loadInteractiveGfsCharts(root){
       svg.classList.add("gfs-interactive-svg");
       forceDarkGfsSvg(svg);
       host.style.setProperty("background","#0A1B29","important");
-      host.closest(".notification-image-item")?.style.setProperty("background","#0A1B29","important");
-      host.closest(".notification-images")?.style.setProperty("background","#0A1B29","important");
+      host.closest(".notification-image-item") && host.closest(".notification-image-item").style.setProperty("background","#0A1B29","important");
+      host.closest(".notification-images") && host.closest(".notification-images").style.setProperty("background","#0A1B29","important");
       svg.setAttribute("role","group");
       svg.setAttribute("aria-label",host.dataset.chartLabel||"İstanbul GFS dört panelli etkileşimli valid-time karşılaştırması");
       svg.setAttribute("focusable","true");
-      host.querySelector(".gfs-chart-loading")?.remove();
+      (host.querySelector(".gfs-chart-loading") && host.querySelector(".gfs-chart-loading").remove());
       if(isMobileGfsLayout()){
         const mobileViews=buildMobileGfsPanelViews(svg,metadata);
         if(mobileViews){
@@ -496,6 +496,6 @@ if(!window.__gfsTooltipDocumentListener){
   window.__gfsTooltipDocumentListener=true;
   document.addEventListener("pointerdown",event=>{
     if(event.target.closest(".gfs-interactive-chart"))return;
-    document.querySelectorAll(".gfs-interactive-chart[data-pinned]").forEach(host=>host.gfsHideTooltip?.());
+    document.querySelectorAll(".gfs-interactive-chart[data-pinned]").forEach(host=>host.gfsHideTooltip && host.gfsHideTooltip());
   });
 }
