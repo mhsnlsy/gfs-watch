@@ -1,10 +1,8 @@
 name: Live Site Visual Monitor
 
 on:
-  push:
-    branches: [main]
-    paths:
-      - ".github/workflows/live-site-visual-monitor.yml"
+  # Production deploys already trigger this monitor; avoid a duplicate run
+  # when the monitor workflow file itself changes.
   workflow_dispatch:
   workflow_run:
     workflows:
