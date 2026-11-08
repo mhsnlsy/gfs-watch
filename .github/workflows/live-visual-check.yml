@@ -16,7 +16,7 @@ concurrency:
 jobs:
   browser:
     name: Production desktop + mobile browser verification
-    if: \${{ github.event_name == 'workflow_dispatch' || github.event.workflow_run.conclusion == 'success' }}
+    if: ${{ github.event_name == 'workflow_dispatch' || github.event.workflow_run.conclusion == 'success' }}
     runs-on: ubuntu-latest
     timeout-minutes: 12
     steps:
@@ -41,7 +41,7 @@ jobs:
 
       - name: Verify production homepage in desktop and mobile browsers
         env:
-          PLAYWRIGHT_PACKAGE: \${{ runner.temp }}/live-visual/node_modules/playwright
+          PLAYWRIGHT_PACKAGE: ${{ runner.temp }}/live-visual/node_modules/playwright
           PUBLIC_SITE: https://istanbulunhavasi.com
         run: |
           set -euo pipefail
@@ -123,6 +123,6 @@ jobs:
         uses: actions/upload-artifact@v4
         with:
           name: live-site-visual-check
-          path: \${{ runner.temp }}/live-site-evidence/
+          path: ${{ runner.temp }}/live-site-evidence/
           if-no-files-found: warn
           retention-days: 14
