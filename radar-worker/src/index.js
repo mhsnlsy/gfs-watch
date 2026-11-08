@@ -184,6 +184,71 @@ async function saveState(db,s){
     .bind(JSON.stringify(s.history),s.last_frame_ts||0,s.last_alert_ts||0,s.last_intensity||"",new Date().toISOString()).run();
 }
 
+function crc32(bytes){
+  let c=0xffffffff;
+  for(const b of bytes){
+    c^=b;
+    for(let k=0;k<8;k++) c=(c>>>1)^((c&1)?0xedb88320:0);
+  }
+  return (c^0xffffffff)>>>0;
+}
+
+function pngChunk(type,data){
+  const t=new TextEncoder().encode(type);
+  const out=new Uint8Array(12+t.length+data.length);
+  const dv=new DataView(out.buffer);
+  dv.setUint32(0,data.length);
+  out.set(t,4); out.set(data,8);
+  dv.setUint32(8+t.length+data.length,crc32(new Uint8Array([...t,...data])));
+  return out;
+}
+
+async function makeSyntheticRadarPng(){
+  const w=256,h=256,bpp=4;
+  const raw=new Uint8Array(h*(1+w*bpp));
+  const cx=128, cy=128-Math.round(30/PIXEL_KM);
+  const blob=[];
+  for(let dy=-1;dy<=2;dy++) for(let dx=-2;dx<=2;dx++) blob.push([cx+dx,cy+dy]);
+  const pixels=new Set(blob.slice(0,20).map(([x,y])=>`${x},${y}`));
+  for(let y=0;y<h;y++){
+    const row=y*(1+w*bpp); raw[row]=0;
+    for(let x=0;x<w;x++){
+      const i=row+1+x*bpp;
+      if(pixels.has(`${x},${y}`)){
+        raw[i]=0; raw[i+1]=119; raw[i+2]=170; raw[i+3]=255;
+      } else {
+        raw[i]=0; raw[i+1]=0; raw[i+2]=0; raw[i+3]=0;
+      }
+    }
+  }
+  const compressed=await readStream(new Response(raw).body.pipeThrough(new CompressionStream("deflate")));
+  const ihdr=new Uint8Array(13), dv=new DataView(ihdr.buffer);
+  dv.setUint32(0,w); dv.setUint32(4,h); ihdr[8]=8; ihdr[9]=6; ihdr[10]=0; ihdr[11]=0; ihdr[12]=0;
+  const sig=new Uint8Array([137,80,78,71,13,10,26,10]);
+  const idat=pngChunk("IDAT",compressed), iend=pngChunk("IEND",new Uint8Array());
+  const out=new Uint8Array(sig.length+25+idat.length+iend.length);
+  let o=0; out.set(sig,o);o+=sig.length;
+  out.set(pngChunk("IHDR",ihdr),o);o+=25;
+  out.set(idat,o);o+=idat.length;
+  out.set(iend,o);
+  return out;
+}
+
+async function runSyntheticTest(env){
+  const bytes=await makeSyntheticRadarPng();
+  const caption=`⚠️ <b>TEST / TATBİKAT — GERÇEK YAĞIŞ DEĞİL</b>
+<b>Sentetik radar senaryosu</b>
+Kütle: 30 km kuzeyden geliyor
+Şiddet: 25 dBZ
+Yağış pikseli: 20
+Hız: 30 km/sa
+Tahmini varış: ~60 dk
+Yön: GÜNEY / İstanbul'a doğru
+Bu mesaj yalnızca sistem testidir; gerçek yağış alarmı değildir.`;
+  const sent=await telegramPhoto(env,bytes,caption);
+  return {status:sent?"test_sent":"telegram_send_failed",telegram_sent:sent,scenario:{distance_km:30,dbz:25,pixels:20,speed_kmh:30,eta_minutes:60}};
+}
+
 async function check(env){
   const timeline=await (await fetch("https://api.rainviewer.com/public/weather-maps.json",{cf:{cacheTtl:0}})).json();
   const past=timeline?.radar?.past||[];
@@ -249,6 +314,6 @@ ${new Date(ts*1000).toLocaleString("tr-TR",{timeZone:"Europe/Istanbul"})}`;
 }
 
 export default {
-  async fetch(request,env){if(new URL(request.url).pathname==="/health"){const s=await getState(env.RADAR_DB);return new Response(JSON.stringify({ok:true,service:"radar-monitor",interval:"6m",pixel_threshold:MIN_ALERT_PIXELS,cooldown_minutes:ALERT_COOLDOWN_SECONDS/60,last_frame_ts:Number(s.last_frame_ts||0),last_alert_ts:Number(s.last_alert_ts||0),last_intensity:s.last_intensity||""}),{headers:{"content-type":"application/json"}});}return new Response(JSON.stringify({ok:true,service:"radar-monitor",interval:"6m"}),{headers:{"content-type":"application/json"}});},
+  async fetch(request,env){const url=new URL(request.url);if(url.pathname==="/test-radar"){return new Response(JSON.stringify(await runSyntheticTest(env)),{headers:{"content-type":"application/json"}});}if(url.pathname==="/health"){const s=await getState(env.RADAR_DB);return new Response(JSON.stringify({ok:true,service:"radar-monitor",interval:"6m",pixel_threshold:MIN_ALERT_PIXELS,cooldown_minutes:ALERT_COOLDOWN_SECONDS/60,last_frame_ts:Number(s.last_frame_ts||0),last_alert_ts:Number(s.last_alert_ts||0),last_intensity:s.last_intensity||""}),{headers:{"content-type":"application/json"}});}return new Response(JSON.stringify({ok:true,service:"radar-monitor",interval:"6m"}),{headers:{"content-type":"application/json"}});},
   async scheduled(event,env,ctx){ctx.waitUntil(check(env).then(r=>console.log(JSON.stringify(r))).catch(e=>console.error(e.stack||e.message||e)));}
 };
