@@ -2982,7 +2982,7 @@ html[data-default-station="eyupsultan"] #station-sisli-button{
       return line;
     }
     function forceHomepageDefaultStation(){
-      if(location.pathname==="/" || /\\/index\\.html$/i.test(location.pathname)){
+      if(location.pathname==="/" || location.pathname.endsWith("/index.html")){
         activeStation="eyupsultan";
         try{localStorage.setItem("istanbul-hava-station","eyupsultan");}catch(_){}
         const e=$("station-enka-button"), y=$("station-eyupsultan-button"), s=$("station-sisli-button");
