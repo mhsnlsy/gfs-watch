@@ -49,7 +49,8 @@ Canlı web arayüzü, API geçidi ve veri toplama servisleri Cloudflare üzerind
 - Kaynak: MeteoPT GFS, 41.014°N / 28.950°E.
 - Worker 00Z, 06Z, 12Z ve 18Z seçicilerini kontrol eder; kullanılabilir döngüleri D1'e arşivler.
 - F72 güncel paketi ve F180 tamamlanmış döngü arşivi D1'de tutulur.
-- API: `/gfs/latest`, `/gfs/comparison`, `/api/health`.
+- API: `/gfs/f72` en yeni kullanılabilir 72 saatlik MeteoPT döngüsünü canlı sunar; `/gfs/latest` en yeni F180 tamamlanmış döngüyü, `/gfs/comparison` dört F180 arşiv döngüsünü, `/api/health` Worker sağlık durumunu verir.
+- Ana sayfadaki MeteoPT 72 saat tablosu ve güncel 72 saatlik görünüm `/gfs/f72` kullanır; F180 raporu, karşılaştırma SVG'si ve Telegram bildirimi F180 tamamlanma koşuluna bağlı kalır.
 - F180 tamamlandığında İstanbul GFS Worker, D1'deki son dört tam döngüyü aynı UTC geçerlilik saatlerine hizalar; rapor metnini ve web için etkileşimli dört panelli SVG'yi üretir. Aynı SVG Cloudflare Worker içinde PNG'ye dönüştürülür, R2'ye arşivlenir ve Telegram'a metin + gerçek fotoğraf (sendPhoto) olarak gönderilir. D1 outbox ve gönderim lease'leri yarım kalan teslimatları kaldığı adımdan sürdürür; gönderim hataları 288 denemeye kadar otomatik tekrarlanır.
 
 ### Köy GFS
