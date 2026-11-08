@@ -4243,34 +4243,7 @@ if(typeof renderBriefing==="function")renderBriefing();
     }
   </style>
 
-  <script>
-    (() => {
-      if (!frame) return;
-      const setFrameHeight = value => {
-        const height = Number(value);
-        if (!Number.isFinite(height) || height <= 0) return;
-        frame.style.height = Math.max(320, Math.min(900, Math.ceil(height))) + "px";
-      };
-      const readFrameHeight = () => {
-        try {
-          const doc = frame.contentDocument;
-          if (!doc) return;
-          setFrameHeight(Math.max(
-            doc.documentElement && doc.documentElement.scrollHeight || 0,
-            doc.body && doc.body.scrollHeight || 0
-          ));
-        } catch (_) {}
-      };
-      frame.addEventListener("load", readFrameHeight);
-      window.addEventListener("message", event => {
-        if (event.origin !== window.location.origin || event.source !== frame.contentWindow) return;
-        const data = event.data;
-        if (!data || data.type !== "gfs-cycle-widget-height") return;
-        setFrameHeight(data.height);
-      });
-      readFrameHeight();
-    })();
-  </script>
+
   <style id="koy-gfs-report-final-match">
     /* FINAL: homepage GFS report uses the Köy page's exact report-frame geometry. */
     #bildirimler .notification-list{
