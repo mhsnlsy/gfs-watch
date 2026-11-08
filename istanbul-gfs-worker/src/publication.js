@@ -1,4 +1,4 @@
-const CYCLE_COLORS = Object.freeze({"06Z":"#B38BE8","00Z":"#F1C98B","18Z":"#7DD3D7","12Z":"#8ABCE8"});
+const CYCLE_COLORS = ["#8ABCE8", "#7DD3D7", "#F1C98B", "#B38BE8"];
 const PANELS = [
   { id: "temperature", field: "temperature_2m_c", title: "Sıcaklık", unit: "°C" },
   { id: "temperature_850", field: "temperature_850hpa_c", title: "850 hPa sıcaklık", unit: "°C" },
@@ -83,7 +83,7 @@ function buildSeries(runs) {
       document,
       points,
       label: runLabel(document.run_id_utc, index === docs.length - 1),
-      color: CYCLE_COLORS[String(document.run_id_utc).slice(11, 13) + "Z"] || "#B38BE8",
+      color: CYCLE_COLORS.slice(-docs.length)[index],
     };
   });
 
