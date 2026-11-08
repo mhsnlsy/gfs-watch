@@ -1,17 +1,18 @@
 name: Send GFS Web Push
 
 on:
-  workflow_call:
+  # Web Push is no longer part of the production data runtime. Manual diagnostics remain available.
+  workflow_dispatch:
     inputs:
       notification_id:
         description: "Optional notification ID; blank sends the latest feed item"
         required: false
         type: string
-  push:
-    branches: [gfs-watch-state]
-    paths:
-      - "public/notifications/latest.json"
-  workflow_dispatch:
+      test_mode:
+        description: "Send a one-off test notification without marking a GFS report as sent"
+        required: false
+        type: boolean
+        default: false
     inputs:
       notification_id:
         description: "Optional notification ID; blank sends the latest feed item"
