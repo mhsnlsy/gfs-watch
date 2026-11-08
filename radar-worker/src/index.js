@@ -309,8 +309,9 @@ Konum: 41.0904 N, 28.9438 E
 ${motionTxt}
 ${onSite?"Konuma ulaşıyor / üzerinde.":"Yaklaşıyor."}
 ${new Date(ts*1000).toLocaleString("tr-TR",{timeZone:"Europe/Istanbul"})}`;
-    sent=radarPhotoBytes?await telegramPhoto(env,radarPhotoBytes,caption):false;
-    if(!sent) await telegramText(env,caption);
+    const photoResult=radarPhotoBytes?await telegramPhoto(env,radarPhotoBytes,caption):false;
+    sent=typeof photoResult==="object"?photoResult.ok:photoResult;
+    if(!sent) sent=await telegramText(env,caption);
     if(sent) {state.last_alert_ts=now;state.last_intensity=intensity;}
   }
   state.history=h;state.last_frame_ts=ts;
