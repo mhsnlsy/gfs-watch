@@ -47,7 +47,7 @@ function formatUtcDate(date) {
 
 function formatNumber(value, digits = 1) {
   const n = numeric(value);
-  return n === null ? "—" : n.toFixed(digits);
+  return n === null ? "—" : new Intl.NumberFormat("tr-TR", { minimumFractionDigits: digits, maximumFractionDigits: digits }).format(n);
 }
 
 function runLabel(runId, latest) {
@@ -337,90 +337,215 @@ export function buildIstanbulInteractiveSvg(runs) {
 export function buildIstanbulReportText(document, now = new Date(), stationObservation = null) {
   const run = new Date(document.run_id_utc);
   if (!Number.isFinite(run.getTime())) throw new Error("Invalid Istanbul GFS report run");
+
   const nowLocal = localDate(now);
-  const forecast = Array.isArray(document.forecast_6_hourly) ? document.forecast_6_hourly : [];
+  const forecast = (Array.isArray(document.forecast_6_hourly) ? document.forecast_6_hourly : [])
+    .filter(point => Number.isFinite(Date.parse(point?.valid_time_utc || "")))
+    .slice()
+    .sort((a, b) => Date.parse(a.valid_time_utc) - Date.parse(b.valid_time_utc));
   const todayKey = nowLocal.getUTCFullYear() + "-" + pad2(nowLocal.getUTCMonth() + 1) + "-" + pad2(nowLocal.getUTCDate());
+  const dayNames = ["Paz", "Pzt", "Sal", "Çar", "Per", "Cum", "Cmt"];
+  const fullDayNames = ["Pazar", "Pazartesi", "Salı", "Çarşamba", "Perşembe", "Cuma", "Cumartesi"];
 
-  const lines = [
-    "🌦 " + APP_NAME + " v" + APP_VERSION,
-    "İSTANBUL GFS TAHMİN RAPORU",
-    "🛰 Model döngüsü: " + formatUtcDate(run) + " UTC (" + pad2(run.getUTCHours()) + "Z)",
-    "🕒 Rapor zamanı: " + formatTrDate(nowLocal) + " TSİ",
-    "📍 Konum: İstanbul, Türkiye",
-    "",
-    "📡 ENKA BALMUMCU İSTASYON GÖZLEMİ",
-    "",
-    "",
-    stationObservation && stationObservation.temperature_2m_c !== null && stationObservation.temperature_2m_c !== undefined
-      ? "🌡 Sıcaklık: " + formatNumber(stationObservation.temperature_2m_c) + "°C"
-      : "🌡 Sıcaklık: —",
-    stationObservation && stationObservation.humidity_percent !== null && stationObservation.humidity_percent !== undefined
-      ? "💧 Nem: " + formatNumber(stationObservation.humidity_percent) + "%"
-      : "💧 Nem: —",
-    stationObservation && stationObservation.station_pressure_hpa !== null && stationObservation.station_pressure_hpa !== undefined
-      ? "🧭 İstasyon basıncı: " + formatNumber(stationObservation.station_pressure_hpa) + " hPa"
-      : "🧭 İstasyon basıncı: —",
-    stationObservation && stationObservation.wind_speed_10m_kmh !== null && stationObservation.wind_speed_10m_kmh !== undefined
-      ? "💨 Rüzgâr: " + formatNumber(stationObservation.wind_speed_10m_kmh) + " km/sa" + (stationObservation.wind_direction_cardinal ? " " + stationObservation.wind_direction_cardinal : "")
-      : "💨 Rüzgâr: —",
-    stationObservation && stationObservation.precipitation_daily_mm !== null && stationObservation.precipitation_daily_mm !== undefined
-      ? "🌧️ Bugünkü yağış: " + formatNumber(stationObservation.precipitation_daily_mm) + " mm"
-      : "🌧️ Bugünkü yağış: —",
-    stationObservation && stationObservation.observed_at_utc
-      ? "🕒 Ölçüm: " + formatTrDate(localDate(stationObservation.observed_at_utc)) + " TSİ" +
-        (Number.isFinite(Number(stationObservation.age_minutes)) ? " · " + Math.round(Number(stationObservation.age_minutes)) + " dk önce" : "")
-      : "🕒 Ölçüm zamanı: —",
-    stationObservation && Number.isFinite(Number(stationObservation.age_minutes)) && Number(stationObservation.age_minutes) > 20
-      ? "⚠️ İstasyon verisi 20 dakikadan eski; paneldeki son başarılı ölçüm kullanıldı."
-      : stationObservation
-        ? "✅ Veri: aktif ENKA Balmumcu istasyon panosundan alındı."
-        : "⚠️ Aktif istasyon panosuna erişilemedi; istasyon verisi eklenemedi.",
-    "",
-    "🌆 GÜNÜN KALANINDA",
-  ];
+  const localParts = value => {
+    const date = localDate(value);
+    return {
+      date,
+      key: date.getUTCFullYear() + "-" + pad2(date.getUTCMonth() + 1) + "-" + pad2(date.getUTCDate()),
+      day: fullDayNames[date.getUTCDay()],
+      shortDay: dayNames[date.getUTCDay()],
+      dateLabel: pad2(date.getUTCDate()) + "." + pad2(date.getUTCMonth() + 1),
+      time: pad2(date.getUTCHours()) + ":" + pad2(date.getUTCMinutes()),
+    };
+  };
+  const formatRange = (values, suffix) => {
+    const clean = values.filter(value => value !== null && value !== undefined && Number.isFinite(Number(value)))
+      .map(Number);
+    if (!clean.length) return null;
+    const low = Math.min(...clean);
+    const high = Math.max(...clean);
+    const value = Math.abs(high - low) < 0.05
+      ? formatNumber(low) + suffix
+      : formatNumber(low) + "–" + formatNumber(high) + suffix;
+    return value;
+  };
+  const windDirection = degrees => {
+    const value = numeric(degrees);
+    if (value === null) return "";
+    const names = ["K", "KD", "D", "GD", "G", "GB", "B", "KB"];
+    return names[Math.round((((value % 360) + 360) % 360) / 45) % 8];
+  };
+  const windText = point => {
+    const speed = numeric(point?.wind_speed_10m_kmh);
+    if (speed === null) return null;
+    const direction = windDirection(point?.wind_direction_10m_deg);
+    return formatNumber(speed) + " km/sa" + (direction ? " " + direction : "");
+  };
+  const timeLabel = value => {
+    const part = localParts(value);
+    return part.shortDay + " " + part.time;
+  };
 
-  const todayPoints = forecast.filter(point => {
-    const valid = new Date(point.valid_time_utc);
-    if (!Number.isFinite(valid.getTime())) return false;
-    const local = localDate(valid);
-    const key = local.getUTCFullYear() + "-" + pad2(local.getUTCMonth() + 1) + "-" + pad2(local.getUTCDate());
-    return key === todayKey && local.getTime() > nowLocal.getTime();
-  });
-  const midnightLocal = new Date(Date.UTC(nowLocal.getUTCFullYear(), nowLocal.getUTCMonth(), nowLocal.getUTCDate() + 1));
-  lines.push("⏳ Süre: " + formatTrDate(nowLocal) + " – " + formatTrDate(midnightLocal) + " TSİ");
-  if (todayPoints.length) {
-    const temps = todayPoints.map(point => numeric(point.temperature_2m_c)).filter(value => value !== null);
-    const winds = todayPoints.map(point => numeric(point.wind_speed_10m_kmh)).filter(value => value !== null);
-    const rain = todayPoints.map(point => numeric(point.precipitation_6h_mm)).filter(value => value !== null)
-      .reduce((sum, value) => sum + Math.max(0, value), 0);
-    if (temps.length) lines.push("🌡 Sıcaklık: " + Math.min(...temps).toFixed(1) + "–" + Math.max(...temps).toFixed(1) + "°C");
-    if (winds.length) lines.push("💨 Rüzgâr: en fazla " + Math.max(...winds).toFixed(1) + " km/sa");
-    lines.push("🌧 Beklenen yağış: " + rain.toFixed(1) + " mm");
-  } else {
-    lines.push("Bu gece yarısına kadar kullanılabilir tahmin noktası bulunmuyor.");
+  const sections = [];
+  sections.push([
+    "🌦 İSTANBUL GFS · " + pad2(run.getUTCHours()) + "Z",
+    "🕒 " + formatTrDate(nowLocal) + " TSİ · Model: " + formatUtcDate(run) + " UTC",
+    "📡 Kaynak: MeteoPT GFS · " + (Number(document.forecast_horizon_hours) || 180) + " saat tahmin",
+  ].join("\n"));
+
+  // Station block is shown only when at least one real measurement is present.
+  // A failed station request must not create a wall of meaningless em dashes.
+  const station = stationObservation && typeof stationObservation === "object" ? stationObservation : null;
+  if (station) {
+    const temperature = numeric(station.temperature_2m_c);
+    const humidity = numeric(station.humidity_percent);
+    const pressure = numeric(station.station_pressure_hpa ?? station.actual_station_pressure_hpa);
+    const wind = numeric(station.wind_speed_10m_kmh);
+    const rain = numeric(station.precipitation_daily_mm);
+    const measurements = [];
+    if (temperature !== null) measurements.push("🌡 " + formatNumber(temperature) + "°C");
+    if (humidity !== null) measurements.push("💧 %" + formatNumber(humidity));
+    if (pressure !== null) measurements.push("🧭 " + formatNumber(pressure) + " hPa");
+    const windDirectionLabel = String(station.wind_direction_cardinal || "").trim();
+    if (wind !== null) measurements.push("💨 " + (windDirectionLabel ? windDirectionLabel + " " : "") + formatNumber(wind) + " km/sa");
+    if (rain !== null) measurements.push("🌧 " + formatNumber(rain) + " mm bugün");
+    if (measurements.length) {
+      const stationLines = [
+        "📍 " + String(station.station_name || "ENKA Balmumcu").toLocaleUpperCase("tr-TR"),
+        measurements.join(" · "),
+      ];
+      if (station.observed_at_utc) {
+        const observed = localParts(station.observed_at_utc);
+        const age = numeric(station.age_minutes);
+        stationLines.push("🕒 Ölçüm: " + observed.dateLabel + " " + observed.time +
+          " TSİ" + (age !== null ? " · " + Math.round(age) + " dk önce" : ""));
+      }
+      const age = numeric(station.age_minutes);
+      if (station.is_stale === true || (age !== null && age > 20)) {
+        stationLines.push("⚠️ İstasyon ölçümü güncel değil.");
+      }
+      sections.push(stationLines.join("\n"));
+    }
   }
 
-  lines.push("", "📅 ÖNÜMÜZDEKİ 3 GÜN");
+  // A compact 24-hour outlook adds humidity and direction without pretending
+  // a single model point is a min/max range.
+  const next24End = now.getTime() + 24 * 3600000;
+  const next24 = forecast.filter(point => {
+    const time = Date.parse(point.valid_time_utc);
+    return time > now.getTime() && time <= next24End;
+  });
+  const outlook = ["⏱ ÖNÜMÜZDEKİ 24 SAAT"];
+  if (next24.length) {
+    const firstTime = localParts(next24[0].valid_time_utc);
+    const lastTime = localParts(next24[next24.length - 1].valid_time_utc);
+    outlook.push("Tahmin noktaları: " + firstTime.dateLabel + " " + firstTime.time +
+      " – " + lastTime.dateLabel + " " + lastTime.time + " TSİ");
+    const temperatures = formatRange(next24.map(point => numeric(point.temperature_2m_c)), "°C");
+    const humidities = formatRange(next24.map(point => numeric(point.humidity_2m_percent)), "%");
+    const rainValues = next24.map(point => numeric(point.precipitation_6h_mm))
+      .filter(value => value !== null);
+    const winds = next24.map(point => point).filter(point => numeric(point.wind_speed_10m_kmh) !== null);
+    if (temperatures) {
+      let line = "🌡 " + temperatures;
+      if (next24.map(point => numeric(point.temperature_2m_c)).filter(value => value !== null).length === 1) {
+        line += " · " + timeLabel(next24.find(point => numeric(point.temperature_2m_c) !== null).valid_time_utc);
+      }
+      outlook.push(line);
+    }
+    if (humidities) outlook.push("💧 Nem: " + humidities);
+    if (rainValues.length) {
+      const totalRain = rainValues.reduce((sum, value) => sum + Math.max(0, value), 0);
+      outlook.push(totalRain < 0.1 ? "🌧 Yağış beklenmiyor" : "🌧 Beklenen toplam: " + formatNumber(totalRain) + " mm");
+    }
+    if (winds.length) {
+      const peak = winds.reduce((best, point) =>
+        numeric(point.wind_speed_10m_kmh) > numeric(best.wind_speed_10m_kmh) ? point : best
+      );
+      outlook.push("💨 En yüksek rüzgâr: " + windText(peak));
+    }
+  } else {
+    outlook.push("Bu zaman aralığında kullanılabilir tahmin noktası yok.");
+  }
+  sections.push(outlook.join("\n"));
+
+  // Five full forecast days are available in the F180 payload.
   const days = (Array.isArray(document.daily_summary) ? document.daily_summary : [])
     .filter(day => String(day.date_istanbul || "") > todayKey)
-    .slice(0, 3);
-  const dayNames = ["Pazar", "Pazartesi", "Salı", "Çarşamba", "Perşembe", "Cuma", "Cumartesi"];
+    .slice(0, 5);
+  const dailyLines = ["📅 5 GÜNLÜK TAHMİN"];
   for (const day of days) {
-    const parts = String(day.date_istanbul).split("-").map(Number);
-    const year = parts[0], month = parts[1], date = parts[2];
+    const [year, month, date] = String(day.date_istanbul).split("-").map(Number);
+    if (!year || !month || !date) continue;
     const local = new Date(Date.UTC(year, month - 1, date));
     const label = dayNames[local.getUTCDay()] + " " + pad2(date) + "." + pad2(month);
-    const low = numeric(day.temperature_min_c);
-    const high = numeric(day.temperature_max_c);
+    const values = [];
+    const tempRange = formatRange([
+      numeric(day.temperature_min_c), numeric(day.temperature_max_c)
+    ], "°C");
+    if (tempRange) values.push(tempRange);
+    const humidityRange = formatRange([
+      numeric(day.humidity_min_percent), numeric(day.humidity_max_percent)
+    ], "%");
+    if (humidityRange) values.push("Nem " + humidityRange);
     const rain = numeric(day.precipitation_total_mm);
-    const wind = numeric(day.wind_speed_max_10m_kmh);
-    const tag = wind !== null && wind > 20 ? " | Rüzgârlı" : "";
-    lines.push("• " + label + ": " + formatNumber(low) + "–" + formatNumber(high) +
-      "°C | Yağış: " + formatNumber(rain) + " mm | Maks. rüzgâr: " + formatNumber(wind) + " km/sa" + tag);
-    if (rain !== null && rain <= 0) lines.push("  ↳ Belirgin yağış beklenmiyor.");
+    if (rain !== null) values.push(rain < 0.1 ? "Yağış yok" : "Yağış " + formatNumber(rain) + " mm");
+    const windSpeed = numeric(day.wind_speed_max_10m_kmh);
+    if (windSpeed !== null) {
+      const direction = windDirection(day.wind_direction_max_10m_deg);
+      values.push("Rüzgâr " + formatNumber(windSpeed) + " km/sa" + (direction ? " " + direction : ""));
+    }
+    if (values.length) dailyLines.push("• " + label + " · " + values.join(" · "));
   }
-  if (!days.length) lines.push("Önümüzdeki üç gün için günlük özet bulunmuyor.");
+  if (dailyLines.length === 1) dailyLines.push("Günlük özet verisi bulunmuyor.");
+  sections.push(dailyLines.join("\n"));
 
-  lines.push("", "📊 Karşılaştırma: Son dört GFS döngüsü aynı geçerlilik saatlerinde hizalandı.");
-  return lines.join("\n");
+  // Convert non-zero forecast precipitation points into concise time windows.
+  const rainHorizonEnd = now.getTime() + 72 * 3600000;
+  const rainPoints = forecast.filter(point => {
+    const time = Date.parse(point.valid_time_utc);
+    const amount = numeric(point.precipitation_6h_mm);
+    return time > now.getTime() && time <= rainHorizonEnd && amount !== null;
+  });
+  const rainEvents = [];
+  let activeEvent = null;
+  const flushRainEvent = () => {
+    if (activeEvent) rainEvents.push(activeEvent);
+    activeEvent = null;
+  };
+  for (const point of rainPoints) {
+    const amount = Math.max(0, numeric(point.precipitation_6h_mm));
+    if (amount < 0.2) {
+      flushRainEvent();
+      continue;
+    }
+    const time = Date.parse(point.valid_time_utc);
+    if (!activeEvent) {
+      activeEvent = { start: point.valid_time_utc, end: point.valid_time_utc, total: amount, count: 1, endTime: time };
+    } else {
+      activeEvent.end = point.valid_time_utc;
+      activeEvent.endTime = time;
+      activeEvent.total += amount;
+      activeEvent.count += 1;
+    }
+  }
+  flushRainEvent();
+  const rainLines = ["🌧 YAĞIŞ ZAMANLARI · 72 SAAT"];
+  if (rainEvents.length) {
+    for (const event of rainEvents.slice(0, 4)) {
+      const start = localParts(event.start);
+      const end = localParts(event.end);
+      const label = event.start === event.end
+        ? start.day + " " + start.time
+        : start.day + " " + start.time + " – " +
+          (start.key === end.key ? end.time : end.day + " " + end.time);
+      rainLines.push("• " + label + " · yaklaşık " + formatNumber(event.total) + " mm");
+    }
+    if (rainEvents.length > 4) rainLines.push("Diğer yağış sinyalleri günlük toplamda gösteriliyor.");
+  } else {
+    rainLines.push("Anlamlı yağış sinyali beklenmiyor.");
+  }
+  sections.push(rainLines.join("\n"));
+
+  return sections.filter(Boolean).join("\n\n");
 }
