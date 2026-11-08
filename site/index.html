@@ -1868,18 +1868,12 @@ html[data-default-station="eyupsultan"] #station-eyupsultan-button{
     });
     function renderRainWindow(parsed){
       latestRainForecastPoints=Array.isArray(parsed)?parsed:[];
-      const current=$("rain-brief-current"),forecast=$("rain-brief-forecast"),heavy=$("rain-brief-heavy");
-      if(!current||!forecast)return;
-      // Both badges are intentionally driven by the exact MeteoPT F72 payload
-      // used by the visible "GFS · Önümüzdeki 72 saat" table.
+      const forecast=$("rain-brief-forecast"),heavy=$("rain-brief-heavy");
+      if(!forecast)return;
+      // The current-rain badge is owned exclusively by the live station observation.
+      // The MeteoPT F72 payload is used only for the forecast badge below.
       const dateTime=ms=>forecastDateTimeTSI(ms);
       const points=latestRainForecastPoints.filter(p=>p.modelLead>0&&numeric(p.precipitation_6h_mm)&&Number.isFinite(p.stamp)).sort((a,b)=>a.stamp-b.stamp);
-      if(points.length){
-        const first=points[0];
-        current.textContent="MeteoPT GFS · ilk tahmin: "+fmt(first.precipitation_6h_mm,1)+" mm / 6 saat";
-      }else{
-        current.textContent="MeteoPT GFS yağış verisi bekleniyor.";
-      }
       if(points.length<2){
         forecast.textContent="MeteoPT GFS verisi yeterli değil; yağış zamanı hesaplanamıyor.";
         if(heavy)heavy.textContent="";
