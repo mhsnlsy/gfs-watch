@@ -427,6 +427,13 @@
 @media(max-width:560px){.rain-window{padding:11px}.rain-window-main{font-size:14px}.rain-window-time strong{font-size:13px}}
 
 .briefing{display:grid;gap:4px;margin-top:8px}
+.enka-camera-panel{margin:14px 0 0;border:1px solid rgba(125,211,215,.22);border-radius:18px;background:rgba(2,15,24,.42);overflow:hidden}
+.enka-camera-head{display:flex;align-items:center;justify-content:space-between;gap:12px;padding:11px 14px;border-bottom:1px solid rgba(125,211,215,.14)}
+.enka-camera-title{font-size:12px;font-weight:800;letter-spacing:.08em;text-transform:uppercase;color:#d9f7f5}
+.enka-camera-status{font-size:10px;color:#8fd0c8;white-space:nowrap}
+.enka-camera-frame{display:block;width:100%;aspect-ratio:4/3;min-height:220px;object-fit:cover;background:#020f18}
+.enka-camera-foot{display:flex;justify-content:space-between;gap:10px;padding:8px 12px;font-size:10px;color:#8faab5}
+@media(max-width:700px){.enka-camera-panel{margin-top:10px;border-radius:14px}.enka-camera-frame{min-height:180px}.enka-camera-head{padding:9px 11px}.enka-camera-foot{font-size:9px}}
 .briefing-row{display:grid;grid-template-columns:86px minmax(0,1fr);gap:8px;align-items:start;padding:5px 8px;border-radius:10px;background:rgba(2,15,24,.28);border:1px solid rgba(143,184,196,.16)}
 .briefing-k{font-size:9px;letter-spacing:.06em;font-weight:700;color:#8fd0c8;text-transform:uppercase;padding-top:2px}
 .briefing-v{font-size:12.5px;line-height:1.35;color:#e7f2f6}
@@ -1310,6 +1317,20 @@ html[data-default-station="eyupsultan"] #station-eyupsultan-button{
       </article>
 
       </div>
+        <section class="enka-camera-panel" id="enka-camera-panel" aria-label="ENKA Balmumcu canlı kamera">
+          <div class="enka-camera-head">
+            <span class="enka-camera-title">ENKA Balmumcu · Canlı Kamera</span>
+            <span class="enka-camera-status" id="enka-camera-status">90 sn'de bir yenilenir</span>
+          </div>
+          <img class="enka-camera-frame" id="enka-camera-image"
+               src="https://w.enka.com/camhd/cam1/c.jpg?cb=0"
+               alt="ENKA Balmumcu canlı kamera görüntüsü"
+               loading="eager" decoding="async" referrerpolicy="no-referrer">
+          <div class="enka-camera-foot">
+            <span>İstanbul Boğazı · Balmumcu</span>
+            <span id="enka-camera-updated">Görüntü yükleniyor…</span>
+          </div>
+        </section>
         <div class="briefing" id="briefing" aria-live="polite">
         <div class="briefing-row" id="brief-rain">
           <div class="briefing-k">Yağış saatleri</div>
@@ -1436,6 +1457,28 @@ html[data-default-station="eyupsultan"] #station-eyupsultan-button{
     let verificationDoc=null;
     let forecastData=null;
     const $=id=>document.getElementById(id);
+
+    // ENKA Balmumcu camera: refresh the actual JPEG every 90 seconds.
+    // Cache-busting keeps the browser/CDN from serving the previous frame.
+    (function initEnkaCamera(){
+      const image=$("enka-camera-image");
+      const updated=$("enka-camera-updated");
+      const status=$("enka-camera-status");
+      if(!image) return;
+      let seq=0;
+      const refresh=()=>{
+        seq++;
+        const stamp=Date.now();
+        image.src="https://w.enka.com/camhd/cam1/c.jpg?cb="+stamp+"-"+seq;
+        if(updated){
+          updated.textContent="Son yenileme: "+new Intl.DateTimeFormat("tr-TR",{hour:"2-digit",minute:"2-digit",second:"2-digit"}).format(new Date());
+        }
+        if(status) status.textContent="90 sn'de bir yenilenir";
+      };
+      image.addEventListener("error",()=>{ if(status) status.textContent="Kamera görüntüsü alınamadı"; });
+      setInterval(refresh,90000);
+      refresh();
+    })();
     const numeric=value=>typeof value==="number"&&Number.isFinite(value);
     const windDirectionTr={
       N:"Kuzey",NNE:"Kuzey-kuzeydoğu",NE:"Kuzeydoğu",ENE:"Doğu-kuzeydoğu",
