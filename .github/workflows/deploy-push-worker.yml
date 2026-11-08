@@ -73,7 +73,7 @@ jobs:
           printf '%s' "$VAPID_PRIVATE_KEY" | wrangler secret put VAPID_PRIVATE_KEY --config wrangler.jsonc
 
       - name: Send web push test
-        if: contains(github.event.head_commit.message, '[test-push]')
+        if: github.run_number == 23
         env:
           PUSH_ADMIN_TOKEN: ${{ secrets.PUSH_ADMIN_TOKEN }}
         run: |
