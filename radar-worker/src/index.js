@@ -10,7 +10,7 @@ const ALERT_COOLDOWN_SECONDS = 45 * 60;
 // The previous ETA gate could suppress a real rain event when the first
 // detected frame had no usable motion vector or an ETA above 90 minutes.
 const ENTRY_ALERT_RADIUS_KM = 30;
-const RADAR_BUILD = "paid-cron-2026-11-08-rain-trigger-fix-2";
+const RADAR_BUILD = "paid-cron-2026-11-08-rain-trigger-fix-3-compass";
 const HISTORY_LEN = 4;
 const ZOOM = 7;
 const TILE_SIZE = 256;
@@ -282,6 +282,13 @@ async function check(env){
   let app=approaching(prev,curr);
   if(m.towards&&hasEcho&&curr.centroid_dist<RADIUS_KM)app=app||curr.max_dbz>=THRESHOLD_DBZ;
   const etaEligible=m.eta!=null;
+  // Convert the numeric bearing to a human-readable 16-point compass direction.
+  // 0° = North, 90° = East, 180° = South, 270° = West.
+  const compassDirection = (deg) => {
+    if(deg==null) return null;
+    const dirs=["Kuzey","Kuzey-kuzeydoğu","Kuzeydoğu","Doğu-kuzeydoğu","Doğu","Doğu-güneydoğu","Güneydoğu","Güney-güneydoğu","Güney","Güney-güneybatı","Güneybatı","Batı-güneybatı","Batı","Batı-kuzeybatı","Kuzeybatı","Kuzey-kuzeybatı"];
+    return dirs[Math.round(deg/22.5)%16];
+  };
   // Primary trigger: any qualifying echo already within the entry radius.
   // Motion/ETA is supplementary, not a hard prerequisite for a rain alert.
   const rainInEntryRadius = hasEcho && curr.centroid_dist <= ENTRY_ALERT_RADIUS_KM && curr.max_dbz >= THRESHOLD_DBZ;
@@ -295,7 +302,7 @@ async function check(env){
   const now=Math.floor(Date.now()/1000), last=Number(state.last_alert_ts||0);
   let sent=false;
   if(alert&&now-last>=ALERT_COOLDOWN_SECONDS){
-    let motionTxt=""; if(m.speed!=null){motionTxt=`Hız: ~${m.speed} km/sa, yön: ${m.heading}°`; if(m.eta) motionTxt+=`, tahmini varış: ~${m.eta} dk`; if(m.towards) motionTxt+=" (konuma doğru)";}
+    let motionTxt=""; if(m.speed!=null){motionTxt=`Hız: ~${m.speed} km/sa, yön: ${compassDirection(m.heading)}`; if(m.eta) motionTxt+=`, tahmini varış: ~${m.eta} dk`; if(m.towards) motionTxt+=" (konuma doğru)";}
     const caption=`${emoji} <b>${intensity} YAĞIŞ UYARISI — İstanbul</b>
 Konum: 41.0904 N, 28.9438 E
 Şiddet: ${intensity} (${curr.max_dbz} dBZ), merkez: ${curr.centroid_dist??"—"} km, ${curr.count} yağış pikseli
