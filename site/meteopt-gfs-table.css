@@ -1761,3 +1761,14 @@ html,body{
   padding-left:2px!important;
   padding-right:2px!important;
 }
+
+
+/* 20261108: both Istanbul and Koy MeteoPT tables use 10px typography on tablet and mobile. */
+@media(max-width:850px){
+  #meteopt-gfs-table .meteopt-data-table,
+  #meteopt-gfs-table .meteopt-data-table th,
+  #meteopt-gfs-table .meteopt-data-table td,
+  #meteopt-gfs-table .meteopt-data-table .meteopt-value{
+    font-size:10px!important;
+  }
+}
