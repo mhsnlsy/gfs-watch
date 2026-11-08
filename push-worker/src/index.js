@@ -2,7 +2,7 @@ import webPush from "web-push";
 
 const DEFAULT_ORIGIN = "https://gfs-watch-web.muhsin-ulusoy.workers.dev";
 const GFS_12Z_URL = "https://api.meteopt.com/gfs/json?lat=41.014&lon=28.95&run=12&lang=en";
-const ISTANBUL_TZ = "Europe/Istanbul"; // Istanbul local time for daily push
+const ISTANBUL_TZ = "Europe/Istanbul"; // Istanbul local time for daily push — verified test path
 
 function corsHeaders(request, env) {
   const headers = new Headers({
