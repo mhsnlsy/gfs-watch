@@ -2944,8 +2944,8 @@ def _prepare_comparison_chart_data(current_run_id, payload, previous_runs):
             + ", ".join(missing_850)
         )
 
-    # Age-based cycle colors: newest is lilac, then amber, cyan, blue.
-    # Derive this from the actual run timestamps, never from array position.
+    # Age-based cycle colors: newest is ALWAYS lilac, then amber, cyan, blue.
+    # The current run is determined from the actual run_id timestamp.
     age_palette = ["#B38BE8", "#F1C98B", "#7DD3D7", "#8ABCE8"]
     ranked_runs = sorted(
         range(len(series)),
