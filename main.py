@@ -2945,7 +2945,7 @@ def _prepare_comparison_chart_data(current_run_id, payload, previous_runs):
         )
 
     # Deep-navy report canvas with four color-blind-friendly, high-contrast cycle accents.
-    colors = ["#55D6D2", "#7EB8FF", "#FFC66D", "#C3A5FF"]
+    colors = ["#8ABCE8", "#7DD3D7", "#F1C98B", "#B38BE8"]
     count = len(series)
     offsets = [
         (index - (count - 1) / 2) * min(0.20, 0.80 / count)
@@ -3051,7 +3051,7 @@ def _draw_comparison_temperature_axis(axis, chart_data):
     candle_width = chart_data["candle_width"]
     x_positions = list(range(len(dates)))
     for series_index, item in enumerate(series):
-        color = colors[series_index % len(colors)]
+        color = colors[series_index]
         values_by_day = [
             _comparison_temperature_ohlc(item["timeline"], day) for day in dates
         ]
@@ -3342,7 +3342,8 @@ def create_valid_time_comparison_assets(current_run_id, payload, previous_runs):
 
         # Series are oldest -> newest. Reverse the shared web palette so the
         # newest line is lilac, then amber, blue, and turquoise.
-        cycle_palette = {"06Z": "#B38BE8", "00Z": "#F1C98B", "18Z": "#7DD3D7", "12Z": "#8ABCE8"}
+        cycle_palette = ["#8ABCE8", "#7DD3D7", "#F1C98B", "#B38BE8"]
+        active_palette = cycle_palette[-len(series):]
         metrics = (
             ("temp", "Sıcaklık", "°C"),
             ("temp_850", "850 hPa sıcaklık", "°C"),
@@ -3373,7 +3374,7 @@ def create_valid_time_comparison_assets(current_run_id, payload, previous_runs):
         legend_handles = []
         for series_index in reversed(range(len(series))):
             item = series[series_index]
-            color = cycle_palette.get(str(item["run_id"])[11:13] + "Z", "#B38BE8")
+            color = active_palette[series_index]
             is_latest = series_index == len(series) - 1
             legend_handles.append(Line2D(
                 [], [],
@@ -3460,7 +3461,7 @@ def create_valid_time_comparison_assets(current_run_id, payload, previous_runs):
                 axis.plot(
                     x_values,
                     y_values,
-                    color=cycle_palette.get(str(item["run_id"])[11:13] + "Z", "#B38BE8"),
+                    color=active_palette[series_index],
                     linewidth=3.2 if is_latest else 1.8,
                     linestyle="-" if is_latest else (0, (4, 3)),
                     marker="o" if is_latest else None,
