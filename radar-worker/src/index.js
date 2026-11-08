@@ -10,7 +10,7 @@ const ALERT_COOLDOWN_SECONDS = 45 * 60;
 // The previous ETA gate could suppress a real rain event when the first
 // detected frame had no usable motion vector or an ETA above 90 minutes.
 const ENTRY_ALERT_RADIUS_KM = 30;
-const RADAR_BUILD = "paid-cron-2026-11-08-rain-trigger-fix-1";
+const RADAR_BUILD = "paid-cron-2026-11-08-rain-trigger-fix-2";
 const HISTORY_LEN = 4;
 const ZOOM = 7;
 const TILE_SIZE = 256;
@@ -281,11 +281,11 @@ async function check(env){
   const onSite=hasEcho&&curr.centroid_dist<5&&curr.max_dbz>=THRESHOLD_DBZ;
   let app=approaching(prev,curr);
   if(m.towards&&hasEcho&&curr.centroid_dist<RADIUS_KM)app=app||curr.max_dbz>=THRESHOLD_DBZ;
-  const etaEligible=m.eta!=null&&m.eta<=90;
+  const etaEligible=m.eta!=null;
   // Primary trigger: any qualifying echo already within the entry radius.
   // Motion/ETA is supplementary, not a hard prerequisite for a rain alert.
   const rainInEntryRadius = hasEcho && curr.centroid_dist <= ENTRY_ALERT_RADIUS_KM && curr.max_dbz >= THRESHOLD_DBZ;
-  const alert=pixelGate&&(rainInEntryRadius || (app&&etaEligible) || onSite);
+  const alert=pixelGate&&(rainInEntryRadius || app || onSite);
 
   let intensity="DÜŞÜK",emoji="🌦️";
   if(curr.max_dbz>30){intensity="ÇOK GÜÇLÜ";emoji="⚠️";}
