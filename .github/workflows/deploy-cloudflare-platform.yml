@@ -1,8 +1,9 @@
 name: Deploy Cloudflare Platform
 
 on:
+  # Production runtime is Cloudflare-native. GitHub only deploys code from main.
   push:
-    branches: [main, istanbul-gfs-data, gfs-watch-state]
+    branches: [main]
     paths:
       - ".github/workflows/deploy-cloudflare-platform.yml"
       - "site/**"
