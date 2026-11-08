@@ -304,15 +304,22 @@ function addMobileGfsCycleLabels(panelHost,panel,panelSvg){
     const cycle=match[1].toUpperCase()+"Z";
     if(seen.has(cycle))return;
     seen.add(cycle);
-    cycles.push({cycle,color:String((item && item.color)||"#d9a7f5")});
+    cycles.push({cycle,run_id_utc:String((item && (item.run_id_utc||item.runIdUtc||item.run_id))||""),color:String((item && item.color)||"#d9a7f5")});
   });
 
   if(!cycles.length)return;
 
   // Use an HTML legend rather than modifying the SVG title. This is deliberately
   // outside the SVG so mobile WebViews cannot clip or discard the labels.
-  const order={"06Z":0,"00Z":1,"18Z":2,"12Z":3};
-  cycles.sort((a,b)=>((order[a.cycle] == null ? 99 : order[a.cycle]))-(order[b.cycle] == null ? 99 : order[b.cycle]));
+  // Sort by the actual model run timestamp, newest -> oldest.
+  // Never sort by cycle label: across midnight, 00Z/06Z/12Z/18Z labels
+  // are not an age ordering. The newest run must receive lilac.
+  cycles.sort((a,b)=>{
+    const at=Date.parse(String(a.run_id_utc||""));
+    const bt=Date.parse(String(b.run_id_utc||""));
+    if(Number.isFinite(at)&&Number.isFinite(bt))return bt-at;
+    return 0;
+  });
 
   // Build the legend FROM THE ACTUAL GRAPH LINES.
   // The SVG renderer tags every plotted series as #gfs-series-N. We read the
