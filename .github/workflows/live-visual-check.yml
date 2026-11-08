@@ -1,0 +1,120 @@
+name: Live Visual Check
+
+on:
+  workflow_run:
+    workflows: ["Deploy Cloudflare Platform"]
+    types: [completed]
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: live-visual-check
+  cancel-in-progress: true
+
+jobs:
+  browser:
+    name: Production desktop + mobile browser verification
+    if: \${{ github.event_name == 'workflow_dispatch' || github.event.workflow_run.conclusion == 'success' }}
+    runs-on: ubuntu-latest
+    timeout-minutes: 12
+    steps:
+      - name: Set up Node.js
+        uses: actions/setup-node@v5
+        with:
+          node-version: "22"
+
+      - name: Install Playwright Chromium
+        run: |
+          set -euo pipefail
+          npm install --prefix "$RUNNER_TEMP/live-visual" --no-save --no-audit --no-fund playwright@1.56.1
+          "$RUNNER_TEMP/live-visual/node_modules/.bin/playwright" install --with-deps chromium
+
+      - name: Verify production homepage in desktop and mobile browsers
+        env:
+          PLAYWRIGHT_PACKAGE: \${{ runner.temp }}/live-visual/node_modules/playwright
+          PUBLIC_SITE: https://istanbulunhavasi.com
+        run: |
+          set -euo pipefail
+          mkdir -p "$RUNNER_TEMP/live-site-evidence"
+          node <<'NODE'
+          const fs = require("fs");
+          const path = require("path");
+          const { chromium } = require(process.env.PLAYWRIGHT_PACKAGE);
+          const base = process.env.PUBLIC_SITE;
+          const out = process.env.RUNNER_TEMP + "/live-site-evidence";
+          const diagnostics = {checked_at_utc:new Date().toISOString(),console_errors:[],page_errors:[],failed_requests:[],viewports:{}};
+
+          (async () => {
+            const browser = await chromium.launch({headless:true});
+            try {
+              for (const view of [
+                {name:"desktop",width:1440,height:1000},
+                {name:"mobile",width:390,height:844}
+              ]) {
+                const context = await browser.newContext({
+                  viewport:{width:view.width,height:view.height},
+                  deviceScaleFactor:view.name==="mobile"?2:1,
+                  isMobile:view.name==="mobile",hasTouch:view.name==="mobile",
+                  locale:"tr-TR",timezoneId:"Europe/Istanbul"
+                });
+                const page = await context.newPage();
+                page.on("console",m=>{if(m.type()==="error")diagnostics.console_errors.push({viewport:view.name,text:m.text()});});
+                page.on("pageerror",e=>diagnostics.page_errors.push({viewport:view.name,text:String(e)}));
+                page.on("requestfailed",r=>diagnostics.failed_requests.push({viewport:view.name,url:r.url(),error:r.failure()?.errorText||"failed"}));
+
+                await page.goto(base+"/?visual-check="+Date.now(),{waitUntil:"domcontentloaded",timeout:45000});
+                await page.waitForFunction(()=>{
+                  const s=document.querySelector("#meteopt-table-status")?.textContent||"";
+                  return /^\s*24\s*\/\s*24/.test(s);
+                },{timeout:45000});
+                await page.waitForFunction(()=>{
+                  const title=document.querySelector("#station-card-title")?.textContent||"";
+                  const temp=document.querySelector("#temperature")?.textContent||"";
+                  const freshness=document.querySelector("#freshness")?.textContent||"";
+                  const button=document.querySelector("#station-eyupsultan-button");
+                  return title.includes("Eyüpsultan")&&temp.trim()!==""&&temp.trim()!=="—°"&&
+                    freshness.trim()==="CANLI ÖLÇÜM"&&button?.classList.contains("active")&&
+                    button?.getAttribute("aria-pressed")==="true";
+                },{timeout:30000});
+
+                const result=await page.evaluate(()=>({
+                  status:document.querySelector("#meteopt-table-status")?.textContent||"",
+                  run:document.querySelector("#meteopt-table-run")?.textContent||"",
+                  rows:document.querySelectorAll("#meteopt-table-body tr").length,
+                  station_title:document.querySelector("#station-card-title")?.textContent||"",
+                  station_temperature:document.querySelector("#temperature")?.textContent||"",
+                  station_freshness:document.querySelector("#freshness")?.textContent||"",
+                  horizontal_overflow_px:Math.max(0,document.documentElement.scrollWidth-window.innerWidth)
+                }));
+                if(result.rows!==24)throw new Error(view.name+": MeteoPT table has "+result.rows+" rows, expected 24.");
+                if(result.horizontal_overflow_px>2)throw new Error(view.name+": horizontal overflow "+result.horizontal_overflow_px+"px.");
+
+                await page.locator("#meteopt-gfs-table").scrollIntoViewIfNeeded();
+                await page.waitForTimeout(250);
+                await page.locator("#meteopt-gfs-table").screenshot({path:path.join(out,"meteopt-table-"+view.name+".png"),animations:"disabled"});
+                await page.screenshot({path:path.join(out,"homepage-"+view.name+".png"),fullPage:true,animations:"disabled"});
+                diagnostics.viewports[view.name]=result;
+                await context.close();
+              }
+
+              if(diagnostics.page_errors.length||diagnostics.failed_requests.length)
+                throw new Error("Browser diagnostics found page errors or failed requests: "+JSON.stringify(diagnostics));
+              fs.writeFileSync(path.join(out,"diagnostics.json"),JSON.stringify(diagnostics,null,2));
+              console.log(JSON.stringify(diagnostics,null,2));
+            } finally { await browser.close(); }
+          })().catch(error=>{
+            fs.writeFileSync(path.join(out,"diagnostics.json"),JSON.stringify({...diagnostics,fatal_error:String(error),stack:error.stack},null,2));
+            console.error(error); process.exitCode=1;
+          });
+          NODE
+
+      - name: Upload browser evidence
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: live-site-visual-check
+          path: \${{ runner.temp }}/live-site-evidence/
+          if-no-files-found: warn
+          retention-days: 14
