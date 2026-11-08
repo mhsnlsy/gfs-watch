@@ -1134,6 +1134,7 @@ async function handleApi(request, env) {
         report_dispatch_configured: Boolean(env.GFS_DISPATCH_TOKEN),
         native_report_generation: true,
         telegram_configured: Boolean(env.TELEGRAM_TOKEN && env.TELEGRAM_CHAT_ID),
+        station_service_configured: Boolean(env.STATIONS?.fetch),
         photo_archive_configured: Boolean(env.ECMWF_ARCHIVE),
         telegram_photo_mode: "sendPhoto/png",
         internal_reconcile_configured: Boolean(env.GFS_DISPATCH_TOKEN),
