@@ -152,7 +152,7 @@ async function buildTomorrowWeather() {
   };
 }
 
-async function sendTomorrowWeatherPush(env, headers, mode = "scheduled") {
+async function sendTomorrowWeatherPush(env, headers, mode = "scheduled", skipDedup = false) {
   const weather = await buildTomorrowWeather();
 
   const existing = await env.DB
@@ -160,7 +160,7 @@ async function sendTomorrowWeatherPush(env, headers, mode = "scheduled") {
     .bind(weather.id)
     .first();
 
-  if (existing) {
+  if (existing && !skipDedup) {
     return { ok: true, skipped: true, reason: "already-sent", ...weather };
   }
 
@@ -339,11 +339,7 @@ export default {
           url.pathname === "/admin/test-tomorrow-weather-push" &&
           request.method === "POST"
         ) {
-          const result = await sendTomorrowWeatherPush(env, headers, "manual-test");
-          if (result.skipped && result.reason === "already-sent") {
-            const retry = await buildTomorrowWeather();
-            return json({ ok: true, skipped: false, manual_test: true, delivered: 0, ...retry }, 200, headers);
-          }
+          const result = await sendTomorrowWeatherPush(env, headers, "manual-test", true);
           return json({ ...result, manual_test: true }, 200, headers);
         }
 
