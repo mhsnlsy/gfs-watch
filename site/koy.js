@@ -1,3 +1,34 @@
+(function(){
+  if(!Promise.allSettled){
+    Promise.allSettled=function(items){
+      return Promise.all(items.map(function(item){
+        return Promise.resolve(item).then(function(value){
+          return {status:"fulfilled",value:value};
+        },function(reason){
+          return {status:"rejected",reason:reason};
+        });
+      }));
+    };
+  }
+  if(!Array.prototype.flatMap){
+    Array.prototype.flatMap=function(fn){
+      var out=[];
+      for(var i=0;i<this.length;i++){
+        var v=fn(this[i],i,this);
+        if(Array.isArray(v)) out.push.apply(out,v); else out.push(v);
+      }
+      return out;
+    };
+  }
+  if(!String.prototype.padStart){
+    String.prototype.padStart=function(len,fill){
+      var s=String(this),f=fill==null?" ":String(fill);
+      while(s.length<len)s=f+s;
+      return s.slice(-len);
+    };
+  }
+})();
+
 (() => {
 "use strict";
 const GFS_CYCLE_THEME=window.GFS_CYCLE_THEME;
