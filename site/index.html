@@ -1268,6 +1268,7 @@
 </style>
 
 
+    <meta name="istanbul-hava-station-default" content="eyupsultan-v2">
 </head>
 <body>
   <header class="shell topbar">
@@ -1286,10 +1287,8 @@
           <button type="button" id="station-sisli-button" data-station="sisli">Şişli</button>
         </div>
         <script>
-          // Restore the last selected station before the dashboard renders.
-          // This keeps a manual page refresh on the same station tab.
+          // HARD DEFAULT: Eyüpsultan is active on every homepage load.
           try{
-            const saved=localStorage.getItem("istanbul-hava-station");
             const station="eyupsultan";
             document.querySelectorAll(".station-switch button[data-station]").forEach(button=>{
               const active=button.dataset.station===station;
@@ -1462,10 +1461,9 @@
     // No forecast-verification.json is published yet; avoid repeated 404s until the calibration archive is generated.
     const VERIFY_URL=null;
     let enkaStationObservation=null,eyupsultanStationObservation=null,sisliStationObservation=null,activeStation="eyupsultan";
-    try{
-      const savedStation=localStorage.getItem("istanbul-hava-station");
-      if(["enka","eyupsultan","sisli"].includes(savedStation))activeStation=savedStation;
-    }catch(_){}
+    // HARD DEFAULT: homepage always starts on Eyüpsultan on every device.
+    // Do not restore a previously stored ENKA/Şişli choice during initial page load.
+    try{ localStorage.removeItem("istanbul-hava-station"); }catch(_){}
     let enkaStationHistorySamples=[],eyupsultanStationHistorySamples=[],sisliStationHistorySamples=[];
     let eyupsultanStationRainHistorySamples=[],sisliStationRainHistorySamples=[];
     let verificationDoc=null;
