@@ -345,14 +345,14 @@ function addMobileGfsCycleLabels(panelHost,panel,panelSvg){
 
   Object.assign(legend.style,{
     position:"absolute",
-    top:"8px",
-    left:"108px",
+    top:"30px",
+    left:"8px",
     right:"8px",
     zIndex:"1100",
     display:"flex",
     alignItems:"center",
-    justifyContent:"flex-start",
-    gap:"8px",
+    justifyContent:"flex-end",
+    gap:"9px",
     flexWrap:"nowrap",
     pointerEvents:"none",
     fontFamily:"inherit",
@@ -365,22 +365,22 @@ function addMobileGfsCycleLabels(panelHost,panel,panelSvg){
     entry.setAttribute("aria-label",item.cycle);
     Object.assign(entry.style,{
       color:item.color,
-      fontSize:"10.5px",
+      fontSize:"10px",
       fontWeight:"800",
       textShadow:"0 1px 2px rgba(0,0,0,.7)",
       display:"inline-flex",
       alignItems:"center",
-      gap:"4px",
+      gap:"3px",
       flex:"0 0 auto"
     });
     const swatch=document.createElement("i");
     Object.assign(swatch.style,{
       display:"inline-block",
-      width:"10px",
+      width:"9px",
       height:"3px",
       borderRadius:"2px",
       backgroundColor:item.color,
-      flex:"0 0 10px"
+      flex:"0 0 9px"
     });
     const text=document.createElement("span");
     text.textContent=item.cycle;
