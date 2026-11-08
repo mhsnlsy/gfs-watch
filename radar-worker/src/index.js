@@ -168,7 +168,12 @@ async function telegramPhoto(env,bytes,caption){
   fd.append("parse_mode","HTML");
   fd.append("photo",new File([bytes],"istanbul-radar.png",{type:"image/png"}));
   const r=await fetch(`https://api.telegram.org/bot${env.TELEGRAM_TOKEN}/sendPhoto`,{method:"POST",body:fd});
-  return r.ok;
+  if(!r.ok){
+    let body="";
+    try{body=await r.text();}catch{}
+    return {ok:false,status:r.status,body:body.slice(0,500)};
+  }
+  return {ok:true,status:r.status};
 }
 
 async function getState(db){
@@ -246,7 +251,8 @@ Tahmini varış: ~60 dk
 Yön: GÜNEY / İstanbul'a doğru
 Bu mesaj yalnızca sistem testidir; gerçek yağış alarmı değildir.`;
   const sent=await telegramPhoto(env,bytes,caption);
-  return {status:sent?"test_sent":"telegram_send_failed",telegram_sent:sent,scenario:{distance_km:30,dbz:25,pixels:20,speed_kmh:30,eta_minutes:60}};
+  const photoOk=typeof sent==="object"?sent.ok:sent;
+  return {status:photoOk?"test_sent":"telegram_send_failed",telegram_sent:photoOk,telegram_photo_result:typeof sent==="object"?sent:null,scenario:{distance_km:30,dbz:25,pixels:20,speed_kmh:30,eta_minutes:60}};
 }
 
 async function check(env){
