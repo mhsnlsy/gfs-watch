@@ -18,7 +18,7 @@ LON = 28.9438
 RADIUS_KM = 25.0
 THRESHOLD_DBZ = 10
 THRESHOLD_DBZ_STRONG = 30
-MIN_ALERT_PIXELS = 15
+MIN_ALERT_PIXELS = 5
 ZOOM = 7
 TILE_SIZE = 256
 PIXEL_KM = 0.55  # approx km per pixel at zoom 7
@@ -27,7 +27,7 @@ CHAT_ID = os.getenv("CHAT_ID")
 STATE_PATH = os.getenv("RADAR_STATE_PATH", "/tmp/radar_state.json")
 ALERT_STATE_PATH = os.getenv("RADAR_ALERT_STATE_PATH", "radar_alert_state.json")
 CHECK_LOG_PATH = os.getenv("RADAR_CHECK_LOG_PATH", "radar_checks.jsonl")
-ALERT_COOLDOWN_SECONDS = 3600
+ALERT_COOLDOWN_SECONDS = 2700
 HISTORY_LEN = 4
 
 HIGH_DBZ_HINTS = [
@@ -265,7 +265,7 @@ def main():
     if towards and has_rain_echo and centroid_dist < RADIUS_KM:
         approaching = approaching or (max_dbz >= THRESHOLD_DBZ)
 
-    # Require at least 15 detected rain pixels AND the existing approach/on-site logic.
+    # Require at least 5 detected rain pixels AND the existing approach/on-site logic.
     alert = pixel_threshold_met and (approaching or on_site)
 
     if max_dbz <= 10:
@@ -335,12 +335,12 @@ def main():
                 alert_state["last_alert_utc"] = datetime.now(timezone.utc).isoformat()
                 alert_state["last_intensity"] = intensity
                 save_alert_state(alert_state)
-                print(f"[RADAR] {intensity} ALERT SENT; 60-minute cooldown started")
+                print(f"[RADAR] {intensity} ALERT SENT; 45-minute cooldown started")
             else:
                 print("[RADAR] Alert not sent; cooldown state unchanged")
         else:
             remaining = int(ALERT_COOLDOWN_SECONDS - seconds_since_alert)
-            print(f"[RADAR] Telegram suppressed by 60-minute cooldown; {remaining}s remaining")
+            print(f"[RADAR] Telegram suppressed by 45-minute cooldown; {remaining}s remaining")
 
     state["history"] = history
     state["last"] = curr
