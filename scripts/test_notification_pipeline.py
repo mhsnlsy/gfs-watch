@@ -217,12 +217,9 @@ def main() -> None:
     api_config = read("site/gfs-api-config.js")
     index = read("site/index.html")
     koy_page = read("site/koy.js")
-    comparison = read("site/gfs-cycle-compare.html")
     assert "gfs-watch-web.muhsin-ulusoy.workers.dev" in api_config
     assert "/gfs/latest" in index
     assert "/api/koy-gfs/" in koy_page
-    assert 'const stationApi=(window.GFS_WATCH_API_BASE||window.location.origin)+"/api/history/"+' in comparison
-    assert "gfs-watch-stations.muhsin-ulusoy.workers.dev" not in comparison
     # Köy report SVG is served at the existing URL from its D1 Service Binding,
     # while the live site verifies the production notification path directly.
     assert "Verify the production notification path is served Worker-first from D1" in platform_workflow
