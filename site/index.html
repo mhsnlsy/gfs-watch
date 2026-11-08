@@ -1289,7 +1289,7 @@ html[data-default-station="eyupsultan"] #station-eyupsultan-button{
       <div class="delta-badge" id="station-24h-diff"></div>
       <div class="delta-badge" id="station-gap" hidden></div>
       <div class="rain-brief" id="rain-brief" aria-live="polite">
-        <div class="delta-badge" id="rain-brief-current">MGM yağış ölçümü bekleniyor.</div>
+        <div class="delta-badge" id="rain-brief-current" data-source="live-station">Yağış yok</div>
         <div class="delta-badge" id="rain-brief-forecast">MeteoPT GFS tahmini bekleniyor.</div>
         <div class="delta-badge" id="rain-brief-heavy"></div>
       </div>
@@ -1868,8 +1868,11 @@ html[data-default-station="eyupsultan"] #station-eyupsultan-button{
     });
     function renderRainWindow(parsed){
       latestRainForecastPoints=Array.isArray(parsed)?parsed:[];
-      const forecast=$("rain-brief-forecast"),heavy=$("rain-brief-heavy");
+      const current=$("rain-brief-current"),forecast=$("rain-brief-forecast"),heavy=$("rain-brief-heavy");
       if(!forecast)return;
+      // Hard guard: the GFS renderer is forbidden from writing the current-station badge.
+      // That badge is exclusively controlled by renderStationCard().
+      if(current) current.dataset.source="live-station";
       // The current-rain badge is owned exclusively by the live station observation.
       // The MeteoPT F72 payload is used only for the forecast badge below.
       const dateTime=ms=>forecastDateTimeTSI(ms);
