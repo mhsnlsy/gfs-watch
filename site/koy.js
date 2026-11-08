@@ -41,7 +41,7 @@ async function getStation(path){
    humidity_percent:s.humidity_percent,
    pressure_hpa:s.pressure_hpa,
    wind_speed_10m_kmh:s.wind_speed_10m_kmh == null ? s.wind_speed_kmh : s.wind_speed_10m_kmh,
-   wind_direction_degrees:s.wind_direction_degrees??s.wind_direction,
+   wind_direction_degrees:s.wind_direction_degrees == null ? s.wind_direction : s.wind_direction_degrees,
    precipitation_1h_mm:s.precipitation_1h_mm == null ? s.rain_1h_mm : s.precipitation_1h_mm,
    precipitation_10m_mm:s.precipitation_10m_mm == null ? s.rain_10m_mm : s.precipitation_10m_mm,
    precipitation_6h_mm:s.precipitation_6h_mm == null ? s.rain_6h_mm : s.precipitation_6h_mm,
@@ -541,7 +541,7 @@ document.addEventListener("pointerdown",event=>{
  if(activeStationTooltip&&!activeStationTooltip.host.contains(event.target))activeStationTooltip.hide();
 },true);
 function bindStationHistoryTooltip(containerId){
- const host=$(containerId),svg=host?.querySelector("svg");
+ const host=$(containerId),svg=host && host.querySelector("svg");
  if(!host||!svg)return;
  const targets=[...svg.querySelectorAll(".station-point-target")];
  if(!targets.length)return;
@@ -579,7 +579,7 @@ function bindStationHistoryTooltip(containerId){
   touchHideTimer=null;
   tooltip.hidden=true;
   pinned=false;
-  if(activeStationTooltip?.tooltip===tooltip)activeStationTooltip=null;
+  if(activeStationTooltip && activeStationTooltip.tooltip===tooltip)activeStationTooltip=null;
  }
  function show(target,event,lock=false){
   if(!target)return;
