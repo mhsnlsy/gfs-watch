@@ -1,6 +1,6 @@
 import { buildIstanbulInteractiveSvg, buildIstanbulReportText } from "./publication.js";
 import { METEOPT_ECMWF_API, METEOPT_ECMWF_WEB, METEOPT_GFS_API, METEOPT_SOURCE_POLICY, meteoptSourceMetadata } from "../../shared/meteopt-source.js";
-import { renderIstanbulPhotoPng } from "./photo.js";
+import { loadIstanbulTelegramFont, renderIstanbulPhotoPng } from "./photo.js";
 // Istanbul GFS Worker: canonical MeteoPT collector + D1 event dispatcher
 const API_BASE = METEOPT_GFS_API;
 const LOCATION = {
@@ -329,8 +329,9 @@ async function processQueuedReports(env) {
     }
     const reportText = buildIstanbulReportText(target, new Date(), stationObservation);
     if (!env.ECMWF_ARCHIVE) throw new Error("R2 image archive binding is unavailable");
-    const pngAssetKey = "data/" + chart.key.replace(/^notifications\//, "notifications/").replace(/\.svg$/i, ".png");
-    const pngBytes = await renderIstanbulPhotoPng(chart.body);
+    const pngAssetKey = "data/" + chart.key.replace(/^notifications\//, "notifications/").replace(/\.svg$/i, "-telegram-v2.png");
+    const telegramFont = await loadIstanbulTelegramFont(env.ECMWF_ARCHIVE);
+    const pngBytes = await renderIstanbulPhotoPng(chart.body, telegramFont);
     await env.ECMWF_ARCHIVE.put(pngAssetKey, pngBytes, {
       httpMetadata: { contentType: "image/png", cacheControl: "public, max-age=3600" },
     });
@@ -516,8 +517,10 @@ async function deliverPendingTelegram(env) {
     }
 
     if (!publication.photo_message_id) {
-      const pngKey = publication.png_asset_key ||
-        ("data/" + String(publication.svg_asset_key || "").replace(/^notifications\//, "notifications/").replace(/\.svg$/i, ".png"));
+      const svgKey = String(publication.svg_asset_key || "");
+      const pngKey = svgKey
+        ? "data/" + svgKey.replace(/^notifications\//, "notifications/").replace(/\.svg$/i, "-telegram-v2.png")
+        : publication.png_asset_key;
       let object = pngKey ? await env.ECMWF_ARCHIVE.get(pngKey) : null;
       let pngBytes;
       if (object) {
@@ -527,7 +530,8 @@ async function deliverPendingTelegram(env) {
         if (!asset || typeof asset.body !== "string") {
           throw new Error("Published SVG asset is missing from D1: " + publication.svg_asset_key);
         }
-        pngBytes = await renderIstanbulPhotoPng(asset.body);
+        const telegramFont = await loadIstanbulTelegramFont(env.ECMWF_ARCHIVE);
+        pngBytes = await renderIstanbulPhotoPng(asset.body, telegramFont);
         await env.ECMWF_ARCHIVE.put(pngKey, pngBytes, {
           httpMetadata: { contentType: "image/png", cacheControl: "public, max-age=3600" },
         });
@@ -536,7 +540,7 @@ async function deliverPendingTelegram(env) {
           "WHERE run_id_utc = ? AND status = 'sending'"
         ).bind(pngKey, new Date().toISOString(), publication.run_id_utc).run();
       }
-      const filename = (pngKey.split("/").pop() || "istanbul-gfs-comparison.png").replace(/\.svg$/i, ".png");
+      const filename = (pngKey.split("/").pop() || "istanbul-gfs-comparison-telegram-v2.png").replace(/\.svg$/i, ".png");
       const form = new FormData();
       form.set("chat_id", env.TELEGRAM_CHAT_ID);
       form.set("caption", "📊 İstanbul GFS · dört döngülü geçerlilik saati karşılaştırması");
