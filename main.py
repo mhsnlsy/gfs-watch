@@ -3342,7 +3342,7 @@ def create_valid_time_comparison_assets(current_run_id, payload, previous_runs):
 
         # Series are oldest -> newest. Reverse the shared web palette so the
         # newest line is lilac, then amber, blue, and turquoise.
-        cycle_palette = ["#7DD3D7", "#8ABCE8", "#F1C98B", "#B38BE8"]
+        cycle_palette = ["#8ABCE8", "#7DD3D7", "#F1C98B", "#B38BE8"]
         active_palette = cycle_palette[-len(series):]
         metrics = (
             ("temp", "Sıcaklık", "°C"),
