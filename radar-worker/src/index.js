@@ -241,20 +241,20 @@ async function makeSyntheticRadarPng(){
 }
 
 async function runSyntheticTest(env){
-  const bytes=await makeSyntheticRadarPng();
-  const caption=`⚠️ <b>TEST / TATBİKAT — GERÇEK YAĞIŞ DEĞİL</b>
-<b>Sentetik radar senaryosu</b>
+  const text=`⚠️ TEST / TATBİKAT — GERÇEK YAĞIŞ DEĞİL
+
+SENTETİK RADAR SENARYOSU
 Kütle: 30 km kuzeyden geliyor
 Şiddet: 25 dBZ
 Yağış pikseli: 20
 Hız: 30 km/sa
 Tahmini varış: ~60 dk
 Yön: GÜNEY / İstanbul'a doğru
-Bu mesaj yalnızca sistem testidir; gerçek yağış alarmı değildir.`;
-  const sent=await telegramPhoto(env,bytes,caption);
-  const photoOk=typeof sent==="object"?sent.ok:sent;
-  return {status:photoOk?"test_sent":"telegram_send_failed",telegram_sent:photoOk,telegram_photo_result:typeof sent==="object"?sent:null,scenario:{distance_km:30,dbz:25,pixels:20,speed_kmh:30,eta_minutes:60}};
-}
+
+BU MESAJ YALNIZCA SİSTEM TESTİDİR. GERÇEK YAĞIŞ ALARMI DEĞİLDİR.`;
+  const sent=await telegramText(env,text);
+  return {status:sent?"test_sent":"telegram_send_failed",telegram_sent:sent,scenario:{distance_km:30,dbz:25,pixels:20,speed_kmh:30,eta_minutes:60},mode:"text_only_test"};
+}}
 
 async function check(env){
   const timeline=await (await fetch("https://api.rainviewer.com/public/weather-maps.json",{cf:{cacheTtl:0}})).json();
