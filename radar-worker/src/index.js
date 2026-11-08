@@ -254,7 +254,7 @@ Yön: GÜNEY / İstanbul'a doğru
 BU MESAJ YALNIZCA SİSTEM TESTİDİR. GERÇEK YAĞIŞ ALARMI DEĞİLDİR.`;
   const sent=await telegramText(env,text);
   return {status:sent?"test_sent":"telegram_send_failed",telegram_sent:sent,scenario:{distance_km:30,dbz:25,pixels:20,speed_kmh:30,eta_minutes:60},mode:"text_only_test"};
-}}
+}
 
 async function check(env){
   const timeline=await (await fetch("https://api.rainviewer.com/public/weather-maps.json",{cf:{cacheTtl:0}})).json();
