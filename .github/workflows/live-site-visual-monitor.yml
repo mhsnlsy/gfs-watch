@@ -63,7 +63,7 @@ jobs:
             checked_at_utc: new Date().toISOString(),
             viewports: {},
             koy_viewports: {},
-            f72: null,
+            f180: null,
             console_errors: [],
             page_errors: [],
             failed_requests: [],
@@ -104,21 +104,21 @@ jobs:
                   if (response.status() >= 400) report.bad_responses.push({
                     viewport: view.name, status: response.status(), url: response.url()
                   });
-                  if (view.name === "desktop" && /\/gfs\/f72(?:\?|$)/.test(response.url())) {
+                  if (view.name === "desktop" && /\/gfs\/latest(?:\?|$)/.test(response.url())) {
                     try {
                       const doc = await response.json();
-                      report.f72 = {
+                      report.f180 = {
                         status: response.status(),
                         run_id_utc: doc.run_id_utc,
-                        horizon_hours: doc.forecast_horizon_hours,
+                        horizon_hours: Math.max(0, ...(doc.forecast_6_hourly || []).map(p => Number(p.forecast_hour)).filter(Number.isFinite)),
                         points: (doc.forecast_6_hourly || []).filter(p =>
                           Number(p.forecast_hour) > 0 &&
-                          Number(p.forecast_hour) <= 72 &&
+                          Number(p.forecast_hour) <= 180 &&
                           Number(p.forecast_hour) % 3 === 0
                         ).length,
                         rh2m_numeric_points: (doc.forecast_6_hourly || []).filter(p =>
                           Number(p.forecast_hour) > 0 &&
-                          Number(p.forecast_hour) <= 72 &&
+                          Number(p.forecast_hour) <= 180 &&
                           Number(p.forecast_hour) % 3 === 0 &&
                           p.humidity_2m_percent !== null &&
                           p.humidity_2m_percent !== undefined &&
@@ -126,14 +126,14 @@ jobs:
                         ).length,
                         snowln_numeric_points: (doc.forecast_6_hourly || []).filter(p =>
                           Number(p.forecast_hour) > 0 &&
-                          Number(p.forecast_hour) <= 72 &&
+                          Number(p.forecast_hour) <= 180 &&
                           Number(p.forecast_hour) % 3 === 0 &&
                           p.snowln !== null && p.snowln !== undefined &&
                           Number.isFinite(Number(p.snowln))
                         ).length
                       };
                     } catch (error) {
-                      report.f72 = { status: response.status(), parse_error: String(error) };
+                      report.f180 = { status: response.status(), parse_error: String(error) };
                     }
                   }
                 });
@@ -148,7 +148,7 @@ jobs:
                 await page.locator("#meteopt-table-status").waitFor({ state: "visible", timeout: 30000 });
                 await page.waitForFunction(() => {
                   const status = document.querySelector("#meteopt-table-status")?.textContent || "";
-                  return /^\s*24\s*\/\s*24/.test(status);
+                  return status.includes("180. saate kadar");
                 }, { timeout: 60000 });
 
                 const table = page.locator("#meteopt-gfs-table");
@@ -177,6 +177,7 @@ jobs:
                     run: document.querySelector("#meteopt-table-run")?.textContent || "",
                     status: document.querySelector("#meteopt-table-status")?.textContent || "",
                     rows: rows.length,
+                    last_step: Number.parseInt((rows[rows.length - 1]?.cells[0]?.innerText || "").replace(/^F/i, ""), 10),
                     columns: document.querySelectorAll("#meteopt-gfs-table thead th").length,
                     humidity_values: humidityValues,
                     numeric_humidity_count: humidityValues.filter(value => value && value !== "—" && Number.isFinite(Number(value.replace(",", ".")))).length,
@@ -201,7 +202,7 @@ jobs:
                 });
 
                 // The Köy page has its own MeteoPT table and must prove that the
-                // Magnus dew-point column is actually populated on all 24 steps.
+                // Magnus dew-point column is populated across the complete F180 horizon.
                 const koyPage = await context.newPage();
                 koyPage.on("console", message => {
                   if (message.type() === "error") report.console_errors.push({
@@ -226,7 +227,7 @@ jobs:
                 await koyPage.locator("#meteopt-table-status").waitFor({ state: "visible", timeout: 30000 });
                 await koyPage.waitForFunction(() => {
                   const status = document.querySelector("#meteopt-table-status")?.textContent || "";
-                  return /^\s*24\s*\/\s*24/.test(status);
+                  return status.includes("180. saate kadar");
                 }, { timeout: 60000 });
                 const koyTable = koyPage.locator("#meteopt-gfs-table");
                 await koyTable.scrollIntoViewIfNeeded();
@@ -251,6 +252,7 @@ jobs:
                     run: document.querySelector("#meteopt-table-run")?.textContent || "",
                     status: document.querySelector("#meteopt-table-status")?.textContent || "",
                     rows: rows.length,
+                    last_step: Number.parseInt((rows[rows.length - 1]?.cells[0]?.innerText || "").replace(/^F/i, ""), 10),
                     columns: document.querySelectorAll("#meteopt-gfs-table thead th").length,
                     headers,
                     humidity_values: humidityValues,
@@ -273,7 +275,8 @@ jobs:
                 await context.close();
               }
 
-              if (report.viewports.desktop.rows !== 24 || report.viewports.mobile.rows !== 24) {
+              if (report.viewports.desktop.rows < 30 || report.viewports.mobile.rows < 30 ||
+                  report.viewports.desktop.last_step < 180 || report.viewports.mobile.last_step < 180) {
                 throw new Error("The real homepage did not render 24 forecast rows on desktop and mobile.");
               }
               const expectedIstanbulHeaders = [
@@ -283,26 +286,26 @@ jobs:
               const expectedKoyHeaders = expectedIstanbulHeaders;
               for (const viewport of ["desktop", "mobile"]) {
                 const istanbul = report.viewports[viewport];
-                if (!istanbul || istanbul.rows !== 24 || istanbul.columns !== 10 ||
-                    istanbul.numeric_humidity_count !== 24 || !istanbul.humidity_scale_valid ||
-                    istanbul.numeric_dew_point_count !== 24 || istanbul.numeric_snowln_count !== 24 ||
+                if (!istanbul || istanbul.rows < 30 || istanbul.last_step < 180 || istanbul.columns !== 10 ||
+                    istanbul.numeric_humidity_count !== istanbul.rows || !istanbul.humidity_scale_valid ||
+                    istanbul.numeric_dew_point_count !== istanbul.rows || istanbul.numeric_snowln_count !== istanbul.rows ||
                     JSON.stringify(istanbul.headers) !== JSON.stringify(expectedIstanbulHeaders)) {
                   throw new Error("The Istanbul GFS table must render the requested 10-column order and 24 RH.2m, Dew Point and Snowln values on " +
                     viewport + ": " + JSON.stringify(istanbul));
                 }
                 const koy = report.koy_viewports[viewport];
-                if (!koy || koy.rows !== 24 || koy.columns !== 10 ||
-                    koy.numeric_humidity_count !== 24 || !koy.humidity_scale_valid || koy.numeric_dew_point_count !== 24 ||
+                if (!koy || koy.rows < 30 || koy.last_step < 180 || koy.columns !== 10 ||
+                    koy.numeric_humidity_count !== koy.rows || !koy.humidity_scale_valid || koy.numeric_dew_point_count !== koy.rows ||
                     JSON.stringify(koy.headers) !== JSON.stringify(expectedKoyHeaders)) {
                   throw new Error("The Köy table must render the requested 10-column order, 24 RH.2m values and 24 dew points on " +
                     viewport + ": " + JSON.stringify(koy));
                 }
               }
-              if (!report.f72 || report.f72.status !== 200 || report.f72.points !== 24 ||
-                  report.f72.rh2m_numeric_points !== 24 ||
-                  report.f72.snowln_numeric_points !== 24 ||
-                  !report.f72.run_id_utc || report.f72.horizon_hours < 72) {
-                throw new Error("The browser did not receive a valid live F72 payload: " + JSON.stringify(report.f72));
+              if (!report.f180 || report.f180.status !== 200 || report.f180.points < 30 ||
+                  report.f180.rh2m_numeric_points !== report.f180.points ||
+                  report.f180.snowln_numeric_points !== report.f180.points ||
+                  !report.f180.run_id_utc || report.f180.horizon_hours < 180) {
+                throw new Error("The browser did not receive a valid live F180 payload: " + JSON.stringify(report.f180));
               }
               if (report.page_errors.length) {
                 throw new Error("The live site emitted JavaScript page errors: " + JSON.stringify(report.page_errors));
@@ -311,7 +314,7 @@ jobs:
               fs.writeFileSync(path.join(out, "diagnostics.json"), JSON.stringify(report, null, 2));
               console.log(JSON.stringify({
                 checked_at_utc: report.checked_at_utc,
-                f72: report.f72,
+                f180: report.f180,
                 desktop: report.viewports.desktop,
                 mobile: report.viewports.mobile,
                 koy_desktop: report.koy_viewports.desktop,
