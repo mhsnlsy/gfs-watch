@@ -151,10 +151,16 @@ def main() -> None:
     panel_bg = constant("GFS_REPORT_PANEL_BG")
     text = constant("GFS_REPORT_TEXT")
     muted = constant("GFS_REPORT_MUTED")
-    palette_match = re.search(r'colors\s*=\s*\[([^\]]+)\]', SOURCE)
+    # The renderer derives colors by cycle age: newest → oldest.
+    # Keep the test aligned with the production palette rather than requiring
+    # an obsolete `colors = [...]` literal assignment.
+    palette_match = re.search(
+        r'age_palette\\s*=\\s*\\[([^\\]]+)\\]', SOURCE
+    )
     if not palette_match:
         raise AssertionError("Four distinct GFS cycle accent colors are missing.")
     palette = re.findall(r"#[0-9A-Fa-f]{6}", palette_match.group(1))
+    assert palette == ["#B38BE8", "#F1C98B", "#7DD3D7", "#8ABCE8"]
 
     assert figure_bg.lower() not in ("#ffffff", "#fffafa", "#fbfdff")
     assert axis_bg.lower() not in ("#ffffff", "#fffafa", "#fbfdff")
