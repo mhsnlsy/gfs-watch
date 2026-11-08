@@ -119,7 +119,7 @@ export default {
       });
     }
 
-    if (path === "/__health") {
+    if (path === "/favicon.svg") {\n      const asset = await env.ASSETS.fetch(new Request(new URL("/icon.svg", url), request));\n      if (!asset.ok) return asset;\n      const headers = new Headers(asset.headers);\n      headers.set("Content-Type", "image/svg+xml; charset=utf-8");\n      headers.set("Cache-Control", "public, max-age=300, must-revalidate");\n      return new Response(request.method === "HEAD" ? null : asset.body, { status: asset.status, headers });\n    }\n\n    if (path === "/__health") {
       const bindings = {
         istanbul: Boolean(env.ISTANBUL_GFS?.fetch),
         koy: Boolean(env.KOY_GFS?.fetch),
