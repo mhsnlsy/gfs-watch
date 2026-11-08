@@ -1,4 +1,4 @@
-function escapeGfsTooltip(value){
+function clearGfsSvgGroup(group){\n  if(!group)return;\n  while(group.firstChild)group.removeChild(group.firstChild);\n}\nfunction escapeGfsTooltip(value){
   return String(value == null ? "" : value).replace(/[&<>"']/g,char=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[char]));
 }
 function formatGfsTooltipNumber(value){
@@ -69,7 +69,7 @@ function attachGfsSvgInteractions(host,svg,metadata,syncGroup){
     host.removeAttribute("data-pinned");
     host.style.removeProperty("z-index");
     svg.querySelectorAll(".gfs-tooltip-crosshair").forEach(line=>line.setAttribute("visibility","hidden"));
-    svg.querySelectorAll(".gfs-tooltip-markers").forEach(group=>group.replaceChildren());
+    svg.querySelectorAll(".gfs-tooltip-markers").forEach(group=>clearGfsSvgGroup(group));
   }
   function panelAtEvent(event){
     const rect=svg.getBoundingClientRect();
@@ -98,7 +98,7 @@ function attachGfsSvgInteractions(host,svg,metadata,syncGroup){
     };
   }
   function show(panel,index,event){
-    if(!panel||!panel.valid_times == null ? void 0 : panel.valid_times[index])return;
+    if(!panel || !Array.isArray(panel.valid_times) || !panel.valid_times[index])return;
     const validTime=panel.valid_times[index];
     const overlay=svg.querySelector('.gfs-panel-interaction[data-panel-id="'+panel.id+'"]');
     if(!overlay)return;
@@ -109,7 +109,7 @@ function attachGfsSvgInteractions(host,svg,metadata,syncGroup){
     crosshair.setAttribute("x2",x);
     crosshair.setAttribute("visibility","visible");
     const markerGroup=overlay.querySelector(".gfs-tooltip-markers");
-    markerGroup.replaceChildren();
+    clearGfsSvgGroup(markerGroup);
     (panel.series||[]).forEach(series=>{
       const y=series.y_positions == null ? void 0 : series.y_positions[index];
       const value=series.values == null ? void 0 : series.values[index];
@@ -146,7 +146,7 @@ function attachGfsSvgInteractions(host,svg,metadata,syncGroup){
           );
           if(found>=0)targetIndex=found;
         }
-        if(!panel.valid_times == null ? void 0 : panel.valid_times[targetIndex])return;
+        if(!Array.isArray(panel.valid_times) || !panel.valid_times[targetIndex])return;
         member.host.style.setProperty("z-index","20","important");
         member.show(panel,targetIndex,member===api ? event : (member.anchorForIndex(panel,targetIndex)||event));
       });
@@ -155,7 +155,7 @@ function attachGfsSvgInteractions(host,svg,metadata,syncGroup){
     // Desktop: one SVG contains all four panels, so activate all four
     // tooltips at the same valid timestamp.
     panelList.forEach(panel=>{
-      if(!panel && panel.valid_times != null ? panel.valid_times[index] : void 0)return;
+      if(!panel || !Array.isArray(panel.valid_times) || !panel.valid_times[index])return;
       show(panel,index,anchorForIndex(panel,index)||event);
     });
   }
