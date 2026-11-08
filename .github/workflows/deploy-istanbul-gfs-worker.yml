@@ -6,6 +6,7 @@ on:
     paths:
       - ".github/workflows/deploy-istanbul-gfs-worker.yml"
       - "istanbul-gfs-worker/**"
+      - "shared/**"
   workflow_dispatch:
 
 permissions:
