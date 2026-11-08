@@ -155,7 +155,7 @@ def main() -> None:
     # Keep the test aligned with the production palette rather than requiring
     # an obsolete `colors = [...]` literal assignment.
     palette_match = re.search(
-        r'age_palette\\s*=\\s*\\[([^\\]]+)\\]', SOURCE
+        r'age_palette\s*=\s*\[([^\]]+)\]', SOURCE
     )
     if not palette_match:
         raise AssertionError("Four distinct GFS cycle accent colors are missing.")
