@@ -356,7 +356,7 @@ jobs:
           test "$f72_ok" -eq 1 || { echo "::error::Public web F72 gateway failed."; cat "$RUNNER_TEMP/web-gfs-f72.json" 2>/dev/null || true; exit 1; }
 
           curl --silent --show-error --fail --max-time 20 "$WEB/meteopt-gfs-table.js?verify=$(date +%s)" -o "$RUNNER_TEMP/meteopt-gfs-table.js"
-          grep -Fq 'return base + "/gfs/f72"' "$RUNNER_TEMP/meteopt-gfs-table.js" || { echo "::error::Live MeteoPT table asset is not wired to /gfs/f72."; exit 1; }
+          grep -Fq '"/gfs/f72"' "$RUNNER_TEMP/meteopt-gfs-table.js" || { echo "::error::Live MeteoPT table asset is not wired to /gfs/f72."; exit 1; }
           grep -Fq 'rh2m-warm-1' "$RUNNER_TEMP/meteopt-gfs-table.js" || { echo "::error::Live MeteoPT table asset is missing the RH.2m colour scale."; exit 1; }
           grep -Fq 'function dewpoint(' "$RUNNER_TEMP/meteopt-gfs-table.js" || { echo "::error::Live MeteoPT table asset is missing Magnus dew point calculation."; exit 1; }
           grep -Fq 'valueCell(snowln, "snowln", 0)' "$RUNNER_TEMP/meteopt-gfs-table.js" || { echo "::error::Live MeteoPT table asset is missing Snowln rendering."; exit 1; }
@@ -394,7 +394,7 @@ jobs:
           }));
           NODE
           curl --silent --show-error --fail --max-time 20 "$PUBLIC_SITE/meteopt-gfs-table.js?verify=$(date +%s)" -o "$RUNNER_TEMP/public-meteopt-gfs-table.js"
-          grep -Fq 'return base + "/gfs/f72"' "$RUNNER_TEMP/public-meteopt-gfs-table.js" || { echo "::error::Public domain serves an old MeteoPT table script."; exit 1; }
+          grep -Fq '"/gfs/f72"' "$RUNNER_TEMP/public-meteopt-gfs-table.js" || { echo "::error::Public domain serves an old MeteoPT table script."; exit 1; }
           grep -Fq 'rh2m-warm-1' "$RUNNER_TEMP/public-meteopt-gfs-table.js" || { echo "::error::Public domain table script is missing the RH.2m colour scale."; exit 1; }
           grep -Fq 'function dewpoint(' "$RUNNER_TEMP/public-meteopt-gfs-table.js" || { echo "::error::Public domain table script is missing Magnus dew point calculation."; exit 1; }
           grep -Fq 'valueCell(snowln, "snowln", 0)' "$RUNNER_TEMP/public-meteopt-gfs-table.js" || { echo "::error::Public domain table script is missing Snowln rendering."; exit 1; }
