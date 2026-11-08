@@ -1721,23 +1721,23 @@ html,body{
 
 
 /* 20261108: increase all MeteoPT table text by 1px without changing column padding. */
-#meteopt-gfs-table .meteopt-data-table{font-size:11px!important}
-#meteopt-gfs-table .meteopt-data-table th{font-size:10px!important}
+#meteopt-gfs-table .meteopt-data-table{font-size:13px!important}
+#meteopt-gfs-table .meteopt-data-table th{font-size:12px!important}
 #meteopt-gfs-table .meteopt-data-table td,
-#meteopt-gfs-table .meteopt-data-table .meteopt-value{font-size:11px!important}
+#meteopt-gfs-table .meteopt-data-table .meteopt-value{font-size:13px!important}
 
 @media(max-width:850px){
-  #meteopt-gfs-table .meteopt-data-table{font-size:9px!important}
-  #meteopt-gfs-table .meteopt-data-table th{font-size:9px!important}
+  #meteopt-gfs-table .meteopt-data-table{font-size:11px!important}
+  #meteopt-gfs-table .meteopt-data-table th{font-size:11px!important}
   #meteopt-gfs-table .meteopt-data-table td,
-  #meteopt-gfs-table .meteopt-data-table .meteopt-value{font-size:9px!important}
+  #meteopt-gfs-table .meteopt-data-table .meteopt-value{font-size:11px!important}
 }
 
 @media(max-width:390px){
   #meteopt-gfs-table .meteopt-data-table{font-size:8px!important}
-  #meteopt-gfs-table .meteopt-data-table th{font-size:7.5px!important}
-  #meteopt-gfs-table .meteopt-data-table td{font-size:8px!important}
-  #meteopt-gfs-table .meteopt-data-table .meteopt-value{font-size:9px!important}
+  #meteopt-gfs-table .meteopt-data-table th{font-size:9.5px!important}
+  #meteopt-gfs-table .meteopt-data-table td{font-size:10px!important}
+  #meteopt-gfs-table .meteopt-data-table .meteopt-value{font-size:11px!important}
 }
 
 /* Preserve the approved compact column spacing at every viewport size. */
