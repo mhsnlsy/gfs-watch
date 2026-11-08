@@ -3,12 +3,14 @@
   "name": "gfs-watch-push",
   "main": "src/index.js",
   "compatibility_date": "2026-10-31",
+  "compatibility_flags": ["nodejs_compat"],
   "workers_dev": true,
   "observability": {
     "enabled": true
   },
   "vars": {
-    "ALLOWED_ORIGIN": "https://gfs-watch-web.muhsin-ulusoy.workers.dev"
+    "ALLOWED_ORIGIN": "https://gfs-watch-web.muhsin-ulusoy.workers.dev",
+    "VAPID_SUBJECT": "https://gfs-watch-web.muhsin-ulusoy.workers.dev/"
   },
   "d1_databases": [
     {
@@ -18,6 +20,6 @@
     }
   ],
   "triggers": {
-    "crons": []
+    "crons": ["45 16 * * *"]
   }
 }
