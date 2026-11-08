@@ -4239,5 +4239,6 @@ if(typeof renderBriefing==="function")renderBriefing();
     }
   </style>
 
+<script id="remove-stray-literal-newline">(()=>{const w=document.createTreeWalker(document.body,NodeFilter.SHOW_TEXT);const n=[];while(w.nextNode())if(w.currentNode.nodeValue.trim()==="\\n")n.push(w.currentNode);n.forEach(x=>x.remove())})();</script>
 </body>
 </html>
