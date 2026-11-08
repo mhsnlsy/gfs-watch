@@ -375,6 +375,19 @@ function renderMgmObservation(o,history,f72){
  const stationName=isHome?"Köy Ev":"Çanakçı MGM";
  const stationElevation=isHome?"363 m":(o?.elevation_m!=null?fmt(o.elevation_m,0)+" m":"");
  const t=num(o.temperature_2m_c),rh=num(o.humidity_percent),wind=num(o.wind_speed_10m_kmh),rain=num(o.precipitation_1h_mm),press=num(o.pressure_hpa);
+ // Rain is always sourced from the real Çanakçı MGM station observation.
+ // For Köy Ev, use the displayed elevation-corrected temperature to choose rain vs snow.
+ const mgmObservation=window.__koyMgmObservation||o;
+ const mgmRain=num(mgmObservation?.precipitation_1h_mm??mgmObservation?.rain_1h_mm??rain);
+ const precipitationPhase=mgmRain!=null&&mgmRain>0
+  ? (t!=null&&t<2.0?"snow":"rain")
+  : "none";
+ const weatherSymbol=$("weather-symbol");
+ if(weatherSymbol){
+  weatherSymbol.textContent=precipitationPhase==="snow"?"🌨️":precipitationPhase==="rain"?"🌧️":"☁️";
+  weatherSymbol.title=precipitationPhase==="snow"?"Kar yağışı · Çanakçı MGM gözlemi"
+   :precipitationPhase==="rain"?"Yağmur · Çanakçı MGM gözlemi":"Şu anda yağış tespit edilmedi";
+ }
  $("temperature").textContent=fmt(t)+"°";
  const cachedObservation=o.fetch_status==="stale_cached";
  const observedAt=o.observed_at_utc||o.fetched_at_utc||o.last_attempt_utc;
@@ -432,7 +445,9 @@ function renderMgmObservation(o,history,f72){
  const samples=Array.isArray(history?.samples)?history.samples:[];
  const temps=samples.map(x=>num(x.temperature_2m_c)).filter(v=>v!=null);
  if(temps.length){const min=Math.min(...temps),max=Math.max(...temps),d=t!=null?t-temps[0]:null;const diff=t!=null?t-min:null;$("station-24h-diff").textContent="Son 24 saatte "+(diff>=0?fmt(diff)+"° daha sıcak":fmt(Math.abs(diff))+"° daha soğuk");}
- if(rain!=null&&rain>0)$("rain-brief-current").textContent=(isHome?"Köy Ev için":"MGM Çanakçı için")+" şu anda yağış var ("+fmt(rain)+" mm/son 1 saat).";else $("rain-brief-current").textContent=(isHome?"Köy Ev için":"MGM Çanakçı için")+" şu anda anlamlı yağış yok.";
+ if(precipitationPhase==="snow")$("rain-brief-current").textContent="Kar yağışı tespit edildi · Çanakçı MGM ("+fmt(mgmRain)+" mm/son 1 saat).";
+ else if(precipitationPhase==="rain")$("rain-brief-current").textContent="Yağmur tespit edildi · Çanakçı MGM ("+fmt(mgmRain)+" mm/son 1 saat).";
+ else $("rain-brief-current").textContent="Çanakçı MGM ölçümünde son 1 saatte yağış yok.";
  const pts=pointsOf(f72||{},72),future=pts.filter(p=>num(p.precipitation_6h_mm)>0.1);
  $("rain-brief-forecast").textContent=future.length?"MeteoPT GFS tahminine göre ilk anlamlı yağış: "+tsGfsValid(future[0].valid_time_utc)+".":"MeteoPT GFS tahmininde önümüzdeki 72 saatte anlamlı yağış görünmüyor.";
  $("history-station-source").textContent=isHome?"KÖY EV · 363 M · RAKIM DÜZELTMELİ":"ÇANAKÇI · GERÇEK ÖLÇÜMLER";
