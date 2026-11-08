@@ -308,7 +308,7 @@ function addMobileGfsCycleLabels(panelHost,panel){
   // Use an HTML legend rather than modifying the SVG title. This is deliberately
   // outside the SVG so mobile WebViews cannot clip or discard the labels.
   const order={"06Z":0,"12Z":1,"18Z":2,"00Z":3};
-  cycles.sort((a,b)=>((order[a.cycle] == null ? 99 : order[a.cycle]))-(order[b.cycle]??99));
+  cycles.sort((a,b)=>((order[a.cycle] == null ? 99 : order[a.cycle]))-(order[b.cycle] == null ? 99 : order[b.cycle]));
 
   const legend=document.createElement("div");
   legend.className="gfs-mobile-cycle-legend";
