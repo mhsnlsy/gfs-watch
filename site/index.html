@@ -1272,7 +1272,7 @@
 <body>
   <header class="shell topbar">
     <a class="brand" href="https://istanbulunhavasi.com/" aria-label="İstanbul Havası · Şehir için hava tahmini"><span class="brand-mark" aria-hidden="true"><img src="/favicon-192x192.png?v=20261108-city-icon-3" alt="" width="38" height="38" style="display:block;width:100%;height:100%;object-fit:contain;border-radius:inherit"></span><span>İstanbul Havası<small>Şehir için hava tahmini</small></span></a>
-    <nav aria-label="Ana gezinme"><a href="#bildirimler">Raporlar</a><a href="#basinc">Basınç analizi</a><a href="./koy.html">Köy</a></nav>
+    <nav aria-label="Ana gezinme"><a href="./index.html" aria-current="page">Anasayfa</a><a href="#bildirimler">Raporlar</a><a href="#basinc">Basınç analizi</a><a href="./koy.html">Köy</a></nav>
     <div class="top-right"><div class="model-picker" role="group" aria-label="Tahmin modeli"><button type="button" id="model-gfs-button" class="active" aria-pressed="true">GFS</button><button type="button" id="model-ecmwf-button" aria-pressed="false">ECMWF IFS</button></div><span class="version"><span data-app-name>İstanbul Havası</span> <span data-app-version>4.0</span></span></div>
   </header>
   <main class="shell" data-ui-build="responsive-2026-11-07-dark-svg-panels">
@@ -1282,7 +1282,7 @@
         <div class="weather-top"><div><div class="label">GERÇEK İSTASYON GÖZLEMİ</div><div class="place" id="station-card-title">ENKA Balmumcu · İstanbul</div></div><span class="model-state" id="freshness">Veri bekleniyor</span></div>
         <div class="station-switch" role="group" aria-label="İstasyon seçimi">
           <button type="button" id="station-enka-button" data-station="enka">ENKA Balmumcu</button>
-          <button type="button" id="station-eyupsultan-button" data-station="eyupsultan">Eyüpsultan</button>
+          <button type="button" id="station-eyupsultan-button" data-station="eyupsultan" class="active" aria-pressed="true">Eyüpsultan</button>
           <button type="button" id="station-sisli-button" data-station="sisli">Şişli</button>
         </div>
         <script>
@@ -1290,7 +1290,7 @@
           // This keeps a manual page refresh on the same station tab.
           try{
             const saved=localStorage.getItem("istanbul-hava-station");
-            const station=["enka","eyupsultan","sisli"].includes(saved)?saved:"enka";
+            const station="eyupsultan";
             document.querySelectorAll(".station-switch button[data-station]").forEach(button=>{
               const active=button.dataset.station===station;
               button.classList.toggle("active",active);
@@ -1461,7 +1461,7 @@
     const STATION_HISTORY_API=key=>STATIONS_API+"/history/"+encodeURIComponent(key)+"?hours=72";
     // No forecast-verification.json is published yet; avoid repeated 404s until the calibration archive is generated.
     const VERIFY_URL=null;
-    let enkaStationObservation=null,eyupsultanStationObservation=null,sisliStationObservation=null,activeStation="enka";
+    let enkaStationObservation=null,eyupsultanStationObservation=null,sisliStationObservation=null,activeStation="eyupsultan";
     try{
       const savedStation=localStorage.getItem("istanbul-hava-station");
       if(["enka","eyupsultan","sisli"].includes(savedStation))activeStation=savedStation;
