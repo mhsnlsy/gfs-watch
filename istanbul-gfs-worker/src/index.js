@@ -1,7 +1,8 @@
 import { buildIstanbulInteractiveSvg, buildIstanbulReportText } from "./publication.js";
+import { METEOPT_ECMWF_API, METEOPT_ECMWF_WEB, METEOPT_GFS_API, METEOPT_SOURCE_POLICY, meteoptSourceMetadata } from "../../shared/meteopt-source.js";
 import { renderIstanbulPhotoPng } from "./photo.js";
 // Istanbul GFS Worker: canonical MeteoPT collector + D1 event dispatcher
-const API_BASE = "https://api.meteopt.com/gfs/json";
+const API_BASE = METEOPT_GFS_API;
 const LOCATION = {
   name: "Istanbul",
   latitude: 41.014,
@@ -12,8 +13,8 @@ const LOCATION = {
 const CYCLES = [18, 12, 6, 0];
 const RETENTION_DAYS = 14;
 const UTC_OFFSET_MS = 3 * 60 * 60 * 1000;
-const ECMWF_API_BASE = "https://api.meteopt.com/ecmwf/json";
-const ECMWF_SOURCE_URL = "https://www.meteopt.com/modelos/ecmwf?lat=41.0901&lon=28.9436";
+const ECMWF_API_BASE = METEOPT_ECMWF_API;
+const ECMWF_SOURCE_URL = METEOPT_ECMWF_WEB + "?lat=41.0901&lon=28.9436";
 const ECMWF_LOCATION = {
   name: "Istanbul",
   latitude: 41.0901,
@@ -166,12 +167,14 @@ function normalize(candidate, now) {
   const first = points[0] || {};
   const payload = {
     schema: "gfs-watch.forecast.v1",
+    source_policy: METEOPT_SOURCE_POLICY,
     model: "ncep_gfs_global",
     forecast_source: "meteopt",
+    source_policy: METEOPT_SOURCE_POLICY,
     run_id_utc: utcIso(candidate.cycle),
     published_at_utc: utcIso(now),
     location: LOCATION,
-    sources: {
+    sources: meteoptSourceMetadata({
       forecast: "MeteoPT GFS point forecast (Istanbul, TR)",
       forecast_url: candidate.url,
     },
