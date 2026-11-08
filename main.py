@@ -2267,8 +2267,8 @@ def fetch_meteopt_weather_data(run_id):
 
 def fetch_full_weather_data(run_id):
     """Assemble one GFS cycle. MeteoPT's 3-hour point is the default source."""
-    if os.getenv("GFS_SOURCE", "meteopt").strip().lower() != "noaa":
-        return fetch_meteopt_weather_data(run_id)
+    # Production source lock: MeteoPT only. Legacy NOAA/NOMADS/S3 code below is inert.
+    return fetch_meteopt_weather_data(run_id)
     print(f"[STEP 1] NOAA/NCEP GRIB2 verisi çekiliyor: {run_id}")
     try:
         run_dt = _parse_utc_datetime(run_id)
@@ -3939,7 +3939,8 @@ async def load_previous_three_runs_for_comparison(current_run_id):
     """Load the three preceding cycles from the same source as the current run."""
     current_dt = _parse_utc_datetime(current_run_id)
     previous_runs = []
-    use_meteopt = os.getenv("GFS_SOURCE", "meteopt").strip().lower() != "noaa"
+    # Production source lock: comparison history is always MeteoPT-backed.
+    use_meteopt = True
 
     for hours_back in (6, 12, 18):
         previous_dt = current_dt - timedelta(hours=hours_back)
