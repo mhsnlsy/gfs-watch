@@ -154,7 +154,7 @@ function normalize(candidate, now) {
     const wind = values("wind_speed_10m_kmh");
     const wind850 = values("wind_speed_850hpa_kmh");
     const windPeak = dayPoints
-      .filter(point => Number.isFinite(Number(point.wind_speed_10m_kmh)))
+      .filter(point => number(point.wind_speed_10m_kmh) !== null)
       .sort((a, b) => Number(b.wind_speed_10m_kmh) - Number(a.wind_speed_10m_kmh))[0] || null;
     daily.push({
       date_istanbul: day,
