@@ -221,7 +221,7 @@ jobs:
           curl --silent --show-error --fail --max-time 20 "$WEB/gfs-comparison-tooltip.js?v=20261108-180h-layout-clipping-1" -o "$RUNNER_TEMP/live-gfs-tooltip.js"
           grep -q 'function forceDarkGfsSvg(svg)' "$RUNNER_TEMP/live-gfs-tooltip.js"
           curl --silent --show-error --fail --max-time 20 "$WEB/service-worker.js?verify=$(date +%s)" -o "$RUNNER_TEMP/live-service-worker.js"
-          grep -q 'istanbul-hava-shell-v28' "$RUNNER_TEMP/live-service-worker.js"
+          grep -q 'istanbul-hava-shell-v29' "$RUNNER_TEMP/live-service-worker.js"
           grep -q 'istanbul-hava-data-v4' "$RUNNER_TEMP/live-service-worker.js"
           echo "Verified live renderer, cache-busted script and refreshed service-worker caches."
 
