@@ -1,3 +1,4 @@
+// LIVE SYNTHETIC RADAR DRILL ENABLED: 30 km N / 25 dBZ / 20 px / 30 km/h / ~60 min ETA
 const LAT = 41.0904;
 const LON = 28.9438;
 const RADIUS_KM = 90;
