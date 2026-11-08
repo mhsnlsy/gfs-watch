@@ -540,10 +540,19 @@ jobs:
                 throw new Error("The production table did not render 24 rows on desktop and mobile: " +
                   JSON.stringify(diagnostics.viewports));
               }
+              const runDate = diagnostics.f72?.run_id_utc ? new Date(diagnostics.f72.run_id_utc) : null;
+              const expectedRunLabel = runDate && Number.isFinite(runDate.getTime())
+                ? "Run: " + new Intl.DateTimeFormat("en-GB", {
+                    timeZone: "UTC", weekday: "short", day: "numeric", month: "short",
+                    year: "numeric", hour: "2-digit", hourCycle: "h23"
+                  }).format(runDate) + "Z"
+                : "";
               if (!diagnostics.f72 || diagnostics.f72.point_count !== 24 ||
-                  diagnostics.f72.run_id_utc !== "2026-11-08T00:00:00+00:00") {
-                throw new Error("Browser-observed F72 response did not match the live 00Z payload: " +
-                  JSON.stringify(diagnostics.f72));
+                  !expectedRunLabel ||
+                  diagnostics.viewports.desktop.run !== expectedRunLabel ||
+                  diagnostics.viewports.mobile.run !== expectedRunLabel) {
+                throw new Error("The homepage table run label does not match its live F72 payload: " +
+                  JSON.stringify({ f72: diagnostics.f72, expectedRunLabel, viewports: diagnostics.viewports }));
               }
               fs.writeFileSync(path.join(out, "diagnostics.json"), JSON.stringify(diagnostics, null, 2));
               console.log(JSON.stringify({
