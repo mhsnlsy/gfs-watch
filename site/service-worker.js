@@ -112,7 +112,7 @@ self.addEventListener("push", event => {
   let payload = {};
   try { payload = event.data ? event.data.json() : {}; }
   catch (_) { payload = { body: "Yeni İstanbul GFS hava raporu yayımlandı." }; }
-  event.waitUntil(self.registration.showNotification(payload.title || "İstanbul'un Havası", {
+  event.waitUntil(self.registration.showNotification(payload.title || "İstanbul Havası", {
     body: payload.body || "Yeni GFS hava raporu yayımlandı.",
     tag: payload.tag || "istanbul-gfs-report",
     data: { url: payload.url || "./#bildirimler" }
