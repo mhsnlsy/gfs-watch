@@ -1,4 +1,4 @@
-const SHELL_CACHE = "istanbul-hava-shell-v30-icons3";
+const SHELL_CACHE = "istanbul-hava-shell-v31-eyupsultan";
 const DATA_CACHE = "istanbul-hava-data-v4";
 const APP_SHELL = [
   "./",
