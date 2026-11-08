@@ -20,7 +20,11 @@ def main() -> None:
     guardian = read("gfs-guardian/src/index.js")
     guardian_config = json.loads(read("gfs-guardian/wrangler.jsonc"))
     gfs_worker = read("istanbul-gfs-worker/src/index.js")
-    assert "api.meteopt.com/ecmwf/json" in gfs_worker
+    meteopt_source = read("shared/meteopt-source.js")
+    assert "METEOPT_GFS_API" in gfs_worker
+    assert "METEOPT_ECMWF_API" in gfs_worker
+    assert "api.meteopt.com/ecmwf/json" in meteopt_source
+    assert "api.meteopt.com/gfs/json" in meteopt_source
     assert '41.0901' in gfs_worker and '28.9436' in gfs_worker
     assert 'ECMWF_ARCHIVE' in gfs_worker
     assert '/ecmwf/latest' in gfs_worker
@@ -29,6 +33,8 @@ def main() -> None:
     web_worker = read("web-worker/src/index.js")
     web_config = json.loads(read("web-worker/wrangler.jsonc"))
     koy_worker = read("koy-gfs-worker/src/index.js")
+    assert "METEOPT_GFS_API" in koy_worker
+    assert "METEOPT_SOURCE_POLICY" in koy_worker
     koy_svg_workflow = read(".github/workflows/rebuild-koy-gfs-interactive-svg.yml")
     istanbul_svg_workflow = read(".github/workflows/rebuild-istanbul-gfs-images.yml")
     koy_deploy = read(".github/workflows/deploy-koy-gfs-worker.yml")
@@ -123,9 +129,9 @@ def main() -> None:
     assert "publication-asset/notifications/latest.json" in istanbul_svg_workflow
     assert "Verified D1 live SVG dark surfaces" in istanbul_svg_workflow
     assert 'path.startsWith("/data/notifications/")' in web_worker
-    # ECMWF is now collected by the Istanbul GFS Worker from MeteoPT and archived
+    # ECMWF is now collected by the Istanbul GFS Worker from the canonical MeteoPT source and archived
     # directly into D1/R2; there is no separate ECMWF GitHub Actions workflow.
-    assert "api.meteopt.com/ecmwf/json" in gfs_worker
+    assert "METEOPT_ECMWF_API" in gfs_worker
     assert "ECMWF_ARCHIVE" in gfs_worker
     assert "data/ecmwf/latest.json" in platform_workflow
     assert "Verified live ECMWF payload served from R2" in platform_workflow
