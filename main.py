@@ -2944,8 +2944,17 @@ def _prepare_comparison_chart_data(current_run_id, payload, previous_runs):
             + ", ".join(missing_850)
         )
 
-    # Deep-navy report canvas with four color-blind-friendly, high-contrast cycle accents.
-    colors = ["#8ABCE8", "#7DD3D7", "#F1C98B", "#B38BE8"]
+    # Age-based cycle colors: newest is lilac, then amber, cyan, blue.
+    # Derive this from the actual run timestamps, never from array position.
+    age_palette = ["#B38BE8", "#F1C98B", "#7DD3D7", "#8ABCE8"]
+    ranked_runs = sorted(
+        range(len(series)),
+        key=lambda index: _parse_utc_datetime(series[index]["run_id"]),
+        reverse=True,
+    )
+    colors = [None] * len(series)
+    for rank, series_index in enumerate(ranked_runs):
+        colors[series_index] = age_palette[min(rank, len(age_palette) - 1)]
     count = len(series)
     offsets = [
         (index - (count - 1) / 2) * min(0.20, 0.80 / count)
@@ -3340,10 +3349,17 @@ def create_valid_time_comparison_assets(current_run_id, payload, previous_runs):
             for value in local_times
         ]
 
-        # Series are oldest -> newest. Reverse the shared web palette so the
-        # newest line is lilac, then amber, blue, and turquoise.
-        cycle_palette = ["#8ABCE8", "#7DD3D7", "#F1C98B", "#B38BE8"]
-        active_palette = cycle_palette[-len(series):]
+        # Color by actual run age: newest lilac, then amber, cyan, blue.
+        # This remains correct even if the input series order changes.
+        age_palette = ["#B38BE8", "#F1C98B", "#7DD3D7", "#8ABCE8"]
+        ranked_runs = sorted(
+            range(len(series)),
+            key=lambda index: _parse_utc_datetime(series[index]["run_id"]),
+            reverse=True,
+        )
+        active_palette = [None] * len(series)
+        for rank, series_index in enumerate(ranked_runs):
+            active_palette[series_index] = age_palette[min(rank, len(age_palette) - 1)]
         metrics = (
             ("temp", "Sıcaklık", "°C"),
             ("temp_850", "850 hPa sıcaklık", "°C"),
