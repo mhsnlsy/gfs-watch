@@ -6,7 +6,7 @@ const STATIONS_API=(window.GFS_WATCH_API_BASE||window.location.origin)+"/api";
 const $=id=>document.getElementById(id);
 const num=v=>v==null||v===""||!Number.isFinite(Number(v))?null:Number(v);
 const fmt=(v,d=1)=>v==null?"—":Number(v).toLocaleString("tr-TR",{minimumFractionDigits:d,maximumFractionDigits:d});
-const esc=s=>String(s??"").replace(/[&<>"]/g,c=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;"}[c]));
+const esc=s=>String(s == null ? "" : s).replace(/[&<>"]/g,c=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;"}[c]));
 const ts=v=>{if(!v)return "—";const d=new Date(v);return Number.isFinite(d.getTime())?new Intl.DateTimeFormat("tr-TR",{timeZone:"Europe/Istanbul",day:"2-digit",month:"2-digit",hour:"2-digit",minute:"2-digit"}).format(d)+" TSİ":"—"};
 const tsGfsValid=v=>{if(!v)return "—";const d=new Date(v);if(!Number.isFinite(d.getTime()))return "—";const date=new Intl.DateTimeFormat("tr-TR",{timeZone:"UTC",day:"2-digit",month:"2-digit"}).format(d);const weekday=new Intl.DateTimeFormat("tr-TR",{timeZone:"UTC",weekday:"long"}).format(d);const clock=new Intl.DateTimeFormat("tr-TR",{timeZone:"UTC",hour:"2-digit",minute:"2-digit",hourCycle:"h23"}).format(d);return date+" "+weekday+" · "+clock+" TSİ"};
 const dayKey=v=>{const d=new Date(v);return Number.isFinite(d.getTime())?new Intl.DateTimeFormat("en-CA",{timeZone:"UTC",year:"numeric",month:"2-digit",day:"2-digit"}).format(d):"—"};
@@ -22,36 +22,36 @@ async function getStation(path){
  const doc=await r.json();
  if(path.includes("/history/")&&Array.isArray(doc.samples)){
   doc.samples=doc.samples.map(s=>({...s,
-   temperature_2m_c:s.temperature_2m_c??s.temperature_c,
+   temperature_2m_c:s.temperature_2m_c == null ? s.temperature_c : s.temperature_2m_c,
    humidity_percent:s.humidity_percent,
    pressure_hpa:s.pressure_hpa,
-   wind_speed_10m_kmh:s.wind_speed_10m_kmh??s.wind_speed_kmh,
-   wind_direction_deg:s.wind_direction_deg??s.wind_direction,
-   precipitation_1h_mm:s.precipitation_1h_mm??s.rain_1h_mm,
-   precipitation_10m_mm:s.precipitation_10m_mm??s.rain_10m_mm,
-   precipitation_6h_mm:s.precipitation_6h_mm??s.rain_6h_mm,
-   precipitation_12h_mm:s.precipitation_12h_mm??s.rain_12h_mm,
-   precipitation_24h_mm:s.precipitation_24h_mm??s.rain_24h_mm
+   wind_speed_10m_kmh:s.wind_speed_10m_kmh == null ? s.wind_speed_kmh : s.wind_speed_10m_kmh,
+   wind_direction_deg:s.wind_direction_deg == null ? s.wind_direction : s.wind_direction_deg,
+   precipitation_1h_mm:s.precipitation_1h_mm == null ? s.rain_1h_mm : s.precipitation_1h_mm,
+   precipitation_10m_mm:s.precipitation_10m_mm == null ? s.rain_10m_mm : s.precipitation_10m_mm,
+   precipitation_6h_mm:s.precipitation_6h_mm == null ? s.rain_6h_mm : s.precipitation_6h_mm,
+   precipitation_12h_mm:s.precipitation_12h_mm == null ? s.rain_12h_mm : s.precipitation_12h_mm,
+   precipitation_24h_mm:s.precipitation_24h_mm == null ? s.rain_24h_mm : s.precipitation_24h_mm
   }));
  }
  if(path==="/stations/canakci"&&doc.station){
   const s=doc.station;
   doc.station={...s,
-   temperature_2m_c:s.temperature_2m_c??s.temperature_c,
+   temperature_2m_c:s.temperature_2m_c == null ? s.temperature_c : s.temperature_2m_c,
    humidity_percent:s.humidity_percent,
    pressure_hpa:s.pressure_hpa,
-   wind_speed_10m_kmh:s.wind_speed_10m_kmh??s.wind_speed_kmh,
+   wind_speed_10m_kmh:s.wind_speed_10m_kmh == null ? s.wind_speed_kmh : s.wind_speed_10m_kmh,
    wind_direction_degrees:s.wind_direction_degrees??s.wind_direction,
-   precipitation_1h_mm:s.precipitation_1h_mm??s.rain_1h_mm,
-   precipitation_10m_mm:s.precipitation_10m_mm??s.rain_10m_mm,
-   precipitation_6h_mm:s.precipitation_6h_mm??s.rain_6h_mm,
-   precipitation_12h_mm:s.precipitation_12h_mm??s.rain_12h_mm,
-   precipitation_24h_mm:s.precipitation_24h_mm??s.rain_24h_mm
+   precipitation_1h_mm:s.precipitation_1h_mm == null ? s.rain_1h_mm : s.precipitation_1h_mm,
+   precipitation_10m_mm:s.precipitation_10m_mm == null ? s.rain_10m_mm : s.precipitation_10m_mm,
+   precipitation_6h_mm:s.precipitation_6h_mm == null ? s.rain_6h_mm : s.precipitation_6h_mm,
+   precipitation_12h_mm:s.precipitation_12h_mm == null ? s.rain_12h_mm : s.precipitation_12h_mm,
+   precipitation_24h_mm:s.precipitation_24h_mm == null ? s.rain_24h_mm : s.precipitation_24h_mm
   };
  }
  return doc;
 }
-function pointsOf(run,max=180){return (run?.forecast_6_hourly||[]).filter(p=>{const h=Number(p.forecast_hour);return Number.isFinite(h)&&h>=3&&h<=max&&h%3===0}).sort((a,b)=>Number(a.forecast_hour)-Number(b.forecast_hour))}
+function pointsOf(run,max=180){return (run && run.forecast_6_hourly||[]).filter(p=>{const h=Number(p.forecast_hour);return Number.isFinite(h)&&h>=3&&h<=max&&h%3===0}).sort((a,b)=>Number(a.forecast_hour)-Number(b.forecast_hour))}
 const HOME_ELEVATION_M=363;
 const MGM_STATION_ELEVATION_M=146;
 const HOME_DELTA_M=HOME_ELEVATION_M-MGM_STATION_ELEVATION_M;
@@ -166,13 +166,13 @@ function svgLine(runs,metric,title,unit,maxHour=180,verification=null){
   // Do not apply maxHour to the older runs: matching the newest run's 72-hour
   // window may require F75, F81, F87… from older cycles.
   const byValidTime=new Map();
-  (run?.forecast_6_hourly||[]).forEach(p=>{
+  (run && run.forecast_6_hourly||[]).forEach(p=>{
    const stamp=Date.parse(p.valid_time_utc||"");
    if(Number.isFinite(stamp))byValidTime.set(stamp,p);
   });
   const points=timeline.map(target=>{
    const p=byValidTime.get(target.stamp);
-   const value=num(p?.[metric]);
+   const value=num(p == null ? void 0 : p[metric]);
    if(value==null)return null;
    return {
     index:target.index,
@@ -198,8 +198,8 @@ function svgLine(runs,metric,title,unit,maxHour=180,verification=null){
  if(hi===lo)hi=lo+1;
  const chartHost=$(metric==="temperature_2m_c"?"next72-temperature":"next72-precipitation");
  const W=1000;
- const boxWidth=Math.max(320,chartHost?.clientWidth||1000);
- const boxHeight=Math.max(180,chartHost?.clientHeight||280);
+ const boxWidth=Math.max(320,chartHost && chartHost.clientWidth||1000);
+ const boxHeight=Math.max(180,chartHost && chartHost.clientHeight||280);
  const H=W*boxHeight/boxWidth;
  const L=78,R=16,T=34,B=60,PW=W-L-R,PH=H-T-B;
  const x=h=>L+(timeline.length===1?PW/2:(h-timeline[0].elapsed)/(timeline[timeline.length-1].elapsed-timeline[0].elapsed||1))*PW;
@@ -244,7 +244,7 @@ document.addEventListener("pointerdown",event=>{
  if(activeGfsTooltip&&!activeGfsTooltip.host.contains(event.target))activeGfsTooltip.hide();
 },true);
 function bindGfsChartTooltip(containerId){
- const host=$(containerId),svg=host?.querySelector("svg.koy-svg");
+ const host=$(containerId),svg=host && host.querySelector("svg.koy-svg");
  if(!host||!svg)return;
  const tooltip=document.createElement("div");
  tooltip.className="gfs-point-tooltip";
@@ -271,7 +271,7 @@ function bindGfsChartTooltip(containerId){
  function hide(){
   tooltip.hidden=true;
   pinned=false;
-  if(activeGfsTooltip?.tooltip===tooltip)activeGfsTooltip=null;
+  if(activeGfsTooltip && activeGfsTooltip.tooltip===tooltip)activeGfsTooltip=null;
  }
  function positionTooltipAbove(event){
   const rect=host.getBoundingClientRect();
@@ -334,7 +334,7 @@ function bindGfsChartTooltip(containerId){
  });
  svg.addEventListener("pointerrawupdate",event=>{if(event.pointerType==="touch")updateTouch(event);},{passive:true});
  svg.addEventListener("touchmove",event=>{
-  const touch=event.touches?.[0];if(!touch)return;
+  const touch=event.touches && event.touches[0];if(!touch)return;
   updateTouch({clientX:touch.clientX,clientY:touch.clientY});
  },{passive:true});
  svg.addEventListener("pointerleave",()=>{if(!pinned)hide();});
@@ -373,12 +373,12 @@ function renderMgmObservation(o,history,f72){
  if(!o)return;
  const isHome=stationMode==="home";
  const stationName=isHome?"Köy Ev":"Çanakçı MGM";
- const stationElevation=isHome?"363 m":(o?.elevation_m!=null?fmt(o.elevation_m,0)+" m":"");
+ const stationElevation=isHome?"363 m":(o && o.elevation_m!=null?fmt(o.elevation_m,0)+" m":"");
  const t=num(o.temperature_2m_c),rh=num(o.humidity_percent),wind=num(o.wind_speed_10m_kmh),rain=num(o.precipitation_1h_mm),press=num(o.pressure_hpa);
  // Rain is always sourced from the real Çanakçı MGM station observation.
  // For Köy Ev, use the displayed elevation-corrected temperature to choose rain vs snow.
  const mgmObservation=window.__koyMgmObservation||o;
- const mgmRain=num(mgmObservation?.precipitation_1h_mm??mgmObservation?.rain_1h_mm??rain);
+ const mgmRain=num((mgmObservation && mgmObservation.precipitation_1h_mm != null ? mgmObservation.precipitation_1h_mm : (mgmObservation && mgmObservation.rain_1h_mm != null ? mgmObservation.rain_1h_mm : rain)));
  const precipitationPhase=mgmRain!=null&&mgmRain>0
   ? (t!=null&&t<2.0?"snow":"rain")
   : "none";
@@ -403,7 +403,7 @@ function renderMgmObservation(o,history,f72){
  const feelsRangeEl=$("feels-like-24h");
  if(feelsRangeEl){
   const now=Date.now(),cutoff=now-24*3600000;
-  const values=(Array.isArray(history?.samples)?history.samples:[]).filter(s=>{
+  const values=(Array.isArray(history && history.samples)?history.samples:[]).filter(s=>{
    const stamp=Date.parse(s.observed_at_utc||s.logged_at_utc||"");
    return Number.isFinite(stamp)&&stamp>=cutoff&&stamp<=now+300000;
   }).map(s=>{
@@ -429,12 +429,12 @@ function renderMgmObservation(o,history,f72){
  $("pressure").innerHTML=fmt(press,1)+'<span class="unit">hPa</span>';
  const validationEl=$("station-alert");
  if(validationEl){
-  const v=o?.validation;
-  validationEl.classList.toggle("station-alert-ok",isHome&&v?.status==="PASS");
-  if(isHome&&v?.status==="FAIL"){
+  const v=o && o.validation;
+  validationEl.classList.toggle("station-alert-ok",isHome&&v && v.status==="PASS");
+  if(isHome&&v && v.status==="FAIL"){
    validationEl.hidden=false;
    validationEl.textContent="Köy Ev hesap kontrolü: "+(Array.isArray(v.checks)?v.checks.join(", "):"tutarsızlık")+" · değerler yeniden hesaplanmalı.";
-  }else if(isHome&&v?.status==="PASS"){
+  }else if(isHome&&v && v.status==="PASS"){
    validationEl.hidden=false;
    validationEl.textContent="✓ Köy Ev hesap doğrulandı · +217 m rakım · hissedilen ve basınç tutarlı";
   }else{
@@ -442,7 +442,7 @@ function renderMgmObservation(o,history,f72){
    validationEl.textContent="";
   }
  }
- const samples=Array.isArray(history?.samples)?history.samples:[];
+ const samples=Array.isArray(history && history.samples)?history.samples:[];
  const temps=samples.map(x=>num(x.temperature_2m_c)).filter(v=>v!=null);
  if(temps.length){const min=Math.min(...temps),max=Math.max(...temps),d=t!=null?t-temps[0]:null;const diff=t!=null?t-min:null;$("station-24h-diff").textContent="Son 24 saatte "+(diff>=0?fmt(diff)+"° daha sıcak":fmt(Math.abs(diff))+"° daha soğuk");}
  if(precipitationPhase==="snow")$("rain-brief-current").textContent="Kar yağışı tespit edildi · Çanakçı MGM ("+fmt(mgmRain)+" mm/son 1 saat).";
@@ -617,7 +617,7 @@ function bindStationHistoryTooltip(containerId){
  });
  svg.addEventListener("pointerrawupdate",handleTouchMove,{passive:false});
  svg.addEventListener("touchmove",event=>{
-  const touch=event.touches?.[0];
+  const touch=event.touches && event.touches[0];
   if(!touch)return;
   handleTouchMove({clientX:touch.clientX,clientY:touch.clientY,pointerType:"touch"});
  },{passive:false});
@@ -641,8 +641,8 @@ function bindStationHistoryTooltip(containerId){
 }
 function renderStationHistory(doc,rainDoc){
  const isHome=stationMode==="home";
- const samples=Array.isArray(doc?.samples)?doc.samples:[];
- const rainSamples=Array.isArray(rainDoc?.samples)?rainDoc.samples:samples;
+ const samples=Array.isArray(doc && doc.samples)?doc.samples:[];
+ const rainSamples=Array.isArray(rainDoc && rainDoc.samples)?rainDoc.samples:samples;
  const stationLabel=isHome?"Köy Ev · 363 m":"Çanakçı · MGM";
  const tempTitle=isHome?"Köy Ev sıcaklık":"Çanakçı sıcaklık";
  const rainTitle=isHome?"Köy Ev yağış":"Çanakçı yağış";
@@ -670,7 +670,7 @@ function renderStationHistory(doc,rainDoc){
  bindStationHistoryTooltip("station-rain-trend");
 }
 function gfsRunLabel(run){
- const date=new Date(run?.run_id_utc||"");
+ const date=new Date(run && run.run_id_utc||"");
  if(!Number.isFinite(date.getTime()))return "GFS döngüsü";
  const utcHour=String(date.getUTCHours()).padStart(2,"0")+"Z";
  return ts(date.toISOString())+" · "+utcHour;
@@ -688,7 +688,7 @@ function renderRunLegend(source){
  }).join("");
 }
 function renderRuns(d,f72){
- const historyRuns=(Array.isArray(d?.runs)?d.runs:[])
+ const historyRuns=(Array.isArray(d && d.runs)?d.runs:[])
   .filter(run=>run&&Array.isArray(run.forecast_6_hourly)&&run.forecast_source==="meteopt")
   .sort((a,b)=>Date.parse(b.run_id_utc||"")-Date.parse(a.run_id_utc||""))
   .slice(0,4);
@@ -709,7 +709,7 @@ function renderRuns(d,f72){
    const latestSvgRun=svgRuns[0];
    const runDate=new Date(latestSvgRun.run_id_utc);
    const runStamp=runDate.getUTCFullYear()+String(runDate.getUTCMonth()+1).padStart(2,"0")+String(runDate.getUTCDate()).padStart(2,"0")+"T"+String(runDate.getUTCHours()).padStart(2,"0")+"Z";
-   const version=encodeURIComponent((d?.updated_at_utc||latestSvgRun.published_at_utc||latestSvgRun.run_id_utc)+"|koy-svg-absolute-path-v5");
+   const version=encodeURIComponent((d && d.updated_at_utc||latestSvgRun.published_at_utc||latestSvgRun.run_id_utc)+"|koy-svg-absolute-path-v5");
    const assetRoot=window.location.pathname.startsWith("/gfs-watch/")?"/gfs-watch/":"/";
    const svgPath=assetRoot+"koy-data/gfs/media/koy-gfs-"+runStamp+"-comparison.svg";
    const svgUrl=new URL(svgPath,window.location.origin).href+"?v="+version;
@@ -797,7 +797,7 @@ function renderRuns(d,f72){
  }
 }
 async function refresh(){if(busy)return;busy=true;
- const results=await Promise.allSettled([
+ const results=await Promise.all([
   get("f72"),get("comparison"),getStation("/history/canakci?hours=72"),
   getStation("/stations/canakci")
  ]);
@@ -807,7 +807,7 @@ async function refresh(){if(busy)return;busy=true;
  }else{
   // If the short F72 pointer is temporarily missing, recover the exact latest MeteoPT run
   // from the comparison archive so the table and charts continue from one canonical payload.
-  const archivedLatest=(comparison?.runs||[]).find(run=>run&&run.forecast_source==="meteopt"&&Array.isArray(run.forecast_6_hourly));
+  const archivedLatest=(comparison && comparison.runs||[]).find(run=>run&&run.forecast_source==="meteopt"&&Array.isArray(run.forecast_6_hourly));
   if(archivedLatest)f72=archivedLatest;
  }
  if(f72)renderF72(stationMode==="home"?homeGfsDocument(f72):f72);
@@ -827,10 +827,10 @@ async function refresh(){if(busy)return;busy=true;
   $("station-temperature-trend").innerHTML='<div class="station-trend-empty">'+(stationMode==="home"?"Köy Ev sanal istasyon geçmişi bekleniyor…":"MGM istasyon geçmişi bekleniyor…")+'</div>';
   $("station-rain-trend").innerHTML='<div class="station-trend-empty">'+(stationMode==="home"?"Köy Ev sanal yağış arşivi bekleniyor…":"MGM yağış arşivi bekleniyor…")+'</div>';
  }
- if(results[3].status==="fulfilled"&&results[3].value?.station){
+ if(results[3].status==="fulfilled"&&results[3].value && results[3].value.station){
   window.__koyMgmObservation=results[3].value.station;
   if(!evObservation)evObservation=buildVirtualHomeObservation(window.__koyMgmObservation);
-  window.__koyCurrentTemp=num(results[3].value.station.temperature_c ?? results[3].value.station.temperature_2m_c);
+  window.__koyCurrentTemp=num(results[3].value.station.temperature_c == null ? results[3].value.station.temperature_2m_c : results[3].value.station.temperature_c);
   const o=window.__koyMgmObservation;
   $("mgm-status-date").textContent=ts(o.last_attempt_utc||o.fetched_at_utc||o.observed_at_utc);
   $("mgm-source-temp").innerHTML=fmt(o.temperature_2m_c)+"<small>°C</small>";
@@ -847,18 +847,18 @@ async function refresh(){if(busy)return;busy=true;
 }
 function setStationMode(mode){
  stationMode=mode==="home"?"home":"mgm";
- $("station-enka-button")?.classList.toggle("active",stationMode==="mgm");
- $("station-home-button")?.classList.toggle("active",stationMode==="home");
- $("station-enka-button")?.setAttribute("aria-pressed",stationMode==="mgm"?"true":"false");
- $("station-home-button")?.setAttribute("aria-pressed",stationMode==="home"?"true":"false");
+ $("station-enka-button") && $("station-enka-button").classList.toggle("active",stationMode==="mgm");
+ $("station-home-button") && $("station-home-button").classList.toggle("active",stationMode==="home");
+ $("station-enka-button") && $("station-enka-button").setAttribute("aria-pressed",stationMode==="mgm"?"true":"false");
+ $("station-home-button") && $("station-home-button").setAttribute("aria-pressed",stationMode==="home"?"true":"false");
  const o=stationMode==="home"?evObservation:window.__koyMgmObservation;
  const h=stationMode==="home"?evHistory:stationHistory;
  if(h)renderStationHistory(h,stationMode==="home"?h:rainHistory);
  if(o)renderMgmObservation(o,h,stationMode==="home"?homeGfsDocument(f72):f72);
  renderRuns(stationMode==="home"?homeGfsComparison(comparison):comparison,stationMode==="home"?homeGfsDocument(f72):f72);
 }
-$("station-enka-button")?.addEventListener("click",()=>setStationMode("mgm"));
-$("station-home-button")?.addEventListener("click",()=>setStationMode("home"));
+$("station-enka-button") && $("station-enka-button").addEventListener("click",()=>setStationMode("mgm"));
+$("station-home-button") && $("station-home-button").addEventListener("click",()=>setStationMode("home"));
 // Köy Ev is the canonical default; only an explicit MGM selection may switch away from it.
 setStationMode("home");
 refresh();
