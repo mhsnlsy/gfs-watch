@@ -1,5 +1,5 @@
 (() => {
-  "use strict";
+  "use strict";\n  // Live recovery: prefer F72, fall back to canonical latest when F72 is unavailable.
   const ROOT = "meteopt-gfs-table";
   // The MeteoPT 72-hour table must follow the newest F72-ready cycle,
   // independently from the slower F180 report/archive publication.
