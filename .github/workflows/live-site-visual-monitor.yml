@@ -182,7 +182,7 @@ jobs:
                 await koyPage.locator("#meteopt-table-status").waitFor({ state: "visible", timeout: 30000 });
                 await koyPage.waitForFunction(() => {
                   const status = document.querySelector("#meteopt-table-status")?.textContent || "";
-                  return /^\\s*24\\s*\\/\\s*24/.test(status);
+                  return /^\s*24\s*\/\s*24/.test(status);
                 }, { timeout: 60000 });
                 const koyTable = koyPage.locator("#meteopt-gfs-table");
                 await koyTable.scrollIntoViewIfNeeded();
