@@ -1487,7 +1487,7 @@ html[data-default-station="eyupsultan"] #station-eyupsultan-button{
       W:"Batı",WNW:"Batı-kuzeybatı",NW:"Kuzeybatı",NNW:"Kuzey-kuzeybatı"
     };
     const fmt=(value,digits=1)=>numeric(value)?value.toLocaleString("tr-TR",{minimumFractionDigits:digits,maximumFractionDigits:digits}):"—";
-    const esc=value=>String(value??"").replace(/[&<>"']/g,char=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[char]));
+    const esc=value=>String(value == null ? "" : value).replace(/[&<>"']/g,char=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[char]));
     const timeTR=value=>new Intl.DateTimeFormat("tr-TR",{timeZone:"Europe/Istanbul",day:"2-digit",minute:"2-digit"}).format(new Date(value));
     const timeUTC=value=>new Intl.DateTimeFormat("tr-TR",{timeZone:"UTC",day:"2-digit",minute:"2-digit",hourCycle:"h23"}).format(new Date(value));
     const forecastClockUTC=value=>new Intl.DateTimeFormat("tr-TR",{timeZone:"UTC",hour:"2-digit",minute:"2-digit",hourCycle:"h23"}).format(new Date(value));
@@ -2977,10 +2977,10 @@ html[data-default-station="eyupsultan"] #station-eyupsultan-button{
       if(typeof refreshSelectedStation==="function")refreshSelectedStation();
     }
     forceHomepageDefaultStation();
-    $("station-enka-button")?.addEventListener("click",()=>selectStation("enka"));
-    $("station-eyupsultan-button")?.addEventListener("click",()=>selectStation("eyupsultan"));
-    $("station-sisli-button")?.addEventListener("click",()=>selectStation("sisli"));
-    document.querySelector(".topbar .brand")?.addEventListener("click",()=>selectStation("eyupsultan"));
+    $("station-enka-button") && $("station-enka-button").addEventListener("click",()=>selectStation("enka"));
+    $("station-eyupsultan-button") && $("station-eyupsultan-button").addEventListener("click",()=>selectStation("eyupsultan"));
+    $("station-sisli-button") && $("station-sisli-button").addEventListener("click",()=>selectStation("sisli"));
+    document.querySelector(".topbar .brand") && document.querySelector(".topbar .brand").addEventListener("click",()=>selectStation("eyupsultan"));
 
 
     function render(data){
@@ -2999,17 +2999,17 @@ renderBriefing();
     function workerStationToPageStation(row){
       if(!row)return null;
       const toNumber=value=>(value===null||value===undefined||value==="")?null:Number(value);
-      const pressure=toNumber(row.pressure_hpa ?? row.actual_station_pressure_hpa ?? row.station_pressure_hpa);
-      const wind=toNumber(row.wind_speed_kmh ?? row.wind_speed_10m_kmh);
-      const temp=toNumber(row.temperature_c ?? row.temperature_2m_c);
+      const pressure=toNumber(row.pressure_hpa == null ? (row.actual_station_pressure_hpa == null ? row.station_pressure_hpa : row.actual_station_pressure_hpa) : row.pressure_hpa);
+      const wind=toNumber(row.wind_speed_kmh == null ? row.wind_speed_10m_kmh : row.wind_speed_kmh);
+      const temp=toNumber(row.temperature_c == null ? row.temperature_2m_c : row.temperature_2m_c);
       const humidity=toNumber(row.humidity_percent);
-      const rain1=toNumber(row.rain_1h_mm ?? row.precipitation_1h_mm);
-      const rain10=toNumber(row.rain_10m_mm ?? row.precipitation_10m_mm);
-      const rain6=toNumber(row.rain_6h_mm ?? row.precipitation_6h_mm);
-      const rain12=toNumber(row.rain_12h_mm ?? row.precipitation_12h_mm);
-      const rain24=toNumber(row.rain_24h_mm ?? row.precipitation_24h_mm);
-      const rain00=toNumber(row.rain_00_now_mm ?? row.precipitation_daily_mm);
-      const degree=toNumber(row.wind_direction ?? row.wind_direction_degrees);
+      const rain1=toNumber(row.rain_1h_mm == null ? row.precipitation_1h_mm : row.precipitation_1h_mm);
+      const rain10=toNumber(row.rain_10m_mm == null ? row.precipitation_10m_mm : row.precipitation_10m_mm);
+      const rain6=toNumber(row.rain_6h_mm == null ? row.precipitation_6h_mm : row.rain_6h_mm);
+      const rain12=toNumber(row.rain_12h_mm == null ? row.precipitation_12h_mm : row.rain_12h_mm);
+      const rain24=toNumber(row.rain_24h_mm == null ? row.precipitation_24h_mm : row.rain_24h_mm);
+      const rain00=toNumber(row.rain_00_now_mm == null ? row.precipitation_daily_mm : row.rain_00_now_mm);
+      const degree=toNumber(row.wind_direction == null ? row.wind_direction_degrees : row.wind_direction);
       let directionCardinal=row.wind_direction_cardinal||null;
       if(!directionCardinal&&degree!==null){
         const dirs=["N","NE","E","SE","S","SW","W","NW"];
@@ -3048,9 +3048,9 @@ renderBriefing();
       if(!Array.isArray(rows))return [];
       const toNumber=value=>(value===null||value===undefined||value==="")?null:Number(value);
       return rows.map(row=>{
-        const temp=toNumber(row.temperature_c ?? row.temperature_2m_c);
-        const rain1=toNumber(row.rain_1h_mm ?? row.precipitation_1h_mm);
-        const rain10=toNumber(row.rain_10m_mm ?? row.precipitation_10m_mm);
+        const temp=toNumber(row.temperature_c == null ? row.temperature_2m_c : row.temperature_2m_c);
+        const rain1=toNumber(row.rain_1h_mm == null ? row.precipitation_1h_mm : row.precipitation_1h_mm);
+        const rain10=toNumber(row.rain_10m_mm == null ? row.precipitation_10m_mm : row.precipitation_10m_mm);
         return {
           station_id:String(row.station_id||""),
           observed_at_utc:row.observed_at_utc||row.fetched_at_utc||null,
@@ -3076,8 +3076,8 @@ renderBriefing();
         const response=await fetch(STATIONS_URL+"?t="+cacheKey,{cache:"no-store"});
         if(!response.ok)throw new Error("Worker stations HTTP "+response.status);
         const document=await response.json();
-        const rows=Array.isArray(document?.stations)?document.stations:[];
-        if(document?.ok!==true||rows.length<3)throw new Error("Station gateway returned an incomplete station list");
+        const rows=Array.isArray(document.stations)?document.stations:[];
+        if(document.ok!==true||rows.length<3)throw new Error("Station gateway returned an incomplete station list");
         for(const row of rows){
           const station=workerStationToPageStation(row);
           if(!station)continue;
@@ -3111,7 +3111,7 @@ if(typeof renderBriefing==="function")renderBriefing();
 
         if(!currentResponse.ok)throw new Error("Selected station API HTTP "+currentResponse.status);
         const currentDocument=await currentResponse.json();
-        if(currentDocument?.ok!==true||!currentDocument?.station)throw new Error("Selected station API returned no station payload");
+        if(currentDocument.ok!==true||!currentDocument.station)throw new Error("Selected station API returned no station payload");
         let currentLoaded=false;
         {
           const candidate=workerStationToPageStation(currentDocument.station);
@@ -3129,7 +3129,7 @@ if(typeof renderBriefing==="function")renderBriefing();
           const response=historyResponses[i];
           if(!response.ok)continue;
           const document=await response.json();
-          const samples=workerHistoryToPageSamples(document?.samples ?? document?.history);
+          const samples=workerHistoryToPageSamples(document.samples == null ? document.history : document.samples);
           const historyKey=historyKeys[i];
           if(historyKey==="enka")enkaStationHistorySamples=samples;
           if(historyKey==="eyupsultan"){
@@ -3341,13 +3341,13 @@ if(typeof renderBriefing==="function")renderBriefing();
         const document=await response.json();
         if(gfsApi){
           document.schema="gfs-watch.notifications.v1";
-          document.items=[{run_id_utc:document.run_id_utc,published_at_utc:document.run_id_utc,title:"İstanbul GFS · F180 tamamlandı",cycle_label:"MeteoPT GFS",report_text:document.report_text,images:((document.images||document.items?.[0]?.images||[])).map((x,i)=>({label:x.label||["2 m sıcaklık","850 hPa sıcaklık","Yağış","10 m rüzgâr"][i]||"GFS grafiği",path:x.url||x.path}))}];
+          document.items=[{run_id_utc:document.run_id_utc,published_at_utc:document.run_id_utc,title:"İstanbul GFS · F180 tamamlandı",cycle_label:"MeteoPT GFS",report_text:document.report_text,images:((document.images||document.items && document.items[0] ? document.items[0].images : null||[])).map((x,i)=>({label:x.label||["2 m sıcaklık","850 hPa sıcaklık","Yağış","10 m rüzgâr"][i]||"GFS grafiği",path:x.url||x.path}))}];
         }
         if(document.schema!=="gfs-watch.notifications.v1"||!Array.isArray(document.items)||!document.items.length){
           throw new Error("Rapor arşivi biçimi geçersiz veya boş.");
         }
         latestNotificationItems=document.items.slice(0,4);
-        renderNotifications(latestNotificationItems,document.updated_at_utc||document.items[0]?.published_at_utc||Date.now());
+        renderNotifications(latestNotificationItems,document.updated_at_utc||document.items[0] && document.items[0].published_at_utc||Date.now());
         $("notification-status").textContent="Otomatik yenileme aktif · Son kontrol: "+new Intl.DateTimeFormat("tr-TR",{timeZone:"Europe/Istanbul",hour:"2-digit",minute:"2-digit"}).format(new Date());
         const reportRun=latestNotificationItems[0]&&latestNotificationItems[0].run_id_utc;
         const forecastRun=forecastData&&forecastData.run_id_utc;
@@ -3436,7 +3436,7 @@ if(typeof renderBriefing==="function")renderBriefing();
     async function startPage(){
       // Start weather data lanes immediately and independently. PWA/push setup
       // must never delay or block live station observations.
-      void Promise.allSettled([
+      void Promise.all([
         loadForecast(),
         loadNotifications(),
         refreshStationObservations(),
@@ -3887,8 +3887,8 @@ if(typeof renderBriefing==="function")renderBriefing();
           const doc = frame.contentDocument;
           if (!doc) return;
           setFrameHeight(Math.max(
-            doc.documentElement?.scrollHeight || 0,
-            doc.body?.scrollHeight || 0
+            doc.documentElement && doc.documentElement.scrollHeight || 0,
+            doc.body && doc.body.scrollHeight || 0
           ));
         } catch (_) {}
       };
