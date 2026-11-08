@@ -34,9 +34,10 @@ jobs:
           cd "$LIVE_VISUAL"
           npm init -y >/dev/null 2>&1
           npm install --no-audit --no-fund --omit=dev playwright@1.56.1
+          export LIVE_VISUAL
           test -f "$LIVE_VISUAL/node_modules/playwright/package.json"
           "$LIVE_VISUAL/node_modules/.bin/playwright" install --with-deps chromium
-          node -e 'console.log("Playwright:", require("$LIVE_VISUAL/node_modules/playwright/package.json").version)'
+          node -e 'console.log("Playwright:", require(process.env.LIVE_VISUAL + "/node_modules/playwright/package.json").version)'
 
       - name: Verify production homepage in desktop and mobile browsers
         env:
