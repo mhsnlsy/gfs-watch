@@ -334,7 +334,7 @@
 
 
     /* Dashboard-first layout: observation left, ENKA history trends right. */
-    .dashboard-top{display:grid;grid-template-columns:minmax(330px,.78fr) minmax(0,1.22fr);gap:14px;align-items:stretch;padding:22px 0 18px}
+    .dashboard-top{display:grid;grid-template-columns:minmax(520px,1.28fr) minmax(260px,.72fr) minmax(340px,.78fr);gap:14px;align-items:start;padding:22px 0 18px}
     .dashboard-top .station-card{width:100%;max-width:none;justify-self:stretch;align-self:stretch;min-height:0;padding:19px 20px}
     .dashboard-top .station-overview{display:block;margin-top:22px}
     .dashboard-top .station-current{width:100%}
@@ -395,7 +395,7 @@
       .dashboard-top .station-card .weather-stats{margin-top:12px;row-gap:7px}
       .dashboard-top .station-card .stat{padding:5px 7px}
     }
-    @media(max-width:900px){.dashboard-top{grid-template-columns:minmax(0,1fr);}.history-charts{grid-template-columns:repeat(2,minmax(0,1fr))}}
+    @media(max-width:900px){.dashboard-top{grid-template-columns:minmax(0,1fr);}.dashboard-briefing{padding-top:0}.history-charts{grid-template-columns:repeat(2,minmax(0,1fr))}}
     @media(max-width:560px){.dashboard-top{padding:20px 0 15px;gap:11px}.dashboard-top .station-card{padding:17px}.dashboard-top .station-card .weather-stats{grid-template-columns:repeat(2,minmax(0,1fr));margin-top:17px}.history-panel{padding:12px}.history-panel-head{margin-bottom:9px}.history-charts{grid-template-columns:minmax(0,1fr);gap:7px}.history-chart-card{padding:9px 9px 6px}.history-chart{height:140px;margin-top:4px}.history-chart-meta{margin-top:1px}}
   
     /* GFS / ECMWF IFS model switch */
@@ -466,13 +466,17 @@
 @media(max-width:560px){.rain-window{padding:11px}.rain-window-main{font-size:14px}.rain-window-time strong{font-size:13px}}
 
 .briefing{display:grid;gap:4px;margin-top:8px}
-.enka-camera-panel{width:48%;margin:0 0 0 auto;align-self:start;justify-self:end;border:1px solid rgba(125,211,215,.22);border-radius:18px;background:rgba(2,15,24,.42);overflow:hidden}
+.dashboard-briefing{min-width:0;align-self:start;padding-top:70px}.dashboard-briefing .briefing{margin-top:0;width:100%}
+    .dashboard-briefing .briefing-row{width:100%}
+    @media(max-width:900px){.dashboard-top{grid-template-columns:minmax(0,1fr);}.dashboard-briefing{padding-top:0}.dashboard-briefing .briefing{margin-top:10px}}
+    @media(max-width:560px){.dashboard-top{padding:20px 0 15px;gap:11px}.dashboard-briefing{padding-top:0}}
+.enka-camera-panel{width:100%;margin:0;align-self:start;justify-self:stretch;border:1px solid rgba(125,211,215,.22);border-radius:18px;background:rgba(2,15,24,.42);overflow:hidden}
 .enka-camera-head{display:flex;align-items:center;justify-content:space-between;gap:12px;padding:11px 14px;border-bottom:1px solid rgba(125,211,215,.14)}
 .enka-camera-title{font-size:12px;font-weight:800;letter-spacing:.08em;text-transform:uppercase;color:#d9f7f5}
 .enka-camera-status{font-size:10px;color:#8fd0c8;white-space:nowrap}
 .enka-camera-frame{display:block;width:100%;margin:0;aspect-ratio:4/3;min-height:0;object-fit:cover;background:#020f18}
 .enka-camera-foot{display:flex;justify-content:space-between;gap:10px;padding:8px 12px;font-size:10px;color:#8faab5}
-@media(max-width:700px){.enka-camera-panel{width:48%;margin:0 0 0 auto;align-self:start;justify-self:end;border-radius:14px}.enka-camera-frame{min-height:0}.enka-camera-head{padding:9px 11px}.enka-camera-foot{font-size:9px}}
+@media(max-width:700px){.enka-camera-panel{width:100%;margin:0;align-self:start;justify-self:stretch;border-radius:14px}.enka-camera-frame{min-height:0}.enka-camera-head{padding:9px 11px}.enka-camera-foot{font-size:9px}}
 .briefing-row{display:grid;grid-template-columns:86px minmax(0,1fr);gap:8px;align-items:start;padding:5px 8px;border-radius:10px;background:rgba(2,15,24,.28);border:1px solid rgba(143,184,196,.16)}
 .briefing-k{font-size:9px;letter-spacing:.06em;font-weight:700;color:#8fd0c8;text-transform:uppercase;padding-top:2px}
 .briefing-v{font-size:12.5px;line-height:1.35;color:#e7f2f6}
@@ -1386,6 +1390,15 @@ html.ios12 .backdrop-filter{display:none}
       </article>
 
       </div>
+        <div class="dashboard-briefing">
+        <div class="briefing" id="briefing" aria-live="polite">
+        <div class="briefing-row" id="brief-rain">
+          <div class="briefing-k">Yağış saatleri</div>
+          <div class="briefing-v" id="brief-rain-lines">Hesaplanıyor…</div>
+        </div>
+        <div class="briefing-row" id="brief-temperature-trend-row"><div class="briefing-k">5 günlük sıcaklık</div><div class="briefing-v" id="brief-temperature-trend" aria-live="polite">Eyüpsultan ölçümü ve tahmin verisi bekleniyor…</div></div>
+        </div>
+        </div>
         <section class="enka-camera-panel" id="enka-camera-panel" aria-label="ENKA Balmumcu canlı kamera">
           <div class="enka-camera-head">
             <span class="enka-camera-title">ENKA Balmumcu · Canlı Kamera</span>
@@ -1400,13 +1413,6 @@ html.ios12 .backdrop-filter{display:none}
             <span id="enka-camera-updated">Görüntü yükleniyor…</span>
           </div>
         </section>
-        <div class="briefing" id="briefing" aria-live="polite">
-        <div class="briefing-row" id="brief-rain">
-          <div class="briefing-k">Yağış saatleri</div>
-          <div class="briefing-v" id="brief-rain-lines">Hesaplanıyor…</div>
-        </div>
-        <div class="briefing-row" id="brief-temperature-trend-row"><div class="briefing-k">5 günlük sıcaklık</div><div class="briefing-v" id="brief-temperature-trend" aria-live="polite">Eyüpsultan ölçümü ve tahmin verisi bekleniyor…</div></div>
-        </div>
 
       </section>
     </section>
