@@ -11,6 +11,6 @@
   "background_color": "#071521",
   "theme_color": "#081827",
   "icons": [
-    { "src": "./favicon.svg?v=20261108", "sizes": "any", "type": "image/svg+xml", "purpose": "any maskable" }
+    { "src": "./favicon.svg?v=20261108-2-2", "sizes": "any", "type": "image/svg+xml", "purpose": "any maskable" }
   ]
 }
