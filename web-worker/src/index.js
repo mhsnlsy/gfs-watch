@@ -89,6 +89,19 @@ async function fetchD1PublicationAsset(request, env, key) {
   return response.ok ? response : null;
 }
 
+function stripStrayLiteralNewlineText(response) {
+  const contentType = response.headers.get("content-type") || "";
+  if (!contentType.toLowerCase().includes("text/html")) return response;
+
+  return new HTMLRewriter()
+    .on("*", {
+      text(text) {
+        if (text.text.trim() === "\\n") text.remove();
+      },
+    })
+    .transform(response);
+}
+
 export default {
   async fetch(request, env) {
     const url = new URL(request.url);
@@ -216,6 +229,7 @@ export default {
       return responseJson({ ok: false, error: "Unknown API route", path }, 404);
     }
 
-    return env.ASSETS.fetch(request);
+    const assetResponse = await env.ASSETS.fetch(request);
+    return stripStrayLiteralNewlineText(assetResponse);
   },
 };
