@@ -132,7 +132,7 @@ export default {
       });
       if (!response.ok) throw new Error("MeteoPT HTTP " + response.status);
       const doc = await response.json();
-      const digits = String(doc.run || "").replace(/\\D/g, "").slice(0, 10);
+      const digits = String(doc.run || "").replace(/\D/g, "").slice(0, 10);
       if (digits.length !== 10 || Number(digits.slice(8, 10)) !== 12) throw new Error("Expected 12Z GFS, received: " + doc.run);
 
       const tz = "Europe/Istanbul";
