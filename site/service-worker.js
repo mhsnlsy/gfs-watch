@@ -1,6 +1,6 @@
 const SHELL_CACHE = "istanbul-hava-shell-v27";
 const DATA_CACHE = "istanbul-hava-data-v4";
-const APP_SHELL = ["./", "./manifest.webmanifest", "./favicon-48x48.png?v=1"];
+const APP_SHELL = ["./", "./manifest.webmanifest", "./favicon-48x48.png?v=2"];
 const MAX_DATA_ENTRIES = 180;
 
 self.addEventListener("install", event => {
