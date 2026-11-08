@@ -801,9 +801,16 @@ async function api(request, env) {
   if (path === "/api/f72") {
     try {
       let current = await currentRun(env, "f72");
-      // Bootstrap the first dataset on demand. This removes the cold-start gap
-      // between Worker deployment and the first 10-minute Cron tick.
-      if (!current) {
+      // Bootstrap missing data and enrich older D1 records after a schema expansion.
+      // Only check the first 72 hours: a stored F180 payload keeps its longer horizon.
+      const needsSnowlineEnrichment = Boolean(current &&
+        Array.isArray(current.payload?.forecast_6_hourly) &&
+        current.payload.forecast_6_hourly.some(point => {
+          const hour = Number(point?.forecast_hour);
+          return hour > 0 && hour <= 72 &&
+            !Object.prototype.hasOwnProperty.call(point, "snowln");
+        }));
+      if (!current || needsSnowlineEnrichment) {
         await collect(env);
         current = await currentRun(env, "f72");
       }
