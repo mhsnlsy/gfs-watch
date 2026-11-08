@@ -26,7 +26,6 @@ def main() -> None:
         'id="station-temperature-trend"',
         'id="station-rain-trend"',
 
-        'id="next72-temperature"',
         'async function refreshStationObservations()',
         'window.setInterval(refreshStationObservations,60000)',
         'id="ecmwf-report-images"',
