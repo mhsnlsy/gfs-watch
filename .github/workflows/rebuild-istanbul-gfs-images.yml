@@ -1,8 +1,15 @@
 name: Rebuild Istanbul GFS Interactive SVG
 
 on:
-  # Legacy renderer repair is manual only. Production reports are rendered by the Cloudflare Istanbul GFS Worker.
+  # Rebuild the shared comparison assets when the renderer changes; production reports are rendered by the Cloudflare Istanbul GFS Worker.
   workflow_dispatch:
+  push:
+    branches: ["main"]
+    paths:
+      - "main.py"
+      - "site/gfs-comparison-tooltip.js"
+      - "scripts/rebuild_istanbul_gfs_comparison_images.py"
+      - ".github/workflows/rebuild-istanbul-gfs-images.yml"
 
 permissions:
   contents: write
