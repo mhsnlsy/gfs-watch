@@ -314,13 +314,18 @@ function addMobileGfsCycleLabels(panelHost,panel){
   const order={"06Z":0,"00Z":1,"18Z":2,"12Z":3};
   cycles.sort((a,b)=>((order[a.cycle] == null ? 99 : order[a.cycle]))-(order[b.cycle] == null ? 99 : order[b.cycle]));
 
-  // Colors are age-based: newest cycle is lilac, then amber, cyan, blue.
-  const ageColors={"06Z":"#B38BE8","00Z":"#F1C98B","18Z":"#7DD3D7","12Z":"#8ABCE8"};
-  const orderedCycles=cycles.map(item=>item.cycle);
-  const newestCycle=orderedCycles[0];
-  const newestIndex=orderedCycles.indexOf(newestCycle);
+  // The source series are ordered oldest -> newest. Preserve that order to
+  // derive age colors, then sort only the displayed legend labels.
   const agePalette=["#B38BE8","#F1C98B","#7DD3D7","#8ABCE8"];
-  cycles.forEach((item,index)=>{ item.color=agePalette[index] || agePalette[3]; });
+  const ageByCycle={};
+  series.forEach((item,index)=>{
+    const label=String(item && item.label||"");
+    const match=label.match(/(00|06|12|18)Z/i);
+    if(match) ageByCycle[match[1].toUpperCase()+"Z"]=agePalette[Math.max(0,series.length-1-index)] || agePalette[3];
+  });
+  cycles.forEach(item=>{
+    item.color=ageByCycle[item.cycle] || item.color || agePalette[3];
+  });
 
   const legend=document.createElement("div");
   legend.className="gfs-mobile-cycle-legend";
