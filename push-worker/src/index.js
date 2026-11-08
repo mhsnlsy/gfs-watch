@@ -340,7 +340,11 @@ export default {
           request.method === "POST"
         ) {
           const result = await sendTomorrowWeatherPush(env, headers, "manual-test");
-          return json(result, 200, headers);
+          if (result.skipped && result.reason === "already-sent") {
+            const retry = await buildTomorrowWeather();
+            return json({ ok: true, skipped: false, manual_test: true, delivered: 0, ...retry }, 200, headers);
+          }
+          return json({ ...result, manual_test: true }, 200, headers);
         }
 
         if (url.pathname === "/admin/notification-sent" && request.method === "GET") {
