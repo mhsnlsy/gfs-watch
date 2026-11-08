@@ -49,7 +49,7 @@ def _read_app_identity():
     except (OSError, ValueError, TypeError):
         name, version = "", ""
     if not name or not version:
-        return "İstanbul'un Havası", "1.4.3"
+        return "İstanbul Havası", "1.4.3"
     return name, version
 
 
