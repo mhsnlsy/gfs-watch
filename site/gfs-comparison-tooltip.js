@@ -291,28 +291,38 @@ function addMobileGfsCycleLabels(panelSvg,panel,metadata){
   if(!panelSvg||!panel||!metadata)return;
   const title=String(panel.title||"").trim();
   if(!title)return;
-  const titleNode=Array.from(panelSvg.querySelectorAll("text")).find(node=>String(node.textContent||"").trim()===title);
+  const titleNode=Array.from(panelSvg.querySelectorAll("text")).find(node=>{
+    const text=String(node.textContent||"").trim();
+    return text===title;
+  });
   if(!titleNode)return;
+
+  // Each mobile panel keeps the four GFS series from the original SVG metadata.
+  // Render every cycle beside the title, using the exact color of its line.
   const series=Array.isArray(panel.series)?panel.series:[];
   const ns="http://www.w3.org/2000/svg";
-  const colors=series.map(item=>String(item?.color||"")).filter(Boolean);
   const seen=new Set();
-  let dx=12;
+  let dx=10;
+
   series.slice().reverse().forEach(item=>{
     const label=String(item?.label||"");
-    const match=label.match(/(?:^|\\b)(00|06|12|18)Z(?:\\b|$)/i);
+    const match=label.match(/(?:^|\b)(00|06|12|18)Z(?:\b|$)/i);
     if(!match)return;
+
     const cycle=match[1].toUpperCase()+"Z";
     if(seen.has(cycle))return;
     seen.add(cycle);
+
     const tspan=document.createElementNS(ns,"tspan");
     tspan.setAttribute("class","gfs-mobile-cycle-label");
     tspan.setAttribute("dx",String(dx));
     tspan.setAttribute("fill",String(item?.color||"#d9a7f5"));
     tspan.setAttribute("font-size","0.72em");
     tspan.setAttribute("font-weight","700");
+    tspan.setAttribute("font-family","inherit");
     tspan.textContent=cycle;
     titleNode.appendChild(tspan);
+
     dx=8;
   });
 }
