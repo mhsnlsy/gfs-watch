@@ -3436,7 +3436,7 @@ if(typeof renderBriefing==="function")renderBriefing();
     async function startPage(){
       // Start weather data lanes immediately and independently. PWA/push setup
       // must never delay or block live station observations.
-      void Promise.all([
+      void Promise.allSettled([
         loadForecast(),
         loadNotifications(),
         refreshStationObservations(),
