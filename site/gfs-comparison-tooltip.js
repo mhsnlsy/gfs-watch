@@ -24,8 +24,12 @@ function gfsWindCardinal(degrees){
   const names=["K","KD","D","GD","G","GB","B","KB"];
   return names[Math.round((Number(degrees)%360)/45)%8];
 }
-function buildGfsTooltipMarkup(panel,index,validTime){
-  const rows=(panel.series||[]).slice().reverse().map(series=>{
+function buildGfsTooltipMarkup(panel,index,validTime,latestOnly){
+  const allSeries=(panel.series||[]).slice();
+  // Publication metadata is chronological (oldest -> newest). On desktop,
+  // show only the final/newest run; mobile keeps the full four-run comparison.
+  const visibleSeries=latestOnly ? allSeries.slice(-1) : allSeries.reverse();
+  const rows=visibleSeries.map(series=>{
     const value=series.values == null ? void 0 : series.values[index];
     const lead=series.lead_hours == null ? void 0 : series.lead_hours[index];
     const direction=series.directions_deg == null ? void 0 : series.directions_deg[index];
@@ -39,9 +43,12 @@ function buildGfsTooltipMarkup(panel,index,validTime){
       '<div class="gfs-chart-tooltip-value">'+formatted+' <small>'+escapeGfsTooltip(panel.unit)+'</small>'+escapeGfsTooltip(directionText)+'</div>'+
       '</div>';
   }).join("");
+  const hint=latestOnly
+    ? "En yeni döngü · aynı geçerlilik anı · TSİ"
+    : "Dört döngü · aynı geçerlilik anı · TSİ";
   return '<div class="gfs-chart-tooltip-head"><div><div class="gfs-chart-tooltip-title">'+escapeGfsTooltip(panel.title)+'</div>'+
     '<div class="gfs-chart-tooltip-time">'+escapeGfsTooltip(formatGfsTooltipTs(validTime))+'</div></div></div>'+
-    rows+'<div class="gfs-chart-tooltip-hint">Dört döngü · aynı geçerlilik anı · TSİ</div>';
+    rows+'<div class="gfs-chart-tooltip-hint">'+hint+'</div>';
 }
 function positionGfsTooltip(host,tooltip,clientX,clientY){
   if(!Number.isFinite(clientX)||!Number.isFinite(clientY))return;
@@ -63,7 +70,7 @@ function positionGfsTooltip(host,tooltip,clientX,clientY){
   tooltip.style.left=Math.round(left)+"px";
   tooltip.style.top=Math.round(top)+"px";
 }
-function attachGfsSvgInteractions(host,svg,metadata,syncGroup){
+function attachGfsSvgInteractions(host,svg,metadata,syncGroup,latestOnly){
   const panels=new Map((metadata.panels||[]).map(panel=>[panel.id,panel]));
   const panelList=Array.from(panels.values());
   const tooltips=new Map();
@@ -140,7 +147,7 @@ function attachGfsSvgInteractions(host,svg,metadata,syncGroup){
     });
     const panelTooltip=tooltips.get(panel.id);
     if(!panelTooltip)return;
-    panelTooltip.innerHTML=buildGfsTooltipMarkup(panel,index,validTime);
+    panelTooltip.innerHTML=buildGfsTooltipMarkup(panel,index,validTime,latestOnly===true);
     const anchor=event&&Number.isFinite(event.clientX)&&Number.isFinite(event.clientY)
       ? event : (anchorForIndex(panel,index)||event);
     positionGfsTooltip(host,panelTooltip,anchor && anchor.clientX,anchor && anchor.clientY);
@@ -515,7 +522,9 @@ async function loadInteractiveGfsCharts(root){
         }
       }else{
         host.appendChild(svg);
-        attachGfsSvgInteractions(host,svg,metadata);
+        // Desktop report: retain synchronized panel tooltips but show only
+        // the newest GFS run in each tooltip.
+        attachGfsSvgInteractions(host,svg,metadata,null,true);
       }
     }catch(error){
       console.error("[GFS SVG TOOLTIP]",error);
