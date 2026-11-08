@@ -148,18 +148,27 @@ function normalize(candidate, now) {
       .map(point => point[key])
       .filter(value => value !== null && Number.isFinite(value));
     const temp = values("temperature_2m_c");
+    const humidity = values("humidity_2m_percent");
     const temp850 = values("temperature_850hpa_c");
     const rain = values("precipitation_6h_mm");
     const wind = values("wind_speed_10m_kmh");
     const wind850 = values("wind_speed_850hpa_kmh");
+    const windPeak = dayPoints
+      .filter(point => Number.isFinite(Number(point.wind_speed_10m_kmh)))
+      .sort((a, b) => Number(b.wind_speed_10m_kmh) - Number(a.wind_speed_10m_kmh))[0] || null;
     daily.push({
       date_istanbul: day,
       temperature_min_c: temp.length ? Math.min(...temp) : null,
       temperature_max_c: temp.length ? Math.max(...temp) : null,
+      humidity_min_percent: humidity.length ? Math.min(...humidity) : null,
+      humidity_max_percent: humidity.length ? Math.max(...humidity) : null,
       temperature_850hpa_min_c: temp850.length ? Math.min(...temp850) : null,
       temperature_850hpa_max_c: temp850.length ? Math.max(...temp850) : null,
-      precipitation_total_mm: rain.reduce((sum, value) => sum + Math.max(0, value), 0),
+      precipitation_total_mm: rain.length
+        ? rain.reduce((sum, value) => sum + Math.max(0, value), 0)
+        : null,
       wind_speed_max_10m_kmh: wind.length ? Math.max(...wind) : null,
+      wind_direction_max_10m_deg: windPeak ? windPeak.wind_direction_10m_deg ?? null : null,
       wind_speed_max_850hpa_kmh: wind850.length ? Math.max(...wind850) : null,
     });
   }
