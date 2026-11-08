@@ -207,8 +207,9 @@ export default {
       return isStaticAssetFallback;
     }
 
-    if (path === "/gfs/latest" || path === "/api/latest" || path === "/api/health" ||
-        path === "/gfs/comparison" || path === "/api/comparison") {
+    if (path === "/gfs/latest" || path === "/api/latest" ||
+        path === "/gfs/f72" || path === "/api/f72" ||
+        path === "/api/health" || path === "/gfs/comparison" || path === "/api/comparison") {
       const targetPath = path.startsWith("/gfs/") ? path : path;
       return callService(env.ISTANBUL_GFS, request, targetPath);
     }
