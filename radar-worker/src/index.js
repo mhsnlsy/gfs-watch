@@ -222,6 +222,6 @@ ${new Date(ts*1000).toLocaleString("tr-TR",{timeZone:"Europe/Istanbul"})}`;
 }
 
 export default {
-  async fetch(request,env){return new Response(JSON.stringify({ok:true,service:"radar-monitor",interval:"6m"}),{headers:{"content-type":"application/json"}});},
+  async fetch(request,env){if(new URL(request.url).pathname==="/health"){const s=await getState(env.RADAR_DB);return new Response(JSON.stringify({ok:true,service:"radar-monitor",interval:"6m",last_frame_ts:Number(s.last_frame_ts||0),last_alert_ts:Number(s.last_alert_ts||0),last_intensity:s.last_intensity||""}),{headers:{"content-type":"application/json"}});}return new Response(JSON.stringify({ok:true,service:"radar-monitor",interval:"6m"}),{headers:{"content-type":"application/json"}});},
   async scheduled(event,env,ctx){ctx.waitUntil(check(env).then(r=>console.log(JSON.stringify(r))).catch(e=>console.error(e.stack||e.message||e)));}
 };
