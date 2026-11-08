@@ -184,6 +184,11 @@
         throw new Error("MeteoPT GFS verisi henüz yayınlanmadı.");
       }
 
+      // Render the live payload before publishing the shared event used by
+      // the homepage rain badges. Without this call the fetch succeeds but
+      // the visible table status never advances beyond its initial state.
+      render(document);
+
       // /gfs/latest is the canonical F180 payload. Normalize it into the
       // same F72 presentation contract so the rest of this renderer stays
       // identical and the visible table never mixes sources.
