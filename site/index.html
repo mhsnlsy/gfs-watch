@@ -1128,6 +1128,34 @@
       .station-card>.station-briefing-inline{padding-top:7px!important}
     }
 
+    /* Station comparison badge: compact and aligned directly beside the live temperature. */
+    .station-card .temp-row{
+      display:flex!important;
+      align-items:center!important;
+      flex-wrap:nowrap!important;
+      gap:8px!important;
+    }
+    .station-card .station-gap-inline{
+      flex:0 1 auto!important;
+      width:max-content!important;
+      max-width:180px!important;
+      min-height:18px!important;
+      margin:0 0 0 2px!important;
+      padding:2px 6px!important;
+      font-size:9px!important;
+      line-height:1.15!important;
+      white-space:nowrap!important;
+      overflow:hidden!important;
+      text-overflow:ellipsis!important;
+      border-radius:999px!important;
+    }
+    @media(max-width:560px){
+      .station-card .station-gap-inline{
+        max-width:130px!important;
+        font-size:8px!important;
+        padding:2px 5px!important;
+      }
+    }
 </style>
   <link rel="stylesheet" href="./meteopt-gfs-table.css?v=20261108-text-only-values-2">
 
@@ -1704,11 +1732,11 @@ html.ios12 .footer > *{
     <div class="temp-row">
       <div class="temperature" id="temperature">—°</div>
       <div class="weather-symbol" id="weather-symbol" aria-hidden="true">☁️</div>
+      <div class="delta-badge station-gap-inline" id="station-gap" hidden></div>
     </div>
     <div class="temp-meta">
       <div class="temp-caption" id="station-observation-meta">Son istasyon ölçümü bekleniyor</div>
       <div class="delta-badge" id="station-24h-diff"></div>
-      <div class="delta-badge" id="station-gap" hidden></div>
       <div class="rain-brief" id="rain-brief" aria-live="polite">
         <div class="delta-badge" id="rain-brief-current" data-source="live-station">Yağış yok</div>
         <div class="delta-badge" id="rain-brief-forecast">MeteoPT GFS tahmini bekleniyor.</div>
