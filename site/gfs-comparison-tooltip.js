@@ -9,6 +9,21 @@ function formatGfsTooltipNumber(value){
   if(value===null||value===undefined||!Number.isFinite(Number(value)))return "—";
   return new Intl.NumberFormat("tr-TR",{minimumFractionDigits:1,maximumFractionDigits:1}).format(Number(value));
 }
+function formatGfsTooltipTs(validTime){
+  // Always derive the visible TSİ time from the authoritative UTC timestamp.
+  // This prevents stale/incorrect precomputed local labels from shifting the
+  // first common valid point (12Z must display as 15:00 TSİ, not 18:00).
+  const utcLabel=String(validTime&&validTime.utcLabel||validTime&&validTime.utc_label||"").trim();
+  const match=utcLabel.match(/^(\\d{2})\\.(\\d{2})\\.(\\d{4})\\s+(\\d{2}):(\\d{2})\\s+UTC$/i);
+  if(match){
+    const utcMs=Date.UTC(Number(match[3]),Number(match[2])-1,Number(match[1]),Number(match[4]),Number(match[5]));
+    const local=new Date(utcMs+3*60*60*1000);
+    const pad=n=>String(n).padStart(2,"0");
+    return pad(local.getUTCDate())+"."+pad(local.getUTCMonth()+1)+"."+local.getUTCFullYear()+" "+
+      pad(local.getUTCHours())+":"+pad(local.getUTCMinutes())+" TSİ";
+  }
+  return String(validTime&&validTime.label||"").replace(/\\s*UTC\\b/g,"").trim();
+}
 function gfsWindCardinal(degrees){
   if(degrees===null||degrees===undefined||!Number.isFinite(Number(degrees)))return "";
   const names=["K","KD","D","GD","G","GB","B","KB"];
@@ -30,7 +45,7 @@ function buildGfsTooltipMarkup(panel,index,validTime){
       '</div>';
   }).join("");
   return '<div class="gfs-chart-tooltip-head"><div><div class="gfs-chart-tooltip-title">'+escapeGfsTooltip(panel.title)+'</div>'+
-    '<div class="gfs-chart-tooltip-time">'+escapeGfsTooltip(String(validTime.label||"").replace(/\s*UTC\b/g,""))+'</div></div></div>'+
+    '<div class="gfs-chart-tooltip-time">'+escapeGfsTooltip(formatGfsTooltipTs(validTime))+'</div></div></div>'+
     rows+'<div class="gfs-chart-tooltip-hint">Dört döngü · aynı geçerlilik anı · TSİ</div>';
 }
 function positionGfsTooltip(host,tooltip,clientX,clientY){
