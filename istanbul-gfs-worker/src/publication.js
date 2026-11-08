@@ -256,7 +256,8 @@ export function buildIstanbulInteractiveSvg(runs) {
       });
       const latest = seriesIndex === series.length - 1;
       parts.push(
-        '<path d="' + pathData + '" fill="none" stroke="' + item.color + '" stroke-width="' +
+        '<path id="gfs-series-' + spec.id + '-' + seriesIndex + '" data-gfs-series-run-id="' +
+        escapeXml(item.document.run_id_utc) + '" d="' + pathData + '" fill="none" stroke="' + item.color + '" stroke-width="' +
         (latest ? 3.2 : 1.8) + '"' + (latest ? "" : ' stroke-dasharray="4 3"') +
         ' stroke-linecap="round" stroke-linejoin="round" opacity="' + (latest ? "1" : ".94") + '"/>'
       );
@@ -266,6 +267,7 @@ export function buildIstanbulInteractiveSvg(runs) {
       });
       panelSeries.push({
         label: item.label,
+        run_id_utc: item.document.run_id_utc,
         color: item.color,
         lead_hours: leadHours,
         values,
