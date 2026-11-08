@@ -41,7 +41,9 @@ function parseRun(value, fallback) {
 
 function asNumber(values, index) {
   try {
-    const n = Number(values?.[index]);
+    const value = values?.[index];
+    if (value === null || value === undefined || value === "") return null;
+    const n = Number(value);
     return Number.isFinite(n) && Math.abs(n) !== Infinity ? n : null;
   } catch (_) {
     return null;
@@ -138,6 +140,8 @@ function normalizeDocument(candidate, now) {
       wind_speed_10m_kmh: asNumber(series("wind10m"), i),
       wind_speed_850hpa_kmh: asNumber(series("wind850"), i),
       precipitation_6h_mm: asNumber(series("apcp"), i),
+      // MeteoPT "snowln" is the model snow-line altitude in metres.
+      snowln: asNumber(series("snowln"), i),
     });
   }
 
@@ -213,14 +217,48 @@ async function persistRun(env, full) {
 
 async function persistF72(env, f72) {
   const stored = await currentRun(env, "f72");
-  if (stored?.run_id_utc === f72.run_id_utc) return false;
+  const sameRun = stored?.run_id_utc === f72.run_id_utc;
+  let payload = f72;
+
+  if (sameRun) {
+    const previousPoints = Array.isArray(stored.payload?.forecast_6_hourly)
+      ? stored.payload.forecast_6_hourly
+      : [];
+    const incomingPoints = Array.isArray(f72.forecast_6_hourly)
+      ? f72.forecast_6_hourly
+      : [];
+
+    // Keep an existing F180 document intact while refreshing the overlapping F72
+    // points with newly available MeteoPT fields such as snowln.
+    if (previousPoints.length > incomingPoints.length) {
+      const incomingByHour = new Map(
+        incomingPoints.map(point => [Number(point.forecast_hour), point])
+      );
+      payload = {
+        ...stored.payload,
+        ...f72,
+        schema: stored.payload.schema || f72.schema,
+        forecast_6_hourly: previousPoints.map(point => {
+          const updated = incomingByHour.get(Number(point.forecast_hour));
+          return updated ? { ...point, ...updated } : point;
+        }),
+      };
+    }
+
+    const comparable = document => {
+      const copy = { ...document };
+      delete copy.published_at_utc;
+      return JSON.stringify(copy);
+    };
+    if (comparable(stored.payload) === comparable(payload)) return false;
+  }
 
   await env.GFS_DB.prepare(
     "INSERT INTO gfs_current (key, run_id_utc, payload_json, updated_at_utc) VALUES (?, ?, ?, ?) ON CONFLICT(key) DO UPDATE SET run_id_utc=excluded.run_id_utc, payload_json=excluded.payload_json, updated_at_utc=excluded.updated_at_utc"
   ).bind(
     "f72",
-    f72.run_id_utc,
-    JSON.stringify(f72),
+    payload.run_id_utc,
+    JSON.stringify(payload),
     new Date().toISOString(),
   ).run();
 
