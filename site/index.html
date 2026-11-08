@@ -2981,6 +2981,13 @@ html[data-default-station="eyupsultan"] #station-sisli-button{
       line+=" Bunların dışındaki saat plana katılmıyor.";
       return line;
     }
+    // Never let an empty/null station state kill the rest of the homepage.
+    // The station API loads asynchronously; the UI controls must bind even when
+    // the first paint has no observation yet.
+    function safeRenderStationCard(station){
+      try{renderStationCard(station||null);}
+      catch(error){console.warn("Station card render skipped:",error);}
+    }
     function forceHomepageDefaultStation(){
       const pagePath=typeof location!=="undefined"&&location?location.pathname:"";
       if(pagePath==="/" || pagePath.endsWith("/index.html")){
@@ -2990,29 +2997,27 @@ html[data-default-station="eyupsultan"] #station-sisli-button{
         if(e)e.classList.toggle("active",false),e.setAttribute("aria-pressed","false");
         if(y)y.classList.toggle("active",true),y.setAttribute("aria-pressed","true");
         if(s)s.classList.toggle("active",false),s.setAttribute("aria-pressed","false");
-        renderStationCard(eyupsultanStationObservation);
+        safeRenderStationCard(eyupsultanStationObservation);
       }
     }
     function selectStation(stationKey){
       if(!["enka","eyupsultan","sisli"].includes(stationKey))return;
       activeStation=stationKey;
       try{localStorage.setItem("istanbul-hava-station",stationKey);}catch(_){}
-      $("station-enka-button").classList.toggle("active",stationKey==="enka");
-      $("station-eyupsultan-button").classList.toggle("active",stationKey==="eyupsultan");
-      $("station-sisli-button").classList.toggle("active",stationKey==="sisli");
-      $("station-enka-button").setAttribute("aria-pressed",String(stationKey==="enka"));
-      $("station-eyupsultan-button").setAttribute("aria-pressed",String(stationKey==="eyupsultan"));
-      $("station-sisli-button").setAttribute("aria-pressed",String(stationKey==="sisli"));
-      renderStationCard(stationKey==="enka"?enkaStationObservation:stationKey==="eyupsultan"?eyupsultanStationObservation:sisliStationObservation);
-      renderStationHistory();
+      const e=$("station-enka-button"), y=$("station-eyupsultan-button"), s=$("station-sisli-button");
+      if(e)e.classList.toggle("active",stationKey==="enka"),e.setAttribute("aria-pressed",String(stationKey==="enka"));
+      if(y)y.classList.toggle("active",stationKey==="eyupsultan"),y.setAttribute("aria-pressed",String(stationKey==="eyupsultan"));
+      if(s)s.classList.toggle("active",stationKey==="sisli"),s.setAttribute("aria-pressed",String(stationKey==="sisli"));
+      safeRenderStationCard(stationKey==="enka"?enkaStationObservation:stationKey==="eyupsultan"?eyupsultanStationObservation:sisliStationObservation);
+      try{renderStationHistory();}catch(error){console.warn("Station history render skipped:",error);}
       if(typeof renderBriefing==="function")renderBriefing();
       if(typeof forecastData!=="undefined"&&forecastData&&typeof renderNext72Hours==="function")renderNext72Hours();
       if(typeof refreshSelectedStation==="function")refreshSelectedStation();
     }
     forceHomepageDefaultStation();
-    $("station-enka-button").addEventListener("click",()=>selectStation("enka"));
-    $("station-eyupsultan-button").addEventListener("click",()=>selectStation("eyupsultan"));
-    $("station-sisli-button").addEventListener("click",()=>selectStation("sisli"));
+    $("station-enka-button")?.addEventListener("click",()=>selectStation("enka"));
+    $("station-eyupsultan-button")?.addEventListener("click",()=>selectStation("eyupsultan"));
+    $("station-sisli-button")?.addEventListener("click",()=>selectStation("sisli"));
     document.querySelector(".topbar .brand")?.addEventListener("click",()=>selectStation("eyupsultan"));
 
 
