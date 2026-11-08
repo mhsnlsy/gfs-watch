@@ -5,6 +5,7 @@ on:
     branches: [main]
     paths:
       - "koy-gfs-worker/**"
+      - "shared/**"
       - ".github/workflows/deploy-koy-gfs-worker.yml"
   workflow_dispatch:
 
