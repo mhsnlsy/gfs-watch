@@ -1,6 +1,6 @@
 const LAT = 41.0904;
 const LON = 28.9438;
-const RADIUS_KM = 25;
+const RADIUS_KM = 90;
 const THRESHOLD_DBZ = 10;
 const THRESHOLD_DBZ_STRONG = 30;
 const MIN_ALERT_PIXELS = 5;
@@ -9,6 +9,7 @@ const HISTORY_LEN = 4;
 const ZOOM = 7;
 const TILE_SIZE = 256;
 const PIXEL_KM = 0.55;
+const ANALYSIS_RADIUS_PX = Math.ceil(RADIUS_KM / PIXEL_KM);
 
 const DBZ_HINTS = [
   [10, [0,220,220]], [15, [0,190,220]], [20, [0,163,224]],
@@ -98,7 +99,7 @@ function estimateDbz(r,g,b){
 
 function analyzeImage(img){
   const [px,py]=latlonToPixel(LAT,LON,ZOOM);
-  const localX=px%TILE_SIZE, localY=py%TILE_SIZE, radius=45;
+  const localX=(px%TILE_SIZE)+TILE_SIZE, localY=(py%TILE_SIZE)+TILE_SIZE, radius=ANALYSIS_RADIUS_PX;
   const high=[];
   for(let dy=-radius;dy<=radius;dy++){
     for(let dx=-radius;dx<=radius;dx++){
@@ -180,10 +181,25 @@ async function check(env){
   const latest=past[past.length-1], path=latest.path, ts=latest.time;
   const host=timeline.host||"https://tilecache.rainviewer.com";
   const [px,py]=latlonToPixel(LAT,LON,ZOOM), tx=Math.floor(px/TILE_SIZE), ty=Math.floor(py/TILE_SIZE);
-  const url=`${host}${path}/${TILE_SIZE}/${ZOOM}/${tx}/${ty}/2/1_1.png`;
-  const tile=await fetch(url,{cf:{cacheTtl:0}});
-  if(!tile.ok) return {status:"tile_download_failed",frame_ts:ts};
-  const bytes=await tile.arrayBuffer(), img=await decodePng(bytes);
+  const tiles=[];
+  for(let oy=-1;oy<=1;oy++) for(let ox=-1;ox<=1;ox++){
+    const u=`${host}${path}/${TILE_SIZE}/${ZOOM}/${tx+ox}/${ty+oy}/2/1_1.png`;
+    const r=await fetch(u,{cf:{cacheTtl:0}});
+    if(!r.ok) return {status:"tile_download_failed",frame_ts:ts};
+    tiles.push({ox,oy,bytes:await r.arrayBuffer()});
+  }
+  const decoded=await Promise.all(tiles.map(async t=>({...t,img:await decodePng(t.bytes)})));
+  const mosaic={w:TILE_SIZE*3,h:TILE_SIZE*3,ct:decoded[0].img.ct,data:new Uint8Array(TILE_SIZE*TILE_SIZE*9*(decoded[0].img.ct===6?4:3))};
+  const bpp=mosaic.ct===6?4:3;
+  for(const t of decoded){
+    for(let y=0;y<TILE_SIZE;y++){
+      const src=(y*TILE_SIZE)*bpp;
+      const dst=((y+(t.oy+1)*TILE_SIZE)*mosaic.w+(t.ox+1)*TILE_SIZE)*bpp;
+      mosaic.data.set(t.img.data.subarray(src,src+TILE_SIZE*bpp),dst);
+    }
+  }
+  const img=mosaic;
+  const radarPhotoBytes=decoded.find(t=>t.ox===0&&t.oy===0)?.bytes;
   const curr=analyzeImage(img), state=await getState(env.RADAR_DB);
   const history=JSON.parse(state.history_json||"[]");
   if(history.length&&history[history.length-1].ts===ts)return {status:"duplicate_frame",frame_ts:ts};
@@ -194,7 +210,8 @@ async function check(env){
   const onSite=hasEcho&&curr.centroid_dist<5&&curr.max_dbz>=THRESHOLD_DBZ;
   let app=approaching(prev,curr);
   if(m.towards&&hasEcho&&curr.centroid_dist<RADIUS_KM)app=app||curr.max_dbz>=THRESHOLD_DBZ;
-  const alert=pixelGate&&(app||onSite);
+  const etaEligible=m.eta!=null&&m.eta<=90;
+  const alert=pixelGate&&((app&&etaEligible)||onSite);
 
   let intensity="DÜŞÜK",emoji="🌦️";
   if(curr.max_dbz>30){intensity="ÇOK GÜÇLÜ";emoji="⚠️";}
@@ -211,13 +228,13 @@ Konum: 41.0904 N, 28.9438 E
 ${motionTxt}
 ${onSite?"Konuma ulaşıyor / üzerinde.":"Yaklaşıyor."}
 ${new Date(ts*1000).toLocaleString("tr-TR",{timeZone:"Europe/Istanbul"})}`;
-    sent=await telegramPhoto(env,bytes,caption);
+    sent=radarPhotoBytes?await telegramPhoto(env,radarPhotoBytes,caption):false;
     if(!sent) await telegramText(env,caption);
     if(sent) {state.last_alert_ts=now;state.last_intensity=intensity;}
   }
   state.history=h;state.last_frame_ts=ts;
   await saveState(env.RADAR_DB,state);
-  return {status:"ok",frame_ts:ts,alert,pixel_count:curr.count,pixel_gate:pixelGate,max_dbz:curr.max_dbz,
+  return {status:"ok",frame_ts:ts,alert,pixel_count:curr.count,pixel_gate:pixelGate,max_dbz:curr.max_dbz,eta_minutes:m.eta,eta_eligible:etaEligible,
     centroid_dist:curr.centroid_dist,approaching:app,on_site:onSite,towards:m.towards,telegram_sent:sent};
 }
 
