@@ -111,7 +111,7 @@ function attachGfsSvgInteractions(host,svg,metadata,syncGroup){
     const markerGroup=overlay.querySelector(".gfs-tooltip-markers");
     markerGroup.replaceChildren();
     (panel.series||[]).forEach(series=>{
-      const y=series.y_positions?.[index];
+      const y=series.y_positions == null ? void 0 : series.y_positions[index];
       const value=series.values == null ? void 0 : series.values[index];
       if(y===null||y===undefined||value===null||value===undefined)return;
       const marker=document.createElementNS("http://www.w3.org/2000/svg","circle");
@@ -146,7 +146,7 @@ function attachGfsSvgInteractions(host,svg,metadata,syncGroup){
           );
           if(found>=0)targetIndex=found;
         }
-        if(!panel.valid_times?.[targetIndex])return;
+        if(!panel.valid_times == null ? void 0 : panel.valid_times[targetIndex])return;
         member.host.style.setProperty("z-index","20","important");
         member.show(panel,targetIndex,member===api ? event : (member.anchorForIndex(panel,targetIndex)||event));
       });
@@ -155,7 +155,7 @@ function attachGfsSvgInteractions(host,svg,metadata,syncGroup){
     // Desktop: one SVG contains all four panels, so activate all four
     // tooltips at the same valid timestamp.
     panelList.forEach(panel=>{
-      if(!panel?.valid_times?.[index])return;
+      if(!panel && panel.valid_times != null ? panel.valid_times[index] : void 0)return;
       show(panel,index,anchorForIndex(panel,index)||event);
     });
   }
