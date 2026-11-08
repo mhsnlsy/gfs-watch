@@ -208,6 +208,10 @@ def main() -> None:
     koy = json.loads(read("koy-gfs-worker/wrangler.jsonc"))
     stations = json.loads(read("station-worker/wrangler.jsonc"))
     assert istanbul["triggers"]["crons"] == ["*/10 * * * *"]
+    assert {"binding": "STATIONS", "service": "gfs-watch-stations"} in istanbul.get("services", [])
+    assert "fetchActiveEnkaStationObservation(env)" in gfs_worker
+    assert "env.STATIONS.fetch" in gfs_worker
+    assert 'rh2m: "humidity_2m_percent"' in gfs_worker
     assert koy["triggers"]["crons"] == ["*/10 * * * *"]
     assert stations["triggers"]["crons"] == ["*/2 * * * *"]
     assert istanbul["d1_databases"][0]["database_name"] == "gfs-watch-istanbul-gfs"
