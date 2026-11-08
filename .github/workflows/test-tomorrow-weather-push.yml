@@ -16,14 +16,37 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - name: Wait for Worker deployment
-        run: sleep 30
+        run: |
+          set -euo pipefail
+          for i in $(seq 1 12); do
+            if curl --fail --silent --show-error https://gfs-watch-push.muhsin-ulusoy.workers.dev/health >/tmp/health.json; then
+              echo "Worker health OK: $(cat /tmp/health.json)"
+              exit 0
+            fi
+            echo "Worker not ready yet; retry $i/12"
+            sleep 15
+          done
+          echo "Worker did not become ready in time."
+          exit 1
 
       - name: Send real tomorrow weather push
         env:
           PUSH_ADMIN_TOKEN: ${{ secrets.PUSH_ADMIN_TOKEN }}
         run: |
           set -euo pipefail
-          curl --fail-with-body --silent --show-error \
-            -X POST \
-            -H "Authorization: Bearer $PUSH_ADMIN_TOKEN" \
-            https://gfs-watch-push.muhsin-ulusoy.workers.dev/admin/test-tomorrow-weather-push
+          for i in $(seq 1 5); do
+            echo "Push attempt $i/5"
+            response=$(curl --fail-with-body --silent --show-error \
+              -X POST \
+              -H "Authorization: Bearer $PUSH_ADMIN_TOKEN" \
+              https://gfs-watch-push.muhsin-ulusoy.workers.dev/admin/test-tomorrow-weather-push)
+            echo "$response"
+            if echo "$response" | grep -q '"delivered":[1-9]'; then
+              echo "Push delivery confirmed by Worker."
+              exit 0
+            fi
+            echo "No delivery reported; retrying in 15s."
+            sleep 15
+          done
+          echo "Worker never reported delivered > 0."
+          exit 1
