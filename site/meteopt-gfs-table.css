@@ -1680,3 +1680,28 @@ html,body{
   border-color: transparent !important;
   box-shadow: none !important;
 }
+
+/* FINAL: forecast numbers must remain text-only; no coloured value pills. */
+#meteopt-gfs-table .meteopt-value,
+#meteopt-gfs-table .meteopt-value.mt-blue,
+#meteopt-gfs-table .meteopt-value.mt-green,
+#meteopt-gfs-table .meteopt-value.mt-yellow,
+#meteopt-gfs-table .meteopt-value.mt-orange,
+#meteopt-gfs-table .meteopt-value.mt-red,
+#meteopt-gfs-table .meteopt-value.mt-purple,
+#meteopt-gfs-table .meteopt-value.mt-gray,
+#meteopt-gfs-table .meteopt-value.rh2m-warm-1,
+#meteopt-gfs-table .meteopt-value.rh2m-warm-2,
+#meteopt-gfs-table .meteopt-value.rh2m-warm-3,
+#meteopt-gfs-table .meteopt-value.rh2m-cool-1,
+#meteopt-gfs-table .meteopt-value.rh2m-cool-2,
+#meteopt-gfs-table .meteopt-value.rh2m-cool-3 {
+  background: transparent !important;
+  background-color: transparent !important;
+  background-image: none !important;
+  border: 0 !important;
+  box-shadow: none !important;
+  border-radius: 0 !important;
+  padding-left: 0 !important;
+  padding-right: 0 !important;
+}
