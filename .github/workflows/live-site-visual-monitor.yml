@@ -1,0 +1,193 @@
+name: Live Site Visual Monitor
+
+on:
+  workflow_dispatch:
+  push:
+    branches: [main]
+    paths:
+      - ".github/workflows/live-site-visual-monitor.yml"
+      - "site/**"
+      - "web-worker/**"
+  schedule:
+    - cron: "17 */6 * * *"
+
+permissions:
+  contents: read
+
+concurrency:
+  group: live-site-visual-monitor
+  cancel-in-progress: true
+
+jobs:
+  visual-monitor:
+    name: Inspect production site in Chromium
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - name: Set up Node.js
+        uses: actions/setup-node@v5
+        with:
+          node-version: "22"
+
+      - name: Install Playwright Chromium
+        run: |
+          set -euo pipefail
+          npm install --prefix "$RUNNER_TEMP/live-visual" --no-save playwright@1.56.1
+          "$RUNNER_TEMP/live-visual/node_modules/.bin/playwright" install --with-deps chromium
+
+      - name: Open live site in desktop and mobile browsers
+        env:
+          PLAYWRIGHT_PACKAGE: ${{ runner.temp }}/live-visual/node_modules/playwright
+          PUBLIC_SITE: https://www.istanbulunhavasi.com
+        run: |
+          set -euo pipefail
+          mkdir -p "$RUNNER_TEMP/live-site-evidence"
+          node <<'NODE'
+          const fs = require("fs");
+          const path = require("path");
+          const { chromium } = require(process.env.PLAYWRIGHT_PACKAGE);
+          const out = process.env.RUNNER_TEMP + "/live-site-evidence";
+          const base = process.env.PUBLIC_SITE;
+          const report = {
+            url: base,
+            checked_at_utc: new Date().toISOString(),
+            viewports: {},
+            f72: null,
+            console_errors: [],
+            page_errors: [],
+            failed_requests: [],
+            bad_responses: []
+          };
+
+          (async () => {
+            const browser = await chromium.launch({ headless: true });
+            try {
+              for (const view of [
+                { name: "desktop", width: 1440, height: 1000 },
+                { name: "mobile", width: 390, height: 844 }
+              ]) {
+                const context = await browser.newContext({
+                  viewport: { width: view.width, height: view.height },
+                  deviceScaleFactor: view.name === "mobile" ? 2 : 1,
+                  isMobile: view.name === "mobile",
+                  hasTouch: view.name === "mobile",
+                  locale: "tr-TR",
+                  timezoneId: "Europe/Istanbul"
+                });
+                const page = await context.newPage();
+
+                page.on("console", message => {
+                  if (message.type() === "error") report.console_errors.push({
+                    viewport: view.name, text: message.text()
+                  });
+                });
+                page.on("pageerror", error => report.page_errors.push({
+                  viewport: view.name, text: String(error)
+                }));
+                page.on("requestfailed", request => report.failed_requests.push({
+                  viewport: view.name,
+                  url: request.url(),
+                  error: request.failure()?.errorText || "failed"
+                }));
+                page.on("response", async response => {
+                  if (response.status() >= 400) report.bad_responses.push({
+                    viewport: view.name, status: response.status(), url: response.url()
+                  });
+                  if (view.name === "desktop" && /\\/gfs\\/f72(?:\\?|$)/.test(response.url())) {
+                    try {
+                      const doc = await response.json();
+                      report.f72 = {
+                        status: response.status(),
+                        run_id_utc: doc.run_id_utc,
+                        horizon_hours: doc.forecast_horizon_hours,
+                        points: (doc.forecast_6_hourly || []).filter(p =>
+                          Number(p.forecast_hour) > 0 &&
+                          Number(p.forecast_hour) <= 72 &&
+                          Number(p.forecast_hour) % 3 === 0
+                        ).length
+                      };
+                    } catch (error) {
+                      report.f72 = { status: response.status(), parse_error: String(error) };
+                    }
+                  }
+                });
+
+                const response = await page.goto(base + "/?visual-check=" + Date.now(), {
+                  waitUntil: "domcontentloaded",
+                  timeout: 60000
+                });
+                if (!response || !response.ok()) {
+                  throw new Error("Homepage navigation failed: HTTP " + (response?.status() ?? "no response"));
+                }
+                await page.locator("#meteopt-table-status").waitFor({ state: "visible", timeout: 30000 });
+                await page.waitForFunction(() => {
+                  const status = document.querySelector("#meteopt-table-status")?.textContent || "";
+                  return /^\\s*24\\s*\\/\\s*24/.test(status);
+                }, { timeout: 60000 });
+
+                const table = page.locator("#meteopt-gfs-table");
+                await table.scrollIntoViewIfNeeded();
+                await page.waitForTimeout(500);
+                await table.screenshot({
+                  path: path.join(out, "meteopt-table-" + view.name + ".png"),
+                  animations: "disabled"
+                });
+                await page.screenshot({
+                  path: path.join(out, "homepage-" + view.name + ".png"),
+                  fullPage: true,
+                  animations: "disabled"
+                });
+
+                report.viewports[view.name] = await page.evaluate(() => ({
+                  title: document.title,
+                  run: document.querySelector("#meteopt-table-run")?.textContent || "",
+                  status: document.querySelector("#meteopt-table-status")?.textContent || "",
+                  rows: document.querySelectorAll("#meteopt-table-body tr").length,
+                  first_row: document.querySelector("#meteopt-table-body tr")?.innerText || "",
+                  last_row: document.querySelector("#meteopt-table-body tr:last-child")?.innerText || "",
+                  viewport_width: window.innerWidth,
+                  document_width: document.documentElement.scrollWidth,
+                  horizontal_overflow_px: Math.max(0, document.documentElement.scrollWidth - window.innerWidth)
+                }));
+                await context.close();
+              }
+
+              if (report.viewports.desktop.rows !== 24 || report.viewports.mobile.rows !== 24) {
+                throw new Error("The real homepage did not render 24 forecast rows on desktop and mobile.");
+              }
+              if (!report.f72 || report.f72.status !== 200 || report.f72.points !== 24 ||
+                  !report.f72.run_id_utc || report.f72.horizon_hours < 72) {
+                throw new Error("The browser did not receive a valid live F72 payload: " + JSON.stringify(report.f72));
+              }
+
+              fs.writeFileSync(path.join(out, "diagnostics.json"), JSON.stringify(report, null, 2));
+              console.log(JSON.stringify({
+                checked_at_utc: report.checked_at_utc,
+                f72: report.f72,
+                desktop: report.viewports.desktop,
+                mobile: report.viewports.mobile,
+                console_errors: report.console_errors.length,
+                page_errors: report.page_errors.length,
+                failed_requests: report.failed_requests.length,
+                bad_responses: report.bad_responses.length
+              }, null, 2));
+            } finally {
+              await browser.close();
+            }
+          })().catch(error => {
+            fs.writeFileSync(path.join(out, "diagnostics.json"), JSON.stringify({
+              ...report, fatal_error: String(error), stack: error.stack
+            }, null, 2));
+            console.error(error);
+            process.exitCode = 1;
+          });
+          NODE
+
+      - name: Upload screenshots and browser diagnostics
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: live-site-visual-check
+          path: ${{ runner.temp }}/live-site-evidence/
+          if-no-files-found: warn
+          retention-days: 14
