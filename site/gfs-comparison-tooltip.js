@@ -327,8 +327,11 @@ function addMobileGfsCycleLabels(panelHost,panel,panelSvg){
     const styleMatch=style.match(/(?:^|;)\\s*stroke\\s*:\\s*([^;]+)/i);
     graphColors[index]=(stroke || (styleMatch ? styleMatch[1].trim() : "")).trim();
   });
+  // Legend order is newest -> oldest. Keep that order and make the
+  // newest cycle unconditionally lilac.
+  const agePalette=["#B38BE8","#F1C98B","#7DD3D7","#8ABCE8"];
   cycles.forEach((item,index)=>{
-    item.color=graphColors[index] || String((series[index] && series[index].color)||"#B38BE8");
+    item.color=agePalette[Math.min(index,agePalette.length-1)] || graphColors[index] || "#B38BE8";
   });
   const legend=document.createElement("div");
   legend.className="gfs-mobile-cycle-legend";
