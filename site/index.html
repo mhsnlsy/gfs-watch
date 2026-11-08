@@ -1316,6 +1316,10 @@ html[data-default-station="eyupsultan"] #station-eyupsultan-button{
               button.classList.toggle("active",active);
               button.setAttribute("aria-pressed",String(active));
             });
+            // Remove the first-paint-only marker after applying the real state.
+            // Otherwise its CSS can keep Eyüpsultan visually selected after
+            // selectStation("sisli") or selectStation("enka").
+            document.documentElement.removeAttribute("data-default-station");
           }catch(_){}
         </script>
         <div class="station-overview">
