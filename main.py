@@ -1964,8 +1964,6 @@ async def stage_open_meteopt_cycle(processed_run_ids):
     Full report/Telegram publication is still gated on f180 and is handled by
     process_gfs_update once the active cycle reaches that threshold.
     """
-    if os.getenv("GFS_SOURCE", "meteopt").strip().lower() == "noaa":
-        return None
     expected_run_dt = meteopt_expected_cycle()
     print(
         f"[METEOPT WINDOW] İstanbul {datetime.now(TR_TZ):%H:%M} TSİ -> "
@@ -2139,7 +2137,7 @@ def fetch_meteopt_weather_data(run_id):
         )
         print(f"[PENDING] {reason}")
         return {
-            "_pending_noaa_gfs": True,
+            "_pending_meteopt_gfs": True,
             "_run_id": run_id,
             "_reason": reason,
         }
