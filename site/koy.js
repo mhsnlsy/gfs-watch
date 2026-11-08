@@ -846,7 +846,8 @@ async function refresh(){if(busy)return;busy=true;
   .filter(run=>{
    if(!run||run.forecast_source!=="meteopt"||!Array.isArray(run.forecast_6_hourly))return false;
    const pts=pointsOf(run,180);
-   return pts.length>=30&&pts.some(point=>Number(point.forecast_hour)>=180);
+   const maximumHour=Math.max(0,...run.forecast_6_hourly.map(point=>Number(point&&point.forecast_hour)).filter(Number.isFinite));
+   return pts.length>=30&&maximumHour>=180;
   })
   .sort((a,b)=>Date.parse(b.run_id_utc||"")-Date.parse(a.run_id_utc||""));
  f180=archivedF180[0]||null;
