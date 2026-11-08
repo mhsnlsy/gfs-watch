@@ -614,7 +614,7 @@ def export_public_forecast_json(
             entries = [
                 _comparison_entry_from_payload(cycle_id, cycle_payload)
                 for cycle_id, cycle_payload in comparison_payloads
-                if cycle_payload and "_pending_noaa_gfs" not in cycle_payload
+                if cycle_payload and "_pending_meteopt_gfs" not in cycle_payload
             ]
             entries.sort(key=lambda item: item["run_id_utc"])
             published["comparison_runs"] = entries[-4:]
@@ -665,10 +665,7 @@ def _load_gfs_850_comparison_runs():
                 "precipitation_6h_mm": point.get("precipitation_6h_mm"),
             })
         if points and stored.get("run_id_utc"):
-            if (
-                os.getenv("GFS_SOURCE", "meteopt").strip().lower() != "noaa"
-                and stored.get("forecast_source") != "meteopt"
-            ):
+            if stored.get("forecast_source") != "meteopt":
                 continue
             entries.append({
                 "run_id_utc": stored["run_id_utc"],
