@@ -70,7 +70,7 @@ jobs:
                 const page = await context.newPage();
                 page.on("console",m=>{if(m.type()==="error")diagnostics.console_errors.push({viewport:view.name,text:m.text()});});
                 page.on("pageerror",e=>diagnostics.page_errors.push({viewport:view.name,text:String(e)}));
-                page.on("requestfailed",r=>{\n                  const error=r.failure()?.errorText||"failed";\n                  // Playwright reports browser/app-cancelled requests as ERR_ABORTED.\n                  // These are expected for image refreshes and third-party frames and\n                  // are not production page failures. Keep genuine network failures.\n                  if(error!=="net::ERR_ABORTED") diagnostics.failed_requests.push({viewport:view.name,url:r.url(),error});\n                });
+                page.on("requestfailed",r=>{\n                  const error=r.failure()?.errorText||"failed";\n                  // ERR_ABORTED is expected for browser/app-cancelled image and third-party requests.\n                  if(error!=="net::ERR_ABORTED") diagnostics.failed_requests.push({viewport:view.name,url:r.url(),error});\n                });
 
                 await page.goto(base+"/?visual-check="+Date.now(),{waitUntil:"domcontentloaded",timeout:45000});
                 await page.waitForFunction(()=>{
