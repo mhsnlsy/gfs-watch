@@ -329,7 +329,7 @@ async function processQueuedReports(env) {
     }
     const reportText = buildIstanbulReportText(target, new Date(), stationObservation);
     if (!env.ECMWF_ARCHIVE) throw new Error("R2 image archive binding is unavailable");
-    const pngAssetKey = "data/" + chart.key.replace(/^notifications\//, "notifications/").replace(/\.svg$/i, "-telegram-v2.png");
+    const pngAssetKey = "data/" + chart.key.replace(/^notifications\//, "notifications/").replace(/\.svg$/i, "-telegram-home-4panel-v3.png");
     const telegramFont = await loadIstanbulTelegramFont(env.ECMWF_ARCHIVE);
     const pngBytes = await renderIstanbulPhotoPng(chart.body, telegramFont);
     await env.ECMWF_ARCHIVE.put(pngAssetKey, pngBytes, {
@@ -519,7 +519,7 @@ async function deliverPendingTelegram(env) {
     if (!publication.photo_message_id) {
       const svgKey = String(publication.svg_asset_key || "");
       const pngKey = svgKey
-        ? "data/" + svgKey.replace(/^notifications\//, "notifications/").replace(/\.svg$/i, "-telegram-v2.png")
+        ? "data/" + svgKey.replace(/^notifications\//, "notifications/").replace(/\.svg$/i, "-telegram-home-4panel-v3.png")
         : publication.png_asset_key;
       let object = pngKey ? await env.ECMWF_ARCHIVE.get(pngKey) : null;
       let pngBytes;
@@ -540,7 +540,7 @@ async function deliverPendingTelegram(env) {
           "WHERE run_id_utc = ? AND status = 'sending'"
         ).bind(pngKey, new Date().toISOString(), publication.run_id_utc).run();
       }
-      const filename = (pngKey.split("/").pop() || "istanbul-gfs-comparison-telegram-v2.png").replace(/\.svg$/i, ".png");
+      const filename = (pngKey.split("/").pop() || "istanbul-gfs-comparison-telegram-home-4panel-v3.png").replace(/\.svg$/i, ".png");
       const form = new FormData();
       form.set("chat_id", env.TELEGRAM_CHAT_ID);
       form.set("caption", "📊 İstanbul GFS · dört döngülü geçerlilik saati karşılaştırması");
