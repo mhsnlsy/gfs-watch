@@ -1710,11 +1710,11 @@ html,body{
 /* 20261108: tighten horizontal spacing between MeteoPT table columns by one step. */
 #meteopt-gfs-table .meteopt-data-table th,
 #meteopt-gfs-table .meteopt-data-table td{
-  padding-left:2px!important;
-  padding-right:2px!important;
+  padding-left:1px!important;
+  padding-right:1px!important;
 }
 #meteopt-gfs-table .meteopt-data-table th:nth-child(2),
 #meteopt-gfs-table .meteopt-data-table td:nth-child(2){
-  padding-left:4px!important;
-  padding-right:4px!important;
+  padding-left:2px!important;
+  padding-right:2px!important;
 }
