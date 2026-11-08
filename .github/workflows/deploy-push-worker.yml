@@ -38,6 +38,10 @@ jobs:
           test -n "$VAPID_PUBLIC_KEY" || exit 1
           test -n "$VAPID_PRIVATE_KEY" || exit 1
 
+      - name: Install Worker dependencies
+        working-directory: push-worker
+        run: npm install --no-audit --no-fund
+
       - name: Install Wrangler
         run: npm install --global wrangler@4
 
