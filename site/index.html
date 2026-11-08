@@ -3320,6 +3320,11 @@ if(typeof renderBriefing==="function")renderBriefing();
     }
     async function refreshPushStatus(){
       const button=$("enable-notifications");
+      if(document.documentElement.classList.contains("ios12")){
+        button.style.display="none";
+        $("notification-status").textContent="iOS 12: cihaz bildirimi kullanılamıyor; tahminler ve raporlar çalışır.";
+        return;
+      }
       if(!("Notification" in window)||!notificationRegistration||!notificationRegistration.pushManager){
         $("notification-status").textContent="Bu tarayıcı cihaz bildirimlerini desteklemiyor.";
         button.disabled=true;
