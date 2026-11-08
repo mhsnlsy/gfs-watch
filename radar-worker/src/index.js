@@ -10,7 +10,7 @@ const ALERT_COOLDOWN_SECONDS = 45 * 60;
 // The previous ETA gate could suppress a real rain event when the first
 // detected frame had no usable motion vector or an ETA above 90 minutes.
 const ENTRY_ALERT_RADIUS_KM = 30;
-const RADAR_BUILD = "paid-cron-2026-11-08-rain-trigger-fix-3-compass";
+const RADAR_BUILD = "paid-cron-2026-11-08-rain-report-map-1";
 const HISTORY_LEN = 4;
 const ZOOM = 7;
 const TILE_SIZE = 256;
@@ -120,13 +120,18 @@ function analyzeImage(img){
       if(dbz>=THRESHOLD_DBZ) high.push({dx,dy,dist_km:Math.hypot(dx,dy)*PIXEL_KM,dbz});
     }
   }
-  if(!high.length)return {max_dbz:0,count:0,centroid_dist:null,strong_count:0,strong_max:0,avg_dx:0,avg_dy:0};
+  if(!high.length)return {max_dbz:0,count:0,centroid_dist:null,strong_count:0,strong_max:0,avg_dx:0,avg_dy:0,area_km2:0,width_km:0,height_km:0};
   const avg_dx=high.reduce((s,p)=>s+p.dx,0)/high.length;
   const avg_dy=high.reduce((s,p)=>s+p.dy,0)/high.length;
   const max_dbz=Math.max(...high.map(p=>p.dbz));
+  const min_dx=Math.min(...high.map(p=>p.dx)), max_dx=Math.max(...high.map(p=>p.dx));
+  const min_dy=Math.min(...high.map(p=>p.dy)), max_dy=Math.max(...high.map(p=>p.dy));
   const strong=high.filter(p=>p.dbz>=THRESHOLD_DBZ_STRONG);
   return {max_dbz,count:high.length,centroid_dist:Math.round(Math.hypot(avg_dx,avg_dy)*PIXEL_KM*10)/10,
-    strong_count:strong.length,strong_max:strong.length?Math.max(...strong.map(p=>p.dbz)):0,avg_dx,avg_dy};
+    strong_count:strong.length,strong_max:strong.length?Math.max(...strong.map(p=>p.dbz)):0,avg_dx,avg_dy,
+    area_km2:Math.round(high.length*PIXEL_KM*PIXEL_KM),
+    width_km:Math.round((max_dx-min_dx+1)*PIXEL_KM*10)/10,
+    height_km:Math.round((max_dy-min_dy+1)*PIXEL_KM*10)/10};
 }
 
 function motion(history){
@@ -245,6 +250,21 @@ async function makeSyntheticRadarPng(){
   return out;
 }
 
+async function encodePngRGBA(w,h,rgba){
+  const raw=new Uint8Array(h*(1+w*4));
+  for(let y=0;y<h;y++){const ro=y*(1+w*4),so=y*w*4;raw[ro]=0;raw.set(rgba.subarray(so,so+w*4),ro+1);}
+  const compressed=await readStream(new Response(raw).body.pipeThrough(new CompressionStream("deflate")));
+  const ihdr=new Uint8Array(13),dv=new DataView(ihdr.buffer);dv.setUint32(0,w);dv.setUint32(4,h);ihdr[8]=8;ihdr[9]=6;
+  const sig=new Uint8Array([137,80,78,71,13,10,26,10]);const a=pngChunk("IHDR",ihdr),b=pngChunk("IDAT",compressed),d=pngChunk("IEND",new Uint8Array());
+  const out=new Uint8Array(sig.length+a.length+b.length+d.length);let o=0;out.set(sig,o);o+=sig.length;out.set(a,o);o+=a.length;out.set(b,o);o+=b.length;out.set(d,o);return out;
+}
+function drawLine(rgba,w,x0,y0,x1,y1,color,width=2){let dx=Math.abs(x1-x0),sx=x0<x1?1:-1,dy=-Math.abs(y1-y0),sy=y0<y1?1:-1,err=dx+dy,h=rgba.length/(w*4);while(true){for(let yy=-width;yy<=width;yy++)for(let xx=-width;xx<=width;xx++){const x=Math.round(x0+xx),y=Math.round(y0+yy);if(x<0||y<0||x>=w||y>=h)continue;const i=(y*w+x)*4;rgba[i]=color[0];rgba[i+1]=color[1];rgba[i+2]=color[2];rgba[i+3]=255;}if(Math.round(x0)===Math.round(x1)&&Math.round(y0)===Math.round(y1))break;const e2=2*err;if(e2>=dy){err+=dy;x0+=sx;}if(e2<=dx){err+=dx;y0+=sy;}}}
+function drawCircle(rgba,w,cx,cy,r,color,width=2){const h=rgba.length/(w*4);for(let a=0;a<360;a++){const rad=a*Math.PI/180,x=Math.round(cx+Math.cos(rad)*r),y=Math.round(cy+Math.sin(rad)*r);for(let k=-width;k<=width;k++){const xx=x+(Math.abs(Math.cos(rad))<0.5?k:0),yy=y+(Math.abs(Math.sin(rad))<0.5?k:0);if(xx<0||yy<0||xx>=w||yy>=h)continue;const i=(yy*w+xx)*4;rgba[i]=color[0];rgba[i+1]=color[1];rgba[i+2]=color[2];rgba[i+3]=255;}}}
+function drawMarker(rgba,w,cx,cy){drawCircle(rgba,w,cx,cy,9,[0,92,230],3);drawCircle(rgba,w,cx,cy,4,[255,255,255],2);drawLine(rgba,w,cx-14,cy,cx+14,cy,[255,255,255],1);drawLine(rgba,w,cx,cy-14,cx,cy+14,[255,255,255],1);}
+function drawArrow(rgba,w,x0,y0,x1,y1){drawLine(rgba,w,x0,y0,x1,y1,[255,255,255],3);const ang=Math.atan2(y1-y0,x1-x0),len=14;drawLine(rgba,w,x1,y1,x1-len*Math.cos(ang-0.5),y1-len*Math.sin(ang-0.5),[255,255,255],3);drawLine(rgba,w,x1,y1,x1-len*Math.cos(ang+0.5),y1-len*Math.sin(ang+0.5),[255,255,255],3);}
+function compositeRadar(base,radar){const rgba=new Uint8Array(base.w*base.h*4),bb=base.ct===6?4:3,rb=radar.ct===6?4:3;for(let p=0,i=0;p<base.w*base.h;p++,i+=4){const bi=p*bb,ri=p*rb;rgba[i]=base.data[bi]||0;rgba[i+1]=base.data[bi+1]||0;rgba[i+2]=base.data[bi+2]||0;rgba[i+3]=255;const a=(radar.ct===6?(radar.data[ri+3]||0):255)/255;if(a>0){rgba[i]=Math.round((radar.data[ri]||0)*a+rgba[i]*(1-a));rgba[i+1]=Math.round((radar.data[ri+1]||0)*a+rgba[i+1]*(1-a));rgba[i+2]=Math.round((radar.data[ri+2]||0)*a+rgba[i+2]*(1-a));}}return rgba;}
+async function makeRadarReportPng(base,radar,curr){const rgba=compositeRadar(base,radar),w=base.w,h=base.h,[px,py]=latlonToPixel(LAT,LON,ZOOM),cx=(px%TILE_SIZE)+TILE_SIZE,cy=(py%TILE_SIZE)+TILE_SIZE;drawCircle(rgba,w,cx,cy,Math.round(ENTRY_ALERT_RADIUS_KM/PIXEL_KM),[255,255,255],2);drawMarker(rgba,w,cx,cy);if(curr.centroid_dist!=null){const mx=cx+curr.avg_dx,my=cy+curr.avg_dy;drawCircle(rgba,w,mx,my,8,[255,255,255],2);drawArrow(rgba,w,cx,cy,mx,my);}return encodePngRGBA(w,h,rgba);}
+
 async function check(env){
   const timeline=await (await fetch("https://api.rainviewer.com/public/weather-maps.json",{cf:{cacheTtl:0}})).json();
   const past=timeline?.radar?.past||[];
@@ -260,7 +280,10 @@ async function check(env){
     tiles.push({ox,oy,bytes:await r.arrayBuffer()});
   }
   const decoded=await Promise.all(tiles.map(async t=>({...t,img:await decodePng(t.bytes)})));
+  const baseTiles=await Promise.all(tiles.map(async t=>{const u=`https://tile.openstreetmap.org/${ZOOM}/${tx+t.ox}/${ty+t.oy}.png`;const r=await fetch(u,{cf:{cacheTtl:3600}});if(!r.ok)throw new Error("base_map_tile_download_failed");return {...t,bytes:await r.arrayBuffer()};}));
+  const baseDecoded=await Promise.all(baseTiles.map(async t=>({...t,img:await decodePng(t.bytes)})));
   const mosaic={w:TILE_SIZE*3,h:TILE_SIZE*3,ct:decoded[0].img.ct,data:new Uint8Array(TILE_SIZE*TILE_SIZE*9*(decoded[0].img.ct===6?4:3))};
+  const baseMosaic={w:TILE_SIZE*3,h:TILE_SIZE*3,ct:baseDecoded[0].img.ct,data:new Uint8Array(TILE_SIZE*TILE_SIZE*9*(baseDecoded[0].img.ct===6?4:3))};
   const bpp=mosaic.ct===6?4:3;
   for(const t of decoded){
     for(let y=0;y<TILE_SIZE;y++){
@@ -303,20 +326,11 @@ async function check(env){
   let sent=false;
   if(alert&&now-last>=ALERT_COOLDOWN_SECONDS){
     let motionTxt=""; if(m.speed!=null){motionTxt=`Hız: ~${m.speed} km/sa, yön: ${compassDirection(m.heading)}`; if(m.eta) motionTxt+=`, tahmini varış: ~${m.eta} dk`; if(m.towards) motionTxt+=" (konuma doğru)";}
-    const caption=`${emoji} <b>${intensity} YAĞIŞ UYARISI — İstanbul</b>
-Konum: 41.0904 N, 28.9438 E
-Şiddet: ${intensity} (${curr.max_dbz} dBZ), merkez: ${curr.centroid_dist??"—"} km, ${curr.count} yağış pikseli
-${motionTxt}
-${onSite?"Konuma ulaşıyor / üzerinde.":"Yaklaşıyor."}
-${new Date(ts*1000).toLocaleString("tr-TR",{timeZone:"Europe/Istanbul"})}`;
-    const photoResult=radarPhotoBytes?await telegramPhoto(env,radarPhotoBytes,caption):false;
-    sent=typeof photoResult==="object"?photoResult.ok:photoResult;
-    if(!sent) sent=await telegramText(env,caption);
-    if(sent) {state.last_alert_ts=now;state.last_intensity=intensity;}
+    const caption=`${emoji} <b>${intensity} YAĞIŞ UYARISI — İstanbul</b>\nKonum: 41.0904 N, 28.9438 E\nŞiddet: ${intensity} (${curr.max_dbz} dBZ)\nYağış merkezi: ${curr.centroid_dist??"—"} km uzakta\nAlan: ~${curr.area_km2} km²\nDoğu-batı genişliği: ~${curr.width_km} km\nKuzey-güney uzunluğu: ~${curr.height_km} km\n${motionTxt}\n${onSite?"Konuma ulaşıyor / üzerinde.":"Yaklaşıyor."}\n${new Date(ts*1000).toLocaleString("tr-TR",{timeZone:"Europe/Istanbul"})}\n© OpenStreetMap contributors`;    const reportPhotoBytes=await makeRadarReportPng(baseMosaic,mosaic,curr);    const photoResult=reportPhotoBytes?await telegramPhoto(env,reportPhotoBytes,caption):false;    sent=typeof photoResult==="object"?photoResult.ok:photoResult;    if(!sent) sent=await telegramText(env,caption);    if(sent) {state.last_alert_ts=now;state.last_intensity=intensity;}
   }
   state.history=h;state.last_frame_ts=ts;
   await saveState(env.RADAR_DB,state);
-  return {status:"ok",frame_ts:ts,alert,pixel_count:curr.count,pixel_gate:pixelGate,max_dbz:curr.max_dbz,eta_minutes:m.eta,eta_eligible:etaEligible,
+  return {status:"ok",frame_ts:ts,alert,pixel_count:curr.count,pixel_gate:pixelGate,max_dbz:curr.max_dbz,area_km2:curr.area_km2,width_km:curr.width_km,height_km:curr.height_km,eta_minutes:m.eta,eta_eligible:etaEligible,
     centroid_dist:curr.centroid_dist,approaching:app,on_site:onSite,towards:m.towards,telegram_sent:sent};
 }
 
