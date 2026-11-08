@@ -10,7 +10,7 @@ on:
   workflow_dispatch:
 
 permissions:
-  contents: write
+  contents: read
 
 concurrency:
   group: cloudflare-koy-gfs-service
@@ -162,89 +162,6 @@ jobs:
 
           echo "Testing live F72 collection..."
           curl --silent --show-error --fail --max-time 60 "$KOY_GFS_API/f72?check=$(date +%s)" -o "$RUNNER_TEMP/koy-f72.json"
-
-      - name: Capture MeteoPT raw snow-line field diagnostic when empty
-        env:
-          GH_TOKEN: ${{ github.token }}
-        run: |
-          set -uo pipefail
-          SOURCE_URL="$(node - "$RUNNER_TEMP/koy-f72.json" <<'NODE'
-          const fs = require("fs");
-          const doc = JSON.parse(fs.readFileSync(process.argv[2], "utf8"));
-          process.stdout.write(String(doc.source_url || ""));
-          NODE
-          )"
-
-          FETCH_STATUS="not_attempted"
-          if [ -n "$SOURCE_URL" ] && curl --silent --show-error --fail --max-time 30 \
-            --header "User-Agent: GFS-Watch-Koy-Cloudflare/1.0" \
-            --header "Cache-Control: no-cache" \
-            "$SOURCE_URL" -o "$RUNNER_TEMP/meteopt-raw.json"; then
-            FETCH_STATUS="ok"
-          else
-            FETCH_STATUS="failed"
-          fi
-          printf '%s' "$FETCH_STATUS" > "$RUNNER_TEMP/meteopt-fetch-status.txt"
-
-          node - "$RUNNER_TEMP/meteopt-raw.json" "$RUNNER_TEMP/meteopt-snowln-diagnostic.json" "$RUNNER_TEMP/meteopt-fetch-status.txt" "$RUNNER_TEMP/koy-f72.json" <<'NODE'
-          const fs = require("fs");
-          const status = fs.readFileSync(process.argv[4], "utf8");
-          const f72 = JSON.parse(fs.readFileSync(process.argv[5], "utf8"));
-          let doc = null;
-          if (status === "ok" && fs.existsSync(process.argv[2])) {
-            doc = JSON.parse(fs.readFileSync(process.argv[2], "utf8"));
-          }
-          const candidates = [];
-          const seen = new Set();
-          function walk(value, path) {
-            if (!value || typeof value !== "object" || seen.has(value)) return;
-            seen.add(value);
-            if (Array.isArray(value)) return;
-            for (const [key, child] of Object.entries(value)) {
-              const next = path + "." + key;
-              if (/snow|snowln|snowline/i.test(key)) {
-                let sample = child;
-                if (child && typeof child === "object" && !Array.isArray(child)) {
-                  sample = child.values ?? child.data ?? child.forecast ?? child.series ?? child;
-                }
-                candidates.push({
-                  path: next,
-                  type: Array.isArray(child) ? "array" : typeof child,
-                  keys: child && typeof child === "object" && !Array.isArray(child) ? Object.keys(child) : [],
-                  sample: Array.isArray(sample) ? sample.slice(0, 24) : sample
-                });
-              }
-              walk(child, next);
-            }
-          }
-          if (doc) walk(doc, "document");
-          const result = {
-            fetch_status: status,
-            source_url: f72.source_url || null,
-            normalized_source_field: f72.meteopt_snowln_source_field || null,
-            normalized_sample: (f72.forecast_6_hourly || []).slice(0, 24).map(point => ({
-              forecast_hour: point.forecast_hour,
-              snowln: point.snowln
-            })),
-            run: doc?.run || null,
-            top_level_keys: doc ? Object.keys(doc) : [],
-            data_keys: Object.keys(doc?.data || {}),
-            steps: (doc?.steps?.values || []).slice(0, 24),
-            snow_related_fields: candidates
-          };
-          fs.writeFileSync(process.argv[3], JSON.stringify(result, null, 2) + "\n");
-          console.log(JSON.stringify(result));
-          NODE
-
-          BRANCH="snowln-debug-$GITHUB_RUN_ID"
-          git config user.name "github-actions[bot]"
-          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
-          git switch --orphan "$BRANCH"
-          mkdir -p .snowln-diagnostics
-          cp "$RUNNER_TEMP/meteopt-snowln-diagnostic.json" ".snowln-diagnostics/$GITHUB_RUN_ID.json"
-          git add ".snowln-diagnostics/$GITHUB_RUN_ID.json"
-          git commit -m "Temporary MeteoPT Snowln field diagnostic"
-          git push "https://x-access-token:$GH_TOKEN@github.com/$GITHUB_REPOSITORY.git" "HEAD:refs/heads/$BRANCH"
 
       - name: Verify live F72 MeteoPT snow-line contract
         run: |
