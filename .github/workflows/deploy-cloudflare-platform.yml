@@ -223,12 +223,12 @@ jobs:
             echo "R2 is not enabled; ECMWF is verified by the existing D1/Static Assets path."
           fi
           curl --silent --show-error --fail --max-time 20 "$WEB/?verify=$(date +%s)" -o "$RUNNER_TEMP/live-index.html"
-          grep -q 'meteopt-gfs-table.css?v=20261108-rh2m-colour-scale-1' "$RUNNER_TEMP/live-index.html"
+          grep -q 'meteopt-gfs-table.css?v=20261108-text-only-values-2' "$RUNNER_TEMP/live-index.html"
           grep -q 'gfs-comparison-tooltip.js?v=20261108-180h-layout-clipping-1' "$RUNNER_TEMP/live-index.html"
           curl --silent --show-error --fail --max-time 20 "$WEB/gfs-comparison-tooltip.js?v=20261108-180h-layout-clipping-1" -o "$RUNNER_TEMP/live-gfs-tooltip.js"
           grep -q 'function forceDarkGfsSvg(svg)' "$RUNNER_TEMP/live-gfs-tooltip.js"
           curl --silent --show-error --fail --max-time 20 "$WEB/service-worker.js?verify=$(date +%s)" -o "$RUNNER_TEMP/live-service-worker.js"
-          grep -q 'istanbul-hava-shell-v30-icons3' "$RUNNER_TEMP/live-service-worker.js"
+          grep -q 'istanbul-hava-shell-v31-eyupsultan' "$RUNNER_TEMP/live-service-worker.js"
           grep -q 'istanbul-hava-data-v4' "$RUNNER_TEMP/live-service-worker.js"
           echo "Verified live renderer, cache-busted script and refreshed service-worker caches."
 
