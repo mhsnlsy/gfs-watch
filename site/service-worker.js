@@ -1,4 +1,4 @@
-const SHELL_CACHE = "istanbul-hava-shell-v32-station-same-origin";
+const SHELL_CACHE = "istanbul-hava-shell-v33-station-null-guard";
 const DATA_CACHE = "istanbul-hava-data-v4";
 const APP_SHELL = [
   "./",
