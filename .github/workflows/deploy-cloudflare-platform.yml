@@ -320,6 +320,40 @@ jobs:
           console.log("Köy page verified: report text removed; chart shell remains.");
           NODE
 
+          echo "Checking latest F72 through the public web gateway..."
+          f72_ok=0
+          for attempt in $(seq 1 5); do
+            if curl --silent --show-error --fail --max-time 45 "$WEB/gfs/f72?check=$(date +%s)" -o "$RUNNER_TEMP/web-gfs-f72.json"; then
+              if node - "$RUNNER_TEMP/web-gfs-f72.json" <<'NODE'
+          const fs = require("fs");
+          const doc = JSON.parse(fs.readFileSync(process.argv[2], "utf8"));
+          const points = (doc.forecast_6_hourly || []).filter(point =>
+            Number(point.forecast_hour) > 0 &&
+            Number(point.forecast_hour) <= 72 &&
+            Number(point.forecast_hour) % 3 === 0
+          );
+          if (doc.schema !== "gfs-watch.forecast.v1" || doc.forecast_source !== "meteopt" ||
+              doc.f72?.available !== true || !doc.run_id_utc || points.length < 24 ||
+              Number(doc.forecast_horizon_hours) < 72) {
+            throw new Error("Public web F72 gateway contract failed: " + JSON.stringify({
+              run_id_utc: doc.run_id_utc,
+              horizon: doc.forecast_horizon_hours,
+              points: points.length,
+              f72: doc.f72
+            }));
+          }
+          console.log(JSON.stringify({ gateway: "/gfs/f72", run_id_utc: doc.run_id_utc, points: points.length }));
+          NODE
+              then f72_ok=1; break; fi
+            fi
+            sleep 8
+          done
+          test "$f72_ok" -eq 1 || { echo "::error::Public web F72 gateway failed."; cat "$RUNNER_TEMP/web-gfs-f72.json" 2>/dev/null || true; exit 1; }
+
+          curl --silent --show-error --fail --max-time 20 "$WEB/meteopt-gfs-table.js?verify=$(date +%s)" -o "$RUNNER_TEMP/meteopt-gfs-table.js"
+          grep -Fq 'return base + "/gfs/f72"' "$RUNNER_TEMP/meteopt-gfs-table.js" || { echo "::error::Live MeteoPT table asset is not wired to /gfs/f72."; exit 1; }
+          echo "Verified homepage MeteoPT table asset uses /gfs/f72."
+
           echo "Checking Istanbul GFS through internal Service Binding..."
           curl --silent --show-error --fail --max-time 45 "$WEB/gfs/latest?check=$(date +%s)" -o "$RUNNER_TEMP/web-gfs.json"
           echo "Checking Köy GFS through internal Service Binding..."
