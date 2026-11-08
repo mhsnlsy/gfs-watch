@@ -154,7 +154,7 @@ jobs:
 
                 report.viewports[view.name] = await page.evaluate(() => {
                   const rows = [...document.querySelectorAll("#meteopt-table-body tr")];
-                  const humidityValues = rows.map(row => row.cells[3]?.innerText.trim() || "");
+                  const humidityValues = rows.map(row => row.cells[7]?.innerText.trim() || "");
                   return {
                     title: document.title,
                     run: document.querySelector("#meteopt-table-run")?.textContent || "",
@@ -213,7 +213,7 @@ jobs:
                 });
                 report.koy_viewports[view.name] = await koyPage.evaluate(() => {
                   const rows = [...document.querySelectorAll("#meteopt-table-body tr")];
-                  const humidityValues = rows.map(row => row.cells[3]?.innerText.trim() || "");
+                  const humidityValues = rows.map(row => row.cells[7]?.innerText.trim() || "");
                   const dewPoints = rows.map(row => row.cells[8]?.innerText.trim() || "");
                   return {
                     title: document.title,

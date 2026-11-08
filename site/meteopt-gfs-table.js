@@ -97,11 +97,11 @@
 
       const values = [
         valueCell(temp2, "t2m"),
-        valueCell(rh2m, "rh2m", 0),
         valueCell(precip, "precip"),
         valueCell(wind10, "wind", 0),
+        valueCell(temp850, "t850"),
         valueCell(wind850, "wind", 0),
-        valueCell(temp850, "t850")
+        valueCell(rh2m, "rh2m", 0)
       ];
 
       rows.push(
