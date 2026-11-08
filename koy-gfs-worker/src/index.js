@@ -51,7 +51,8 @@ function asNumber(values, index) {
 }
 
 const SNOWLINE_KEYS = new Set([
-  "snowln", "snowline", "snow_line", "snowlevel", "snow_level",
+  // MeteoPT GFS API names its SnowLn series "snlevel".
+  "snlevel", "snowln", "snowline", "snow_line", "snowlevel", "snow_level",
   "snowlineheight", "snow_line_height", "snowlevelheight",
   "snow_level_height", "snowaltitude", "snow_altitude",
   "snowlinealtitude", "snow_line_altitude",
