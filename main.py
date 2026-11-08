@@ -64,23 +64,11 @@ TR_TZ = ZoneInfo("Europe/Istanbul")  # İstanbul saat dilimi
 DATA_DIR = "/data" if os.path.isdir("/data") else "."
 DB_PATH = os.getenv("DB_PATH", os.path.join(DATA_DIR, "gfs_watch.db"))
 MODEL_NAME = "ncep_gfs_global"
-# Detect completed +180 GFS cycles directly from NOAA's public S3 inventory.
-# Selected GRIB2 messages are fetched from the same S3 objects via .idx ranges,
-# avoiding the hundreds-of-megabytes full global file and all weather APIs.
-NOAA_GFS_S3_BASE = "https://noaa-gfs-bdp-pds.s3.amazonaws.com"
-NOAA_NOMADS_GFS_BASE = "https://nomads.ncep.noaa.gov/pub/data/nccf/com/gfs/prod"
-NOAA_RANGE_DOWNLOAD_WORKERS = max(2, int(os.getenv("NOAA_RANGE_DOWNLOAD_WORKERS", "8")))
-NOAA_CYCLE_LOOKBACK = 6
+# Production source is locked to MeteoPT. NOAA/NOMADS are intentionally not
+# runtime providers for the live site or Telegram publication path.
 MIN_FORECAST_HOURS = 180
 RETENTION_DAYS = 10
 PUBLIC_DATA_DIR = os.getenv("PUBLIC_DATA_DIR", "public")
-NOAA_CACHE_DIR = os.getenv("NOAA_CACHE_DIR", "noaa_cache_v2")
-NOAA_PREFETCH_FILES_PER_CHECK = max(
-    1, int(os.getenv("NOAA_PREFETCH_FILES_PER_CHECK", "141"))
-)
-NOAA_CACHE_RETENTION_HOURS = max(
-    12.0, float(os.getenv("NOAA_CACHE_RETENTION_HOURS", "48"))
-)
 REGIONAL_PRESSURE_DIAMETER_KM = 2500.0
 REGIONAL_PRESSURE_RADIUS_KM = REGIONAL_PRESSURE_DIAMETER_KM / 2.0
 HIGH_PRESSURE_THRESHOLD_HPA = 1023.0
@@ -544,7 +532,7 @@ def _comparison_entry_from_payload(run_id, payload):
     run_dt = _parse_utc_datetime(run_id)
     return {
         "run_id_utc": run_dt.isoformat(timespec="seconds"),
-        "forecast_source": "meteopt" if "MeteoPT" in str(payload.get("data_source", "")) else payload.get("forecast_source", "noaa"),
+        "forecast_source": "meteopt",
         "forecast_6_hourly": _forecast_points_from_payload(payload),
     }
 
@@ -572,9 +560,7 @@ def export_public_forecast_json(
         })
 
     model_metadata = payload.get("model_metadata", {})
-    forecast_source = (
-        "meteopt" if "MeteoPT" in str(payload.get("data_source", "")) else "noaa"
-    )
+    forecast_source = "meteopt"
     document = {
         "schema": "gfs-watch.forecast.v1",
         "model": MODEL_NAME,
@@ -593,18 +579,13 @@ def export_public_forecast_json(
             "nearest_gfs_grid_longitude": GRID_LON,
         },
         "sources": {
-            "forecast": payload.get("data_source", "NOAA/NCEP GFS 0.25° GRIB2"),
-            "model_initial_conditions": payload.get(
-                "initial_source",
-                "NOAA/NCEP GFS f000 native GRIB2 initial fields",
-            ),
+            "forecast": "MeteoPT GFS point forecast",
+            "model_initial_conditions": "MeteoPT GFS source",
         },
-        "noaa_source_file": {
+        "meteopt_source": {
             "f180_available": model_metadata.get("noaa_f180_available", True),
-            "f180_last_modified_utc": model_metadata.get("last_modified_time"),
-            "f180_source_name": model_metadata.get("source_name"),
-            "f180_source_url": model_metadata.get("source_url"),
-            "global_grib2_size_bytes": model_metadata.get("source_object_size_bytes"),
+            "f180_source_name": "MeteoPT",
+            "f180_source_url": "https://api.meteopt.com/gfs/json",
         },
         "current_conditions": {
             "temperature_2m_c": current.get("temp"),
