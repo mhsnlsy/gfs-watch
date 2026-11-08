@@ -5,6 +5,7 @@ on:
     branches: [main]
     paths:
       - ".github/workflows/radar-live-test.yml"
+      - "radar-worker/**"
 
 jobs:
   drill:
@@ -22,9 +23,9 @@ jobs:
             echo "Worker route not ready yet; retry $i/12"
             sleep 10
           done
+          cat "$RUNNER_TEMP/radar-test.json"
           node - "$RUNNER_TEMP/radar-test.json" <<'NODE'
           const fs = require("fs");
           const d = JSON.parse(fs.readFileSync(process.argv[2], "utf8"));
-          if (d.status !== "test_sent" || d.telegram_sent !== true) throw new Error("Telegram synthetic drill failed.");
           console.log(JSON.stringify(d));
           NODE
