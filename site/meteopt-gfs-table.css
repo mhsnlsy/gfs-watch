@@ -1662,3 +1662,21 @@ html,body{
     touch-action:auto!important;
   }
 }
+
+/* Numeric forecast cells: colour text only, no translucent background panel. */
+#meteopt-gfs-table .meteopt-data-table td .mt-blue,
+#meteopt-gfs-table .meteopt-data-table td .mt-green,
+#meteopt-gfs-table .meteopt-data-table td .mt-yellow,
+#meteopt-gfs-table .meteopt-data-table td .mt-orange,
+#meteopt-gfs-table .meteopt-data-table td .mt-red,
+#meteopt-gfs-table .meteopt-data-table td .mt-purple,
+#meteopt-gfs-table .meteopt-data-table td .rh2m-warm-1,
+#meteopt-gfs-table .meteopt-data-table td .rh2m-warm-2,
+#meteopt-gfs-table .meteopt-data-table td .rh2m-warm-3,
+#meteopt-gfs-table .meteopt-data-table td .rh2m-cool-1,
+#meteopt-gfs-table .meteopt-data-table td .rh2m-cool-2,
+#meteopt-gfs-table .meteopt-data-table td .rh2m-cool-3 {
+  background: transparent !important;
+  border-color: transparent !important;
+  box-shadow: none !important;
+}
