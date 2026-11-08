@@ -132,8 +132,8 @@ def main() -> None:
     assert abs(direction_from_uv(1.0, 0.0) - 270.0) < 1e-9
 
     version = json.loads((ROOT / "site" / "version.json").read_text(encoding="utf-8"))
-    if version.get("name") != "İstanbul Havası" or version.get("version") != "1.4.3":
-        raise AssertionError("Shared app identity must stay İstanbul Havası 4.0 for the official 1.4.3 release.")
+    if version.get("name") != "İstanbul Havası" or version.get("version") != "1.5.0":
+        raise AssertionError("Shared app identity must stay İstanbul Havası 4.0 for the official 1.5.0 release.")
     if 'data-app-name' not in html or 'data-app-version' not in html or "./version.json" not in html:
         raise AssertionError("The website must render its name and version from site/version.json.")
     if "GFS Watch · v3.0.0" in html or "GFS Watch v3.0.0" in html:
