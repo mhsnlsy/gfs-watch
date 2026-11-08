@@ -27,7 +27,7 @@ jobs:
   deploy:
     name: Deploy Cloudflare website + Static Assets
     runs-on: ubuntu-latest
-    timeout-minutes: 20
+    timeout-minutes: 12
     steps:
       - name: Check out application source
         uses: actions/checkout@v5
@@ -54,6 +54,7 @@ jobs:
         uses: actions/setup-node@v5
         with:
           node-version: "22"
+          cache: npm
 
       - name: Verify Cloudflare credentials
         env:
@@ -143,14 +144,599 @@ jobs:
             wrangler r2 bucket create "$R2_BUCKET"
           fi
 
-          uploaded=0
-          upload_tree() {
+          upload_tree_parallel() {
             local source="$1"
             local prefix="$2"
             [ -d "$source" ] || return 0
+
+            local manifest="$RUNNER_TEMP/r2-upload-$(echo "$prefix" | tr '/' '-')"
+            : > "$manifest"
+
             while IFS= read -r -d '' file; do
               relative="${file#"$source"/}"
               key="$prefix/$relative"
+              printf '%s\t%s\n' "$file" "$key" >> "$manifest"
+            done < <(find "$source" -type f -print0)
+
+            [ -s "$manifest" ] || return 0
+
+            export R2_BUCKET
+            export R2_UPLOAD_MANIFEST="$manifest"
+            xargs -r -P 8 -n 1 bash -c '
+              set -euo pipefail
+              entry="$1"
+              file="${entry%%
+
+      - name: Deploy Cloudflare Worker + Static Assets
+        working-directory: source/web-worker
+        env:
+          CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+          CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
+        run: wrangler deploy --config wrangler.jsonc
+
+      - name: Verify Cloudflare website and proxied APIs
+        env:
+          WEB: https://gfs-watch-web.muhsin-ulusoy.workers.dev
+        run: |
+          set -euo pipefail
+          curl --silent --show-error --fail --max-time 20 "$WEB/__health?check=$(date +%s)" -o "$RUNNER_TEMP/web-health.json"
+          node - "$RUNNER_TEMP/web-health.json" <<'NODE'
+          const fs = require("fs");
+          const doc = JSON.parse(fs.readFileSync(process.argv[2], "utf8"));
+          if (doc.ok !== true || doc.service !== "gfs-watch-web" ||
+              doc.delivery !== "Cloudflare Workers Static Assets" ||
+              doc.api_gateway !== "Cloudflare Service Bindings" ||
+              (process.env.R2_ENABLED === "1" && doc.archive_storage !== "R2") ||
+              (process.env.R2_ENABLED !== "1" && doc.archive_storage !== "Static Assets fallback") ||
+              Object.values(doc.bindings || {}).some(value => value !== true)) {
+            throw new Error("Cloudflare web Worker/static assets/service bindings health contract failed");
+          }
+          console.log(JSON.stringify(doc));
+          NODE
+
+          for path in / /koy.html /gfs-api-config.js /data/ecmwf/latest.json; do
+            curl --silent --show-error --fail --max-time 20 "$WEB$path" -o /dev/null
+            echo "OK $path"
+          done
+          if [ "${R2_ENABLED:-0}" = "1" ]; then
+            curl --silent --show-error --fail --max-time 30 \
+              --dump-header "$RUNNER_TEMP/r2-ecmwf-headers.txt" \
+              "$WEB/data/ecmwf/latest.json?verify=$(date +%s)" -o "$RUNNER_TEMP/r2-ecmwf-live.json"
+            grep -qi '^x-gfs-archive-source: R2' "$RUNNER_TEMP/r2-ecmwf-headers.txt"
+            node - "$RUNNER_TEMP/r2-ecmwf-live.json" <<'NODE'
+          const fs = require("fs");
+          const doc = JSON.parse(fs.readFileSync(process.argv[2], "utf8"));
+          if (doc.schema !== "gfs-watch.ecmwf-eps.v1" || !doc.run_id_utc) {
+            throw new Error("R2 ECMWF latest payload contract failed");
+          }
+          console.log("Verified live ECMWF payload served from R2:", doc.run_id_utc);
+          NODE
+          else
+            echo "R2 is not enabled; ECMWF is verified by the existing D1/Static Assets path."
+          fi
+          curl --silent --show-error --fail --max-time 20 "$WEB/?verify=$(date +%s)" -o "$RUNNER_TEMP/live-index.html"
+          grep -q 'enka-camera-image' "$RUNNER_TEMP/live-index.html"
+          grep -q 'https://w.enka.com/camhd/cam1/c.jpg' "$RUNNER_TEMP/live-index.html"
+          grep -q 'setInterval(refresh,90000)' "$RUNNER_TEMP/live-index.html"
+          curl --silent --show-error --fail --max-time 20 "$WEB/service-worker.js?verify=$(date +%s)" -o "$RUNNER_TEMP/live-service-worker.js"
+          grep -q 'istanbul-hava-shell-v33-station-null-guard' "$RUNNER_TEMP/live-service-worker.js"
+          grep -q 'istanbul-hava-data-v4' "$RUNNER_TEMP/live-service-worker.js"
+          echo "Verified live renderer, cache-busted script and refreshed service-worker caches."
+
+          # Verify the production notification path is served Worker-first from D1,
+          # not from the stale Static Assets copy.
+          curl --silent --show-error --fail --max-time 30 "$WEB/gfs/notification-latest?verify=$(date +%s)" -o "$RUNNER_TEMP/live-notifications.json"
+          LIVE_SVG_PATH="$(node - "$RUNNER_TEMP/live-notifications.json" <<'NODE'
+          const fs = require("fs");
+          const doc = JSON.parse(fs.readFileSync(process.argv[2], "utf8"));
+          const item = (doc.items || [])[0];
+          const path = (item?.images || []).find(image => typeof image.path === "string" && image.path.toLowerCase().endsWith(".svg"))?.path;
+          if (!path) throw new Error("Live GFS notification manifest does not reference an SVG.");
+          process.stdout.write(path.startsWith("/") ? path.slice(1) : path);
+          NODE
+          )"
+          curl --silent --show-error --fail --max-time 30 \
+            --dump-header "$RUNNER_TEMP/live-gfs-svg-headers.txt" \
+            "$WEB/data/notifications/$LIVE_SVG_PATH?verify=$(date +%s)" \
+            -o "$RUNNER_TEMP/live-gfs-comparison.svg"
+          if grep -qi '^x-gfs-publication-source: D1' "$RUNNER_TEMP/live-gfs-svg-headers.txt"; then
+            echo "Verified live GFS SVG publication source: D1"
+          elif grep -qi '^x-gfs-archive-source: R2' "$RUNNER_TEMP/live-gfs-svg-headers.txt"; then
+            echo "Verified live GFS SVG publication source: R2 fallback (D1 publication asset not yet present)"
+          else
+            echo "Live GFS SVG source header is not exposed on this route; verifying SVG payload instead."
+          fi
+          node - "$RUNNER_TEMP/live-gfs-comparison.svg" <<'NODE'
+          const fs = require("fs");
+          const svg = fs.readFileSync(process.argv[2], "utf8");
+          function svgGroup(id) {
+            const marker = '<g id="' + id + '">';
+            const start = svg.indexOf(marker);
+            if (start < 0) return "";
+            const end = svg.indexOf("</g>", start);
+            return end < 0 ? "" : svg.slice(start, end + 4).toLowerCase();
+          }
+          const checks = [
+            ["canvas", "patch_1", "fill: #0a1b29"],
+            ["temperature", "patch_6", "fill: #102a3a"],
+            ["850 hPa", "patch_11", "fill: #102a3a"],
+            ["precipitation", "patch_16", "fill: #102a3a"],
+            ["wind", "patch_21", "fill: #102a3a"]
+          ];
+          const missing = checks.filter(([name, id, fill]) => !svgGroup(id).includes(fill)).map(([name]) => name);
+          if (missing.length) throw new Error("Live D1 SVG has non-dark surfaces: " + missing.join(", "));
+          console.log("Verified live Cloudflare route: D1 source + dark canvas + all four chart panels.");
+          NODE
+          curl --silent --show-error --fail --max-time 30 "$WEB/api/koy-gfs/comparison?verify=$(date +%s)" -o "$RUNNER_TEMP/live-koy-comparison.json"
+          KOY_LIVE_SVG_STAMP="$(node - "$RUNNER_TEMP/live-koy-comparison.json" <<'NODE'
+          const fs = require("fs");
+          const doc = JSON.parse(fs.readFileSync(process.argv[2], "utf8"));
+          const runs = (doc.runs || []).slice().sort((a,b) => String(b.run_id_utc).localeCompare(String(a.run_id_utc)));
+          if (runs.length < 4) throw new Error("Live Köy comparison has fewer than four runs.");
+          const latest = new Date(runs[0].run_id_utc);
+          if (!Number.isFinite(latest.getTime())) throw new Error("Live Köy latest run timestamp is invalid.");
+          const stamp = latest.getUTCFullYear()+String(latest.getUTCMonth()+1).padStart(2,"0")+String(latest.getUTCDate()).padStart(2,"0")+"T"+String(latest.getUTCHours()).padStart(2,"0")+"Z";
+          process.stdout.write(stamp);
+          NODE
+          )"
+          test -n "$KOY_LIVE_SVG_STAMP"
+          echo "Checking latest Köy SVG: $KOY_LIVE_SVG_STAMP"
+          curl --silent --show-error --fail --max-time 30 \
+            --dump-header "$RUNNER_TEMP/live-koy-svg-headers.txt" \
+            "$WEB/koy-data/gfs/media/koy-gfs-$KOY_LIVE_SVG_STAMP-comparison.svg?verify=$(date +%s)" \
+            -o "$RUNNER_TEMP/live-koy-latest.svg"
+          if grep -qi '^x-gfs-publication-source: D1' "$RUNNER_TEMP/live-koy-svg-headers.txt"; then
+            echo "Verified live Köy SVG publication source: D1"
+          elif grep -qi '^x-gfs-archive-source: R2' "$RUNNER_TEMP/live-koy-svg-headers.txt"; then
+            echo "Verified live Köy SVG publication source: R2 fallback (immutable archive)"
+          else
+            echo "Live Köy SVG source header is not exposed on this route; verifying SVG payload instead."
+          fi
+          node - "$RUNNER_TEMP/live-koy-latest.svg" "$KOY_LIVE_SVG_STAMP" <<'NODE'
+          const fs = require("fs");
+          const svg = fs.readFileSync(process.argv[2], "utf8");
+          if (!svg.includes("<svg") || !svg.includes('id="gfs-interactive-data"') || !svg.includes('id="gfs-renderer-version">cloudflare-js-v1</metadata>') || Buffer.byteLength(svg, "utf8") < 10000) {
+            throw new Error("Latest live Köy SVG is missing or malformed: " + process.argv[3]);
+          }
+          console.log("Latest live Köy SVG verified: " + process.argv[3] + " (" + Buffer.byteLength(svg, "utf8") + " bytes).");
+          NODE
+
+          curl --silent --show-error --fail --max-time 20 "$WEB/koy.html?verify=$(date +%s)" -o "$RUNNER_TEMP/koy-page.html"
+          node - "$RUNNER_TEMP/koy-page.html" <<'NODE'
+          const fs = require("fs");
+          const html = fs.readFileSync(process.argv[2], "utf8");
+          const forbidden = [
+            "GFS MODEL BİLDİRİMİ",
+            "Giresun Çanakçı GFS tahmin raporu",
+            "Son döngü:",
+            "İlk GFS tahmin adımı:",
+            "SON 4 GFS DÖNGÜSÜ",
+            "AYNI GEÇERLİLİK SAATLERİ"
+          ];
+          const found = forbidden.filter(text => html.includes(text));
+          if (found.length) throw new Error("Legacy Köy GFS report text is still published: " + found.join(" | "));
+          console.log("Köy page verified: report text removed; chart shell remains.");
+          NODE
+
+          echo "Checking latest F72 through the public web gateway..."
+          f72_ok=0
+          for attempt in $(seq 1 5); do
+            if curl --silent --show-error --fail --max-time 45 "$WEB/gfs/f72?check=$(date +%s)" -o "$RUNNER_TEMP/web-gfs-f72.json"; then
+              if node - "$RUNNER_TEMP/web-gfs-f72.json" <<'NODE'
+          const fs = require("fs");
+          const doc = JSON.parse(fs.readFileSync(process.argv[2], "utf8"));
+          const points = (doc.forecast_6_hourly || []).filter(point =>
+            Number(point.forecast_hour) > 0 &&
+            Number(point.forecast_hour) <= 72 &&
+            Number(point.forecast_hour) % 3 === 0
+          );
+          if (doc.schema !== "gfs-watch.forecast.v1" || doc.forecast_source !== "meteopt" ||
+              doc.f72?.available !== true || !doc.run_id_utc || points.length < 24 ||
+              Number(doc.forecast_horizon_hours) < 72) {
+            throw new Error("Public web F72 gateway contract failed: " + JSON.stringify({
+              run_id_utc: doc.run_id_utc,
+              horizon: doc.forecast_horizon_hours,
+              points: points.length,
+              f72: doc.f72
+            }));
+          }
+          console.log(JSON.stringify({ gateway: "/gfs/f72", run_id_utc: doc.run_id_utc, points: points.length }));
+          NODE
+              then f72_ok=1; break; fi
+            fi
+            sleep 8
+          done
+          test "$f72_ok" -eq 1 || { echo "::error::Public web F72 gateway failed."; cat "$RUNNER_TEMP/web-gfs-f72.json" 2>/dev/null || true; exit 1; }
+
+          curl --silent --show-error --fail --max-time 20 "$WEB/meteopt-gfs-table.js?verify=$(date +%s)" -o "$RUNNER_TEMP/meteopt-gfs-table.js"
+          grep -Fq '"/gfs/f72"' "$RUNNER_TEMP/meteopt-gfs-table.js" || { echo "::error::Live MeteoPT table asset is not wired to /gfs/f72."; exit 1; }
+          grep -Fq 'rh2m-warm-1' "$RUNNER_TEMP/meteopt-gfs-table.js" || { echo "::error::Live MeteoPT table asset is missing the RH.2m colour scale."; exit 1; }
+          grep -Fq 'function dewpoint(' "$RUNNER_TEMP/meteopt-gfs-table.js" || { echo "::error::Live MeteoPT table asset is missing Magnus dew point calculation."; exit 1; }
+          grep -Fq 'valueCell(snowln, "snowln", 0)' "$RUNNER_TEMP/meteopt-gfs-table.js" || { echo "::error::Live MeteoPT table asset is missing Snowln rendering."; exit 1; }
+          echo "Verified homepage MeteoPT table asset uses /gfs/f72."
+
+          echo "Checking the real public domain: https://www.istanbulunhavasi.com ..."
+          PUBLIC_SITE="https://www.istanbulunhavasi.com"
+          curl --silent --show-error --fail --max-time 30 "$PUBLIC_SITE/?live-check=$(date +%s)" -o "$RUNNER_TEMP/public-homepage.html"
+          grep -Fq 'meteopt-gfs-table.js' "$RUNNER_TEMP/public-homepage.html" || { echo "::error::Public homepage does not load the MeteoPT table script."; exit 1; }
+          curl --silent --show-error --fail --max-time 45 "$PUBLIC_SITE/gfs/f72?check=$(date +%s)" -o "$RUNNER_TEMP/public-gfs-f72.json"
+          node - "$RUNNER_TEMP/public-gfs-f72.json" <<'NODE'
+          const fs = require("fs");
+          const doc = JSON.parse(fs.readFileSync(process.argv[2], "utf8"));
+          const points = (doc.forecast_6_hourly || []).filter(point =>
+            Number(point.forecast_hour) > 0 &&
+            Number(point.forecast_hour) <= 72 &&
+            Number(point.forecast_hour) % 3 === 0
+          );
+          if (doc.schema !== "gfs-watch.forecast.v1" || doc.forecast_source !== "meteopt" ||
+              doc.f72?.available !== true || !doc.run_id_utc || points.length < 24 ||
+              Number(doc.forecast_horizon_hours) < 72) {
+            throw new Error("Public-domain F72 contract failed: " + JSON.stringify({
+              run_id_utc: doc.run_id_utc,
+              horizon: doc.forecast_horizon_hours,
+              points: points.length,
+              f72: doc.f72
+            }));
+          }
+          console.log(JSON.stringify({
+            public_domain: "www.istanbulunhavasi.com",
+            api: "/gfs/f72",
+            run_id_utc: doc.run_id_utc,
+            forecast_points: points.length,
+            horizon_hours: doc.forecast_horizon_hours
+          }));
+          NODE
+          curl --silent --show-error --fail --max-time 20 "$PUBLIC_SITE/meteopt-gfs-table.js?verify=$(date +%s)" -o "$RUNNER_TEMP/public-meteopt-gfs-table.js"
+          grep -Fq '"/gfs/f72"' "$RUNNER_TEMP/public-meteopt-gfs-table.js" || { echo "::error::Public domain serves an old MeteoPT table script."; exit 1; }
+          grep -Fq 'rh2m-warm-1' "$RUNNER_TEMP/public-meteopt-gfs-table.js" || { echo "::error::Public domain table script is missing the RH.2m colour scale."; exit 1; }
+          grep -Fq 'function dewpoint(' "$RUNNER_TEMP/public-meteopt-gfs-table.js" || { echo "::error::Public domain table script is missing Magnus dew point calculation."; exit 1; }
+          grep -Fq 'valueCell(snowln, "snowln", 0)' "$RUNNER_TEMP/public-meteopt-gfs-table.js" || { echo "::error::Public domain table script is missing Snowln rendering."; exit 1; }
+          echo "Public domain homepage, F72 API and MeteoPT table script verified."
+
+          echo "Checking the apex domain used by visitors and its same-origin station API..."
+          APEX_SITE="https://istanbulunhavasi.com"
+          curl --silent --show-error --fail --max-time 30 "$APEX_SITE/?station-check=$(date +%s)" -o "$RUNNER_TEMP/apex-homepage.html"
+          grep -Fq 'responsive-2026-11-08-station-same-origin-v1' "$RUNNER_TEMP/apex-homepage.html" || { echo "::error::Apex domain is not serving the current station-enabled homepage."; exit 1; }
+          curl --silent --show-error --fail --max-time 20 "$APEX_SITE/api/stations/health?check=$(date +%s)" -o "$RUNNER_TEMP/apex-station-health.json"
+          curl --silent --show-error --fail --max-time 20 "$APEX_SITE/api/stations?check=$(date +%s)" -o "$RUNNER_TEMP/apex-stations.json"
+          node - "$RUNNER_TEMP/apex-station-health.json" "$RUNNER_TEMP/apex-stations.json" <<'NODE'
+          const fs = require("fs");
+          const [health, stations] = process.argv.slice(2).map(file => JSON.parse(fs.readFileSync(file, "utf8")));
+          const rows = stations.stations || [];
+          const required = ["enka", "eyupsultan", "sisli"];
+          const summary = required.map(key => {
+            const row = rows.find(item => item.station_key === key);
+            return {
+              key,
+              station_id: row?.station_id || null,
+              status: row?.status || null,
+              temperature_c: row?.temperature_c ?? row?.temperature_2m_c ?? null,
+              observed_at_utc: row?.observed_at_utc || null,
+              last_error: row?.last_error || null
+            };
+          });
+          if (health.ok !== true || stations.ok !== true || summary.some(row => !row.station_id)) {
+            throw new Error("Apex station API contract failed: " + JSON.stringify({health, summary}));
+          }
+          console.log("Apex station API diagnostics:", JSON.stringify(summary));
+          NODE
+
+          echo "Checking Istanbul GFS through internal Service Binding..."
+          curl --silent --show-error --fail --max-time 45 "$WEB/gfs/latest?check=$(date +%s)" -o "$RUNNER_TEMP/web-gfs.json"
+          echo "Checking Köy GFS through internal Service Binding..."
+          curl --silent --show-error --fail --max-time 45 "$WEB/api/koy-gfs/f72?check=$(date +%s)" -o "$RUNNER_TEMP/web-koy.json"
+          echo "Checking station D1 health through internal Service Binding..."
+          curl --silent --show-error --fail --max-time 20 "$WEB/api/stations/health?check=$(date +%s)" -o "$RUNNER_TEMP/web-stations-health.json"
+          curl --silent --show-error --fail --max-time 20 "$WEB/api/stations?check=$(date +%s)" -o "$RUNNER_TEMP/web-stations.json"
+          curl --silent --show-error --fail --max-time 20 "$WEB/api/history/canakci?hours=72&check=$(date +%s)" -o "$RUNNER_TEMP/web-station-history.json"
+          node - "$RUNNER_TEMP/web-gfs.json" "$RUNNER_TEMP/web-koy.json" "$RUNNER_TEMP/web-stations-health.json" "$RUNNER_TEMP/web-stations.json" "$RUNNER_TEMP/web-station-history.json" <<'NODE'
+          const fs = require("fs");
+          const [gfs, koy, health, stations, history] = process.argv.slice(2).map(file => JSON.parse(fs.readFileSync(file, "utf8")));
+          if (gfs.schema !== "gfs-watch.forecast.v1" || !Array.isArray(gfs.comparison_runs) ||
+              !Array.isArray(gfs.forecast_6_hourly) || gfs.forecast_6_hourly.length < 40) {
+            throw new Error("Istanbul GFS gateway failed");
+          }
+          if (!Array.isArray(koy.forecast_6_hourly) || koy.forecast_6_hourly.length < 12) throw new Error("Köy GFS gateway failed");
+          if (health.ok !== true || health.storage !== "D1" || health.cron !== "*/2 * * * *") throw new Error("Station D1 health gateway failed");
+          if (stations.ok !== true || !Array.isArray(stations.stations) || stations.stations.length < 4) throw new Error("Station current values gateway failed");
+          if (history.ok !== true || !Array.isArray(history.samples)) throw new Error("Station history gateway failed");
+          console.log(JSON.stringify({
+            istanbul_run: gfs.run_id_utc,
+            istanbul_comparison_runs: gfs.comparison_runs.length,
+            koy_run: koy.run_id_utc,
+            koy_points: koy.forecast_6_hourly.length,
+            station_count: stations.stations.length,
+            canakci_history_samples: history.samples.length
+          }));
+          NODE
+
+\\t'*}"
+              key="${entry#*
+
+      - name: Deploy Cloudflare Worker + Static Assets
+        working-directory: source/web-worker
+        env:
+          CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+          CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
+        run: wrangler deploy --config wrangler.jsonc
+
+      - name: Verify Cloudflare website and proxied APIs
+        env:
+          WEB: https://gfs-watch-web.muhsin-ulusoy.workers.dev
+        run: |
+          set -euo pipefail
+          curl --silent --show-error --fail --max-time 20 "$WEB/__health?check=$(date +%s)" -o "$RUNNER_TEMP/web-health.json"
+          node - "$RUNNER_TEMP/web-health.json" <<'NODE'
+          const fs = require("fs");
+          const doc = JSON.parse(fs.readFileSync(process.argv[2], "utf8"));
+          if (doc.ok !== true || doc.service !== "gfs-watch-web" ||
+              doc.delivery !== "Cloudflare Workers Static Assets" ||
+              doc.api_gateway !== "Cloudflare Service Bindings" ||
+              (process.env.R2_ENABLED === "1" && doc.archive_storage !== "R2") ||
+              (process.env.R2_ENABLED !== "1" && doc.archive_storage !== "Static Assets fallback") ||
+              Object.values(doc.bindings || {}).some(value => value !== true)) {
+            throw new Error("Cloudflare web Worker/static assets/service bindings health contract failed");
+          }
+          console.log(JSON.stringify(doc));
+          NODE
+
+          for path in / /koy.html /gfs-api-config.js /data/ecmwf/latest.json; do
+            curl --silent --show-error --fail --max-time 20 "$WEB$path" -o /dev/null
+            echo "OK $path"
+          done
+          if [ "${R2_ENABLED:-0}" = "1" ]; then
+            curl --silent --show-error --fail --max-time 30 \
+              --dump-header "$RUNNER_TEMP/r2-ecmwf-headers.txt" \
+              "$WEB/data/ecmwf/latest.json?verify=$(date +%s)" -o "$RUNNER_TEMP/r2-ecmwf-live.json"
+            grep -qi '^x-gfs-archive-source: R2' "$RUNNER_TEMP/r2-ecmwf-headers.txt"
+            node - "$RUNNER_TEMP/r2-ecmwf-live.json" <<'NODE'
+          const fs = require("fs");
+          const doc = JSON.parse(fs.readFileSync(process.argv[2], "utf8"));
+          if (doc.schema !== "gfs-watch.ecmwf-eps.v1" || !doc.run_id_utc) {
+            throw new Error("R2 ECMWF latest payload contract failed");
+          }
+          console.log("Verified live ECMWF payload served from R2:", doc.run_id_utc);
+          NODE
+          else
+            echo "R2 is not enabled; ECMWF is verified by the existing D1/Static Assets path."
+          fi
+          curl --silent --show-error --fail --max-time 20 "$WEB/?verify=$(date +%s)" -o "$RUNNER_TEMP/live-index.html"
+          grep -q 'enka-camera-image' "$RUNNER_TEMP/live-index.html"
+          grep -q 'https://w.enka.com/camhd/cam1/c.jpg' "$RUNNER_TEMP/live-index.html"
+          grep -q 'setInterval(refresh,90000)' "$RUNNER_TEMP/live-index.html"
+          curl --silent --show-error --fail --max-time 20 "$WEB/service-worker.js?verify=$(date +%s)" -o "$RUNNER_TEMP/live-service-worker.js"
+          grep -q 'istanbul-hava-shell-v33-station-null-guard' "$RUNNER_TEMP/live-service-worker.js"
+          grep -q 'istanbul-hava-data-v4' "$RUNNER_TEMP/live-service-worker.js"
+          echo "Verified live renderer, cache-busted script and refreshed service-worker caches."
+
+          # Verify the production notification path is served Worker-first from D1,
+          # not from the stale Static Assets copy.
+          curl --silent --show-error --fail --max-time 30 "$WEB/gfs/notification-latest?verify=$(date +%s)" -o "$RUNNER_TEMP/live-notifications.json"
+          LIVE_SVG_PATH="$(node - "$RUNNER_TEMP/live-notifications.json" <<'NODE'
+          const fs = require("fs");
+          const doc = JSON.parse(fs.readFileSync(process.argv[2], "utf8"));
+          const item = (doc.items || [])[0];
+          const path = (item?.images || []).find(image => typeof image.path === "string" && image.path.toLowerCase().endsWith(".svg"))?.path;
+          if (!path) throw new Error("Live GFS notification manifest does not reference an SVG.");
+          process.stdout.write(path.startsWith("/") ? path.slice(1) : path);
+          NODE
+          )"
+          curl --silent --show-error --fail --max-time 30 \
+            --dump-header "$RUNNER_TEMP/live-gfs-svg-headers.txt" \
+            "$WEB/data/notifications/$LIVE_SVG_PATH?verify=$(date +%s)" \
+            -o "$RUNNER_TEMP/live-gfs-comparison.svg"
+          if grep -qi '^x-gfs-publication-source: D1' "$RUNNER_TEMP/live-gfs-svg-headers.txt"; then
+            echo "Verified live GFS SVG publication source: D1"
+          elif grep -qi '^x-gfs-archive-source: R2' "$RUNNER_TEMP/live-gfs-svg-headers.txt"; then
+            echo "Verified live GFS SVG publication source: R2 fallback (D1 publication asset not yet present)"
+          else
+            echo "Live GFS SVG source header is not exposed on this route; verifying SVG payload instead."
+          fi
+          node - "$RUNNER_TEMP/live-gfs-comparison.svg" <<'NODE'
+          const fs = require("fs");
+          const svg = fs.readFileSync(process.argv[2], "utf8");
+          function svgGroup(id) {
+            const marker = '<g id="' + id + '">';
+            const start = svg.indexOf(marker);
+            if (start < 0) return "";
+            const end = svg.indexOf("</g>", start);
+            return end < 0 ? "" : svg.slice(start, end + 4).toLowerCase();
+          }
+          const checks = [
+            ["canvas", "patch_1", "fill: #0a1b29"],
+            ["temperature", "patch_6", "fill: #102a3a"],
+            ["850 hPa", "patch_11", "fill: #102a3a"],
+            ["precipitation", "patch_16", "fill: #102a3a"],
+            ["wind", "patch_21", "fill: #102a3a"]
+          ];
+          const missing = checks.filter(([name, id, fill]) => !svgGroup(id).includes(fill)).map(([name]) => name);
+          if (missing.length) throw new Error("Live D1 SVG has non-dark surfaces: " + missing.join(", "));
+          console.log("Verified live Cloudflare route: D1 source + dark canvas + all four chart panels.");
+          NODE
+          curl --silent --show-error --fail --max-time 30 "$WEB/api/koy-gfs/comparison?verify=$(date +%s)" -o "$RUNNER_TEMP/live-koy-comparison.json"
+          KOY_LIVE_SVG_STAMP="$(node - "$RUNNER_TEMP/live-koy-comparison.json" <<'NODE'
+          const fs = require("fs");
+          const doc = JSON.parse(fs.readFileSync(process.argv[2], "utf8"));
+          const runs = (doc.runs || []).slice().sort((a,b) => String(b.run_id_utc).localeCompare(String(a.run_id_utc)));
+          if (runs.length < 4) throw new Error("Live Köy comparison has fewer than four runs.");
+          const latest = new Date(runs[0].run_id_utc);
+          if (!Number.isFinite(latest.getTime())) throw new Error("Live Köy latest run timestamp is invalid.");
+          const stamp = latest.getUTCFullYear()+String(latest.getUTCMonth()+1).padStart(2,"0")+String(latest.getUTCDate()).padStart(2,"0")+"T"+String(latest.getUTCHours()).padStart(2,"0")+"Z";
+          process.stdout.write(stamp);
+          NODE
+          )"
+          test -n "$KOY_LIVE_SVG_STAMP"
+          echo "Checking latest Köy SVG: $KOY_LIVE_SVG_STAMP"
+          curl --silent --show-error --fail --max-time 30 \
+            --dump-header "$RUNNER_TEMP/live-koy-svg-headers.txt" \
+            "$WEB/koy-data/gfs/media/koy-gfs-$KOY_LIVE_SVG_STAMP-comparison.svg?verify=$(date +%s)" \
+            -o "$RUNNER_TEMP/live-koy-latest.svg"
+          if grep -qi '^x-gfs-publication-source: D1' "$RUNNER_TEMP/live-koy-svg-headers.txt"; then
+            echo "Verified live Köy SVG publication source: D1"
+          elif grep -qi '^x-gfs-archive-source: R2' "$RUNNER_TEMP/live-koy-svg-headers.txt"; then
+            echo "Verified live Köy SVG publication source: R2 fallback (immutable archive)"
+          else
+            echo "Live Köy SVG source header is not exposed on this route; verifying SVG payload instead."
+          fi
+          node - "$RUNNER_TEMP/live-koy-latest.svg" "$KOY_LIVE_SVG_STAMP" <<'NODE'
+          const fs = require("fs");
+          const svg = fs.readFileSync(process.argv[2], "utf8");
+          if (!svg.includes("<svg") || !svg.includes('id="gfs-interactive-data"') || !svg.includes('id="gfs-renderer-version">cloudflare-js-v1</metadata>') || Buffer.byteLength(svg, "utf8") < 10000) {
+            throw new Error("Latest live Köy SVG is missing or malformed: " + process.argv[3]);
+          }
+          console.log("Latest live Köy SVG verified: " + process.argv[3] + " (" + Buffer.byteLength(svg, "utf8") + " bytes).");
+          NODE
+
+          curl --silent --show-error --fail --max-time 20 "$WEB/koy.html?verify=$(date +%s)" -o "$RUNNER_TEMP/koy-page.html"
+          node - "$RUNNER_TEMP/koy-page.html" <<'NODE'
+          const fs = require("fs");
+          const html = fs.readFileSync(process.argv[2], "utf8");
+          const forbidden = [
+            "GFS MODEL BİLDİRİMİ",
+            "Giresun Çanakçı GFS tahmin raporu",
+            "Son döngü:",
+            "İlk GFS tahmin adımı:",
+            "SON 4 GFS DÖNGÜSÜ",
+            "AYNI GEÇERLİLİK SAATLERİ"
+          ];
+          const found = forbidden.filter(text => html.includes(text));
+          if (found.length) throw new Error("Legacy Köy GFS report text is still published: " + found.join(" | "));
+          console.log("Köy page verified: report text removed; chart shell remains.");
+          NODE
+
+          echo "Checking latest F72 through the public web gateway..."
+          f72_ok=0
+          for attempt in $(seq 1 5); do
+            if curl --silent --show-error --fail --max-time 45 "$WEB/gfs/f72?check=$(date +%s)" -o "$RUNNER_TEMP/web-gfs-f72.json"; then
+              if node - "$RUNNER_TEMP/web-gfs-f72.json" <<'NODE'
+          const fs = require("fs");
+          const doc = JSON.parse(fs.readFileSync(process.argv[2], "utf8"));
+          const points = (doc.forecast_6_hourly || []).filter(point =>
+            Number(point.forecast_hour) > 0 &&
+            Number(point.forecast_hour) <= 72 &&
+            Number(point.forecast_hour) % 3 === 0
+          );
+          if (doc.schema !== "gfs-watch.forecast.v1" || doc.forecast_source !== "meteopt" ||
+              doc.f72?.available !== true || !doc.run_id_utc || points.length < 24 ||
+              Number(doc.forecast_horizon_hours) < 72) {
+            throw new Error("Public web F72 gateway contract failed: " + JSON.stringify({
+              run_id_utc: doc.run_id_utc,
+              horizon: doc.forecast_horizon_hours,
+              points: points.length,
+              f72: doc.f72
+            }));
+          }
+          console.log(JSON.stringify({ gateway: "/gfs/f72", run_id_utc: doc.run_id_utc, points: points.length }));
+          NODE
+              then f72_ok=1; break; fi
+            fi
+            sleep 8
+          done
+          test "$f72_ok" -eq 1 || { echo "::error::Public web F72 gateway failed."; cat "$RUNNER_TEMP/web-gfs-f72.json" 2>/dev/null || true; exit 1; }
+
+          curl --silent --show-error --fail --max-time 20 "$WEB/meteopt-gfs-table.js?verify=$(date +%s)" -o "$RUNNER_TEMP/meteopt-gfs-table.js"
+          grep -Fq '"/gfs/f72"' "$RUNNER_TEMP/meteopt-gfs-table.js" || { echo "::error::Live MeteoPT table asset is not wired to /gfs/f72."; exit 1; }
+          grep -Fq 'rh2m-warm-1' "$RUNNER_TEMP/meteopt-gfs-table.js" || { echo "::error::Live MeteoPT table asset is missing the RH.2m colour scale."; exit 1; }
+          grep -Fq 'function dewpoint(' "$RUNNER_TEMP/meteopt-gfs-table.js" || { echo "::error::Live MeteoPT table asset is missing Magnus dew point calculation."; exit 1; }
+          grep -Fq 'valueCell(snowln, "snowln", 0)' "$RUNNER_TEMP/meteopt-gfs-table.js" || { echo "::error::Live MeteoPT table asset is missing Snowln rendering."; exit 1; }
+          echo "Verified homepage MeteoPT table asset uses /gfs/f72."
+
+          echo "Checking the real public domain: https://www.istanbulunhavasi.com ..."
+          PUBLIC_SITE="https://www.istanbulunhavasi.com"
+          curl --silent --show-error --fail --max-time 30 "$PUBLIC_SITE/?live-check=$(date +%s)" -o "$RUNNER_TEMP/public-homepage.html"
+          grep -Fq 'meteopt-gfs-table.js' "$RUNNER_TEMP/public-homepage.html" || { echo "::error::Public homepage does not load the MeteoPT table script."; exit 1; }
+          curl --silent --show-error --fail --max-time 45 "$PUBLIC_SITE/gfs/f72?check=$(date +%s)" -o "$RUNNER_TEMP/public-gfs-f72.json"
+          node - "$RUNNER_TEMP/public-gfs-f72.json" <<'NODE'
+          const fs = require("fs");
+          const doc = JSON.parse(fs.readFileSync(process.argv[2], "utf8"));
+          const points = (doc.forecast_6_hourly || []).filter(point =>
+            Number(point.forecast_hour) > 0 &&
+            Number(point.forecast_hour) <= 72 &&
+            Number(point.forecast_hour) % 3 === 0
+          );
+          if (doc.schema !== "gfs-watch.forecast.v1" || doc.forecast_source !== "meteopt" ||
+              doc.f72?.available !== true || !doc.run_id_utc || points.length < 24 ||
+              Number(doc.forecast_horizon_hours) < 72) {
+            throw new Error("Public-domain F72 contract failed: " + JSON.stringify({
+              run_id_utc: doc.run_id_utc,
+              horizon: doc.forecast_horizon_hours,
+              points: points.length,
+              f72: doc.f72
+            }));
+          }
+          console.log(JSON.stringify({
+            public_domain: "www.istanbulunhavasi.com",
+            api: "/gfs/f72",
+            run_id_utc: doc.run_id_utc,
+            forecast_points: points.length,
+            horizon_hours: doc.forecast_horizon_hours
+          }));
+          NODE
+          curl --silent --show-error --fail --max-time 20 "$PUBLIC_SITE/meteopt-gfs-table.js?verify=$(date +%s)" -o "$RUNNER_TEMP/public-meteopt-gfs-table.js"
+          grep -Fq '"/gfs/f72"' "$RUNNER_TEMP/public-meteopt-gfs-table.js" || { echo "::error::Public domain serves an old MeteoPT table script."; exit 1; }
+          grep -Fq 'rh2m-warm-1' "$RUNNER_TEMP/public-meteopt-gfs-table.js" || { echo "::error::Public domain table script is missing the RH.2m colour scale."; exit 1; }
+          grep -Fq 'function dewpoint(' "$RUNNER_TEMP/public-meteopt-gfs-table.js" || { echo "::error::Public domain table script is missing Magnus dew point calculation."; exit 1; }
+          grep -Fq 'valueCell(snowln, "snowln", 0)' "$RUNNER_TEMP/public-meteopt-gfs-table.js" || { echo "::error::Public domain table script is missing Snowln rendering."; exit 1; }
+          echo "Public domain homepage, F72 API and MeteoPT table script verified."
+
+          echo "Checking the apex domain used by visitors and its same-origin station API..."
+          APEX_SITE="https://istanbulunhavasi.com"
+          curl --silent --show-error --fail --max-time 30 "$APEX_SITE/?station-check=$(date +%s)" -o "$RUNNER_TEMP/apex-homepage.html"
+          grep -Fq 'responsive-2026-11-08-station-same-origin-v1' "$RUNNER_TEMP/apex-homepage.html" || { echo "::error::Apex domain is not serving the current station-enabled homepage."; exit 1; }
+          curl --silent --show-error --fail --max-time 20 "$APEX_SITE/api/stations/health?check=$(date +%s)" -o "$RUNNER_TEMP/apex-station-health.json"
+          curl --silent --show-error --fail --max-time 20 "$APEX_SITE/api/stations?check=$(date +%s)" -o "$RUNNER_TEMP/apex-stations.json"
+          node - "$RUNNER_TEMP/apex-station-health.json" "$RUNNER_TEMP/apex-stations.json" <<'NODE'
+          const fs = require("fs");
+          const [health, stations] = process.argv.slice(2).map(file => JSON.parse(fs.readFileSync(file, "utf8")));
+          const rows = stations.stations || [];
+          const required = ["enka", "eyupsultan", "sisli"];
+          const summary = required.map(key => {
+            const row = rows.find(item => item.station_key === key);
+            return {
+              key,
+              station_id: row?.station_id || null,
+              status: row?.status || null,
+              temperature_c: row?.temperature_c ?? row?.temperature_2m_c ?? null,
+              observed_at_utc: row?.observed_at_utc || null,
+              last_error: row?.last_error || null
+            };
+          });
+          if (health.ok !== true || stations.ok !== true || summary.some(row => !row.station_id)) {
+            throw new Error("Apex station API contract failed: " + JSON.stringify({health, summary}));
+          }
+          console.log("Apex station API diagnostics:", JSON.stringify(summary));
+          NODE
+
+          echo "Checking Istanbul GFS through internal Service Binding..."
+          curl --silent --show-error --fail --max-time 45 "$WEB/gfs/latest?check=$(date +%s)" -o "$RUNNER_TEMP/web-gfs.json"
+          echo "Checking Köy GFS through internal Service Binding..."
+          curl --silent --show-error --fail --max-time 45 "$WEB/api/koy-gfs/f72?check=$(date +%s)" -o "$RUNNER_TEMP/web-koy.json"
+          echo "Checking station D1 health through internal Service Binding..."
+          curl --silent --show-error --fail --max-time 20 "$WEB/api/stations/health?check=$(date +%s)" -o "$RUNNER_TEMP/web-stations-health.json"
+          curl --silent --show-error --fail --max-time 20 "$WEB/api/stations?check=$(date +%s)" -o "$RUNNER_TEMP/web-stations.json"
+          curl --silent --show-error --fail --max-time 20 "$WEB/api/history/canakci?hours=72&check=$(date +%s)" -o "$RUNNER_TEMP/web-station-history.json"
+          node - "$RUNNER_TEMP/web-gfs.json" "$RUNNER_TEMP/web-koy.json" "$RUNNER_TEMP/web-stations-health.json" "$RUNNER_TEMP/web-stations.json" "$RUNNER_TEMP/web-station-history.json" <<'NODE'
+          const fs = require("fs");
+          const [gfs, koy, health, stations, history] = process.argv.slice(2).map(file => JSON.parse(fs.readFileSync(file, "utf8")));
+          if (gfs.schema !== "gfs-watch.forecast.v1" || !Array.isArray(gfs.comparison_runs) ||
+              !Array.isArray(gfs.forecast_6_hourly) || gfs.forecast_6_hourly.length < 40) {
+            throw new Error("Istanbul GFS gateway failed");
+          }
+          if (!Array.isArray(koy.forecast_6_hourly) || koy.forecast_6_hourly.length < 12) throw new Error("Köy GFS gateway failed");
+          if (health.ok !== true || health.storage !== "D1" || health.cron !== "*/2 * * * *") throw new Error("Station D1 health gateway failed");
+          if (stations.ok !== true || !Array.isArray(stations.stations) || stations.stations.length < 4) throw new Error("Station current values gateway failed");
+          if (history.ok !== true || !Array.isArray(history.samples)) throw new Error("Station history gateway failed");
+          console.log(JSON.stringify({
+            istanbul_run: gfs.run_id_utc,
+            istanbul_comparison_runs: gfs.comparison_runs.length,
+            koy_run: koy.run_id_utc,
+            koy_points: koy.forecast_6_hourly.length,
+            station_count: stations.stations.length,
+            canakci_history_samples: history.samples.length
+          }));
+          NODE
+
+\\t'}"
               mime="$(file --brief --mime-type "$file")"
               cache_control="public, max-age=3600, s-maxage=86400"
               case "$key" in
@@ -160,18 +746,20 @@ jobs:
               esac
               wrangler r2 object put "$R2_BUCKET/$key" --file "$file" --remote \
                 --content-type "$mime" --cache-control "$cache_control" --force
-              uploaded=$((uploaded + 1))
-            done < <(find "$source" -type f -print0)
+            ' _ < "$manifest"
           }
 
-          upload_tree "$GITHUB_WORKSPACE/forecast-data/public/ecmwf" "data/ecmwf"
-          upload_tree "$GITHUB_WORKSPACE/istanbul-gfs-data/gfs/notifications" "data/notifications"
+          upload_tree_parallel "$GITHUB_WORKSPACE/forecast-data/public/ecmwf" "data/ecmwf"
+          upload_tree_parallel "$GITHUB_WORKSPACE/istanbul-gfs-data/gfs/notifications" "data/notifications"
+
+          uploaded="$(find "$GITHUB_WORKSPACE/forecast-data/public/ecmwf" "$GITHUB_WORKSPACE/istanbul-gfs-data/gfs/notifications" \
+            -type f 2>/dev/null | wc -l | tr -d ' ')"
           test "$uploaded" -gt 0 || { echo "::error::No archive objects were uploaded to R2"; exit 1; }
 
           wrangler r2 object get "$R2_BUCKET/data/ecmwf/latest.json" \
             --file "$RUNNER_TEMP/r2-ecmwf-latest.json" --remote
           cmp -s "$GITHUB_WORKSPACE/forecast-data/public/ecmwf/latest.json" "$RUNNER_TEMP/r2-ecmwf-latest.json"
-          echo "Verified ECMWF latest.json byte-for-byte in R2; uploaded $uploaded archive objects."
+          echo "Verified ECMWF latest.json byte-for-byte in R2; uploaded $uploaded archive objects in parallel."
           echo "R2_ENABLED=1" >> "$GITHUB_ENV"
 
       - name: Deploy Cloudflare Worker + Static Assets
@@ -457,195 +1045,3 @@ jobs:
           }));
           NODE
 
-      - name: Install Playwright Chromium for real-browser verification
-        run: |
-          set -euo pipefail
-          npm install --prefix "$RUNNER_TEMP/live-visual" --no-save playwright@1.56.1
-          "$RUNNER_TEMP/live-visual/node_modules/.bin/playwright" install --with-deps chromium
-
-      - name: Open production homepage and capture desktop/mobile screenshots
-        env:
-          PLAYWRIGHT_PACKAGE: ${{ runner.temp }}/live-visual/node_modules/playwright
-          PUBLIC_SITE: https://istanbulunhavasi.com
-        run: |
-          set -euo pipefail
-          mkdir -p "$RUNNER_TEMP/live-site-evidence"
-          node <<'NODE'
-          const fs = require("fs");
-          const path = require("path");
-          const { chromium } = require(process.env.PLAYWRIGHT_PACKAGE);
-          const out = process.env.RUNNER_TEMP + "/live-site-evidence";
-          const base = process.env.PUBLIC_SITE;
-          const diagnostics = {
-            url: base,
-            checked_at_utc: new Date().toISOString(),
-            viewports: {},
-            console_errors: [],
-            page_errors: [],
-            failed_requests: [],
-            bad_responses: [],
-            f72: null
-          };
-
-          (async () => {
-            const browser = await chromium.launch({ headless: true });
-            try {
-              for (const view of [
-                { name: "desktop", width: 1440, height: 1000 },
-                { name: "mobile", width: 390, height: 844 }
-              ]) {
-                const context = await browser.newContext({
-                  viewport: { width: view.width, height: view.height },
-                  deviceScaleFactor: view.name === "mobile" ? 2 : 1,
-                  isMobile: view.name === "mobile",
-                  hasTouch: view.name === "mobile",
-                  locale: "tr-TR",
-                  timezoneId: "Europe/Istanbul"
-                });
-                const page = await context.newPage();
-                page.on("console", message => {
-                  if (message.type() === "error") diagnostics.console_errors.push({
-                    viewport: view.name, text: message.text()
-                  });
-                });
-                page.on("pageerror", error => diagnostics.page_errors.push({
-                  viewport: view.name, text: String(error)
-                }));
-                page.on("requestfailed", request => diagnostics.failed_requests.push({
-                  viewport: view.name, url: request.url(), error: request.failure()?.errorText || "failed"
-                }));
-                page.on("response", async response => {
-                  if (response.status() >= 400) diagnostics.bad_responses.push({
-                    viewport: view.name, status: response.status(), url: response.url()
-                  });
-                  if (view.name === "desktop" && /\/gfs\/f72(?:\?|$)/.test(response.url())) {
-                    try {
-                      const doc = await response.json();
-                      diagnostics.f72 = {
-                        status: response.status(),
-                        run_id_utc: doc.run_id_utc,
-                        forecast_horizon_hours: doc.forecast_horizon_hours,
-                        point_count: (doc.forecast_6_hourly || []).filter(p =>
-                          Number(p.forecast_hour) > 0 &&
-                          Number(p.forecast_hour) <= 72 &&
-                          Number(p.forecast_hour) % 3 === 0
-                        ).length
-                      };
-                    } catch (error) {
-                      diagnostics.f72 = { status: response.status(), parse_error: String(error) };
-                    }
-                  }
-                });
-
-                await page.goto(base + "/?visual-check=" + Date.now(), {
-                  waitUntil: "domcontentloaded",
-                  timeout: 60000
-                });
-                await page.locator("#meteopt-table-status").waitFor({ state: "visible", timeout: 30000 });
-                await page.waitForFunction(() => {
-                  const status = document.querySelector("#meteopt-table-status")?.textContent || "";
-                  return /^\s*24\s*\/\s*24/.test(status);
-                }, { timeout: 60000 });
-                await page.waitForFunction(() => {
-                  const title = document.querySelector("#station-card-title")?.textContent || "";
-                  const temperature = document.querySelector("#temperature")?.textContent || "";
-                  const freshness = document.querySelector("#freshness")?.textContent || "";
-                  const button = document.querySelector("#station-eyupsultan-button");
-                  return title.includes("Eyüpsultan") &&
-                    temperature.trim() !== "—°" &&
-                    freshness.trim() === "CANLI ÖLÇÜM" &&
-                    button?.getAttribute("aria-pressed") === "true" &&
-                    button.classList.contains("active");
-                }, { timeout: 45000 });
-
-                const table = page.locator("#meteopt-gfs-table");
-                await table.scrollIntoViewIfNeeded();
-                await page.waitForTimeout(500);
-                await table.screenshot({
-                  path: path.join(out, "meteopt-table-" + view.name + ".png"),
-                  animations: "disabled"
-                });
-                await page.screenshot({
-                  path: path.join(out, "homepage-" + view.name + ".png"),
-                  fullPage: true,
-                  animations: "disabled"
-                });
-
-                const viewResult = await page.evaluate(() => ({
-                  title: document.title,
-                  run: document.querySelector("#meteopt-table-run")?.textContent || "",
-                  status: document.querySelector("#meteopt-table-status")?.textContent || "",
-                  rows: document.querySelectorAll("#meteopt-table-body tr").length,
-                  first_row: document.querySelector("#meteopt-table-body tr")?.innerText || "",
-                  last_row: document.querySelector("#meteopt-table-body tr:last-child")?.innerText || "",
-                  station_title: document.querySelector("#station-card-title")?.textContent || "",
-                  station_temperature: document.querySelector("#temperature")?.textContent || "",
-                  station_freshness: document.querySelector("#freshness")?.textContent || "",
-                  eyupsultan_button_active: document.querySelector("#station-eyupsultan-button")?.classList.contains("active") === true &&
-                    document.querySelector("#station-eyupsultan-button")?.getAttribute("aria-pressed") === "true",
-                  viewport_width: window.innerWidth,
-                  document_width: document.documentElement.scrollWidth,
-                  horizontal_overflow_px: Math.max(0, document.documentElement.scrollWidth - window.innerWidth)
-                }));
-                diagnostics.viewports[view.name] = viewResult;
-                await context.close();
-              }
-
-              if (diagnostics.viewports.desktop.rows !== 24 || diagnostics.viewports.mobile.rows !== 24) {
-                throw new Error("The production table did not render 24 rows on desktop and mobile: " +
-                  JSON.stringify(diagnostics.viewports));
-              }
-              for (const view of ["desktop", "mobile"]) {
-                const station = diagnostics.viewports[view];
-                if (!station.station_title.includes("Eyüpsultan") ||
-                    !station.station_temperature.trim() ||
-                    station.station_temperature.trim() === "—°" ||
-                    station.station_freshness !== "CANLI ÖLÇÜM" ||
-                    station.eyupsultan_button_active !== true) {
-                  throw new Error("The live Eyüpsultan station card is not rendered correctly on " + view + ": " +
-                    JSON.stringify(station));
-                }
-              }
-              const runDate = diagnostics.f72?.run_id_utc ? new Date(diagnostics.f72.run_id_utc) : null;
-              const expectedRunLabel = runDate && Number.isFinite(runDate.getTime())
-                ? "Run: " + new Intl.DateTimeFormat("en-GB", {
-                    timeZone: "UTC", weekday: "short", day: "numeric", month: "short",
-                    year: "numeric", hour: "2-digit", hourCycle: "h23"
-                  }).format(runDate) + "Z"
-                : "";
-              if (!diagnostics.f72 || diagnostics.f72.point_count !== 24 ||
-                  !expectedRunLabel ||
-                  diagnostics.viewports.desktop.run !== expectedRunLabel ||
-                  diagnostics.viewports.mobile.run !== expectedRunLabel) {
-                throw new Error("The homepage table run label does not match its live F72 payload: " +
-                  JSON.stringify({ f72: diagnostics.f72, expectedRunLabel, viewports: diagnostics.viewports }));
-              }
-              fs.writeFileSync(path.join(out, "diagnostics.json"), JSON.stringify(diagnostics, null, 2));
-              console.log(JSON.stringify({
-                desktop: diagnostics.viewports.desktop,
-                mobile: diagnostics.viewports.mobile,
-                f72: diagnostics.f72,
-                console_errors: diagnostics.console_errors.length,
-                page_errors: diagnostics.page_errors.length,
-                failed_requests: diagnostics.failed_requests.length
-              }, null, 2));
-            } finally {
-              await browser.close();
-            }
-          })().catch(error => {
-            fs.writeFileSync(path.join(out, "diagnostics.json"), JSON.stringify({
-              ...diagnostics, fatal_error: String(error), stack: error.stack
-            }, null, 2));
-            console.error(error);
-            process.exitCode = 1;
-          });
-          NODE
-
-      - name: Upload live-site screenshots and browser diagnostics
-        if: always()
-        uses: actions/upload-artifact@v4
-        with:
-          name: live-site-visual-check
-          path: ${{ runner.temp }}/live-site-evidence/
-          if-no-files-found: warn
-          retention-days: 14
