@@ -1055,10 +1055,10 @@
       .briefing { margin-top:5px!important; gap:3px!important; }
       .briefing-row { padding:4px 6px!important; }
     }
-    /* FINAL DASHBOARD LAYOUT: observation | briefing | camera */
+    /* FINAL DASHBOARD LAYOUT: unified observation + briefing panel | camera */
     .dashboard-top{
       display:grid!important;
-      grid-template-columns:minmax(0,1.18fr) minmax(0,1.40fr) minmax(340px,.62fr)!important;
+      grid-template-columns:minmax(0,1.18fr) minmax(340px,.62fr)!important;
       gap:14px!important;
       align-items:start!important;
       width:100%!important;
@@ -1069,39 +1069,50 @@
       min-width:0!important;
       width:100%!important;
     }
-    .dashboard-top>.dashboard-briefing{
+    .dashboard-top>.enka-camera-panel{
       grid-column:2!important;
       grid-row:1!important;
       min-width:0!important;
       width:100%!important;
-      padding-top:70px!important;
-    }
-    .dashboard-top>.enka-camera-panel{
-      grid-column:3!important;
-      grid-row:1!important;
-      min-width:0!important;
-      width:50%!important;
-      margin:0 0 0 auto!important;
+      margin:0!important;
       align-self:start!important;
-      justify-self:end!important;
+      justify-self:stretch!important;
     }
-    .dashboard-top>.dashboard-briefing .briefing{
+    .station-card>.station-briefing-inline{
+      grid-column:1 / -1!important;
       width:100%!important;
       min-width:0!important;
+      margin-top:2px!important;
+      padding-top:10px!important;
+      border-top:1px solid rgba(213,237,240,.13)!important;
+    }
+    .station-card>.station-briefing-inline .briefing{
+      display:grid!important;
+      grid-template-columns:repeat(2,minmax(0,1fr))!important;
+      gap:10px!important;
+      width:100%!important;
       margin:0!important;
     }
+    .station-card>.station-briefing-inline .briefing-row{
+      min-width:0!important;
+      min-height:100%!important;
+      background:rgba(2,15,24,.22)!important;
+    }
     @media(max-width:900px){
-      .dashboard-top{
-        grid-template-columns:minmax(0,1fr)!important;
-      }
+      .dashboard-top{grid-template-columns:minmax(0,1fr)!important}
       .dashboard-top>.dashboard-left,
-      .dashboard-top>.dashboard-briefing,
       .dashboard-top>.enka-camera-panel{
         grid-column:1!important;
         grid-row:auto!important;
         width:100%!important;
       }
-      .dashboard-top>.dashboard-briefing{padding-top:0!important}
+    }
+    @media(max-width:560px){
+      .station-card>.station-briefing-inline .briefing{
+        grid-template-columns:minmax(0,1fr)!important;
+        gap:7px!important;
+      }
+      .station-card>.station-briefing-inline{padding-top:7px!important}
     }
 
 </style>
@@ -1711,18 +1722,21 @@ html.ios12 .footer > *{
         </div>
         <div class="history-source-note" id="history-source-note">Sıcaklık seçili istasyonun. Yağış iki istasyonda da MGM Eyüpsultan.</div>
       </section>
+        <div class="dashboard-briefing station-briefing-inline">
+          <div class="briefing" id="briefing" aria-live="polite">
+            <div class="briefing-row" id="brief-rain">
+              <div class="briefing-k">Yağış saatleri</div>
+              <div class="briefing-v" id="brief-rain-lines">Hesaplanıyor…</div>
+            </div>
+            <div class="briefing-row" id="brief-temperature-trend-row">
+              <div class="briefing-k">5 günlük sıcaklık</div>
+              <div class="briefing-v" id="brief-temperature-trend" aria-live="polite">Eyüpsultan ölçümü ve tahmin verisi bekleniyor…</div>
+            </div>
+          </div>
+        </div>
       </article>
 
       </div>
-        <div class="dashboard-briefing">
-        <div class="briefing" id="briefing" aria-live="polite">
-        <div class="briefing-row" id="brief-rain">
-          <div class="briefing-k">Yağış saatleri</div>
-          <div class="briefing-v" id="brief-rain-lines">Hesaplanıyor…</div>
-        </div>
-        <div class="briefing-row" id="brief-temperature-trend-row"><div class="briefing-k">5 günlük sıcaklık</div><div class="briefing-v" id="brief-temperature-trend" aria-live="polite">Eyüpsultan ölçümü ve tahmin verisi bekleniyor…</div></div>
-        </div>
-        </div>
         <section class="enka-camera-panel" id="enka-camera-panel" aria-label="ENKA Balmumcu canlı kamera">
           <div class="enka-camera-head">
             <span class="enka-camera-title">ENKA Balmumcu · Canlı Kamera</span>
@@ -2506,10 +2520,14 @@ html.ios12 .footer > *{
     }
     function renderEyupsultanHourlyRain(samples,stationName,holder,meta,currentObservation){
       const now=Date.now(),windowMs=86400000,hourMs=3600000;
-      // Anchor the 24-hour chart window to the current hour boundary.
-      // Its plotted data and visible window therefore advance once per hour.
-      const chartEnd=Math.floor(now/hourMs)*hourMs,start=chartEnd-windowMs;
+      // Use the end of the current hour as the chart boundary. This keeps the
+      // current hour visible as a provisional point while preserving one point
+      // per hourly slot. Once the hour closes, the same point becomes final.
+      const chartEnd=Math.floor(now/hourMs)*hourMs+hourMs,start=chartEnd-windowMs;
       const rows=Array.isArray(samples)?samples.slice():[];
+
+      // The live observation is always a valid fallback and is also used to
+      // populate the current (still-running) hour when the archive is empty.
       if(currentObservation&&numeric(currentObservation.precipitation_1h_mm)){
         rows.push({
           observed_at_utc:currentObservation.observed_at_utc||currentObservation.fetched_at_utc,
@@ -2517,34 +2535,31 @@ html.ios12 .footer > *{
         });
       }
 
-      // Each source value is already a trailing one-hour rainfall accumulation.
-      // Preserve all five-minute measurements in the archive, but plot only the
-      // latest observed value from each completed UTC hour: one point per hour.
+      // MGM's precipitation_1h_mm is a rolling one-hour accumulation.
+      // Keep the latest reading in each hourly slot so the chart advances
+      // once per hour instead of drawing every 5/10-minute poll.
       const rawByTime=new Map();
       rows.forEach(sample=>{
         const time=Date.parse(sample.observed_at_utc||sample.logged_at_utc||"");
         const mm=sample.precipitation_1h_mm==null?NaN:Number(sample.precipitation_1h_mm);
-        if(Number.isFinite(time)&&time>=start-hourMs&&time<chartEnd&&Number.isFinite(mm)&&mm>=0){
+        if(Number.isFinite(time)&&time>=start&&time<chartEnd&&Number.isFinite(mm)&&mm>=0){
           rawByTime.set(time,{time,mm});
         }
       });
+
       const hourlyPoints=new Map();
       [...rawByTime.values()].sort((a,b)=>a.time-b.time).forEach(point=>{
-        if(point.time<start||point.time>=chartEnd)return;
         const slot=Math.floor(point.time/hourMs);
-        const slotEnd=(slot+1)*hourMs;
-        // Only publish a point after its one-hour bucket is complete.
-        if(slotEnd>now)return;
         const previous=hourlyPoints.get(slot);
         if(!previous||point.time>previous.time)hourlyPoints.set(slot,point);
       });
       const points=[...hourlyPoints.values()].sort((a,b)=>a.time-b.time);
 
       if(!points.length){
-        const rainMaxBadge=$("station-rain-max");
+        const rainMaxBadge=$( "station-rain-max" );
         if(rainMaxBadge){rainMaxBadge.hidden=true;rainMaxBadge.textContent="";}
-        holder.innerHTML='<div class="station-trend-empty">Tamamlanmış saatlik MGM yağış ölçümü bekleniyor. Her saat bir yeni nokta eklenecek.</div>';
-        if(meta)meta.textContent=stationName+" · MGM · saatlik arşiv noktası bekleniyor";
+        holder.innerHTML='<div class="station-trend-empty">MGM saatlik yağış arşivi henüz oluşuyor. İlk ölçüm geldiğinde grafik otomatik başlayacak.</div>';
+        if(meta)meta.textContent=stationName+" · MGM · saatlik arşiv oluşturuluyor";
         return;
       }
 
@@ -2565,124 +2580,33 @@ html.ios12 .footer > *{
         else group.push(point);
       });
       const line=groups.map(group=>group.map((point,index)=>(index?"L":"M")+x(point.time).toFixed(1)+" "+y(point.mm).toFixed(1)).join(" ")).join(" ");
-      const dots=points.map(point=>'<circle cx="'+x(point.time).toFixed(1)+'" cy="'+y(point.mm).toFixed(1)+'" r="3" fill="'+(point.mm>0?"#83c9eb":"rgba(131,201,235,.4)")+'"><title>'+esc(timeTR(point.time))+' · '+fmt(point.mm,1)+' mm / 1 saat · saatlik adım</title></circle>').join("");
-      holder.innerHTML='<svg viewBox="0 0 '+width+' '+height+'" role="img" aria-label="'+esc(stationName)+' son 24 saatteki kayan bir saatlik yağış toplamı; tamamlanan her saatten bir ölçüm">'+grid+'<path d="'+line+'" fill="none" stroke="#83c9eb" stroke-width="1.9" stroke-linejoin="round"/>'+dots+labels+'</svg>';
+      const dots=points.map(point=>{
+        const provisional=((Math.floor(point.time/hourMs)+1)*hourMs>now);
+        const marker=point.mm>0?"#83c9eb":"rgba(131,201,235,.4)";
+        const detail=provisional?"Devam eden saat":"Tamamlanan saat";
+        return '<circle cx="'+x(point.time).toFixed(1)+'" cy="'+y(point.mm).toFixed(1)+'" r="3" fill="'+marker+'"><title>'+esc(timeTR(point.time))+' · '+fmt(point.mm,1)+' mm / 1 saat · '+detail+'</title></circle>';
+      }).join("");
+      holder.innerHTML='<svg viewBox="0 0 '+width+' '+height+'" role="img" aria-label="'+esc(stationName)+' son 24 saatteki saatlik kayan yağış toplamı; her saatten bir ölçüm">'+grid+'<path d="'+line+'" fill="none" stroke="#83c9eb" stroke-width="1.9" stroke-linejoin="round"/>'+dots+labels+'</svg>';
 
       const latest=points[points.length-1];
-      const rainMaxBadge=$("station-rain-max");
+      const rainMaxBadge=$( "station-rain-max" );
       if(rainMaxBadge){
         const peak=points.reduce((best,p)=>!best||p.mm>best.mm?p:best,null);
         if(peak){rainMaxBadge.hidden=false;rainMaxBadge.textContent="Saatlik maks "+fmt(peak.mm,1)+" mm · "+timeTR(peak.time);}
         else{rainMaxBadge.hidden=true;rainMaxBadge.textContent="";}
       }
+      const latestIsProvisional=((Math.floor(latest.time/hourMs)+1)*hourMs>now);
       const coverageHours=Math.max(0,(latest.time-points[0].time)/3600000);
       const coverageNote=coverageHours<22.9?" · arşiv "+fmt(coverageHours,1)+" saattir birikiyor":" · 24 saatlik arşiv";
-      if(meta)meta.textContent=stationName+" · MGM · son tamamlanan saat: "+fmt(latest.mm,1)+" mm / 1 saat · 1 saatlik adım"+coverageNote;
-      if(typeof document!=="undefined"){
-        const svg=holder.querySelector("svg");
-        attachStationHistoryTooltip(holder,svg,points.map(point=>({
+      if(meta)meta.textContent=stationName+" · MGM · "+(latestIsProvisional?"devam eden saat":"son tamamlanan saat")+": "+fmt(latest.mm,1)+" mm / 1 saat"+coverageNote;
+      attachStationHistoryTooltip(holder,holder.querySelector("svg"),points.map(point=>{
+        const provisional=((Math.floor(point.time/hourMs)+1)*hourMs>now);
+        return {
           x:x(point.time),y:y(point.mm),time:point.time,
           valueLabel:fmt(point.mm,1)+" mm / 1 saat",
-          detail:"Kayan son 1 saatlik toplam · tamamlanan saat başına tek ölçüm"
-        })),width,height,top,bottom,"#83c9eb");
-      }
-    }
-    function renderEyupsultanRolling30mRain(samples,stationName,holder,meta,currentObservation){
-      const now=Date.now(),hourMs=3600000,chartEnd=Math.floor(now/hourMs)*hourMs,start=chartEnd-86400000,tenMinutes=10*60000,tolerance=150000;
-      const rows=Array.isArray(samples)?samples.slice():[];
-      if(currentObservation&&numeric(currentObservation.precipitation_10m_mm)){
-        rows.push({
-          observed_at_utc:currentObservation.observed_at_utc||currentObservation.fetched_at_utc,
-          precipitation_10m_mm:currentObservation.precipitation_10m_mm
-        });
-      }
-      // MGM's precipitation_10m_mm is a trailing 10-minute amount.
-      // Samples arrive every 5 minutes, so take non-overlapping readings at t, t-10m and t-20m.
-      // This gives a true trailing 30-minute total without double-counting overlapping windows.
-      const byTime=new Map();
-      rows.forEach(sample=>{
-        const time=Date.parse(sample.observed_at_utc||sample.logged_at_utc||"");
-        const mm=sample.precipitation_10m_mm==null?NaN:Number(sample.precipitation_10m_mm);
-        if(Number.isFinite(time)&&time>=start-30*60000&&time<=now+60000&&Number.isFinite(mm)&&mm>=0){
-          byTime.set(time,{time,mm});
-        }
-      });
-      const raw=[...byTime.values()].sort((a,b)=>a.time-b.time);
-      function nearestAt(target){
-        let best=null,distance=Infinity;
-        for(const sample of raw){
-          const delta=Math.abs(sample.time-target);
-          if(delta<distance){best=sample;distance=delta;}
-          if(sample.time>target+tolerance)break;
-        }
-        return distance<=tolerance?best:null;
-      }
-      const points=[];
-      raw.forEach(sample=>{
-        if(sample.time<start||sample.time>now+60000)return;
-        const windows=[0,1,2].map(offset=>nearestAt(sample.time-offset*tenMinutes));
-        if(windows.some(item=>!item))return;
-        const mm=windows.reduce((sum,item)=>sum+item.mm,0);
-        points.push({time:sample.time,mm,count:windows.length});
-      });
-      if(!points.length){
-        const rainMaxBadge=$("station-rain-max");
-        if(rainMaxBadge){rainMaxBadge.hidden=true;rainMaxBadge.textContent="";}
-        holder.innerHTML='<div class="station-trend-empty">Kayan 30 dk yağış grafiği hazırlanıyor. Üç ardışık MGM 10 dk ölçümü tamamlanınca çizgi oluşacak; eski arşivde 10 dk alanı bulunmuyor.</div>';
-        if(meta)meta.textContent=stationName+" · MGM · kayan 30 dk toplam için yeni 10 dk kayıtları bekleniyor";
-        return;
-      }
-
-      // ENKA'nın yağış grafiği 30 dk kayandır; rozet ise tamamlanmış saatlik
-      // MGM birikimleri içindeki maksimum değeri gösterir.
-      const hourlyByTime=new Map();
-      rows.forEach(sample=>{
-        const time=Date.parse(sample.observed_at_utc||sample.logged_at_utc||"");
-        const mm=sample.precipitation_1h_mm==null?NaN:Number(sample.precipitation_1h_mm);
-        if(Number.isFinite(time)&&time>=start-hourMs&&time<Math.floor(now/hourMs)*hourMs&&Number.isFinite(mm)&&mm>=0){
-          hourlyByTime.set(time,{time,mm});
-        }
-      });
-      const hourlyBadgePoints=new Map();
-      [...hourlyByTime.values()].sort((a,b)=>a.time-b.time).forEach(point=>{
-        const slot=Math.floor(point.time/hourMs),slotEnd=(slot+1)*hourMs;
-        if(slotEnd>now)return;
-        const previous=hourlyBadgePoints.get(slot);
-        if(!previous||point.time>previous.time)hourlyBadgePoints.set(slot,point);
-      });
-      const hourlyPeak=[...hourlyBadgePoints.values()].reduce((best,p)=>!best||p.mm>best.mm?p:best,null);
-      const rainMaxBadge=$("station-rain-max");
-      if(rainMaxBadge){
-        if(hourlyPeak){rainMaxBadge.hidden=false;rainMaxBadge.textContent="Saatlik maks "+fmt(hourlyPeak.mm,1)+" mm · "+timeTR(hourlyPeak.time);}
-        else{rainMaxBadge.hidden=true;rainMaxBadge.textContent="";}
-      }
-      const width=560,height=160,left=42,right=12,top=14,bottom=27,pw=width-left-right,ph=height-top-bottom;
-      const max=Math.max(.5,...points.map(point=>point.mm))*1.15;
-      const x=t=>left+(t-start)/86400000*pw,y=v=>top+ph-v/max*ph;
-      const grid=[0,max/2,max].map(v=>'<line x1="'+left+'" y1="'+y(v)+'" x2="'+(width-right)+'" y2="'+y(v)+'" stroke="rgba(190,215,225,.13)" stroke-dasharray="3 4"/><text x="'+(left-7)+'" y="'+(y(v)+3)+'" fill="#9fb5c1" font-size="10" text-anchor="end">'+v.toFixed(v<2?1:0).replace(".",",")+'</text>').join("");
-      const labels=[0,6,12,18,24].map(h=>'<text x="'+(left+pw*h/24)+'" y="'+(height-6)+'" fill="#9fb5c1" font-size="10" text-anchor="middle">'+(h===24?"Şimdi":h+"s")+'</text>').join("");
-      const groups=[];
-      points.forEach(point=>{
-        const group=groups[groups.length-1];
-        if(!group||point.time-group[group.length-1].time>10.5*60000)groups.push([point]);
-        else group.push(point);
-      });
-      const line=groups.map(group=>group.map((point,index)=>(index?"L":"M")+x(point.time).toFixed(1)+" "+y(point.mm).toFixed(1)).join(" ")).join(" ");
-      const dots=points.map(point=>'<circle cx="'+x(point.time).toFixed(1)+'" cy="'+y(point.mm).toFixed(1)+'" r="2.7" fill="'+(point.mm>0?"#83c9eb":"rgba(131,201,235,.4)")+'"><title>'+esc(timeTR(point.time))+' · '+fmt(point.mm,1)+' mm / 30 dk</title></circle>').join("");
-      holder.innerHTML='<svg viewBox="0 0 '+width+' '+height+'" role="img" aria-label="'+esc(stationName)+' son 24 saatteki kayan 30 dakika yağış toplamı · MGM Eyüpsultan kaynağı">'+grid+'<path d="'+line+'" fill="none" stroke="#83c9eb" stroke-width="1.9" stroke-linejoin="round"/>'+dots+labels+'</svg>';
-      const latest=points[points.length-1];
-      const sourceLabel=stationName==="ENKA Balmumcu"?"MGM Eyüpsultan":"MGM 18101";
-      const coverageHours=Math.max(0,(latest.time-points[0].time)/3600000);
-      const coverageNote=coverageHours<23.9?" · 30 dk arşivi "+fmt(coverageHours,1)+" saattir birikiyor":" · 24 saatlik 30 dk arşivi";
-      if(meta)meta.textContent=stationName+" · "+sourceLabel+" · son ölçüm: "+fmt(latest.mm,1)+" mm / 30 dk · üç çakışmayan 10 dk ölçüm"+coverageNote;
-      if(typeof document!=="undefined"){
-        const svg=holder.querySelector("svg");
-        attachStationHistoryTooltip(holder,svg,points.map(point=>({
-          x:x(point.time),y:y(point.mm),time:point.time,
-          valueLabel:fmt(point.mm,1)+" mm / 30 dk",
-          detail:"Kayan son 30 dakika · üç adet çakışmayan MGM 10 dk yağış ölçümü"
-        })),width,height,top,bottom,"#83c9eb");
-      }
+          detail:(provisional?"Devam eden saat · ":"Tamamlanan saat · ")+timeTR(point.time)
+        };
+      }),width,height,top,bottom,"#83c9eb");
     }
     function renderStationRainTrend(samples,stationName){
       const holder=$("station-rain-trend"),meta=$("station-rain-meta");if(!holder)return;
