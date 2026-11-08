@@ -176,7 +176,26 @@
         throw new Error("MeteoPT GFS verisi henüz yayınlanmadı.");
       }
 
-      render(document);
+      // Publish the exact normalized points used by the visible 72-hour table.
+      // The homepage rain badges listen to this event and therefore cannot drift
+      // to a different GFS payload or cycle.
+      const points = Array.isArray(document.forecast_6_hourly)
+        ? document.forecast_6_hourly.map(point => ({
+            modelLead: Number(point.forecast_hour),
+            stamp: Date.parse(point.valid_time_utc),
+            precipitation_6h_mm: number(point.precipitation_6h_mm)
+          })).filter(point =>
+            Number.isFinite(point.modelLead) &&
+            Number.isFinite(point.stamp) &&
+            point.modelLead > 0 &&
+            point.modelLead <= 72 &&
+            point.modelLead % 3 === 0
+          )
+        : [];
+      window.__METEOPT_F72_DOCUMENT = document;
+      window.dispatchEvent(new CustomEvent("meteopt-gfs-f72-updated", {
+        detail: { document, points }
+      }));
     } catch (error) {
       if (status) status.textContent = "MeteoPT tablosu yüklenemedi: " + error.message;
 
