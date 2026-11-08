@@ -287,34 +287,34 @@ function forceDarkGfsSvg(svg){
     card.style.setProperty("border-color","#17384A","important");
   }
 }
-function extractLatestGfsCycleHour(metadata){
-  const panels=Array.isArray(metadata?.panels)?metadata.panels:[];
-  const series=panels.flatMap(panel=>Array.isArray(panel?.series)?panel.series:[]);
-  const preferred=series.find(item=>/YENİ/i.test(String(item?.label||"")));
-  const candidates=[preferred,...series].filter(Boolean);
-  for(const item of candidates){
-    const label=String(item?.label||"");
-    const match=label.match(/(?:^|\b)(00|06|12|18)Z(?:\b|$)/i);
-    if(match)return match[1]+"Z";
-  }
-  return "";
-}
-function addMobileGfsCycleLabel(panelSvg,panel,metadata){
-  const cycle=extractLatestGfsCycleHour(metadata);
-  if(!cycle||!panelSvg||!panel)return;
+function addMobileGfsCycleLabels(panelSvg,panel,metadata){
+  if(!panelSvg||!panel||!metadata)return;
   const title=String(panel.title||"").trim();
   if(!title)return;
   const titleNode=Array.from(panelSvg.querySelectorAll("text")).find(node=>String(node.textContent||"").trim()===title);
   if(!titleNode)return;
+  const series=Array.isArray(panel.series)?panel.series:[];
   const ns="http://www.w3.org/2000/svg";
-  const label=document.createElementNS(ns,"tspan");
-  label.setAttribute("class","gfs-mobile-cycle-label");
-  label.setAttribute("dx","12");
-  label.setAttribute("fill","#d9a7f5");
-  label.setAttribute("font-size","0.78em");
-  label.setAttribute("font-weight","700");
-  label.textContent=cycle;
-  titleNode.appendChild(label);
+  const colors=series.map(item=>String(item?.color||"")).filter(Boolean);
+  const seen=new Set();
+  let dx=12;
+  series.slice().reverse().forEach(item=>{
+    const label=String(item?.label||"");
+    const match=label.match(/(?:^|\\b)(00|06|12|18)Z(?:\\b|$)/i);
+    if(!match)return;
+    const cycle=match[1].toUpperCase()+"Z";
+    if(seen.has(cycle))return;
+    seen.add(cycle);
+    const tspan=document.createElementNS(ns,"tspan");
+    tspan.setAttribute("class","gfs-mobile-cycle-label");
+    tspan.setAttribute("dx",String(dx));
+    tspan.setAttribute("fill",String(item?.color||"#d9a7f5"));
+    tspan.setAttribute("font-size","0.72em");
+    tspan.setAttribute("font-weight","700");
+    tspan.textContent=cycle;
+    titleNode.appendChild(tspan);
+    dx=8;
+  });
 }
 function buildMobileGfsPanelViews(sourceSvg,metadata){
   const fallbackPanels=[
@@ -344,7 +344,7 @@ function buildMobileGfsPanelViews(sourceSvg,metadata){
     clone.setAttribute("preserveAspectRatio","none");
     clone.setAttribute("role","group");
     clone.setAttribute("aria-label",panel.title+" · mobil görünüm");
-    addMobileGfsCycleLabel(clone,panel,metadata);
+    addMobileGfsCycleLabels(clone,panel,metadata);
     clone.querySelectorAll(".gfs-panel-interaction").forEach(group=>{
       if(group.getAttribute("data-panel-id")!==panel.id)group.remove();
     });
