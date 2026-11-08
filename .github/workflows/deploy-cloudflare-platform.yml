@@ -114,7 +114,6 @@ jobs:
           touch web-worker/public/.nojekyll
           test -s web-worker/public/index.html
           test -s web-worker/public/koy.html
-          test -s web-worker/public/gfs-cycle-compare.html
           echo "Static asset count: $(find web-worker/public -type f | wc -l)"
 
       - name: Ensure R2 archive bucket and upload legacy archives (optional)
@@ -202,7 +201,7 @@ jobs:
           console.log(JSON.stringify(doc));
           NODE
 
-          for path in / /koy.html /gfs-cycle-compare.html /gfs-api-config.js /data/ecmwf/latest.json; do
+          for path in / /koy.html /gfs-api-config.js /data/ecmwf/latest.json; do
             curl --silent --show-error --fail --max-time 20 "$WEB$path" -o /dev/null
             echo "OK $path"
           done
