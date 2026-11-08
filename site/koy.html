@@ -1619,9 +1619,9 @@
         <div class="meteopt-table-scroll" aria-label="GFS tahmin tablosu">
           <table class="meteopt-data-table koy-snowln-table">
             <thead><tr>
-              <th>Steps</th><th>Date/Hour (TSİ)</th><th>T.2m</th><th>Prec.</th><th>W.10m</th><th>W.850</th><th>T.850</th><th>Snowln (m)</th>
+              <th>Steps</th><th>Date/Hour (TSİ)</th><th>T.2m</th><th>Prec.</th><th>W.10m</th><th>W.850</th><th>T.850</th><th>Dew Point (°C)</th><th>Snowln (m)</th>
             </tr></thead>
-            <tbody id="meteopt-table-body"><tr><td colspan="8" class="meteopt-table-empty">MeteoPT verisi yükleniyor…</td></tr></tbody>
+            <tbody id="meteopt-table-body"><tr><td colspan="9" class="meteopt-table-empty">MeteoPT verisi yükleniyor…</td></tr></tbody>
           </table>
         </div>
 
@@ -1657,12 +1657,12 @@
     #meteopt-gfs-table .meteopt-data-table.koy-snowln-table th:nth-child(2),
     #meteopt-gfs-table .meteopt-data-table.koy-snowln-table td:nth-child(2) { width:25%!important; }
     #meteopt-gfs-table .meteopt-data-table.koy-snowln-table th:nth-child(n+3),
-    #meteopt-gfs-table .meteopt-data-table.koy-snowln-table td:nth-child(n+3) { width:11.3333%!important; }
+    #meteopt-gfs-table .meteopt-data-table.koy-snowln-table td:nth-child(n+3) { width:9.7143%!important; }
   </style>
   <div id="pull-refresh-indicator" role="status" aria-live="polite"><span class="pull-refresh-icon">↓</span><span class="pull-refresh-label">Yenilemek için aşağı çek</span></div>
     <script src="./gfs-comparison-tooltip.js?v=20261108-180h-layout-clipping-1"></script>
     <script src="./gfs-cycle-theme.js?v=20261106-shared-cycle-theme-1" defer></script>
-    <script src="./koy.js?v=20261108-mgm-rain-snow-icon-1" defer></script>
+    <script src="./koy.js?v=20261108-gfs-dewpoint-1" defer></script>
 
 </body>
 </html>
