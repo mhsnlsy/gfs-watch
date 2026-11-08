@@ -3368,13 +3368,10 @@ if(typeof renderBriefing==="function")renderBriefing();
         showRadarFrame();
         if(rainviewerTimer)clearInterval(rainviewerTimer);
         rainviewerTimer=setInterval(showRadarFrame,900);
-        const gfs=$("next72-precipitation"),target=$("radar-gfs-precipitation");
-        if(gfs&&gfs.innerHTML&&!gfs.querySelector(".chart-empty")?.textContent.includes("yükleniyor")){
-          target.innerHTML=gfs.innerHTML;
-          $("radar-gfs-forecast-time").textContent="GFS · "+(forecastData&&forecastData.run_id_utc?runStamp(forecastData.run_id_utc)+"Z döngüsü":"son yayımlanan döngü");
-        }else{
-          target.innerHTML='<div class="chart-empty">GFS yağış tahmini henüz hazır değil.</div>';
-          $("radar-gfs-forecast-time").textContent="Model verisi bekleniyor";
+        const target=$("radar-gfs-precipitation");
+        if(target){
+          target.innerHTML='<div class="chart-empty">GFS yağış tahmini grafiği bu projeden kaldırıldı.</div>';
+          $("radar-gfs-forecast-time").textContent="Model grafiği devre dışı";
         }
         status.textContent="RainViewer güncellendi · "+new Intl.DateTimeFormat("tr-TR",{timeZone:"Europe/Istanbul",hour:"2-digit",minute:"2-digit"}).format(new Date())+" TSİ";
         setTimeout(()=>rainviewerMap&&rainviewerMap.invalidateSize(),100);
