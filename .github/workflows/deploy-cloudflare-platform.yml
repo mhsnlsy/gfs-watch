@@ -468,7 +468,7 @@ jobs:
       - name: Open production homepage and capture desktop/mobile screenshots
         env:
           PLAYWRIGHT_PACKAGE: ${{ runner.temp }}/live-visual/node_modules/playwright
-          PUBLIC_SITE: https://www.istanbulunhavasi.com
+          PUBLIC_SITE: https://istanbulunhavasi.com
         run: |
           set -euo pipefail
           mkdir -p "$RUNNER_TEMP/live-site-evidence"
@@ -548,6 +548,17 @@ jobs:
                   const status = document.querySelector("#meteopt-table-status")?.textContent || "";
                   return /^\s*24\s*\/\s*24/.test(status);
                 }, { timeout: 60000 });
+                await page.waitForFunction(() => {
+                  const title = document.querySelector("#station-card-title")?.textContent || "";
+                  const temperature = document.querySelector("#temperature")?.textContent || "";
+                  const freshness = document.querySelector("#freshness")?.textContent || "";
+                  const button = document.querySelector("#station-eyupsultan-button");
+                  return title.includes("Eyüpsultan") &&
+                    temperature.trim() !== "—°" &&
+                    freshness.trim() === "CANLI ÖLÇÜM" &&
+                    button?.getAttribute("aria-pressed") === "true" &&
+                    button.classList.contains("active");
+                }, { timeout: 45000 });
 
                 const table = page.locator("#meteopt-gfs-table");
                 await table.scrollIntoViewIfNeeded();
@@ -569,6 +580,11 @@ jobs:
                   rows: document.querySelectorAll("#meteopt-table-body tr").length,
                   first_row: document.querySelector("#meteopt-table-body tr")?.innerText || "",
                   last_row: document.querySelector("#meteopt-table-body tr:last-child")?.innerText || "",
+                  station_title: document.querySelector("#station-card-title")?.textContent || "",
+                  station_temperature: document.querySelector("#temperature")?.textContent || "",
+                  station_freshness: document.querySelector("#freshness")?.textContent || "",
+                  eyupsultan_button_active: document.querySelector("#station-eyupsultan-button")?.classList.contains("active") === true &&
+                    document.querySelector("#station-eyupsultan-button")?.getAttribute("aria-pressed") === "true",
                   viewport_width: window.innerWidth,
                   document_width: document.documentElement.scrollWidth,
                   horizontal_overflow_px: Math.max(0, document.documentElement.scrollWidth - window.innerWidth)
@@ -580,6 +596,17 @@ jobs:
               if (diagnostics.viewports.desktop.rows !== 24 || diagnostics.viewports.mobile.rows !== 24) {
                 throw new Error("The production table did not render 24 rows on desktop and mobile: " +
                   JSON.stringify(diagnostics.viewports));
+              }
+              for (const view of ["desktop", "mobile"]) {
+                const station = diagnostics.viewports[view];
+                if (!station.station_title.includes("Eyüpsultan") ||
+                    !station.station_temperature.trim() ||
+                    station.station_temperature.trim() === "—°" ||
+                    station.station_freshness !== "CANLI ÖLÇÜM" ||
+                    station.eyupsultan_button_active !== true) {
+                  throw new Error("The live Eyüpsultan station card is not rendered correctly on " + view + ": " +
+                    JSON.stringify(station));
+                }
               }
               const runDate = diagnostics.f72?.run_id_utc ? new Date(diagnostics.f72.run_id_utc) : null;
               const expectedRunLabel = runDate && Number.isFinite(runDate.getTime())
