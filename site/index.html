@@ -1860,6 +1860,12 @@ html[data-default-station="eyupsultan"] #station-eyupsultan-button{
       return bias>0?"model "+fmt(mag,2)+" mm fazla yağış vermiş":"model "+fmt(mag,2)+" mm az yağış vermiş";
     }
     let latestRainForecastPoints=[];
+    // The station rain badges consume the same F72 payload as the visible MeteoPT table.
+    // This keeps the badge and table on one source/cycle instead of maintaining two forecast paths.
+    window.addEventListener("meteopt-gfs-f72-updated",event=>{
+      const points=event&&event.detail&&Array.isArray(event.detail.points)?event.detail.points:[];
+      if(points.length) renderRainWindow(points);
+    });
     function renderRainWindow(parsed){
       latestRainForecastPoints=Array.isArray(parsed)?parsed:[];
       const current=$("rain-brief-current"),forecast=$("rain-brief-forecast"),heavy=$("rain-brief-heavy");
@@ -3701,7 +3707,7 @@ if(typeof renderBriefing==="function")renderBriefing();
     })();
   </script>
 
-  <script src="./meteopt-gfs-table.js?v=20261108-rh2m-dewpoint-snowln-1" defer></script>
+  <script src="./meteopt-gfs-table.js?v=20261108-badge-sync-1" defer></script>
 
     <style id="koy-gfs-report-rules-home">
       /* Exact layout rules from the working Köy GFS report. */
