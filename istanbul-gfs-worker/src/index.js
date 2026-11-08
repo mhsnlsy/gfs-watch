@@ -917,11 +917,48 @@ async function latestF72Payload(env, bootstrap = true) {
       await collect(env, "live-f72-read-refresh");
       current = await getCurrent(env, "f72");
     } catch (error) {
-      if (!current) throw error;
-      console.error(JSON.stringify({
-        event: "istanbul_live_f72_refresh_error",
-        message: String(error?.message || error),
-      }));
+      if (!current) {
+        console.error(JSON.stringify({
+          event: "istanbul_live_f72_refresh_error",
+          message: String(error?.message || error),
+        }));
+      } else {
+        console.error(JSON.stringify({
+          event: "istanbul_live_f72_refresh_error",
+          message: String(error?.message || error),
+        }));
+      }
+    }
+  }
+
+  // F72 is a presentation milestone, not a separate source of truth. If the
+  // dedicated F72 D1 row is temporarily absent, fall back to the canonical
+  // latest GFS payload and expose only its first 72 forecast hours. This keeps
+  // the public MeteoPT table alive during a transient F72 refresh/queue race.
+  if (!current) {
+    const latest = await getCurrent(env, "latest");
+    if (latest?.payload) {
+      const sourcePoints = Array.isArray(latest.payload.forecast_6_hourly)
+        ? latest.payload.forecast_6_hourly
+        : [];
+      const points = sourcePoints.filter(point => {
+        const hour = Number(point?.forecast_hour);
+        return Number.isFinite(hour) && hour > 0 && hour <= 72 && hour % 3 === 0;
+      });
+      if (points.length >= 24) {
+        current = {
+          run_id_utc: latest.run_id_utc,
+          updated_at_utc: latest.updated_at_utc,
+          payload: {
+            ...latest.payload,
+            milestone: "F72-fallback",
+            f72: { ...(latest.payload.f72 || {}), available: true, forecast_hour: 72, source: "MeteoPT" },
+            forecast_horizon_hours: 72,
+            forecast_6_hourly: points,
+            forecast_valid_until_utc: points[points.length - 1]?.valid_time_utc || latest.payload.forecast_valid_until_utc,
+          },
+        };
+      }
     }
   }
 
