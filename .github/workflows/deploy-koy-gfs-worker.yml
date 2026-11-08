@@ -183,6 +183,9 @@ jobs:
             point.snowln !== null && point.snowln !== undefined &&
             Number.isFinite(Number(point.snowln))
           );
+          if (!numericSnowlnPoints.length) {
+            throw new Error("MeteoPT snowln field exists but contains no numeric values; refusing to publish an empty column");
+          }
           console.log(JSON.stringify({
             run_id_utc: doc.run_id_utc,
             forecast_source: doc.forecast_source,
