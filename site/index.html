@@ -1870,17 +1870,16 @@ html[data-default-station="eyupsultan"] #station-eyupsultan-button{
       latestRainForecastPoints=Array.isArray(parsed)?parsed:[];
       const current=$("rain-brief-current"),forecast=$("rain-brief-forecast"),heavy=$("rain-brief-heavy");
       if(!current||!forecast)return;
-      const station=typeof eyupsultanStationObservation!=="undefined"?eyupsultanStationObservation:null;
-      const measured=station&&typeof station.precipitation_1h_mm==="number"?station.precipitation_1h_mm:null;
-      // GFS yağış özetleri de aynı MeteoPT/TSİ konvansiyonunu kullanır:
-      // 12Z + 3 saat = 15 TSİ. UTC saatine +3 eklenmez.
+      // Both badges are intentionally driven by the exact MeteoPT F72 payload
+      // used by the visible "GFS · Önümüzdeki 72 saat" table.
       const dateTime=ms=>forecastDateTimeTSI(ms);
-      if(measured===null){
-        current.textContent="MGM Eyüpsultan anlık yağış ölçümü alınamıyor.";
-      }else{
-        current.textContent=measured>=0.1?"Yağmurlu":"Yağış yok";
-      }
       const points=latestRainForecastPoints.filter(p=>p.modelLead>0&&numeric(p.precipitation_6h_mm)&&Number.isFinite(p.stamp)).sort((a,b)=>a.stamp-b.stamp);
+      if(points.length){
+        const first=points[0];
+        current.textContent="MeteoPT GFS · ilk tahmin: "+fmt(first.precipitation_6h_mm,1)+" mm / 6 saat";
+      }else{
+        current.textContent="MeteoPT GFS yağış verisi bekleniyor.";
+      }
       if(points.length<2){
         forecast.textContent="MeteoPT GFS verisi yeterli değil; yağış zamanı hesaplanamıyor.";
         if(heavy)heavy.textContent="";
