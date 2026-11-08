@@ -1,11 +1,10 @@
 (() => {
-  "use strict";  // Live recovery: prefer F72, fall back to canonical latest when F72 is unavailable.
+  "use strict";
   const ROOT = "meteopt-gfs-table";
-  // The MeteoPT 72-hour table must follow the newest F72-ready cycle,
-  // independently from the slower F180 report/archive publication.
+  // The homepage MeteoPT table uses the canonical F180-ready payload.
+  // This is the same MeteoPT GFS run, not a second forecast source.
   const API_BASE = () => String(window.ISTANBUL_GFS_API_BASE || window.location.origin || "").replace(/\/+$/, "");
-  const DATA_URL = () => API_BASE() + "/gfs/f72";
-  const FALLBACK_DATA_URL = () => API_BASE() + "/gfs/latest";
+  const DATA_URL = () => API_BASE() + "/gfs/latest";
   const $ = (id) => document.getElementById(id);
   const finite = (value) => value !== null && value !== undefined && value !== "" && Number.isFinite(Number(value));
   const number = (value) => finite(value) ? Number(value) : null;
@@ -80,20 +79,20 @@
       ? document.forecast_6_hourly
       : [];
 
-    // The homepage MeteoPT table shows every 3-hourly forecast step through 72h.
-    const pointsThrough72h = points.filter(point => {
+    // Show all 3-hourly forecast steps from the F180-ready MeteoPT payload.
+    const pointsThrough180h = points.filter(point => {
       const step = Number(point.forecast_hour);
-      return Number.isFinite(step) && step > 0 && step <= 72 && step % 3 === 0;
+      return Number.isFinite(step) && step > 0 && step <= 180 && step % 3 === 0;
     });
 
     const pointByHour = new Map(points.map(point => [Number(point.forecast_hour), point]));
     const rows = [];
-    const hours = pointsThrough72h
+    const hours = pointsThrough180h
       .map(point => ({ step: Number(point.forecast_hour), point }))
       .sort((a, b) => a.step - b.step);
 
     for (const item of hours) {
-      if (!Number.isFinite(item.step) || item.step <= 0 || item.step > 72) continue;
+      if (!Number.isFinite(item.step) || item.step <= 0 || item.step > 180) continue;
 
       const point = item.point || pointByHour.get(item.step) || null;
       const wind10 = point ? number(point.wind_speed_10m_kmh) : null;
@@ -152,27 +151,17 @@
         }).format(new Date(document.published_at_utc)) + " TSİ"
       : "Yayın zamanı bilinmiyor";
 
-    $("meteopt-table-status").textContent = rows.length + " / 24 adım · 3 saatlik · 72. saate kadar";
+    $("meteopt-table-status").textContent = rows.length + " / 60 adım · 3 saatlik · 180. saate kadar";
   }
 
   async function refresh() {
     const status = $("meteopt-table-status");
 
     try {
-      let response = await fetch(DATA_URL() + "?meteopt-table=" + Date.now(), {
+      const response = await fetch(DATA_URL() + "?meteopt-table-f180=" + Date.now(), {
         cache: "no-store"
       });
-
-      // Keep the public table alive if the dedicated F72 D1 row is temporarily
-      // unavailable. The canonical /gfs/latest payload contains the same
-      // MeteoPT run and a full forecast; we expose only the first 72h below.
-      if (!response.ok) {
-        const f72Status = response.status;
-        response = await fetch(FALLBACK_DATA_URL() + "?meteopt-table-fallback=" + Date.now(), {
-          cache: "no-store"
-        });
-        if (!response.ok) throw new Error("F72 HTTP " + f72Status + " / latest HTTP " + response.status);
-      }
+      if (!response.ok) throw new Error("F180 HTTP " + response.status);
 
       const document = await response.json();
 
@@ -189,14 +178,9 @@
       // the visible table status never advances beyond its initial state.
       render(document);
 
-      // /gfs/latest is the canonical F180 payload. Normalize it into the
-      // same F72 presentation contract so the rest of this renderer stays
-      // identical and the visible table never mixes sources.
-
-      // Publish the exact normalized points used by the visible 72-hour table.
-      // The homepage rain badges listen to this event and therefore cannot drift
-      // to a different GFS payload or cycle.
-      const points = Array.isArray(document.forecast_6_hourly)
+      // Publish only the first 72h to the existing rain-badge event so its
+      // current consumers keep their original near-term contract.
+      const points72 = Array.isArray(document.forecast_6_hourly)
         ? document.forecast_6_hourly.map(point => ({
             modelLead: Number(point.forecast_hour),
             stamp: Date.parse(point.valid_time_utc),
@@ -209,9 +193,10 @@
             point.modelLead % 3 === 0
           )
         : [];
+      window.__METEOPT_F180_DOCUMENT = document;
       window.__METEOPT_F72_DOCUMENT = document;
       window.dispatchEvent(new CustomEvent("meteopt-gfs-f72-updated", {
-        detail: { document, points }
+        detail: { document, points: points72 }
       }));
     } catch (error) {
       if (status) status.textContent = "MeteoPT tablosu yüklenemedi: " + error.message;
