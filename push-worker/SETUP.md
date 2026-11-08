@@ -49,7 +49,7 @@ Başarılı çalıştırmanın loglarında Worker URL'si görünür. Şu biçimd
 
 Bu URL'yi Repository variables bölümüne `PUSH_API_URL` adıyla ekle.
 
-Ardından Actions → **Deploy İstanbul'un Havası** → Run workflow ile Pages'i yeniden dağıt. Böylece site, Push API adresini öğrenir.
+Ardından Actions → **Deploy İstanbul Havası** → Run workflow ile Pages'i yeniden dağıt. Böylece site, Push API adresini öğrenir.
 
 ## 5. iPhone
 
