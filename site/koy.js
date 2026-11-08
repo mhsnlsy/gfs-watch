@@ -477,7 +477,7 @@ function renderMgmObservation(o,history,f72){
  const temps=samples.map(x=>num(x.temperature_2m_c)).filter(v=>v!=null);
  if(temps.length){const min=Math.min(...temps),max=Math.max(...temps),d=t!=null?t-temps[0]:null;const diff=t!=null?t-min:null;$("station-24h-diff").textContent="Son 24 saatte "+(diff>=0?fmt(diff)+"° daha sıcak":fmt(Math.abs(diff))+"° daha soğuk");}
  if(precipitationPhase==="snow")$("rain-brief-current").textContent="Kar yağışı tespit edildi · Çanakçı MGM ("+fmt(mgmRain)+" mm/son 1 saat).";
- else if(precipitationPhase==="rain")$("rain-brief-current").textContent="Yağmur tespit edildi · Çanakçı MGM ("+fmt(mgmRain)+" mm/son 1 saat).";
+ else if(precipitationPhase==="rain")$("rain-brief-current").textContent="Yağışlı.";
  else $("rain-brief-current").textContent="Çanakçı MGM ölçümünde son 1 saatte yağış yok.";
  const pts=pointsOf(f72||{},72),future=pts.filter(p=>num(p.precipitation_6h_mm)>0.1);
  if(future.length){
