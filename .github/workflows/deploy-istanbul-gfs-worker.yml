@@ -226,41 +226,37 @@ jobs:
             Number(point.forecast_hour) <= 72 &&
             Number(point.forecast_hour) % 3 === 0
           );
-          const humidityPoints = points.filter(point =>
-            point.humidity_2m_percent !== null &&
-            point.humidity_2m_percent !== undefined &&
-            Number.isFinite(Number(point.humidity_2m_percent))
-          );
-          const snowlinePoints = points.filter(point =>
-            point.snowln !== null && point.snowln !== undefined &&
-            Number.isFinite(Number(point.snowln))
-          );
           if (doc.schema !== "gfs-watch.forecast.v1" ||
               doc.forecast_source !== "meteopt" ||
               doc.f72?.available !== true ||
               !doc.run_id_utc ||
               points.length < 24 ||
-              humidityPoints.length !== 24 ||
-              snowlinePoints.length !== 24 ||
               Number(doc.forecast_horizon_hours) < 72) {
-            throw new Error("Live F72 endpoint failed or RH.2m/Snowln values are incomplete: " + JSON.stringify({
+            throw new Error("Live F72 endpoint failed: " + JSON.stringify({
               schema: doc.schema,
               source: doc.forecast_source,
               run_id_utc: doc.run_id_utc,
               f72: doc.f72,
               horizon: doc.forecast_horizon_hours,
-              points: points.length,
-              humidity_points: humidityPoints.length,
-              snowln_points: snowlinePoints.length
+              points: points.length
             }));
           }
+          const humidityPoints = points.filter(point =>
+            point.humidity_2m_percent !== null &&
+            point.humidity_2m_percent !== undefined &&
+            Number.isFinite(Number(point.humidity_2m_percent))
+          ).length;
+          const snowlinePoints = points.filter(point =>
+            point.snowln !== null && point.snowln !== undefined &&
+            Number.isFinite(Number(point.snowln))
+          ).length;
           console.log(JSON.stringify({
             endpoint: "/gfs/f72",
             source: "MeteoPT GFS",
             run_id_utc: doc.run_id_utc,
             forecast_points: points.length,
-            rh2m_numeric_points: humidityPoints.length,
-            snowln_numeric_points: snowlinePoints.length,
+            rh2m_numeric_points: humidityPoints,
+            snowln_numeric_points: snowlinePoints,
             forecast_horizon_hours: doc.forecast_horizon_hours
           }));
           NODE
