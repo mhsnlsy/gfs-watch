@@ -1301,7 +1301,7 @@ html[data-default-station="eyupsultan"] #station-sisli-button{
     <nav aria-label="Ana gezinme"><a href="./index.html" aria-current="page">Anasayfa</a><a href="#bildirimler">Raporlar</a><a href="#basinc">Basınç analizi</a><a href="./koy.html">Köy</a></nav>
     <div class="top-right"><div class="model-picker" role="group" aria-label="Tahmin modeli"><button type="button" id="model-gfs-button" class="active" aria-pressed="true">GFS</button><button type="button" id="model-ecmwf-button" aria-pressed="false">ECMWF IFS</button></div><span class="version"><span data-app-name>İstanbul Havası</span> <span data-app-version>4.0</span></span></div>
   </header>
-  <main class="shell" data-ui-build="responsive-2026-11-08-station-api-direct-v1">
+  <main class="shell" data-ui-build="responsive-2026-11-08-station-same-origin-v1">
     <section class="dashboard-top" aria-label="İstanbul anlık gözlem, geçmiş ve 72 saatlik tahmin">
       <div class="dashboard-left">
       <article class="weather-card station-card" id="balmumcu" role="region" aria-labelledby="station-card-title">
@@ -1480,7 +1480,7 @@ html[data-default-station="eyupsultan"] #station-sisli-button{
       document.querySelectorAll("[data-app-version]").forEach(node=>{node.textContent=doc.version;});
     }
     fetch("./version.json",{cache:"no-store"}).then(response=>response.ok?response.json():null).then(applyAppVersion).catch(()=>{});
-    const STATIONS_API="https://gfs-watch-stations.muhsin-ulusoy.workers.dev/api";
+    const STATIONS_API=(window.GFS_WATCH_API_BASE||window.location.origin)+"/api";
     const STATIONS_URL=STATIONS_API+"/stations";
     const STATION_HISTORY_API=key=>STATIONS_API+"/history/"+encodeURIComponent(key)+"?hours=72";
     // No forecast-verification.json is published yet; avoid repeated 404s until the calibration archive is generated.
@@ -3111,6 +3111,7 @@ html[data-default-station="eyupsultan"] #station-sisli-button{
         if(!response.ok)throw new Error("Worker stations HTTP "+response.status);
         const document=await response.json();
         const rows=Array.isArray(document?.stations)?document.stations:[];
+        if(document?.ok!==true||rows.length<3)throw new Error("Station gateway returned an incomplete station list");
         for(const row of rows){
           const station=workerStationToPageStation(row);
           if(!station)continue;
@@ -3123,6 +3124,13 @@ html[data-default-station="eyupsultan"] #station-sisli-button{
 if(typeof renderBriefing==="function")renderBriefing();
       }catch(error){
         console.warn("Worker istasyon verisi alınamadı:",error);
+        if(!enkaStationObservation&&!eyupsultanStationObservation&&!sisliStationObservation){
+          $("freshness").textContent="İSTASYON BAĞLANTISI YOK";
+          $("freshness").classList.add("stale");
+          $("station-observation-meta").textContent="İstasyon servisine bağlanılamadı; otomatik yeniden denenecek.";
+          $("station-alert").hidden=false;
+          $("station-alert").textContent="⚠ Canlı istasyon API bağlantısı kurulamadı. GFS tahminleri bundan bağımsız çalışır.";
+        }
       }
     }
     async function refreshSelectedStation(){
@@ -3135,10 +3143,12 @@ if(typeof renderBriefing==="function")renderBriefing();
           ...historyKeys.map(key=>fetch(STATION_HISTORY_API(key)+"&t="+cacheKey,{cache:"no-store"}))
         ]);
 
+        if(!currentResponse.ok)throw new Error("Selected station API HTTP "+currentResponse.status);
+        const currentDocument=await currentResponse.json();
+        if(currentDocument?.ok!==true||!currentDocument?.station)throw new Error("Selected station API returned no station payload");
         let currentLoaded=false;
-        if(currentResponse.ok){
-          const document=await currentResponse.json();
-          const candidate=workerStationToPageStation(document?.station);
+        {
+          const candidate=workerStationToPageStation(currentDocument.station);
           if(candidate){
             const candidateAge=Date.parse(candidate.observed_at_utc||"");
             const candidateFresh=Number.isFinite(candidateAge)&&((Date.now()-candidateAge)/60000)<20&&!candidate.is_stale;
@@ -3175,7 +3185,13 @@ if(typeof renderBriefing==="function")renderBriefing();
         if(typeof forecastData!=="undefined"&&forecastData&&typeof renderNext72Hours==="function")renderNext72Hours();
       }catch(error){
         console.warn("Cloudflare istasyon API verisi alınamadı:",error);
-}
+        if(activeStation===stationKey&&!stationObservationIsFresh(stationKey==="enka"?enkaStationObservation:stationKey==="eyupsultan"?eyupsultanStationObservation:sisliStationObservation)){
+          $("freshness").textContent="İSTASYON BAĞLANTISI YOK";
+          $("freshness").classList.add("stale");
+          $("station-alert").hidden=false;
+          $("station-alert").textContent="⚠ "+(stationKey==="eyupsultan"?"Eyüpsultan":stationKey==="sisli"?"Şişli":"ENKA Balmumcu")+" ölçümü alınamadı; tekrar denenecek.";
+        }
+      }
     }
     async function loadForecast(){
       try{
@@ -3457,21 +3473,21 @@ if(typeof renderBriefing==="function")renderBriefing();
       }finally{rainviewerLoading=false;}
     }
     async function startPage(){
-      await registerAppWorker();
-      await loadPushConfig();
-      await refreshPushStatus();
-      await Promise.allSettled([
+      // Start weather data lanes immediately and independently. PWA/push setup
+      // must never delay or block live station observations.
+      void Promise.allSettled([
         loadForecast(),
         loadNotifications(),
         refreshStationObservations(),
         refreshSelectedStation(),
         loadVerification()
       ]);
-      // Forecast, station observations, and station history are independent.
-      // A failure in one chain must not prevent the others from refreshing.
+      void registerAppWorker()
+        .then(()=>loadPushConfig())
+        .then(()=>refreshPushStatus())
+        .catch(error=>console.warn("PWA/bildirim kurulumu istasyon verisini engellemedi:",error));
       window.setInterval(()=>{loadForecast();loadNotifications();loadVerification();loadRadarGfsComparison();refreshSelectedStation();},300000);
       window.setInterval(refreshStationObservations,60000);
-      // Keep the live dashboard and rolling 72h history synchronized with Worker/D1.
       window.setInterval(refreshSelectedStation,60000);
     }
 
