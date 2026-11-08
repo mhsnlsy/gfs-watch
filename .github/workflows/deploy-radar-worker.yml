@@ -1,4 +1,4 @@
-name: Deploy Radar Worker
+name: Deploy Cloudflare Radar Monitor
 
 on:
   push:
@@ -8,32 +8,175 @@ on:
       - ".github/workflows/deploy-radar-worker.yml"
   workflow_dispatch:
 
+permissions:
+  contents: write
+
+concurrency:
+  group: cloudflare-radar-monitor-deploy-v1
+  cancel-in-progress: true
+
 jobs:
   deploy:
+    name: Deploy Radar Worker + D1 and verify autonomous Cron
     runs-on: ubuntu-latest
-    defaults:
-      run:
-        working-directory: radar-worker
-    steps:
-      - name: Checkout
-        uses: actions/checkout@v4
+    timeout-minutes: 20
 
-      - name: Setup Node
-        uses: actions/setup-node@v4
+    steps:
+      - name: Check out repository
+        uses: actions/checkout@v5
         with:
-          node-version: 22
+          ref: main
+          fetch-depth: 0
+
+      - name: Set up Node.js
+        uses: actions/setup-node@v5
+        with:
+          node-version: "22"
+
+      - name: Verify Cloudflare and Telegram credentials
+        env:
+          CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+          CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
+          TELEGRAM_TOKEN: ${{ secrets.TELEGRAM_TOKEN }}
+          TELEGRAM_CHAT_ID: ${{ secrets.CHAT_ID }}
+        run: |
+          set -euo pipefail
+          test -n "$CLOUDFLARE_API_TOKEN" || { echo "::error::CLOUDFLARE_API_TOKEN is not configured"; exit 1; }
+          test -n "$CLOUDFLARE_ACCOUNT_ID" || { echo "::error::CLOUDFLARE_ACCOUNT_ID is not configured"; exit 1; }
+          test -n "$TELEGRAM_TOKEN" || { echo "::error::TELEGRAM_TOKEN is not configured"; exit 1; }
+          test -n "$TELEGRAM_CHAT_ID" || { echo "::error::CHAT_ID is not configured"; exit 1; }
 
       - name: Install Wrangler
-        run: npm install --global wrangler@latest
+        run: npm install --global wrangler@4
 
-      - name: Deploy Worker
+      - name: Create or locate production D1 database
+        working-directory: radar-worker
         env:
           CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
           CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
-        run: wrangler deploy
+        run: |
+          set -euo pipefail
+          wrangler d1 list --json > "$RUNNER_TEMP/d1-list.json"
 
-      - name: Apply D1 migration
+          find_db_id() {
+            node - "$RUNNER_TEMP/d1-list.json" <<'NODE'
+          const fs = require("fs");
+          const data = JSON.parse(fs.readFileSync(process.argv[2], "utf8"));
+          function walk(value) {
+            if (!value) return null;
+            if (Array.isArray(value)) {
+              for (const item of value) { const found = walk(item); if (found) return found; }
+              return null;
+            }
+            if (typeof value !== "object") return null;
+            const name = value.name || value.database_name || value.databaseName;
+            const id = value.uuid || value.database_id || value.databaseId;
+            if (name === "gfs-watch-radar" && id) return String(id);
+            for (const child of Object.values(value)) { const found = walk(child); if (found) return found; }
+            return null;
+          }
+          const id = walk(data);
+          if (id) process.stdout.write(id);
+          NODE
+          }
+
+          D1_ID="$(find_db_id)"
+          if [ -z "$D1_ID" ]; then
+            echo "Creating production D1 database..."
+            wrangler d1 create gfs-watch-radar --location eeur
+            wrangler d1 list --json > "$RUNNER_TEMP/d1-list.json"
+            D1_ID="$(find_db_id)"
+          fi
+
+          test -n "$D1_ID" || { echo "::error::Could not resolve gfs-watch-radar D1 database ID"; exit 1; }
+
+          node - "$D1_ID" wrangler.jsonc <<'NODE'
+          const fs = require("fs");
+          const id = process.argv[2];
+          const file = process.argv[3];
+          const config = JSON.parse(fs.readFileSync(file, "utf8"));
+          const binding = (config.d1_databases || []).find(item => item.database_name === "gfs-watch-radar");
+          if (!binding) throw new Error("RADAR_DB binding missing");
+          binding.database_id = id;
+          fs.writeFileSync(file, JSON.stringify(config, null, 2) + "\n");
+          NODE
+
+      - name: Apply production D1 migrations
+        working-directory: radar-worker
         env:
           CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
           CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
-        run: wrangler d1 migrations apply gfs-watch-radar --remote
+        run: wrangler d1 migrations apply gfs-watch-radar --remote --config wrangler.jsonc
+
+      - name: Configure Telegram secrets on Cloudflare
+        working-directory: radar-worker
+        env:
+          CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+          CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
+          TELEGRAM_TOKEN: ${{ secrets.TELEGRAM_TOKEN }}
+          TELEGRAM_CHAT_ID: ${{ secrets.CHAT_ID }}
+        run: |
+          set -euo pipefail
+          printf '%s' "$TELEGRAM_TOKEN" | wrangler secret put TELEGRAM_TOKEN --config wrangler.jsonc
+          printf '%s' "$TELEGRAM_CHAT_ID" | wrangler secret put CHAT_ID --config wrangler.jsonc
+
+      - name: Deploy six-minute Radar Worker
+        working-directory: radar-worker
+        env:
+          CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+          CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
+        run: wrangler deploy --config wrangler.jsonc
+
+      - name: Verify Worker health endpoint
+        env:
+          RADAR_API: https://gfs-watch-radar-monitor.muhsin-ulusoy.workers.dev
+        run: |
+          set -euo pipefail
+          curl --silent --show-error --fail --max-time 15 "$RADAR_API/health" | tee "$RUNNER_TEMP/radar-health.json"
+
+      - name: Verify autonomous six-minute Cron writes a new frame
+        env:
+          RADAR_API: https://gfs-watch-radar-monitor.muhsin-ulusoy.workers.dev
+        run: |
+          set -euo pipefail
+          baseline="$(date -u +%s)"
+          for attempt in $(seq 1 10); do
+            if curl --silent --show-error --fail --max-time 15 "$RADAR_API/health?check=$(date +%s)" -o "$RUNNER_TEMP/radar-health.json"; then
+              if node - "$RUNNER_TEMP/radar-health.json" "$baseline" <<'NODE'
+          const fs = require("fs");
+          const d = JSON.parse(fs.readFileSync(process.argv[2], "utf8"));
+          const baseline = Number(process.argv[3]);
+          const ts = Number(d.last_frame_ts || 0);
+          if (d.ok !== true || d.service !== "radar-monitor" || ts < baseline - 120) process.exit(1);
+          NODE
+              then
+                cat "$RUNNER_TEMP/radar-health.json"
+                exit 0
+              fi
+            fi
+            echo "Waiting for Cloudflare Cron confirmation: attempt $attempt/10"
+            sleep 60
+          done
+          echo "::error::Cloudflare six-minute Radar Cron did not write a fresh RainViewer frame within the verification window."
+          cat "$RUNNER_TEMP/radar-health.json" || true
+          exit 1
+
+      - name: Retire legacy GitHub Radar Actions
+        if: success()
+        run: |
+          set -euo pipefail
+          removed=0
+          for f in .github/workflows/radar-monitor.yml .github/workflows/radar-monitor-10m.yml; do
+            if [ -f "$f" ]; then
+              git rm "$f"
+              removed=1
+            fi
+          done
+          if [ "$removed" -eq 1 ]; then
+            git config user.name "github-actions[bot]"
+            git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+            git commit -m "Retire GitHub Radar Actions after Cloudflare cutover"
+            git push origin HEAD:main
+          else
+            echo "Legacy Radar Actions already retired."
+          fi
