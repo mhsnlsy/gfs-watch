@@ -2356,9 +2356,9 @@ html.ios12 .footer > *{
           forecast.textContent="MeteoPT GFS tahminine göre "+dateTime(dryAt)+" itibarıyla yağış sona eriyor; tahmin süresinin kalanında yeniden yağış görünmüyor.";
         }
       }else if(upcoming.length){
-        const next=upcoming[0],hours=Math.max(0,(next.start-now)/3600000);
+        const next=upcoming[0],forecastAt=next.end,hours=Math.max(0,(forecastAt-now)/3600000);
         const lead=hours<1?"1 saatten az":Math.round(hours)+" saat";
-        forecast.innerHTML="MeteoPT GFS tahminine göre yaklaşık "+lead+" içinde<br>("+dateTime(next.start)+") yağmur bekleniyor.";
+        forecast.innerHTML="MeteoPT GFS tahminine göre yaklaşık "+lead+" içinde<br>("+dateTime(forecastAt)+") yağış bekleniyor.";
       }else{
         forecast.textContent="MeteoPT GFS tahmininde mevcut zamandan sonra belirgin yağış görünmüyor.";
       }
@@ -3236,8 +3236,8 @@ html.ios12 .footer > *{
         const spells=[];
         let current=null;
         for(const item of wet){
-          const begin=stepH>=3?item.stamp-stepH*3600000:item.stamp;
-          if(!current||(stepH>=3?begin-current.end>30*60000:item.stamp-current.end>2*3600000)){
+          const begin=item.stamp;
+          if(!current||begin-current.end>2*3600000){
             current={start:begin,end:item.stamp,sum:0};
             spells.push(current);
           }
