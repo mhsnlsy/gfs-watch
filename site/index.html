@@ -1448,7 +1448,8 @@
     const STATIONS_API=(window.GFS_WATCH_API_BASE||window.location.origin)+"/api";
     const STATIONS_URL=STATIONS_API+"/stations";
     const STATION_HISTORY_API=key=>STATIONS_API+"/history/"+encodeURIComponent(key)+"?hours=72";
-    const VERIFY_URL="./data/forecast-verification.json";
+    // No forecast-verification.json is published yet; avoid repeated 404s until the calibration archive is generated.
+    const VERIFY_URL=null;
     let enkaStationObservation=null,eyupsultanStationObservation=null,sisliStationObservation=null,activeStation="enka";
     try{
       const savedStation=localStorage.getItem("istanbul-hava-station");
@@ -2936,7 +2937,7 @@
     }
     function planningLine(){
       const cycle=forecastData&&forecastData.run_id_utc?timeUTC(forecastData.run_id_utc)+" UTC":"Son GFS çıktısı";
-      if(!verificationDoc)return "Saatlik güven kaydı yükleniyor. Her çıktı gerçekleşen ölçümle karşılaştırılıyor.";
+      if(!verificationDoc)return "Saatlik model doğrulama arşivi henüz yayımlanmıyor. Gerçekleşen gözlem kaydı oluştuğunda burada gösterilecek.";
       const temperature=formatLeadRanges(trustedLeadHours("temp"));
       const rain=formatLeadRanges(trustedLeadHours("rain"));
       if(!temperature&&!rain)return cycle+" çıktısında %90 eşiğini geçen saat henüz yok. Her saat kendi kaydına bakıyor; eşik tutunca yalnız o saat plana girer.";
@@ -3192,7 +3193,7 @@ if(typeof renderBriefing==="function")renderBriefing();
       loadInteractiveGfsCharts(list);
     }
     async function loadPushConfig(){
-      const configUrl=new URL("/gfs-watch/push-config.json",window.location.origin);
+      const configUrl=new URL("/push-config.json",window.location.origin);
       configUrl.searchParams.set("t",String(Date.now()));
       try{
         const response=await fetch(configUrl.href,{cache:"no-store",credentials:"omit"});
@@ -3349,11 +3350,15 @@ if(typeof renderBriefing==="function")renderBriefing();
       return formatted.replace(",","")+"Z";
     }
     async function loadVerification(){
-      try{
-        const response=await fetch(VERIFY_URL+"?t="+Date.now(),{cache:"no-store"});
-        if(!response.ok)throw new Error("missing");
-        verificationDoc=await response.json();
-      }catch(_){
+      if(VERIFY_URL){
+        try{
+          const response=await fetch(VERIFY_URL+"?t="+Date.now(),{cache:"no-store"});
+          if(!response.ok)throw new Error("missing");
+          verificationDoc=await response.json();
+        }catch(_){
+          verificationDoc=null;
+        }
+      }else{
         verificationDoc=null;
       }
       if(typeof forecastData!=="undefined"&&forecastData&&typeof renderNext72Hours==="function")renderNext72Hours();
