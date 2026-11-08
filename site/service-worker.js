@@ -1,6 +1,20 @@
-const SHELL_CACHE = "istanbul-hava-shell-v29";
+const SHELL_CACHE = "istanbul-hava-shell-v30-icons3";
 const DATA_CACHE = "istanbul-hava-data-v4";
-const APP_SHELL = ["./", "./manifest.webmanifest", "./favicon-192x192.png?v=1"];
+const APP_SHELL = [
+  "./",
+  "./manifest.webmanifest",
+  "./favicon.ico",
+  "./favicon.svg",
+  "./favicon-16x16.png",
+  "./favicon-32x32.png",
+  "./favicon-48x48.png",
+  "./favicon-192x192.png",
+  "./favicon-512x512.png",
+  "./apple-touch-icon.png",
+  "./icon-maskable-512.png",
+  "./mstile-150x150.png",
+  "./browserconfig.xml"
+];
 const MAX_DATA_ENTRIES = 180;
 
 self.addEventListener("install", event => {
@@ -95,7 +109,7 @@ self.addEventListener("fetch", event => {
   }
 
   // Keep the app shell and its local icons available for repeat launches.
-  if (url.pathname.endsWith(".webmanifest") || url.pathname.endsWith(".svg")) {
+  if (/\.(?:webmanifest|svg|png|ico|xml)$/i.test(url.pathname)) {
     event.respondWith((async () => {
       const cache = await caches.open(SHELL_CACHE);
       const cached = await cache.match(canonicalRequest(request.url));

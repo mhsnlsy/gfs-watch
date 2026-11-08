@@ -120,11 +120,11 @@ export default {
     }
 
     if (path === "/favicon.svg" || path === "/favicon.ico") {
-      const asset = await env.ASSETS.fetch(new Request(new URL("/favicon-192x192.png", url), request));
+      const asset = await env.ASSETS.fetch(new Request(new URL(path, url), request));
       if (!asset.ok) return asset;
       const headers = new Headers(asset.headers);
-      headers.set("Content-Type", "image/png");
-      headers.set("Cache-Control", "public, max-age=300, must-revalidate");
+      headers.set("Content-Type", path === "/favicon.svg" ? "image/svg+xml; charset=utf-8" : "image/x-icon");
+      headers.set("Cache-Control", "public, max-age=86400, stale-while-revalidate=604800");
       return new Response(request.method === "HEAD" ? null : asset.body, { status: asset.status, headers });
     }
 

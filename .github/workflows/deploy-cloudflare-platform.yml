@@ -7,6 +7,8 @@ on:
     paths:
       - ".github/workflows/deploy-cloudflare-platform.yml"
       - "site/**"
+      - "assets/brand/**"
+      - "scripts/build_site_icons.py"
       - "web-worker/**"
       - "gfs/notifications/**"
       - "gfs/**"
@@ -74,6 +76,11 @@ jobs:
           rm -rf web-worker/public
           mkdir -p web-worker/public/data
           cp -a site/. web-worker/public/
+
+          # Rebuild every favicon, Apple touch icon and PWA icon from the
+          # approved single-source Istanbul logo on every production deploy.
+          python -m pip install --disable-pip-version-check --quiet Pillow
+          python scripts/build_site_icons.py assets/brand web-worker/public
 
           # Keep the existing public forecast-verification and ECMWF assets.
           if [ -d "$GITHUB_WORKSPACE/forecast-data/public" ]; then

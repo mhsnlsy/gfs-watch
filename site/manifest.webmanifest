@@ -11,6 +11,23 @@
   "background_color": "#071521",
   "theme_color": "#081827",
   "icons": [
-    { "src": "./favicon-192x192.png?v=1", "sizes": "192x192", "type": "image/png", "purpose": "any maskable" }
+    {
+      "src": "./favicon-192x192.png?v=20261108-city-icon-3",
+      "sizes": "192x192",
+      "type": "image/png",
+      "purpose": "any"
+    },
+    {
+      "src": "./favicon-512x512.png?v=20261108-city-icon-3",
+      "sizes": "512x512",
+      "type": "image/png",
+      "purpose": "any"
+    },
+    {
+      "src": "./icon-maskable-512.png?v=20261108-city-icon-3",
+      "sizes": "512x512",
+      "type": "image/png",
+      "purpose": "maskable"
+    }
   ]
 }
