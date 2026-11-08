@@ -169,10 +169,26 @@ jobs:
             console.error(JSON.stringify(doc, null, 2));
             throw new Error("Köy GFS F72 live payload is missing or incomplete");
           }
+          const f72Points = doc.forecast_6_hourly.filter(point => {
+            const hour = Number(point?.forecast_hour);
+            return hour > 0 && hour <= 72;
+          });
+          const missingSnowln = f72Points.filter(point =>
+            !Object.prototype.hasOwnProperty.call(point, "snowln")
+          );
+          if (!f72Points.length || missingSnowln.length) {
+            throw new Error("Köy GFS F72 payload is missing MeteoPT snowln values on forecast points");
+          }
+          const numericSnowlnPoints = f72Points.filter(point =>
+            point.snowln !== null && point.snowln !== undefined &&
+            Number.isFinite(Number(point.snowln))
+          );
           console.log(JSON.stringify({
             run_id_utc: doc.run_id_utc,
             forecast_source: doc.forecast_source,
             points: doc.forecast_6_hourly.length,
+            snowln_field_points: f72Points.length,
+            snowln_numeric_points: numericSnowlnPoints.length,
             first_valid_time_utc: doc.forecast_6_hourly[0]?.valid_time_utc || null,
             last_valid_time_utc: doc.forecast_6_hourly.at(-1)?.valid_time_utc || null
           }));
