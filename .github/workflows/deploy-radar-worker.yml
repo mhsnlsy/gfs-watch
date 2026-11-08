@@ -127,6 +127,20 @@ jobs:
           CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
         run: wrangler deploy --config wrangler.jsonc
 
+      - name: Run one-time synthetic radar drill
+        env:
+          RADAR_API: https://gfs-watch-radar-monitor.muhsin-ulusoy.workers.dev
+        run: |
+          set -euo pipefail
+          echo "Running synthetic drill: 30 km north / 25 dBZ / 20 pixels / 30 km/h / ~60 min ETA"
+          curl --silent --show-error --fail --max-time 30 "$RADAR_API/test-radar" | tee "$RUNNER_TEMP/radar-test.json"
+          node - "$RUNNER_TEMP/radar-test.json" <<'NODE'
+          const fs = require("fs");
+          const d = JSON.parse(fs.readFileSync(process.argv[2], "utf8"));
+          if (d.status !== "test_sent" || d.telegram_sent !== true) throw new Error("Synthetic radar drill did not reach Telegram.");
+          if (d.scenario.distance_km !== 30 || d.scenario.dbz !== 25 || d.scenario.pixels !== 20 || d.scenario.speed_kmh !== 30 || d.scenario.eta_minutes !== 60) throw new Error("Synthetic radar scenario mismatch.");
+          NODE
+
       - name: Verify Worker health endpoint
         env:
           RADAR_API: https://gfs-watch-radar-monitor.muhsin-ulusoy.workers.dev
