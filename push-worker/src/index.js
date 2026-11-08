@@ -1,4 +1,7 @@
+import webPush from "web-push";
+
 const DEFAULT_ORIGIN = "https://gfs-watch-web.muhsin-ulusoy.workers.dev";
+const GFS_12Z_URL = "https://api.meteopt.com/gfs/json?lat=41.014&lon=28.95&run=12&lang=en";
 
 function corsHeaders(request, env) {
   const headers = new Headers({
@@ -119,5 +122,67 @@ export default {
       console.error("Push API error:", error && error.message ? error.message : error);
       return json({ error: "Internal server error" }, 500, headers);
     }
+  },
+  async scheduled(event, env, ctx) {
+    if (event.cron !== "45 16 * * *") return;
+    ctx.waitUntil((async () => {
+      const response = await fetch(GFS_12Z_URL, {
+        headers: { "User-Agent": "IstanbulunHavasi-CloudflareTomorrowPush/1.0", "Cache-Control": "no-cache" },
+        signal: AbortSignal.timeout(45000)
+      });
+      if (!response.ok) throw new Error("MeteoPT HTTP " + response.status);
+      const doc = await response.json();
+      const digits = String(doc.run || "").replace(/\\D/g, "").slice(0, 10);
+      if (digits.length !== 10 || Number(digits.slice(8, 10)) !== 12) throw new Error("Expected 12Z GFS, received: " + doc.run);
+
+      const tz = "Europe/Istanbul";
+      const dateKey = d => new Intl.DateTimeFormat("en-CA", { timeZone: tz, year: "numeric", month: "2-digit", day: "2-digit" }).format(d);
+      const hour = d => Number(new Intl.DateTimeFormat("en-GB", { timeZone: tz, hour: "2-digit", hourCycle: "h23" }).format(d));
+      const n = v => Number.isFinite(Number(v)) ? Number(v) : null;
+      const fmt = v => String(Math.round(Math.abs(v) * 10) / 10).replace(".", ",");
+      const cloudLabel = v => v < 40 ? "güneşli" : v < 70 ? "parçalı bulutlu" : "bulutlu";
+      const cycle = new Date(Date.UTC(Number(digits.slice(0,4)), Number(digits.slice(4,6))-1, Number(digits.slice(6,8)), 12));
+      const steps = doc.steps?.values || [];
+      const tmp = doc.data?.tmp2m?.values || [];
+      const rain = doc.data?.apcp?.values || [];
+      const clouds = doc.data?.clouds?.values || [];
+      const points = [];
+      for (let i=0; i<steps.length; i++) {
+        const lead=n(steps[i]); if (lead===null || lead<=0) continue;
+        const valid=new Date(cycle.getTime()+lead*3600000);
+        points.push({date:dateKey(valid),hour:hour(valid),temp:n(tmp[i]),precip:n(rain[i]),clouds:n(clouds[i])});
+      }
+      const today=dateKey(new Date()), tomorrow=dateKey(new Date(Date.now()+86400000));
+      const tp=points.filter(p=>p.date===today&&p.temp!==null);
+      const mp=points.filter(p=>p.date===tomorrow&&p.temp!==null);
+      if (!tp.length || !mp.length) throw new Error("12Z GFS lacks today/tomorrow temperature data.");
+      const todayMax=Math.max(...tp.map(p=>p.temp)), tomorrowMax=Math.max(...mp.map(p=>p.temp));
+      const cp=mp.filter(p=>p.clouds!==null).sort((a,b)=>Math.abs(a.hour-15)-Math.abs(b.hour-15))[0];
+      if (!cp) throw new Error("12Z GFS lacks Clouds data for tomorrow.");
+      const rainy=mp.some(p=>p.precip!==null&&p.precip>0);
+      const weather=rainy?"yağmurlu":cloudLabel(cp.clouds);
+      const delta=tomorrowMax-todayMax;
+      const comparison=Math.abs(delta)<0.05?"bugünle aynı sıcaklıkta":"bugünden "+fmt(delta)+"°C daha "+(delta>0?"sıcak":"soğuk");
+      const body="Yarın hava "+fmt(tomorrowMax)+"°C, "+comparison+", "+weather+".";
+      const id="tomorrow-weather-"+digits+"Z-"+tomorrow;
+      if (await env.DB.prepare("SELECT id FROM sent_notifications WHERE id = ?").bind(id).first()) return;
+      const rows=await env.DB.prepare("SELECT subscription_json FROM push_subscriptions ORDER BY created_at ASC LIMIT 500").all();
+      const subscriptions=(rows.results||[]).map(row=>{try{return JSON.parse(row.subscription_json)}catch(_){return null}}).filter(Boolean);
+      if (!subscriptions.length) return;
+      if (!env.VAPID_PUBLIC_KEY || !env.VAPID_PRIVATE_KEY) throw new Error("VAPID keys not configured.");
+      webPush.setVapidDetails(env.VAPID_SUBJECT||DEFAULT_ORIGIN+"/",env.VAPID_PUBLIC_KEY,env.VAPID_PRIVATE_KEY);
+      const payload=JSON.stringify({title:"İstanbul · Yarın hava nasıl?",body,tag:"gfs-"+id,url:DEFAULT_ORIGIN+"/#bildirimler"});
+      let delivered=0;
+      for (const sub of subscriptions) {
+        try { await webPush.sendNotification(sub,payload,{TTL:86400,urgency:"normal"}); delivered++; }
+        catch(error) {
+          const status=Number(error.statusCode||0);
+          console.error("Tomorrow push failed:",status||error.message);
+          if(status===404||status===410) await env.DB.prepare("DELETE FROM push_subscriptions WHERE endpoint = ?").bind(sub.endpoint).run();
+        }
+      }
+      if(delivered>0) await env.DB.prepare("INSERT OR IGNORE INTO sent_notifications (id,sent_at,recipient_count) VALUES (?,?,?)").bind(id,new Date().toISOString(),delivered).run();
+      console.log("19:45 tomorrow weather push:",JSON.stringify({id,body,delivered}));
+    })());
   }
 };
