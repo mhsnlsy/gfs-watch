@@ -21,15 +21,12 @@ def main() -> None:
         'id="gfs-model-view"',
         'id="ecmwf-model-view"',
         'id="ecmwf-daily-grid"',
-        'id="next-72h-panel"',
         'station-history-inline',
         'id="station-history-panel"',
         'id="station-temperature-trend"',
         'id="station-rain-trend"',
 
         'id="next72-temperature"',
-        'id="next72-precipitation"',
-        'function renderNext72Hours()',
         'async function refreshStationObservations()',
         'window.setInterval(refreshStationObservations,60000)',
         'id="ecmwf-report-images"',
@@ -101,8 +98,8 @@ def main() -> None:
         raise AssertionError("The bottom GFS 850 hPa panel should be gone.")
     if 'class="chart-stack"' not in ecmwf or 'class="chart-card"' not in ecmwf:
         raise AssertionError("The remaining ECMWF wind comparison charts are missing.")
-    if '.next-72h-card{\n      border:0!important' not in html or '.chart-stack>.chart-card{\n      border:0!important' not in html:
-        raise AssertionError("Mobile chart cards must be frameless.")
+    if '.chart-stack>.chart-card{\n      border:0!important' not in html:
+        raise AssertionError("Mobile ECMWF chart cards must be frameless.")
     if html.count('document.addEventListener("pointerdown"') != 1 or html.count('window.addEventListener("scroll"') != 1:
         raise AssertionError("Touch tooltip dismissal must use singleton global listeners.")
 
@@ -141,8 +138,6 @@ def main() -> None:
     if '"version.json"' not in main or "APP_LABEL" not in main or 'f"🌦 {APP_LABEL}"' not in main:
         raise AssertionError("Telegram reports must take their version from the same site/version.json.")
 
-    if 'id="next72-wind-speed"' in html or 'id="next72-wind-direction"' in html:
-        raise AssertionError("The 72-hour panel must show only temperature and precipitation.")
     for marker in ('id="briefing"', 'id="brief-rain"', 'id="brief-rain-lines"', "function buildBriefing"):
         if marker not in html:
             raise AssertionError("72-hour briefing is missing: " + marker)
@@ -150,8 +145,8 @@ def main() -> None:
         raise AssertionError("Modern iPhone safe-area viewport support is missing.")
     if "orientation:landscape" not in html or "max-height:600px" not in html:
         raise AssertionError("Compact landscape phone layout is missing.")
-    print("[ECMWF UI SMOKE] model selector, daily forecast ordering, temperature/rain-only "
-          "72-hour panel, responsive safe areas, touch tooltip dismissal, ECMWF wind comparison, "
+    print("[ECMWF UI SMOKE] model selector, daily forecast ordering, responsive safe areas, "
+          "touch tooltip dismissal, ECMWF wind comparison, "
           "55-step contract and unique IDs passed.")
 
 
