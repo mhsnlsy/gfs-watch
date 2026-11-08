@@ -287,44 +287,64 @@ function forceDarkGfsSvg(svg){
     card.style.setProperty("border-color","#17384A","important");
   }
 }
-function addMobileGfsCycleLabels(panelSvg,panel,metadata){
-  if(!panelSvg||!panel||!metadata)return;
-  const title=String(panel.title||"").trim();
-  if(!title)return;
-  const titleNode=Array.from(panelSvg.querySelectorAll("text")).find(node=>{
-    const text=String(node.textContent||"").trim();
-    return text===title;
-  });
-  if(!titleNode)return;
-
-  // Each mobile panel keeps the four GFS series from the original SVG metadata.
-  // Render every cycle beside the title, using the exact color of its line.
+function addMobileGfsCycleLabels(panelHost,panel){
+  if(!panelHost||!panel)return;
   const series=Array.isArray(panel.series)?panel.series:[];
-  const ns="http://www.w3.org/2000/svg";
+  const cycles=[];
   const seen=new Set();
-  let dx=10;
 
-  series.slice().reverse().forEach(item=>{
+  series.forEach(item=>{
     const label=String(item?.label||"");
     const match=label.match(/(00|06|12|18)Z/i);
     if(!match)return;
-
     const cycle=match[1].toUpperCase()+"Z";
     if(seen.has(cycle))return;
     seen.add(cycle);
-
-    const tspan=document.createElementNS(ns,"tspan");
-    tspan.setAttribute("class","gfs-mobile-cycle-label");
-    tspan.setAttribute("dx",String(dx));
-    tspan.setAttribute("fill",String(item?.color||"#d9a7f5"));
-    tspan.setAttribute("font-size","0.72em");
-    tspan.setAttribute("font-weight","700");
-    tspan.setAttribute("font-family","inherit");
-    tspan.textContent=cycle;
-    titleNode.appendChild(tspan);
-
-    dx=8;
+    cycles.push({cycle,color:String(item?.color||"#d9a7f5")});
   });
+
+  if(!cycles.length)return;
+
+  // Use an HTML legend rather than modifying the SVG title. This is deliberately
+  // outside the SVG so mobile WebViews cannot clip or discard the labels.
+  const order={"06Z":0,"12Z":1,"18Z":2,"00Z":3};
+  cycles.sort((a,b)=>(order[a.cycle]??99)-(order[b.cycle]??99));
+
+  const legend=document.createElement("div");
+  legend.className="gfs-mobile-cycle-legend";
+  legend.setAttribute("aria-label","GFS döngüleri");
+
+  Object.assign(legend.style,{
+    position:"absolute",
+    top:"8px",
+    left:"108px",
+    right:"56px",
+    zIndex:"30",
+    display:"flex",
+    alignItems:"center",
+    justifyContent:"flex-start",
+    gap:"9px",
+    flexWrap:"nowrap",
+    pointerEvents:"none",
+    fontFamily:"inherit",
+    lineHeight:"1",
+    whiteSpace:"nowrap"
+  });
+
+  cycles.forEach(item=>{
+    const span=document.createElement("span");
+    span.textContent=item.cycle;
+    Object.assign(span.style,{
+      color:item.color,
+      fontSize:"11px",
+      fontWeight:"800",
+      textShadow:"0 1px 2px rgba(0,0,0,.55)",
+      display:"inline-block"
+    });
+    legend.appendChild(span);
+  });
+
+  panelHost.appendChild(legend);
 }
 function buildMobileGfsPanelViews(sourceSvg,metadata){
   const fallbackPanels=[
@@ -354,7 +374,7 @@ function buildMobileGfsPanelViews(sourceSvg,metadata){
     clone.setAttribute("preserveAspectRatio","none");
     clone.setAttribute("role","group");
     clone.setAttribute("aria-label",panel.title+" · mobil görünüm");
-    addMobileGfsCycleLabels(clone,panel,metadata);
+    
     clone.querySelectorAll(".gfs-panel-interaction").forEach(group=>{
       if(group.getAttribute("data-panel-id")!==panel.id)group.remove();
     });
@@ -426,6 +446,8 @@ async function loadInteractiveGfsCharts(root){
             // viewport so the report header and neighboring panels cannot bleed
             // into this card on mobile.
             panelHost.style.setProperty("overflow","hidden","important");
+            panelHost.style.setProperty("position","relative","important");
+            addMobileGfsCycleLabels(panelHost,panel);
             panelSvg.style.setProperty("overflow","hidden","important");
             panelHost.appendChild(panelSvg);
             host.appendChild(panelHost);
