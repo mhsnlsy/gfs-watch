@@ -125,14 +125,24 @@ function analyzeImage(img){
 
 function motion(history){
   if(history.length<2)return {speed:null,heading:null,towards:false,eta:null};
-  const a=history[history.length-2],b=history[history.length-1],dt=b.ts-a.ts;
-  if(dt<60)return {speed:null,heading:null,towards:false,eta:null};
-  const dx=b.avg_dx-a.avg_dx,dy=b.avg_dy-a.avg_dy,dist=Math.hypot(dx,dy);
-  const speed=dist*PIXEL_KM/dt*3600, heading=(Math.atan2(dx,-dy)*180/Math.PI+360)%360;
-  const tx=-b.avg_dx,ty=-b.avg_dy,tlen=Math.hypot(tx,ty);
+  const segments=[];
+  for(let i=1;i<history.length;i++){
+    const a=history[i-1],b=history[i],dt=b.ts-a.ts;
+    if(dt<60) continue;
+    const dx=b.avg_dx-a.avg_dx,dy=b.avg_dy-a.avg_dy,dist=Math.hypot(dx,dy);
+    if(dist>0) segments.push({dx,dy,dist,dt});
+  }
+  if(!segments.length)return {speed:null,heading:null,towards:false,eta:null};
+  const recent=segments.slice(-3);
+  const totalDt=recent.reduce((s,x)=>s+x.dt,0);
+  const dx=recent.reduce((s,x)=>s+x.dx,0),dy=recent.reduce((s,x)=>s+x.dy,0);
+  const dist=Math.hypot(dx,dy);
+  if(totalDt<60||dist===0)return {speed:null,heading:null,towards:false,eta:null};
+  const speed=dist*PIXEL_KM/totalDt*3600, heading=(Math.atan2(dx,-dy)*180/Math.PI+360)%360;
+  const b=history[history.length-1],tx=-b.avg_dx,ty=-b.avg_dy,tlen=Math.hypot(tx,ty);
   const towards=dist>=0.5&&tlen>=1&&(dx*tx+dy*ty)/(dist*tlen)>0.5;
-  const eta=speed>5&&b.centroid_dist&&towards?b.centroid_dist/speed*60:null;
-  return {speed:Math.round(speed),heading:Math.round(heading),towards,eta:eta?Math.round(eta):null};
+  const eta=speed>5&&b.centroid_dist!=null&&towards?b.centroid_dist/speed*60:null;
+  return {speed:Math.round(speed),heading:Math.round(heading),towards,eta:eta!=null?Math.round(eta):null};
 }
 
 function approaching(prev,curr){
