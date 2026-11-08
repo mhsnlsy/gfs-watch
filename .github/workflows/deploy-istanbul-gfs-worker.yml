@@ -275,6 +275,7 @@ jobs:
           if (doc.ok !== true || doc.service !== "gfs-watch-istanbul-gfs" || doc.storage !== "D1" ||
               doc.cron !== "*/10 * * * *" || doc.report_dispatch_configured !== true ||
               doc.native_report_generation !== true || doc.telegram_configured !== true ||
+              doc.station_service_configured !== true ||
               doc.photo_archive_configured !== true || doc.telegram_photo_mode !== "sendPhoto/png" ||
               doc.internal_reconcile_configured !== true || !doc.last_cron_success_at_utc ||
               !Number.isFinite(doc.pending_report_publications) ||
