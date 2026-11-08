@@ -50,6 +50,82 @@ function asNumber(values, index) {
   }
 }
 
+const SNOWLINE_KEYS = new Set([
+  "snowln", "snowline", "snow_line", "snowlevel", "snow_level",
+  "snowlineheight", "snow_line_height", "snowlevelheight",
+  "snow_level_height", "snowaltitude", "snow_altitude",
+  "snowlinealtitude", "snow_line_altitude",
+]);
+
+function normalizedFieldName(value) {
+  return String(value || "").toLowerCase().replace(/[^a-z0-9]/g, "");
+}
+
+function valuesFromField(field) {
+  if (Array.isArray(field)) return field;
+  if (!field || typeof field !== "object") return null;
+  if (Array.isArray(field.values)) return field.values;
+  if (Array.isArray(field.data)) return field.data;
+  if (Array.isArray(field.forecast)) return field.forecast;
+  if (Array.isArray(field.series)) return field.series;
+  return null;
+}
+
+function findSnowlineSeries(document) {
+  const queue = [{ value: document, path: "document" }];
+  const visited = new Set();
+
+  while (queue.length) {
+    const current = queue.shift();
+    const value = current?.value;
+    if (!value || typeof value !== "object" || Array.isArray(value) || visited.has(value)) continue;
+    visited.add(value);
+
+    for (const [key, child] of Object.entries(value)) {
+      const normalized = normalizedFieldName(key);
+      const isSnowlineKey = SNOWLINE_KEYS.has(normalized) ||
+        (normalized.includes("snow") && /(line|ln|level|altitude)/.test(normalized));
+      if (isSnowlineKey) {
+        const values = valuesFromField(child);
+        if (values) {
+          const hasNumericValue = values.some(item =>
+            item !== null && item !== undefined && item !== "" && Number.isFinite(Number(item))
+          );
+          if (hasNumericValue) return { key: current.path + "." + key, values };
+        }
+      }
+    }
+
+    for (const [key, child] of Object.entries(value)) {
+      if (child && typeof child === "object" && !Array.isArray(child)) {
+        queue.push({ value: child, path: current.path + "." + key });
+      }
+    }
+  }
+
+  return { key: null, values: [] };
+}
+
+function mergeForecastPoints(previousPoints, incomingPoints) {
+  const merged = new Map();
+  for (const point of Array.isArray(previousPoints) ? previousPoints : []) {
+    const hour = Number(point?.forecast_hour);
+    if (Number.isFinite(hour)) merged.set(hour, { ...point });
+  }
+  for (const point of Array.isArray(incomingPoints) ? incomingPoints : []) {
+    const hour = Number(point?.forecast_hour);
+    if (!Number.isFinite(hour)) continue;
+    const previous = merged.get(hour) || {};
+    const next = { ...previous };
+    for (const [key, value] of Object.entries(point || {})) {
+      if (value !== null && value !== undefined) next[key] = value;
+      else if (!(key in next)) next[key] = value;
+    }
+    merged.set(hour, next);
+  }
+  return [...merged.values()].sort((a, b) => Number(a.forecast_hour) - Number(b.forecast_hour));
+}
+
 async function fetchCycle(requestedHour) {
   const url = new URL(API_BASE);
   url.searchParams.set("lat", String(LOCATION.latitude));
@@ -125,7 +201,10 @@ function normalizeDocument(candidate, now) {
   if (!steps.length) throw new Error("MeteoPT returned no forecast steps");
 
   const data = candidate.document?.data || {};
-  const series = name => data?.[name]?.values || [];
+  const series = name => valuesFromField(data?.[name]) || [];
+  // MeteoPT may expose the snow-line series with a display label or nested
+  // field name. Resolve it from the original response instead of guessing.
+  const snowlineSeries = findSnowlineSeries(candidate.document);
 
   const points = [];
   for (let i = 0; i < steps.length; i += 1) {
@@ -140,8 +219,8 @@ function normalizeDocument(candidate, now) {
       wind_speed_10m_kmh: asNumber(series("wind10m"), i),
       wind_speed_850hpa_kmh: asNumber(series("wind850"), i),
       precipitation_6h_mm: asNumber(series("apcp"), i),
-      // MeteoPT "snowln" is the model snow-line altitude in metres.
-      snowln: asNumber(series("snowln"), i),
+      // MeteoPT "SnowLn" is the model snow-line altitude in metres.
+      snowln: asNumber(snowlineSeries.values, i),
     });
   }
 
@@ -154,6 +233,7 @@ function normalizeDocument(candidate, now) {
     run_id_utc: cycle.toISOString(),
     published_at_utc: new Date(now).toISOString(),
     forecast_source: "meteopt",
+    meteopt_snowln_source_field: snowlineSeries.key,
   };
 
   const f72Ready = Math.max(...steps) >= 72 && points.filter(p => p.forecast_hour > 0 && p.forecast_hour <= 72).length >= 12;
@@ -197,18 +277,37 @@ async function currentRun(env, key) {
 
 async function persistRun(env, full) {
   const existing = await env.GFS_DB.prepare(
-    "SELECT run_id_utc FROM gfs_runs WHERE run_id_utc = ?"
+    "SELECT payload_json FROM gfs_runs WHERE run_id_utc = ?"
   ).bind(full.run_id_utc).first();
 
-  if (existing) return false;
+  let payload = full;
+  if (existing?.payload_json) {
+    const previous = JSON.parse(existing.payload_json);
+    payload = {
+      ...previous,
+      ...full,
+      forecast_6_hourly: mergeForecastPoints(
+        previous.forecast_6_hourly,
+        full.forecast_6_hourly
+      ),
+    };
+    const comparable = value => {
+      const copy = { ...value };
+      delete copy.published_at_utc;
+      return JSON.stringify(copy);
+    };
+    if (comparable(previous) === comparable(payload)) return false;
+  }
 
   const storedAt = new Date().toISOString();
   await env.GFS_DB.prepare(
-    "INSERT INTO gfs_runs (run_id_utc, payload_json, published_at_utc, stored_at_utc) VALUES (?, ?, ?, ?)"
+    "INSERT INTO gfs_runs (run_id_utc, payload_json, published_at_utc, stored_at_utc) VALUES (?, ?, ?, ?) " +
+    "ON CONFLICT(run_id_utc) DO UPDATE SET payload_json=excluded.payload_json, " +
+    "published_at_utc=excluded.published_at_utc, stored_at_utc=excluded.stored_at_utc"
   ).bind(
     full.run_id_utc,
-    JSON.stringify(full),
-    full.published_at_utc,
+    JSON.stringify(payload),
+    payload.published_at_utc,
     storedAt,
   ).run();
 
@@ -231,17 +330,11 @@ async function persistF72(env, f72) {
     // Keep an existing F180 document intact while refreshing the overlapping F72
     // points with newly available MeteoPT fields such as snowln.
     if (previousPoints.length > incomingPoints.length) {
-      const incomingByHour = new Map(
-        incomingPoints.map(point => [Number(point.forecast_hour), point])
-      );
       payload = {
         ...stored.payload,
         ...f72,
         schema: stored.payload.schema || f72.schema,
-        forecast_6_hourly: previousPoints.map(point => {
-          const updated = incomingByHour.get(Number(point.forecast_hour));
-          return updated ? { ...point, ...updated } : point;
-        }),
+        forecast_6_hourly: mergeForecastPoints(previousPoints, incomingPoints),
       };
     }
 
@@ -805,11 +898,12 @@ async function api(request, env) {
       // Only check the first 72 hours: a stored F180 payload keeps its longer horizon.
       const needsSnowlineEnrichment = Boolean(current &&
         Array.isArray(current.payload?.forecast_6_hourly) &&
-        current.payload.forecast_6_hourly.some(point => {
-          const hour = Number(point?.forecast_hour);
-          return hour > 0 && hour <= 72 &&
-            !Object.prototype.hasOwnProperty.call(point, "snowln");
-        }));
+        (current.payload.meteopt_snowln_source_field == null ||
+          current.payload.forecast_6_hourly.some(point => {
+            const hour = Number(point?.forecast_hour);
+            return hour > 0 && hour <= 72 &&
+              (point.snowln === null || point.snowln === undefined);
+          })));
       if (!current || needsSnowlineEnrichment) {
         await collect(env);
         current = await currentRun(env, "f72");
