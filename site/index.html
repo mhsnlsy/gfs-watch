@@ -395,6 +395,10 @@
     .station-switch{display:flex;gap:5px;width:max-content;max-width:100%;margin-top:11px;padding:3px;border:1px solid rgba(204,225,239,.13);border-radius:999px;background:rgba(3,15,24,.34);position:relative;z-index:1}
     .station-switch button{appearance:none;border:1px solid transparent;border-radius:999px;padding:7px 11px;background:transparent;color:#9fb5c1;font:700 10px "DM Sans",sans-serif;white-space:nowrap;cursor:pointer;transition:background .18s,border-color .18s,color .18s}
     .station-switch button.active{background:rgba(125,211,215,.15);border-color:rgba(125,211,215,.32);color:#d8fbf3}
+    /* aria-pressed is the authoritative visual state; prevents stale .active
+       classes/first-paint markup from making two stations look selected. */
+    .station-switch button[aria-pressed="true"]{background:rgba(125,211,215,.15);border-color:rgba(125,211,215,.32);color:#d8fbf3}
+    .station-switch button[aria-pressed="false"]{background:transparent;border-color:transparent;color:#9fb5c1}
     .station-switch button:focus-visible{outline:2px solid var(--cyan);outline-offset:2px}
     @media(max-width:560px){.station-switch{margin-top:9px}.station-switch button{padding:6px 9px;font-size:9px}}
 .dashboard-top{display:grid;grid-template-columns:minmax(320px,.78fr) minmax(0,1.22fr);gap:14px;align-items:start;padding:20px 0 18px}
