@@ -294,7 +294,7 @@ function extractLatestGfsCycleHour(metadata){
   const candidates=[preferred,...series].filter(Boolean);
   for(const item of candidates){
     const label=String(item?.label||"");
-    const match=label.match(/(?:^|\\b)(00|06|12|18)Z(?:\\b|$)/i);
+    const match=label.match(/(?:^|\b)(00|06|12|18)Z(?:\b|$)/i);
     if(match)return match[1]+"Z";
   }
   return "";
