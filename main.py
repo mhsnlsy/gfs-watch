@@ -3474,7 +3474,7 @@ def create_valid_time_comparison_assets(current_run_id, payload, previous_runs):
                     y_values.append(value)
 
                 is_latest = series_index == len(series) - 1
-                axis.plot(
+                line = axis.plot(
                     x_values,
                     y_values,
                     color=active_palette[series_index],
@@ -3486,7 +3486,10 @@ def create_valid_time_comparison_assets(current_run_id, payload, previous_runs):
                     solid_capstyle="round",
                     solid_joinstyle="round",
                     zorder=5 if is_latest else 3,
-                )
+                )[0]
+                # Stable SVG identity: the mobile legend reads the color
+                # directly from this exact plotted line.
+                line.set_gid(f"gfs-series-{series_index}")
 
             if not finite_values:
                 axis.text(
