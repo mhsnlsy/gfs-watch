@@ -1,6 +1,6 @@
 import assert from "node:assert/strict";
 import { buildIstanbulInteractiveSvg, buildIstanbulReportText } from "../istanbul-gfs-worker/src/publication.js";
-import { renderIstanbulPhotoPng } from "../istanbul-gfs-worker/src/photo.js";
+import { loadIstanbulTelegramFont, renderIstanbulPhotoPng } from "../istanbul-gfs-worker/src/photo.js";
 
 const base = Date.UTC(2026, 10, 1, 0, 0, 0);
 const runs = [];
@@ -50,9 +50,26 @@ assert.ok(chart.body.includes("cloudflare-js-v1"));
 assert.ok(chart.body.includes("fill: #0a1b29"));
 assert.ok(chart.body.includes("fill: #102a3a"));
 
-const photoPng = await renderIstanbulPhotoPng(chart.body);
+const fontCache = new Map();
+const fontArchive = {
+  async get(key) {
+    const bytes = fontCache.get(key);
+    return bytes ? { arrayBuffer: async () => bytes.buffer.slice(bytes.byteOffset, bytes.byteOffset + bytes.byteLength) } : null;
+  },
+  async put(key, bytes) {
+    fontCache.set(key, new Uint8Array(bytes));
+  },
+};
+const telegramFont = await loadIstanbulTelegramFont(fontArchive);
+assert.ok(telegramFont.length > 100000, "Telegram Inter font should be loaded and cached");
+const photoPng = await renderIstanbulPhotoPng(chart.body, telegramFont);
 assert.ok(photoPng.length > 1024);
 assert.deepEqual([...photoPng.slice(0, 8)], [137, 80, 78, 71, 13, 10, 26, 10]);
+const pngUInt32 = offset =>
+  photoPng[offset] * 0x1000000 + photoPng[offset + 1] * 0x10000 +
+  photoPng[offset + 2] * 0x100 + photoPng[offset + 3];
+assert.equal(pngUInt32(16), 2048, "Telegram report should use reference-width canvas");
+assert.equal(pngUInt32(20), 1256, "Telegram report should use reference-height canvas");
 
 const stationObservation = {
   station_name: "ENKA Balmumcu",
