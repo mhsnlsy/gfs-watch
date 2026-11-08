@@ -93,7 +93,7 @@ jobs:
                   if (response.status() >= 400) report.bad_responses.push({
                     viewport: view.name, status: response.status(), url: response.url()
                   });
-                  if (view.name === "desktop" && /\\/gfs\\/f72(?:\\?|$)/.test(response.url())) {
+                  if (view.name === "desktop" && /\/gfs\/f72(?:\?|$)/.test(response.url())) {
                     try {
                       const doc = await response.json();
                       report.f72 = {
@@ -122,7 +122,7 @@ jobs:
                 await page.locator("#meteopt-table-status").waitFor({ state: "visible", timeout: 30000 });
                 await page.waitForFunction(() => {
                   const status = document.querySelector("#meteopt-table-status")?.textContent || "";
-                  return /^\\s*24\\s*\\/\\s*24/.test(status);
+                  return /^\s*24\s*\/\s*24/.test(status);
                 }, { timeout: 60000 });
 
                 const table = page.locator("#meteopt-gfs-table");
