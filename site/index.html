@@ -1281,17 +1281,13 @@
 })();
 </script>
 <style id="force-eyupsultan-first-paint">
-/* FORCE: Eyüpsultan must be visibly active on first paint. */
+/* First paint uses the Eyüpsultan button's normal .active state.
+   Do not hard-code the inactive styles here: selectStation() owns the
+   active state after the user switches stations. */
 html[data-default-station="eyupsultan"] #station-eyupsultan-button{
-  background:rgba(125,211,215,.15)!important;
-  border-color:rgba(125,211,215,.32)!important;
-  color:#d8fbf3!important;
-}
-html[data-default-station="eyupsultan"] #station-enka-button,
-html[data-default-station="eyupsultan"] #station-sisli-button{
-  background:transparent!important;
-  border-color:transparent!important;
-  color:#9fb5c1!important;
+  background:rgba(125,211,215,.15);
+  border-color:rgba(125,211,215,.32);
+  color:#d8fbf3;
 }
 </style>
   </head>
