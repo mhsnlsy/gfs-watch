@@ -119,8 +119,8 @@ export default {
       });
     }
 
-    if (path === "/favicon.svg") {
-      const asset = await env.ASSETS.fetch(new Request(new URL("/icon.svg", url), request));
+    if (path === "/favicon.svg" || path === "/favicon.ico") {
+      const asset = await env.ASSETS.fetch(new Request(new URL("/istanbul-havasi-icon-20261108.svg", url), request));
       if (!asset.ok) return asset;
       const headers = new Headers(asset.headers);
       headers.set("Content-Type", "image/svg+xml; charset=utf-8");
