@@ -1069,14 +1069,21 @@
       min-width:0!important;
       width:100%!important;
     }
+    /* Camera: 50% size, pinned to the top-right of the dashboard column. */
     .dashboard-top>.enka-camera-panel{
       grid-column:2!important;
       grid-row:1!important;
+      width:50%!important;
+      max-width:50%!important;
       min-width:0!important;
-      width:100%!important;
-      margin:0!important;
+      margin:0 0 0 auto!important;
       align-self:start!important;
-      justify-self:stretch!important;
+      justify-self:end!important;
+      transform:none!important;
+    }
+    .dashboard-top>.enka-camera-panel .enka-camera-frame{
+      width:100%!important;
+      height:auto!important;
     }
     .station-card>.station-briefing-inline{
       grid-column:1 / -1!important;
@@ -1100,11 +1107,17 @@
     }
     @media(max-width:900px){
       .dashboard-top{grid-template-columns:minmax(0,1fr)!important}
-      .dashboard-top>.dashboard-left,
-      .dashboard-top>.enka-camera-panel{
+      .dashboard-top>.dashboard-left{
         grid-column:1!important;
         grid-row:auto!important;
         width:100%!important;
+      }
+      .dashboard-top>.enka-camera-panel{
+        grid-column:1!important;
+        grid-row:auto!important;
+        width:50%!important;
+        max-width:50%!important;
+        margin:0 0 0 auto!important;
       }
     }
     @media(max-width:560px){
