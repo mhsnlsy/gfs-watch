@@ -4243,7 +4243,33 @@ if(typeof renderBriefing==="function")renderBriefing();
         border-radius:15px!important;
       }
     }
-  </style>
+      /* Keep the long MeteoPT rain badge from expanding the left grid column. */
+    .dashboard-top .station-card{
+      grid-template-columns:minmax(0,1fr) minmax(0,1.08fr)!important;
+    }
+    .dashboard-top .station-card>.station-overview,
+    .dashboard-top .station-card .station-current{
+      min-width:0!important;
+      width:100%!important;
+    }
+    .dashboard-top .station-card .rain-brief{
+      min-width:0!important;
+      max-width:100%!important;
+    }
+    .dashboard-top .station-card .rain-brief .delta-badge{
+      display:block!important;
+      width:fit-content;
+      max-width:100%!important;
+      box-sizing:border-box;
+      white-space:normal!important;
+      overflow-wrap:anywhere!important;
+    }
+    @media(max-width:900px){
+      .dashboard-top .station-card{
+        grid-template-columns:minmax(0,1fr)!important;
+      }
+    }
+</style>
 
 <script id="remove-stray-literal-newline">(()=>{const w=document.createTreeWalker(document,NodeFilter.SHOW_TEXT);const n=[];while(w.nextNode())if(w.currentNode.nodeValue.trim()==="\\n")n.push(w.currentNode);n.forEach(x=>x.remove())})();</script>
 </body>
