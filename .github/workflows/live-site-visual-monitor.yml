@@ -1,6 +1,10 @@
 name: Live Site Visual Monitor
 
 on:
+  push:
+    branches: [main]
+    paths:
+      - ".github/workflows/live-site-visual-monitor.yml"
   workflow_dispatch:
   workflow_run:
     workflows:
@@ -53,6 +57,7 @@ jobs:
             url: base,
             checked_at_utc: new Date().toISOString(),
             viewports: {},
+            koy_viewports: {},
             f72: null,
             console_errors: [],
             page_errors: [],
@@ -150,11 +155,75 @@ jobs:
                   document_width: document.documentElement.scrollWidth,
                   horizontal_overflow_px: Math.max(0, document.documentElement.scrollWidth - window.innerWidth)
                 }));
+
+                // The Köy page has its own MeteoPT table and must prove that the
+                // Magnus dew-point column is actually populated on all 24 steps.
+                const koyPage = await context.newPage();
+                koyPage.on("console", message => {
+                  if (message.type() === "error") report.console_errors.push({
+                    viewport: view.name + "-koy", text: message.text()
+                  });
+                });
+                koyPage.on("pageerror", error => report.page_errors.push({
+                  viewport: view.name + "-koy", text: String(error)
+                }));
+                koyPage.on("requestfailed", request => report.failed_requests.push({
+                  viewport: view.name + "-koy",
+                  url: request.url(),
+                  error: request.failure()?.errorText || "failed"
+                }));
+                const koyResponse = await koyPage.goto(base + "/koy?visual-check=" + Date.now(), {
+                  waitUntil: "domcontentloaded",
+                  timeout: 60000
+                });
+                if (!koyResponse || !koyResponse.ok()) {
+                  throw new Error("Köy page navigation failed: HTTP " + (koyResponse?.status() ?? "no response"));
+                }
+                await koyPage.locator("#meteopt-table-status").waitFor({ state: "visible", timeout: 30000 });
+                await koyPage.waitForFunction(() => {
+                  const status = document.querySelector("#meteopt-table-status")?.textContent || "";
+                  return /^\\s*24\\s*\\/\\s*24/.test(status);
+                }, { timeout: 60000 });
+                const koyTable = koyPage.locator("#meteopt-gfs-table");
+                await koyTable.scrollIntoViewIfNeeded();
+                await koyPage.waitForTimeout(500);
+                await koyTable.screenshot({
+                  path: path.join(out, "koy-meteopt-table-" + view.name + ".png"),
+                  animations: "disabled"
+                });
+                await koyPage.screenshot({
+                  path: path.join(out, "koy-page-" + view.name + ".png"),
+                  fullPage: true,
+                  animations: "disabled"
+                });
+                report.koy_viewports[view.name] = await koyPage.evaluate(() => {
+                  const rows = [...document.querySelectorAll("#meteopt-table-body tr")];
+                  const dewPoints = rows.map(row => row.cells[7]?.innerText.trim() || "");
+                  return {
+                    title: document.title,
+                    run: document.querySelector("#meteopt-table-run")?.textContent || "",
+                    status: document.querySelector("#meteopt-table-status")?.textContent || "",
+                    rows: rows.length,
+                    columns: document.querySelectorAll("#meteopt-gfs-table thead th").length,
+                    dew_point_values: dewPoints,
+                    numeric_dew_point_count: dewPoints.filter(value => value && value !== "—" && Number.isFinite(Number(value.replace(",", ".")))).length,
+                    snowln_first_row: rows[0]?.cells[8]?.innerText.trim() || "",
+                    viewport_width: window.innerWidth,
+                    document_width: document.documentElement.scrollWidth
+                  };
+                });
                 await context.close();
               }
 
               if (report.viewports.desktop.rows !== 24 || report.viewports.mobile.rows !== 24) {
                 throw new Error("The real homepage did not render 24 forecast rows on desktop and mobile.");
+              }
+              for (const viewport of ["desktop", "mobile"]) {
+                const koy = report.koy_viewports[viewport];
+                if (!koy || koy.rows !== 24 || koy.columns !== 9 || koy.numeric_dew_point_count !== 24) {
+                  throw new Error("The live Köy page must render 24 rows, 9 columns and 24 numeric dew points on " +
+                    viewport + ": " + JSON.stringify(koy));
+                }
               }
               if (!report.f72 || report.f72.status !== 200 || report.f72.points !== 24 ||
                   !report.f72.run_id_utc || report.f72.horizon_hours < 72) {
@@ -167,6 +236,8 @@ jobs:
                 f72: report.f72,
                 desktop: report.viewports.desktop,
                 mobile: report.viewports.mobile,
+                koy_desktop: report.koy_viewports.desktop,
+                koy_mobile: report.koy_viewports.mobile,
                 console_errors: report.console_errors.length,
                 page_errors: report.page_errors.length,
                 failed_requests: report.failed_requests.length,
