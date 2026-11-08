@@ -40,5 +40,15 @@
       "binding": "LIVE_ARCHIVE",
       "bucket_name": "gfs-watch-live-archive"
     }
+  ],
+  "routes": [
+    {
+      "pattern": "istanbulunhavasi.com",
+      "custom_domain": true
+    },
+    {
+      "pattern": "www.istanbulunhavasi.com",
+      "custom_domain": true
+    }
   ]
 }
