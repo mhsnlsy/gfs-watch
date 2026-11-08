@@ -1,3 +1,4 @@
+// RADAR CRON LIVE — Cloudflare Paid
 // LIVE SYNTHETIC RADAR DRILL ENABLED: 30 km N / 25 dBZ / 20 px / 30 km/h / ~60 min ETA
 const LAT = 41.0904;
 const LON = 28.9438;
@@ -6,6 +7,7 @@ const THRESHOLD_DBZ = 10;
 const THRESHOLD_DBZ_STRONG = 30;
 const MIN_ALERT_PIXELS = 5;
 const ALERT_COOLDOWN_SECONDS = 45 * 60;
+const RADAR_BUILD = "paid-cron-2026-11-08";
 const HISTORY_LEN = 4;
 const ZOOM = 7;
 const TILE_SIZE = 256;
@@ -322,6 +324,6 @@ ${new Date(ts*1000).toLocaleString("tr-TR",{timeZone:"Europe/Istanbul"})}`;
 }
 
 export default {
-  async fetch(request,env){const url=new URL(request.url);if(url.pathname==="/test-radar"){return new Response(JSON.stringify(await runSyntheticTest(env)),{headers:{"content-type":"application/json"}});}if(url.pathname==="/health"){const s=await getState(env.RADAR_DB);return new Response(JSON.stringify({ok:true,service:"radar-monitor",interval:"6m",pixel_threshold:MIN_ALERT_PIXELS,cooldown_minutes:ALERT_COOLDOWN_SECONDS/60,last_frame_ts:Number(s.last_frame_ts||0),last_alert_ts:Number(s.last_alert_ts||0),last_intensity:s.last_intensity||""}),{headers:{"content-type":"application/json"}});}return new Response(JSON.stringify({ok:true,service:"radar-monitor",interval:"6m"}),{headers:{"content-type":"application/json"}});},
+  async fetch(request,env){const url=new URL(request.url);if(url.pathname==="/test-radar"){return new Response(JSON.stringify(await runSyntheticTest(env)),{headers:{"content-type":"application/json"}});}if(url.pathname==="/health"){const s=await getState(env.RADAR_DB);return new Response(JSON.stringify({ok:true,service:"radar-monitor",interval:"6m",build:RADAR_BUILD,pixel_threshold:MIN_ALERT_PIXELS,cooldown_minutes:ALERT_COOLDOWN_SECONDS/60,last_frame_ts:Number(s.last_frame_ts||0),last_alert_ts:Number(s.last_alert_ts||0),last_intensity:s.last_intensity||""}),{headers:{"content-type":"application/json"}});}return new Response(JSON.stringify({ok:true,service:"radar-monitor",interval:"6m"}),{headers:{"content-type":"application/json"}});},
   async scheduled(event,env,ctx){ctx.waitUntil(check(env).then(r=>console.log(JSON.stringify(r))).catch(e=>console.error(e.stack||e.message||e)));}
 };
