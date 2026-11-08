@@ -68,8 +68,8 @@ assert.deepEqual([...photoPng.slice(0, 8)], [137, 80, 78, 71, 13, 10, 26, 10]);
 const pngUInt32 = offset =>
   photoPng[offset] * 0x1000000 + photoPng[offset + 1] * 0x10000 +
   photoPng[offset + 2] * 0x100 + photoPng[offset + 3];
-assert.equal(pngUInt32(16), 2048, "Telegram report should use reference-width canvas");
-assert.equal(pngUInt32(20), 1256, "Telegram report should use reference-height canvas");
+assert.equal(pngUInt32(16), 2048, "Telegram image should preserve homepage 2x2 chart canvas width");
+assert.equal(pngUInt32(20), 1490, "Telegram image should preserve homepage 2x2 aspect ratio");
 
 const stationObservation = {
   station_name: "ENKA Balmumcu",
