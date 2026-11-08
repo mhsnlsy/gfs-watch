@@ -177,7 +177,7 @@ function normalize(candidate, now) {
     sources: meteoptSourceMetadata({
       forecast: "MeteoPT GFS point forecast (Istanbul, TR)",
       forecast_url: candidate.url,
-    },
+    }),
     f72: {
       available: hasF72,
       forecast_hour: 72,
