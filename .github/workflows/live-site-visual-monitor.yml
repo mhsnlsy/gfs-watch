@@ -275,9 +275,7 @@ jobs:
                 "Steps", "Date/Hour (TSİ)", "T.2m", "Prec.", "W.10m", "T.850",
                 "W.850", "RH.2m (%)", "Dew Point (°C)", "Snowln (m)"
               ];
-              const expectedKoyHeaders = [
-                ...expectedIstanbulHeaders, "Dew Point (°C)", "Snowln (m)"
-              ];
+              const expectedKoyHeaders = expectedIstanbulHeaders;
               for (const viewport of ["desktop", "mobile"]) {
                 const istanbul = report.viewports[viewport];
                 if (!istanbul || istanbul.rows !== 24 || istanbul.columns !== 10 ||
