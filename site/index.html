@@ -412,9 +412,6 @@
 .dashboard-left .history-chart{height:92px;margin-top:2px}
 .dashboard-left .history-chart-head h3{font-size:12px}
 .dashboard-left .history-chart-head p,.dashboard-left .history-chart-meta,.dashboard-left .history-source-note{font-size:8px}
-.next-72h-panel{min-width:0;padding:15px;background:linear-gradient(145deg,rgba(18,43,61,.94),rgba(12,31,46,.96));border:1px solid var(--line);border-radius:20px;height:auto!important;min-height:0!important;align-self:start!important}
-    .gfs-cycle-compare-frame{display:block;width:100%;height:365px;min-height:0;max-height:none;border:0;background:transparent;overflow:visible!important;overflow-x:visible!important;overflow-y:visible!important;overscroll-behavior:auto;touch-action:auto}
-    @media(max-width:700px){.gfs-cycle-compare-frame{height:365px;min-height:0;max-height:none;overflow:visible!important;overflow-x:visible!important;overflow-y:visible!important;touch-action:auto}}
 
 .rain-window-left{margin-top:12px;align-self:stretch;width:100%;min-width:0}.rain-window-left .rain-window-main{font-size:15px}.rain-window-left .rain-window-detail{max-width:680px}
     .rain-window{margin-top:14px;padding:13px 14px;border:1px solid rgba(131,201,235,.22);border-radius:14px;background:linear-gradient(120deg,rgba(30,79,103,.24),rgba(4,19,29,.24))}
@@ -429,17 +426,6 @@
 .rain-window-time strong{display:block;font:700 14px Manrope,sans-serif;color:#e8f5f8;margin-top:3px}
 @media(max-width:560px){.rain-window{padding:11px}.rain-window-main{font-size:14px}.rain-window-time strong{font-size:13px}}
 
-.next-72h-head{display:flex;justify-content:space-between;align-items:flex-start;gap:10px;margin-bottom:12px}
-.next-72h-head h2{font-size:20px;margin-top:5px}
-.next-72h-head p{font-size:9px;color:var(--muted);margin:5px 0 0}
-.next-72h-badge{font-size:9px;color:#b8d7df;border:1px solid var(--line);padding:6px 8px;border-radius:8px;white-space:nowrap;max-width:42%}
-.next-72h-grid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:16px 20px}
-.next-72h-card{position:relative;min-width:0;padding:12px 10px 9px;border:1px solid rgba(204,225,239,.08);border-radius:14px;background:rgba(4,19,29,.17)}
-.next-72h-card-head{display:flex;align-items:center;justify-content:space-between;gap:8px}
-.next-72h-card-head h3{font:700 14px Manrope,sans-serif;margin:0}
-.next-72h-card-head span{font-size:8px;color:var(--muted);white-space:nowrap}
-.next-72h-chart{height:190px;width:100%;margin-top:8px;min-width:0}
-.next-72h-chart svg{display:block;width:100%;height:100%;overflow:visible}
 .briefing{display:grid;gap:4px;margin-top:8px}
 .briefing-row{display:grid;grid-template-columns:86px minmax(0,1fr);gap:8px;align-items:start;padding:5px 8px;border-radius:10px;background:rgba(2,15,24,.28);border:1px solid rgba(143,184,196,.16)}
 .briefing-k{font-size:9px;letter-spacing:.06em;font-weight:700;color:#8fd0c8;text-transform:uppercase;padding-top:2px}
@@ -449,8 +435,6 @@
 .brief-spell{font-size:12.5px;line-height:1.4;color:#e7f2f6}
 .brief-spell+.brief-spell{margin-top:2px}
 .brief-meta{margin-top:3px;font-size:11px;line-height:1.35;color:#a8c0ca}
-@media(max-width:900px){.dashboard-top{grid-template-columns:minmax(0,1fr)}.dashboard-left{display:contents}.dashboard-left .station-card{order:0}.next-72h-panel{order:1}.dashboard-left .history-panel{order:2}}
-@media(max-width:560px){.dashboard-top{gap:10px;padding:16px 0 12px}.dashboard-left .history-chart{height:88px}.next-72h-panel{padding:11px;border-radius:16px}.next-72h-head h2{font-size:18px}.next-72h-grid{gap:7px}.next-72h-card{padding:8px 6px 6px}.next-72h-card-head h3{font-size:11px}.next-72h-chart{height:120px}}
 
     /* Integrated observation card: station history is part of the live card. */
     .dashboard-top{grid-template-columns:minmax(310px,.82fr) minmax(0,1.18fr);gap:13px;align-items:stretch;padding:18px 0 16px}
@@ -493,14 +477,12 @@
 
 
     /* Mobile interaction and frameless chart finish. */
-    .next-72h-card{
       border:0!important;
       border-radius:0!important;
       background:transparent!important;
       box-shadow:none!important;
       padding:3px 2px 0!important;
     }
-    .next-72h-grid{column-gap:18px;row-gap:15px}
     .chart-stack>.chart-card{
       border:0!important;
       border-radius:0!important;
@@ -519,20 +501,12 @@
       box-shadow:0 8px 22px rgba(0,0,0,.30);
     }
     @media(max-width:560px){
-      .next-72h-panel{padding:13px 12px}
-      .next-72h-head{
         display:flex;
         flex-direction:column;
         align-items:flex-start;
         gap:7px;
         margin-bottom:9px;
       }
-      .next-72h-head h2{font-size:19px;white-space:normal}
-      .next-72h-badge{white-space:normal;line-height:1.35}
-      .next-72h-grid{grid-template-columns:minmax(0,1fr);gap:18px}
-      .next-72h-card{padding:2px 1px 0!important}
-      .next-72h-chart{height:172px;margin-top:6px}
-      .next-72h-card-head h3{font-size:14px}
       .chart-tooltip{min-width:146px;max-width:min(190px,calc(100vw - 44px));padding:7px 8px}
       .station-history-tooltip{min-width:132px;max-width:min(182px,calc(100vw - 44px));padding:8px 9px;font-size:10px}
       .station-history-tooltip-value{font-size:13px}
@@ -540,7 +514,6 @@
 
 
     /* Anchor touch-detail popups to their own mini-chart. */
-    .next-72h-chart{position:relative}
 
 
     /* Remove browser focus/hover rings from transparent SVG chart hit regions. */
@@ -567,7 +540,6 @@
       filter:none!important;
       box-shadow:none!important;
     }
-    .next-72h-chart svg,
     .history-chart svg,
     .chart-wrap svg{
       outline:0!important;
@@ -584,9 +556,7 @@
     main.shell { padding-bottom:max(12px,env(safe-area-inset-bottom)); }
     .topbar { min-height:76px; height:auto; padding-top:max(8px,env(safe-area-inset-top)); gap:18px; }
     .dashboard-top { grid-template-columns:minmax(360px,.82fr) minmax(0,1.18fr); gap:clamp(14px,1.5vw,24px); }
-    .dashboard-top > *, .dashboard-left, .station-card, .next-72h-panel, .section, .section-head,
     .chart-stack, .chart-card, .notification-card, .lower-grid > * { min-width:0; }
-    .next-72h-chart { min-height:150px; }
     .chart-wrap, .ecmwf-chart, .ecmwf-table-wrap { max-width:100%; }
     img, svg, video, canvas { max-width:100%; }
     button, .tab, .model-picker button, .station-switch button, .notification-button {
@@ -598,7 +568,6 @@
     @media (min-width:1600px) {
       .shell { width:min(1560px,calc(100% - 64px)); }
       .dashboard-top { grid-template-columns:minmax(420px,.78fr) minmax(0,1.22fr); }
-      .next-72h-chart { height:210px; }
       .section { padding-top:36px; padding-bottom:36px; }
       h2 { font-size:26px; }
     }
@@ -606,7 +575,6 @@
       .dashboard-top { grid-template-columns:minmax(0,1fr); }
       .dashboard-left { display:block; }
       .dashboard-top .station-card { width:100%; }
-      .next-72h-grid { grid-template-columns:repeat(2,minmax(0,1fr)); }
     }
     @media (max-width:700px) {
       html { scroll-padding-top:calc(64px + env(safe-area-inset-top)); }
@@ -615,8 +583,6 @@
       .dashboard-top { grid-template-columns:minmax(0,1fr); }
       .dashboard-left { display:block; }
       .dashboard-top .station-card { width:100%; max-width:none; }
-      .next-72h-grid { grid-template-columns:minmax(0,1fr); }
-      .next-72h-chart { height:clamp(160px,42vw,210px); }
       .chart-wrap { overflow-x:auto; -webkit-overflow-scrolling:touch; }
       .chart-wrap svg { min-width:560px; }
       .ecmwf-chart { overflow-x:auto; -webkit-overflow-scrolling:touch; }
@@ -641,15 +607,6 @@
     /* Portrait mobile: compact the 72-hour forecast and remove excess chart whitespace. */
     @media (max-width:700px) and (orientation:portrait) {
       .dashboard-top { gap:8px; padding-top:10px; padding-bottom:8px; }
-      .next-72h-panel { padding:10px 9px; border-radius:15px; }
-      .next-72h-head { gap:7px; margin-bottom:6px; }
-      .next-72h-head h2 { margin-top:2px; font-size:17px; line-height:1.15; }
-      .next-72h-head p { margin-top:3px; line-height:1.3; }
-      .next-72h-badge { padding:4px 6px; font-size:8px; }
-      .next-72h-grid { gap:7px; }
-      .next-72h-card { padding:7px 7px 5px; border-radius:11px; }
-      .next-72h-card-head h3 { font-size:12px; }
-      .next-72h-chart { height:132px; min-height:0; margin-top:3px; }
       .briefing { gap:4px; margin-top:6px; }
       .briefing-row { grid-template-columns:78px minmax(0,1fr); gap:6px; padding:5px 7px; }
       .briefing-v,.brief-spell { font-size:12px; line-height:1.32; }
@@ -663,8 +620,6 @@
       .hero { padding-top:16px; }
       .dashboard-top { grid-template-columns:minmax(270px,.8fr) minmax(0,1.2fr); gap:10px; }
       .dashboard-left { display:block; }
-      .next-72h-grid { grid-template-columns:repeat(2,minmax(0,1fr)); gap:8px; }
-      .next-72h-chart { height:125px; }
       .station-history-inline .history-charts { grid-template-columns:repeat(2,minmax(0,1fr)); }
       .daily-grid { grid-template-columns:repeat(4,minmax(0,1fr)); }
       .section { padding-top:16px; padding-bottom:16px; }
@@ -913,7 +868,6 @@
       align-self:stretch!important;
       grid-template-rows:auto auto auto minmax(0,1fr) auto!important;
     }
-    .dashboard-top .next-72h-panel{
       margin:0!important;
       align-self:stretch!important;
       height:100%!important;
@@ -948,7 +902,6 @@
     .dashboard-top{align-items:start!important}
     .dashboard-left,
     .dashboard-top .station-card,
-    .dashboard-top .next-72h-panel{
       height:auto!important;
       min-height:0!important;
       flex:0 0 auto!important;
@@ -963,7 +916,6 @@
     @media(max-width:900px){
       .dashboard-left{height:auto!important;min-height:0!important}
       .dashboard-top .station-card,
-      .dashboard-top .next-72h-panel{
         flex:0 0 auto!important;
         height:auto!important;
         min-height:0!important;
@@ -997,7 +949,6 @@
 
 
     /* GFS 180h panel: do not stretch the forecast card to the height of adjacent content. */
-    .dashboard-top .next-72h-panel{
       height:auto!important;
       min-height:0!important;
       align-self:start!important;
@@ -1047,16 +998,10 @@
 
     /* Final mobile density override: trim chart and card whitespace by ~25%. */
     @media (max-width:700px) and (orientation:portrait) {
-      .next-72h-panel { padding:9px 8px!important; }
-      .next-72h-head { margin-bottom:6px!important; gap:5px!important; }
-      .next-72h-grid { row-gap:13px!important; column-gap:8px!important; }
-      .next-72h-card { padding:2px 1px 0!important; }
-      .next-72h-chart {
         height:129px!important;
         min-height:0!important;
         margin-top:2px!important;
       }
-      .next-72h-chart svg { height:100%!important; }
       .briefing { margin-top:5px!important; gap:3px!important; }
       .briefing-row { padding:4px 6px!important; }
     }
@@ -1365,11 +1310,6 @@ html[data-default-station="eyupsultan"] #station-eyupsultan-button{
       </article>
 
       </div>
-      <section class="next-72h-panel" id="next-72h-panel" aria-label="Önümüzdeki 72 saatlik hava tahmini">
-        <iframe id="gfs-cycle-compare-frame" class="gfs-cycle-compare-frame" src="./gfs-cycle-compare.html?v=20261108-tooltip-visible-overflow-4" title="İstanbul · Son dört GFS döngüsünün 72 saatlik karşılaştırması" loading="eager" scrolling="auto" frameborder="0" border="0" style="border:0!important;outline:0!important;box-shadow:none!important;background:transparent!important;"></iframe>
-        <div hidden aria-hidden="true">
-          <span id="next-72h-meta">Model verisi bekleniyor</span>
-          <div id="next72-temperature"></div>
           <div id="next72-precipitation"></div>
         </div>
         <div class="briefing" id="briefing" aria-live="polite">
@@ -1877,38 +1817,6 @@ html[data-default-station="eyupsultan"] #station-eyupsultan-button{
       }
       if(mag<0.05)return "yön yok, yağış miktarı tutmuş";
       return bias>0?"model "+fmt(mag,2)+" mm fazla yağış vermiş":"model "+fmt(mag,2)+" mm az yağış vermiş";
-    }
-    function renderNext72Hours(){
-      const meta=$("next-72h-meta"),points=forecastData&&Array.isArray(forecastData.forecast_6_hourly)?forecastData.forecast_6_hourly:[];
-      const now=Date.now(),horizon=now+72*3600000;
-      const parsed=points.map(p=>{
-        const stamp=new Date(p.valid_time_utc).getTime();
-        const modelLead=Number(p.forecast_hour);
-        return {...p,stamp,modelLead};
-      }).filter(p=>Number.isFinite(p.stamp)&&Number.isFinite(p.modelLead)).sort((a,b)=>a.stamp-b.stamp);
-      const hourly=parsed.filter(p=>p.stamp>=now-20*60000&&p.stamp<=horizon+20*60000).map(p=>({...p,lead:Math.max(0,(p.stamp-now)/3600000)}));
-      if(hourly.length<2){["next72-temperature","next72-precipitation"].forEach(id=>$(id).innerHTML='<div class="chart-empty">Yeni GFS raporu bekleniyor. 72 saatlik pencere son raporun çıktısına kilitlenir.</div>');if(meta)meta.textContent="Yeni rapor bekleniyor";renderRainWindow(parsed);return;}
-      const temperature=hourly.filter(p=>numeric(p.temperature_2m_c)).map(p=>{
-        const skill=skillAtLead(p.modelLead);
-        const mae=skill&&numeric(skill.mae_c)?skill.mae_c:null;
-        const bias=skill&&numeric(skill.bias_c)?skill.bias_c:null;
-        const within=skill&&numeric(skill.within_2c_pct)?skill.within_2c_pct:null;
-        const samples=skill&&skill.pairs?skill.pairs:0;
-        const trusted=numeric(within)&&within>=90;
-        const detail=within!=null
-          ?"f"+String(p.modelLead).padStart(3,"0")+" · "+signedMiss(bias,"temp")+" · ±2°C içinde %"+Math.round(within)+" · "+samples+" örnek · "+(trusted?"%90 üzerinde, dikkate al":"%90 altında, plana katma")
-          :"f"+String(p.modelLead).padStart(3,"0")+" · bu saat henüz doğrulanmadı, plana katma";
-        return {lead:p.lead,time:p.valid_time_utc,value:p.temperature_2m_c,mae,bias,within,trusted,label:fmt(p.temperature_2m_c,1)+" °C",detail};
-      });
-      const rain=[];parsed.filter(p=>p.modelLead>0&&p.modelLead%3===0&&p.stamp>=now-20*60000&&p.stamp<=horizon+20*60000).forEach(p=>{const interval=parsed.filter(q=>q.modelLead>p.modelLead-3&&q.modelLead<=p.modelLead);const native3h=interval.length===1&&numeric(interval[0].precipitation_6h_mm);if(!native3h&&(interval.length!==3||interval.some(q=>!numeric(q.precipitation_6h_mm))))return;const amount=native3h?interval[0].precipitation_6h_mm:interval.reduce((sum,q)=>sum+q.precipitation_6h_mm,0);const skill=skillAtLeadRain(p.modelLead);const mae=skill&&numeric(skill.mae_mm)?skill.mae_mm:null;const bias=skill&&numeric(skill.bias_mm)?skill.bias_mm:null;const within=skill&&numeric(skill.within_1mm_pct)?skill.within_1mm_pct:null;const samples=skill&&skill.pairs?skill.pairs:0;const trusted=numeric(within)&&within>=90;const detail=within!=null?"f"+String(p.modelLead).padStart(3,"0")+" · "+signedMiss(bias,"rain")+" · ±1 mm içinde %"+Math.round(within)+" · "+samples+" örnek · "+(trusted?"%90 üzerinde, dikkate al":"%90 altında, plana katma"):"f"+String(p.modelLead).padStart(3,"0")+" · bu yağış saati henüz doğrulanmadı, plana katma";rain.push({lead:Math.max(0,(p.stamp-now)/3600000),time:p.valid_time_utc,value:amount,mae,bias,within,trusted,label:fmt(amount,2)+" mm / 3 saat",detail});});
-      const cycle=forecastData&&forecastData.run_id_utc?timeUTC(forecastData.run_id_utc)+" UTC":"GFS";
-      if(meta)meta.textContent=cycle+" · sonraki 72 saat";
-      const tempSpan=document.querySelector("#next72-temperature")?.closest(".next-72h-card")?.querySelector("span");
-      const rainSpan=document.querySelector("#next72-precipitation")?.closest(".next-72h-card")?.querySelector("span");
-      if(tempSpan){tempSpan.textContent="°C";tempSpan.classList.remove("bias-tag");}
-      if(rainSpan){rainSpan.textContent="mm / 3 saat";rainSpan.classList.remove("bias-tag");}
-      drawNext72Line("next72-temperature",temperature,"#7dd3d7","Sıcaklık °C");drawNext72Line("next72-precipitation",rain,"#83c9eb","Yağış mm");
-      renderRainWindow(parsed);
     }
     let latestRainForecastPoints=[];
     function renderRainWindow(parsed){
@@ -3015,7 +2923,6 @@ html[data-default-station="eyupsultan"] #station-eyupsultan-button{
       safeRenderStationCard(stationKey==="enka"?enkaStationObservation:stationKey==="eyupsultan"?eyupsultanStationObservation:sisliStationObservation);
       try{renderStationHistory();}catch(error){console.warn("Station history render skipped:",error);}
       if(typeof renderBriefing==="function")renderBriefing();
-      if(typeof forecastData!=="undefined"&&forecastData&&typeof renderNext72Hours==="function")renderNext72Hours();
       if(typeof refreshSelectedStation==="function")refreshSelectedStation();
     }
     forceHomepageDefaultStation();
@@ -3191,7 +3098,6 @@ if(typeof renderBriefing==="function")renderBriefing();
         renderStationCard(activeStation==="enka"?enkaStationObservation:activeStation==="eyupsultan"?eyupsultanStationObservation:sisliStationObservation);
         renderStationHistory();
 if(typeof renderBriefing==="function")renderBriefing();
-        if(typeof forecastData!=="undefined"&&forecastData&&typeof renderNext72Hours==="function")renderNext72Hours();
       }catch(error){
         console.warn("Cloudflare istasyon API verisi alınamadı:",error);
         if(activeStation===stationKey&&!stationObservationIsFresh(stationKey==="enka"?enkaStationObservation:stationKey==="eyupsultan"?eyupsultanStationObservation:sisliStationObservation)){
@@ -3433,7 +3339,6 @@ if(typeof renderBriefing==="function")renderBriefing();
       }else{
         verificationDoc=null;
       }
-      if(typeof forecastData!=="undefined"&&forecastData&&typeof renderNext72Hours==="function")renderNext72Hours();
       if(forecastData&&typeof renderBriefing==="function")renderBriefing();
     }
 
@@ -3761,29 +3666,6 @@ if(typeof renderBriefing==="function")renderBriefing();
 
   <script src="./meteopt-gfs-table.js?v=20261108-rh2m-dewpoint-snowln-1" defer></script>
 
-  <style id="gfs-istanbul-koy-layout">
-    /* İstanbul GFS alanı, Köy sayfasındaki çerçevesiz yerleşimi kullanır. */
-    #next-72h-panel{
-      padding:0!important;
-      background:transparent!important;
-      border:0!important;
-      border-radius:0!important;
-      box-shadow:none!important;
-    }
-    #gfs-cycle-compare-frame{
-      display:block;
-      width:100%;
-      min-height:0;
-      max-height:none;
-      border:0;
-      background:transparent;
-      overflow:visible;
-      overflow-x:visible;
-      overflow-y:visible;
-      overscroll-behavior:auto;
-      touch-action:auto;
-    }
-  </style>
     <style id="koy-gfs-report-rules-home">
       /* Exact layout rules from the working Köy GFS report. */
       .koy-gfs-report-card{
@@ -3930,7 +3812,6 @@ if(typeof renderBriefing==="function")renderBriefing();
   <style id="home-gfs-report-frame-v3">
     /* FINAL: the report is already the outer panel. Do not create a second
        white/default iframe frame or shrink the chart canvas. */
-    #gfs-cycle-compare-frame{
       display:block!important;
       width:100%!important;
       max-width:100%!important;
@@ -3948,7 +3829,6 @@ if(typeof renderBriefing==="function")renderBriefing();
 
   <script>
     (() => {
-      const frame = document.getElementById("gfs-cycle-compare-frame");
       if (!frame) return;
       const setFrameHeight = value => {
         const height = Number(value);
@@ -4076,7 +3956,6 @@ if(typeof renderBriefing==="function")renderBriefing();
       outline:0!important;
       box-shadow:none!important;
     }
-    #gfs-cycle-compare-frame{
       border:0!important;
       outline:0!important;
       box-shadow:none!important;
@@ -4097,7 +3976,6 @@ if(typeof renderBriefing==="function")renderBriefing();
     }
   </style>  <style id="homepage-gfs-iframe-border-dark">
     /* GFS iframe: varsayılan beyaz iframe kenarlığı tamamen kaldırılır. */
-    #gfs-cycle-compare-frame{
       border:0!important;
       outline:0!important;
       box-shadow:none!important;
@@ -4109,7 +3987,6 @@ if(typeof renderBriefing==="function")renderBriefing();
   </style>
   <style id="koy-iframe-frame-clone">
     /* Köy GFS rapor kuralı: tek koyu yüzey, iframe içinde beyaz/nested frame yok. */
-    #gfs-cycle-compare-frame{
       display:block!important;
       box-sizing:border-box!important;
       width:100%!important;
