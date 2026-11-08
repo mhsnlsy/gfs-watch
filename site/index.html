@@ -23,6 +23,37 @@
   <title>İstanbul Havası — İstanbul Hava Tahmini</title>
   <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css">
   <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+  <script id="ios12-compatibility">
+(function(){
+  if(!Promise.allSettled){
+    Promise.allSettled=function(items){
+      return Promise.all(items.map(function(item){
+        return Promise.resolve(item).then(
+          function(value){return {status:"fulfilled",value:value};},
+          function(reason){return {status:"rejected",reason:reason};}
+        );
+      }));
+    };
+  }
+  if(!Array.prototype.flatMap){
+    Array.prototype.flatMap=function(fn){
+      var out=[];
+      for(var i=0;i<this.length;i++){
+        var v=fn(this[i],i,this);
+        if(Array.isArray(v)) out.push.apply(out,v); else out.push(v);
+      }
+      return out;
+    };
+  }
+  if(!String.prototype.padStart){
+    String.prototype.padStart=function(len,fill){
+      var s=String(this),f=fill==null?" ":String(fill);
+      while(s.length<len)s=f+s;
+      return s.slice(-len);
+    };
+  }
+})();
+</script>
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;500;600;700&family=Manrope:wght@400;500;600;700;800&display=swap" rel="stylesheet">
