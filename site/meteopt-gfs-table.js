@@ -151,7 +151,15 @@
         }).format(new Date(document.published_at_utc)) + " TSİ"
       : "Yayın zamanı bilinmiyor";
 
-    $("meteopt-table-status").textContent = rows.length + " / 60 adım · 3 saatlik · 180. saate kadar";
+    const stepIntervals = Array.from(new Set(hours.slice(1)
+      .map((item, index) => item.step - hours[index].step)
+      .filter(interval => Number.isFinite(interval) && interval > 0)))
+      .sort((a, b) => a - b);
+    const cadenceLabel = stepIntervals.length
+      ? stepIntervals.map(interval => interval + " saat").join("/")
+      : "model";
+    $("meteopt-table-status").textContent = rows.length + " adım · " + cadenceLabel +
+      " aralıklı · 180. saate kadar";
   }
 
   async function refresh() {
