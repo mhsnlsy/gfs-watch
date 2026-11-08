@@ -291,7 +291,7 @@ function forceDarkGfsSvg(svg){
     card.style.setProperty("border-color","#17384A","important");
   }
 }
-function addMobileGfsCycleLabels(panelHost,panel){
+function addMobileGfsCycleLabels(panelHost,panel,panelSvg){
   if(!panelHost||!panel)return;
   const series=Array.isArray(panel.series)?panel.series:[];
   const cycles=[];
@@ -314,27 +314,22 @@ function addMobileGfsCycleLabels(panelHost,panel){
   const order={"06Z":0,"00Z":1,"18Z":2,"12Z":3};
   cycles.sort((a,b)=>((order[a.cycle] == null ? 99 : order[a.cycle]))-(order[b.cycle] == null ? 99 : order[b.cycle]));
 
-  // Derive legend colors from the actual run timestamp in each series label.
-  // This guarantees newest=lilac regardless of array ordering or cycle hour.
-  const agePalette=["#B38BE8","#F1C98B","#7DD3D7","#8ABCE8"];
-  const parseRunTime=(label)=>{
-    const m=String(label||"").match(/(?:YENİ\s*·\s*)?(00|06|12|18)Z\s*\|\s*(\d{2})\.(\d{2})\s+(\d{2}):\d{2}/i);
-    if(!m)return null;
-    const year=new Date().getUTCFullYear();
-    return Date.UTC(year,Number(m[2])-1,Number(m[3]),Number(m[1]));
-  };
-  const rankedSeries=series.map((item,index)=>({item,index,ts:parseRunTime(item.label)}))
-    .sort((a,b)=>(b.ts??-Infinity)-(a.ts??-Infinity));
-  const colorByCycle={};
-  rankedSeries.forEach((entry,rank)=>{
-    const label=String(entry.item && entry.item.label||"");
-    const match=label.match(/(00|06|12|18)Z/i);
-    if(match) colorByCycle[match[1].toUpperCase()+"Z"]=agePalette[Math.min(rank,agePalette.length-1)];
+  // Build the legend FROM THE ACTUAL GRAPH LINES.
+  // The SVG renderer tags every plotted series as #gfs-series-N. We read the
+  // stroke that is actually painted in the graph instead of reconstructing
+  // colors from cycle names, timestamps, or a separate palette.
+  const graphColors=[];
+  const seriesNodes=panelSvg ? panelSvg.querySelectorAll('[id^="gfs-series-"]') : [];
+  seriesNodes.forEach((node,index)=>{
+    const line=node.querySelector ? (node.querySelector("path,polyline,line")||node) : node;
+    const stroke=(line.getAttribute("stroke")||"").trim();
+    const style=(line.getAttribute("style")||"");
+    const styleMatch=style.match(/(?:^|;)\\s*stroke\\s*:\\s*([^;]+)/i);
+    graphColors[index]=(stroke || (styleMatch ? styleMatch[1].trim() : "")).trim();
   });
-  cycles.forEach(item=>{
-    item.color=colorByCycle[item.cycle] || item.color || agePalette[3];
+  cycles.forEach((item,index)=>{
+    item.color=graphColors[index] || String((series[index] && series[index].color)||"#B38BE8");
   });
-
   const legend=document.createElement("div");
   legend.className="gfs-mobile-cycle-legend";
   legend.setAttribute("aria-label","GFS döngüleri");
@@ -472,7 +467,7 @@ async function loadInteractiveGfsCharts(root){
             // into this card on mobile.
             panelHost.style.setProperty("overflow","hidden","important");
             panelHost.style.setProperty("position","relative","important");
-            addMobileGfsCycleLabels(panelHost,panelMetadata.panels && panelMetadata.panels[0]);
+            addMobileGfsCycleLabels(panelHost,panelMetadata.panels && panelMetadata.panels[0],panelSvg);
             panelSvg.style.setProperty("overflow","hidden","important");
             panelHost.appendChild(panelSvg);
             host.appendChild(panelHost);
