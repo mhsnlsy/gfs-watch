@@ -2,6 +2,9 @@ name: GFS Pressure Centers
 
 on:
   workflow_dispatch:
+  push:
+    branches:
+      - feat/gfs-pressure-centers-github-actions
   schedule:
     - cron: "20 23,5,11,17 * * *"
 
