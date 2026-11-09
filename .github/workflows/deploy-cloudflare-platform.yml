@@ -373,7 +373,7 @@ jobs:
           echo "Verified homepage MeteoPT table asset uses the F180-ready /gfs/latest endpoint."
 
           echo "Checking the real public domain: https://www.istanbulunhavasi.com ..."
-          PUBLIC_SITE="https://www.istanbulunhavasi.com"
+          PUBLIC_SITE="https://istanbulunhavasi.com"
           curl --silent --show-error --fail --max-time 30 "$PUBLIC_SITE/?live-check=$(date +%s)" -o "$RUNNER_TEMP/public-homepage.html"
           grep -Fq 'meteopt-gfs-table.js' "$RUNNER_TEMP/public-homepage.html" || { echo "::error::Public homepage does not load the MeteoPT table script."; exit 1; }
           curl --silent --show-error --fail --max-time 45 "$PUBLIC_SITE/gfs/f72?check=$(date +%s)" -o "$RUNNER_TEMP/public-gfs-f72.json"
