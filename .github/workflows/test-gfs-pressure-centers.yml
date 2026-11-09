@@ -1,0 +1,43 @@
+name: Test GFS Pressure Centers
+
+on:
+  pull_request:
+    paths:
+      - "services/gfs-pressure-centers/**"
+      - ".github/workflows/test-gfs-pressure-centers.yml"
+      - "site/index.html"
+
+jobs:
+  syntax:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.13"
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+      - name: Python syntax
+        run: python -m py_compile services/gfs-pressure-centers/container/*.py
+      - name: Worker syntax
+        run: node --check services/gfs-pressure-centers/src/index.js
+      - name: Site pressure UI smoke check
+        run: |
+          python - <<'PY'
+          from pathlib import Path
+          html = Path("site/index.html").read_text(encoding="utf-8")
+          required = [
+              'id="basinc"',
+              'id="pressure-findings"',
+              'id="pressure-map"',
+              'gfs-pressure-api-url',
+              'function renderPressureCenters',
+              'function renderPressureMap',
+              'async function loadPressureCenters'
+          ]
+          missing = [x for x in required if x not in html]
+          if missing:
+              raise SystemExit("Missing pressure UI markers: " + ", ".join(missing))
+          print("Pressure-center UI smoke check OK")
+          PY
