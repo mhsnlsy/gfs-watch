@@ -3572,3 +3572,61 @@ html.ios12 #enka-camera-panel .enka-camera-frame{
     margin-top:4px!important;
   }
 }
+
+
+/* FINAL MOBILE: homepage live-observation panel 10% smaller */
+@media (max-width:560px){
+  .dashboard-left .station-card{
+    width:90%!important;
+    max-width:90%!important;
+    margin-left:auto!important;
+    margin-right:auto!important;
+    padding:15.3px!important;
+    border-radius:17px!important;
+  }
+  .dashboard-left .station-card>.station-switch{
+    margin-top:12.6px!important;
+  }
+  .dashboard-left .station-card>.station-switch button{
+    min-height:34.2px!important;
+    padding:7.2px 9.9px!important;
+  }
+  .dashboard-left .station-card .station-overview{
+    margin-top:9px!important;
+  }
+  .dashboard-left .station-card .temp-row{
+    margin-top:10.8px!important;
+    gap:11.7px!important;
+  }
+  .dashboard-left .station-card .temperature{
+    font-size:54px!important;
+  }
+  .dashboard-left .station-card .weather-symbol{
+    font-size:32.4px!important;
+  }
+  .dashboard-left .station-card .weather-stats{
+    gap:8px 6.3px!important;
+    margin-top:15.3px!important;
+  }
+  .dashboard-left .station-card .stat{
+    padding:4.5px 6.3px!important;
+  }
+  .dashboard-left .station-card .stat .name{font-size:8.1px!important}
+  .dashboard-left .station-card .stat .value{font-size:13.5px!important}
+  .dashboard-left .station-card .stat .unit,
+  .dashboard-left .station-card .stat .detail{font-size:7.2px!important}
+  .dashboard-left .station-card>.station-history-inline{
+    margin-top:7.2px!important;
+    padding-top:7.2px!important;
+  }
+  .dashboard-left .station-card .history-charts{
+    gap:6.3px!important;
+  }
+  .dashboard-left .station-card .history-chart-card{
+    padding:8.1px 8.1px 5.4px!important;
+  }
+  .dashboard-left .station-card .history-chart{
+    height:126px!important;
+    margin-top:3.6px!important;
+  }
+}
