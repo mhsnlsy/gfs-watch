@@ -3,12 +3,13 @@ import fs from "node:fs";
 import vm from "node:vm";
 
 const html = fs.readFileSync("site/index.html", "utf8");
+const appJs = fs.readFileSync("site/home-app.js", "utf8");
 assert.match(html, /const STATIONS_API=\(window\.GFS_WATCH_API_BASE\|\|window\.location\.origin\)\+"\/api";/, "Station reads must use same-origin Cloudflare API gateway.");
 assert.doesNotMatch(html, /gfs-watch-stations\.muhsin-ulusoy\.workers\.dev/, "Homepage must not make cross-origin station API calls.");
 assert.match(html, /Start weather data lanes immediately and independently/, "Station startup must not wait for PWA/push setup.");
 const eyupsultanCollector = fs.readFileSync("scripts/eyupsultan_weather.mjs", "utf8");
-const functionStart = html.indexOf("function renderStationTemperatureTrend");
-const functionEnd = html.indexOf("function render(data)", functionStart);
+const functionStart = appJs.indexOf("function renderStationTemperatureTrend");
+const functionEnd = appJs.indexOf("function render(data)", functionStart);
 assert.ok(functionStart >= 0 && functionEnd > functionStart, "Station history/switch functions must exist.");
 
 const nodes = new Map();
@@ -171,7 +172,7 @@ sandbox.eyupsultanStationRainHistorySamples = [hourlyRainSample(30, 0.6)];
 sandbox.sisliStationRainHistorySamples = [hourlyRainSample(30, 0.4)];
 
 vm.createContext(sandbox);
-vm.runInContext(html.slice(functionStart, functionEnd), sandbox, {
+vm.runInContext(appJs.slice(functionStart, functionEnd), sandbox, {
   filename: "site/index.html#station-history-functions"
 });
 // This test covers station switching and history charts only. Keep the separate
