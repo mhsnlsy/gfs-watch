@@ -2002,8 +2002,29 @@ if(typeof renderBriefing==="function")renderBriefing();
         // The notification archive contains the four-cycle comparison PNGs.
         // The embedded forecast report and the archive now share the same PNG chart paths.
         const gfsApi=(window.ISTANBUL_GFS_API_BASE||"").replace(/\/$/,"");
-        const response=await fetch((gfsApi?gfsApi+"/gfs/notification-latest":"./data/notifications/latest.json")+"?t="+Date.now(),{cache:"no-store"});
-        if(!response.ok)throw new Error("Rapor arşivi henüz oluşturulmadı.");
+        const archiveUrls=[
+          (gfsApi?gfsApi+"/gfs/notification-latest":"./data/notifications/latest.json"),
+          "https://gfs-watch-istanbul-gfs.muhsin-ulusoy.workers.dev/gfs/publication-asset/notifications/latest.json",
+          "./data/notifications/latest.json"
+        ].filter((url,index,list)=>url && list.indexOf(url)===index);
+        let response=null;
+        let lastArchiveError=null;
+        for(const archiveUrl of archiveUrls){
+          try{
+            const candidate=await fetch(archiveUrl+"?t="+Date.now(),{
+              cache:"no-store",
+              mode:archiveUrl.startsWith(window.location.origin)?"same-origin":"cors"
+            });
+            if(candidate.ok){
+              response=candidate;
+              break;
+            }
+            lastArchiveError=new Error("Rapor arşivi HTTP "+candidate.status);
+          }catch(error){
+            lastArchiveError=error;
+          }
+        }
+        if(!response)throw lastArchiveError||new Error("Rapor arşivi henüz oluşturulmadı.");
         const document=await response.json();
         if(gfsApi){
           document.schema="gfs-watch.notifications.v1";
