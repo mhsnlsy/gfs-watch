@@ -2150,32 +2150,35 @@ html.ios12 .footer > *{
   html, body { max-width:100%; overflow-x:hidden!important; }
   .shell { width:calc(100% - 20px)!important; max-width:100%!important; min-width:0!important; }
 
-  /* Header: replace the tiny one-line link strip with a tappable 2x2 menu. */
+  /* Header: compact 1x4 navigation on mobile. */
   .topbar { flex-wrap:wrap!important; align-items:center!important; min-width:0!important; }
   .topbar nav {
     order:3!important;
     width:100%!important;
     max-width:100%!important;
     display:grid!important;
-    grid-template-columns:repeat(2,minmax(0,1fr))!important;
-    gap:6px!important;
-    margin-top:7px!important;
+    grid-template-columns:repeat(4,minmax(0,1fr))!important;
+    gap:5px!important;
+    margin-top:6px!important;
     padding:0!important;
     overflow:visible!important;
-    white-space:normal!important;
+    white-space:nowrap!important;
   }
   .topbar nav a {
-    min-height:44px!important;
+    min-height:35px!important;
+    height:35px!important;
     display:flex!important;
     align-items:center!important;
     justify-content:center!important;
     box-sizing:border-box!important;
-    padding:8px 6px!important;
+    padding:5px 3px!important;
     border:1px solid rgba(204,225,239,.12)!important;
-    border-radius:9px!important;
-    font-size:12px!important;
-    line-height:1.15!important;
-    white-space:normal!important;
+    border-radius:8px!important;
+    font-size:9.5px!important;
+    line-height:1!important;
+    white-space:nowrap!important;
+    overflow:hidden!important;
+    text-overflow:ellipsis!important;
   }
   .top-right { min-width:0!important; }
   .model-picker button { min-height:44px!important; min-width:44px!important; padding:0 10px!important; }
