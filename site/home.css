@@ -2521,3 +2521,45 @@ html.ios12 #enka-camera-panel .enka-camera-frame{
     max-width:900px;
   }
 }
+
+
+/* Mobile GFS report charts: scale each tooltip chart to the phone width. */
+@media (max-width:700px), (pointer:coarse){
+  #bildirimler .notification-card.notification-chart-only{
+    width:100%!important;
+    max-width:100%!important;
+    min-width:0!important;
+    overflow:hidden!important;
+  }
+  #bildirimler .notification-images,
+  #bildirimler .notification-image-item,
+  #bildirimler .gfs-interactive-chart,
+  #bildirimler .gfs-mobile-panel-stack,
+  #bildirimler .gfs-mobile-panel-host{
+    width:100%!important;
+    max-width:100%!important;
+    min-width:0!important;
+    box-sizing:border-box!important;
+  }
+  #bildirimler .gfs-interactive-chart,
+  #bildirimler .gfs-mobile-panel-host{
+    overflow:hidden!important;
+  }
+  #bildirimler .gfs-interactive-chart .gfs-interactive-svg,
+  #bildirimler .gfs-mobile-panel-host .gfs-mobile-panel-svg{
+    display:block!important;
+    width:100%!important;
+    min-width:0!important;
+    max-width:100%!important;
+    height:auto!important;
+    max-height:none!important;
+  }
+}
+@media (max-width:390px){
+  #bildirimler .gfs-interactive-chart .gfs-interactive-svg,
+  #bildirimler .gfs-mobile-panel-host .gfs-mobile-panel-svg{
+    width:100%!important;
+    min-width:0!important;
+    max-width:100%!important;
+  }
+}
