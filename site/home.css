@@ -4535,3 +4535,11 @@ html.ios12 #enka-camera-panel .enka-camera-frame{
     box-shadow:none!important;
   }
 }
+
+
+/* 1px breathing room below the homepage brand subtitle. */
+@media (max-width:560px){
+  .topbar .brand small{
+    margin-bottom:1px!important;
+  }
+}
