@@ -28,3 +28,9 @@ The response must contain `grid.shortName` and `analysis.centers`.
 
 ## Production integration
 Do not connect this service to the main site until a real GFS GRIB2 test succeeds. The existing MeteoPT-only point forecast path remains untouched.
+
+### Live analysis endpoint
+
+`GET /latest` downloads only the regional MSLP subset from the NOAA NOMADS GFS 0.25° GRIB filter, analyzes the 1,250 km radius around Istanbul, and returns compact JSON for the site.
+
+The service does not download the full global GFS GRIB2 file. NOMADS supports filtering by variable, level, and geographic subregion.
