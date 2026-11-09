@@ -3650,3 +3650,79 @@ html.ios12 #enka-camera-panel .enka-camera-frame{
     overflow:hidden!important;
   }
 }
+
+
+
+/* FINAL MOBILE: live-observation inner spacing and typography reduced 10% */
+@media (max-width:560px){
+  .dashboard-left .station-card{
+    padding:13.77px!important;
+    border-radius:15.3px!important;
+    row-gap:7.2px!important;
+  }
+  .dashboard-left .station-card>.station-switch{
+    gap:6.3px!important;
+    margin-top:11.34px!important;
+  }
+  .dashboard-left .station-card>.station-switch button{
+    min-height:30.78px!important;
+    padding:6.48px 8.91px!important;
+  }
+  .dashboard-left .station-card .station-overview{
+    margin-top:8.1px!important;
+  }
+  .dashboard-left .station-card .temp-row{
+    margin-top:9.72px!important;
+    gap:10.53px!important;
+  }
+  .dashboard-left .station-card .temperature{
+    font-size:48.6px!important;
+  }
+  .dashboard-left .station-card .weather-symbol{
+    font-size:29.16px!important;
+  }
+  .dashboard-left .station-card .weather-stats{
+    gap:7.2px 5.67px!important;
+    margin-top:13.77px!important;
+  }
+  .dashboard-left .station-card .stat{
+    padding:4.05px 5.67px!important;
+  }
+  .dashboard-left .station-card .stat .name{
+    font-size:7.29px!important;
+  }
+  .dashboard-left .station-card .stat .value{
+    font-size:12.15px!important;
+  }
+  .dashboard-left .station-card .stat .unit,
+  .dashboard-left .station-card .stat .detail{
+    font-size:6.48px!important;
+  }
+  .dashboard-left .station-card>.station-history-inline{
+    margin-top:6.48px!important;
+    padding-top:6.48px!important;
+  }
+  .dashboard-left .station-card .history-charts{
+    gap:5.67px!important;
+  }
+  .dashboard-left .station-card .history-chart-card{
+    padding:7.29px 7.29px 4.86px!important;
+  }
+  .dashboard-left .station-card .history-chart{
+    margin-top:3.24px!important;
+  }
+  .dashboard-left .station-card .history-chart-head{
+    gap:4.5px!important;
+  }
+  .dashboard-left .station-card .history-chart-head h3{
+    font-size:14.4px!important;
+  }
+  .dashboard-left .station-card .history-chart-head p{
+    font-size:8.1px!important;
+    line-height:1.26!important;
+  }
+  .dashboard-left .station-card .history-source-note{
+    font-size:8.1px!important;
+    line-height:1.35!important;
+  }
+}
