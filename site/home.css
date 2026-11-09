@@ -2512,17 +2512,69 @@ html.ios12 #enka-camera-panel .enka-camera-frame{
 
 /* Desktop: keep the live observation dashboard compact and anchored to the left. */
 @media (min-width:901px){
-  /* Desktop: compact live observation dashboard, flush to the left. */
+  /* Desktop: keep the live observation panel unchanged at 600px,
+     and use the open space on its right for the latest GFS report. */
   .dashboard-top{
-    grid-template-columns:600px;
-    width:600px;
-    max-width:600px;
+    display:grid;
+    grid-template-columns:600px minmax(0,1fr);
+    gap:22px;
+    width:100%;
+    max-width:100%;
     margin-left:0;
     margin-right:auto;
+    align-items:start;
+  }
+  .dashboard-top .dashboard-left{
+    width:600px;
+    min-width:600px;
   }
   .dashboard-top .station-card{
     width:600px;
     max-width:600px;
+  }
+  .dashboard-top #gfs-model-view{
+    width:100%;
+    min-width:0;
+    margin:0;
+    padding:0;
+  }
+  .dashboard-top #bildirimler{
+    width:100%;
+    min-width:0;
+    margin:0;
+    padding:0;
+  }
+  .dashboard-top #bildirimler .notification-list,
+  .dashboard-top #bildirimler .notification-card,
+  .dashboard-top #bildirimler .notification-images{
+    width:100%;
+    max-width:none;
+    min-width:0;
+    box-sizing:border-box;
+  }
+  .dashboard-top #bildirimler .notification-card{
+    padding:20px;
+  }
+  .dashboard-top #bildirimler .koy-gfs-svg-images{
+    width:100%!important;
+  }
+}
+@media (max-width:1100px) and (min-width:701px){
+  .dashboard-top{
+    grid-template-columns:minmax(0,1fr);
+    width:100%;
+    max-width:100%;
+  }
+  .dashboard-top .dashboard-left{
+    width:100%;
+    min-width:0;
+  }
+  .dashboard-top .station-card,
+  .dashboard-top #gfs-model-view,
+  .dashboard-top #bildirimler{
+    width:100%;
+    min-width:0;
+    max-width:100%;
   }
 }
 
