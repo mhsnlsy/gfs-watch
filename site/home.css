@@ -3759,29 +3759,50 @@ html.ios12 #enka-camera-panel .enka-camera-frame{
   box-sizing:border-box!important;
 }
 @media (min-width:1200px) and (pointer:fine){
+  /* Desktop target layout:
+     live observation stays at the top-left;
+     the two forecast-summary boxes sit in the open left column,
+     aligned with the upper portion of the MeteoPT 180h table;
+     pressure analysis remains lower at the requested 800px position. */
   .dashboard-left > .station-card{
     grid-column:1!important;
     grid-row:1!important;
   }
   .dashboard-left > .station-briefing-inline{
     grid-column:1!important;
-    grid-row:2!important;
-    position:relative!important;
-    top:0!important;
+    grid-row:1!important;
+    position:absolute!important;
+    top:600px!important;
     left:0!important;
     width:600px!important;
     max-width:600px!important;
-    align-self:start!important;
     margin:0!important;
-    z-index:30!important;
+    padding:0!important;
+    align-self:start!important;
+    z-index:25!important;
+  }
+  .dashboard-left > .station-briefing-inline .briefing{
+    display:grid!important;
+    grid-template-columns:repeat(2,minmax(0,1fr))!important;
+    gap:10px!important;
+    width:100%!important;
+    margin:0!important;
+  }
+  .dashboard-left > .station-briefing-inline .briefing-row{
+    width:100%!important;
+    min-width:0!important;
+    box-sizing:border-box!important;
   }
   .dashboard-left > .gfs-pressure-panel{
     grid-column:1!important;
-    grid-row:3!important;
-    position:static!important;
-    top:auto!important;
-    left:auto!important;
+    grid-row:1!important;
+    position:absolute!important;
+    top:800px!important;
+    left:0!important;
+    width:600px!important;
+    max-width:600px!important;
     margin:0!important;
+    z-index:20!important;
   }
 }
 @media (max-width:1199px), (pointer:coarse){
