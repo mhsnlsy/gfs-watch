@@ -4437,3 +4437,62 @@ html.ios12 #enka-camera-panel .enka-camera-frame{
     font-size:7.5px!important;
   }
 }
+
+
+/* FINAL MOBILE HEADER PARITY — match the Köy header/navigation exactly. */
+@media (max-width:560px){
+  .topbar{
+    flex-wrap:wrap!important;
+    align-items:center!important;
+    justify-content:flex-start!important;
+    min-height:64px!important;
+    height:auto!important;
+    padding:10px 0!important;
+    gap:0!important;
+  }
+  .topbar .brand{
+    font-size:14px!important;
+    gap:9px!important;
+  }
+  .topbar .brand-mark{
+    width:32px!important;
+    height:32px!important;
+    border-radius:10px!important;
+  }
+  .topbar .brand small{
+    font-size:8px!important;
+    letter-spacing:.09em!important;
+  }
+  .topbar .top-right{
+    margin-left:auto!important;
+    gap:4px!important;
+  }
+  .topbar .model-picker{
+    gap:2px!important;
+    padding:3px!important;
+  }
+  .topbar .model-picker button{
+    min-height:0!important;
+    padding:7px 8px!important;
+    font-size:9.5px!important;
+  }
+  .topbar nav{
+    display:flex!important;
+    order:3!important;
+    width:100%!important;
+    max-width:100%!important;
+    overflow-x:auto!important;
+    gap:16px!important;
+    padding:6px 0 2px!important;
+    white-space:nowrap!important;
+    scrollbar-width:none!important;
+  }
+  .topbar nav::-webkit-scrollbar{display:none!important}
+  .topbar nav a{
+    min-height:0!important;
+    font-size:11px!important;
+    line-height:1.2!important;
+    padding:0!important;
+    flex:none!important;
+  }
+}
