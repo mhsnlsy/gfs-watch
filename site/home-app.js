@@ -1911,6 +1911,9 @@ if(typeof renderBriefing==="function")renderBriefing();
     }
     async function refreshPushStatus(){
       const button=$("enable-notifications");
+      // Notification controls were removed from the public homepage.
+      // Keep the PWA setup from touching missing notification DOM nodes.
+      if(!button)return;
       if(document.documentElement.classList.contains("ios12")){
         button.style.display="none";
         $("notification-status").textContent="iOS 12: cihaz bildirimi kullanılamıyor; tahminler ve raporlar çalışır.";
