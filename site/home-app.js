@@ -440,7 +440,15 @@
       if(current) current.dataset.source="live-station";
       // The current-rain badge is owned exclusively by the live station observation.
       // The MeteoPT F72 payload is used only for the forecast badge below.
-      const dateTime=ms=>forecastDateTimeTSI(ms);
+      // Match the MeteoPT 180h table clock exactly: the table labels the
+      // published UTC forecast hour as TSİ without adding Istanbul +03 again.
+      // Example: a 00Z valid time is shown as 00:00 TSİ in the table.
+      const dateTime=ms=>{
+        const date=new Date(ms);
+        const weekday=new Intl.DateTimeFormat("tr-TR",{timeZone:"UTC",weekday:"long"}).format(date);
+        const clock=new Intl.DateTimeFormat("tr-TR",{timeZone:"UTC",hour:"2-digit",minute:"2-digit",hourCycle:"h23"}).format(date);
+        return weekday+" · "+clock+" TSİ";
+      };
       const points=latestRainForecastPoints.filter(p=>p.modelLead>0&&numeric(p.precipitation_6h_mm)&&Number.isFinite(p.stamp)).sort((a,b)=>a.stamp-b.stamp);
       if(points.length<2){
         forecast.textContent="MeteoPT GFS verisi yeterli değil; yağış zamanı hesaplanamıyor.";
