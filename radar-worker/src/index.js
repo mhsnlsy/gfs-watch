@@ -252,12 +252,12 @@ async function check(env){
     tiles.push({ox,oy,bytes:await r.arrayBuffer()});
   }
   const decoded=await Promise.all(tiles.map(async t=>({...t,img:await decodePng(t.bytes)})));
-  const baseTiles=await Promise.all(tiles.map(async t=>{const u=`https://tile.openstreetmap.org/${ZOOM}/${tx+t.ox}/${ty+t.oy}.png`;const r=await fetch(u,{cf:{cacheTtl:3600}});if(!r.ok)throw new Error("base_map_tile_download_failed");return {...t,bytes:await r.arrayBuffer()};}));
-  const baseDecoded=await Promise.all(baseTiles.map(async t=>({...t,img:await decodePng(t.bytes)})));
+  // Build only the radar mosaic needed for detection first. The expensive
+  // OSM/base-map fetch and PNG compositing are deferred until an alert is
+  // actually going to be sent. This keeps the six-minute Cron well below
+  // the Worker CPU budget during normal (no-alert) scans.
   const mosaic={w:TILE_SIZE*3,h:TILE_SIZE*3,ct:decoded[0].img.ct,data:new Uint8Array(TILE_SIZE*TILE_SIZE*9*(decoded[0].img.ct===6?4:3))};
-  const baseMosaic={w:TILE_SIZE*3,h:TILE_SIZE*3,ct:baseDecoded[0].img.ct,data:new Uint8Array(TILE_SIZE*TILE_SIZE*9*(baseDecoded[0].img.ct===6?4:3))};
   const bpp=mosaic.ct===6?4:3;
-  const baseBpp=baseMosaic.ct===6?4:3;
   for(const t of decoded){
     for(let y=0;y<TILE_SIZE;y++){
       const src=(y*TILE_SIZE)*bpp;
@@ -265,15 +265,7 @@ async function check(env){
       mosaic.data.set(t.img.data.subarray(src,src+TILE_SIZE*bpp),dst);
     }
   }
-  for(const t of baseDecoded){
-    for(let y=0;y<TILE_SIZE;y++){
-      const src=(y*TILE_SIZE)*baseBpp;
-      const dst=((y+(t.oy+1)*TILE_SIZE)*baseMosaic.w+(t.ox+1)*TILE_SIZE)*baseBpp;
-      baseMosaic.data.set(t.img.data.subarray(src,src+TILE_SIZE*baseBpp),dst);
-    }
-  }
   const img=mosaic;
-  const radarPhotoBytes=decoded.find(t=>t.ox===0&&t.oy===0)?.bytes;
   const curr=analyzeImage(img), state=await getState(env.RADAR_DB);
   const history=JSON.parse(state.history_json||"[]");
   if(history.length&&history[history.length-1].ts===ts)return {status:"duplicate_frame",frame_ts:ts};
@@ -305,7 +297,19 @@ async function check(env){
   let sent=false, telegramStatus=0, telegramError="";
   if(alert&&now-last>=ALERT_COOLDOWN_SECONDS){
     let motionTxt=""; if(m.speed!=null){motionTxt=`Hız: ~${m.speed} km/sa, yön: ${compassDirection(m.heading)}`; if(m.eta) motionTxt+=`, tahmini varış: ~${m.eta} dk`; if(m.towards) motionTxt+=" (konuma doğru)";}
-    const caption=`${emoji} <b>${intensity} YAĞIŞ UYARISI — İstanbul</b>\nKonum: 41.0904 N, 28.9438 E\nŞiddet: ${intensity} (${curr.max_dbz} dBZ)\nYağış merkezi: ${curr.centroid_dist??"—"} km uzakta\nAlan: ~${curr.area_km2} km²\nDoğu-batı genişliği: ~${curr.width_km} km\nKuzey-güney uzunluğu: ~${curr.height_km} km\n${motionTxt}\n${onSite?"Konuma ulaşıyor / üzerinde.":"Yaklaşıyor."}\n${new Date(ts*1000).toLocaleString("tr-TR",{timeZone:"Europe/Istanbul"})}\n© OpenStreetMap contributors`;    const reportPhotoBytes=await makeRadarReportPng(baseMosaic,mosaic,curr);
+    const caption=`${emoji} <b>${intensity} YAĞIŞ UYARISI — İstanbul</b>\nKonum: 41.0904 N, 28.9438 E\nŞiddet: ${intensity} (${curr.max_dbz} dBZ)\nYağış merkezi: ${curr.centroid_dist??"—"} km uzakta\nAlan: ~${curr.area_km2} km²\nDoğu-batı genişliği: ~${curr.width_km} km\nKuzey-güney uzunluğu: ~${curr.height_km} km\n${motionTxt}\n${onSite?"Konuma ulaşıyor / üzerinde.":"Yaklaşıyor."}\n${new Date(ts*1000).toLocaleString("tr-TR",{timeZone:"Europe/Istanbul"})}\n© OpenStreetMap contributors`;    // Only build the map-backed report when an alert is actually sent.
+    const baseTiles=await Promise.all(tiles.map(async t=>{const u=`https://tile.openstreetmap.org/${ZOOM}/${tx+t.ox}/${ty+t.oy}.png`;const r=await fetch(u,{cf:{cacheTtl:3600}});if(!r.ok)throw new Error("base_map_tile_download_failed");return {...t,bytes:await r.arrayBuffer()};}));
+    const baseDecoded=await Promise.all(baseTiles.map(async t=>({...t,img:await decodePng(t.bytes)})));
+    const baseMosaic={w:TILE_SIZE*3,h:TILE_SIZE*3,ct:baseDecoded[0].img.ct,data:new Uint8Array(TILE_SIZE*TILE_SIZE*9*(baseDecoded[0].img.ct===6?4:3))};
+    const baseBpp=baseMosaic.ct===6?4:3;
+    for(const t of baseDecoded){
+      for(let y=0;y<TILE_SIZE;y++){
+        const src=(y*TILE_SIZE)*baseBpp;
+        const dst=((y+(t.oy+1)*TILE_SIZE)*baseMosaic.w+(t.ox+1)*TILE_SIZE)*baseBpp;
+        baseMosaic.data.set(t.img.data.subarray(src,src+TILE_SIZE*baseBpp),dst);
+      }
+    }
+    const reportPhotoBytes=await makeRadarReportPng(baseMosaic,mosaic,curr);
     const photoResult=reportPhotoBytes?await telegramPhoto(env,reportPhotoBytes,caption):false;
     if(typeof photoResult==="object"){
       telegramStatus=photoResult.status||0;
@@ -352,7 +356,7 @@ export default {
         },
         simulation:{
           immediate_repeat_blocked:simulatedBlocked,
-          after_45_minutes_allowed:simulatedAllowed
+          after_30_minutes_allowed:simulatedAllowed
         },
         telegram_sent:false
       }),{status:passed?200:500,headers:{"content-type":"application/json","cache-control":"no-store"}});
