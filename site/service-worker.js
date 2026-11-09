@@ -1,4 +1,4 @@
-const SHELL_CACHE = "istanbul-hava-shell-v36-enka-camera-frame";
+const SHELL_CACHE = "istanbul-hava-shell-v37-koy-parity";
 const DATA_CACHE = "istanbul-hava-data-v4";
 const APP_SHELL = [
   "./",
