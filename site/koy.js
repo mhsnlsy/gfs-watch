@@ -916,10 +916,23 @@ function pressureRegionNameKoy(latitude,longitude){
   if(lat>=45&&lon<32)return "Doğu Avrupa · Romanya-Ukrayna";
   return "Bölgesel analiz alanı";
 }
+function buildPressureCommentKoy(centers){
+  if(!Array.isArray(centers)||!centers.length)return "İstanbul merkezli 2500 km çapındaki alanda GFS deniz seviyesi basıncına göre belirlenen eşiklerde anlamlı bir basınç merkezi bulunmuyor.";
+  const highs=centers.filter(c=>c.type==="high").sort((a,b)=>Number(b.pressure_hpa)-Number(a.pressure_hpa));
+  const lows=centers.filter(c=>c.type==="low").sort((a,b)=>Number(a.pressure_hpa)-Number(b.pressure_hpa));
+  const parts=[];
+  if(highs.length){const s=highs[0];parts.push("İstanbul merkezli 2500 km çapındaki alanda "+highs.length+" yüksek basınç merkezi öne çıkıyor. En güçlü merkez "+Number(s.pressure_hpa).toFixed(1)+" hPa ile "+pressureRegionNameKoy(s.latitude,s.longitude)+" üzerinde; İstanbul'un yaklaşık "+Number(s.distance_km).toFixed(0)+" km "+esc(String(s.direction||""))+" yönünde.");}
+  if(lows.length){const s=lows[0];parts.push(lows.length+" alçak basınç merkezi de tespit ediliyor. En belirgin merkez "+Number(s.pressure_hpa).toFixed(1)+" hPa ile "+pressureRegionNameKoy(s.latitude,s.longitude)+" üzerinde.");}
+  else parts.push("Bu analiz alanında 1013 hPa ve altına inen belirgin bir alçak basınç merkezi yok.");
+  const dirs=centers.map(c=>String(c.direction||"")).filter(Boolean),east=dirs.filter(d=>["D","DGD","DKD"].includes(d)).length;
+  if(east===centers.length)parts.push("Merkezlerin tamamının İstanbul'un doğu-kuzeydoğu tarafında toplanması, bölgesel basınç alanında doğu sektörü yüksek basınç açısından baskın olduğunu gösteriyor.");
+  return parts.join(" ");
+}
 function renderPressureTextKoy(centers){
   const list=$("pressure-findings"); if(!list)return;
-  if(!Array.isArray(centers)||!centers.length){list.innerHTML='<li class="pressure-empty">GitHub Actions GFS bölgesel analizinde eşik üstü/altı merkez bulunmadı.</li>';return;}
-  list.innerHTML=centers.map(c=>{
+  if(!Array.isArray(centers)||!centers.length){list.innerHTML='<li class="pressure-empty">'+buildPressureCommentKoy([])+'</li>';return;}
+  const comment=buildPressureCommentKoy(centers);
+  list.innerHTML='<li class="pressure-comment">'+esc(comment)+'</li>'+centers.map(c=>{
     const low=c.type==="low";
     return '<li class="pressure-center-item"><span class="pressure-icon '+(low?"low":"high")+'">'+(low?"↘":"↗")+'</span><span><strong>'+(low?"Alçak basınç":"Yüksek basınç")+' · '+esc(pressureRegionNameKoy(c.latitude,c.longitude))+'</strong><br><span class="pressure-center-value">'+Number(c.pressure_hpa).toFixed(1)+' hPa</span> · İstanbul\'a '+Number(c.distance_km).toFixed(0)+' km '+esc(String(c.direction||""))+' yönünde</span></li>';
   }).join("");
