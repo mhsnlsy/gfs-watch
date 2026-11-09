@@ -288,10 +288,9 @@ async function check(env){
   const rainInEntryRadius = hasEcho && curr.centroid_dist <= ENTRY_ALERT_RADIUS_KM && curr.max_dbz >= THRESHOLD_DBZ;
   const alert=pixelGate&&(rainInEntryRadius || app || onSite);
 
-  let intensity="DÜŞÜK",emoji="🌦️";
-  if(curr.max_dbz>30){intensity="ÇOK GÜÇLÜ";emoji="⚠️";}
-  else if(curr.max_dbz>20){intensity="GÜÇLÜ";emoji="⛈️";}
-  else if(curr.max_dbz>10){intensity="ORTA";emoji="🌧️";}
+  let intensity="HAFİF",emoji="🌦️";
+  if(curr.max_dbz>=25){intensity="GÜÇLÜ";emoji="⛈️";}
+  else if(curr.max_dbz>=15){intensity="ORTA";emoji="🌧️";}
 
   const now=Math.floor(Date.now()/1000), last=Number(state.last_alert_ts||0);
   let sent=false;
