@@ -4027,3 +4027,303 @@ html.ios12 #enka-camera-panel .enka-camera-frame{
     margin-top:1px!important;
   }
 }
+
+
+/* FINAL MOBILE PARITY PASS — match the Köy live-observation card.
+   This overrides legacy homepage-only selector sizing, oversized temperature,
+   stat tile backgrounds, and history spacing that made the card taller. */
+@media (max-width:560px){
+  .dashboard-left .station-card{
+    display:grid!important;
+    grid-template-columns:minmax(0,1fr)!important;
+    grid-template-rows:auto auto auto auto auto!important;
+    align-items:start!important;
+    align-content:start!important;
+    width:100%!important;
+    min-width:0!important;
+    max-width:100%!important;
+    height:auto!important;
+    min-height:0!important;
+    max-height:none!important;
+    box-sizing:border-box!important;
+    padding:14px 12px 12px!important;
+    border-radius:19px!important;
+    row-gap:8px!important;
+  }
+
+  .dashboard-left .station-card>.weather-top,
+  .dashboard-left .station-card>.station-switch,
+  .dashboard-left .station-card>.station-alert,
+  .dashboard-left .station-card>.station-history-inline{
+    grid-column:1/-1!important;
+  }
+
+  /* The three homepage choices use Köy's compact inline segmented control,
+     not the old full-width 44px-high mobile button grid. */
+  .dashboard-left .station-card>.station-switch{
+    display:flex!important;
+    flex-direction:row!important;
+    flex-wrap:nowrap!important;
+    align-items:center!important;
+    justify-content:flex-start!important;
+    justify-self:start!important;
+    width:max-content!important;
+    max-width:100%!important;
+    min-width:0!important;
+    gap:5px!important;
+    margin:2px 0 0!important;
+    padding:2px!important;
+    box-sizing:border-box!important;
+  }
+  .dashboard-left .station-card>.station-switch button{
+    display:inline-flex!important;
+    flex:0 1 auto!important;
+    align-items:center!important;
+    justify-content:center!important;
+    width:auto!important;
+    min-width:0!important;
+    min-height:0!important;
+    height:auto!important;
+    padding:5px 10px!important;
+    font-size:9px!important;
+    line-height:1.2!important;
+    white-space:nowrap!important;
+    overflow-wrap:normal!important;
+    box-sizing:border-box!important;
+  }
+
+  .dashboard-left .station-card>.station-overview{
+    display:contents!important;
+    margin:0!important;
+    padding:0!important;
+  }
+  .dashboard-left .station-card .station-current{
+    grid-column:1!important;
+    grid-row:3!important;
+    min-width:0!important;
+    align-self:start!important;
+    margin:0!important;
+    padding:0!important;
+  }
+  .dashboard-left .station-card .temp-row{
+    display:flex!important;
+    align-items:center!important;
+    gap:7px!important;
+    margin:0!important;
+    padding:0!important;
+  }
+  .dashboard-left .station-card .temperature{
+    flex:0 0 auto!important;
+    font-size:clamp(39px,10.5vw,46px)!important;
+    line-height:1!important;
+    letter-spacing:-.075em!important;
+  }
+  .dashboard-left .station-card .weather-symbol{
+    flex:0 0 auto!important;
+    font-size:23px!important;
+    line-height:1!important;
+  }
+  .dashboard-left .station-card .temp-meta{
+    margin-top:0!important;
+  }
+  .dashboard-left .station-card .temp-caption{
+    margin-top:0!important;
+    font-size:9px!important;
+    line-height:1.45!important;
+  }
+  .dashboard-left .station-card .delta-badge{
+    margin-top:2px!important;
+  }
+  .dashboard-left .station-card .rain-brief{
+    display:grid!important;
+    justify-items:start!important;
+    gap:1px!important;
+    margin-top:2px!important;
+  }
+  .dashboard-left .station-card .rain-brief .delta-badge{
+    margin-top:2px!important;
+    padding:2px 7px!important;
+    font-size:10px!important;
+    line-height:1.35!important;
+    max-width:100%!important;
+    white-space:normal!important;
+    overflow-wrap:anywhere!important;
+  }
+
+  .dashboard-left .station-card>.weather-stats{
+    grid-column:1!important;
+    grid-row:4!important;
+    display:grid!important;
+    grid-template-columns:repeat(2,minmax(0,1fr))!important;
+    gap:9px 7px!important;
+    width:100%!important;
+    min-width:0!important;
+    margin:10px 0 0!important;
+    padding:8px 0 0!important;
+    align-content:start!important;
+    overflow:visible!important;
+    border-top:1px solid rgba(213,237,240,.13)!important;
+    box-sizing:border-box!important;
+  }
+  .dashboard-left .station-card .stat{
+    min-width:0!important;
+    max-width:100%!important;
+    padding:4px 5px!important;
+    background:transparent!important;
+    border:0!important;
+    border-radius:0!important;
+    box-shadow:none!important;
+    box-sizing:border-box!important;
+    text-align:left!important;
+    overflow:visible!important;
+  }
+  .dashboard-left .station-card .stat:first-child{
+    padding-left:0!important;
+  }
+  .dashboard-left .station-card .stat:not(:last-child){
+    border-right:1px solid rgba(213,237,240,.11)!important;
+  }
+  .dashboard-left .station-card .stat:last-child{
+    border-right:0!important;
+  }
+  .dashboard-left .station-card .stat .name{
+    font-size:9px!important;
+    line-height:1.2!important;
+    white-space:nowrap!important;
+    overflow:visible!important;
+  }
+  .dashboard-left .station-card .stat .value{
+    margin-top:1px!important;
+    font-size:15px!important;
+    line-height:1.2!important;
+    white-space:nowrap!important;
+    overflow:visible!important;
+  }
+  .dashboard-left .station-card .stat .unit{
+    margin-left:2px!important;
+    font-size:8px!important;
+  }
+  .dashboard-left .station-card .stat .detail{
+    margin-top:3px!important;
+    font-size:8px!important;
+    line-height:1.25!important;
+    white-space:normal!important;
+    overflow-wrap:anywhere!important;
+  }
+
+  .dashboard-left .station-card>.station-history-inline{
+    grid-column:1!important;
+    grid-row:5!important;
+    display:block!important;
+    width:100%!important;
+    min-width:0!important;
+    height:auto!important;
+    min-height:0!important;
+    max-height:none!important;
+    margin:2px 0 0!important;
+    padding:4px 0 0!important;
+    border:0!important;
+    border-top:1px solid rgba(213,237,240,.13)!important;
+    border-radius:0!important;
+    background:transparent!important;
+    box-shadow:none!important;
+    box-sizing:border-box!important;
+    overflow:visible!important;
+  }
+  .dashboard-left .station-card .station-history-inline .history-panel-head{
+    display:flex!important;
+    align-items:center!important;
+    margin:0 0 2px!important;
+  }
+  .dashboard-left .station-card .station-history-inline .history-panel-head h2{
+    margin:2px 0 0!important;
+    font-size:15px!important;
+    line-height:1.2!important;
+  }
+  .dashboard-left .station-card .station-history-inline .section-kicker{
+    font-size:8px!important;
+    line-height:1.25!important;
+    letter-spacing:.11em!important;
+  }
+  .dashboard-left .station-card .station-history-inline .history-charts{
+    display:grid!important;
+    grid-template-columns:repeat(2,minmax(0,1fr))!important;
+    grid-template-rows:auto!important;
+    gap:9px!important;
+    width:100%!important;
+    min-width:0!important;
+    height:auto!important;
+    min-height:0!important;
+    margin:0!important;
+    padding:0!important;
+    align-items:start!important;
+  }
+  .dashboard-left .station-card .station-history-inline .history-chart-card{
+    display:block!important;
+    width:auto!important;
+    min-width:0!important;
+    height:auto!important;
+    min-height:0!important;
+    margin:0!important;
+    padding:0!important;
+    border:0!important;
+    border-radius:0!important;
+    background:transparent!important;
+    box-shadow:none!important;
+  }
+  .dashboard-left .station-card .station-history-inline .history-chart-head{
+    display:flex!important;
+    align-items:flex-start!important;
+    gap:4px!important;
+    margin:0 0 1px!important;
+    padding:0!important;
+  }
+  .dashboard-left .station-card .station-history-inline .history-chart-head h3{
+    margin:0!important;
+    font-size:10px!important;
+    line-height:1.25!important;
+  }
+  .dashboard-left .station-card .station-history-inline .history-chart-head p{
+    margin:3px 0 0!important;
+    font-size:7px!important;
+    line-height:1.3!important;
+  }
+  .dashboard-left .station-card .station-history-inline .history-chart{
+    display:block!important;
+    width:100%!important;
+    min-width:0!important;
+    height:70px!important;
+    min-height:0!important;
+    max-height:70px!important;
+    margin:0!important;
+    padding:0!important;
+    position:relative!important;
+    overflow:visible!important;
+  }
+  .dashboard-left .station-card .station-history-inline .history-chart svg{
+    display:block!important;
+    width:100%!important;
+    max-width:100%!important;
+    height:100%!important;
+    margin:0!important;
+  }
+  .dashboard-left .station-card .station-history-inline .history-chart-meta{
+    margin:1px 0 0!important;
+    font-size:6.5px!important;
+    line-height:1.25!important;
+  }
+  .dashboard-left .station-card .station-history-inline .station-metric-badges{
+    margin:0!important;
+    gap:3px!important;
+  }
+  .dashboard-left .station-card .station-history-inline .station-metric-badge{
+    padding:2px 6px!important;
+    font-size:8px!important;
+    line-height:1.2!important;
+  }
+  .dashboard-left .station-card .station-history-inline .history-source-note{
+    margin:1px 0 0!important;
+    font-size:7px!important;
+    line-height:1.3!important;
+  }
+}
