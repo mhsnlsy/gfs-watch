@@ -236,7 +236,7 @@ jobs:
           curl --silent --show-error --fail --max-time 20 "$WEB/home-app.js?v=20261109-gfs-direct-fallback-1" -o "$RUNNER_TEMP/live-home-app.js"
           grep -q 'setInterval(refresh,90000)' "$RUNNER_TEMP/live-home-app.js"
           curl --silent --show-error --fail --max-time 20 "$WEB/service-worker.js?verify=$(date +%s)" -o "$RUNNER_TEMP/live-service-worker.js"
-          grep -q 'istanbul-hava-shell-v36-enka-camera-frame' "$RUNNER_TEMP/live-service-worker.js"
+          grep -q 'istanbul-hava-shell-v37-koy-parity' "$RUNNER_TEMP/live-service-worker.js"
           grep -q 'istanbul-hava-data-v4' "$RUNNER_TEMP/live-service-worker.js"
           echo "Verified live renderer, cache-busted script and refreshed service-worker caches."
 
