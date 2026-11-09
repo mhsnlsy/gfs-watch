@@ -1329,9 +1329,16 @@
     function renderRainDays(){
       const holder=$("brief-rain-lines");
       if(!holder)return;
-      const points=forecastData&&Array.isArray(forecastData.forecast_6_hourly)?forecastData.forecast_6_hourly:[];
+      // Use the same canonical F180 MeteoPT payload as the 180-hour table.
+      // The table's displayed TSİ clock is its source of truth, so the rain
+      // arrival shown in the live briefing cannot drift to a different hour.
+      const canonicalF180=window.__METEOPT_F180_DOCUMENT;
+      const points=canonicalF180&&Array.isArray(canonicalF180.forecast_6_hourly)
+        ? canonicalF180.forecast_6_hourly
+        : (forecastData&&Array.isArray(forecastData.forecast_6_hourly)?forecastData.forecast_6_hourly:[]);
+      const tableClockOffsetMs=canonicalF180 ? -3*3600000 : 0;
       const horizon=Date.now()+72*3600000;
-      const clock=ms=>forecastClockUTC(ms);
+      const clock=ms=>forecastClockUTC(ms+tableClockOffsetMs);
       const hourOf=ms=>Number(new Intl.DateTimeFormat("en-GB",{timeZone:"UTC",hour:"2-digit",hourCycle:"h23"}).format(new Date(ms)));
       const cover=(startHour,endHour)=>{
         if(endHour<=5)return "gece";
@@ -1351,11 +1358,12 @@
         const [start,end]=dayWindow(offset);
         if(start>=horizon)break;
         const dayPoints=points.filter(point=>{
-          const stamp=new Date(point.valid_time_utc).getTime();
+          const rawStamp=new Date(point.valid_time_utc).getTime();
+          const stamp=rawStamp+tableClockOffsetMs;
           return stamp>=Math.max(start,Date.now()-30*60000)&&stamp<end&&stamp<=horizon+60000;
         });
         if(!dayPoints.length)continue;
-        const wet=dayPoints.filter(point=>(point.precipitation_6h_mm||0)>=0.2).map(point=>({stamp:new Date(point.valid_time_utc).getTime(),mm:point.precipitation_6h_mm})).sort((a,b)=>a.stamp-b.stamp);
+        const wet=dayPoints.filter(point=>(point.precipitation_6h_mm||0)>=0.2).map(point=>({stamp:new Date(point.valid_time_utc).getTime()+tableClockOffsetMs,mm:point.precipitation_6h_mm})).sort((a,b)=>a.stamp-b.stamp);
         const spells=[];
         let current=null;
         for(const item of wet){
