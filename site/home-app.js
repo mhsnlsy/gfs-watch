@@ -1,6 +1,23 @@
 
     // Keep the full F180 payload for long-range charts and briefings; the dedicated 72-hour table reads /gfs/f72 separately.
-    const DATA_URL=(window.ISTANBUL_GFS_API_BASE||window.location.origin)+"/gfs/latest";
+    const DATA_API_BASE=(window.ISTANBUL_GFS_API_BASE||window.location.origin);
+    const DATA_URL=DATA_API_BASE+"/gfs/latest";
+    const DATA_URL_FALLBACK="https://gfs-watch-istanbul-gfs.muhsin-ulusoy.workers.dev/gfs/latest";
+    async function fetchForecastData(path){
+      const primary=DATA_API_BASE+path;
+      try{
+        const response=await fetch(primary,{cache:"no-store"});
+        if(response.ok)return response;
+      }catch(_){}
+      if(DATA_API_BASE!==window.location.origin){
+        try{
+          const response=await fetch(window.location.origin+path,{cache:"no-store"});
+          if(response.ok)return response;
+        }catch(_){}
+      }
+      const fallback=DATA_URL_FALLBACK.replace("/gfs/latest",path);
+      return fetch(fallback,{cache:"no-store",mode:"cors"});
+    }
     const ECMWF_DATA_URL="./data/ecmwf/latest.json";
     function applyAppVersion(doc){
       if(!doc||!doc.name||!doc.version)return;
@@ -1808,7 +1825,7 @@ if(typeof renderBriefing==="function")renderBriefing();
     async function loadForecast(){
       try{
         const cacheKey=Date.now();
-        const response=await fetch(DATA_URL+"?t="+cacheKey,{cache:"no-store"});
+        const response=await fetchForecastData("/gfs/latest?t="+cacheKey);
         if(!response.ok)throw new Error("Tahmin verisi şu anda alınamıyor.");
         const data=await response.json();
         if(!data||!["gfs-watch.forecast.v1","gfs-watch.forecast.v2"].includes(data.schema)){
