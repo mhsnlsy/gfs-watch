@@ -1,6 +1,13 @@
 {
-  "name":"gfs-pressure-centers",
-  "private":true,
-  "devDependencies":{"wrangler":"latest"},
-  "scripts":{"dev":"wrangler dev","deploy":"wrangler deploy"}
+  "name": "gfs-pressure-centers",
+  "private": true,
+  "devDependencies": {
+    "wrangler": "4.45.0"
+  },
+  "scripts": {
+    "check:wrangler": "wrangler --version",
+    "check:config": "wrangler deploy --dry-run --outdir .wrangler-dry-run",
+    "dev": "wrangler dev",
+    "deploy": "wrangler deploy"
+  }
 }
