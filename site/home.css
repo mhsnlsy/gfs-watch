@@ -3317,3 +3317,51 @@ html.ios12 #enka-camera-panel .enka-camera-frame{
     box-sizing:border-box!important;
   }
 }
+
+
+/* MOBILE: move pressure panel below the entire GFS/ECMWF content */
+@media (max-width:1199px), (pointer:coarse){
+  .dashboard-top{
+    display:grid!important;
+    grid-template-columns:minmax(0,1fr)!important;
+    align-items:start!important;
+  }
+  .dashboard-left{
+    display:contents!important;
+  }
+  .dashboard-left > .station-card{
+    grid-column:1!important;
+    grid-row:auto!important;
+    order:1!important;
+    width:100%!important;
+    max-width:100%!important;
+    min-width:0!important;
+  }
+  .dashboard-right{
+    grid-column:1!important;
+    grid-row:auto!important;
+    order:2!important;
+    width:100%!important;
+    max-width:100%!important;
+    min-width:0!important;
+  }
+  .dashboard-left > .gfs-pressure-panel{
+    grid-column:1!important;
+    grid-row:auto!important;
+    order:3!important;
+    width:100%!important;
+    max-width:100%!important;
+    min-width:0!important;
+    margin:14px 0 0!important;
+    padding:0!important;
+  }
+  .dashboard-left > .gfs-pressure-panel > .section-head{
+    margin:0!important;
+  }
+  .dashboard-left > .gfs-pressure-panel > .pressure-card{
+    width:100%!important;
+    max-width:100%!important;
+    min-width:0!important;
+    box-sizing:border-box!important;
+  }
+}
