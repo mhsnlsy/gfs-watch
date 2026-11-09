@@ -95,7 +95,7 @@
 
   
 
-  <link rel="stylesheet" href="./home.css?v=20261109-gfs-report-150-1">
+  <link rel="stylesheet" href="./home.css?v=20261109-report-table-order-1">
 <!-- desktop-dashboard-width-cache --><!-- desktop-dashboard-width-600 --></head>
 <body>
   <header class="shell topbar">
@@ -200,22 +200,6 @@
     <div id="gfs-model-view">
     </div>
     </section>
-    <div id="ecmwf-model-view" hidden aria-label="ECMWF tahmin görünümü">
-      <div class="section-head" style="padding-top:30px"><div><div class="section-kicker">ECMWF IFS · HRES + ENS</div><h2>ECMWF IFS · İstanbul</h2></div><div class="section-note"><span id="ecmwf-run-meta">ECMWF döngüsü bekleniyor</span><br><span id="ecmwf-updated-chip">Yayın zamanı</span><br>Günlük en düşük / en yüksek sıcaklık</div></div>
-<section class="section" id="ecmwf-seyir">
-      <div class="section-head">
-        <div><div class="section-kicker">ECMWF IFS · SON DÖRT ÇIKTI</div><h2>Çevrim karşılaştırması</h2><p class="section-description">Son dört yayımlanmış ECMWF döngüsü aynı geçerlilik saatine göre üst üste. Yeni döngü gelince en eskisi düşer.</p></div>
-        <div class="section-note">Sıcaklık, yağış ve rüzgâr<br>Kendiliğinden güncellenir</div>
-      </div>
-      <div class="chart-stack" id="ecmwf-report-images">
-        <article class="chart-card"><div class="chart-empty">Dört çıktının PNG raporu hazırlanıyor…</div></article>
-      </div>
-
-    </section>
-<section class="section" id="ecmwf-basinc"><div class="section-head"><div><div class="section-kicker">ECMWF · METEOPT MODEL ANALİZİ</div><h2>Basınç düzeni ve kaynak</h2></div><div class="section-note">MeteoPT ECMWF noktası<br>noktasal basınç analizi</div></div><div class="lower-grid"><article class="pressure-card"><div class="label">Bölgesel basınç merkezleri ve İstanbul'a etkisi</div><ul class="pressure-list" id="ecmwf-pressure-findings"><li class="loading">Analiz yükleniyor…</li></ul></article><article class="info-card"><div class="label">Veri hakkında</div><p>İstasyon ölçümü ile ECMWF tahmini ayrı kaynaklardır. 2 m, 10 m rüzgâr, yağış, 850 hPa ve basınç MeteoPT ECMWF nokta serisindendir.</p><div class="source-row"><span>Model: <strong>ECMWF · MeteoPT nokta serisi</strong></span><span id="ecmwf-valid-until">Geçerlilik: —</span></div></article></div></section>
-      <section class="section" aria-label="ECMWF veri kaynağı ve lisans"><p class="ecmwf-source-note">Kaynak: <a href="https://www.meteopt.com/modelos/ecmwf?lat=41.0901&lon=28.9436" target="_blank" rel="noopener">MeteoPT ECMWF</a> · İstanbul ECMWF noktası 41.0901°N 28.9436°E · 3 saatlik sıcaklık, yağış, rüzgâr, 850 hPa ve basınç. Ensemble sapması bu kaynakta yok.</p></section>
-<section class="section" id="ecmwf-tahmin"><div class="section-head"><div><div class="section-kicker">ECMWF IFS · MODEL TAHMİNİ</div><h2>8 günlük tahmin</h2></div><div class="section-note"><span id="ecmwf-daily-cycle-chip">ECMWF döngüsü yükleniyor</span><br><span id="ecmwf-daily-updated-chip">Yayın zamanı bekleniyor</span><br>Günlük en düşük / en yüksek sıcaklık · HRES yüzey tahmini</div></div><div class="daily-grid" id="ecmwf-daily-grid"><div class="loading">ECMWF tahmini yükleniyor…</div></div></section>
-    </div>
     <div class="water-gfs-layout">
     <section class="section gfs-table-section" id="meteopt-gfs-table" aria-label="MeteoPT GFS ham model tablosu">
       <article class="meteopt-table-card">
@@ -254,6 +238,22 @@
           <ul class="pressure-list" id="pressure-findings"><li class="loading">Analiz yükleniyor…</li></ul><div class="pressure-explainer">İstanbul merkezli 2500 km çapındaki alanda GFS deniz seviyesi basıncından belirlenen anlamlı merkezler. Eşikler: yüksek ≥1023 hPa · alçak ≤1013 hPa.</div>
         </article>
       </aside>
+    </div>
+    <div id="ecmwf-model-view" hidden aria-label="ECMWF tahmin görünümü">
+      <div class="section-head" style="padding-top:30px"><div><div class="section-kicker">ECMWF IFS · HRES + ENS</div><h2>ECMWF IFS · İstanbul</h2></div><div class="section-note"><span id="ecmwf-run-meta">ECMWF döngüsü bekleniyor</span><br><span id="ecmwf-updated-chip">Yayın zamanı</span><br>Günlük en düşük / en yüksek sıcaklık</div></div>
+<section class="section" id="ecmwf-seyir">
+      <div class="section-head">
+        <div><div class="section-kicker">ECMWF IFS · SON DÖRT ÇIKTI</div><h2>Çevrim karşılaştırması</h2><p class="section-description">Son dört yayımlanmış ECMWF döngüsü aynı geçerlilik saatine göre üst üste. Yeni döngü gelince en eskisi düşer.</p></div>
+        <div class="section-note">Sıcaklık, yağış ve rüzgâr<br>Kendiliğinden güncellenir</div>
+      </div>
+      <div class="chart-stack" id="ecmwf-report-images">
+        <article class="chart-card"><div class="chart-empty">Dört çıktının PNG raporu hazırlanıyor…</div></article>
+      </div>
+
+    </section>
+<section class="section" id="ecmwf-basinc"><div class="section-head"><div><div class="section-kicker">ECMWF · METEOPT MODEL ANALİZİ</div><h2>Basınç düzeni ve kaynak</h2></div><div class="section-note">MeteoPT ECMWF noktası<br>noktasal basınç analizi</div></div><div class="lower-grid"><article class="pressure-card"><div class="label">Bölgesel basınç merkezleri ve İstanbul'a etkisi</div><ul class="pressure-list" id="ecmwf-pressure-findings"><li class="loading">Analiz yükleniyor…</li></ul></article><article class="info-card"><div class="label">Veri hakkında</div><p>İstasyon ölçümü ile ECMWF tahmini ayrı kaynaklardır. 2 m, 10 m rüzgâr, yağış, 850 hPa ve basınç MeteoPT ECMWF nokta serisindendir.</p><div class="source-row"><span>Model: <strong>ECMWF · MeteoPT nokta serisi</strong></span><span id="ecmwf-valid-until">Geçerlilik: —</span></div></article></div></section>
+      <section class="section" aria-label="ECMWF veri kaynağı ve lisans"><p class="ecmwf-source-note">Kaynak: <a href="https://www.meteopt.com/modelos/ecmwf?lat=41.0901&lon=28.9436" target="_blank" rel="noopener">MeteoPT ECMWF</a> · İstanbul ECMWF noktası 41.0901°N 28.9436°E · 3 saatlik sıcaklık, yağış, rüzgâr, 850 hPa ve basınç. Ensemble sapması bu kaynakta yok.</p></section>
+<section class="section" id="ecmwf-tahmin"><div class="section-head"><div><div class="section-kicker">ECMWF IFS · MODEL TAHMİNİ</div><h2>8 günlük tahmin</h2></div><div class="section-note"><span id="ecmwf-daily-cycle-chip">ECMWF döngüsü yükleniyor</span><br><span id="ecmwf-daily-updated-chip">Yayın zamanı bekleniyor</span><br>Günlük en düşük / en yüksek sıcaklık · HRES yüzey tahmini</div></div><div class="daily-grid" id="ecmwf-daily-grid"><div class="loading">ECMWF tahmini yükleniyor…</div></div></section>
     </div>
     <section class="section enka-camera-section" id="enka-kamera" aria-label="ENKA Balmumcu canlı kamera">
       <section class="enka-camera-panel" id="enka-camera-panel">
