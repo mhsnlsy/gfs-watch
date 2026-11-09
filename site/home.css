@@ -3253,3 +3253,67 @@ html.ios12 #enka-camera-panel .enka-camera-frame{
     padding:14px!important;
   }
 }
+
+
+/* DESKTOP PRESSURE PANEL PLACEMENT — left column, directly below live observation.
+   The existing report, charts and 180h MeteoPT table remain in the right column. */
+@media (min-width:1200px) and (pointer:fine){
+  .dashboard-top{
+    grid-template-columns:600px minmax(0,1fr)!important;
+    column-gap:24px!important;
+    align-items:start!important;
+  }
+  .dashboard-left{
+    display:contents!important;
+  }
+  .dashboard-left > .station-card{
+    grid-column:1!important;
+    grid-row:1!important;
+    width:600px!important;
+    max-width:600px!important;
+    min-width:0!important;
+    align-self:start!important;
+    margin:0!important;
+  }
+  .dashboard-left > .gfs-pressure-panel{
+    grid-column:1!important;
+    grid-row:2!important;
+    width:600px!important;
+    max-width:600px!important;
+    min-width:0!important;
+    margin:14px 0 0!important;
+    padding:0!important;
+    align-self:start!important;
+  }
+  .dashboard-left > .gfs-pressure-panel > .section-head{
+    margin:0!important;
+  }
+  .dashboard-left > .gfs-pressure-panel > .pressure-card{
+    width:100%!important;
+    max-width:600px!important;
+    min-width:0!important;
+    box-sizing:border-box!important;
+  }
+  .dashboard-right{
+    grid-column:2!important;
+    grid-row:1 / span 2!important;
+    width:100%!important;
+    min-width:0!important;
+    max-width:100%!important;
+    align-self:start!important;
+  }
+}
+
+/* Keep the original single-column flow on tablet/mobile. */
+@media (max-width:1199px), (pointer:coarse){
+  .dashboard-left > .gfs-pressure-panel{
+    width:100%!important;
+    max-width:100%!important;
+    margin:14px 0 0!important;
+  }
+  .dashboard-left > .gfs-pressure-panel > .pressure-card{
+    width:100%!important;
+    max-width:100%!important;
+    box-sizing:border-box!important;
+  }
+}
