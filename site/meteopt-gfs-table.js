@@ -5,6 +5,28 @@
   // This is the same MeteoPT GFS run, not a second forecast source.
   const API_BASE = () => String(window.ISTANBUL_GFS_API_BASE || window.location.origin || "").replace(/\/+$/, "");
   const DATA_URL = () => API_BASE() + "/gfs/latest";
+  const DATA_URL_FALLBACK = "https://gfs-watch-istanbul-gfs.muhsin-ulusoy.workers.dev/gfs/latest";
+  async function fetchForecast() {
+    const urls = [DATA_URL()];
+    if (urls[0] !== DATA_URL_FALLBACK) urls.push(DATA_URL_FALLBACK);
+    let lastError = null;
+    for (const url of urls) {
+      try {
+        const response = await fetch(url + (url.includes("?") ? "&" : "?") + "meteopt-table-f180=" + Date.now(), {
+          cache: "no-store",
+          mode: url.startsWith(window.location.origin) ? "same-origin" : "cors"
+        });
+        if (!response.ok) {
+          lastError = new Error("F180 HTTP " + response.status);
+          continue;
+        }
+        return response;
+      } catch (error) {
+        lastError = error;
+      }
+    }
+    throw lastError || new Error("F180 verisi alınamadı.");
+  }
   const $ = (id) => document.getElementById(id);
   const finite = (value) => value !== null && value !== undefined && value !== "" && Number.isFinite(Number(value));
   const number = (value) => finite(value) ? Number(value) : null;
@@ -166,9 +188,7 @@
     const status = $("meteopt-table-status");
 
     try {
-      const response = await fetch(DATA_URL() + "?meteopt-table-f180=" + Date.now(), {
-        cache: "no-store"
-      });
+      const response = await fetchForecast();
       if (!response.ok) throw new Error("F180 HTTP " + response.status);
 
       const document = await response.json();
