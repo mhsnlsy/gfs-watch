@@ -662,45 +662,7 @@
         return Math.abs(p.lead-target)<Math.abs(best.lead-target)?p:best;
       },null);
     }
-    function drawNext72Line(targetId,data,color,label){
-      const holder=$(targetId);if(data.length<2){holder.innerHTML='<div class="chart-empty">Bu değişken için yeterli tahmin noktası yok.</div>';return;}
-      const rainChart=label.startsWith("Yağış");
-      const biases=data.map(p=>p.bias).filter(numeric);
-      const meanBias=biases.length?biases.reduce((sum,value)=>sum+value,0)/biases.length:null;
-      const phrase=numeric(meanBias)?signedMiss(meanBias,rainChart?"rain":"temp"):"";
-      const width=520,height=150,left=34,right=10,top=12,bottom=26,pw=width-left-right,ph=height-top-bottom,values=data.map(p=>p.value);
-      const edge=(value,mae,sign)=>{const next=value+sign*(numeric(mae)?mae:0);return rainChart?Math.max(0,next):next;};
-      const usual=p=>numeric(p.bias)?(rainChart?Math.max(0,p.value-p.bias):p.value-p.bias):p.value;
-      const banded=data.flatMap(p=>numeric(p.mae)?[edge(p.value,p.mae,-1),edge(p.value,p.mae,1),usual(p)]:[usual(p)]);
-      const minimum=Math.min(...values,...banded),maximum=Math.max(...values,...banded),span=(maximum-minimum)||1,low=rainChart?0:minimum-span*.12,high=maximum+span*(rainChart ? .16 : .12);
-      const x=lead=>left+lead/72*pw,y=value=>top+(high-value)/(high-low)*ph,coords=data.map(p=>({x:x(p.lead),y:y(p.value),time:p.time,valueLabel:p.label,detail:p.detail||("Tahmin adımı: +"+p.lead+" saat")}));
-      const grid=[0,1,2].map(i=>{const value=low+(high-low)*i/2,yy=y(value);return '<line x1="'+left+'" y1="'+yy+'" x2="'+(width-right)+'" y2="'+yy+'" stroke="rgba(190,218,228,.14)" stroke-dasharray="3 5"/><text x="'+(left-6)+'" y="'+(yy+3)+'" fill="#91a9b8" font-size="9" text-anchor="end">'+fmt(value,label.startsWith("Yağış")?1:0)+'</text>';}).join("");
-      // GFS 72 saatlik eksen: modelin gerçek geçerlilik saatlerini TSİ olarak göster.
-      // Böylece 12Z döngüsünde örneğin +3 saat doğrudan 15 TSİ olarak görünür.
-      const axisHours=[0,12,24,36,48,60,72];
-      const ticks=axisHours.map(hour=>{
-        const target=hourlyForecastAxisPoint(data,hour);
-        const label=target?forecastDateTimeTSI(target.time):"+"+hour+"s";
-        return '<text x="'+x(hour)+'" y="'+(height-7)+'" fill="#91a9b8" font-size="8" text-anchor="middle">'+esc(label)+'</text>';
-      }).join("");
-      let band="";
-      if(data.some(p=>numeric(p.mae))){
-        const hi=data.map(p=>({x:x(p.lead),y:y(edge(p.value,p.mae,1))}));
-        const lo=[...data].reverse().map(p=>({x:x(p.lead),y:y(edge(p.value,p.mae,-1))}));
-        const d=[...hi,...lo].map((p,i)=>(i?"L":"M")+p.x.toFixed(1)+" "+p.y.toFixed(1)).join(" ")+" Z";
-        band='<path d="'+d+'" fill="'+(rainChart?"rgba(131,201,235,.2)":"rgba(125,211,215,.16)")+'"></path>';
-      }
-      let biasLine="";
-      if(data.some(p=>numeric(p.bias))){
-        const path=data.map((p,i)=>(i?"L":"M")+x(p.lead).toFixed(1)+" "+y(usual(p)).toFixed(1)).join(" ");
-        biasLine='<path d="'+path+'" fill="none" stroke="#f1c98b" stroke-width="1.7" stroke-dasharray="4 3" stroke-linecap="round"/>';
-      }
-      const colored=data.some(p=>numeric(p.within));
-      const stroke=colored?coords.slice(0,-1).map((p,i)=>'<path d="M'+p.x.toFixed(1)+" "+p.y.toFixed(1)+" L "+coords[i+1].x.toFixed(1)+" "+coords[i+1].y.toFixed(1)+'" fill="none" stroke="'+skillColor(data[i].within)+'" stroke-width="2.8" stroke-linecap="round" stroke-linejoin="round"/>').join(""):'<path d="'+coords.map((p,i)=>(i?"L":"M")+p.x.toFixed(1)+" "+p.y.toFixed(1)).join(" ")+'" fill="none" stroke="'+color+'" stroke-width="2.7" stroke-linecap="round" stroke-linejoin="round"/>';
-      const dots=coords.map((p,i)=>'<circle cx="'+p.x+'" cy="'+p.y+'" r="'+(data[i].trusted?3.6:2.2)+'" fill="'+(numeric(data[i].within)?skillColor(data[i].within):color)+'"'+(data[i].trusted?' stroke="#edf8f4" stroke-width="1"':'')+'/>').join("");
-      holder.innerHTML='<svg viewBox="0 0 '+width+' '+height+'" role="img" aria-label="Önümüzdeki 72 saat '+esc(label)+' tahmini. '+esc(phrase||"Sapma yönü henüz yok")+'.">'+grid+band+stroke+biasLine+dots+ticks+'</svg>';
-      if(typeof document!=="undefined")attachStationHistoryTooltip(holder,holder.querySelector("svg"),coords,width,height,top,bottom,color,true);
-    }
+    
     function attachStationHistoryTooltip(holder,svg,coords,width,height,top,bottom,color,forecastUTC=false){
       if(!coords.length||typeof document==="undefined")return;
       const tip=document.createElement("div");
@@ -1589,18 +1551,7 @@
       parts.push(start===previous?"+"+start:"+"+start+"–+"+previous);
       return parts.join(", ");
     }
-    function planningLine(){
-      const cycle=forecastData&&forecastData.run_id_utc?timeUTC(forecastData.run_id_utc)+" UTC":"Son GFS çıktısı";
-      if(!verificationDoc)return "Saatlik model doğrulama arşivi henüz yayımlanmıyor. Gerçekleşen gözlem kaydı oluştuğunda burada gösterilecek.";
-      const temperature=formatLeadRanges(trustedLeadHours("temp"));
-      const rain=formatLeadRanges(trustedLeadHours("rain"));
-      if(!temperature&&!rain)return cycle+" çıktısında %90 eşiğini geçen saat henüz yok. Her saat kendi kaydına bakıyor; eşik tutunca yalnız o saat plana girer.";
-      let line=cycle+" çıktısı. Dikkate alınan saatler, geçmişte %90 ve üzeri tutanlar.";
-      line+=temperature?" Sıcaklık (±2°C): "+temperature+".":" Sıcaklıkta %90 saati yok.";
-      line+=rain?" Yağış (±1 mm): "+rain+".":" Yağışta %90 saati yok.";
-      line+=" Bunların dışındaki saat plana katılmıyor.";
-      return line;
-    }
+    
     // Never let an empty/null station state kill the rest of the homepage.
     // The station API loads asynchronously; the UI controls must bind even when
     // the first paint has no observation yet.
@@ -1842,15 +1793,8 @@ if(typeof renderBriefing==="function")renderBriefing();
         renderStationHistory();
       }
     }
-    let notificationRegistration=null;
-    let pushApiUrl="";
-    let pushConfigError="";
     let latestNotificationItems=[];
-    function formatNotificationTime(value){
-      const date=new Date(value);
-      if(Number.isNaN(date.getTime()))return "Zaman bilgisi yok";
-      return new Intl.DateTimeFormat("tr-TR",{timeZone:"Europe/Istanbul",dateStyle:"medium",timeStyle:"short"}).format(date);
-    }
+    
     function notificationAsset(path,cacheVersion){
       if(!path)return null;
       const url=/^https?:\/\//i.test(String(path))?new URL(String(path)):new URL("./data/notifications/"+path,window.location.href);
@@ -1880,125 +1824,14 @@ if(typeof renderBriefing==="function")renderBriefing();
       }).join("");
       loadInteractiveGfsCharts(list);
     }
-    async function loadPushConfig(){
-      const configUrl=new URL("/push-config.json",window.location.origin);
-      configUrl.searchParams.set("t",String(Date.now()));
-      try{
-        const response=await fetch(configUrl.href,{cache:"no-store",credentials:"omit"});
-        if(!response.ok)throw new Error("push-config.json HTTP "+response.status);
-        const config=await response.json();
-        const candidate=String(config.apiBaseUrl||"").trim().replace(/\/+$/,"");
-        if(!candidate)throw new Error("push-config.json içinde apiBaseUrl boş.");
-        if(!/^https:\/\//i.test(candidate))throw new Error("apiBaseUrl HTTPS adresi değil.");
-        pushApiUrl=candidate;
-      }catch(error){
-        pushApiUrl="";
-        pushConfigError=String(error&&error.message||error);
-        console.error("GFS Push config load failed:",configUrl.href,error);
-      }
-      return pushApiUrl;
-    }
-    function decodeVapidKey(value){
-      const padding="=".repeat((4-value.length%4)%4);
-      const base64=(value+padding).replace(/-/g,"+").replace(/_/g,"/");
-      const raw=window.atob(base64);
-      return Uint8Array.from(raw,char=>char.charCodeAt(0));
-    }
+    
     async function registerAppWorker(){
       if(!("serviceWorker" in navigator))return;
       try{notificationRegistration=await navigator.serviceWorker.register("./service-worker.js");}
       catch(_){notificationRegistration=null;}
     }
-    async function refreshPushStatus(){
-      const button=$("enable-notifications");
-      // Notification controls were removed from the public homepage.
-      // Keep the PWA setup from touching missing notification DOM nodes.
-      if(!button)return;
-      if(document.documentElement.classList.contains("ios12")){
-        button.style.display="none";
-        $("notification-status").textContent="iOS 12: cihaz bildirimi kullanılamıyor; tahminler ve raporlar çalışır.";
-        return;
-      }
-      if(!("Notification" in window)||!notificationRegistration||!notificationRegistration.pushManager){
-        $("notification-status").textContent="Bu tarayıcı cihaz bildirimlerini desteklemiyor.";
-        button.disabled=true;
-        return;
-      }
-      if(Notification.permission==="denied"){
-        $("notification-status").textContent="Bildirim izni tarayıcı ayarlarında kapalı.";
-        button.textContent="Bildirim iznini kontrol et";
-        button.disabled=true;
-        return;
-      }
-      if(Notification.permission==="granted"){
-        if(!pushApiUrl){
-          $("notification-status").textContent="Tarayıcı bildirimi açık; GFS bildirim sunucusuna bağlantı yapılandırılmamış.";
-          button.textContent="Sunucu bağlantısını kontrol et";
-          button.disabled=false;
-          return;
-        }
-        try{
-          const subscription=await notificationRegistration.pushManager.getSubscription();
-          if(subscription){
-            $("notification-status").textContent="GFS bildirimleri etkin · Sayfa kapalıyken de gönderilebilir.";
-            button.textContent="GFS bildirimleri açık";
-            button.disabled=true;
-            return;
-          }
-          $("notification-status").textContent="Tarayıcı bildirimi açık; GFS cihaz aboneliği henüz tamamlanmamış.";
-          button.textContent="GFS bildirimlerini etkinleştir";
-          button.disabled=false;
-          return;
-        }catch(_){
-          $("notification-status").textContent="Tarayıcı izni açık; cihaz aboneliği okunamadı. Yeniden deneyebilirsin.";
-          button.textContent="GFS bildirimlerini yeniden dene";
-          button.disabled=false;
-          return;
-        }
-      }
-      $("notification-status").textContent="Yalnızca yeni GFS raporları için bildirim";
-      button.textContent="Cihaz bildirimlerini aç";
-      button.disabled=false;
-    }
-    async function enableNotifications(){
-      const button=$("enable-notifications");
-      button.disabled=true;
-      try{
-        if(!("Notification" in window))throw new Error("Bu tarayıcı cihaz bildirimlerini desteklemiyor.");
-        const permission=Notification.permission==="granted"?"granted":await Notification.requestPermission();
-        if(permission!=="granted")throw new Error("Bildirim izni verilmedi.");
-        if(!pushApiUrl)await loadPushConfig();
-        if(!pushApiUrl)throw new Error("Bildirim yapılandırması yüklenemedi: "+(pushConfigError||"apiBaseUrl boş.")+" (İstenen dosya: "+new URL("/gfs-watch/push-config.json",window.location.origin).href+")");
-        const registration=notificationRegistration||await navigator.serviceWorker.ready;
-        if(!registration.pushManager)throw new Error("Bu tarayıcı arka plan bildirimlerini desteklemiyor.");
-        const keyResponse=await fetch(pushApiUrl+"/vapid-public-key",{cache:"no-store"});
-        if(!keyResponse.ok)throw new Error("GFS sunucusu VAPID anahtarını vermedi (HTTP "+keyResponse.status+"). Sunucu yapılandırmasını kontrol etmek gerekiyor.");
-        const keyData=await keyResponse.json();
-        if(!keyData.publicKey)throw new Error("GFS sunucusundan VAPID public key gelmedi. Sunucu anahtarlarını kontrol etmek gerekiyor.");
-        let subscription=await registration.pushManager.getSubscription();
-        if(!subscription){
-          subscription=await registration.pushManager.subscribe({
-            userVisibleOnly:true,
-            applicationServerKey:decodeVapidKey(keyData.publicKey)
-          });
-        }
-        const saved=await fetch(pushApiUrl+"/subscribe",{
-          method:"POST",
-          headers:{"Content-Type":"application/json"},
-          body:JSON.stringify(subscription)
-        });
-        if(!saved.ok)throw new Error("Cihaz aboneliği sunucuya kaydedilemedi (HTTP "+saved.status+"). Bağlantı veya sunucu ayarlarını kontrol etmek gerekiyor.");
-        $("notification-status").textContent="GFS bildirimleri etkin · Sayfa kapalıyken de gönderilebilir.";
-        button.textContent="GFS bildirimleri açık";
-        button.disabled=true;
-      }catch(error){
-        $("notification-status").textContent=error.message||"Bildirim kurulumu tamamlanamadı.";
-        button.textContent="Cihaz bildirimlerini aç";
-        button.disabled=false;
-      }
-    }
-    const enableNotificationsButton=$("enable-notifications");
-    if(enableNotificationsButton)enableNotificationsButton.addEventListener("click",enableNotifications);
+    
+    
     async function loadNotifications(){
       try{
         // Same flow as the working Köy page: use the native comparison
@@ -2163,10 +1996,7 @@ if(typeof renderBriefing==="function")renderBriefing();
         refreshSelectedStation(),
         loadVerification()
       ]);
-      void registerAppWorker()
-        .then(()=>loadPushConfig())
-        .then(()=>refreshPushStatus())
-        .catch(error=>console.warn("PWA/bildirim kurulumu istasyon verisini engellemedi:",error));
+      void registerAppWorker().catch(error=>console.warn("PWA kurulumu istasyon verisini engellemedi:",error));
       window.setInterval(()=>{loadForecast();loadNotifications();loadVerification();loadRadarGfsComparison();refreshSelectedStation();},300000);
       window.setInterval(refreshStationObservations,60000);
       window.setInterval(refreshSelectedStation,60000);
@@ -2174,123 +2004,7 @@ if(typeof renderBriefing==="function")renderBriefing();
 
     let ecmwfForecast=null,ecmwfLoading=false,ecmwfLastFetch=0;
     let activeModel="gfs";
-    function renderEcmwfComparisonChart(metric,targetId,history){
-      const container=$(targetId);
-      const count=$(targetId.replace("-chart","-count"));
-      const runs=(Array.isArray(history)?history:[]).slice(-4);
-      const definitions={
-        temperature:{field:"temperature_2m_c",label:"2 m sıcaklık",unit:"°C"},
-        t850:{field:"temperature_850hpa_c",label:"850 hPa sıcaklık",unit:"°C"},
-        wind10:{field:"wind_speed_10m_kmh",label:"10 m rüzgâr",unit:"km/sa"},
-        wind850:{field:"wind_speed_850hpa_kmh",label:"850 hPa rüzgâr",unit:"km/sa"},
-        precipitation:{field:"precipitation_6h_mm",label:"6 saatlik yağış",unit:"mm"}
-      };
-      const definition=definitions[metric];
-      if(!definition){container.innerHTML='<div class="chart-empty">Bilinmeyen karşılaştırma değişkeni.</div>';return;}
-      const palette=["#7dd3d7","#8abce8","#f1c98b","#8fd7ba"];
-      const series=runs.map((run,index)=>{
-        const points=Array.isArray(run.forecast_6_hourly)?run.forecast_6_hourly:[];
-        const values=new Map();
-        if(metric==="precipitation"){
-          const endpoints=points.map(point=>({...point,endMs:Date.parse(point.valid_time_utc)}))
-            .filter(point=>Number.isFinite(point.endMs)).sort((a,b)=>a.endMs-b.endMs);
-          for(const endpoint of endpoints){
-            const end=endpoint.endMs,start=end-6*3600000;
-            let cursor=start,total=0,valid=true;
-            const intervals=endpoints.filter(point=>point.endMs>start&&point.endMs<=end);
-            for(const point of intervals){
-              const hours=Number(point.precipitation_interval_hours);
-              if(!Number.isFinite(hours)||hours<=0){valid=false;break;}
-              const intervalStart=point.endMs-hours*3600000;
-              if(intervalStart!==cursor||point.endMs>end){valid=false;break;}
-              const amount=Number(point.precipitation_6h_mm);
-              if(!Number.isFinite(amount)){valid=false;break;}
-              total+=amount;cursor=point.endMs;
-            }
-            if(valid&&cursor===end)values.set(new Date(end).toISOString(),total);
-          }
-        }else{
-          for(const point of points){
-            const value=Number(point[definition.field]);
-            const timestamp=Date.parse(point.valid_time_utc);
-            if(Number.isFinite(value)&&Number.isFinite(timestamp))values.set(new Date(timestamp).toISOString(),value);
-          }
-        }
-        return {runId:run.run_id_utc,values,color:palette[index]};
-      });
-      const common=series.length?Array.from(series[0].values.keys()).filter(key=>series.every(item=>item.values.has(key))).sort():[];
-      if(count)count.textContent=series.length+" çıktı · "+common.length+" ortak zaman";
-      const modelName=String(targetId).startsWith("gfs-")?"GFS":"ECMWF";
-      if(series.length<2||common.length<2){
-        container.innerHTML='<div class="chart-empty">Karşılaştırma için henüz yeterli yayımlanmış '+modelName+' çevrimi yok. Yeni çıktılar geldikçe grafik otomatik tamamlanacak.</div>';
-        return;
-      }
-      const width=940,height=300,left=58,right=16,top=16,bottom=56;
-      const candleChart=(metric==="temperature"||metric==="t850")&&!String(targetId).startsWith("gfs-");
-      const allValues=series.flatMap(item=>common.map(key=>item.values.get(key)));
-      const min=metric==="precipitation"?0:Math.min(...allValues);
-      const max=Math.max(...allValues);
-      const span=(max-min)||1;
-      const low=metric==="precipitation"?0:min-span*.12;
-      const high=max+(metric==="precipitation"?Math.max(.2,span*.12):span*.12);
-      const yFor=value=>top+((high-value)/(high-low))*(height-top-bottom);
-      const ticks=[0,1,2,3].map(index=>low+(high-low)*index/3);
-      const grid=ticks.map(value=>{
-        const y=yFor(value);
-        return '<line x1="'+left+'" y1="'+y+'" x2="'+(width-right)+'" y2="'+y+'" stroke="rgba(194,220,232,.12)" stroke-dasharray="4 6"/><text x="'+(left-10)+'" y="'+(y+4)+'" fill="#91a9b8" font-size="11" text-anchor="end">'+fmt(value,metric==="precipitation"?1:0)+'</text>';
-      }).join("");
-      let marks="",labels="",note="X ekseni: ortak geçerlilik zamanı · Y ekseni: "+definition.unit;
-      if(candleChart){
-        const dayKeys=new Map();
-        for(const key of common){
-          const day=new Intl.DateTimeFormat("en-CA",{timeZone:"Europe/Istanbul",year:"numeric",month:"2-digit",day:"2-digit"}).format(new Date(key));
-          if(!dayKeys.has(day))dayKeys.set(day,[]);
-          dayKeys.get(day).push(key);
-        }
-        const days=Array.from(dayKeys.entries());
-        const slot=(width-left-right)/Math.max(1,days.length);
-        const gap=1.5;
-        const candleW=Math.max(4,Math.min(12,(slot*.78-gap*(series.length-1))/series.length));
-        const groupW=series.length*candleW+(series.length-1)*gap;
-        const dateFmt=new Intl.DateTimeFormat("tr-TR",{timeZone:"Europe/Istanbul",day:"2-digit"});
-        const weekFmt=new Intl.DateTimeFormat("tr-TR",{timeZone:"Europe/Istanbul",weekday:"short"});
-        marks=days.map(([day,keys],dayIndex)=>{
-          const origin=left+dayIndex*slot+(slot-groupW)/2;
-          return series.map((item,seriesIndex)=>{
-            const values=keys.map(key=>item.values.get(key)).filter(value=>Number.isFinite(value));
-            if(!values.length)return "";
-            const open=values[0],close=values[values.length-1],highValue=Math.max(...values),lowValue=Math.min(...values);
-            const cx=origin+seriesIndex*(candleW+gap)+candleW/2;
-            let yTop=yFor(Math.max(open,close)),yBottom=yFor(Math.min(open,close));
-            if(yBottom-yTop<2.6){const mid=(yTop+yBottom)/2;yTop=mid-1.3;yBottom=mid+1.3;}
-            return '<line x1="'+cx.toFixed(1)+'" y1="'+yFor(highValue).toFixed(1)+'" x2="'+cx.toFixed(1)+'" y2="'+yFor(lowValue).toFixed(1)+'" stroke="'+item.color+'" stroke-width="1.7" stroke-linecap="round"/><rect x="'+(cx-candleW/2).toFixed(1)+'" y="'+yTop.toFixed(1)+'" width="'+candleW.toFixed(1)+'" height="'+(yBottom-yTop).toFixed(1)+'" rx="1" fill="'+item.color+'"/>';
-          }).join("");
-        }).join("");
-        labels=days.map(([day,keys],dayIndex)=>{
-          const x=left+dayIndex*slot+slot/2;
-          const stamp=new Date(keys[0]);
-          return '<text x="'+x.toFixed(1)+'" y="'+(height-14)+'" fill="#d7e6ee" font-size="11" text-anchor="middle">'+esc(dateFmt.format(stamp))+'</text>';
-        }).join("");
-        note="Gövde: günün ilk ve son değeri · Fitil: gün içi en düşük ve en yüksek · "+definition.unit;
-      }else{
-        const xFor=index=>left+(index/Math.max(1,common.length-1))*(width-left-right);
-        marks=series.map(item=>{
-          const coords=common.map((key,index)=>({x:xFor(index),y:yFor(item.values.get(key))}));
-          const path=coords.map((point,index)=>(index?"L":"M")+point.x.toFixed(1)+" "+point.y.toFixed(1)).join(" ");
-          const dots=coords.filter((point,index)=>index===0||index===coords.length-1||index%8===0)
-            .map(point=>'<circle cx="'+point.x+'" cy="'+point.y+'" r="2.8" fill="'+item.color+'"/>').join("");
-          return '<path d="'+path+'" fill="none" stroke="'+item.color+'" stroke-width="2.8" stroke-linecap="round" stroke-linejoin="round"/>'+dots;
-        }).join("");
-        const labelIndices=[0,Math.floor((common.length-1)/2),common.length-1];
-        labels=Array.from(new Set(labelIndices)).map(index=>{
-          const date=new Date(common[index]);
-          const label=new Intl.DateTimeFormat("tr-TR",{timeZone:"Europe/Istanbul",day:"2-digit"}).format(date);
-          return '<text x="'+xFor(index)+'" y="'+(height-14)+'" fill="#91a9b8" font-size="11" text-anchor="middle">'+esc(label)+'</text>';
-        }).join("");
-      }
-      const legend=series.map(item=>'<span style="display:inline-flex;align-items:center;gap:6px;margin:0 12px 6px 0;font-size:11px;color:#b9cbd4"><i style="display:inline-block;width:17px;height:'+(candleChart?"9":"3")+'px;border-radius:2px;background:'+item.color+'"></i>'+esc(timeTR(item.runId))+' TSİ</span>').join("");
-      container.innerHTML='<svg viewBox="0 0 '+width+' '+height+'" role="img" aria-label="'+definition.label+' için son dört '+modelName+' çıktısı karşılaştırması'+(candleChart?", günlük iğneli mum":"")+'">'+grid+marks+labels+'</svg><div style="padding:5px 8px 0;display:flex;flex-wrap:wrap;gap:2px 4px">'+legend+'</div><div style="padding:2px 8px 8px;color:#91a9b8;font-size:10px">'+note+'</div>';
-    }
+    
     function renderEcmwfReportImages(document){
       const holder=$("ecmwf-report-images");
       if(!holder)return;
