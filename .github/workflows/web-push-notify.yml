@@ -1,7 +1,8 @@
 name: Send GFS Web Push
 
 on:
-  # Web Push is no longer part of the production data runtime. Manual diagnostics remain available.
+  schedule:
+    - cron: "45 16 * * *" # 19:45 TSİ (UTC+3)
   workflow_dispatch:
     inputs:
       notification_id:
