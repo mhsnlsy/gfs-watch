@@ -365,6 +365,20 @@ export default {
       }),{status:sent?200:502,headers:{"content-type":"application/json","cache-control":"no-store"}});
     }
 
-    if(url.pathname==="/health"){const url=new URL(request.url);if(url.pathname==="/health"){const s=await getState(env.RADAR_DB);return new Response(JSON.stringify({ok:true,service:"radar-monitor",interval:"6m",build:RADAR_BUILD,pixel_threshold:MIN_ALERT_PIXELS,cooldown_minutes:ALERT_COOLDOWN_SECONDS/60,last_frame_ts:Number(s.last_frame_ts||0),last_alert_ts:Number(s.last_alert_ts||0),last_intensity:s.last_intensity||""}),{headers:{"content-type":"application/json"}});}return new Response(JSON.stringify({ok:true,service:"radar-monitor",interval:"6m"}),{headers:{"content-type":"application/json"}});},
+    if(url.pathname==="/health"){
+      const s=await getState(env.RADAR_DB);
+      return new Response(JSON.stringify({
+        ok:true,service:"radar-monitor",interval:"6m",build:RADAR_BUILD,
+        pixel_threshold:MIN_ALERT_PIXELS,
+        cooldown_minutes:ALERT_COOLDOWN_SECONDS/60,
+        last_frame_ts:Number(s.last_frame_ts||0),
+        last_alert_ts:Number(s.last_alert_ts||0),
+        last_intensity:s.last_intensity||""
+      }),{headers:{"content-type":"application/json"}});
+    }
+    return new Response(JSON.stringify({ok:true,service:"radar-monitor",interval:"6m"}),{
+      headers:{"content-type":"application/json"}
+    });
+  },
   async scheduled(event,env,ctx){ctx.waitUntil(check(env).then(r=>console.log(JSON.stringify(r))).catch(e=>console.error(e.stack||e.message||e)));}
 };
