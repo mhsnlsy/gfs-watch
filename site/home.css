@@ -3661,12 +3661,14 @@ html.ios12 #enka-camera-panel .enka-camera-frame{
     row-gap:7.2px!important;
   }
   .dashboard-left .station-card>.station-switch{
-    gap:6.3px!important;
+    gap:5px!important;
     margin-top:11.34px!important;
   }
   .dashboard-left .station-card>.station-switch button{
     min-height:28px!important;
     padding:7px!important;
+    font-size:11px!important;
+    line-height:1.1!important;
   }
   .dashboard-left .station-card .station-overview{
     margin-top:8.1px!important;
