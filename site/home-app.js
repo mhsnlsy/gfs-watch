@@ -1628,7 +1628,7 @@ renderBriefing();
         const age=(Date.now()-new Date(data.published_at_utc).getTime())/3600000;
       }
       if(data.forecast_valid_until_utc&&$("valid-until"))$("valid-until").textContent="Son geçerlilik: "+new Intl.DateTimeFormat("tr-TR",{timeZone:"Europe/Istanbul",day:"2-digit",month:"2-digit"}).format(new Date(data.forecast_valid_until_utc));
-      renderFindings(data.regional_pressure_analysis&&data.regional_pressure_analysis.findings,data.current_conditions&&data.current_conditions.mean_sea_level_pressure_hpa);
+      // GFS bölgesel basınç merkezleri ayrı GitHub Actions verisinden render ediliyor; eski noktasal yorum katmanı bunu ezmemeli.
     }
     function workerStationToPageStation(row){
       if(!row)return null;
