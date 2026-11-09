@@ -410,9 +410,9 @@
 .enka-camera-head{display:flex;align-items:center;justify-content:space-between;gap:12px;padding:11px 14px;border-bottom:1px solid rgba(125,211,215,.14)}
 .enka-camera-title{font-size:8px;font-weight:800;letter-spacing:.06em;text-transform:uppercase;color:#d9f7f5;line-height:1.15}
 .enka-camera-status{font-size:10px;color:#8fd0c8;white-space:nowrap}
-.enka-camera-frame{display:block;width:100%;margin:0;aspect-ratio:4/3;min-height:0;object-fit:cover;background:#020f18}
+.enka-camera-frame{display:block;width:100%;margin:0;aspect-ratio:auto;min-height:0;object-fit:cover;background:#020f18}
 .enka-camera-foot{display:flex;justify-content:space-between;gap:10px;padding:8px 12px;font-size:10px;color:#8faab5}
-@media(max-width:700px){.enka-camera-panel{grid-column:1 / -1!important;width:min(100%,330px)!important;margin-left:0!important;margin-right:auto!important;margin-top:0!important;align-self:start!important;justify-self:start!important;border-radius:14px;position:relative;left:0!important;transform:none!important}.enka-camera-frame{min-height:0}.enka-camera-head{padding:9px 11px}.enka-camera-foot{font-size:9px}}
+@media(max-width:700px){.enka-camera-panel{grid-column:auto!important;width:100%!important;max-width:100%!important;margin:0!important;align-self:stretch!important;justify-self:stretch!important;border-radius:21px;position:static!important;left:auto!important;transform:none!important}.enka-camera-frame{min-height:0}.enka-camera-head{padding:9px 11px}.enka-camera-foot{font-size:9px}}
 .briefing-row{display:grid;grid-template-columns:86px minmax(0,1fr);gap:8px;align-items:start;padding:5px 8px;border-radius:10px;background:rgba(2,15,24,.28);border:1px solid rgba(143,184,196,.16)}
 .briefing-k{font-size:9px;letter-spacing:.06em;font-weight:700;color:#8fd0c8;text-transform:uppercase;padding-top:2px}
 .briefing-v{font-size:12.5px;line-height:1.35;color:#e7f2f6}
@@ -991,10 +991,10 @@
       .briefing { margin-top:5px!important; gap:3px!important; }
       .briefing-row { padding:4px 6px!important; }
     }
-    /* FINAL DASHBOARD LAYOUT: unified observation + briefing panel | camera */
+    /* FINAL DASHBOARD LAYOUT: the observation card uses the full content row. */
     .dashboard-top{
       display:grid!important;
-      grid-template-columns:minmax(0,1.18fr) minmax(340px,.62fr)!important;
+      grid-template-columns:minmax(0,1fr)!important;
       gap:14px!important;
       align-items:start!important;
       width:100%!important;
@@ -1004,22 +1004,7 @@
       grid-row:1!important;
       min-width:0!important;
       width:100%!important;
-    }
-    /* Camera: 50% size, pinned to the top-right of the dashboard column. */
-    .dashboard-top>.enka-camera-panel{
-      grid-column:2!important;
-      grid-row:1!important;
-      width:50%!important;
-      max-width:50%!important;
-      min-width:0!important;
-      margin:0 0 0 auto!important;
-      align-self:start!important;
-      justify-self:end!important;
-      transform:none!important;
-    }
-    .dashboard-top>.enka-camera-panel .enka-camera-frame{
-      width:100%!important;
-      height:auto!important;
+      max-width:none!important;
     }
     .station-card>.station-briefing-inline{
       grid-column:1 / -1!important;
@@ -1047,17 +1032,7 @@
         grid-column:1!important;
         grid-row:auto!important;
         width:100%!important;
-      }
-      .dashboard-top>.enka-camera-panel{
-        grid-column:1!important;
-        grid-row:auto!important;
-        width:50%!important;
-        max-width:50%!important;
-        margin:0 auto 0 0!important;
-        justify-self:start!important;
-        align-self:start!important;
-        left:0!important;
-        transform:none!important;
+        max-width:none!important;
       }
     }
     @media(max-width:560px){
@@ -2398,4 +2373,112 @@ html.ios12 .footer > *{
   #bildirimler .gfs-interactive-chart .gfs-interactive-svg,
   #bildirimler .gfs-mobile-panel-host .gfs-mobile-panel-svg { min-width:640px!important; }
   #meteopt-gfs-table .meteopt-data-table { min-width:640px!important; }
+}
+
+/* ENKA camera: full-width card under the pressure-centres panel. */
+.dashboard-top{
+  grid-template-columns:minmax(0,1fr)!important;
+}
+.dashboard-top>.dashboard-left,
+.dashboard-top .station-card{
+  width:100%!important;
+  max-width:none!important;
+  min-width:0!important;
+}
+#enka-kamera{
+  width:100%;
+  max-width:100%;
+  min-width:0;
+}
+#enka-camera-panel.enka-camera-panel{
+  width:100%!important;
+  max-width:100%!important;
+  min-width:0!important;
+  margin:0!important;
+  justify-self:stretch!important;
+  align-self:stretch!important;
+  position:static!important;
+  left:auto!important;
+  transform:none!important;
+  grid-column:auto!important;
+  border:1px solid var(--line);
+  border-radius:21px;
+  background:linear-gradient(145deg,rgba(18,43,61,.94),rgba(12,31,46,.96));
+  overflow:hidden;
+  box-sizing:border-box;
+}
+#enka-camera-panel .enka-camera-head,
+#enka-camera-panel .enka-camera-foot{
+  display:flex;
+  align-items:center;
+  justify-content:space-between;
+  gap:10px 12px;
+  flex-wrap:wrap;
+  min-width:0;
+}
+#enka-camera-panel .enka-camera-title,
+#enka-camera-panel .enka-camera-status,
+#enka-camera-panel .enka-camera-foot span{
+  min-width:0;
+  white-space:normal;
+  overflow-wrap:anywhere;
+}
+#enka-camera-panel .enka-camera-status{text-align:right}
+#enka-camera-panel .enka-camera-stage{
+  position:relative;
+  width:100%;
+  max-width:100%;
+  aspect-ratio:16/9;
+  background:#071521;
+  overflow:hidden;
+}
+@supports not (aspect-ratio: 16 / 9){
+  #enka-camera-panel .enka-camera-stage{height:0;padding-top:56.25%}
+}
+#enka-camera-panel .enka-camera-frame,
+#enka-camera-panel .enka-camera-placeholder{
+  position:absolute;
+  inset:0;
+  width:100%!important;
+  height:100%!important;
+  max-width:100%;
+  min-height:0!important;
+}
+#enka-camera-panel .enka-camera-frame{
+  object-fit:cover;
+  aspect-ratio:auto;
+}
+#enka-camera-panel .enka-camera-frame.is-pending,
+#enka-camera-image:not([src]){visibility:hidden}
+#enka-camera-panel .enka-camera-placeholder{
+  display:grid;
+  place-items:center;
+  padding:16px;
+  text-align:center;
+  color:#9fb4c0;
+  font-size:13px;
+  line-height:1.45;
+  background:
+    linear-gradient(180deg,rgba(8,24,36,.15),rgba(8,24,36,.62)),
+    repeating-linear-gradient(135deg,rgba(125,211,215,.06) 0 12px,transparent 12px 24px);
+}
+#enka-camera-panel .enka-camera-placeholder[hidden]{display:none!important}
+html.ios12 #enka-camera-panel,
+html.ios12 #enka-camera-panel .enka-camera-stage,
+html.ios12 #enka-camera-panel .enka-camera-frame{
+  width:100%!important;
+  max-width:100%!important;
+  min-width:0!important;
+}
+html.ios12 #enka-camera-panel .enka-camera-frame{
+  position:absolute!important;
+  height:100%!important;
+  min-height:0!important;
+}
+@media(max-width:700px){
+  #enka-camera-panel.enka-camera-panel{
+    width:100%!important;
+    max-width:100%!important;
+    margin:0!important;
+  }
 }
