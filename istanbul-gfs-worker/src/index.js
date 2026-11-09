@@ -1188,8 +1188,8 @@ async function handleApi(request, env) {
         images: row.svg_asset_key ? [{
           label: "GFS dört döngü · aynı geçerlilik saatleri (TSİ)",
           path: String(row.svg_asset_key)
-            .replace(/^data\\/notifications\\//, "")
-            .replace(/^notifications\\//, "")
+            .replace(/^data\/notifications\//, "")
+            .replace(/^notifications\//, "")
         }] : []
       }));
       return json({
