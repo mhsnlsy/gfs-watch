@@ -3643,9 +3643,9 @@ html.ios12 #enka-camera-panel .enka-camera-frame{
     max-width:100%!important;
     margin-left:auto!important;
     margin-right:auto!important;
-    height:950px!important;
-    min-height:950px!important;
-    max-height:950px!important;
+    height:1020px!important;
+    min-height:1020px!important;
+    max-height:1020px!important;
     box-sizing:border-box!important;
     overflow:hidden!important;
   }
