@@ -1,4 +1,4 @@
-name: Temporary tomorrow weather push test
+name: One-off tomorrow weather push delivery
 
 on:
   push:
@@ -39,7 +39,7 @@ jobs:
             response=$(curl --fail-with-body --silent --show-error \
               -X POST \
               -H "Authorization: Bearer $PUSH_ADMIN_TOKEN" \
-              https://gfs-watch-push.muhsin-ulusoy.workers.dev/admin/test-tomorrow-weather-push)
+              https://gfs-watch-push.muhsin-ulusoy.workers.dev/admin/send-tomorrow-weather)
             echo "$response"
             if echo "$response" | grep -q '"delivered":[1-9]'; then
               echo "Push delivery confirmed by Worker."
