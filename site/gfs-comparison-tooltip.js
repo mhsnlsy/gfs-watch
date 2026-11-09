@@ -363,12 +363,12 @@ function addMobileGfsCycleLabels(panelHost,panel,panelSvg){
   Object.assign(legend.style,{
     position:"absolute",
     top:"8px",
-    left:"8px",
-    right:"8px",
+    left:"84px",
+    right:"84px",
     zIndex:"1100",
     display:"flex",
     alignItems:"center",
-    justifyContent:"flex-end",
+    justifyContent:"center",
     gap:"9px",
     flexWrap:"nowrap",
     pointerEvents:"none",
@@ -407,6 +407,17 @@ function addMobileGfsCycleLabels(panelHost,panel,panelSvg){
   });
 
   panelHost.appendChild(legend);
+}
+function removeNativeMobileGfsLegend(svg){
+  if(!svg)return;
+  const wanted=["00Z","06Z","12Z","18Z"];
+  const groups=Array.from(svg.querySelectorAll("g")).filter(group=>{
+    const text=(group.textContent||"").replace(/\\s+/g," ").trim();
+    return wanted.every(label=>text.includes(label));
+  });
+  if(!groups.length)return;
+  groups.sort((a,b)=>(a.textContent||"").length-(b.textContent||"").length);
+  groups[0].remove();
 }
 function buildMobileGfsPanelViews(sourceSvg,metadata){
   const fallbackPanels=[
@@ -503,6 +514,7 @@ async function loadInteractiveGfsCharts(root){
             const panelHost=document.createElement("div");
             panelHost.className="gfs-mobile-panel-host";
             forceDarkGfsSvg(panelSvg);
+            removeNativeMobileGfsLegend(panelSvg);
             panelHost.style.setProperty("background","#0A1B29","important");
             // The panel SVG uses a cropped viewBox. Clip everything outside that
             // viewport so the report header and neighboring panels cannot bleed
