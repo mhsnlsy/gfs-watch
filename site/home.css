@@ -2391,12 +2391,12 @@ html.ios12 .footer > *{
   min-width:0;
 }
 #enka-camera-panel.enka-camera-panel{
-  width:100%!important;
+  width:max(40%, min(280px, 100%))!important;
   max-width:100%!important;
   min-width:0!important;
-  margin:0!important;
-  justify-self:stretch!important;
-  align-self:stretch!important;
+  margin:0 auto!important;
+  justify-self:center!important;
+  align-self:center!important;
   position:static!important;
   left:auto!important;
   transform:none!important;
@@ -2416,12 +2416,22 @@ html.ios12 .footer > *{
   flex-wrap:wrap;
   min-width:0;
 }
+#enka-camera-panel .enka-camera-title{
+  font-size:12px;
+  line-height:1.35;
+  letter-spacing:.04em;
+}
+#enka-camera-panel .enka-camera-status,
+#enka-camera-panel .enka-camera-foot{
+  font-size:12px;
+  line-height:1.35;
+}
 #enka-camera-panel .enka-camera-title,
 #enka-camera-panel .enka-camera-status,
 #enka-camera-panel .enka-camera-foot span{
   min-width:0;
   white-space:normal;
-  overflow-wrap:anywhere;
+  overflow-wrap:break-word;
 }
 #enka-camera-panel .enka-camera-status{text-align:right}
 #enka-camera-panel .enka-camera-stage{
@@ -2463,7 +2473,13 @@ html.ios12 .footer > *{
     repeating-linear-gradient(135deg,rgba(125,211,215,.06) 0 12px,transparent 12px 24px);
 }
 #enka-camera-panel .enka-camera-placeholder[hidden]{display:none!important}
-html.ios12 #enka-camera-panel,
+html.ios12 #enka-camera-panel{
+  width:max(40%, min(280px, 100%))!important;
+  max-width:100%!important;
+  min-width:0!important;
+  margin-left:auto!important;
+  margin-right:auto!important;
+}
 html.ios12 #enka-camera-panel .enka-camera-stage,
 html.ios12 #enka-camera-panel .enka-camera-frame{
   width:100%!important;
@@ -2477,8 +2493,13 @@ html.ios12 #enka-camera-panel .enka-camera-frame{
 }
 @media(max-width:700px){
   #enka-camera-panel.enka-camera-panel{
-    width:100%!important;
+    width:max(40%, min(280px, 100%))!important;
     max-width:100%!important;
-    margin:0!important;
+    margin:0 auto!important;
+  }
+  #enka-camera-panel .enka-camera-head,
+  #enka-camera-panel .enka-camera-foot{
+    padding-left:10px;
+    padding-right:10px;
   }
 }
