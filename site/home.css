@@ -3815,3 +3815,30 @@ html.ios12 #enka-camera-panel .enka-camera-frame{
     line-height:1.42!important;
   }
 }
+
+
+/* FINAL: homepage live observation panel uses the Köy panel's exact
+   effective padding values. Padding only; typography and other geometry stay unchanged. */
+@media (max-width:560px){
+  .dashboard-left .station-card{
+    padding:14px 12px 12px!important;
+  }
+  .dashboard-left .station-card>.station-switch{
+    padding:2px!important;
+  }
+  .dashboard-left .station-card>.station-switch button{
+    padding:5px 10px!important;
+  }
+  .dashboard-left .station-card>.weather-stats{
+    padding-top:8px!important;
+  }
+  .dashboard-left .station-card .stat{
+    padding:4px 5px!important;
+  }
+  .dashboard-left .station-card>.station-history-inline{
+    padding-top:4px!important;
+  }
+  .dashboard-left .station-card .station-history-inline .history-chart-card{
+    padding:0!important;
+  }
+}
