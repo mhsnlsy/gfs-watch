@@ -4543,3 +4543,34 @@ html.ios12 #enka-camera-panel .enka-camera-frame{
     margin-bottom:1px!important;
   }
 }
+
+/* GFS raporu — Köy sayfasıyla birebir ölçü */
+#bildirimler .notification-card.koy-gfs-report-card{
+  box-sizing:border-box!important;
+  width:92%!important;
+  max-width:1120px!important;
+  min-width:0!important;
+  margin:0 auto!important;
+  padding:0!important;
+  border:0!important;
+  border-radius:18px!important;
+  overflow:hidden!important;
+}
+#bildirimler .notification-card.koy-gfs-report-card .koy-gfs-svg-images{
+  width:100%!important;
+  max-width:100%!important;
+  margin:0!important;
+  padding:0!important;
+}
+#bildirimler .notification-card.koy-gfs-report-card .gfs-interactive-chart{
+  width:90%!important;
+  max-width:90%!important;
+  margin-left:auto!important;
+  margin-right:auto!important;
+}
+@media(max-width:700px),(pointer:coarse){
+  #bildirimler .notification-card.koy-gfs-report-card .gfs-interactive-chart{
+    width:100%!important;
+    max-width:100%!important;
+  }
+}
