@@ -69,22 +69,25 @@
     }
     function pressureRegionName(latitude,longitude){
       const lat=Number(latitude),lon=Number(longitude);
-      if(lat>=50&&lat<=53&&lon>=22&&lon<=29)return "Kuzeybatı Ukrayna (Volın bölgesi)";
-      if(lat>=44&&lat<=46.5&&lon>=32.2&&lon<=37)return "Kırım Yarımadası, Ukrayna";
+      if(lat>=41.45&&lat<=42.05&&lon>=32.9&&lon<=34.2)return "Kastamonu · Küre/Azdavay çevresi";
+      if(lat>=39.2&&lat<=40.9&&lon>=40.2&&lon<=42.6)return "Erzurum · Tortum çevresi";
+      if(lat>=38.0&&lat<=39.3&&lon>=35.0&&lon<=36.6)return "Kayseri · Bünyan/Sarız çevresi";
+      if(lat>=41.0&&lat<=42.2&&lon>=32.0&&lon<=34.8)return "Batı Karadeniz · Kastamonu çevresi";
+      if(lat>=39.0&&lat<=41.2&&lon>=40.0&&lon<=43.5)return "Doğu Anadolu · Erzurum çevresi";
+      if(lat>=37.8&&lat<=39.5&&lon>=34.5&&lon<=37.5)return "İç Anadolu · Kayseri çevresi";
+      if(lat>=42.0&&lat<=44.5&&lon>=40.0&&lon<=45.0)return "Kafkaslar · Gürcistan–Rusya sınır bölgesi";
       if(lat>=43.6&&lat<=48.3&&lon>=20.2&&lon<=29.7)return "Romanya";
-      if(lat>=41.2&&lat<=44.2&&lon>=22.3&&lon<=28.2)return "Bulgaristan, Balkanlar";
-      if(lat>=43&&lat<=49.2&&lon>=37&&lon<=48.5)return "Güney Rusya (Rostov ve Krasnodar çevresi)";
-      if(lat>=35&&lat<=41&&lon>=19&&lon<23)return "Batı Yunanistan ve İyon Denizi açıkları";
-      if(lat>=39&&lat<=41.8&&lon>=20&&lon<=26.6)return "Kuzeydoğu Yunanistan (Trakya ve Makedonya)";
-      if(lat>=35&&lat<39&&lon>=23&&lon<=28.5)return "Doğu Yunanistan ve Kuzey Ege";
+      if(lat>=44&&lat<=46.5&&lon>=32.2&&lon<=37)return "Kırım ve kuzey Karadeniz";
+      if(lat>=41.2&&lat<=44.2&&lon>=22.3&&lon<=28.2)return "Bulgaristan ve Balkanlar";
+      if(lat>=43&&lat<=49.2&&lon>=37&&lon<=48.5)return "Güney Rusya · Kuzey Kafkasya";
       if(lat>=40.5&&lat<=47.5&&lon>=27&&lon<=42.5)return lon<33?"Batı Karadeniz":lon<37?"Orta Karadeniz":"Doğu Karadeniz";
-      if(lat>=40&&lat<=42.3&&lon>=26&&lon<=30.5)return "Marmara ve Trakya, Türkiye";
-      if(lat>=36.5&&lat<=40&&lon>=26&&lon<=30)return "Ege Bölgesi, Türkiye";
-      if(lat>=37&&lat<=40.8&&lon>=30&&lon<=36.5)return "İç Anadolu, Türkiye";
+      if(lat>=40&&lat<=42.3&&lon>=26&&lon<=30.5)return "Marmara ve Trakya";
+      if(lat>=36.5&&lat<=40&&lon>=26&&lon<=30)return "Ege Bölgesi";
+      if(lat>=37&&lat<=40.8&&lon>=30&&lon<=36.5)return "İç Anadolu";
       if(lat>=30&&lat<36.5&&lon>=27&&lon<=37.5)return "Doğu Akdeniz";
-      if(lat>=39&&lat<=46&&lon>=13&&lon<=20)return "Adriyatik Denizi ve Batı Balkan kıyıları";
-      if(lat>=45&&lon<32)return "Doğu Avrupa (Romanya-Ukrayna çevresi)";
-      return "İstanbul çevresindeki bölgesel analiz alanı";
+      if(lat>=39&&lat<=46&&lon>=13&&lon<=20)return "Adriyatik ve Batı Balkanlar";
+      if(lat>=45&&lon<32)return "Doğu Avrupa · Romanya-Ukrayna";
+      return "Bölgesel analiz alanı";
     }
     function pressureRelativeToIstanbul(latitude,longitude){
       const rad=value=>value*Math.PI/180;
@@ -102,25 +105,20 @@
       const items=findings.map(value=>String(value)).filter(value=>!value.includes("Yüksek ve alçak basınç merkezleri bölgesel eğilimi gösterir"));
       list.innerHTML=items.map(text=>'<li><span class="pressure-icon">◈</span><span>'+esc(text)+'</span></li>').join("");
     }
-    function renderPressureMap(centers){
-      const map=$("pressure-map");
-      if(!map)return;
-      const width=760,height=360,left=42,right=18,top=18,bottom=34;
-      const minLon=15,maxLon=45,minLat=30,maxLat=52;
-      const x=lon=>left+(Number(lon)-minLon)/(maxLon-minLon)*(width-left-right);
-      const y=lat=>top+(maxLat-Number(lat))/(maxLat-minLat)*(height-top-bottom);
-      const gridLon=[15,20,25,30,35,40,45];
-      const gridLat=[30,35,40,45,50];
-      const grid=gridLon.map(lon=>`<line x1="${x(lon)}" y1="${top}" x2="${x(lon)}" y2="${height-bottom}" class="pressure-map-grid"/><text x="${x(lon)}" y="${height-12}" class="pressure-map-label" text-anchor="middle">${lon}°E</text>`).join("")
-        +gridLat.map(lat=>`<line x1="${left}" y1="${y(lat)}" x2="${width-right}" y2="${y(lat)}" class="pressure-map-grid"/><text x="8" y="${y(lat)+4}" class="pressure-map-label">${lat}°N</text>`).join("");
-      const istX=x(28.95),istY=y(41.014);
-      const markers=centers.map(center=>{
-        const cls=center.type==="low"?"low":"high";
-        const label=center.type==="low"?"L":"Y";
-        const cx=x(center.longitude),cy=y(center.latitude);
-        return `<g class="pressure-map-marker ${cls}" tabindex="0"><circle cx="${cx}" cy="${cy}" r="9"/><text x="${cx}" y="${cy+4}" text-anchor="middle">${label}</text><title>${center.type==="low"?"Alçak":"Yüksek"} basınç · ${Number(center.pressure_hpa).toFixed(1)} hPa · ${Number(center.distance_km).toFixed(0)} km</title></g>`;
+    function renderPressureText(centers){
+      const list=$("pressure-findings");
+      if(!list)return;
+      if(!Array.isArray(centers)||!centers.length){
+        list.innerHTML='<li class="pressure-empty">GitHub Actions GFS bölgesel analizinde eşik üstü/altı merkez bulunmadı.</li>';
+        return;
+      }
+      list.innerHTML=centers.map(center=>{
+        const isLow=center.type==="low";
+        const label=isLow?"Alçak basınç":"Yüksek basınç";
+        const icon=isLow?"↘":"↗";
+        const region=pressureRegionName(center.latitude,center.longitude);
+        return '<li class="pressure-center-item"><span class="pressure-icon '+(isLow?"low":"high")+'">'+icon+'</span><span><strong>'+label+' · '+esc(region)+'</strong><br><span class="pressure-center-value">'+Number(center.pressure_hpa).toFixed(1)+' hPa</span> · İstanbul\'a '+Number(center.distance_km).toFixed(0)+' km '+esc(String(center.direction||""))+' yönünde</span></li>';
       }).join("");
-      map.innerHTML=`<div class="pressure-map-head"><span>İstanbul merkezli · 2500 km çap</span><span><i class="pressure-map-key high"></i> Yüksek ≥1023 · <i class="pressure-map-key low"></i> Alçak ≤1013</span></div><svg viewBox="0 0 ${width} ${height}" role="img" aria-label="Basınç merkezleri koordinat haritası">${grid}<rect x="${left}" y="${top}" width="${width-left-right}" height="${height-top-bottom}" class="pressure-map-frame"/><line x1="${istX-12}" y1="${istY}" x2="${istX+12}" y2="${istY}" class="pressure-map-istanbul"/><line x1="${istX}" y1="${istY-12}" x2="${istX}" y2="${istY+12}" class="pressure-map-istanbul"/><circle cx="${istX}" cy="${istY}" r="3.5" class="pressure-map-istanbul-dot"/><text x="${istX+9}" y="${istY-8}" class="pressure-map-istanbul-label">İstanbul</text>${markers}</svg>`;
     }
     async function loadGithubPressureCenters(){
       const list=$("pressure-findings");
@@ -131,13 +129,11 @@
         const payload=await response.json();
         const analysis=payload&&payload.analysis;
         const centers=analysis&&Array.isArray(analysis.centers)?analysis.centers:[];
-        if(!centers.length){
-          renderPressureText([]);
-          return;
-        }
         renderPressureText(centers);
-        const cycle=payload.cycle_utc?new Intl.DateTimeFormat("tr-TR",{timeZone:"Europe/Istanbul",day:"2-digit",month:"2-digit",hour:"2-digit",minute:"2-digit",hourCycle:"h23"}).format(new Date(payload.cycle_utc)):"—";
-        list.innerHTML += '<li class="pressure-source-note">GitHub Actions · GFS 0.25° GRIB2 · f000 · '+esc(cycle)+' TSİ</li>';
+        if(centers.length){
+          const cycle=payload.cycle_utc?new Intl.DateTimeFormat("tr-TR",{timeZone:"Europe/Istanbul",day:"2-digit",month:"2-digit",hour:"2-digit",minute:"2-digit",hourCycle:"h23"}).format(new Date(payload.cycle_utc)):"—";
+          list.innerHTML += '<li class="pressure-source-note">GitHub Actions · GFS 0.25° GRIB2 · f000 · '+esc(cycle)+' TSİ</li>';
+        }
       }catch(error){
         console.warn("GitHub GFS pressure centers unavailable:",error);
         list.innerHTML='<li class="pressure-empty">GitHub Actions basınç analizi henüz hazır değil.</li>';
