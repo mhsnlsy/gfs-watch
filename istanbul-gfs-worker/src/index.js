@@ -919,35 +919,90 @@ async function latestPayload(env, bootstrap = true) {
 }
 
 async function latestF72Payload(env, bootstrap = true) {
+  // F72 is a presentation milestone, not a separate source of truth.
+  // Never block the public F72 endpoint on a full MeteoPT collection when a
+  // known-good F72 or canonical latest payload is already available. A full
+  // collection can take longer than the gateway health-check timeout.
   let current = await getCurrent(env, "f72");
-  const staleAfterMs = 20 * 60 * 1000;
-  const currentAgeMs = current?.updated_at_utc
-    ? Date.now() - Date.parse(current.updated_at_utc)
-    : Number.POSITIVE_INFINITY;
 
-  if (bootstrap && (!current || !Number.isFinite(currentAgeMs) || currentAgeMs > staleAfterMs)) {
+  // Prefer the canonical latest payload immediately when the dedicated F72
+  // row is absent. It is already produced by the same collector and can be
+  // reduced to the first 72 hours without another upstream request.
+  if (!current) {
+    const latest = await getCurrent(env, "latest");
+    if (latest?.payload) {
+      const sourcePoints = Array.isArray(latest.payload.forecast_6_hourly)
+        ? latest.payload.forecast_6_hourly
+        : [];
+      const points = sourcePoints.filter(point => {
+        const hour = Number(point?.forecast_hour);
+        return Number.isFinite(hour) && hour > 0 && hour <= 72 && hour % 3 === 0;
+      });
+      if (points.length >= 24) {
+        current = {
+          run_id_utc: latest.run_id_utc,
+          updated_at_utc: latest.updated_at_utc,
+          payload: {
+            ...latest.payload,
+            milestone: "F72-fallback",
+            f72: { ...(latest.payload.f72 || {}), available: true, forecast_hour: 72, source: "MeteoPT" },
+            forecast_horizon_hours: 72,
+            forecast_6_hourly: points,
+            forecast_valid_until_utc: points[points.length - 1]?.valid_time_utc || latest.payload.forecast_valid_until_utc,
+          },
+        };
+      }
+    }
+  }
+
+  // Only attempt an upstream refresh when no usable cached payload exists.
+  // This preserves a fast, deterministic public response during a temporary
+  // MeteoPT slowdown or when the worker is under load.
+  if (!current && bootstrap) {
     try {
       await collect(env, "live-f72-read-refresh");
       current = await getCurrent(env, "f72");
     } catch (error) {
-      if (!current) {
-        console.error(JSON.stringify({
-          event: "istanbul_live_f72_refresh_error",
-          message: String(error?.message || error),
-        }));
-      } else {
-        console.error(JSON.stringify({
-          event: "istanbul_live_f72_refresh_error",
-          message: String(error?.message || error),
-        }));
+      console.error(JSON.stringify({
+        event: "istanbul_live_f72_refresh_error",
+        message: String(error?.message || error),
+      }));
+    }
+  }
+
+  // If the refresh created an F72 row, use it. If it did not, retry the
+  // canonical latest fallback once so a successful collection can still
+  // satisfy the public F72 contract.
+  if (!current) {
+    const latest = await getCurrent(env, "latest");
+    if (latest?.payload) {
+      const sourcePoints = Array.isArray(latest.payload.forecast_6_hourly)
+        ? latest.payload.forecast_6_hourly
+        : [];
+      const points = sourcePoints.filter(point => {
+        const hour = Number(point?.forecast_hour);
+        return Number.isFinite(hour) && hour > 0 && hour <= 72 && hour % 3 === 0;
+      });
+      if (points.length >= 24) {
+        current = {
+          run_id_utc: latest.run_id_utc,
+          updated_at_utc: latest.updated_at_utc,
+          payload: {
+            ...latest.payload,
+            milestone: "F72-fallback",
+            f72: { ...(latest.payload.f72 || {}), available: true, forecast_hour: 72, source: "MeteoPT" },
+            forecast_horizon_hours: 72,
+            forecast_6_hourly: points,
+            forecast_valid_until_utc: points[points.length - 1]?.valid_time_utc || latest.payload.forecast_valid_until_utc,
+          },
+        };
       }
     }
   }
 
   // F72 is a presentation milestone, not a separate source of truth. If the
   // dedicated F72 D1 row is temporarily absent, fall back to the canonical
-  // latest GFS payload and expose only its first 72 forecast hours. This keeps
-  // the public MeteoPT table alive during a transient F72 refresh/queue race.
+  // latest GFS payload and expose only its first 72 forecast hours.
   if (!current) {
     const latest = await getCurrent(env, "latest");
     if (latest?.payload) {
