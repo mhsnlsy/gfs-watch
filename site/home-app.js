@@ -138,7 +138,7 @@
     const esc=value=>String(value == null ? "" : value).replace(/[&<>"']/g,char=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[char]));
     const timeTR=value=>new Intl.DateTimeFormat("tr-TR",{timeZone:"Europe/Istanbul",day:"2-digit",minute:"2-digit"}).format(new Date(value));
     const timeUTC=value=>new Intl.DateTimeFormat("tr-TR",{timeZone:"UTC",day:"2-digit",minute:"2-digit",hourCycle:"h23"}).format(new Date(value));
-    const forecastClockUTC=value=>new Intl.DateTimeFormat("tr-TR",{timeZone:"UTC",hour:"2-digit",minute:"2-digit",hourCycle:"h23"}).format(new Date(value));
+    // Single canonical MeteoPT display clock. The 180h table and every live forecast badge use this exact conversion.\n    // MeteoPT table convention: subtract 3h from the published valid timestamp before formatting as TSİ.\n    const meteoptCanonicalDateLabel=value=>{\n      const date=new Date(new Date(value).getTime()-3*3600000);\n      const weekday=new Intl.DateTimeFormat("tr-TR",{timeZone:"Europe/Istanbul",weekday:"long"}).format(date);\n      const clock=new Intl.DateTimeFormat("tr-TR",{timeZone:"Europe/Istanbul",hour:"2-digit",minute:"2-digit",hourCycle:"h23"}).format(date);\n      return weekday.charAt(0).toLocaleUpperCase("tr-TR")+weekday.slice(1)+" · "+clock+" TSİ";\n    };\n    window.__METEOPT_CANONICAL_DATE_LABEL=meteoptCanonicalDateLabel;\n    const forecastClockUTC=value=>meteoptCanonicalDateLabel(value).split(" · ")[1].replace(" TSİ","");
     const symbolFor=rain=>rain>=5?"🌧️":rain>=1?"🌦️":"⛅";
     function renderDaily(items,targetId="daily-grid"){
       const grid=$(targetId);
@@ -587,13 +587,7 @@
       // Match the MeteoPT 180h table clock exactly: the table labels the
       // published UTC forecast hour as TSİ without adding Istanbul +03 again.
       // Example: a 00Z valid time is shown as 00:00 TSİ in the table.
-      const dateTime=ms=>{
-        const date=new Date(ms);
-        const weekday=new Intl.DateTimeFormat("tr-TR",{timeZone:"UTC",weekday:"long"}).format(date);
-        const clock=new Intl.DateTimeFormat("tr-TR",{timeZone:"UTC",hour:"2-digit",minute:"2-digit",hourCycle:"h23"}).format(date);
-        return weekday+" · "+clock+" TSİ";
-      };
-      const points=latestRainForecastPoints.filter(p=>p.modelLead>0&&numeric(p.precipitation_6h_mm)&&Number.isFinite(p.stamp)).sort((a,b)=>a.stamp-b.stamp);
+      const dateTime=ms=>window.__METEOPT_CANONICAL_DATE_LABEL(ms);\n      const points=latestRainForecastPoints.filter(p=>p.modelLead>0&&numeric(p.precipitation_6h_mm)&&Number.isFinite(p.stamp)).sort((a,b)=>a.stamp-b.stamp);
       if(points.length<2){
         forecast.textContent="MeteoPT GFS verisi yeterli değil; yağış zamanı hesaplanamıyor.";
         if(heavy){heavy.textContent="";heavy.hidden=true;}
