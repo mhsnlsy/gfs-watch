@@ -26,22 +26,13 @@
     }
     fetch("./version.json",{cache:"no-store"}).then(response=>response.ok?response.json():null).then(applyAppVersion).catch(()=>{});
     const STATIONS_API=(window.GFS_WATCH_API_BASE||window.location.origin)+"/api";
-    const STATIONS_API_FALLBACK="https://gfs-watch-stations.muhsin-ulusoy.workers.dev/api";
     const STATIONS_URL=STATIONS_API+"/stations";
     const STATION_HISTORY_API=key=>STATIONS_API+"/history/"+encodeURIComponent(key)+"?hours=72";
     async function fetchStationsApi(path){
       const primary=STATIONS_API+path;
-      try{
-        const response=await fetch(primary,{cache:"no-store"});
-        if(response.ok){
-          try{
-            const probe=await response.clone().json();
-            if(probe&&probe.ok===true)return response;
-          }catch(_){}
-        }
-      }catch(_){}
-      const fallback=STATIONS_API_FALLBACK+path;
-      return fetch(fallback,{cache:"no-store",mode:"cors"});
+      const response=await fetch(primary,{cache:"no-store"});
+      if(!response.ok)throw new Error("İstasyon API HTTP "+response.status);
+      return response;
     }
     // No forecast-verification.json is published yet; avoid repeated 404s until the calibration archive is generated.
     const VERIFY_URL=null;
