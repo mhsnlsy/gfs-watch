@@ -30,8 +30,17 @@ jobs:
       - name: Install pinned Wrangler and Containers SDK
         run: npm install
 
-      - name: Show Wrangler version
-        run: npx wrangler --version
+      - name: Show Cloudflare tool versions
+        run: |
+          npx wrangler --version
+          npm ls @cloudflare/containers wrangler
+
+      - name: Guard against legacy Container import
+        run: |
+          ! grep -R 'cloudflare:containers' -n src container || {
+            echo "Legacy cloudflare:containers import detected"
+            exit 1
+          }
 
       - name: Validate Container configuration and bundle
         run: npx wrangler deploy --dry-run --outdir .wrangler-dry-run
