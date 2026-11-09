@@ -2068,7 +2068,7 @@ html.ios12 .footer > *{
       border-radius:19px!important;
       padding:20px!important;
       min-width:0!important;
-      width:119.025%!important;
+      width:100%!important;
       max-width:none!important;
       margin-left:auto!important;
       margin-right:auto!important;
@@ -2675,5 +2675,60 @@ html.ios12 #enka-camera-panel .enka-camera-frame{
   .dashboard-top>.station-briefing-inline{
     width:100%;
     min-width:0;
+  }
+}
+
+
+/* FINAL DESKTOP LAYOUT FIX — GFS report, MeteoPT table and pressure analysis
+   must form one vertical document flow; never place the table beside/over the report. */
+@media (min-width:1101px) and (pointer:fine){
+  #bildirimler{
+    display:block!important;
+    width:100%!important;
+    max-width:100%!important;
+    min-width:0!important;
+    margin:0!important;
+  }
+  #bildirimler .notification-list{
+    display:block!important;
+    width:100%!important;
+    max-width:100%!important;
+    min-width:0!important;
+  }
+  #bildirimler .notification-card.koy-gfs-report-card{
+    display:block!important;
+    width:100%!important;
+    max-width:100%!important;
+    min-width:0!important;
+    margin:0!important;
+    box-sizing:border-box!important;
+  }
+  .water-gfs-layout{
+    display:block!important;
+    width:100%!important;
+    max-width:100%!important;
+    min-width:0!important;
+    margin:0!important;
+    padding:0!important;
+  }
+  .water-gfs-layout #meteopt-gfs-table{
+    display:block!important;
+    width:100%!important;
+    max-width:100%!important;
+    min-width:0!important;
+    margin:0!important;
+  }
+  .water-gfs-layout #meteopt-gfs-table .meteopt-table-card{
+    width:100%!important;
+    max-width:100%!important;
+    min-width:0!important;
+    box-sizing:border-box!important;
+  }
+  .water-gfs-layout .gfs-pressure-panel{
+    display:block!important;
+    width:100%!important;
+    max-width:100%!important;
+    min-width:0!important;
+    margin:22px 0 0!important;
   }
 }
