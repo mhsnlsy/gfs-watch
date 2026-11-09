@@ -135,34 +135,6 @@ function analyzeImage(img){
     height_km:Math.round((max_dy-min_dy+1)*PIXEL_KM*10)/10};
 }
 
-function motion(history){
-  if(history.length<2)return {speed:null,heading:null,towards:false,eta:null};
-  const segments=[];
-  for(let i=1;i<history.length;i++){
-    const a=history[i-1],b=history[i],dt=b.ts-a.ts;
-    if(dt<60) continue;
-    const dx=b.avg_dx-a.avg_dx,dy=b.avg_dy-a.avg_dy,dist=Math.hypot(dx,dy);
-    if(dist>0) segments.push({dx,dy,dist,dt});
-  }
-  if(!segments.length)return {speed:null,heading:null,towards:false,eta:null};
-  const recent=segments.slice(-3);
-  const totalDt=recent.reduce((s,x)=>s+x.dt,0);
-  const dx=recent.reduce((s,x)=>s+x.dx,0),dy=recent.reduce((s,x)=>s+x.dy,0);
-  const dist=Math.hypot(dx,dy);
-  if(totalDt<60||dist===0)return {speed:null,heading:null,towards:false,eta:null};
-  const speed=dist*PIXEL_KM/totalDt*3600, heading=(Math.atan2(dx,-dy)*180/Math.PI+360)%360;
-  const b=history[history.length-1],tx=-b.avg_dx,ty=-b.avg_dy,tlen=Math.hypot(tx,ty);
-  const towards=dist>=0.5&&tlen>=1&&(dx*tx+dy*ty)/(dist*tlen)>0.5;
-  const eta=speed>5&&b.centroid_dist!=null&&towards?b.centroid_dist/speed*60:null;
-  return {speed:Math.round(speed),heading:Math.round(heading),towards,eta:eta!=null?Math.round(eta):null};
-}
-
-function approaching(prev,curr){
-  if(!curr||curr.centroid_dist==null)return false;
-  if(!prev||prev.centroid_dist==null)return curr.centroid_dist<20&&curr.max_dbz>=THRESHOLD_DBZ;
-  return curr.centroid_dist<prev.centroid_dist-0.8&&curr.centroid_dist<RADIUS_KM&&curr.max_dbz>=THRESHOLD_DBZ;
-}
-
 async function telegramText(env,text){
   if(!env.TELEGRAM_TOKEN||!env.CHAT_ID)return {ok:false,status:0,body:"telegram credentials missing"};
   const r=await fetch(`https://api.telegram.org/bot${env.TELEGRAM_TOKEN}/sendMessage`,{
@@ -269,25 +241,12 @@ async function check(env){
   const curr=analyzeImage(img), state=await getState(env.RADAR_DB);
   const history=JSON.parse(state.history_json||"[]");
   if(history.length&&history[history.length-1].ts===ts)return {status:"duplicate_frame",frame_ts:ts};
-
   history.push({ts,avg_dx:curr.avg_dx,avg_dy:curr.avg_dy,centroid_dist:curr.centroid_dist,max_dbz:curr.max_dbz});
-  const h=history.slice(-HISTORY_LEN), prev=h.length>1?h[h.length-2]:null, m=motion(h);
-  const pixelGate=curr.count>=MIN_ALERT_PIXELS, hasEcho=curr.centroid_dist!=null&&curr.count>0;
-  const onSite=hasEcho&&curr.centroid_dist<5&&curr.max_dbz>=THRESHOLD_DBZ;
-  let app=approaching(prev,curr);
-  if(m.towards&&hasEcho&&curr.centroid_dist<RADIUS_KM)app=app||curr.max_dbz>=THRESHOLD_DBZ;
-  const etaEligible=m.eta!=null;
-  // Convert the numeric bearing to a human-readable 16-point compass direction.
-  // 0° = North, 90° = East, 180° = South, 270° = West.
-  const compassDirection = (deg) => {
-    if(deg==null) return null;
-    const dirs=["Kuzey","Kuzey-kuzeydoğu","Kuzeydoğu","Doğu-kuzeydoğu","Doğu","Doğu-güneydoğu","Güneydoğu","Güney-güneydoğu","Güney","Güney-güneybatı","Güneybatı","Batı-güneybatı","Batı","Batı-kuzeybatı","Kuzeybatı","Kuzey-kuzeybatı"];
-    return dirs[Math.round(deg/22.5)%16];
-  };
-  // Primary trigger: any qualifying echo already within the entry radius.
-  // Motion/ETA is supplementary, not a hard prerequisite for a rain alert.
-  const rainInEntryRadius = hasEcho && curr.min_dist_km <= ENTRY_ALERT_RADIUS_KM && curr.max_dbz >= THRESHOLD_DBZ;
-  const alert=pixelGate&&(rainInEntryRadius || app || onSite);
+  const h=history.slice(-HISTORY_LEN);
+  const pixelGate=curr.count>=MIN_ALERT_PIXELS;
+  const hasRain=curr.min_dist_km!=null&&curr.min_dist_km<=RADIUS_KM&&curr.max_dbz>=THRESHOLD_DBZ;
+  // Minimal alert rule: >=5 pixels + >=5 dBZ + within 25 km.
+  const alert=pixelGate&&hasRain;
 
   let intensity="HAFİF",emoji="🌦️";
   if(curr.max_dbz>=25){intensity="GÜÇLÜ";emoji="⛈️";}
@@ -296,8 +255,7 @@ async function check(env){
   const now=Math.floor(Date.now()/1000), last=Number(state.last_alert_ts||0);
   let sent=false, telegramStatus=0, telegramError="";
   if(alert&&now-last>=ALERT_COOLDOWN_SECONDS){
-    let motionTxt=""; if(m.speed!=null){motionTxt=`Hız: ~${m.speed} km/sa, yön: ${compassDirection(m.heading)}`; if(m.eta) motionTxt+=`, tahmini varış: ~${m.eta} dk`; if(m.towards) motionTxt+=" (konuma doğru)";}
-    const caption=`${emoji} <b>${intensity} YAĞIŞ UYARISI — İstanbul</b>\nKonum: 41.0904 N, 28.9438 E\nŞiddet: ${intensity} (${curr.max_dbz} dBZ)\nYağış merkezi: ${curr.centroid_dist??"—"} km uzakta\nAlan: ~${curr.area_km2} km²\nDoğu-batı genişliği: ~${curr.width_km} km\nKuzey-güney uzunluğu: ~${curr.height_km} km\n${motionTxt}\n${onSite?"Konuma ulaşıyor / üzerinde.":"Yaklaşıyor."}\n${new Date(ts*1000).toLocaleString("tr-TR",{timeZone:"Europe/Istanbul"})}\n© OpenStreetMap contributors`;    // Only build the map-backed report when an alert is actually sent.
+    const caption=`${emoji} <b>${intensity} YAĞIŞ UYARISI — İstanbul</b>\\nKonum: 41.0904 N, 28.9438 E\\nŞiddet: ${intensity} (${curr.max_dbz} dBZ)\\nYağış merkezi: ${curr.centroid_dist??"—" } km uzakta\\nAlan: ~${curr.area_km2} km²\\nDoğu-batı genişliği: ~${curr.width_km} km\\nKuzey-güney uzunluğu: ~${curr.height_km} km\\nRadar: 25 km içinde yağış ekosu tespit edildi.\\n${new Date(ts*1000).toLocaleString("tr-TR",{timeZone:"Europe/Istanbul"})}\\n© OpenStreetMap contributors`;
     const baseTiles=await Promise.all(tiles.map(async t=>{const u=`https://tile.openstreetmap.org/${ZOOM}/${tx+t.ox}/${ty+t.oy}.png`;const r=await fetch(u,{cf:{cacheTtl:3600}});if(!r.ok)throw new Error("base_map_tile_download_failed");return {...t,bytes:await r.arrayBuffer()};}));
     const baseDecoded=await Promise.all(baseTiles.map(async t=>({...t,img:await decodePng(t.bytes)})));
     const baseMosaic={w:TILE_SIZE*3,h:TILE_SIZE*3,ct:baseDecoded[0].img.ct,data:new Uint8Array(TILE_SIZE*TILE_SIZE*9*(baseDecoded[0].img.ct===6?4:3))};
@@ -328,8 +286,7 @@ async function check(env){
   }
   state.history=h;state.last_frame_ts=ts;
   await saveState(env.RADAR_DB,state);
-  return {status:"ok",frame_ts:ts,alert,pixel_count:curr.count,pixel_gate:pixelGate,max_dbz:curr.max_dbz,area_km2:curr.area_km2,width_km:curr.width_km,height_km:curr.height_km,eta_minutes:m.eta,eta_eligible:etaEligible,
-    min_dist_km:curr.min_dist_km,centroid_dist:curr.centroid_dist,approaching:app,on_site:onSite,towards:m.towards,telegram_sent:sent,telegram_status:telegramStatus,telegram_error:telegramError};
+  return {status:"ok",frame_ts:ts,alert,pixel_count:curr.count,pixel_gate:pixelGate,max_dbz:curr.max_dbz,area_km2:curr.area_km2,width_km:curr.width_km,height_km:curr.height_km,min_dist_km:curr.min_dist_km,centroid_dist:curr.centroid_dist,telegram_sent:sent,telegram_status:telegramStatus,telegram_error:telegramError};
 }
 
 export default {
