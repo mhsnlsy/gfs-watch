@@ -1994,7 +1994,8 @@ if(typeof renderBriefing==="function")renderBriefing();
         button.disabled=false;
       }
     }
-    $("enable-notifications").addEventListener("click",enableNotifications);
+    const enableNotificationsButton=$("enable-notifications");
+    if(enableNotificationsButton)enableNotificationsButton.addEventListener("click",enableNotifications);
     async function loadNotifications(){
       const bundled=forecastData&&forecastData.report;
       try{
