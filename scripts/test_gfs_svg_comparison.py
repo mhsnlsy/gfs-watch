@@ -70,8 +70,9 @@ def main_test() -> None:
         png_size = Image.open(BytesIO(png)).size
         assert png_size[0] == 1792 and 1300 <= png_size[1] <= 1304, f"Unexpected 2x2 Telegram PNG dimensions: {png_size}"
         html = (ROOT / "site" / "index.html").read_text(encoding="utf-8")
-        assert ".gfs-interactive-chart{position:relative;width:100%;max-width:none;min-width:0;margin-inline:0" in html
-        assert ".notification-chart-only .gfs-interactive-chart" in html
+        css = (ROOT / "site" / "home.css").read_text(encoding="utf-8")
+        assert ".gfs-interactive-chart{position:relative;width:100%;max-width:none;min-width:0;margin-inline:0" in css
+        assert ".notification-chart-only .gfs-interactive-chart" in css
         assert assets["series_count"] == 4
         assert assets["valid_time_count"] == 25
 
