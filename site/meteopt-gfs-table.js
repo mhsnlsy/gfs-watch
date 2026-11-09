@@ -67,15 +67,19 @@
   }
 
   function dateLabel(point, runId, step) {
-    let date = point && point.valid_time_utc
+    const rawDate = point && point.valid_time_utc
       ? new Date(point.valid_time_utc)
       : new Date(new Date(runId).getTime() + step * 3600000);
 
-    if (!Number.isFinite(date.getTime())) return "—";
+    if (!Number.isFinite(rawDate.getTime())) return "—";
 
-    // MeteoPT panel convention: Step 3 of the 12Z run is displayed as 15 TSİ,
-    // not 18 TSİ. The published forecast values themselves are not changed.
-    date = new Date(date.getTime() - 3 * 3600000);
+    // Use the same canonical clock as the live homepage forecast badges.
+    if (typeof window !== "undefined" && typeof window.__METEOPT_CANONICAL_DATE_LABEL === "function") {
+      return window.__METEOPT_CANONICAL_DATE_LABEL(rawDate.getTime());
+    }
+
+    // Fallback for standalone table rendering.
+    let date = new Date(rawDate.getTime() - 3 * 3600000);
 
     const datePart = new Intl.DateTimeFormat("en-GB", {
       timeZone: "Europe/Istanbul",
