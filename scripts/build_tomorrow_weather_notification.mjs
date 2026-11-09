@@ -37,7 +37,7 @@ const delta = tomorrowMax - todayMax;
 const tempSentence = Math.abs(delta) < 0.05 ? "bugünle aynı sıcaklıkta" : "bugünden " + fmt(delta) + "°C daha " + (delta > 0 ? "sıcak" : "soğuk");
 const body = "Yarın hava " + fmt(tomorrowMax) + "°C, " + tempSentence + ", " + weatherLabel + ".";
 const notificationId = "tomorrow-weather-" + runDigits + "Z-" + tomorrow;
-const feed = { schema: "gfs-watch.notifications.v1", items: [{ id: notificationId, title: "İstanbul · Yarın hava nasıl?", summary: body }], metadata: { run_id_utc: cycle.toISOString(), forecast_date_istanbul: tomorrow, source: "MeteoPT GFS 12Z", tomorrow_max_c: tomorrowMax, today_max_c: todayMax, delta_c: Math.round(delta * 10) / 10, clouds_percent: cloudPoint.clouds, clouds_valid_time_istanbul: cloudPoint.valid.toISOString(), precipitation_expected: rainTomorrow } };
+const feed = { schema: "gfs-watch.notifications.v1", items: [{ id: notificationId, title: "İstanbul · Yarın hava nasıl?", summary: body }], metadata: { run_id_utc: cycle.toISOString(), forecast_date_istanbul: tomorrow, source: "MeteoPT GFS 12Z", tomorrow_max_c: tomorrowMax, today_max_c: todayMax, delta_c: Math.round(delta * 10) / 10, clouds_percent: cloudPoint ? cloudPoint.clouds : null, clouds_valid_time_istanbul: cloudPoint ? cloudPoint.valid.toISOString() : null, precipitation_expected: rainTomorrow } };
 await mkdir(OUTPUT.split("/").slice(0, -1).join("/") || ".", { recursive: true });
 await writeFile(OUTPUT, JSON.stringify(feed, null, 2), "utf8");
 console.log(JSON.stringify(feed.metadata, null, 2));
