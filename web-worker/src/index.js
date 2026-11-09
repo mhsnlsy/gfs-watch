@@ -181,6 +181,16 @@ export default {
     }
 
     if (path === "/gfs/notification-latest") {
+      // Ask the Istanbul service for its native D1 publication manifest first.
+      // This also rebuilds the manifest from gfs_report_publications when the
+      // mutable notifications/latest.json publication asset is missing.
+      const nativeManifest = await callService(
+        env.ISTANBUL_GFS,
+        request,
+        "/gfs/notification-latest"
+      );
+      if (nativeManifest.ok) return nativeManifest;
+
       // The latest manifest is mutable: D1 is authoritative so a delayed R2
       // archive sync can never overwrite a newer native Worker publication.
       const published = await fetchD1PublicationAsset(request, env, "notifications/latest.json");
