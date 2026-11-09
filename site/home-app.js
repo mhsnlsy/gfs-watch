@@ -650,7 +650,7 @@
         const heavyNext=significant.filter(x=>x.start>tableClockNow);
         const target=heavyActive[0]||heavyNext[0];
         if(target){
-          const when=target.start<=tableClockNow?"Şu anda":" "+dateTime(target.start)+" itibarıyla";
+          const when=target.start<=tableClockNow?"Şu anda":" "+dateTime(target.end)+" itibarıyla";
           heavy.hidden=false;
           heavy.textContent="Kuvvetli yağış uyarısı: "+when+" "+fmt(target.mm,2)+" mm / 3 saat (2,00 mm üzeri) tahmin ediliyor.";
         }else{
