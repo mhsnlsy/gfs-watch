@@ -239,7 +239,6 @@ export default {
       return responseJson({ ok: false, error: "Unknown API route", path }, 404);
     }
 
-    const assetResponse = await env.ASSETS.fetch(request);
-    return stripStrayLiteralNewlineText(assetResponse);
+    const assetResponse = await env.ASSETS.fetch(request);\n    const contentType = assetResponse.headers.get("content-type") || "";\n    if (contentType.toLowerCase().includes("text/html")) {\n      const headers = new Headers(assetResponse.headers);\n      headers.set("Cache-Control", "no-store, max-age=0");\n      headers.set("CDN-Cache-Control", "no-store");\n      return stripStrayLiteralNewlineText(new Response(assetResponse.body, { status: assetResponse.status, statusText: assetResponse.statusText, headers }));\n    }\n    return stripStrayLiteralNewlineText(assetResponse);
   },
 };
