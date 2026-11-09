@@ -102,6 +102,31 @@
       const items=findings.map(value=>String(value)).filter(value=>!value.includes("Yüksek ve alçak basınç merkezleri bölgesel eğilimi gösterir"));
       list.innerHTML=items.map(text=>'<li><span class="pressure-icon">◈</span><span>'+esc(text)+'</span></li>').join("");
     }
+    async function loadGithubPressureCenters(){
+      const list=$("pressure-findings");
+      if(!list)return;
+      try{
+        const response=await fetch("./data/gfs-pressure-centers.json?v="+Date.now(),{cache:"no-store",credentials:"same-origin"});
+        if(!response.ok)throw new Error("HTTP "+response.status);
+        const payload=await response.json();
+        const analysis=payload&&payload.analysis;
+        const centers=analysis&&Array.isArray(analysis.centers)?analysis.centers:[];
+        if(!centers.length){
+          list.innerHTML='<li class="pressure-empty">GitHub Actions GFS bölgesel analizinde eşik üstü/altı merkez bulunmadı.</li>';
+          return;
+        }
+        const cycle=payload.cycle_utc?new Intl.DateTimeFormat("tr-TR",{timeZone:"Europe/Istanbul",day:"2-digit",month:"2-digit",hour:"2-digit",minute:"2-digit",hourCycle:"h23"}).format(new Date(payload.cycle_utc)):"—";
+        list.innerHTML=centers.map(center=>{
+          const label=center.type==="low"?"Alçak basınç":"Yüksek basınç";
+          const icon=center.type==="low"?"↘":"↗";
+          return '<li><span class="pressure-icon">'+icon+'</span><span><strong>'+label+' · '+Number(center.pressure_hpa).toFixed(1)+' hPa</strong><br>'+Number(center.distance_km).toFixed(0)+' km · '+esc(String(center.direction||""))+' · '+Number(center.latitude).toFixed(1)+'°N '+Number(center.longitude).toFixed(1)+'°E</span></li>';
+        }).join("")+'<li class="pressure-source-note">GitHub Actions · GFS 0.25° GRIB2 · f000 · '+esc(cycle)+' TSİ</li>';
+      }catch(error){
+        console.warn("GitHub GFS pressure centers unavailable:",error);
+        list.innerHTML='<li class="pressure-empty">GitHub Actions basınç analizi henüz hazır değil.</li>';
+      }
+    }
+    loadGithubPressureCenters();
     let activeTouchChartTooltip=null;
     let activeTouchChartTooltipTimer=null;
     function clearScheduledTouchChartTooltip(hideFn){

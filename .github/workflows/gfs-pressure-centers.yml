@@ -1,0 +1,70 @@
+name: GFS Pressure Centers
+
+on:
+  workflow_dispatch:
+  push:
+    branches:
+      - main
+  schedule:
+    - cron: "20 23,5,11,17 * * *"
+
+permissions:
+  contents: write
+
+jobs:
+  analyze:
+    if: github.event_name != 'push' || contains(github.event.head_commit.message, '[pressure-center-test]')
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Install ecCodes
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y --no-install-recommends libeccodes-dev
+
+      - name: Setup Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+          cache: pip
+
+      - name: Install Python dependencies
+        run: |
+          python -m pip install --upgrade pip
+          python -m pip install eccodes numpy
+
+      - name: Fetch and analyze latest GFS MSLP
+        working-directory: scripts/pressure_centers
+        run: |
+          python fetch_pressure_centers.py > ../../site/data/gfs-pressure-centers.json
+
+      - name: Validate output
+        run: |
+          python -m json.tool site/data/gfs-pressure-centers.json > /dev/null
+          python - <<'PY'
+          import json
+          p=json.load(open("site/data/gfs-pressure-centers.json"))
+          assert p["status"] == "ok"
+          assert p["analysis"]["radius_km"] == 1250
+          assert p["analysis"]["diameter_km"] == 2500
+          assert p["analysis"]["thresholds"]["low_hpa"] == 1013
+          assert p["analysis"]["thresholds"]["high_hpa"] == 1023
+          print("Pressure-center JSON validation OK")
+          print("Cycle:", p["cycle_utc"])
+          print("Centers:", len(p["analysis"]["centers"]))
+          PY
+
+      - name: Publish JSON to main
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add site/data/gfs-pressure-centers.json
+          if git diff --cached --quiet; then
+            echo "Pressure-center data unchanged."
+            exit 0
+          fi
+          git commit -m "data: update GFS pressure centers [pressure-centers]"
+          git push
