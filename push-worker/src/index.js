@@ -251,8 +251,17 @@ export default {
         if (!token || request.headers.get("Authorization") !== "Bearer " + token) {
           return json({ error: "Unauthorized" }, 401, headers);
         }
-        const result = await sendTomorrowWeatherPush(env);
-        return json({ ...result, manual: true }, 200, headers);
+        try {
+          const result = await sendTomorrowWeatherPush(env);
+          return json({ ...result, manual: true }, 200, headers);
+        } catch (error) {
+          console.error("Manual push failed:", error && error.stack ? error.stack : error);
+          return json({
+            error: "Manual push failed",
+            detail: error && error.message ? error.message : String(error),
+            manual: true
+          }, 500, headers);
+        }
       }
 
       if (url.pathname === "/subscribe" && request.method === "POST") {
