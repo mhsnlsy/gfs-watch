@@ -3636,16 +3636,16 @@ html.ios12 #enka-camera-panel .enka-camera-frame{
 }
 
 
-/* FINAL MOBILE: match Köy live-observation panel geometry exactly */
+/* FINAL MOBILE: homepage live-observation panel fixed height */
 @media (max-width:560px){
   .dashboard-left .station-card{
     width:100%!important;
     max-width:100%!important;
     margin-left:auto!important;
     margin-right:auto!important;
-    height:600px!important;
-    min-height:600px!important;
-    max-height:600px!important;
+    height:800px!important;
+    min-height:800px!important;
+    max-height:800px!important;
     box-sizing:border-box!important;
     overflow:hidden!important;
   }
