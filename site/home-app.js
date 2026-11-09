@@ -33,7 +33,12 @@
       const primary=STATIONS_API+path;
       try{
         const response=await fetch(primary,{cache:"no-store"});
-        if(response.ok)return response;
+        if(response.ok){
+          try{
+            const probe=await response.clone().json();
+            if(probe&&probe.ok===true)return response;
+          }catch(_){}
+        }
       }catch(_){}
       const fallback=STATIONS_API_FALLBACK+path;
       return fetch(fallback,{cache:"no-store",mode:"cors"});
