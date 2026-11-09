@@ -2029,9 +2029,25 @@ if(typeof renderBriefing==="function")renderBriefing();
         }
         if(!response)throw lastArchiveError||new Error("Rapor arşivi henüz oluşturulmadı.");
         const document=await response.json();
-        if(gfsApi){
-          document.schema="gfs-watch.notifications.v1";
-          document.items=[{run_id_utc:document.run_id_utc,published_at_utc:document.run_id_utc,title:"İstanbul GFS · F180 tamamlandı",cycle_label:"MeteoPT GFS",report_text:document.report_text,images:((document.images||document.items && document.items[0] ? document.items[0].images : null||[])).map((x,i)=>({label:x.label||["2 m sıcaklık","850 hPa sıcaklık","Yağış","10 m rüzgâr"][i]||"GFS grafiği",path:x.url||x.path}))}];
+        // The same-origin /gfs/notification-latest gateway already returns the
+        // canonical gfs-watch.notifications.v1 manifest from D1. Do not
+        // collapse that four-cycle archive into a single synthetic item.
+        if(document.schema!=="gfs-watch.notifications.v1" && (document.run_id_utc || document.report_text || document.images)){
+          document={
+            schema:"gfs-watch.notifications.v1",
+            updated_at_utc:document.updated_at_utc||document.published_at_utc||Date.now(),
+            items:[{
+              run_id_utc:document.run_id_utc||document.published_at_utc||null,
+              published_at_utc:document.published_at_utc||document.run_id_utc||null,
+              title:document.title||"İstanbul GFS · F180 tamamlandı",
+              cycle_label:document.cycle_label||"MeteoPT GFS",
+              report_text:document.report_text||"",
+              images:(document.images||[]).map((x,i)=>({
+                label:x.label||["2 m sıcaklık","850 hPa sıcaklık","Yağış","10 m rüzgâr"][i]||"GFS grafiği",
+                path:x.url||x.path
+              }))
+            }]
+          };
         }
         if(document.schema!=="gfs-watch.notifications.v1"||!Array.isArray(document.items)||!document.items.length){
           throw new Error("Rapor arşivi biçimi geçersiz veya boş.");
