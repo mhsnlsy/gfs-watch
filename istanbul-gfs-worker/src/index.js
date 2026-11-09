@@ -1168,6 +1168,46 @@ async function handleApi(request, env) {
     }
   }
 
+  if (path === "/gfs/notification-latest") {
+    try {
+      const rows = await env.GFS_DB.prepare(
+        "SELECT run_id_utc, report_text, svg_asset_key, updated_at_utc " +
+        "FROM gfs_report_publications ORDER BY run_id_utc DESC LIMIT 4"
+      ).all();
+      const publications = Array.isArray(rows?.results) ? rows.results : [];
+      if (!publications.length) {
+        return json({ ok: false, error: "Notification archive not published" }, 404);
+      }
+      const items = publications.map(row => ({
+        id: row.run_id_utc,
+        run_id_utc: row.run_id_utc,
+        published_at_utc: row.updated_at_utc || row.run_id_utc,
+        title: "İstanbul GFS · F180 tamamlandı",
+        cycle_label: "MeteoPT GFS",
+        report_text: row.report_text || "",
+        images: row.svg_asset_key ? [{
+          label: "GFS dört döngü · aynı geçerlilik saatleri (TSİ)",
+          path: String(row.svg_asset_key)
+            .replace(/^data\\/notifications\\//, "")
+            .replace(/^notifications\\//, "")
+        }] : []
+      }));
+      return json({
+        schema: "gfs-watch.notifications.v1",
+        updated_at_utc: new Date().toISOString(),
+        run_id_utc: items[0].run_id_utc,
+        published_at_utc: items[0].published_at_utc,
+        title: items[0].title,
+        cycle_label: items[0].cycle_label,
+        report_text: items[0].report_text,
+        images: items[0].images,
+        items
+      });
+    } catch (error) {
+      return json({ ok: false, error: String(error?.message || error) }, 503);
+    }
+  }
+
   if (path === "/api/health") {
     try {
       const current = await getCurrent(env, "latest");
