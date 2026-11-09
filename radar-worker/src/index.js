@@ -1,7 +1,7 @@
 // RADAR CRON LIVE — Cloudflare Paid
 const LAT = 41.0904;
 const LON = 28.9438;
-const RADIUS_KM = 90;
+const RADIUS_KM = 25;
 const THRESHOLD_DBZ = 10;
 const THRESHOLD_DBZ_STRONG = 30;
 const MIN_ALERT_PIXELS = 5;
@@ -9,7 +9,7 @@ const ALERT_COOLDOWN_SECONDS = 45 * 60;
 // Rain must trigger even when motion/ETA cannot be calculated reliably.
 // The previous ETA gate could suppress a real rain event when the first
 // detected frame had no usable motion vector or an ETA above 90 minutes.
-const ENTRY_ALERT_RADIUS_KM = 30;
+const ENTRY_ALERT_RADIUS_KM = 25;
 const RADAR_BUILD = "paid-cron-2026-11-08-rain-report-map-1";
 const HISTORY_LEN = 4;
 const ZOOM = 7;
