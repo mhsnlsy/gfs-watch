@@ -3913,3 +3913,109 @@ html.ios12 #enka-camera-panel .enka-camera-frame{
     height:76px!important;
   }
 }
+
+
+/* FINAL ZERO-DIFF MOBILE MATCH: homepage live observation card follows
+   the effective Köy station-card geometry, spacing and typography. */
+@media (max-width:560px){
+  .dashboard-left .station-card{
+    height:auto!important;
+    min-height:0!important;
+    max-height:none!important;
+    box-sizing:border-box!important;
+    padding:14px 12px 12px!important;
+    row-gap:8px!important;
+    border-radius:17px!important;
+  }
+
+  .dashboard-left .station-card>.weather-top,
+  .dashboard-left .station-card>.station-switch,
+  .dashboard-left .station-card>.station-alert,
+  .dashboard-left .station-card>.station-history-inline{
+    grid-column:1 / -1!important;
+  }
+
+  .dashboard-left .station-card>.station-switch{
+    gap:5px!important;
+    margin-top:2px!important;
+    padding:2px!important;
+  }
+  .dashboard-left .station-card>.station-switch button{
+    min-height:0!important;
+    padding:5px 10px!important;
+    font-size:10px!important;
+  }
+
+  .dashboard-left .station-card>.station-overview{
+    margin-top:0!important;
+  }
+  .dashboard-left .station-card .temp-row{
+    margin-top:0!important;
+    gap:13px!important;
+  }
+  .dashboard-left .station-card .temperature{
+    font-size:60px!important;
+  }
+  .dashboard-left .station-card .weather-symbol{
+    font-size:36px!important;
+  }
+  .dashboard-left .station-card .temp-caption{
+    margin-top:0!important;
+  }
+
+  .dashboard-left .station-card>.weather-stats{
+    grid-column:1!important;
+    grid-row:auto!important;
+    grid-template-columns:repeat(2,minmax(0,1fr))!important;
+    gap:9px 7px!important;
+    margin-top:10px!important;
+    padding-top:8px!important;
+  }
+  .dashboard-left .station-card .stat{
+    min-width:0!important;
+    padding:4px 5px!important;
+  }
+  .dashboard-left .station-card .stat .name{
+    font-size:9px!important;
+    white-space:nowrap!important;
+  }
+  .dashboard-left .station-card .stat .value{
+    font-size:15px!important;
+    margin-top:1px!important;
+    white-space:nowrap!important;
+  }
+  .dashboard-left .station-card .stat .unit,
+  .dashboard-left .station-card .stat .detail{
+    font-size:8px!important;
+  }
+
+  .dashboard-left .station-card>.station-history-inline{
+    grid-column:1!important;
+    grid-row:auto!important;
+    width:100%!important;
+    min-width:0!important;
+    margin-top:8px!important;
+    padding-top:4px!important;
+  }
+  .dashboard-left .station-card .station-history-inline .history-panel-head{
+    margin:0 0 2px!important;
+  }
+  .dashboard-left .station-card .station-history-inline .history-chart-head{
+    margin-bottom:1px!important;
+  }
+  .dashboard-left .station-card .station-history-inline .history-charts{
+    grid-template-columns:repeat(2,minmax(0,1fr))!important;
+    gap:9px!important;
+  }
+  .dashboard-left .station-card .station-history-inline .history-chart-card{
+    padding:0!important;
+  }
+  .dashboard-left .station-card .station-history-inline .history-chart{
+    height:76px!important;
+    margin-top:0!important;
+  }
+  .dashboard-left .station-card .station-history-inline .history-chart-meta,
+  .dashboard-left .station-card .station-history-inline .history-source-note{
+    margin-top:1px!important;
+  }
+}
