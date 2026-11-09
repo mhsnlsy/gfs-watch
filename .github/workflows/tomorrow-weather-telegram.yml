@@ -1,0 +1,45 @@
+name: Send Tomorrow Weather to Telegram
+
+on:
+  schedule:
+    - cron: "45 16 * * *" # 19:45 TSİ
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: tomorrow-weather-telegram
+  cancel-in-progress: false
+
+jobs:
+  send:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Check out application code
+        uses: actions/checkout@v7
+        with:
+          ref: main
+
+      - name: Set up Node.js
+        uses: actions/setup-node@v5
+        with:
+          node-version: "22"
+
+      - name: Build tomorrow weather notification
+        run: node scripts/build_tomorrow_weather_notification.mjs
+
+      - name: Set up Python
+        uses: actions/setup-python@v6
+        with:
+          python-version: "3.12"
+
+      - name: Install Telegram sender
+        run: python -m pip install --disable-pip-version-check python-telegram-bot
+
+      - name: Send tomorrow weather to Telegram
+        env:
+          TELEGRAM_TOKEN: ${{ secrets.TELEGRAM_TOKEN }}
+          CHAT_ID: ${{ secrets.CHAT_ID }}
+          TOMORROW_NOTIFICATION_FEED: tmp/tomorrow-weather-notification.json
+        run: python scripts/send_tomorrow_weather_telegram.py
