@@ -2,9 +2,6 @@ name: Manual tomorrow weather push
 
 on:
   workflow_dispatch:
-  push:
-    paths:
-      - "push-worker/.manual-push-trigger"
 
 permissions:
   contents: read
