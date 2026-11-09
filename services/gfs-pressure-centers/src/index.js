@@ -1,4 +1,4 @@
-import { Container } from "cloudflare:containers";
+import { Container } from "@cloudflare/containers";
 
 export class GfsPressureContainer extends Container {
   defaultPort = 8080;
@@ -9,18 +9,28 @@ export class GfsPressureContainer extends Container {
 export default {
   async fetch(request, env) {
     const url = new URL(request.url);
-    if (url.pathname === "/health" || url.pathname === "/latest" || (url.pathname === "/analyze" && request.method === "POST")) {
-      return env.GFS_PRESSURE_CONTAINER.fetch(
+    if (
+      url.pathname === "/health" ||
+      url.pathname === "/latest" ||
+      (url.pathname === "/analyze" && request.method === "POST")
+    ) {
+      const container = env.GFS_PRESSURE_CONTAINER.getByName("gfs-pressure-centers");
+      return container.fetch(
         new Request(new URL(url.pathname, request.url), request)
       );
     }
+
     return new Response(
       JSON.stringify({
         service: "gfs-pressure-centers",
         status: "ok",
         endpoints: ["/health", "/latest", "/analyze"]
       }),
-      { headers: { "content-type": "application/json" } }
+      {
+        headers: {
+          "content-type": "application/json; charset=utf-8"
+        }
+      }
     );
   }
 };
