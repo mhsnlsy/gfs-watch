@@ -1,10 +1,6 @@
-name: One-off tomorrow weather push delivery
+name: Manual tomorrow weather push
 
 on:
-  push:
-    branches: [main]
-    paths:
-      - "push-worker/src/index.js"
   workflow_dispatch:
 
 permissions:
