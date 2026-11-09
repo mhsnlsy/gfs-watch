@@ -3632,3 +3632,15 @@ html.ios12 #enka-camera-panel .enka-camera-frame{
     margin-top:3.6px!important;
   }
 }
+
+
+/* FINAL MOBILE: fixed homepage live-observation panel height */
+@media (max-width:560px){
+  .dashboard-left .station-card{
+    height:980px!important;
+    min-height:980px!important;
+    max-height:980px!important;
+    box-sizing:border-box!important;
+    overflow:hidden!important;
+  }
+}
