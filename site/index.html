@@ -70,7 +70,7 @@
 })();
 </script>
   
-  <link rel="stylesheet" href="./meteopt-gfs-table.css?v=20261109-report-stack-2">
+  <link rel="stylesheet" href="./meteopt-gfs-table.css?v=20261109-dashboard-exact-1">
 
     
   
@@ -95,7 +95,7 @@
 
   
 
-  <link rel="stylesheet" href="./home.css?v=20261109-desktop-flow-fix-2">
+  <link rel="stylesheet" href="./home.css?v=20261109-dashboard-exact-1">
 <!-- desktop-dashboard-width-cache --><!-- desktop-dashboard-width-600 --></head>
 <body>
   <header class="shell topbar">
@@ -104,50 +104,51 @@
     <div class="top-right"><div class="model-picker" role="group" aria-label="Tahmin modeli"><button type="button" id="model-gfs-button" class="active" aria-pressed="true">GFS</button><button type="button" id="model-ecmwf-button" aria-pressed="false">ECMWF IFS</button></div><span class="version"><span data-app-name>İstanbul Havası</span> <span data-app-version>4.0</span></span></div>
   </header>
   <main class="shell" data-ui-build="responsive-2026-11-08-station-same-origin-v1">
-    <section class="dashboard-top" aria-label="İstanbul anlık gözlem, geçmiş ve 72 saatlik tahmin">
-      <div class="dashboard-left">
-      <article class="weather-card station-card" id="balmumcu" role="region" aria-labelledby="station-card-title">
-        <div class="weather-top"><div><div class="label">GERÇEK İSTASYON GÖZLEMİ</div><div class="place" id="station-card-title">Eyüpsultan · İstanbul</div></div><span class="model-state" id="freshness">Veri bekleniyor</span></div>
-        <div class="station-switch" role="group" aria-label="İstasyon seçimi">
-          <button type="button" id="station-enka-button" data-station="enka">ENKA Balmumcu</button>
-          <button type="button" id="station-eyupsultan-button" data-station="eyupsultan" class="active" aria-pressed="true">Eyüpsultan</button>
-          <button type="button" id="station-sisli-button" data-station="sisli">Şişli</button>
-        </div>
-        <script>
-          // HARD DEFAULT: Eyüpsultan is active on every homepage load.
-          try{
-            const station=new URLSearchParams(location.search).get("station")==="eyupsultan"?"eyupsultan":(window.__FORCED_DEFAULT_STATION__||"eyupsultan");
-            document.querySelectorAll(".station-switch button[data-station]").forEach(button=>{
-              const active=button.dataset.station===station;
-              button.classList.toggle("active",active);
-              button.setAttribute("aria-pressed",String(active));
-            });
-            // Remove the first-paint-only marker after applying the real state.
-            // Otherwise its CSS can keep Eyüpsultan visually selected after
-            // selectStation("sisli") or selectStation("enka").
-            document.documentElement.removeAttribute("data-default-station");
-          }catch(_){}
-        </script>
-        <div class="station-overview">
+    <section class="dashboard-top" aria-label="İstanbul canlı gözlem ve GFS tahmini">
+  <div class="dashboard-left">
+    <div class="dashboard-left">
+    <article class="weather-card station-card" id="balmumcu" role="region" aria-labelledby="station-card-title">
+      <div class="weather-top"><div><div class="label">GERÇEK İSTASYON GÖZLEMİ</div><div class="place" id="station-card-title">Eyüpsultan · İstanbul</div></div><span class="model-state" id="freshness">Veri bekleniyor</span></div>
+      <div class="station-switch" role="group" aria-label="İstasyon seçimi">
+        <button type="button" id="station-enka-button" data-station="enka">ENKA Balmumcu</button>
+        <button type="button" id="station-eyupsultan-button" data-station="eyupsultan" class="active" aria-pressed="true">Eyüpsultan</button>
+        <button type="button" id="station-sisli-button" data-station="sisli">Şişli</button>
+      </div>
+      <script>
+        // HARD DEFAULT: Eyüpsultan is active on every homepage load.
+        try{
+          const station=new URLSearchParams(location.search).get("station")==="eyupsultan"?"eyupsultan":(window.__FORCED_DEFAULT_STATION__||"eyupsultan");
+          document.querySelectorAll(".station-switch button[data-station]").forEach(button=>{
+            const active=button.dataset.station===station;
+            button.classList.toggle("active",active);
+            button.setAttribute("aria-pressed",String(active));
+          });
+          // Remove the first-paint-only marker after applying the real state.
+          // Otherwise its CSS can keep Eyüpsultan visually selected after
+          // selectStation("sisli") or selectStation("enka").
+          document.documentElement.removeAttribute("data-default-station");
+        }catch(_){}
+      </script>
+      <div class="station-overview">
   <div class="station-current">
     <div class="temp-row">
-      <div class="temperature" id="temperature">—°</div>
-      <div class="weather-symbol" id="weather-symbol" aria-hidden="true">☁️</div>
-      <div class="station-temp-compare" id="station-temp-compare" hidden aria-live="polite"></div>
+    <div class="temperature" id="temperature">—°</div>
+    <div class="weather-symbol" id="weather-symbol" aria-hidden="true">☁️</div>
+    <div class="station-temp-compare" id="station-temp-compare" hidden aria-live="polite"></div>
     </div>
     <div class="temp-meta">
-      <div class="temp-caption" id="station-observation-meta">Son istasyon ölçümü bekleniyor</div>
-      <div class="delta-badge" id="station-24h-diff"></div>
-      <div class="rain-brief" id="rain-brief" aria-live="polite">
-        <div class="delta-badge" id="rain-brief-current" data-source="live-station">Yağış yok</div>
-        <div class="delta-badge" id="rain-brief-forecast">MeteoPT GFS tahmini bekleniyor.</div>
-        <div class="delta-badge" id="rain-brief-heavy" hidden></div>
-      </div>
-      
+    <div class="temp-caption" id="station-observation-meta">Son istasyon ölçümü bekleniyor</div>
+    <div class="delta-badge" id="station-24h-diff"></div>
+    <div class="rain-brief" id="rain-brief" aria-live="polite">
+      <div class="delta-badge" id="rain-brief-current" data-source="live-station">Yağış yok</div>
+      <div class="delta-badge" id="rain-brief-forecast">MeteoPT GFS tahmini bekleniyor.</div>
+      <div class="delta-badge" id="rain-brief-heavy" hidden></div>
+    </div>
+    
     </div>
   </div>
 </div>
-        <div class="weather-stats">
+      <div class="weather-stats">
   <div class="stat feels-like-stat"><div class="name">Hissedilen</div><div class="value" id="feels-like">—<span class="unit">°</span></div><div class="feels-like-24h-badge" id="feels-like-24h" hidden aria-label="Hissedilen son 24 saat minimum ve maksimum"></div></div>
   <div class="stat"><div class="name">Rüzgâr</div><div class="value" id="wind">—<span class="unit">km/sa</span></div><div class="detail" id="wind-direction">—</div></div>
   <div class="stat"><div class="name">Nem</div><div class="value" id="humidity">—<span class="unit">%</span></div></div>
@@ -155,19 +156,17 @@
   <div class="stat"><div class="name">Yağış</div><div class="value" id="rain">—<span class="unit">mm</span></div><div class="detail" id="rain-detail">Son 12 saat</div></div>
   <div class="stat"><div class="name">Basınç</div><div class="value" id="pressure">—<span class="unit">hPa</span></div><div class="detail" id="pressure-detail"></div></div>
 </div>
-        <div class="station-alert" id="station-alert" role="status" aria-live="polite" hidden></div>
-      <section class="station-history-inline history-panel" id="station-history-panel" aria-label="Seçili istasyonun son 24 saat geçmişi">
-        <div class="history-panel-head"><div><div class="section-kicker" id="history-station-source">ENKA BALMUMCU · GERÇEK ÖLÇÜMLER</div><h2>Son 24 saat</h2></div></div>
-        <div class="history-charts">
-          <article class="history-chart-card"><div class="history-chart-head"><div><h3>Sıcaklık</h3><p>°C · 30 dk ortalama, min–maks</p></div><span class="history-chart-icon">℃</span></div><div class="history-chart" id="station-temperature-trend"><div class="station-trend-empty">Sıcaklık kayıtları bekleniyor…</div></div><div class="station-metric-badges" aria-label="24 saat sıcaklık özeti"><span class="station-metric-badge station-metric-badge-temp" id="station-temp-max" hidden></span><span class="station-metric-badge station-metric-badge-temp" id="station-temp-min" hidden></span></div><div class="history-chart-meta" id="station-trend-meta">Seçili istasyonun ölçüm geçmişi</div></article>
-          <article class="history-chart-card"><div class="history-chart-head"><div><h3 id="station-rain-title">Yağış</h3><p id="station-rain-caption">mm · kayan 1 saatlik toplam</p></div><span class="history-chart-icon">☂</span></div><div class="history-chart" id="station-rain-trend"><div class="station-trend-empty">Yağış geçmişi oluşturuluyor…</div></div><div class="station-metric-badges" aria-label="24 saat yağış özeti"><span class="station-metric-badge station-metric-badge-rain" id="station-rain-max" hidden></span></div><div class="history-chart-meta" id="station-rain-meta">MGM · yarım saat</div></article>
-        </div>
-        <div class="history-source-note" id="history-source-note">Sıcaklık seçili istasyonun. Yağış iki istasyonda da MGM Eyüpsultan.</div>
-      </section>
-     </article>
-
+      <div class="station-alert" id="station-alert" role="status" aria-live="polite" hidden></div>
+    <section class="station-history-inline history-panel" id="station-history-panel" aria-label="Seçili istasyonun son 24 saat geçmişi">
+      <div class="history-panel-head"><div><div class="section-kicker" id="history-station-source">ENKA BALMUMCU · GERÇEK ÖLÇÜMLER</div><h2>Son 24 saat</h2></div></div>
+      <div class="history-charts">
+        <article class="history-chart-card"><div class="history-chart-head"><div><h3>Sıcaklık</h3><p>°C · 30 dk ortalama, min–maks</p></div><span class="history-chart-icon">℃</span></div><div class="history-chart" id="station-temperature-trend"><div class="station-trend-empty">Sıcaklık kayıtları bekleniyor…</div></div><div class="station-metric-badges" aria-label="24 saat sıcaklık özeti"><span class="station-metric-badge station-metric-badge-temp" id="station-temp-max" hidden></span><span class="station-metric-badge station-metric-badge-temp" id="station-temp-min" hidden></span></div><div class="history-chart-meta" id="station-trend-meta">Seçili istasyonun ölçüm geçmişi</div></article>
+        <article class="history-chart-card"><div class="history-chart-head"><div><h3 id="station-rain-title">Yağış</h3><p id="station-rain-caption">mm · kayan 1 saatlik toplam</p></div><span class="history-chart-icon">☂</span></div><div class="history-chart" id="station-rain-trend"><div class="station-trend-empty">Yağış geçmişi oluşturuluyor…</div></div><div class="station-metric-badges" aria-label="24 saat yağış özeti"><span class="station-metric-badge station-metric-badge-rain" id="station-rain-max" hidden></span></div><div class="history-chart-meta" id="station-rain-meta">MGM · yarım saat</div></article>
       </div>
-        <div class="dashboard-briefing station-briefing-inline">
+      <div class="history-source-note" id="history-source-note">Sıcaklık seçili istasyonun. Yağış iki istasyonda da MGM Eyüpsultan.</div>
+    </section>
+     </article>
+<div class="dashboard-briefing station-briefing-inline">
           <div class="briefing" id="briefing" aria-live="polite">
             <div class="briefing-row" id="brief-rain">
               <div class="briefing-k">Yağış saatleri</div>
@@ -179,82 +178,84 @@
             </div>
           </div>
         </div>
- 
-    <section class="section" id="bildirimler">
-      <div class="section-head report-head">
-        <div><div class="section-kicker">SON GFS RAPORU</div><h2>Son hava raporu</h2></div>
-        <div class="notification-controls">
-          <button class="notification-button" id="enable-notifications" type="button">Cihaz bildirimlerini aç</button>
-          <span id="notification-status" class="notification-status" aria-live="polite">Yalnızca yeni GFS raporları için bildirim</span>
-        </div>
-      </div>
-      <div id="notifications-list" class="notification-list" aria-live="polite">
-  <article class="notification-card koy-gfs-report-card">
-    <div class="notification-images koy-fullframe-images koy-gfs-svg-images" id="koy-gfs-comparison-container" data-svg-src="">
-      <div class="notification-image-item">
-        <div class="gfs-chart-loading">İstanbul GFS dört döngülü etkileşimli SVG raporu bekleniyor…</div>
-      </div>
-    </div>
-  </article>
-</div>
+  </div>
+  <div class="dashboard-right">
     <div id="gfs-model-view">
-    </div>
-    </section>
-    <div class="water-gfs-layout">
-    <section class="section gfs-table-section" id="meteopt-gfs-table" aria-label="MeteoPT GFS ham model tablosu">
-      <article class="meteopt-table-card">
-        <div class="meteopt-table-panel-head">
-          <div class="meteopt-table-title">
-            <div class="section-kicker">METEOPT GFS</div>
-            <h2>GFS · Önümüzdeki 180 saat</h2>
+      <section class="section" id="bildirimler">
+            <div class="section-head report-head">
+              <div><div class="section-kicker">SON GFS RAPORU</div><h2>Son hava raporu</h2></div>
+              <div class="notification-controls">
+                <button class="notification-button" id="enable-notifications" type="button">Cihaz bildirimlerini aç</button>
+                <span id="notification-status" class="notification-status" aria-live="polite">Yalnızca yeni GFS raporları için bildirim</span>
+              </div>
+            </div>
+            <div id="notifications-list" class="notification-list" aria-live="polite">
+        <article class="notification-card koy-gfs-report-card">
+          <div class="notification-images koy-fullframe-images koy-gfs-svg-images" id="koy-gfs-comparison-container" data-svg-src="">
+            <div class="notification-image-item">
+              <div class="gfs-chart-loading">İstanbul GFS dört döngülü etkileşimli SVG raporu bekleniyor…</div>
+            </div>
           </div>
-          <div class="meteopt-table-cycle">
-            <span id="meteopt-table-run">Model döngüsü bekleniyor</span>
-            <span id="meteopt-table-updated">Veri bekleniyor</span>
-          </div>
-        </div>
-        <div class="meteopt-table-toolbar">
-          <span class="meteopt-table-source"><span class="meteopt-table-dot"></span> Kaynak: MeteoPT GFS</span>
-          <span id="meteopt-table-status" role="status" aria-live="polite">Veri yükleniyor…</span>
-        </div>
-        <div class="meteopt-table-scroll" aria-label="GFS tahmin tablosu">
-          <table class="meteopt-data-table">            <thead><tr>
-              <th>Steps</th><th>Date/Hour (TSİ)</th><th>T.2m</th><th>Prec.</th><th>W.10m</th><th>T.850</th><th>W.850</th><th>RH.2m<br>(%)</th><th>Dew Point<br>(°C)</th><th>Snowln<br>(m)</th>
-            </tr></thead>
-            <tbody id="meteopt-table-body"><tr><td colspan="10" class="meteopt-table-empty">MeteoPT verisi yükleniyor…</td></tr></tbody>
-          </table>
-        </div>
-      </article>
-    </section>
-      <aside class="section gfs-pressure-panel" id="basinc">
-        <div class="section-head">
-          <div>
-            <div class="section-kicker">GFS · DENİZ SEVİYESİ</div>
-            <h2>Basınç merkezleri</h2>
-          </div>
-        </div>
-        <article class="pressure-card">
-          <div class="label">Bölgesel basınç merkezleri ve İstanbul'a etkisi</div>
-          <ul class="pressure-list" id="pressure-findings"><li class="loading">Analiz yükleniyor…</li></ul><div class="pressure-explainer">İstanbul merkezli 2500 km çapındaki alanda GFS deniz seviyesi basıncından belirlenen anlamlı merkezler. Eşikler: yüksek ≥1023 hPa · alçak ≤1013 hPa.</div>
         </article>
-      </aside>
+      </div></section>
+      <div class="water-gfs-layout">
+          <section class="section gfs-table-section" id="meteopt-gfs-table" aria-label="MeteoPT GFS ham model tablosu">
+            <article class="meteopt-table-card">
+              <div class="meteopt-table-panel-head">
+                <div class="meteopt-table-title">
+                  <div class="section-kicker">METEOPT GFS</div>
+                  <h2>GFS · Önümüzdeki 180 saat</h2>
+                </div>
+                <div class="meteopt-table-cycle">
+                  <span id="meteopt-table-run">Model döngüsü bekleniyor</span>
+                  <span id="meteopt-table-updated">Veri bekleniyor</span>
+                </div>
+              </div>
+              <div class="meteopt-table-toolbar">
+                <span class="meteopt-table-source"><span class="meteopt-table-dot"></span> Kaynak: MeteoPT GFS</span>
+                <span id="meteopt-table-status" role="status" aria-live="polite">Veri yükleniyor…</span>
+              </div>
+              <div class="meteopt-table-scroll" aria-label="GFS tahmin tablosu">
+                <table class="meteopt-data-table">            <thead><tr>
+                    <th>Steps</th><th>Date/Hour (TSİ)</th><th>T.2m</th><th>Prec.</th><th>W.10m</th><th>T.850</th><th>W.850</th><th>RH.2m<br>(%)</th><th>Dew Point<br>(°C)</th><th>Snowln<br>(m)</th>
+                  </tr></thead>
+                  <tbody id="meteopt-table-body"><tr><td colspan="10" class="meteopt-table-empty">MeteoPT verisi yükleniyor…</td></tr></tbody>
+                </table>
+              </div>
+            </article>
+          </section>
+            <aside class="section gfs-pressure-panel" id="basinc">
+              <div class="section-head">
+                <div>
+                  <div class="section-kicker">GFS · DENİZ SEVİYESİ</div>
+                  <h2>Basınç merkezleri</h2>
+                </div>
+              </div>
+              <article class="pressure-card">
+                <div class="label">Bölgesel basınç merkezleri ve İstanbul'a etkisi</div>
+                <ul class="pressure-list" id="pressure-findings"><li class="loading">Analiz yükleniyor…</li></ul><div class="pressure-explainer">İstanbul merkezli 2500 km çapındaki alanda GFS deniz seviyesi basıncından belirlenen anlamlı merkezler. Eşikler: yüksek ≥1023 hPa · alçak ≤1013 hPa.</div>
+              </article>
+            </aside>
+          </div>
     </div>
     <div id="ecmwf-model-view" hidden aria-label="ECMWF tahmin görünümü">
-      <div class="section-head" style="padding-top:30px"><div><div class="section-kicker">ECMWF IFS · HRES + ENS</div><h2>ECMWF IFS · İstanbul</h2></div><div class="section-note"><span id="ecmwf-run-meta">ECMWF döngüsü bekleniyor</span><br><span id="ecmwf-updated-chip">Yayın zamanı</span><br>Günlük en düşük / en yüksek sıcaklık</div></div>
-<section class="section" id="ecmwf-seyir">
-      <div class="section-head">
-        <div><div class="section-kicker">ECMWF IFS · SON DÖRT ÇIKTI</div><h2>Çevrim karşılaştırması</h2><p class="section-description">Son dört yayımlanmış ECMWF döngüsü aynı geçerlilik saatine göre üst üste. Yeni döngü gelince en eskisi düşer.</p></div>
-        <div class="section-note">Sıcaklık, yağış ve rüzgâr<br>Kendiliğinden güncellenir</div>
-      </div>
-      <div class="chart-stack" id="ecmwf-report-images">
-        <article class="chart-card"><div class="chart-empty">Dört çıktının PNG raporu hazırlanıyor…</div></article>
-      </div>
-
-    </section>
-<section class="section" id="ecmwf-basinc"><div class="section-head"><div><div class="section-kicker">ECMWF · METEOPT MODEL ANALİZİ</div><h2>Basınç düzeni ve kaynak</h2></div><div class="section-note">MeteoPT ECMWF noktası<br>noktasal basınç analizi</div></div><div class="lower-grid"><article class="pressure-card"><div class="label">Bölgesel basınç merkezleri ve İstanbul'a etkisi</div><ul class="pressure-list" id="ecmwf-pressure-findings"><li class="loading">Analiz yükleniyor…</li></ul></article><article class="info-card"><div class="label">Veri hakkında</div><p>İstasyon ölçümü ile ECMWF tahmini ayrı kaynaklardır. 2 m, 10 m rüzgâr, yağış, 850 hPa ve basınç MeteoPT ECMWF nokta serisindendir.</p><div class="source-row"><span>Model: <strong>ECMWF · MeteoPT nokta serisi</strong></span><span id="ecmwf-valid-until">Geçerlilik: —</span></div></article></div></section>
-      <section class="section" aria-label="ECMWF veri kaynağı ve lisans"><p class="ecmwf-source-note">Kaynak: <a href="https://www.meteopt.com/modelos/ecmwf?lat=41.0901&lon=28.9436" target="_blank" rel="noopener">MeteoPT ECMWF</a> · İstanbul ECMWF noktası 41.0901°N 28.9436°E · 3 saatlik sıcaklık, yağış, rüzgâr, 850 hPa ve basınç. Ensemble sapması bu kaynakta yok.</p></section>
-<section class="section" id="ecmwf-tahmin"><div class="section-head"><div><div class="section-kicker">ECMWF IFS · MODEL TAHMİNİ</div><h2>8 günlük tahmin</h2></div><div class="section-note"><span id="ecmwf-daily-cycle-chip">ECMWF döngüsü yükleniyor</span><br><span id="ecmwf-daily-updated-chip">Yayın zamanı bekleniyor</span><br>Günlük en düşük / en yüksek sıcaklık · HRES yüzey tahmini</div></div><div class="daily-grid" id="ecmwf-daily-grid"><div class="loading">ECMWF tahmini yükleniyor…</div></div></section>
-    </div>
+          <div class="section-head" style="padding-top:30px"><div><div class="section-kicker">ECMWF IFS · HRES + ENS</div><h2>ECMWF IFS · İstanbul</h2></div><div class="section-note"><span id="ecmwf-run-meta">ECMWF döngüsü bekleniyor</span><br><span id="ecmwf-updated-chip">Yayın zamanı</span><br>Günlük en düşük / en yüksek sıcaklık</div></div>
+    <section class="section" id="ecmwf-seyir">
+          <div class="section-head">
+            <div><div class="section-kicker">ECMWF IFS · SON DÖRT ÇIKTI</div><h2>Çevrim karşılaştırması</h2><p class="section-description">Son dört yayımlanmış ECMWF döngüsü aynı geçerlilik saatine göre üst üste. Yeni döngü gelince en eskisi düşer.</p></div>
+            <div class="section-note">Sıcaklık, yağış ve rüzgâr<br>Kendiliğinden güncellenir</div>
+          </div>
+          <div class="chart-stack" id="ecmwf-report-images">
+            <article class="chart-card"><div class="chart-empty">Dört çıktının PNG raporu hazırlanıyor…</div></article>
+          </div>
+    
+        </section>
+    <section class="section" id="ecmwf-basinc"><div class="section-head"><div><div class="section-kicker">ECMWF · METEOPT MODEL ANALİZİ</div><h2>Basınç düzeni ve kaynak</h2></div><div class="section-note">MeteoPT ECMWF noktası<br>noktasal basınç analizi</div></div><div class="lower-grid"><article class="pressure-card"><div class="label">Bölgesel basınç merkezleri ve İstanbul'a etkisi</div><ul class="pressure-list" id="ecmwf-pressure-findings"><li class="loading">Analiz yükleniyor…</li></ul></article><article class="info-card"><div class="label">Veri hakkında</div><p>İstasyon ölçümü ile ECMWF tahmini ayrı kaynaklardır. 2 m, 10 m rüzgâr, yağış, 850 hPa ve basınç MeteoPT ECMWF nokta serisindendir.</p><div class="source-row"><span>Model: <strong>ECMWF · MeteoPT nokta serisi</strong></span><span id="ecmwf-valid-until">Geçerlilik: —</span></div></article></div></section>
+          <section class="section" aria-label="ECMWF veri kaynağı ve lisans"><p class="ecmwf-source-note">Kaynak: <a href="https://www.meteopt.com/modelos/ecmwf?lat=41.0901&lon=28.9436" target="_blank" rel="noopener">MeteoPT ECMWF</a> · İstanbul ECMWF noktası 41.0901°N 28.9436°E · 3 saatlik sıcaklık, yağış, rüzgâr, 850 hPa ve basınç. Ensemble sapması bu kaynakta yok.</p></section>
+    <section class="section" id="ecmwf-tahmin"><div class="section-head"><div><div class="section-kicker">ECMWF IFS · MODEL TAHMİNİ</div><h2>8 günlük tahmin</h2></div><div class="section-note"><span id="ecmwf-daily-cycle-chip">ECMWF döngüsü yükleniyor</span><br><span id="ecmwf-daily-updated-chip">Yayın zamanı bekleniyor</span><br>Günlük en düşük / en yüksek sıcaklık · HRES yüzey tahmini</div></div><div class="daily-grid" id="ecmwf-daily-grid"><div class="loading">ECMWF tahmini yükleniyor…</div></div></section>
+        </div>
+  </div>
+</section>
     <section class="section enka-camera-section" id="enka-kamera" aria-label="ENKA Balmumcu canlı kamera">
       <section class="enka-camera-panel" id="enka-camera-panel">
         <div class="enka-camera-head">
