@@ -3026,3 +3026,116 @@ html.ios12 #enka-camera-panel .enka-camera-frame{
     grid-template-columns:minmax(0,1fr)!important;
   }
 }
+
+
+/* FINAL FIX: the left station panel must size to its own content.
+   Earlier equal-height rules stretched it to the full right-column/table height
+   and pushed the station selector away from the card header. */
+@media (min-width:1200px) and (pointer:fine){
+  .dashboard-top{
+    align-items:start!important;
+  }
+  .dashboard-left{
+    display:block!important;
+    height:auto!important;
+    min-height:0!important;
+    max-height:none!important;
+    flex:none!important;
+    align-self:start!important;
+    overflow:visible!important;
+  }
+  .dashboard-left>.station-card,
+  .dashboard-left .station-card{
+    display:grid!important;
+    grid-template-columns:minmax(0,1fr) minmax(250px,42%)!important;
+    grid-template-rows:auto auto auto auto auto auto!important;
+    grid-auto-rows:auto!important;
+    align-content:start!important;
+    align-items:start!important;
+    height:auto!important;
+    min-height:0!important;
+    max-height:none!important;
+    flex:none!important;
+    align-self:start!important;
+    overflow:visible!important;
+  }
+  .dashboard-left .station-card>.weather-top{
+    grid-column:1/-1!important;
+    grid-row:1!important;
+  }
+  .dashboard-left .station-card>.station-switch{
+    grid-column:1/-1!important;
+    grid-row:2!important;
+    align-self:start!important;
+    justify-self:start!important;
+    margin-top:8px!important;
+  }
+  .dashboard-left .station-card>.station-overview{
+    display:contents!important;
+  }
+  .dashboard-left .station-card .station-current{
+    grid-column:1!important;
+    grid-row:3!important;
+    align-self:start!important;
+  }
+  .dashboard-left .station-card>.weather-stats{
+    grid-column:2!important;
+    grid-row:3!important;
+    align-self:start!important;
+    align-content:start!important;
+  }
+  .dashboard-left .station-card>.station-alert{
+    grid-column:1/-1!important;
+    grid-row:4!important;
+  }
+  .dashboard-left .station-card>.station-history-inline{
+    grid-column:1/-1!important;
+    grid-row:5!important;
+    display:block!important;
+    height:auto!important;
+    min-height:0!important;
+    max-height:none!important;
+    flex:none!important;
+    align-self:start!important;
+    margin-top:10px!important;
+  }
+  .dashboard-left .station-history-inline .history-charts{
+    display:grid!important;
+    grid-template-columns:repeat(2,minmax(0,1fr))!important;
+    grid-template-rows:auto!important;
+    align-content:start!important;
+    height:auto!important;
+    min-height:0!important;
+    max-height:none!important;
+    flex:none!important;
+  }
+  .dashboard-left .station-history-inline .history-chart-card{
+    display:block!important;
+    height:auto!important;
+    min-height:0!important;
+    max-height:none!important;
+  }
+  .dashboard-left .station-history-inline .history-chart{
+    height:118px!important;
+    min-height:0!important;
+    max-height:118px!important;
+  }
+  .dashboard-left .station-card>.station-briefing-inline{
+    grid-column:1/-1!important;
+    grid-row:6!important;
+    display:block!important;
+    height:auto!important;
+    min-height:0!important;
+    max-height:none!important;
+    flex:none!important;
+    align-self:start!important;
+    margin-top:10px!important;
+  }
+  .dashboard-left .station-card>.station-briefing-inline .briefing{
+    display:grid!important;
+    grid-template-columns:repeat(2,minmax(0,1fr))!important;
+    align-content:start!important;
+    height:auto!important;
+    min-height:0!important;
+  }
+}
