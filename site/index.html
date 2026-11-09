@@ -95,7 +95,7 @@
 
   
 
-  <link rel="stylesheet" href="./home.css?v=20261109-perf-1">
+  <link rel="stylesheet" href="./home.css?v=20261109-camera-bottom-1">
 </head>
 <body>
   <header class="shell topbar">
@@ -179,22 +179,6 @@
       </article>
 
       </div>
-        <section class="enka-camera-panel" id="enka-camera-panel" aria-label="ENKA Balmumcu canlı kamera">
-          <div class="enka-camera-head">
-            <span class="enka-camera-title">ENKA Balmumcu · Canlı Kamera</span>
-            <span class="enka-camera-status" id="enka-camera-status">90 sn'de bir yenilenir</span>
-          </div>
-          <img class="enka-camera-frame" id="enka-camera-image"
-               src="https://w.enka.com/camhd/cam1/c.jpg?cb=0"
-               alt="ENKA Balmumcu canlı kamera görüntüsü"
-               loading="eager" decoding="async" referrerpolicy="no-referrer">
-          <div class="enka-camera-foot">
-            <span>İstanbul Boğazı · Balmumcu</span>
-            <span id="enka-camera-updated">Görüntü yükleniyor…</span>
-          </div>
-        </section>
-
-      </section>
     </section>
     <div id="gfs-model-view">
     <section class="section" id="bildirimler">
@@ -270,12 +254,31 @@
         </article>
       </aside>
     </div>
+    <section class="section enka-camera-section" id="enka-kamera" aria-label="ENKA Balmumcu canlı kamera">
+      <section class="enka-camera-panel" id="enka-camera-panel">
+        <div class="enka-camera-head">
+          <span class="enka-camera-title">ENKA Balmumcu · Canlı Kamera</span>
+          <span class="enka-camera-status" id="enka-camera-status">90 sn'de bir yenilenir</span>
+        </div>
+        <div class="enka-camera-stage">
+          <div class="enka-camera-placeholder" id="enka-camera-placeholder">Görüntü bekleniyor</div>
+          <img class="enka-camera-frame is-pending" id="enka-camera-image"
+               data-camera-src="https://w.enka.com/camhd/cam1/c.jpg"
+               alt="ENKA Balmumcu canlı kamera görüntüsü"
+               loading="lazy" decoding="async" referrerpolicy="no-referrer">
+        </div>
+        <div class="enka-camera-foot">
+          <span>İstanbul Boğazı · Balmumcu</span>
+          <span id="enka-camera-updated">Görüntü yükleniyor…</span>
+        </div>
+      </section>
+    </section>
 
   </main>
   <footer class="shell footer"><span><strong data-app-name>İstanbul Havası</strong> <span data-app-version>4.0</span></span><span>Veri kaynakları: ENKA Balmumcu kamera OCR · MGM Eyüpsultan 18101 · MGM Şişli 18401 · MeteoPT GFS · ECMWF · Otomatik kontrol: 5 dakika</span></footer>
   <script src="./gfs-api-config.js?v=20261107-cloudflare-edge-2" defer></script>
   <script src="./gfs-comparison-tooltip.js?v=20261108-desktop-latest-cycle-tooltip-5" defer></script>
-    <script src="./home-app.js?v=20261109-pressure-text-1" defer></script>
+    <script src="./home-app.js?v=20261109-camera-bottom-1" defer></script>
 
   
   <div id="pull-refresh-indicator" role="status" aria-live="polite"><span class="pull-refresh-icon">↓</span><span class="pull-refresh-label">Yenilemek için aşağı çek</span></div>

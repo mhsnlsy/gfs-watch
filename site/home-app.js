@@ -23,26 +23,86 @@
     let forecastData=null;
     const $=id=>document.getElementById(id);
 
-    // ENKA Balmumcu camera: refresh the actual JPEG every 90 seconds.
-    // Cache-busting keeps the browser/CDN from serving the previous frame.
+    // ENKA Balmumcu camera: refresh the JPEG every 90 seconds once it scrolls into view.
+    // A timed-out request keeps the last good frame instead of leaving an empty panel.
     (function initEnkaCamera(){
       const image=$("enka-camera-image");
       const updated=$("enka-camera-updated");
       const status=$("enka-camera-status");
-      if(!image) return;
+      const panel=$("enka-camera-panel");
+      const placeholder=$("enka-camera-placeholder");
+      if(!image||!panel) return;
+      const source=image.dataset.cameraSrc||"https://w.enka.com/camhd/cam1/c.jpg";
+      const timeoutMs=12000;
       let seq=0;
-      const refresh=()=>{
-        seq++;
-        const stamp=Date.now();
-        image.src="https://w.enka.com/camhd/cam1/c.jpg?cb="+stamp+"-"+seq;
-        if(updated){
-          updated.textContent="Son yenileme: "+new Intl.DateTimeFormat("tr-TR",{hour:"2-digit",minute:"2-digit",second:"2-digit"}).format(new Date());
-        }
-        if(status) status.textContent="90 sn'de bir yenilenir";
+      let started=false;
+      let lastFrame="";
+      let requestToken=0;
+      const showFrame=(url)=>{
+        lastFrame=url;
+        image.src=url;
+        image.classList.remove("is-pending");
+        if(placeholder) placeholder.hidden=true;
       };
-      image.addEventListener("error",()=>{ if(status) status.textContent="Kamera görüntüsü alınamadı"; });
-      setInterval(refresh,90000);
-      refresh();
+      const showFallback=(message)=>{
+        if(lastFrame){
+          if(image.getAttribute("src")!==lastFrame) image.src=lastFrame;
+          image.classList.remove("is-pending");
+          if(placeholder) placeholder.hidden=true;
+          if(updated) updated.textContent="Son kare gösteriliyor";
+        }else{
+          image.classList.add("is-pending");
+          image.removeAttribute("src");
+          if(placeholder) placeholder.hidden=false;
+          if(updated) updated.textContent="Görüntü bekleniyor";
+        }
+        if(status) status.textContent=message;
+      };
+      const refresh=()=>{
+        const token=++requestToken;
+        seq++;
+        const url=source+(source.indexOf("?")>=0?"&":"?")+"cb="+Date.now()+"-"+seq;
+        const probe=new Image();
+        let settled=false;
+        const timer=window.setTimeout(()=>{
+          if(settled||token!==requestToken) return;
+          settled=true;
+          probe.onload=null;
+          probe.onerror=null;
+          showFallback(lastFrame?"Yenileme zaman aşımı · son kare":"Görüntü zaman aşımına uğradı");
+        },timeoutMs);
+        probe.onload=()=>{
+          if(settled||token!==requestToken) return;
+          settled=true;
+          window.clearTimeout(timer);
+          showFrame(url);
+          if(updated) updated.textContent="Son yenileme: "+new Intl.DateTimeFormat("tr-TR",{hour:"2-digit",minute:"2-digit",second:"2-digit"}).format(new Date());
+          if(status) status.textContent="90 sn'de bir yenilenir";
+        };
+        probe.onerror=()=>{
+          if(settled||token!==requestToken) return;
+          settled=true;
+          window.clearTimeout(timer);
+          showFallback(lastFrame?"Kamera görüntüsü alınamadı · son kare":"Kamera görüntüsü alınamadı");
+        };
+        probe.referrerPolicy="no-referrer";
+        probe.src=url;
+      };
+      const start=()=>{
+        if(started) return;
+        started=true;
+        refresh();
+        setInterval(refresh,90000);
+      };
+      if("IntersectionObserver" in window){
+        const observer=new IntersectionObserver(entries=>{
+          if(entries.some(entry=>entry.isIntersecting||entry.intersectionRatio>0)){
+            start();
+            observer.disconnect();
+          }
+        },{rootMargin:"160px 0px",threshold:0});
+        observer.observe(panel);
+      }else start();
     })();
     const numeric=value=>typeof value==="number"&&Number.isFinite(value);
     const windDirectionTr={
