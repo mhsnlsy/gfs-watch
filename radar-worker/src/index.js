@@ -221,37 +221,6 @@ function pngChunk(type,data){
   return out;
 }
 
-async function makeSyntheticRadarPng(){
-  const w=256,h=256,bpp=4;
-  const raw=new Uint8Array(h*(1+w*bpp));
-  const cx=128, cy=128-Math.round(30/PIXEL_KM);
-  const blob=[];
-  for(let dy=-1;dy<=2;dy++) for(let dx=-2;dx<=2;dx++) blob.push([cx+dx,cy+dy]);
-  const pixels=new Set(blob.slice(0,20).map(([x,y])=>`${x},${y}`));
-  for(let y=0;y<h;y++){
-    const row=y*(1+w*bpp); raw[row]=0;
-    for(let x=0;x<w;x++){
-      const i=row+1+x*bpp;
-      if(pixels.has(`${x},${y}`)){
-        raw[i]=0; raw[i+1]=119; raw[i+2]=170; raw[i+3]=255;
-      } else {
-        raw[i]=0; raw[i+1]=0; raw[i+2]=0; raw[i+3]=0;
-      }
-    }
-  }
-  const compressed=await readStream(new Response(raw).body.pipeThrough(new CompressionStream("deflate")));
-  const ihdr=new Uint8Array(13), dv=new DataView(ihdr.buffer);
-  dv.setUint32(0,w); dv.setUint32(4,h); ihdr[8]=8; ihdr[9]=6; ihdr[10]=0; ihdr[11]=0; ihdr[12]=0;
-  const sig=new Uint8Array([137,80,78,71,13,10,26,10]);
-  const idat=pngChunk("IDAT",compressed), iend=pngChunk("IEND",new Uint8Array());
-  const out=new Uint8Array(sig.length+25+idat.length+iend.length);
-  let o=0; out.set(sig,o);o+=sig.length;
-  out.set(pngChunk("IHDR",ihdr),o);o+=25;
-  out.set(idat,o);o+=idat.length;
-  out.set(iend,o);
-  return out;
-}
-
 async function encodePngRGBA(w,h,rgba){
   const raw=new Uint8Array(h*(1+w*4));
   for(let y=0;y<h;y++){const ro=y*(1+w*4),so=y*w*4;raw[ro]=0;raw.set(rgba.subarray(so,so+w*4),ro+1);}
@@ -340,29 +309,30 @@ export default {
   async fetch(request,env){
     const url=new URL(request.url);
 
-    // Deployment smoke-test: verifies the exact Cloudflare Worker -> Telegram
-    // delivery path without touching radar_state or the real alert cooldown.
-    if(url.pathname==="/test-radar"){
-      const scenario={distance_km:30,dbz:25,pixels:20,speed_kmh:30,eta_minutes:60};
-      const caption=
-        "🌧️ <b>SENTETİK RADAR TESTİ — İstanbul</b>\\n"+
-        "RainViewer/Telegram teslimat hattı testi.\\n"+
-        "Senaryo: 30 km kuzey · 25 dBZ · 20 piksel · 30 km/sa · ~60 dk ETA";
-      const photo=await makeSyntheticRadarPng();
-      const photoResult=await telegramPhoto(env,photo,caption);
-      const telegramSent=Boolean(typeof photoResult==="object" ? photoResult.ok : photoResult);
-      let textResult=null;
-      if(!telegramSent){
-        textResult=await telegramText(env,caption);
-      }
-      const sent=telegramSent || Boolean(textResult?.ok);
+    if(url.pathname==="/test-cooldown"){
+      const now=Math.floor(Date.now()/1000);
+      const state=await getState(env.RADAR_DB);
+      const last=Number(state.last_alert_ts||0);
+      const syntheticLast=now-60;
+      const syntheticFuture=now-(ALERT_COOLDOWN_SECONDS+60);
+      const blockedByState=last>0 && now-last<ALERT_COOLDOWN_SECONDS;
+      const simulatedBlocked=now-syntheticLast<ALERT_COOLDOWN_SECONDS;
+      const simulatedAllowed=now-syntheticFuture>=ALERT_COOLDOWN_SECONDS;
+      const passed=simulatedBlocked&&simulatedAllowed;
       return new Response(JSON.stringify({
-        status:sent?"test_sent":"test_failed",
-        telegram_sent:sent,
-        photo_result:photoResult,
-        text_result:textResult,
-        scenario
-      }),{status:sent?200:502,headers:{"content-type":"application/json","cache-control":"no-store"}});
+        status:passed?"cooldown_test_passed":"cooldown_test_failed",
+        cooldown_minutes:ALERT_COOLDOWN_SECONDS/60,
+        current_state:{
+          last_alert_ts:last,
+          elapsed_seconds:last>0?now-last:null,
+          blocked_by_current_state:blockedByState
+        },
+        simulation:{
+          immediate_repeat_blocked:simulatedBlocked,
+          after_45_minutes_allowed:simulatedAllowed
+        },
+        telegram_sent:false
+      }),{status:passed?200:500,headers:{"content-type":"application/json","cache-control":"no-store"}});
     }
 
     if (url.pathname === "/health") {
