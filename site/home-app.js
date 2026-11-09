@@ -2000,89 +2000,102 @@ if(typeof renderBriefing==="function")renderBriefing();
     const enableNotificationsButton=$("enable-notifications");
     if(enableNotificationsButton)enableNotificationsButton.addEventListener("click",enableNotifications);
     async function loadNotifications(){
-      const bundled=forecastData&&forecastData.report;
       try{
-        // The notification archive contains the four-cycle comparison PNGs.
-        // The embedded forecast report and the archive now share the same PNG chart paths.
-        const gfsApi=(window.ISTANBUL_GFS_API_BASE||"").replace(/\/$/,"");
-        const archiveUrls=[
-          (gfsApi?gfsApi+"/gfs/notification-latest":"/gfs/notification-latest"),
-          "https://gfs-watch-istanbul-gfs.muhsin-ulusoy.workers.dev/gfs/notification-latest",
-          "https://gfs-watch-istanbul-gfs.muhsin-ulusoy.workers.dev/gfs/publication-asset/notifications/latest.json",
-          "./data/notifications/latest.json"
-        ].filter((url,index,list)=>url && list.indexOf(url)===index);
-        let response=null;
-        let lastArchiveError=null;
-        for(const archiveUrl of archiveUrls){
+        // Same flow as the working Köy page: use the native comparison
+        // endpoint first and resolve the generated four-cycle SVG directly.
+        const comparisonUrls=[
+          ((window.ISTANBUL_GFS_API_BASE||window.location.origin).replace(/\/$/,"")+"/gfs/comparison"),
+          "https://gfs-watch-istanbul-gfs.muhsin-ulusoy.workers.dev/gfs/comparison"
+        ].filter((url,index,list)=>url&&list.indexOf(url)===index);
+        let comparison=null;
+        let comparisonError=null;
+        for(const url of comparisonUrls){
           try{
-            const candidate=await fetch(archiveUrl+"?t="+Date.now(),{
+            const response=await fetch(url+"?v="+Date.now(),{
               cache:"no-store",
-              mode:archiveUrl.startsWith(window.location.origin)?"same-origin":"cors"
+              mode:url.startsWith(window.location.origin)?"same-origin":"cors"
             });
-            if(candidate.ok){
-              response=candidate;
-              break;
+            if(response.ok){
+              const doc=await response.json();
+              if(Array.isArray(doc&&doc.runs)&&doc.runs.length){
+                comparison=doc;
+                break;
+              }
             }
-            lastArchiveError=new Error("Rapor arşivi HTTP "+candidate.status);
+            comparisonError=new Error("GFS karşılaştırma API HTTP "+response.status);
           }catch(error){
-            lastArchiveError=error;
+            comparisonError=error;
           }
         }
-        if(!response)throw lastArchiveError||new Error("Rapor arşivi henüz oluşturulmadı.");
-        const document=await response.json();
-        // The same-origin /gfs/notification-latest gateway already returns the
-        // canonical gfs-watch.notifications.v1 manifest from D1. Do not
-        // collapse that four-cycle archive into a single synthetic item.
-        if(document.schema!=="gfs-watch.notifications.v1" && (document.run_id_utc || document.report_text || document.images)){
-          document={
-            schema:"gfs-watch.notifications.v1",
-            updated_at_utc:document.updated_at_utc||document.published_at_utc||Date.now(),
-            items:[{
-              run_id_utc:document.run_id_utc||document.published_at_utc||null,
-              published_at_utc:document.published_at_utc||document.run_id_utc||null,
-              title:document.title||"İstanbul GFS · F180 tamamlandı",
-              cycle_label:document.cycle_label||"MeteoPT GFS",
-              report_text:document.report_text||"",
-              images:(document.images||[]).map((x,i)=>({
-                label:x.label||["2 m sıcaklık","850 hPa sıcaklık","Yağış","10 m rüzgâr"][i]||"GFS grafiği",
-                path:x.url||x.path
-              }))
-            }]
-          };
-        }
-        if(document.schema!=="gfs-watch.notifications.v1"||!Array.isArray(document.items)||!document.items.length){
-          throw new Error("Rapor arşivi biçimi geçersiz veya boş.");
-        }
-        latestNotificationItems=document.items.slice(0,4);
-        renderNotifications(latestNotificationItems,document.updated_at_utc||document.items[0] && document.items[0].published_at_utc||Date.now());
-        $("notification-status").textContent="Otomatik yenileme aktif · Son kontrol: "+new Intl.DateTimeFormat("tr-TR",{timeZone:"Europe/Istanbul",hour:"2-digit",minute:"2-digit"}).format(new Date());
-        const reportRun=latestNotificationItems[0]&&latestNotificationItems[0].run_id_utc;
-        const forecastRun=forecastData&&forecastData.run_id_utc;
-        if(reportRun&&(!forecastRun||reportRun>forecastRun))loadForecast();
+        if(!comparison)throw comparisonError||new Error("GFS karşılaştırma verisi alınamadı.");
+
+        const runs=comparison.runs.filter(run=>run&&run.run_id_utc).slice(0,4);
+        const latestRun=runs[0];
+        if(!latestRun)throw new Error("GFS karşılaştırma sonucu boş.");
+        const runDate=new Date(latestRun.run_id_utc);
+        const runStamp=runDate.getUTCFullYear()
+          +String(runDate.getUTCMonth()+1).padStart(2,"0")
+          +String(runDate.getUTCDate()).padStart(2,"0")
+          +"T"+String(runDate.getUTCHours()).padStart(2,"0")+"Z";
+        const version=encodeURIComponent(
+          (comparison.updated_at_utc||latestRun.published_at_utc||latestRun.run_id_utc)
+          +"|istanbul-svg-absolute-path-v1"
+        );
+        const assetRoot=window.location.pathname.startsWith("/gfs-watch/")?"/gfs-watch/":"/";
+        const svgPath=assetRoot+"data/notifications/istanbul-gfs-"+runStamp+"-comparison.svg";
+        const svgUrl=new URL(svgPath,window.location.origin).href+"?v="+version;
+
+        latestNotificationItems=runs;
+        renderNotifications([{
+          run_id_utc:latestRun.run_id_utc,
+          published_at_utc:latestRun.published_at_utc||latestRun.run_id_utc,
+          title:"İstanbul GFS · dört döngülü karşılaştırma",
+          cycle_label:"MeteoPT GFS",
+          images:[{
+            label:"GFS dört döngü · aynı geçerlilik saatleri (TSİ)",
+            path:svgUrl
+          }]
+        }],comparison.updated_at_utc||latestRun.published_at_utc||latestRun.run_id_utc);
         return;
       }catch(error){
-        // Keep the current report visible if the archive is temporarily unavailable.
-        if(bundled&&bundled.report_text&&(!forecastData.run_id_utc||bundled.run_id_utc===forecastData.run_id_utc)){
-          latestNotificationItems=[bundled];
-          renderNotifications(latestNotificationItems,forecastData.published_at_utc||bundled.published_at_utc||Date.now());
-          $("notification-status").textContent="Rapor arşivi bekleniyor; güncel tahmin raporu gösteriliyor.";
-          return;
+        // Keep the existing archive manifest only as a fallback.
+        try{
+          const gfsApi=(window.ISTANBUL_GFS_API_BASE||"").replace(/\/$/,"");
+          const archiveUrls=[
+            (gfsApi?gfsApi+"/gfs/notification-latest":"/gfs/notification-latest"),
+            "https://gfs-watch-istanbul-gfs.muhsin-ulusoy.workers.dev/gfs/notification-latest",
+            "https://gfs-watch-istanbul-gfs.muhsin-ulusoy.workers.dev/gfs/publication-asset/notifications/latest.json",
+            "./data/notifications/latest.json"
+          ].filter((url,index,list)=>url&&list.indexOf(url)===index);
+          let response=null;
+          let lastArchiveError=null;
+          for(const archiveUrl of archiveUrls){
+            try{
+              const candidate=await fetch(archiveUrl+"?t="+Date.now(),{
+                cache:"no-store",
+                mode:archiveUrl.startsWith(window.location.origin)?"same-origin":"cors"
+              });
+              if(candidate.ok){
+                response=candidate;
+                break;
+              }
+              lastArchiveError=new Error("Rapor arşivi HTTP "+candidate.status);
+            }catch(fallbackError){
+              lastArchiveError=fallbackError;
+            }
+          }
+          if(!response)throw lastArchiveError||new Error("Rapor arşivi henüz oluşturulmadı.");
+          const document=await response.json();
+          if(document.schema!=="gfs-watch.notifications.v1"||!Array.isArray(document.items)||!document.items.length){
+            throw new Error("Rapor arşivi biçimi geçersiz veya boş.");
+          }
+          latestNotificationItems=document.items.slice(0,4);
+          renderNotifications(latestNotificationItems,document.updated_at_utc||document.items[0]&&document.items[0].published_at_utc||Date.now());
+        }catch(fallbackError){
+          console.error("İstanbul GFS report load failed:",error,fallbackError);
+          throw fallbackError;
         }
-        $("notifications-list").innerHTML='<div class="chart-empty">Rapor arşivi şu anda alınamıyor. Sayfa açıkken otomatik olarak yeniden denenecek.</div>';
-        $("notification-status").textContent="Rapor arşivi bağlantısı bekleniyor · 5 dakikada bir yeniden denenir";
       }
-    }
-    function fmt1(value){return numeric(value)?(Math.round(value*10)/10).toFixed(1):"—";}
-    function fmtSigned(value){if(!numeric(value))return "—";const rounded=Math.round(value*10)/10;return (rounded>0?"+":"")+rounded.toFixed(1);}
-    function pctText(value){return numeric(value)?Math.round(value)+"%":"—";}
-    function istStamp(value){
-      if(!value)return "—";
-      return new Intl.DateTimeFormat("tr-TR",{timeZone:"Europe/Istanbul",day:"2-digit",month:"short",hour:"2-digit",minute:"2-digit"}).format(new Date(value));
-    }
-    function runStamp(value){
-      if(!value)return "—";
-      const formatted=new Intl.DateTimeFormat("tr-TR",{timeZone:"UTC",day:"2-digit",month:"short",hour:"2-digit",minute:"2-digit"}).format(new Date(value));
-      return formatted.replace(",","")+"Z";
     }
     async function loadVerification(){
       if(VERIFY_URL){
