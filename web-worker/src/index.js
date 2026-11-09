@@ -134,16 +134,50 @@ export default {
         koy: Boolean(env.KOY_GFS?.fetch),
         stations: Boolean(env.STATIONS?.fetch),
       };
+
+      async function probe(binding, targetPath) {
+        const started = Date.now();
+        if (!binding || typeof binding.fetch !== "function") {
+          return { ok: false, status: 503, latency_ms: 0, error: "binding_missing" };
+        }
+        try {
+          const response = await binding.fetch(internalRequest(request, targetPath));
+          const body = await response.clone().json().catch(() => null);
+          return {
+            ok: response.ok,
+            status: response.status,
+            latency_ms: Date.now() - started,
+            payload_ok: body?.ok === true,
+            error: body?.error || null,
+            latest_run_id_utc: body?.latest_run_id_utc || body?.station?.last_success_utc || null,
+          };
+        } catch (error) {
+          return {
+            ok: false,
+            status: 503,
+            latency_ms: Date.now() - started,
+            error: String(error?.message || error),
+          };
+        }
+      }
+
+      const [istanbul, stations] = await Promise.all([
+        probe(env.ISTANBUL_GFS, "/api/health"),
+        probe(env.STATIONS, "/api/health"),
+      ]);
+      const ok = Object.values(bindings).every(Boolean) && istanbul.ok && stations.ok;
+
       return responseJson({
-        ok: Object.values(bindings).every(Boolean),
+        ok,
         service: "gfs-watch-web",
         delivery: "Cloudflare Workers Static Assets",
         api_gateway: "Cloudflare Service Bindings",
         services: SERVICES,
         bindings,
+        probes: { istanbul_gfs: istanbul, stations },
         archive_storage: env.LIVE_ARCHIVE ? "R2" : "Static Assets fallback",
         checked_at_utc: new Date().toISOString(),
-      }, Object.values(bindings).every(Boolean) ? 200 : 503);
+      }, ok ? 200 : 503);
     }
 
     if (path === "/gfs/notification-latest") {
