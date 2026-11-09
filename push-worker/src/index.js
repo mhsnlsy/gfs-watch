@@ -25,11 +25,6 @@ function json(data, status = 200, headers = new Headers()) {
   return new Response(JSON.stringify(data), { status, headers: out });
 }
 
-function authorized(request, env) {
-  const token = env.PUSH_ADMIN_TOKEN;
-  return Boolean(token && request.headers.get("Authorization") === `Bearer ${token}`);
-}
-
 async function readJson(request, maxBytes = 16_384) {
   const length = Number(request.headers.get("Content-Length") || 0);
   if (length > maxBytes) throw new Error("Request body too large");
@@ -152,20 +147,11 @@ async function buildTomorrowWeather() {
   };
 }
 
-async function sendTomorrowWeatherPush(env, headers, mode = "scheduled", skipDedup = false) {
+async function sendTomorrowWeatherPush(env) {
   const weather = await buildTomorrowWeather();
 
-  const existing = await env.DB
-    .prepare("SELECT id FROM sent_notifications WHERE id = ?")
-    .bind(weather.id)
-    .first();
-
-  if (existing && !skipDedup) {
-    return { ok: true, skipped: true, reason: "already-sent", ...weather };
-  }
-
   const rows = await env.DB
-    .prepare("SELECT subscription_json FROM push_subscriptions ORDER BY created_at ASC LIMIT 500")
+    .prepare("SELECT subscription_json FROM push_subscriptions LIMIT 500")
     .all();
 
   const subscriptions = (rows.results || [])
@@ -175,7 +161,8 @@ async function sendTomorrowWeatherPush(env, headers, mode = "scheduled", skipDed
     .filter(Boolean);
 
   if (!subscriptions.length) {
-    return { ok: true, skipped: true, reason: "no-subscriptions", ...weather };
+    console.log("19:45 push: no subscriptions");
+    return { ok: true, delivered: 0, reason: "no-subscriptions", ...weather };
   }
 
   if (!env.VAPID_PUBLIC_KEY || !env.VAPID_PRIVATE_KEY) {
@@ -191,7 +178,7 @@ async function sendTomorrowWeatherPush(env, headers, mode = "scheduled", skipDed
   const payload = JSON.stringify({
     title: "İstanbul · Yarın hava nasıl?",
     body: weather.body,
-    tag: "gfs-" + weather.id,
+    tag: "gfs-tomorrow-weather",
     url: DEFAULT_ORIGIN + "/#bildirimler"
   });
 
@@ -206,7 +193,7 @@ async function sendTomorrowWeatherPush(env, headers, mode = "scheduled", skipDed
       delivered++;
     } catch (error) {
       const status = Number(error.statusCode || 0);
-      console.error("Tomorrow push failed:", status || error.message);
+      console.error("Web push failed:", status || error.message);
 
       if (status === 404 || status === 410) {
         await env.DB
@@ -217,29 +204,24 @@ async function sendTomorrowWeatherPush(env, headers, mode = "scheduled", skipDed
     }
   }
 
-  if (delivered > 0) {
-    await env.DB
-      .prepare(
-        "INSERT OR IGNORE INTO sent_notifications (id, sent_at, recipient_count) VALUES (?, ?, ?)"
-      )
-      .bind(weather.id, new Date().toISOString(), delivered)
-      .run();
-  }
-
   console.log(
-    mode + " tomorrow weather push:",
-    JSON.stringify({ id: weather.id, run: weather.run, body: weather.body, delivered })
+    "19:45 push:",
+    JSON.stringify({
+      run: weather.run,
+      tomorrow: weather.tomorrow,
+      body: weather.body,
+      delivered,
+      subscriptions: subscriptions.length
+    })
   );
 
   return {
     ok: true,
-    skipped: false,
     delivered,
     subscriptions: subscriptions.length,
     ...weather
   };
 }
-
 export default {
   async fetch(request, env) {
     const url = new URL(request.url);
@@ -296,93 +278,6 @@ export default {
         return json({ ok: true, subscribed: true }, 201, headers);
       }
 
-      if (url.pathname.startsWith("/admin/")) {
-        if (!authorized(request, env)) {
-          return json({ error: "Unauthorized" }, 401, headers);
-        }
-
-        if (url.pathname === "/admin/subscriptions" && request.method === "GET") {
-          const result = await env.DB
-            .prepare(
-              "SELECT subscription_json FROM push_subscriptions ORDER BY created_at ASC LIMIT 500"
-            )
-            .all();
-
-          const subscriptions = (result.results || [])
-            .map(row => {
-              try { return JSON.parse(row.subscription_json); } catch (_) { return null; }
-            })
-            .filter(Boolean);
-
-          return json({ subscriptions }, 200, headers);
-        }
-
-        if (url.pathname === "/admin/subscriptions/delete" && request.method === "POST") {
-          const body = await readJson(request);
-
-          if (
-            typeof body.endpoint !== "string" ||
-            !body.endpoint.startsWith("https://")
-          ) {
-            return json({ error: "Invalid endpoint" }, 400, headers);
-          }
-
-          await env.DB
-            .prepare("DELETE FROM push_subscriptions WHERE endpoint = ?")
-            .bind(body.endpoint)
-            .run();
-
-          return json({ ok: true }, 200, headers);
-        }
-
-        if (
-          url.pathname === "/admin/send-tomorrow-weather" &&
-          request.method === "POST"
-        ) {
-          const result = await sendTomorrowWeatherPush(env, headers, "manual", false);
-          return json({ ...result, manual: true }, 200, headers);
-        }
-
-        if (url.pathname === "/admin/notification-sent" && request.method === "GET") {
-          const id = url.searchParams.get("id") || "";
-
-          if (!id || id.length > 200) {
-            return json({ error: "Invalid notification id" }, 400, headers);
-          }
-
-          const row = await env.DB
-            .prepare(
-              "SELECT id, sent_at, recipient_count FROM sent_notifications WHERE id = ?"
-            )
-            .bind(id)
-            .first();
-
-          return json({ sent: Boolean(row), record: row || null }, 200, headers);
-        }
-
-        if (url.pathname === "/admin/notification-sent" && request.method === "POST") {
-          const body = await readJson(request);
-
-          if (
-            typeof body.id !== "string" ||
-            !body.id ||
-            body.id.length > 200 ||
-            !Number.isInteger(body.recipient_count) ||
-            body.recipient_count < 1
-          ) {
-            return json({ error: "Invalid sent notification record" }, 400, headers);
-          }
-
-          await env.DB
-            .prepare(
-              "INSERT OR IGNORE INTO sent_notifications (id, sent_at, recipient_count) VALUES (?, ?, ?)"
-            )
-            .bind(body.id, new Date().toISOString(), body.recipient_count)
-            .run();
-
-          return json({ ok: true }, 201, headers);
-        }
-      }
 
       return json({ error: "Not found" }, 404, headers);
     } catch (error) {
@@ -395,12 +290,8 @@ export default {
   },
 
   async scheduled(event, env, ctx) {
-    if (event.cron !== "45 16 * * *") return;
-
-    ctx.waitUntil(
-      (async () => {
-        await sendTomorrowWeatherPush(env, new Headers(), "scheduled");
-      })()
-    );
+    if (event.cron === "45 16 * * *") {
+      ctx.waitUntil(sendTomorrowWeatherPush(env));
+    }
   }
 };
