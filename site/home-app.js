@@ -1866,7 +1866,7 @@ if(typeof renderBriefing==="function")renderBriefing();
       list.innerHTML=items.slice(0,1).map(item=>{
         const legacyImage=notificationAsset(item.image_path,cacheVersion);
         const imageItems=Array.isArray(item.images)
-          ? item.images.filter(image=>image&&typeof image.path==="string"&&/\.(?:png|svg)$/i.test(image.path)).map(image=>({url:notificationAsset(image.path,cacheVersion),isSvg:/\.svg$/i.test(image.path)}))
+          ? item.images.filter(image=>image&&typeof image.path==="string"&&/\.(?:png|svg)(?:[?#].*)?$/i.test(image.path)).map(image=>({url:notificationAsset(image.path,cacheVersion),isSvg:/\.svg(?:[?#]|$)/i.test(image.path)}))
           : legacyImage&&/\.(?:png|svg)(?:[?#]|$)/i.test(item.image_path||"")?[{url:legacyImage,isSvg:/\.svg(?:[?#]|$)/i.test(item.image_path||"")}]:[];
         const imagesHtml=imageItems.length>0
           ? '<div class="notification-images koy-fullframe-images koy-gfs-svg-images" style="background:#0A1B29!important">'+imageItems.map(image=>{
