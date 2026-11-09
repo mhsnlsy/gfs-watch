@@ -4,7 +4,7 @@ const LON = 28.9438;
 const ANALYSIS_RADIUS_KM = 210;
 const THRESHOLD_DBZ_STRONG = 30;
 const ENTRY_ALERT_RADIUS_KM = 25;
-const RADAR_BUILD = "paid-cron-2026-11-10-approach-only-1";
+const RADAR_BUILD = "paid-cron-2026-11-10-approach-every-6m-1";
 const HISTORY_LEN = 4;
 const ZOOM = 7;
 const TILE_SIZE = 256;
@@ -244,8 +244,8 @@ async function check(env){
     previous.min_dist_km != null &&
     curr.min_dist_km < previous.min_dist_km
   );
-  // Alert rule: if RainViewer detects precipitation and the detected
-  // precipitation is moving closer to the target than in the previous frame.
+  // Alert on every six-minute scan while RainViewer detects precipitation
+  // that is moving closer to Istanbul. No cooldown is applied.
   const alert = rainDetected && approaching;
 
   let intensity="HAFİF",emoji="🌦️";
