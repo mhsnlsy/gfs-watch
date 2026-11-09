@@ -508,7 +508,8 @@ function meteoptTableBand(field,value){
 function meteoptTableValue(value,field,digits=1){
  if(value==null)return '<span class="meteopt-value">—</span>';
  const band=meteoptTableBand(field,value);
- return '<span class="meteopt-value '+band+'">'+fmt(value,digits)+'</span>';
+ const display=field==="snowln" ? String(Math.round(value)) : fmt(value,digits);
+ return '<span class="meteopt-value '+band+'">'+display+'</span>';
 }
 function renderF180(d){
  const pts=pointsOf(d,180);
