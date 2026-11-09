@@ -15,6 +15,11 @@ MAIN = ROOT / "main.py"
 def main() -> None:
     html = HTML.read_text(encoding="utf-8")
     main = MAIN.read_text(encoding="utf-8")
+    APP = ROOT / "site" / "home-app.js"
+    CSS = ROOT / "site" / "home.css"
+    app = APP.read_text(encoding="utf-8")
+    css = CSS.read_text(encoding="utf-8")
+    website_contract = html + "\n" + app + "\n" + css
     required = (
         'id="model-gfs-button"',
         'id="model-ecmwf-button"',
@@ -50,7 +55,7 @@ def main() -> None:
         'renderDaily(viewData.daily_summary,"ecmwf-daily-grid")',
         'renderFindings(viewData.regional_pressure_analysis&&viewData.regional_pressure_analysis.findings,first.mslp&&first.mslp.mean_hpa,"ecmwf-pressure-findings")',
     )
-    missing = [item for item in required if item not in html]
+    missing = [item for item in required if item not in website_contract]
     if missing:
         raise AssertionError("Missing ECMWF website contract: " + ", ".join(missing))
 
@@ -60,9 +65,9 @@ def main() -> None:
     station_card_end = html.index('</article>', history_end)
     if not (station_card_start < history_start < history_end < station_card_end):
         raise AssertionError("The 24-hour station trends must be embedded inside the live observation card.")
-    if '.station-history-inline .history-charts{grid-template-columns:repeat(2,minmax(0,1fr))' not in html:
+    if '.station-history-inline .history-charts{grid-template-columns:repeat(2,minmax(0,1fr))' not in website_contract:
         raise AssertionError("The embedded station history must use a compact two-chart layout.")
-    if '.daily-grid .day{padding:10px 4px 9px' not in html:
+    if '.daily-grid .day{padding:10px 4px 9px' not in website_contract:
         raise AssertionError("The eight-day forecast cards are missing their compact visual treatment.")
 
     ids = re.findall('id="([^"]+)"', html)
@@ -97,18 +102,18 @@ def main() -> None:
         raise AssertionError("The bottom GFS 850 hPa panel should be gone.")
     if 'class="chart-stack"' not in ecmwf or 'class="chart-card"' not in ecmwf:
         raise AssertionError("The remaining ECMWF wind comparison charts are missing.")
-    if '.chart-stack>.chart-card{\n      border:0!important' not in html:
+    if '.chart-stack>.chart-card{\n      border:0!important' not in website_contract:
         raise AssertionError("Mobile ECMWF chart cards must be frameless.")
-    if html.count('document.addEventListener("pointerdown"') != 1 or html.count('window.addEventListener("scroll"') != 1:
+    if website_contract.count('document.addEventListener("pointerdown"') != 1 or website_contract.count('window.addEventListener("scroll"') != 1:
         raise AssertionError("Touch tooltip dismissal must use singleton global listeners.")
 
     for section_id in ("ecmwf-tahmin", "ecmwf-seyir", "ecmwf-basinc"):
         if f'id="{section_id}"' not in ecmwf:
             raise AssertionError(f"Missing ECMWF section: {section_id}")
 
-    if "ecmwf-report-images" not in ecmwf:
+    if "ecmwf-report-images" not in website_contract:
         raise AssertionError("ECMWF PNG report gallery is missing.")
-    if "#ecmwf-report-images{display:grid;grid-template-columns:repeat(2,minmax(0,1fr))" not in html:
+    if "#ecmwf-report-images{display:grid;grid-template-columns:repeat(2,minmax(0,1fr))" not in website_contract:
         raise AssertionError("Desktop ECMWF report images must sit in a 2x2 grid.")
 
     if "ecmwf-wind-chart" in html or "ecmwf-forecast-table" in html:
@@ -138,11 +143,11 @@ def main() -> None:
         raise AssertionError("Telegram reports must take their version from the same site/version.json.")
 
     for marker in ('id="briefing"', 'id="brief-rain"', 'id="brief-rain-lines"', "function buildBriefing"):
-        if marker not in html:
+        if marker not in website_contract:
             raise AssertionError("72-hour briefing is missing: " + marker)
-    if "viewport-fit=cover" not in html or "env(safe-area-inset-top)" not in html:
+    if "viewport-fit=cover" not in website_contract or "env(safe-area-inset-top)" not in website_contract:
         raise AssertionError("Modern iPhone safe-area viewport support is missing.")
-    if "orientation:landscape" not in html or "max-height:600px" not in html:
+    if "orientation:landscape" not in website_contract or "max-height:600px" not in website_contract:
         raise AssertionError("Compact landscape phone layout is missing.")
     print("[ECMWF UI SMOKE] model selector, daily forecast ordering, responsive safe areas, "
           "touch tooltip dismissal, ECMWF wind comparison, "
