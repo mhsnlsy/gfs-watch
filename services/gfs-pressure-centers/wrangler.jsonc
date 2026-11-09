@@ -1,0 +1,28 @@
+{
+  "$schema": "./node_modules/wrangler/config-schema.json",
+  "name": "gfs-pressure-centers",
+  "main": "src/index.js",
+  "compatibility_date": "2026-11-08",
+  "containers": [
+    {
+      "class_name": "GfsPressureContainer",
+      "image": "./container/Dockerfile",
+      "max_instances": 1,
+      "instance_type": "basic"
+    }
+  ],
+  "durable_objects": {
+    "bindings": [
+      {
+        "name": "GFS_PRESSURE_CONTAINER",
+        "class_name": "GfsPressureContainer"
+      }
+    ]
+  },
+  "exports": {
+    "GfsPressureContainer": {
+      "type": "durable-object",
+      "storage": "sqlite"
+    }
+  }
+}
