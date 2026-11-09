@@ -246,6 +246,15 @@ export default {
         return json({ publicKey: env.VAPID_PUBLIC_KEY }, 200, headers);
       }
 
+      if (url.pathname === "/admin/send-tomorrow-weather" && request.method === "POST") {
+        const token = env.PUSH_ADMIN_TOKEN;
+        if (!token || request.headers.get("Authorization") !== "Bearer " + token) {
+          return json({ error: "Unauthorized" }, 401, headers);
+        }
+        const result = await sendTomorrowWeatherPush(env);
+        return json({ ...result, manual: true }, 200, headers);
+      }
+
       if (url.pathname === "/subscribe" && request.method === "POST") {
         if (origin !== allowedOrigin) {
           return json({ error: "Origin not allowed" }, 403, headers);
