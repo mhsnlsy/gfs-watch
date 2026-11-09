@@ -163,12 +163,14 @@ function approaching(prev,curr){
 }
 
 async function telegramText(env,text){
-  if(!env.TELEGRAM_TOKEN||!env.CHAT_ID)return false;
+  if(!env.TELEGRAM_TOKEN||!env.CHAT_ID)return {ok:false,status:0,body:"telegram credentials missing"};
   const r=await fetch(`https://api.telegram.org/bot${env.TELEGRAM_TOKEN}/sendMessage`,{
     method:"POST",headers:{"content-type":"application/json"},
     body:JSON.stringify({chat_id:env.CHAT_ID,text,parse_mode:"HTML"})
   });
-  return r.ok;
+  let body="";
+  try{body=await r.text();}catch{}
+  return {ok:r.ok,status:r.status,body:body.slice(0,500)};
 }
 
 async function telegramPhoto(env,bytes,caption){
@@ -335,6 +337,34 @@ async function check(env){
 }
 
 export default {
-  async fetch(request,env){const url=new URL(request.url);if(url.pathname==="/health"){const s=await getState(env.RADAR_DB);return new Response(JSON.stringify({ok:true,service:"radar-monitor",interval:"6m",build:RADAR_BUILD,pixel_threshold:MIN_ALERT_PIXELS,cooldown_minutes:ALERT_COOLDOWN_SECONDS/60,last_frame_ts:Number(s.last_frame_ts||0),last_alert_ts:Number(s.last_alert_ts||0),last_intensity:s.last_intensity||""}),{headers:{"content-type":"application/json"}});}return new Response(JSON.stringify({ok:true,service:"radar-monitor",interval:"6m"}),{headers:{"content-type":"application/json"}});},
+  async fetch(request,env){
+    const url=new URL(request.url);
+
+    // Deployment smoke-test: verifies the exact Cloudflare Worker -> Telegram
+    // delivery path without touching radar_state or the real alert cooldown.
+    if(url.pathname==="/test-radar"){
+      const scenario={distance_km:30,dbz:25,pixels:20,speed_kmh:30,eta_minutes:60};
+      const caption=
+        "🌧️ <b>SENTETİK RADAR TESTİ — İstanbul</b>\\n"+
+        "RainViewer/Telegram teslimat hattı testi.\\n"+
+        "Senaryo: 30 km kuzey · 25 dBZ · 20 piksel · 30 km/sa · ~60 dk ETA";
+      const photo=await makeSyntheticRadarPng();
+      const photoResult=await telegramPhoto(env,photo,caption);
+      const telegramSent=Boolean(typeof photoResult==="object" ? photoResult.ok : photoResult);
+      let textResult=null;
+      if(!telegramSent){
+        textResult=await telegramText(env,caption);
+      }
+      const sent=telegramSent || Boolean(textResult?.ok);
+      return new Response(JSON.stringify({
+        status:sent?"test_sent":"test_failed",
+        telegram_sent:sent,
+        photo_result:photoResult,
+        text_result:textResult,
+        scenario
+      }),{status:sent?200:502,headers:{"content-type":"application/json","cache-control":"no-store"}});
+    }
+
+    if(url.pathname==="/health"){const url=new URL(request.url);if(url.pathname==="/health"){const s=await getState(env.RADAR_DB);return new Response(JSON.stringify({ok:true,service:"radar-monitor",interval:"6m",build:RADAR_BUILD,pixel_threshold:MIN_ALERT_PIXELS,cooldown_minutes:ALERT_COOLDOWN_SECONDS/60,last_frame_ts:Number(s.last_frame_ts||0),last_alert_ts:Number(s.last_alert_ts||0),last_intensity:s.last_intensity||""}),{headers:{"content-type":"application/json"}});}return new Response(JSON.stringify({ok:true,service:"radar-monitor",interval:"6m"}),{headers:{"content-type":"application/json"}});},
   async scheduled(event,env,ctx){ctx.waitUntil(check(env).then(r=>console.log(JSON.stringify(r))).catch(e=>console.error(e.stack||e.message||e)));}
 };
