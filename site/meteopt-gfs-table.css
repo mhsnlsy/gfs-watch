@@ -1884,3 +1884,24 @@ html,body{
     line-height: 1.05 !important;
   }
 }
+
+
+/* Keep the Köy page's more-specific local table rules aligned with İstanbul. */
+@media (min-width: 851px) and (pointer: fine) {
+  #meteopt-gfs-table .meteopt-data-table.koy-snowln-table th:first-child,
+  #meteopt-gfs-table .meteopt-data-table.koy-snowln-table td:first-child {width:44px!important;min-width:44px!important;max-width:44px!important}
+  #meteopt-gfs-table .meteopt-data-table.koy-snowln-table th:nth-child(2),
+  #meteopt-gfs-table .meteopt-data-table.koy-snowln-table td:nth-child(2) {width:114px!important;min-width:114px!important;max-width:114px!important}
+  #meteopt-gfs-table .meteopt-data-table.koy-snowln-table th:nth-child(n+3),
+  #meteopt-gfs-table .meteopt-data-table.koy-snowln-table td:nth-child(n+3) {width:52px!important;min-width:52px!important;max-width:52px!important}
+}
+@media (max-width: 850px), (pointer: coarse) {
+  #meteopt-gfs-table .meteopt-data-table.koy-snowln-table th:first-child,
+  #meteopt-gfs-table .meteopt-data-table.koy-snowln-table td:first-child {width:7%!important;min-width:0!important;max-width:none!important}
+  #meteopt-gfs-table .meteopt-data-table.koy-snowln-table th:nth-child(2),
+  #meteopt-gfs-table .meteopt-data-table.koy-snowln-table td:nth-child(2) {width:23%!important;min-width:0!important;max-width:none!important}
+  #meteopt-gfs-table .meteopt-data-table.koy-snowln-table th:nth-child(n+3),
+  #meteopt-gfs-table .meteopt-data-table.koy-snowln-table td:nth-child(n+3) {width:8.75%!important;min-width:0!important;max-width:none!important}
+  #meteopt-gfs-table .meteopt-data-table.koy-snowln-table th,
+  #meteopt-gfs-table .meteopt-data-table.koy-snowln-table td {padding-left:0!important;padding-right:0!important}
+}
