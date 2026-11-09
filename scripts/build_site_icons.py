@@ -57,7 +57,7 @@ def main() -> None:
     logo.save(
         args.output / "favicon.ico",
         format="ICO",
-        sizes=[(16, 16), (32, 32), (48, 48), (64, 64), (128, 128), (256, 256)],
+        sizes=[(16, 16), (32, 32), (48, 48), (64, 64)],
     )
 
     # Apple touch icons are opaque: composite transparent rounded corners on navy.
@@ -80,7 +80,7 @@ def main() -> None:
         args.output / "mstile-150x150.png", format="PNG", optimize=True
     )
 
-    # Embed the PNG inside the SVG so browser favicon loading has no external dependency.
+    # Keep the 512x512 favicon PNG palette-compressed; it is a PWA asset, not a first-paint resource.\n    favicon512 = logo.resize((512, 512), resampling).convert(\n        "P", palette=Image.Palette.ADAPTIVE, colors=256, dither=Image.Dither.NONE\n    )\n    favicon512.save(args.output / "favicon-512x512.png", format="PNG", optimize=True)\n\n    # Embed the PNG inside the SVG so browser favicon loading has no external dependency.
     png512 = (args.output / "favicon-512x512.png").read_bytes()
     embedded_png = base64.b64encode(png512).decode("ascii")
     svg = (
