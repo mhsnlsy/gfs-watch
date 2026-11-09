@@ -111,16 +111,16 @@
       const y=lat=>top+(maxLat-Number(lat))/(maxLat-minLat)*(height-top-bottom);
       const gridLon=[15,20,25,30,35,40,45];
       const gridLat=[30,35,40,45,50];
-      const grid=gridLon.map(lon=>\`<line x1="\${x(lon)}" y1="\${top}" x2="\${x(lon)}" y2="\${height-bottom}" class="pressure-map-grid"/><text x="\${x(lon)}" y="\${height-12}" class="pressure-map-label" text-anchor="middle">\${lon}°E</text>\`).join("")
-        +gridLat.map(lat=>\`<line x1="\${left}" y1="\${y(lat)}" x2="\${width-right}" y2="\${y(lat)}" class="pressure-map-grid"/><text x="8" y="\${y(lat)+4}" class="pressure-map-label">\${lat}°N</text>\`).join("");
+      const grid=gridLon.map(lon=>`<line x1="${x(lon)}" y1="${top}" x2="${x(lon)}" y2="${height-bottom}" class="pressure-map-grid"/><text x="${x(lon)}" y="${height-12}" class="pressure-map-label" text-anchor="middle">${lon}°E</text>`).join("")
+        +gridLat.map(lat=>`<line x1="${left}" y1="${y(lat)}" x2="${width-right}" y2="${y(lat)}" class="pressure-map-grid"/><text x="8" y="${y(lat)+4}" class="pressure-map-label">${lat}°N</text>`).join("");
       const istX=x(28.95),istY=y(41.014);
       const markers=centers.map(center=>{
         const cls=center.type==="low"?"low":"high";
         const label=center.type==="low"?"L":"Y";
         const cx=x(center.longitude),cy=y(center.latitude);
-        return \`<g class="pressure-map-marker \${cls}" tabindex="0"><circle cx="\${cx}" cy="\${cy}" r="9"/><text x="\${cx}" y="\${cy+4}" text-anchor="middle">\${label}</text><title>\${center.type==="low"?"Alçak":"Yüksek"} basınç · \${Number(center.pressure_hpa).toFixed(1)} hPa · \${Number(center.distance_km).toFixed(0)} km</title></g>\`;
+        return `<g class="pressure-map-marker ${cls}" tabindex="0"><circle cx="${cx}" cy="${cy}" r="9"/><text x="${cx}" y="${cy+4}" text-anchor="middle">${label}</text><title>${center.type==="low"?"Alçak":"Yüksek"} basınç · ${Number(center.pressure_hpa).toFixed(1)} hPa · ${Number(center.distance_km).toFixed(0)} km</title></g>`;
       }).join("");
-      map.innerHTML=\`<div class="pressure-map-head"><span>İstanbul merkezli · 2500 km çap</span><span><i class="pressure-map-key high"></i> Yüksek ≥1023 · <i class="pressure-map-key low"></i> Alçak ≤1013</span></div><svg viewBox="0 0 \${width} \${height}" role="img" aria-label="Basınç merkezleri koordinat haritası">\${grid}<rect x="\${left}" y="\${top}" width="\${width-left-right}" height="\${height-top-bottom}" class="pressure-map-frame"/><line x1="\${istX-12}" y1="\${istY}" x2="\${istX+12}" y2="\${istY}" class="pressure-map-istanbul"/><line x1="\${istX}" y1="\${istY-12}" x2="\${istX}" y2="\${istY+12}" class="pressure-map-istanbul"/><circle cx="\${istX}" cy="\${istY}" r="3.5" class="pressure-map-istanbul-dot"/><text x="\${istX+9}" y="\${istY-8}" class="pressure-map-istanbul-label">İstanbul</text>\${markers}</svg>\`;
+      map.innerHTML=`<div class="pressure-map-head"><span>İstanbul merkezli · 2500 km çap</span><span><i class="pressure-map-key high"></i> Yüksek ≥1023 · <i class="pressure-map-key low"></i> Alçak ≤1013</span></div><svg viewBox="0 0 ${width} ${height}" role="img" aria-label="Basınç merkezleri koordinat haritası">${grid}<rect x="${left}" y="${top}" width="${width-left-right}" height="${height-top-bottom}" class="pressure-map-frame"/><line x1="${istX-12}" y1="${istY}" x2="${istX+12}" y2="${istY}" class="pressure-map-istanbul"/><line x1="${istX}" y1="${istY-12}" x2="${istX}" y2="${istY+12}" class="pressure-map-istanbul"/><circle cx="${istX}" cy="${istY}" r="3.5" class="pressure-map-istanbul-dot"/><text x="${istX+9}" y="${istY-8}" class="pressure-map-istanbul-label">İstanbul</text>${markers}</svg>`;
     }
     async function loadGithubPressureCenters(){
       const list=$("pressure-findings");
