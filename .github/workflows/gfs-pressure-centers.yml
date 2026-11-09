@@ -1,4 +1,5 @@
 name: GFS Pressure Centers
+# [pressure-center-test] refined detector + map validation
 
 on:
   workflow_dispatch:
