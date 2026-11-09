@@ -2512,18 +2512,17 @@ html.ios12 #enka-camera-panel .enka-camera-frame{
 
 /* Desktop: keep the live observation dashboard compact and anchored to the left. */
 @media (min-width:901px){
-  /* Desktop: keep the live observation dashboard narrow and firmly left-aligned,
-     leaving the rest of the page open for the surrounding content. */
+  /* Desktop: compact live observation dashboard, flush to the left. */
   .dashboard-top{
-    grid-template-columns:minmax(0,820px);
-    width:820px;
-    max-width:calc(100vw - 32px);
+    grid-template-columns:600px;
+    width:600px;
+    max-width:600px;
     margin-left:0;
     margin-right:auto;
   }
   .dashboard-top .station-card{
-    width:100%;
-    max-width:820px;
+    width:600px;
+    max-width:600px;
   }
 }
 
