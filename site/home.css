@@ -3296,7 +3296,7 @@ html.ios12 #enka-camera-panel .enka-camera-frame{
   }
   .dashboard-right{
     grid-column:2!important;
-    grid-row:1 / span 2!important;
+    grid-row:1!important;
     width:100%!important;
     min-width:0!important;
     max-width:100%!important;
