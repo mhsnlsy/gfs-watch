@@ -336,11 +336,11 @@ export default {
         }
 
         if (
-          url.pathname === "/admin/test-tomorrow-weather-push" &&
+          url.pathname === "/admin/send-tomorrow-weather" &&
           request.method === "POST"
         ) {
-          const result = await sendTomorrowWeatherPush(env, headers, "manual-test", true);
-          return json({ ...result, manual_test: true }, 200, headers);
+          const result = await sendTomorrowWeatherPush(env, headers, "manual", false);
+          return json({ ...result, manual: true }, 200, headers);
         }
 
         if (url.pathname === "/admin/notification-sent" && request.method === "GET") {
