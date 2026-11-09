@@ -3665,8 +3665,8 @@ html.ios12 #enka-camera-panel .enka-camera-frame{
     margin-top:11.34px!important;
   }
   .dashboard-left .station-card>.station-switch button{
-    min-height:30.78px!important;
-    padding:6.48px 8.91px!important;
+    min-height:28px!important;
+    padding:7px!important;
   }
   .dashboard-left .station-card .station-overview{
     margin-top:8.1px!important;
