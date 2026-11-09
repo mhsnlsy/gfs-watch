@@ -1,11 +1,6 @@
 name: Deploy GFS Pressure Centers Container
 on:
   workflow_dispatch:
-  push:
-    paths:
-      - 'services/gfs-pressure-centers/**'
-      - '.github/workflows/deploy-gfs-pressure-centers.yml'
-    branches: [main]
 permissions:
   contents: read
 jobs:
