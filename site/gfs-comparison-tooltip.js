@@ -362,7 +362,7 @@ function addMobileGfsCycleLabels(panelHost,panel,panelSvg){
 
   Object.assign(legend.style,{
     position:"absolute",
-    top:"30px",
+    top:"8px",
     left:"8px",
     right:"8px",
     zIndex:"1100",
