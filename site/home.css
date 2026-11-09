@@ -410,7 +410,7 @@
 .enka-camera-head{display:flex;align-items:center;justify-content:space-between;gap:12px;padding:11px 14px;border-bottom:1px solid rgba(125,211,215,.14)}
 .enka-camera-title{font-size:8px;font-weight:800;letter-spacing:.06em;text-transform:uppercase;color:#d9f7f5;line-height:1.15}
 .enka-camera-status{font-size:10px;color:#8fd0c8;white-space:nowrap}
-.enka-camera-frame{display:block;width:100%;margin:0;aspect-ratio:auto;min-height:0;object-fit:cover;background:#020f18}
+.enka-camera-frame{display:block;width:100%;margin:0;aspect-ratio:auto;min-height:0;object-fit:contain;background:#020f18}
 .enka-camera-foot{display:flex;justify-content:space-between;gap:10px;padding:8px 12px;font-size:10px;color:#8faab5}
 @media(max-width:700px){.enka-camera-panel{grid-column:auto!important;width:100%!important;max-width:100%!important;margin:0!important;align-self:stretch!important;justify-self:stretch!important;border-radius:21px;position:static!important;left:auto!important;transform:none!important}.enka-camera-frame{min-height:0}.enka-camera-head{padding:9px 11px}.enka-camera-foot{font-size:9px}}
 .briefing-row{display:grid;grid-template-columns:86px minmax(0,1fr);gap:8px;align-items:start;padding:5px 8px;border-radius:10px;background:rgba(2,15,24,.28);border:1px solid rgba(143,184,196,.16)}
@@ -2394,9 +2394,9 @@ html.ios12 .footer > *{
   width:max(40%, min(280px, 100%))!important;
   max-width:100%!important;
   min-width:0!important;
-  margin:0 auto!important;
-  justify-self:center!important;
-  align-self:center!important;
+  margin:0 auto 0 0!important;
+  justify-self:start!important;
+  align-self:start!important;
   position:static!important;
   left:auto!important;
   transform:none!important;
@@ -2438,12 +2438,12 @@ html.ios12 .footer > *{
   position:relative;
   width:100%;
   max-width:100%;
-  aspect-ratio:16/9;
+  aspect-ratio:4/3;
   background:#071521;
   overflow:hidden;
 }
-@supports not (aspect-ratio: 16 / 9){
-  #enka-camera-panel .enka-camera-stage{height:0;padding-top:56.25%}
+@supports not (aspect-ratio: 4 / 3){
+  #enka-camera-panel .enka-camera-stage{height:0;padding-top:75%}
 }
 #enka-camera-panel .enka-camera-frame,
 #enka-camera-panel .enka-camera-placeholder{
@@ -2455,7 +2455,8 @@ html.ios12 .footer > *{
   min-height:0!important;
 }
 #enka-camera-panel .enka-camera-frame{
-  object-fit:cover;
+  object-fit:contain;
+  object-position:center;
   aspect-ratio:auto;
 }
 #enka-camera-panel .enka-camera-frame.is-pending,
@@ -2477,7 +2478,7 @@ html.ios12 #enka-camera-panel{
   width:max(40%, min(280px, 100%))!important;
   max-width:100%!important;
   min-width:0!important;
-  margin-left:auto!important;
+  margin-left:0!important;
   margin-right:auto!important;
 }
 html.ios12 #enka-camera-panel .enka-camera-stage,
@@ -2492,7 +2493,8 @@ html.ios12 #enka-camera-panel .enka-camera-frame{
   min-height:0!important;
 }
 @media(max-width:700px){
-  #enka-camera-panel.enka-camera-panel{
+  #enka-camera-panel.enka-camera-panel,
+  html.ios12 #enka-camera-panel{
     width:max(40%, min(280px, 100%))!important;
     max-width:100%!important;
     margin:0 auto!important;
