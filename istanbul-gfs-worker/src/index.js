@@ -823,11 +823,17 @@ async function collectData(env) {
     }
   }
 
-  const latestRuns = await listRuns(env, 1);
-  if (latestRuns[0]) {
+  // Keep the public latest feed alive from the newest successfully normalized
+  // MeteoPT cycle, even before F180 is reached. F180 is required for archiving
+  // and report generation, but it must not be allowed to blank the homepage
+  // during the hours when only F72/F153/etc. is available.
+  const newestNormalized = normalized
+    .map(entry => entry.result.payload)
+    .sort((a, b) => Date.parse(b.run_id_utc) - Date.parse(a.run_id_utc))[0] || null;
+  if (newestNormalized) {
     const current = await getCurrent(env, "latest");
-    if (!current || Date.parse(latestRuns[0].run_id_utc) >= Date.parse(current.run_id_utc)) {
-      await writeCurrent(env, "latest", latestRuns[0]);
+    if (!current || Date.parse(newestNormalized.run_id_utc) >= Date.parse(current.run_id_utc)) {
+      await writeCurrent(env, "latest", newestNormalized);
     }
   }
 
