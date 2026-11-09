@@ -3765,17 +3765,15 @@ html.ios12 #enka-camera-panel .enka-camera-frame{
   }
   .dashboard-left > .station-briefing-inline{
     grid-column:1!important;
-    grid-row:1!important;
-    position:absolute!important;
-    top:590px!important;
+    grid-row:2!important;
+    position:relative!important;
+    top:0!important;
     left:0!important;
     width:600px!important;
     max-width:600px!important;
+    align-self:start!important;
+    margin:0!important;
     z-index:30!important;
-  }
-  .dashboard-left > .station-briefing-inline{
-    grid-column:1!important;
-    grid-row:2!important;
   }
   .dashboard-left > .gfs-pressure-panel{
     grid-column:1!important;
