@@ -2385,18 +2385,24 @@ html.ios12 .footer > *{
   max-width:none!important;
   min-width:0!important;
 }
-#enka-kamera{
+.water-gfs-layout > #enka-kamera{
+  grid-column:1;
   width:100%;
   max-width:100%;
   min-width:0;
+  justify-self:stretch;
+  align-self:start;
+  box-sizing:border-box;
+  padding-left:0;
+  padding-right:0;
 }
 #enka-camera-panel.enka-camera-panel{
-  width:max(40%, min(280px, 100%))!important;
+  width:100%!important;
   max-width:100%!important;
   min-width:0!important;
-  margin:0 auto 0 0!important;
-  justify-self:start!important;
-  align-self:start!important;
+  margin:0!important;
+  justify-self:stretch!important;
+  align-self:stretch!important;
   position:static!important;
   left:auto!important;
   transform:none!important;
@@ -2475,11 +2481,10 @@ html.ios12 .footer > *{
 }
 #enka-camera-panel .enka-camera-placeholder[hidden]{display:none!important}
 html.ios12 #enka-camera-panel{
-  width:max(40%, min(280px, 100%))!important;
+  width:100%!important;
   max-width:100%!important;
   min-width:0!important;
-  margin-left:0!important;
-  margin-right:auto!important;
+  margin:0!important;
 }
 html.ios12 #enka-camera-panel .enka-camera-stage,
 html.ios12 #enka-camera-panel .enka-camera-frame{
@@ -2492,12 +2497,14 @@ html.ios12 #enka-camera-panel .enka-camera-frame{
   height:100%!important;
   min-height:0!important;
 }
-@media(max-width:700px){
+@media(max-width:899px){
   #enka-camera-panel.enka-camera-panel,
-  html.ios12 #enka-camera-panel{
-    width:max(40%, min(280px, 100%))!important;
+  html.ios12 #enka-camera-panel,
+  .water-gfs-layout > #enka-kamera{
+    width:100%!important;
     max-width:100%!important;
-    margin:0 auto!important;
+    margin:0!important;
+    justify-self:stretch!important;
   }
   #enka-camera-panel .enka-camera-head,
   #enka-camera-panel .enka-camera-foot{
