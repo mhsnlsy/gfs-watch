@@ -2,7 +2,7 @@
 const LAT = 41.0904;
 const LON = 28.9438;
 const RADIUS_KM = 25;
-const THRESHOLD_DBZ = 8;
+const THRESHOLD_DBZ = 5;
 const THRESHOLD_DBZ_STRONG = 30;
 const MIN_ALERT_PIXELS = 5;
 const ALERT_COOLDOWN_SECONDS = 45 * 60;
@@ -10,7 +10,7 @@ const ALERT_COOLDOWN_SECONDS = 45 * 60;
 // The previous ETA gate could suppress a real rain event when the first
 // detected frame had no usable motion vector or an ETA above 90 minutes.
 const ENTRY_ALERT_RADIUS_KM = 25;
-const RADAR_BUILD = "paid-cron-2026-11-08-rain-report-map-1";
+const RADAR_BUILD = "paid-cron-2026-11-09-dbz5-rain-report-map-1";
 const HISTORY_LEN = 4;
 const ZOOM = 7;
 const TILE_SIZE = 256;
