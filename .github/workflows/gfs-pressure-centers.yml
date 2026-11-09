@@ -2,9 +2,6 @@ name: GFS Pressure Centers
 
 on:
   workflow_dispatch:
-  push:
-    branches:
-      - main
   schedule:
     - cron: "20 23,5,11,17 * * *"
 
@@ -13,7 +10,6 @@ permissions:
 
 jobs:
   analyze:
-    if: github.event_name != 'push' || contains(github.event.head_commit.message, '[pressure-center-test]')
     runs-on: ubuntu-latest
     timeout-minutes: 15
     steps:
