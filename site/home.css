@@ -3139,3 +3139,117 @@ html.ios12 #enka-camera-panel .enka-camera-frame{
     min-height:0!important;
   }
 }
+
+
+/* PRESSURE PANEL FINAL PLACEMENT
+   Keep the pressure analysis inside the available GFS column.
+   In mobile flow it must follow the full MeteoPT 180h table. */
+.water-gfs-layout,
+.gfs-table-pressure-layout{
+  display:flex!important;
+  flex-direction:column!important;
+  align-items:stretch!important;
+  justify-content:flex-start!important;
+  gap:16px!important;
+  width:100%!important;
+  max-width:100%!important;
+  min-width:0!important;
+  margin-left:0!important;
+  margin-right:0!important;
+  padding-left:0!important;
+  padding-right:0!important;
+  box-sizing:border-box!important;
+}
+.water-gfs-layout > #meteopt-gfs-table,
+.gfs-table-pressure-layout > #meteopt-gfs-table{
+  order:1!important;
+  position:static!important;
+  inset:auto!important;
+  float:none!important;
+  transform:none!important;
+  display:block!important;
+  width:100%!important;
+  max-width:100%!important;
+  min-width:0!important;
+  margin:0!important;
+  box-sizing:border-box!important;
+}
+.water-gfs-layout > #basinc,
+.gfs-table-pressure-layout > #basinc{
+  order:2!important;
+  position:static!important;
+  inset:auto!important;
+  float:none!important;
+  transform:none!important;
+  display:block!important;
+  width:100%!important;
+  max-width:100%!important;
+  min-width:0!important;
+  margin:0!important;
+  padding:0!important;
+  justify-self:stretch!important;
+  align-self:stretch!important;
+  box-sizing:border-box!important;
+}
+.water-gfs-layout > #basinc > .pressure-card,
+.gfs-table-pressure-layout > #basinc > .pressure-card{
+  display:block!important;
+  width:100%!important;
+  max-width:100%!important;
+  min-width:0!important;
+  margin:0!important;
+  box-sizing:border-box!important;
+  overflow-wrap:anywhere!important;
+}
+.water-gfs-layout #pressure-findings,
+.gfs-table-pressure-layout #pressure-findings{
+  width:100%!important;
+  max-width:100%!important;
+  min-width:0!important;
+  box-sizing:border-box!important;
+}
+.water-gfs-layout .pressure-center-item,
+.gfs-table-pressure-layout .pressure-center-item,
+.water-gfs-layout .pressure-comment,
+.gfs-table-pressure-layout .pressure-comment{
+  min-width:0!important;
+  max-width:100%!important;
+  overflow-wrap:anywhere!important;
+  box-sizing:border-box!important;
+}
+@media (max-width:1199px), (pointer:coarse){
+  .dashboard-right .water-gfs-layout,
+  .dashboard-right .gfs-table-pressure-layout{
+    display:flex!important;
+    flex-direction:column!important;
+    align-items:stretch!important;
+    gap:12px!important;
+    width:100%!important;
+    max-width:100%!important;
+    min-width:0!important;
+    margin:0!important;
+  }
+  .dashboard-right .water-gfs-layout > #meteopt-gfs-table,
+  .dashboard-right .gfs-table-pressure-layout > #meteopt-gfs-table{
+    order:1!important;
+    width:100%!important;
+    max-width:100%!important;
+    min-width:0!important;
+    margin:0!important;
+  }
+  .dashboard-right .water-gfs-layout > #basinc,
+  .dashboard-right .gfs-table-pressure-layout > #basinc{
+    order:2!important;
+    width:100%!important;
+    max-width:100%!important;
+    min-width:0!important;
+    margin:0!important;
+    padding:0!important;
+  }
+  .dashboard-right #basinc .pressure-card{
+    width:100%!important;
+    max-width:100%!important;
+    min-width:0!important;
+    padding:14px!important;
+  }
+}
