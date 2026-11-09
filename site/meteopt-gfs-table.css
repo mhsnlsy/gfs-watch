@@ -1192,8 +1192,10 @@
   margin-right: 0 !important;
 }
 @media (min-width: 900px) {
+  /* Desktop: the MeteoPT GFS table belongs directly below
+     the "Son hava raporu" panel. Pressure analysis follows below it. */
   .water-gfs-layout {
-    grid-template-columns: minmax(0, 1.55fr) minmax(280px, .75fr) !important;
+    grid-template-columns: minmax(0, 1fr) !important;
   }
 }
 @media (max-width: 899px) {
