@@ -3289,6 +3289,12 @@ html.ios12 #enka-camera-panel .enka-camera-frame{
     left:0!important;
     z-index:20!important;
   }
+  /* The pressure section visually bridges the live-observation card and the
+     MeteoPT 180h table without changing either panel's own dimensions. */
+  .dashboard-left > .gfs-pressure-panel .section-head,
+  .dashboard-left > .gfs-pressure-panel .pressure-card{
+    position:relative!important;
+  }
   .dashboard-left > .gfs-pressure-panel > .section-head{
     margin:0!important;
   }
