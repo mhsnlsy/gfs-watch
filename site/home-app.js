@@ -1321,6 +1321,11 @@
       renderTemperatureTrend();
       renderStationGap();
     }
+    window.addEventListener("meteopt-gfs-f72-updated",()=>{
+      // The F180 table is the canonical rain timing source; refresh the
+      // briefing immediately when that payload arrives or is refreshed.
+      try{renderRainDays();}catch(error){console.warn("Rain briefing refresh skipped:",error);}
+    });
     function dayWindow(offset){
       const key=new Intl.DateTimeFormat("en-CA",{timeZone:"Europe/Istanbul",year:"numeric",month:"2-digit",day:"2-digit"}).format(new Date());
       const start=Date.parse(key+"T00:00:00+03:00")+offset*86400000;
