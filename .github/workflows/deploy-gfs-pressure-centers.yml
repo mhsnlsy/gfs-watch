@@ -25,9 +25,17 @@ jobs:
         uses: actions/setup-node@v4
         with:
           node-version: 22
+          cache: npm
+          cache-dependency-path: services/gfs-pressure-centers/package-lock.json
 
-      - name: Install Wrangler
+      - name: Install pinned Wrangler
         run: npm install
+
+      - name: Show Wrangler version
+        run: npx wrangler --version
+
+      - name: Validate Container configuration and bundle
+        run: npx wrangler deploy --dry-run --outdir .wrangler-dry-run
 
       - name: Deploy Container
         run: npx wrangler deploy
