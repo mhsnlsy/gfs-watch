@@ -219,7 +219,7 @@ assert.match(appJs, /station-history-tooltip-value/);
 assert.match(appJs, /bucketMs=1800000/);
 assert.match(appJs, /const STATION_HISTORY_API=key=>STATIONS_API\+"\/history\/"\+encodeURIComponent\(key\)\+"\?hours=72"/);
 assert.match(appJs, /historyKeys=stationKey==="enka"\?\["enka","sisli"\]:\[stationKey\]/);
-assert.match(appJs, /fetch\(STATION_HISTORY_API\(key\)/);
+assert.match(appJs, /fetchStationsApi\("\/history\/".*encodeURIComponent\(key\).*hours=72/);
 assert.match(html, /if\(station\.station_id==="18101"\)eyupsultanStationObservation=station/);
 assert.match(eyupsultanCollector, /precipitation_10m_mm: observation\.precipitation_10m_mm/);
 assert.match(eyupsultanCollector, /last\.precipitation_10m_mm = sample\.precipitation_10m_mm/);
