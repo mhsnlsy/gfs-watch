@@ -220,9 +220,11 @@ def main() -> None:
 
     api_config = read("site/gfs-api-config.js")
     index = read("site/index.html")
+    home_app = read("site/home-app.js")
     koy_page = read("site/koy.js")
     assert "gfs-watch-web.muhsin-ulusoy.workers.dev" in api_config
-    assert "/gfs/latest" in index
+    assert "/gfs/latest" in home_app
+    assert "DATA_API_BASE=(window.ISTANBUL_GFS_API_BASE||window.location.origin)" in home_app
     assert "/api/koy-gfs/" in koy_page
     # Köy report SVG is served at the existing URL from its D1 Service Binding,
     # while the live site verifies the production notification path directly.
