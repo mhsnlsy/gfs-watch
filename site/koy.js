@@ -837,6 +837,7 @@ function renderRuns(d,f180){
  }
 }
 async function refresh(){if(busy)return;busy=true;
+ try {
  const results=await Promise.allSettled([
   get("comparison"),getStation("/history/canakci?hours=72"),
   getStation("/stations/canakci")
@@ -881,10 +882,14 @@ async function refresh(){if(busy)return;busy=true;
   if(!evObservation)evObservation=buildVirtualHomeObservation(window.__koyMgmObservation);
   window.__koyCurrentTemp=num(results[2].value.station.temperature_c == null ? results[2].value.station.temperature_2m_c : results[2].value.station.temperature_c);
   const o=window.__koyMgmObservation;
-  $("mgm-status-date").textContent=ts(o.last_attempt_utc||o.fetched_at_utc||o.observed_at_utc);
-  $("mgm-source-temp").innerHTML=fmt(o.temperature_2m_c)+"<small>°C</small>";
-  $("mgm-source-status").textContent="Canlı MGM ölçümü · son 1 saat yağış "+fmt(o.precipitation_1h_mm)+" mm";
-  $("mgm-source-fill").style.width=Math.min(100,Math.max(0,(num(o.precipitation_1h_mm)||0)*8))+"%";
+  const mgmStatusDate=$("mgm-status-date");
+  if(mgmStatusDate)mgmStatusDate.textContent=ts(o.last_attempt_utc||o.fetched_at_utc||o.observed_at_utc);
+  const mgmSourceTemp=$("mgm-source-temp");
+  if(mgmSourceTemp)mgmSourceTemp.innerHTML=fmt(o.temperature_2m_c)+"<small>°C</small>";
+  const mgmSourceStatus=$("mgm-source-status");
+  if(mgmSourceStatus)mgmSourceStatus.textContent="Canlı MGM ölçümü · son 1 saat yağış "+fmt(o.precipitation_1h_mm)+" mm";
+  const mgmSourceFill=$("mgm-source-fill");
+  if(mgmSourceFill)mgmSourceFill.style.width=Math.min(100,Math.max(0,(num(o.precipitation_1h_mm)||0)*8))+"%";
  }
  // Render the selected station independently from the MGM fetch result.
  // This is important for Köy Ev: its derived payload is a separate artifact.
@@ -892,7 +897,16 @@ async function refresh(){if(busy)return;busy=true;
  const selectedHistory=stationMode==="home"?evHistory:stationHistory;
  if(selectedObservation)renderMgmObservation(selectedObservation,selectedHistory,f180);
  renderRuns(stationMode==="home"?homeGfsComparison(comparison):comparison,stationMode==="home"?homeGfsDocument(f180):f180);
- busy=false;
+ } catch(error) {
+  console.error("Köy hava verileri yenileme hatası:",error);
+  const freshness=$("freshness");
+  if(freshness){
+   freshness.textContent="Veri yenileme hatası";
+   freshness.classList.add("stale");
+  }
+ } finally {
+  busy=false;
+ }
 }
 function pressureRegionNameKoy(latitude,longitude){
   const lat=Number(latitude),lon=Number(longitude);
