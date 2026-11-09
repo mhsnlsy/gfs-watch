@@ -3848,3 +3848,68 @@ html.ios12 #enka-camera-panel .enka-camera-frame{
     padding:0!important;
   }
 }
+
+
+/* FINAL: homepage mobile live-observation panel matches the Köy panel's
+   effective mobile geometry values shown in the comparison. */
+@media (max-width:560px){
+  .dashboard-left .station-card{
+    padding:14px 12px 12px!important;
+    border-radius:17px!important;
+  }
+  .dashboard-left .station-card>.station-switch{
+    gap:7px!important;
+    margin-top:9px!important;
+    padding:3px!important;
+  }
+  .dashboard-left .station-card>.station-switch button{
+    min-height:38px!important;
+    padding:8px 11px!important;
+    font-size:10px!important;
+  }
+  .dashboard-left .station-card>.station-overview{
+    margin-top:10px!important;
+  }
+  .dashboard-left .station-card .temp-row{
+    margin-top:12px!important;
+    gap:13px!important;
+  }
+  .dashboard-left .station-card .temperature{
+    font-size:60px!important;
+  }
+  .dashboard-left .station-card .weather-symbol{
+    font-size:36px!important;
+  }
+  .dashboard-left .station-card .weather-stats{
+    margin-top:17px!important;
+    row-gap:7px!important;
+    column-gap:6px!important;
+    padding-top:0!important;
+  }
+  .dashboard-left .station-card .stat{
+    padding:5px 7px!important;
+  }
+  .dashboard-left .station-card .stat .name{
+    font-size:9px!important;
+  }
+  .dashboard-left .station-card .stat .value{
+    font-size:15px!important;
+  }
+  .dashboard-left .station-card .stat .unit,
+  .dashboard-left .station-card .stat .detail{
+    font-size:8px!important;
+  }
+  .dashboard-left .station-card>.station-history-inline{
+    margin-top:2px!important;
+    padding-top:4px!important;
+  }
+  .dashboard-left .station-card .station-history-inline .history-charts{
+    gap:9px!important;
+  }
+  .dashboard-left .station-card .station-history-inline .history-chart-card{
+    padding:0!important;
+  }
+  .dashboard-left .station-card .station-history-inline .history-chart{
+    height:76px!important;
+  }
+}
