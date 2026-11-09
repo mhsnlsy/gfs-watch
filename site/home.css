@@ -2512,17 +2512,44 @@ html.ios12 #enka-camera-panel .enka-camera-frame{
 
 /* Desktop: keep the live observation dashboard compact and anchored to the left. */
 @media (min-width:901px){
-  /* Desktop: compact live observation dashboard, flush to the left. */
+  /* Desktop: live observation and latest GFS report sit side by side,
+     both compact and anchored to the left. */
   .dashboard-top{
-    grid-template-columns:600px;
-    width:600px;
-    max-width:600px;
+    grid-template-columns:600px 600px;
+    gap:18px;
+    width:1218px;
+    max-width:calc(100vw - 32px);
     margin-left:0;
     margin-right:auto;
+    align-items:start;
   }
   .dashboard-top .station-card{
     width:600px;
     max-width:600px;
+  }
+  .dashboard-top #bildirimler{
+    width:600px;
+    min-width:600px;
+    margin:0;
+    padding-top:22px;
+  }
+  .dashboard-top #bildirimler .notification-card{
+    width:600px;
+    max-width:600px;
+  }
+}
+@media (max-width:1100px) and (min-width:701px){
+  .dashboard-top{
+    grid-template-columns:minmax(0,1fr);
+    width:100%;
+    max-width:100%;
+  }
+  .dashboard-top .station-card,
+  .dashboard-top #bildirimler,
+  .dashboard-top #bildirimler .notification-card{
+    width:100%;
+    min-width:0;
+    max-width:100%;
   }
 }
 
