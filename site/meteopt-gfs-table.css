@@ -1981,3 +1981,16 @@ html,body{
     font-size:10px!important;
   }
 }
+
+
+/* FINAL: Köy Date/Hour (TSİ) data cells — reduce mobile text by 1px. */
+@media (max-width:850px){
+  #meteopt-gfs-table .meteopt-data-table.koy-snowln-table td:nth-child(2){
+    font-size:9px!important;
+  }
+}
+@media (max-width:390px){
+  #meteopt-gfs-table .meteopt-data-table.koy-snowln-table td:nth-child(2){
+    font-size:9px!important;
+  }
+}
