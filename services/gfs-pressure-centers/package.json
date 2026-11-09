@@ -1,8 +1,11 @@
 {
   "name": "gfs-pressure-centers",
   "private": true,
+  "dependencies": {
+    "@cloudflare/containers": "^0.5.0"
+  },
   "devDependencies": {
-    "wrangler": "4.45.0"
+    "wrangler": "^4.45.0"
   },
   "scripts": {
     "check:wrangler": "wrangler --version",
