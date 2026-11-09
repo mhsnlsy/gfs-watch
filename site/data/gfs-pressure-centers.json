@@ -1,5 +1,390 @@
 {
-  "status": "pending",
+  "status": "ok",
   "source": "NOAA GFS 0.25° GRIB2 · NOMADS",
-  "message": "İlk GitHub Actions çalışması bekleniyor."
+  "analysis": {
+    "center_latitude": 41.014,
+    "center_longitude": 28.95,
+    "diameter_km": 2500,
+    "radius_km": 1250,
+    "thresholds": {
+      "low_hpa": 1013,
+      "high_hpa": 1023
+    },
+    "centers": [
+      {
+        "type": "high",
+        "pressure_hpa": 1036.1,
+        "latitude": 41.75,
+        "longitude": 33.5,
+        "distance_km": 388.3,
+        "bearing_deg": 76,
+        "direction": "DKD"
+      },
+      {
+        "type": "high",
+        "pressure_hpa": 1034.9,
+        "latitude": 40.25,
+        "longitude": 41.25,
+        "distance_km": 1040.6,
+        "bearing_deg": 91,
+        "direction": "D"
+      },
+      {
+        "type": "high",
+        "pressure_hpa": 1034.9,
+        "latitude": 40.0,
+        "longitude": 38.25,
+        "distance_km": 793.9,
+        "bearing_deg": 95,
+        "direction": "D"
+      },
+      {
+        "type": "high",
+        "pressure_hpa": 1034.3,
+        "latitude": 38.75,
+        "longitude": 35.75,
+        "distance_km": 632.3,
+        "bearing_deg": 111,
+        "direction": "DGD"
+      },
+      {
+        "type": "high",
+        "pressure_hpa": 1033.4,
+        "latitude": 40.75,
+        "longitude": 31.5,
+        "distance_km": 216.4,
+        "bearing_deg": 97,
+        "direction": "D"
+      },
+      {
+        "type": "high",
+        "pressure_hpa": 1032.8,
+        "latitude": 37.0,
+        "longitude": 33.75,
+        "distance_km": 609.1,
+        "bearing_deg": 136,
+        "direction": "GD"
+      },
+      {
+        "type": "high",
+        "pressure_hpa": 1032.5,
+        "latitude": 43.5,
+        "longitude": 41.25,
+        "distance_km": 1048.2,
+        "bearing_deg": 71,
+        "direction": "DKD"
+      },
+      {
+        "type": "high",
+        "pressure_hpa": 1032.5,
+        "latitude": 39.75,
+        "longitude": 30.25,
+        "distance_km": 178.5,
+        "bearing_deg": 142,
+        "direction": "GD"
+      },
+      {
+        "type": "high",
+        "pressure_hpa": 1032.0,
+        "latitude": 44.75,
+        "longitude": 34.25,
+        "distance_km": 599.0,
+        "bearing_deg": 44,
+        "direction": "KD"
+      },
+      {
+        "type": "high",
+        "pressure_hpa": 1031.7,
+        "latitude": 42.0,
+        "longitude": 27.25,
+        "distance_km": 179.0,
+        "bearing_deg": 308,
+        "direction": "KKB"
+      },
+      {
+        "type": "high",
+        "pressure_hpa": 1031.2,
+        "latitude": 48.75,
+        "longitude": 29.0,
+        "distance_km": 860.2,
+        "bearing_deg": 0,
+        "direction": "K"
+      },
+      {
+        "type": "high",
+        "pressure_hpa": 1031.2,
+        "latitude": 41.75,
+        "longitude": 24.5,
+        "distance_km": 380.1,
+        "bearing_deg": 284,
+        "direction": "KB"
+      },
+      {
+        "type": "high",
+        "pressure_hpa": 1031.1,
+        "latitude": 47.5,
+        "longitude": 31.5,
+        "distance_km": 749.1,
+        "bearing_deg": 15,
+        "direction": "KKD"
+      },
+      {
+        "type": "high",
+        "pressure_hpa": 1031.1,
+        "latitude": 44.75,
+        "longitude": 38.0,
+        "distance_km": 845.6,
+        "bearing_deg": 58,
+        "direction": "DKD"
+      },
+      {
+        "type": "high",
+        "pressure_hpa": 1030.9,
+        "latitude": 43.5,
+        "longitude": 35.25,
+        "distance_km": 587.3,
+        "bearing_deg": 60,
+        "direction": "DKD"
+      },
+      {
+        "type": "high",
+        "pressure_hpa": 1030.9,
+        "latitude": 39.75,
+        "longitude": 27.0,
+        "distance_km": 216.9,
+        "bearing_deg": 230,
+        "direction": "BGB"
+      },
+      {
+        "type": "high",
+        "pressure_hpa": 1030.8,
+        "latitude": 44.5,
+        "longitude": 28.75,
+        "distance_km": 388.0,
+        "bearing_deg": 358,
+        "direction": "K"
+      },
+      {
+        "type": "high",
+        "pressure_hpa": 1030.5,
+        "latitude": 47.0,
+        "longitude": 25.5,
+        "distance_km": 720.3,
+        "bearing_deg": 339,
+        "direction": "K"
+      },
+      {
+        "type": "high",
+        "pressure_hpa": 1030.4,
+        "latitude": 40.0,
+        "longitude": 22.25,
+        "distance_km": 577.4,
+        "bearing_deg": 261,
+        "direction": "BKB"
+      },
+      {
+        "type": "high",
+        "pressure_hpa": 1030.1,
+        "latitude": 45.5,
+        "longitude": 25.0,
+        "distance_km": 592.4,
+        "bearing_deg": 329,
+        "direction": "K"
+      },
+      {
+        "type": "high",
+        "pressure_hpa": 1030.0,
+        "latitude": 38.5,
+        "longitude": 24.0,
+        "distance_km": 507.0,
+        "bearing_deg": 238,
+        "direction": "B"
+      },
+      {
+        "type": "high",
+        "pressure_hpa": 1029.8,
+        "latitude": 45.0,
+        "longitude": 22.75,
+        "distance_km": 670.9,
+        "bearing_deg": 313,
+        "direction": "KKB"
+      },
+      {
+        "type": "high",
+        "pressure_hpa": 1029.5,
+        "latitude": 49.0,
+        "longitude": 23.25,
+        "distance_km": 994.0,
+        "bearing_deg": 335,
+        "direction": "K"
+      },
+      {
+        "type": "high",
+        "pressure_hpa": 1029.0,
+        "latitude": 37.0,
+        "longitude": 23.0,
+        "distance_km": 680.5,
+        "bearing_deg": 231,
+        "direction": "BGB"
+      },
+      {
+        "type": "high",
+        "pressure_hpa": 1028.9,
+        "latitude": 48.75,
+        "longitude": 19.25,
+        "distance_km": 1148.8,
+        "bearing_deg": 322,
+        "direction": "KKB"
+      },
+      {
+        "type": "high",
+        "pressure_hpa": 1028.6,
+        "latitude": 35.5,
+        "longitude": 24.0,
+        "distance_km": 749.8,
+        "bearing_deg": 217,
+        "direction": "BGB"
+      },
+      {
+        "type": "high",
+        "pressure_hpa": 1028.1,
+        "latitude": 39.5,
+        "longitude": 43.25,
+        "distance_km": 1223.7,
+        "bearing_deg": 93,
+        "direction": "D"
+      },
+      {
+        "type": "high",
+        "pressure_hpa": 1026.9,
+        "latitude": 35.0,
+        "longitude": 38.0,
+        "distance_km": 1036.2,
+        "bearing_deg": 127,
+        "direction": "GD"
+      },
+      {
+        "type": "high",
+        "pressure_hpa": 1026.8,
+        "latitude": 32.5,
+        "longitude": 22.0,
+        "distance_km": 1130.3,
+        "bearing_deg": 215,
+        "direction": "BGB"
+      },
+      {
+        "type": "high",
+        "pressure_hpa": 1026.7,
+        "latitude": 45.25,
+        "longitude": 15.75,
+        "distance_km": 1168.3,
+        "bearing_deg": 298,
+        "direction": "KB"
+      },
+      {
+        "type": "high",
+        "pressure_hpa": 1026.6,
+        "latitude": 39.25,
+        "longitude": 16.5,
+        "distance_km": 1075.5,
+        "bearing_deg": 264,
+        "direction": "BKB"
+      },
+      {
+        "type": "high",
+        "pressure_hpa": 1026.5,
+        "latitude": 46.0,
+        "longitude": 17.75,
+        "distance_km": 1058.4,
+        "bearing_deg": 305,
+        "direction": "KKB"
+      },
+      {
+        "type": "high",
+        "pressure_hpa": 1026.5,
+        "latitude": 35.25,
+        "longitude": 36.25,
+        "distance_km": 904.0,
+        "bearing_deg": 133,
+        "direction": "GD"
+      },
+      {
+        "type": "high",
+        "pressure_hpa": 1026.4,
+        "latitude": 35.0,
+        "longitude": 33.0,
+        "distance_km": 756.8,
+        "bearing_deg": 151,
+        "direction": "GGB"
+      },
+      {
+        "type": "high",
+        "pressure_hpa": 1026.3,
+        "latitude": 40.75,
+        "longitude": 15.0,
+        "distance_km": 1171.9,
+        "bearing_deg": 273,
+        "direction": "BKB"
+      },
+      {
+        "type": "high",
+        "pressure_hpa": 1026.0,
+        "latitude": 31.25,
+        "longitude": 25.25,
+        "distance_km": 1135.1,
+        "bearing_deg": 198,
+        "direction": "GBG"
+      },
+      {
+        "type": "high",
+        "pressure_hpa": 1025.4,
+        "latitude": 39.25,
+        "longitude": 14.75,
+        "distance_km": 1221.6,
+        "bearing_deg": 265,
+        "direction": "BKB"
+      },
+      {
+        "type": "high",
+        "pressure_hpa": 1025.2,
+        "latitude": 32.75,
+        "longitude": 36.75,
+        "distance_km": 1150.3,
+        "bearing_deg": 141,
+        "direction": "GD"
+      },
+      {
+        "type": "high",
+        "pressure_hpa": 1024.9,
+        "latitude": 43.5,
+        "longitude": 17.25,
+        "distance_km": 1000.8,
+        "bearing_deg": 290,
+        "direction": "KB"
+      },
+      {
+        "type": "high",
+        "pressure_hpa": 1023.5,
+        "latitude": 32.0,
+        "longitude": 35.25,
+        "distance_km": 1148.8,
+        "bearing_deg": 149,
+        "direction": "GGB"
+      }
+    ]
+  },
+  "grid": {
+    "shortName": "prmsl",
+    "name": "Pressure reduced to MSL",
+    "Ni": 145,
+    "Nj": 97,
+    "lat_min": 29.0,
+    "lat_max": 53.0,
+    "lon_min": 12.0,
+    "lon_max": 48.0
+  },
+  "cycle_utc": "2026-11-09T00:00:00Z",
+  "forecast_hour": 0,
+  "download_bytes": 24793,
+  "download_url": "https://nomads.ncep.noaa.gov/cgi-bin/filter_gfs_0p25.pl?file=gfs.t00z.pgrb2.0p25.f000&var_PRMSL=on&lev_mean_sea_level=on&subregion=&leftlon=12&rightlon=48&toplat=53&bottomlat=29&dir=%2Fgfs.20261109%2F00%2Fatmos"
 }
