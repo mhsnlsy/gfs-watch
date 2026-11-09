@@ -2289,20 +2289,30 @@ if(typeof renderBriefing==="function")renderBriefing();
     function setModelView(mode,persist=true){
       activeModel=mode==="ecmwf"?"ecmwf":"gfs";
       const ecmwf=activeModel==="ecmwf";
-      $("gfs-model-view").hidden=ecmwf;
-      $("ecmwf-model-view").hidden=!ecmwf;
-      $("model-gfs-button").classList.toggle("active",!ecmwf);
-      $("model-ecmwf-button").classList.toggle("active",ecmwf);
-      $("model-gfs-button").setAttribute("aria-pressed",String(!ecmwf));
-      $("model-ecmwf-button").setAttribute("aria-pressed",String(ecmwf));
+      const gfsButton=$("model-gfs-button");
+      const ecmwfButton=$("model-ecmwf-button");
+      const gfsView=$("gfs-model-view");
+      const ecmwfView=$("ecmwf-model-view");
+      if(gfsView)gfsView.hidden=ecmwf;
+      if(ecmwfView)ecmwfView.hidden=!ecmwf;
+      if(gfsButton){
+        gfsButton.classList.toggle("active",!ecmwf);
+        gfsButton.setAttribute("aria-pressed",String(!ecmwf));
+      }
+      if(ecmwfButton){
+        ecmwfButton.classList.toggle("active",ecmwf);
+        ecmwfButton.setAttribute("aria-pressed",String(ecmwf));
+      }
       const nav=document.querySelector(".topbar nav");
       if(nav)nav.hidden=ecmwf;
       if(persist){try{localStorage.setItem("istanbul-hava-model-view",activeModel);}catch(_){}}
       if(typeof renderBriefing==="function")renderBriefing();
       loadEcmwf();
     }
-    $("model-gfs-button").addEventListener("click",()=>setModelView("gfs"));
-    $("model-ecmwf-button").addEventListener("click",()=>setModelView("ecmwf"));
+    const modelGfsButton=$("model-gfs-button");
+    const modelEcmwfButton=$("model-ecmwf-button");
+    if(modelGfsButton)modelGfsButton.addEventListener("click",()=>setModelView("gfs"));
+    if(modelEcmwfButton)modelEcmwfButton.addEventListener("click",()=>setModelView("ecmwf"));
     try{if(localStorage.getItem("istanbul-hava-model-view")==="ecmwf")activeModel="ecmwf";}catch(_){}
     setModelView(activeModel,false);
 
