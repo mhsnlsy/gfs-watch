@@ -3277,13 +3277,15 @@ html.ios12 #enka-camera-panel .enka-camera-frame{
   }
   .dashboard-left > .gfs-pressure-panel{
     grid-column:1!important;
-    grid-row:2!important;
+    grid-row:1!important;
     width:600px!important;
     max-width:600px!important;
     min-width:0!important;
-    margin:14px 0 0!important;
+    margin:610px 0 0!important;
     padding:0!important;
     align-self:start!important;
+    position:relative!important;
+    z-index:20!important;
   }
   .dashboard-left > .gfs-pressure-panel > .section-head{
     margin:0!important;
