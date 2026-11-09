@@ -4496,3 +4496,42 @@ html.ios12 #enka-camera-panel .enka-camera-frame{
     flex:none!important;
   }
 }
+
+
+/* FINAL: Homepage mobile navigation parity with Köy — plain links, no button boxes. */
+@media (max-width:560px){
+  .topbar nav{
+    display:flex!important;
+    order:3!important;
+    width:100%!important;
+    max-width:100%!important;
+    grid-template-columns:none!important;
+    gap:16px!important;
+    margin-top:0!important;
+    padding:6px 0 2px!important;
+    overflow-x:auto!important;
+    white-space:nowrap!important;
+  }
+  .topbar nav a{
+    display:inline!important;
+    min-height:0!important;
+    height:auto!important;
+    width:auto!important;
+    flex:none!important;
+    padding:0!important;
+    margin:0!important;
+    border:0!important;
+    border-radius:0!important;
+    background:transparent!important;
+    box-shadow:none!important;
+    font-size:11px!important;
+    line-height:1.2!important;
+    color:#b5c7d1!important;
+  }
+  .topbar nav a:hover,
+  .topbar nav a:focus{
+    border:0!important;
+    background:transparent!important;
+    box-shadow:none!important;
+  }
+}
