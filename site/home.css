@@ -2619,3 +2619,19 @@ html.ios12 #enka-camera-panel .enka-camera-frame{
     max-width:100%!important;
   }
 }
+
+
+/* Restore the live observation column to its original compact desktop width. */
+@media (min-width:1101px){
+  .dashboard-top>.dashboard-left{
+    width:600px!important;
+    min-width:600px!important;
+    max-width:600px!important;
+  }
+  .dashboard-top>.dashboard-left>.station-card,
+  .dashboard-top .station-card{
+    width:600px!important;
+    min-width:600px!important;
+    max-width:600px!important;
+  }
+}
