@@ -25,7 +25,7 @@ def direction(deg):
     names = ["K","KKD","KD","DKD","D","DGD","GD","GGB","G","GBG","BGB","B","BKB","KB","KKB","K"]
     return names[int((deg + 11.25) // 22.5) % 16]
 
-def detect_centers(values, lats, lons, neighborhood=2, min_separation_km=150):
+def detect_centers(values, lats, lons, neighborhood=2, min_separation_km=300, prominence_hpa=1.5, max_centers_per_type=6):
     import numpy as np
     v = np.asarray(values, dtype=float)
     la = np.asarray(lats, dtype=float)
@@ -47,7 +47,10 @@ def detect_centers(values, lats, lons, neighborhood=2, min_separation_km=150):
                 continue
 
             window = v[iy-n:iy+n+1, ix-n:ix+n+1]
-            if p <= LOW_HPA and p <= float(np.nanmin(window)):
+            ring = window.copy()
+            ring[n, n] = np.nan
+            ring_mean = float(np.nanmean(ring))
+            if p <= LOW_HPA and (ring_mean - p) >= prominence_hpa and p <= float(np.nanmin(window)):
                 candidates.append({
                     "type": "low",
                     "pressure_hpa": round(p, 1),
@@ -55,7 +58,7 @@ def detect_centers(values, lats, lons, neighborhood=2, min_separation_km=150):
                     "longitude": round(lon, 3),
                     "distance_km": round(distance, 1),
                 })
-            if p >= HIGH_HPA and p >= float(np.nanmax(window)):
+            if p >= HIGH_HPA and p >= float(np.nanmax(window)) and (p - ring_mean) >= prominence_hpa:
                 candidates.append({
                     "type": "high",
                     "pressure_hpa": round(p, 1),
@@ -83,4 +86,7 @@ def detect_centers(values, lats, lons, neighborhood=2, min_separation_km=150):
         center["bearing_deg"] = round(bearing)
         center["direction"] = direction(bearing)
         kept.append(center)
-    return kept
+    kept = [c for c in kept if c["type"] in ("low", "high")]
+    lows = [c for c in kept if c["type"] == "low"][:max_centers_per_type]
+    highs = [c for c in kept if c["type"] == "high"][:max_centers_per_type]
+    return lows + highs
