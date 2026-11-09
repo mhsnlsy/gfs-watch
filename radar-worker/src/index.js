@@ -120,14 +120,15 @@ function analyzeImage(img){
       if(dbz>=THRESHOLD_DBZ) high.push({dx,dy,dist_km:Math.hypot(dx,dy)*PIXEL_KM,dbz});
     }
   }
-  if(!high.length)return {max_dbz:0,count:0,centroid_dist:null,strong_count:0,strong_max:0,avg_dx:0,avg_dy:0,area_km2:0,width_km:0,height_km:0};
+  if(!high.length)return {max_dbz:0,count:0,min_dist_km:null,centroid_dist:null,strong_count:0,strong_max:0,avg_dx:0,avg_dy:0,area_km2:0,width_km:0,height_km:0};
   const avg_dx=high.reduce((s,p)=>s+p.dx,0)/high.length;
   const avg_dy=high.reduce((s,p)=>s+p.dy,0)/high.length;
+  const min_dist_km=Math.min(...high.map(p=>p.dist_km));
   const max_dbz=Math.max(...high.map(p=>p.dbz));
   const min_dx=Math.min(...high.map(p=>p.dx)), max_dx=Math.max(...high.map(p=>p.dx));
   const min_dy=Math.min(...high.map(p=>p.dy)), max_dy=Math.max(...high.map(p=>p.dy));
   const strong=high.filter(p=>p.dbz>=THRESHOLD_DBZ_STRONG);
-  return {max_dbz,count:high.length,centroid_dist:Math.round(Math.hypot(avg_dx,avg_dy)*PIXEL_KM*10)/10,
+  return {max_dbz,count:high.length,min_dist_km:Math.round(min_dist_km*10)/10,centroid_dist:Math.round(Math.hypot(avg_dx,avg_dy)*PIXEL_KM*10)/10,
     strong_count:strong.length,strong_max:strong.length?Math.max(...strong.map(p=>p.dbz)):0,avg_dx,avg_dy,
     area_km2:Math.round(high.length*PIXEL_KM*PIXEL_KM),
     width_km:Math.round((max_dx-min_dx+1)*PIXEL_KM*10)/10,
@@ -256,11 +257,19 @@ async function check(env){
   const mosaic={w:TILE_SIZE*3,h:TILE_SIZE*3,ct:decoded[0].img.ct,data:new Uint8Array(TILE_SIZE*TILE_SIZE*9*(decoded[0].img.ct===6?4:3))};
   const baseMosaic={w:TILE_SIZE*3,h:TILE_SIZE*3,ct:baseDecoded[0].img.ct,data:new Uint8Array(TILE_SIZE*TILE_SIZE*9*(baseDecoded[0].img.ct===6?4:3))};
   const bpp=mosaic.ct===6?4:3;
+  const baseBpp=baseMosaic.ct===6?4:3;
   for(const t of decoded){
     for(let y=0;y<TILE_SIZE;y++){
       const src=(y*TILE_SIZE)*bpp;
       const dst=((y+(t.oy+1)*TILE_SIZE)*mosaic.w+(t.ox+1)*TILE_SIZE)*bpp;
       mosaic.data.set(t.img.data.subarray(src,src+TILE_SIZE*bpp),dst);
+    }
+  }
+  for(const t of baseDecoded){
+    for(let y=0;y<TILE_SIZE;y++){
+      const src=(y*TILE_SIZE)*baseBpp;
+      const dst=((y+(t.oy+1)*TILE_SIZE)*baseMosaic.w+(t.ox+1)*TILE_SIZE)*baseBpp;
+      baseMosaic.data.set(t.img.data.subarray(src,src+TILE_SIZE*baseBpp),dst);
     }
   }
   const img=mosaic;
@@ -285,7 +294,7 @@ async function check(env){
   };
   // Primary trigger: any qualifying echo already within the entry radius.
   // Motion/ETA is supplementary, not a hard prerequisite for a rain alert.
-  const rainInEntryRadius = hasEcho && curr.centroid_dist <= ENTRY_ALERT_RADIUS_KM && curr.max_dbz >= THRESHOLD_DBZ;
+  const rainInEntryRadius = hasEcho && curr.min_dist_km <= ENTRY_ALERT_RADIUS_KM && curr.max_dbz >= THRESHOLD_DBZ;
   const alert=pixelGate&&(rainInEntryRadius || app || onSite);
 
   let intensity="HAFİF",emoji="🌦️";
@@ -293,15 +302,30 @@ async function check(env){
   else if(curr.max_dbz>=15){intensity="ORTA";emoji="🌧️";}
 
   const now=Math.floor(Date.now()/1000), last=Number(state.last_alert_ts||0);
-  let sent=false;
+  let sent=false, telegramStatus=0, telegramError="";
   if(alert&&now-last>=ALERT_COOLDOWN_SECONDS){
     let motionTxt=""; if(m.speed!=null){motionTxt=`Hız: ~${m.speed} km/sa, yön: ${compassDirection(m.heading)}`; if(m.eta) motionTxt+=`, tahmini varış: ~${m.eta} dk`; if(m.towards) motionTxt+=" (konuma doğru)";}
-    const caption=`${emoji} <b>${intensity} YAĞIŞ UYARISI — İstanbul</b>\nKonum: 41.0904 N, 28.9438 E\nŞiddet: ${intensity} (${curr.max_dbz} dBZ)\nYağış merkezi: ${curr.centroid_dist??"—"} km uzakta\nAlan: ~${curr.area_km2} km²\nDoğu-batı genişliği: ~${curr.width_km} km\nKuzey-güney uzunluğu: ~${curr.height_km} km\n${motionTxt}\n${onSite?"Konuma ulaşıyor / üzerinde.":"Yaklaşıyor."}\n${new Date(ts*1000).toLocaleString("tr-TR",{timeZone:"Europe/Istanbul"})}\n© OpenStreetMap contributors`;    const reportPhotoBytes=await makeRadarReportPng(baseMosaic,mosaic,curr);    const photoResult=reportPhotoBytes?await telegramPhoto(env,reportPhotoBytes,caption):false;    sent=typeof photoResult==="object"?photoResult.ok:photoResult;    if(!sent) sent=await telegramText(env,caption);    if(sent) {state.last_alert_ts=now;state.last_intensity=intensity;}
+    const caption=`${emoji} <b>${intensity} YAĞIŞ UYARISI — İstanbul</b>\nKonum: 41.0904 N, 28.9438 E\nŞiddet: ${intensity} (${curr.max_dbz} dBZ)\nYağış merkezi: ${curr.centroid_dist??"—"} km uzakta\nAlan: ~${curr.area_km2} km²\nDoğu-batı genişliği: ~${curr.width_km} km\nKuzey-güney uzunluğu: ~${curr.height_km} km\n${motionTxt}\n${onSite?"Konuma ulaşıyor / üzerinde.":"Yaklaşıyor."}\n${new Date(ts*1000).toLocaleString("tr-TR",{timeZone:"Europe/Istanbul"})}\n© OpenStreetMap contributors`;    const reportPhotoBytes=await makeRadarReportPng(baseMosaic,mosaic,curr);
+    const photoResult=reportPhotoBytes?await telegramPhoto(env,reportPhotoBytes,caption):false;
+    if(typeof photoResult==="object"){
+      telegramStatus=photoResult.status||0;
+      telegramError=photoResult.ok?"":(photoResult.body||"");
+      sent=photoResult.ok;
+    }else{
+      sent=Boolean(photoResult);
+    }
+    if(!sent){
+      const textResult=await telegramText(env,caption);
+      telegramStatus=textResult.status||telegramStatus;
+      telegramError=textResult.ok?"":(textResult.body||telegramError);
+      sent=textResult.ok;
+    }
+    if(sent) {state.last_alert_ts=now;state.last_intensity=intensity;}
   }
   state.history=h;state.last_frame_ts=ts;
   await saveState(env.RADAR_DB,state);
   return {status:"ok",frame_ts:ts,alert,pixel_count:curr.count,pixel_gate:pixelGate,max_dbz:curr.max_dbz,area_km2:curr.area_km2,width_km:curr.width_km,height_km:curr.height_km,eta_minutes:m.eta,eta_eligible:etaEligible,
-    centroid_dist:curr.centroid_dist,approaching:app,on_site:onSite,towards:m.towards,telegram_sent:sent};
+    min_dist_km:curr.min_dist_km,centroid_dist:curr.centroid_dist,approaching:app,on_site:onSite,towards:m.towards,telegram_sent:sent,telegram_status:telegramStatus,telegram_error:telegramError};
 }
 
 export default {
