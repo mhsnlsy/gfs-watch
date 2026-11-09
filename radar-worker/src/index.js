@@ -1,21 +1,15 @@
 // RADAR CRON LIVE — Cloudflare Paid
 const LAT = 41.0904;
 const LON = 28.9438;
-const RADIUS_KM = 25;
-const THRESHOLD_DBZ = 5;
+const ANALYSIS_RADIUS_KM = 210;
 const THRESHOLD_DBZ_STRONG = 30;
-const MIN_ALERT_PIXELS = 5;
-const ALERT_COOLDOWN_SECONDS = 30 * 60;
-// Rain must trigger even when motion/ETA cannot be calculated reliably.
-// The previous ETA gate could suppress a real rain event when the first
-// detected frame had no usable motion vector or an ETA above 90 minutes.
 const ENTRY_ALERT_RADIUS_KM = 25;
-const RADAR_BUILD = "paid-cron-2026-11-09-dbz5-rain-report-map-1";
+const RADAR_BUILD = "paid-cron-2026-11-10-approach-only-1";
 const HISTORY_LEN = 4;
 const ZOOM = 7;
 const TILE_SIZE = 256;
 const PIXEL_KM = 0.55;
-const ANALYSIS_RADIUS_PX = Math.ceil(RADIUS_KM / PIXEL_KM);
+const ANALYSIS_RADIUS_PX = Math.ceil(ANALYSIS_RADIUS_KM / PIXEL_KM);
 
 const DBZ_HINTS = [
   [10, [0,220,220]], [15, [0,190,220]], [20, [0,163,224]],
@@ -117,7 +111,7 @@ function analyzeImage(img){
       const a=img.ct===6?img.data[i+3]:255;
       if(a<=40) continue;
       const dbz=estimateDbz(r,g,b);
-      if(dbz>=THRESHOLD_DBZ) high.push({dx,dy,dist_km:Math.hypot(dx,dy)*PIXEL_KM,dbz});
+      if(a>40 && (img.ct===6 || dbz>0)) high.push({dx,dy,dist_km:Math.hypot(dx,dy)*PIXEL_KM,dbz});
     }
   }
   if(!high.length)return {max_dbz:0,count:0,min_dist_km:null,centroid_dist:null,strong_count:0,strong_max:0,avg_dx:0,avg_dy:0,area_km2:0,width_km:0,height_km:0};
@@ -241,21 +235,27 @@ async function check(env){
   const curr=analyzeImage(img), state=await getState(env.RADAR_DB);
   const history=JSON.parse(state.history_json||"[]");
   if(history.length&&history[history.length-1].ts===ts)return {status:"duplicate_frame",frame_ts:ts};
-  history.push({ts,avg_dx:curr.avg_dx,avg_dy:curr.avg_dy,centroid_dist:curr.centroid_dist,max_dbz:curr.max_dbz});
+  history.push({ts,avg_dx:curr.avg_dx,avg_dy:curr.avg_dy,min_dist_km:curr.min_dist_km,centroid_dist:curr.centroid_dist,max_dbz:curr.max_dbz});
   const h=history.slice(-HISTORY_LEN);
-  const pixelGate=curr.count>=MIN_ALERT_PIXELS;
-  const hasRain=curr.min_dist_km!=null&&curr.min_dist_km<=RADIUS_KM&&curr.max_dbz>=THRESHOLD_DBZ;
-  // Minimal alert rule: >=5 pixels + >=5 dBZ + within 25 km.
-  const alert=pixelGate&&hasRain;
+  const previous = h.length >= 2 ? h[h.length - 2] : null;
+  const rainDetected = curr.count > 0 && curr.min_dist_km != null;
+  const approaching = Boolean(
+    previous &&
+    previous.min_dist_km != null &&
+    curr.min_dist_km < previous.min_dist_km
+  );
+  // Alert rule: if RainViewer detects precipitation and the detected
+  // precipitation is moving closer to the target than in the previous frame.
+  const alert = rainDetected && approaching;
 
   let intensity="HAFİF",emoji="🌦️";
   if(curr.max_dbz>=25){intensity="GÜÇLÜ";emoji="⛈️";}
   else if(curr.max_dbz>=15){intensity="ORTA";emoji="🌧️";}
 
-  const now=Math.floor(Date.now()/1000), last=Number(state.last_alert_ts||0);
+  const now=Math.floor(Date.now()/1000);
   let sent=false, telegramStatus=0, telegramError="";
-  if(alert&&now-last>=ALERT_COOLDOWN_SECONDS){
-    const caption=`${emoji} <b>${intensity} YAĞIŞ UYARISI — İstanbul</b>\\nKonum: 41.0904 N, 28.9438 E\\nŞiddet: ${intensity} (${curr.max_dbz} dBZ)\\nYağış merkezi: ${curr.centroid_dist??"—" } km uzakta\\nAlan: ~${curr.area_km2} km²\\nDoğu-batı genişliği: ~${curr.width_km} km\\nKuzey-güney uzunluğu: ~${curr.height_km} km\\nRadar: 25 km içinde yağış ekosu tespit edildi.\\n${new Date(ts*1000).toLocaleString("tr-TR",{timeZone:"Europe/Istanbul"})}\\n© OpenStreetMap contributors`;
+  if(alert){
+    const caption=`${emoji} <b>${intensity} YAĞIŞ UYARISI — İstanbul</b>\\nKonum: 41.0904 N, 28.9438 E\\nŞiddet: ${intensity} (${curr.max_dbz} dBZ)\\nYağış merkezi: ${curr.centroid_dist??"—" } km uzakta\\nAlan: ~${curr.area_km2} km²\\nDoğu-batı genişliği: ~${curr.width_km} km\\nKuzey-güney uzunluğu: ~${curr.height_km} km\\nRadar: Yağış ekosu İstanbul yönünde yaklaşıyor.\\n${new Date(ts*1000).toLocaleString("tr-TR",{timeZone:"Europe/Istanbul"})}\\n© OpenStreetMap contributors`;
     const baseTiles=await Promise.all(tiles.map(async t=>{const u=`https://tile.openstreetmap.org/${ZOOM}/${tx+t.ox}/${ty+t.oy}.png`;const r=await fetch(u,{cf:{cacheTtl:3600}});if(!r.ok)throw new Error("base_map_tile_download_failed");return {...t,bytes:await r.arrayBuffer()};}));
     const baseDecoded=await Promise.all(baseTiles.map(async t=>({...t,img:await decodePng(t.bytes)})));
     const baseMosaic={w:TILE_SIZE*3,h:TILE_SIZE*3,ct:baseDecoded[0].img.ct,data:new Uint8Array(TILE_SIZE*TILE_SIZE*9*(baseDecoded[0].img.ct===6?4:3))};
@@ -297,26 +297,12 @@ export default {
       const now=Math.floor(Date.now()/1000);
       const state=await getState(env.RADAR_DB);
       const last=Number(state.last_alert_ts||0);
-      const syntheticLast=now-60;
-      const syntheticFuture=now-(ALERT_COOLDOWN_SECONDS+60);
-      const blockedByState=last>0 && now-last<ALERT_COOLDOWN_SECONDS;
-      const simulatedBlocked=now-syntheticLast<ALERT_COOLDOWN_SECONDS;
-      const simulatedAllowed=now-syntheticFuture>=ALERT_COOLDOWN_SECONDS;
-      const passed=simulatedBlocked&&simulatedAllowed;
       return new Response(JSON.stringify({
-        status:passed?"cooldown_test_passed":"cooldown_test_failed",
-        cooldown_minutes:ALERT_COOLDOWN_SECONDS/60,
-        current_state:{
-          last_alert_ts:last,
-          elapsed_seconds:last>0?now-last:null,
-          blocked_by_current_state:blockedByState
-        },
-        simulation:{
-          immediate_repeat_blocked:simulatedBlocked,
-          after_30_minutes_allowed:simulatedAllowed
-        },
+        status:"cooldown_removed",
+        alert_rule:"RainViewer yağış tespiti + yaklaşma",
+        last_alert_ts:Number(state.last_alert_ts||0),
         telegram_sent:false
-      }),{status:passed?200:500,headers:{"content-type":"application/json","cache-control":"no-store"}});
+      }),{status:200,headers:{"content-type":"application/json","cache-control":"no-store"}});
     }
 
     if (url.pathname === "/health") {
@@ -326,8 +312,7 @@ export default {
         service: "radar-monitor",
         interval: "6m",
         build: RADAR_BUILD,
-        pixel_threshold: MIN_ALERT_PIXELS,
-        cooldown_minutes: ALERT_COOLDOWN_SECONDS / 60,
+        alert_rule: "RainViewer yağış tespiti + yaklaşma",
         last_frame_ts: Number(state.last_frame_ts || 0),
         last_alert_ts: Number(state.last_alert_ts || 0),
         last_intensity: state.last_intensity || ""
