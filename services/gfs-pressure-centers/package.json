@@ -1,0 +1,6 @@
+{
+  "name":"gfs-pressure-centers",
+  "private":true,
+  "devDependencies":{"wrangler":"latest"},
+  "scripts":{"dev":"wrangler dev","deploy":"wrangler deploy"}
+}
