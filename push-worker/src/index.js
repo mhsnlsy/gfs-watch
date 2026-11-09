@@ -310,11 +310,6 @@ export default {
       );
       return json({ error: "Internal server error" }, 500, headers);
     }
-  },
-
-  async scheduled(event, env, ctx) {
-    if (event.cron === "45 16 * * *") {
-      ctx.waitUntil(sendTomorrowWeatherPush(env));
-    }
   }
+
 };
