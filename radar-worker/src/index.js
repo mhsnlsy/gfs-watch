@@ -2,7 +2,7 @@
 const LAT = 41.0904;
 const LON = 28.9438;
 const RADIUS_KM = 25;
-const THRESHOLD_DBZ = 10;
+const THRESHOLD_DBZ = 8;
 const THRESHOLD_DBZ_STRONG = 30;
 const MIN_ALERT_PIXELS = 5;
 const ALERT_COOLDOWN_SECONDS = 45 * 60;
