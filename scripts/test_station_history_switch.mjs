@@ -2,7 +2,6 @@ import assert from "node:assert/strict";
 import fs from "node:fs";
 import vm from "node:vm";
 
-const html = fs.readFileSync("site/index.html", "utf8");
 const appJs = fs.readFileSync("site/home-app.js", "utf8");
 assert.match(appJs, /const STATIONS_API=\(window\.GFS_WATCH_API_BASE\|\|window\.location\.origin\)\+"\/api";/, "Station reads must use same-origin Cloudflare API gateway.");
 assert.doesNotMatch(appJs, /gfs-watch-stations\.muhsin-ulusoy\.workers\.dev/, "Homepage app must not make cross-origin station API calls.");
@@ -220,7 +219,7 @@ assert.match(appJs, /bucketMs=1800000/);
 assert.match(appJs, /const STATION_HISTORY_API=key=>STATIONS_API\+"\/history\/"\+encodeURIComponent\(key\)\+"\?hours=72"/);
 assert.match(appJs, /historyKeys=stationKey==="enka"\?\["enka","sisli"\]:\[stationKey\]/);
 assert.match(appJs, /fetchStationsApi\("\/history\/".*encodeURIComponent\(key\).*hours=72/);
-assert.match(html, /if\(station\.station_id==="18101"\)eyupsultanStationObservation=station/);
+assert.match(appJs, /if\(station\.station_id==="18101"\)eyupsultanStationObservation=station/);
 assert.match(eyupsultanCollector, /precipitation_10m_mm: observation\.precipitation_10m_mm/);
 assert.match(eyupsultanCollector, /last\.precipitation_10m_mm = sample\.precipitation_10m_mm/);
 console.log("Station history switch smoke tests passed: card, temperature trend, rainfall trend, source labels, and station isolation.");
