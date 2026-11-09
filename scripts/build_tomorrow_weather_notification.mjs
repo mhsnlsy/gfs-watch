@@ -16,7 +16,6 @@ if (runDigits.length !== 10 || Number(runDigits.slice(8, 10)) !== 12) throw new 
 const cycle = new Date(Date.UTC(Number(runDigits.slice(0, 4)), Number(runDigits.slice(4, 6)) - 1, Number(runDigits.slice(6, 8)), 12));
 const steps = doc.steps.values.map(finite);
 const series = { tmp2m: (doc.data.tmp2m && doc.data.tmp2m.values) || [], apcp: (doc.data.apcp && doc.data.apcp.values) || [], clouds: (doc.data.clouds && doc.data.clouds.values) || [] };
-if (!series.clouds.length) throw new Error('MeteoPT 12Z output does not contain the "Clouds" series.');
 const points = [];
 for (let i = 0; i < steps.length; i += 1) { const lead = steps[i]; if (lead === null || lead <= 0) continue; const valid = new Date(cycle.getTime() + lead * 3600000); points.push({ lead, valid, date: dateKey(valid), hour: hour(valid), temp: finite(series.tmp2m[i]), precip: finite(series.apcp[i]), clouds: finite(series.clouds[i]) }); }
 if (!points.length) throw new Error("MeteoPT 12Z output has no forecast points.");
@@ -28,9 +27,12 @@ if (!todayPoints.length || !tomorrowPoints.length) throw new Error("12Z GFS does
 const todayMax = Math.max(...todayPoints.map(p => p.temp));
 const tomorrowMax = Math.max(...tomorrowPoints.map(p => p.temp));
 const cloudPoint = tomorrowPoints.filter(p => p.clouds !== null).sort((a, b) => Math.abs(a.hour - 15) - Math.abs(b.hour - 15))[0];
-if (!cloudPoint) throw new Error("12Z GFS has no Clouds value for tomorrow.");
 const rainTomorrow = tomorrowPoints.some(p => p.precip !== null && p.precip > 0);
-const weatherLabel = rainTomorrow ? "yağmurlu" : cloudLabel(cloudPoint.clouds);
+const weatherLabel = rainTomorrow
+  ? "yağmurlu"
+  : cloudPoint && cloudPoint.clouds !== null
+    ? cloudLabel(cloudPoint.clouds)
+    : "bulutlu";
 const delta = tomorrowMax - todayMax;
 const tempSentence = Math.abs(delta) < 0.05 ? "bugünle aynı sıcaklıkta" : "bugünden " + fmt(delta) + "°C daha " + (delta > 0 ? "sıcak" : "soğuk");
 const body = "Yarın hava " + fmt(tomorrowMax) + "°C, " + tempSentence + ", " + weatherLabel + ".";
