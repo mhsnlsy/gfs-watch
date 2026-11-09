@@ -2006,7 +2006,8 @@ if(typeof renderBriefing==="function")renderBriefing();
         // The embedded forecast report and the archive now share the same PNG chart paths.
         const gfsApi=(window.ISTANBUL_GFS_API_BASE||"").replace(/\/$/,"");
         const archiveUrls=[
-          (gfsApi?gfsApi+"/gfs/notification-latest":"./data/notifications/latest.json"),
+          (gfsApi?gfsApi+"/gfs/notification-latest":"/gfs/notification-latest"),
+          "https://gfs-watch-istanbul-gfs.muhsin-ulusoy.workers.dev/gfs/notification-latest",
           "https://gfs-watch-istanbul-gfs.muhsin-ulusoy.workers.dev/gfs/publication-asset/notifications/latest.json",
           "./data/notifications/latest.json"
         ].filter((url,index,list)=>url && list.indexOf(url)===index);
