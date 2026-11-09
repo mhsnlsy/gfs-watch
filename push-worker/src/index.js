@@ -124,13 +124,18 @@ async function buildTomorrowWeather() {
     .filter(p => p.clouds !== null)
     .sort((a, b) => Math.abs(a.hour - 15) - Math.abs(b.hour - 15))[0];
 
-  if (!cloudPoint) throw new Error("12Z GFS lacks Clouds data for tomorrow.");
-
   const rainy = tomorrowPoints.some(
     p => p.precip !== null && p.precip > 0
   );
 
-  const weather = rainy ? "yağmurlu" : cloudLabel(cloudPoint.clouds);
+  // Clouds is optional in some MeteoPT 12Z payloads. Rain is authoritative;
+  // if cloud coverage is missing, use a neutral "bulutlu" fallback instead
+  // of aborting the entire notification.
+  const weather = rainy
+    ? "yağmurlu"
+    : cloudPoint && cloudPoint.clouds !== null
+      ? cloudLabel(cloudPoint.clouds)
+      : "bulutlu";
   const delta = tomorrowMax - todayMax;
 
   const comparison = Math.abs(delta) < 0.05
