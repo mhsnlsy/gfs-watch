@@ -67,4 +67,5 @@ jobs:
             exit 0
           fi
           git commit -m "data: update GFS pressure centers [pressure-centers]"
+          git pull --rebase origin main
           git push
