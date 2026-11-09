@@ -458,10 +458,14 @@
       const gaps=points.slice(1).map((p,i)=>(p.stamp-points[i].stamp)/3600000).filter(v=>v>0&&v<=12).sort((a,b)=>a-b);
       const stepH=gaps.length?gaps[Math.floor(gaps.length/2)]:3;
       const now=Date.now();
+      // The MeteoPT table deliberately displays UTC forecast clock values as TSİ
+      // (without adding +03:00). Compare forecast timestamps against the same
+      // wall-clock scale; otherwise the countdown is exactly three hours too long.
+      const tableClockNow=now+3*3600000;
       const intervals=points.map(p=>({start:p.stamp-stepH*3600000,end:p.stamp,mm:p.precipitation_6h_mm}))
-        .filter(x=>x.mm>=0.2&&x.end>now-stepH*3600000);
-      const active=intervals.filter(x=>x.start<=now&&x.end>now);
-      const upcoming=intervals.filter(x=>x.start>now);
+        .filter(x=>x.mm>=0.2&&x.end>tableClockNow-stepH*3600000);
+      const active=intervals.filter(x=>x.start<=tableClockNow&&x.end>tableClockNow);
+      const upcoming=intervals.filter(x=>x.start>tableClockNow);
       if(active.length){
         // Yağış sürüyorsa, birbirine bitişik yağışlı model adımlarını birleştir
         // ve mevcut yağış periyodunun sona ereceği ilk kuru zamanı göster.
@@ -486,7 +490,7 @@
           forecast.textContent="MeteoPT GFS tahminine göre "+dateTime(dryAt)+" itibarıyla yağış sona eriyor; tahmin süresinin kalanında yeniden yağış görünmüyor.";
         }
       }else if(upcoming.length){
-        const next=upcoming[0],forecastAt=next.end,hours=Math.max(0,(forecastAt-now)/3600000);
+        const next=upcoming[0],forecastAt=next.end,hours=Math.max(0,(forecastAt-tableClockNow)/3600000);
         const lead=hours<1?"1 saatten az":Math.round(hours)+" saat";
         forecast.innerHTML="MeteoPT GFS tahminine göre yaklaşık "+lead+" içinde<br>("+dateTime(forecastAt)+") yağış bekleniyor.";
       }else{
@@ -494,11 +498,11 @@
       }
       if(heavy){
         const significant=intervals.filter(x=>x.mm>2.00);
-        const heavyActive=significant.filter(x=>x.start<=now&&x.end>now);
-        const heavyNext=significant.filter(x=>x.start>now);
+        const heavyActive=significant.filter(x=>x.start<=tableClockNow&&x.end>tableClockNow);
+        const heavyNext=significant.filter(x=>x.start>tableClockNow);
         const target=heavyActive[0]||heavyNext[0];
         if(target){
-          const when=target.start<=now?"Şu anda":" "+dateTime(target.start)+" itibarıyla";
+          const when=target.start<=tableClockNow?"Şu anda":" "+dateTime(target.start)+" itibarıyla";
           heavy.hidden=false;
           heavy.textContent="Kuvvetli yağış uyarısı: "+when+" "+fmt(target.mm,2)+" mm / 3 saat (2,00 mm üzeri) tahmin ediliyor.";
         }else{
