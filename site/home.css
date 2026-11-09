@@ -2732,3 +2732,297 @@ html.ios12 #enka-camera-panel .enka-camera-frame{
     margin:22px 0 0!important;
   }
 }
+
+
+/* =========================================================
+   HOMEPAGE DESKTOP REDESIGN — stable two-column composition
+   Left: single 600px observation card.
+   Right: latest four-cycle GFS report, then 180h table,
+   then pressure analysis. Mobile/tablet keeps stacked flow.
+   ========================================================= */
+@media (min-width:1200px) and (pointer:fine){
+  main.shell{
+    width:min(1680px,calc(100% - 64px))!important;
+    max-width:1680px!important;
+    margin-left:auto!important;
+    margin-right:auto!important;
+  }
+  .dashboard-top{
+    display:grid!important;
+    grid-template-columns:600px minmax(0,1fr)!important;
+    column-gap:24px!important;
+    row-gap:0!important;
+    width:100%!important;
+    max-width:100%!important;
+    margin:0!important;
+    padding:18px 0 24px!important;
+    align-items:start!important;
+  }
+  .dashboard-left{
+    display:block!important;
+    width:600px!important;
+    min-width:0!important;
+    max-width:600px!important;
+    margin:0!important;
+    align-self:start!important;
+  }
+  .dashboard-left>.station-card,
+  .dashboard-left .station-card{
+    display:grid!important;
+    width:600px!important;
+    min-width:0!important;
+    max-width:600px!important;
+    box-sizing:border-box!important;
+    margin:0!important;
+    align-self:start!important;
+    height:auto!important;
+  }
+  .dashboard-left .history-panel{
+    width:100%!important;
+    min-width:0!important;
+    box-sizing:border-box!important;
+  }
+  .dashboard-left .history-charts{
+    display:grid!important;
+    grid-template-columns:repeat(2,minmax(0,1fr))!important;
+    gap:10px!important;
+    width:100%!important;
+    min-width:0!important;
+  }
+  .dashboard-left .history-chart-card{
+    min-width:0!important;
+    padding:8px 8px 6px!important;
+    margin:0!important;
+  }
+  .dashboard-left .history-chart{
+    width:100%!important;
+    height:118px!important;
+    min-width:0!important;
+  }
+  .dashboard-left .station-briefing-inline{
+    grid-column:1/-1!important;
+    width:100%!important;
+    min-width:0!important;
+    max-width:100%!important;
+    margin:8px 0 0!important;
+    padding:10px 0 0!important;
+    box-sizing:border-box!important;
+  }
+  .dashboard-left .station-card>.station-briefing-inline .briefing{
+    display:grid!important;
+    grid-template-columns:repeat(2,minmax(0,1fr))!important;
+    gap:10px!important;
+    width:100%!important;
+    min-width:0!important;
+    margin:0!important;
+  }
+  .dashboard-left .station-card>.station-briefing-inline .briefing-row{
+    display:grid!important;
+    grid-template-columns:92px minmax(0,1fr)!important;
+    align-items:start!important;
+    gap:8px!important;
+    min-width:0!important;
+    min-height:100%!important;
+    padding:11px 10px!important;
+    border:1px solid rgba(125,211,215,.14)!important;
+    border-radius:12px!important;
+    background:rgba(2,15,24,.34)!important;
+    box-sizing:border-box!important;
+  }
+  .dashboard-right{
+    display:flex!important;
+    flex-direction:column!important;
+    gap:18px!important;
+    width:100%!important;
+    min-width:0!important;
+    max-width:100%!important;
+    margin:0!important;
+    padding:0!important;
+    align-self:start!important;
+  }
+  #gfs-model-view,
+  #ecmwf-model-view{
+    width:100%!important;
+    min-width:0!important;
+    max-width:100%!important;
+    margin:0!important;
+    padding:0!important;
+    box-sizing:border-box!important;
+  }
+  #bildirimler{
+    display:block!important;
+    width:100%!important;
+    min-width:0!important;
+    max-width:100%!important;
+    margin:0!important;
+    padding:0!important;
+  }
+  #bildirimler .section-head.report-head{
+    display:flex!important;
+    flex-direction:row!important;
+    align-items:center!important;
+    justify-content:space-between!important;
+    gap:14px!important;
+    width:100%!important;
+    margin:0 0 14px!important;
+    padding:0!important;
+  }
+  #bildirimler .notification-controls{
+    display:flex!important;
+    flex-direction:column!important;
+    align-items:flex-end!important;
+    justify-content:center!important;
+    gap:5px!important;
+    width:auto!important;
+    min-width:180px!important;
+    margin:0!important;
+  }
+  #bildirimler .notification-button{
+    width:auto!important;
+    min-width:176px!important;
+  }
+  #bildirimler .notification-status{
+    text-align:right!important;
+  }
+  #bildirimler .notification-list{
+    display:block!important;
+    width:100%!important;
+    min-width:0!important;
+    max-width:100%!important;
+    margin:0!important;
+    padding:0!important;
+  }
+  #bildirimler .notification-card.koy-gfs-report-card,
+  #bildirimler .notification-card.notification-chart-only{
+    display:block!important;
+    width:100%!important;
+    min-width:0!important;
+    max-width:100%!important;
+    margin:0!important;
+    padding:12px!important;
+    box-sizing:border-box!important;
+    border:1px solid rgba(125,211,215,.24)!important;
+    border-radius:18px!important;
+    background:linear-gradient(145deg,rgba(7,34,51,.96),rgba(5,25,39,.98))!important;
+    box-shadow:none!important;
+    overflow:hidden!important;
+  }
+  #bildirimler .koy-gfs-svg-images,
+  #bildirimler .notification-card .koy-gfs-svg-images,
+  #bildirimler .gfs-interactive-chart{
+    display:block!important;
+    width:100%!important;
+    min-width:0!important;
+    max-width:100%!important;
+    margin:0!important;
+    box-sizing:border-box!important;
+  }
+  #bildirimler .gfs-interactive-chart .gfs-interactive-svg{
+    display:block!important;
+    width:100%!important;
+    min-width:0!important;
+    max-width:100%!important;
+    height:auto!important;
+    margin:0!important;
+  }
+  .dashboard-right .water-gfs-layout{
+    display:grid!important;
+    grid-template-columns:minmax(0,1fr)!important;
+    gap:18px!important;
+    width:100%!important;
+    min-width:0!important;
+    max-width:100%!important;
+    margin:0!important;
+    padding:0!important;
+  }
+  .dashboard-right #meteopt-gfs-table,
+  .dashboard-right #meteopt-gfs-table.gfs-table-section{
+    display:block!important;
+    width:100%!important;
+    min-width:0!important;
+    max-width:100%!important;
+    margin:0!important;
+    padding:0!important;
+  }
+  .dashboard-right #meteopt-gfs-table .meteopt-table-card{
+    display:block!important;
+    width:100%!important;
+    min-width:0!important;
+    max-width:100%!important;
+    margin:0!important;
+    padding:12px!important;
+    box-sizing:border-box!important;
+  }
+  .dashboard-right #meteopt-gfs-table .meteopt-table-scroll{
+    display:block!important;
+    width:100%!important;
+    min-width:0!important;
+    max-width:100%!important;
+    overflow-x:auto!important;
+    overflow-y:visible!important;
+  }
+  .dashboard-right #meteopt-gfs-table .meteopt-data-table{
+    display:table!important;
+    width:100%!important;
+    min-width:900px!important;
+    max-width:none!important;
+    table-layout:fixed!important;
+    margin:0!important;
+  }
+  .dashboard-right .gfs-pressure-panel{
+    display:block!important;
+    width:100%!important;
+    min-width:0!important;
+    max-width:100%!important;
+    margin:0!important;
+    padding:0!important;
+  }
+  .dashboard-right #ecmwf-model-view[hidden],
+  .dashboard-right #gfs-model-view[hidden]{
+    display:none!important;
+  }
+}
+
+/* Tablet and mobile: restore one-column document flow without changing
+   the established touch-scale SVG and horizontal table handling. */
+@media (max-width:1199px), (pointer:coarse){
+  .dashboard-top{
+    display:grid!important;
+    grid-template-columns:minmax(0,1fr)!important;
+    width:100%!important;
+    max-width:100%!important;
+    gap:14px!important;
+  }
+  .dashboard-left,
+  .dashboard-right{
+    display:block!important;
+    width:100%!important;
+    min-width:0!important;
+    max-width:100%!important;
+  }
+  .dashboard-left .station-card{
+    width:100%!important;
+    min-width:0!important;
+    max-width:100%!important;
+  }
+  .dashboard-left .history-charts{
+    grid-template-columns:repeat(2,minmax(0,1fr))!important;
+  }
+  .dashboard-left .station-briefing-inline .briefing{
+    grid-template-columns:repeat(2,minmax(0,1fr))!important;
+  }
+  .dashboard-right #gfs-model-view,
+  .dashboard-right #ecmwf-model-view,
+  .dashboard-right #bildirimler,
+  .dashboard-right .water-gfs-layout{
+    width:100%!important;
+    min-width:0!important;
+    max-width:100%!important;
+  }
+}
+@media (max-width:560px){
+  .dashboard-left .history-charts,
+  .dashboard-left .station-briefing-inline .briefing{
+    grid-template-columns:minmax(0,1fr)!important;
+  }
+}
