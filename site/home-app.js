@@ -9,8 +9,18 @@
     }
     fetch("./version.json",{cache:"no-store"}).then(response=>response.ok?response.json():null).then(applyAppVersion).catch(()=>{});
     const STATIONS_API=(window.GFS_WATCH_API_BASE||window.location.origin)+"/api";
+    const STATIONS_API_FALLBACK="https://gfs-watch-stations.muhsin-ulusoy.workers.dev/api";
     const STATIONS_URL=STATIONS_API+"/stations";
     const STATION_HISTORY_API=key=>STATIONS_API+"/history/"+encodeURIComponent(key)+"?hours=72";
+    async function fetchStationsApi(path){
+      const primary=STATIONS_API+path;
+      try{
+        const response=await fetch(primary,{cache:"no-store"});
+        if(response.ok)return response;
+      }catch(_){}
+      const fallback=STATIONS_API_FALLBACK+path;
+      return fetch(fallback,{cache:"no-store",mode:"cors"});
+    }
     // No forecast-verification.json is published yet; avoid repeated 404s until the calibration archive is generated.
     const VERIFY_URL=null;
     let enkaStationObservation=null,eyupsultanStationObservation=null,sisliStationObservation=null,activeStation="eyupsultan";
@@ -1710,7 +1720,7 @@ renderBriefing();
     async function refreshStationObservations(){
       const cacheKey=Date.now();
       try{
-        const response=await fetch(STATIONS_URL+"?t="+cacheKey,{cache:"no-store"});
+        const response=await fetchStationsApi("/stations?t="+cacheKey);
         if(!response.ok)throw new Error("Worker stations HTTP "+response.status);
         const document=await response.json();
         const rows=Array.isArray(document.stations)?document.stations:[];
@@ -1742,8 +1752,8 @@ if(typeof renderBriefing==="function")renderBriefing();
       try{
         const historyKeys=stationKey==="enka"?["enka","sisli"]:[stationKey];
         const [currentResponse,...historyResponses]=await Promise.all([
-          fetch(STATIONS_API+"/stations/"+encodeURIComponent(stationKey)+"?t="+cacheKey,{cache:"no-store"}),
-          ...historyKeys.map(key=>fetch(STATION_HISTORY_API(key)+"&t="+cacheKey,{cache:"no-store"}))
+          fetchStationsApi("/stations/"+encodeURIComponent(stationKey)+"?t="+cacheKey),
+          ...historyKeys.map(key=>fetchStationsApi("/history/"+encodeURIComponent(key)+"?hours=72&t="+cacheKey))
         ]);
 
         if(!currentResponse.ok)throw new Error("Selected station API HTTP "+currentResponse.status);
