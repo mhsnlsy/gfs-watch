@@ -13,39 +13,39 @@
     "centers": [
       {
         "type": "high",
-        "pressure_hpa": 1036.1,
-        "latitude": 41.75,
-        "longitude": 33.5,
-        "distance_km": 388.3,
-        "bearing_deg": 76,
-        "direction": "DKD"
-      },
-      {
-        "type": "high",
-        "pressure_hpa": 1034.9,
-        "latitude": 40.25,
+        "pressure_hpa": 1033.3,
+        "latitude": 41.25,
         "longitude": 41.25,
-        "distance_km": 1040.6,
-        "bearing_deg": 91,
+        "distance_km": 1029.6,
+        "bearing_deg": 84,
         "direction": "D"
       },
       {
         "type": "high",
-        "pressure_hpa": 1034.3,
-        "latitude": 38.75,
-        "longitude": 35.75,
-        "distance_km": 632.3,
-        "bearing_deg": 111,
+        "pressure_hpa": 1030.8,
+        "latitude": 44.0,
+        "longitude": 42.0,
+        "distance_km": 1118.7,
+        "bearing_deg": 68,
+        "direction": "DKD"
+      },
+      {
+        "type": "high",
+        "pressure_hpa": 1029.6,
+        "latitude": 38.25,
+        "longitude": 38.25,
+        "distance_km": 853.1,
+        "bearing_deg": 108,
         "direction": "DGD"
       },
       {
         "type": "high",
-        "pressure_hpa": 1032.5,
-        "latitude": 43.5,
-        "longitude": 41.25,
-        "distance_km": 1048.2,
-        "bearing_deg": 71,
-        "direction": "DKD"
+        "pressure_hpa": 1029.2,
+        "latitude": 38.25,
+        "longitude": 43.0,
+        "distance_km": 1240.3,
+        "bearing_deg": 100,
+        "direction": "D"
       }
     ]
   },
@@ -59,8 +59,8 @@
     "lon_min": 12.0,
     "lon_max": 48.0
   },
-  "cycle_utc": "2026-11-09T00:00:00Z",
+  "cycle_utc": "2026-11-09T12:00:00Z",
   "forecast_hour": 0,
-  "download_bytes": 24793,
-  "download_url": "https://nomads.ncep.noaa.gov/cgi-bin/filter_gfs_0p25.pl?file=gfs.t00z.pgrb2.0p25.f000&var_PRMSL=on&lev_mean_sea_level=on&subregion=&leftlon=12&rightlon=48&toplat=53&bottomlat=29&dir=%2Fgfs.20261109%2F00%2Fatmos"
+  "download_bytes": 23035,
+  "download_url": "https://nomads.ncep.noaa.gov/cgi-bin/filter_gfs_0p25.pl?file=gfs.t12z.pgrb2.0p25.f000&var_PRMSL=on&lev_mean_sea_level=on&subregion=&leftlon=12&rightlon=48&toplat=53&bottomlat=29&dir=%2Fgfs.20261109%2F12%2Fatmos"
 }
