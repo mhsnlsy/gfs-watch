@@ -27,7 +27,7 @@ jobs:
           node-version: 22
           package-manager-cache: false
 
-      - name: Install pinned Wrangler
+      - name: Install pinned Wrangler and Containers SDK
         run: npm install
 
       - name: Show Wrangler version
