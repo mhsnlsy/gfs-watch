@@ -1905,3 +1905,64 @@ html,body{
   #meteopt-gfs-table .meteopt-data-table.koy-snowln-table th,
   #meteopt-gfs-table .meteopt-data-table.koy-snowln-table td {padding-left:0!important;padding-right:0!important}
 }
+
+
+/* 20261109: stop the table frame at the final Snowln column on desktop.
+   Keep the module flush-left and size its card/wrapper to the table content. */
+@media (min-width: 851px) and (pointer: fine) {
+  #meteopt-gfs-table,
+  #meteopt-gfs-table.gfs-table-section {
+    display: block !important;
+    width: fit-content !important;
+    max-width: 100% !important;
+    min-width: 0 !important;
+    margin-left: 0 !important;
+    margin-right: auto !important;
+    justify-self: start !important;
+  }
+  #meteopt-gfs-table > .section-head {
+    width: 100% !important;
+    max-width: 100% !important;
+  }
+  #meteopt-gfs-table .meteopt-table-card {
+    display: block !important;
+    width: fit-content !important;
+    max-width: 100% !important;
+    min-width: 0 !important;
+    margin-left: 0 !important;
+    margin-right: auto !important;
+  }
+  #meteopt-gfs-table .meteopt-table-scroll {
+    display: block !important;
+    width: fit-content !important;
+    max-width: 100% !important;
+    min-width: 0 !important;
+    overflow: visible !important;
+  }
+  #meteopt-gfs-table .meteopt-data-table {
+    display: table !important;
+    width: max-content !important;
+    min-width: 0 !important;
+    max-width: 100% !important;
+    table-layout: auto !important;
+    margin: 0 !important;
+  }
+  #meteopt-gfs-table .meteopt-table-toolbar {
+    width: 100% !important;
+    max-width: 100% !important;
+  }
+}
+
+/* Touch and narrow layouts remain full-width and responsive. */
+@media (max-width: 850px), (pointer: coarse) {
+  #meteopt-gfs-table,
+  #meteopt-gfs-table .meteopt-table-card,
+  #meteopt-gfs-table .meteopt-table-scroll {
+    width: 100% !important;
+    max-width: 100% !important;
+  }
+  #meteopt-gfs-table .meteopt-data-table {
+    width: 100% !important;
+    max-width: 100% !important;
+  }
+}
