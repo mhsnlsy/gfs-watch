@@ -3728,3 +3728,90 @@ html.ios12 #enka-camera-panel .enka-camera-frame{
     line-height:1.35!important;
   }
 }
+
+/* FINAL: separate forecast briefing from the live observation card.
+   The two briefing panels now sit immediately below the live station card. */
+.dashboard-left > .station-briefing-inline{
+  display:block!important;
+  width:100%!important;
+  max-width:100%!important;
+  min-width:0!important;
+  margin:0!important;
+  padding:0!important;
+  box-sizing:border-box!important;
+  align-self:start!important;
+}
+.dashboard-left > .station-briefing-inline .briefing{
+  display:grid!important;
+  grid-template-columns:minmax(0,1fr)!important;
+  gap:10px!important;
+  width:100%!important;
+  margin:0!important;
+}
+.dashboard-left > .station-briefing-inline .briefing-row{
+  width:100%!important;
+  box-sizing:border-box!important;
+}
+@media (min-width:1200px) and (pointer:fine){
+  .dashboard-left > .station-card{
+    grid-column:1!important;
+    grid-row:1!important;
+  }
+  .dashboard-left > .station-briefing-inline{
+    grid-column:1!important;
+    grid-row:2!important;
+  }
+  .dashboard-left > .gfs-pressure-panel{
+    grid-column:1!important;
+    grid-row:3!important;
+    position:static!important;
+    top:auto!important;
+    left:auto!important;
+    margin:0!important;
+  }
+}
+@media (max-width:1199px), (pointer:coarse){
+  .dashboard-left > .station-card{
+    grid-column:1!important;
+    grid-row:auto!important;
+    order:1!important;
+  }
+  .dashboard-left > .station-briefing-inline{
+    grid-column:1!important;
+    grid-row:auto!important;
+    order:2!important;
+    margin-top:0!important;
+  }
+  .dashboard-right{
+    order:3!important;
+  }
+  .dashboard-left > .gfs-pressure-panel{
+    grid-column:1!important;
+    grid-row:auto!important;
+    order:4!important;
+  }
+}
+@media (max-width:560px){
+  .dashboard-left > .station-briefing-inline{
+    width:100%!important;
+    margin:0!important;
+    padding:0!important;
+  }
+  .dashboard-left > .station-briefing-inline .briefing{
+    gap:9px!important;
+  }
+  .dashboard-left > .station-briefing-inline .briefing-row{
+    grid-template-columns:132px minmax(0,1fr)!important;
+    gap:8px!important;
+    padding:8px 10px!important;
+    border-radius:15px!important;
+  }
+  .dashboard-left > .station-briefing-inline .briefing-k{
+    font-size:10px!important;
+    line-height:1.25!important;
+  }
+  .dashboard-left > .station-briefing-inline .briefing-v{
+    font-size:14px!important;
+    line-height:1.42!important;
+  }
+}
