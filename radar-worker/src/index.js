@@ -286,24 +286,12 @@ async function check(env){
   }
   state.history=h;state.last_frame_ts=ts;
   await saveState(env.RADAR_DB,state);
-  return {status:"ok",frame_ts:ts,alert,pixel_count:curr.count,pixel_gate:pixelGate,max_dbz:curr.max_dbz,area_km2:curr.area_km2,width_km:curr.width_km,height_km:curr.height_km,min_dist_km:curr.min_dist_km,centroid_dist:curr.centroid_dist,telegram_sent:sent,telegram_status:telegramStatus,telegram_error:telegramError};
+  return {status:"ok",frame_ts:ts,alert,rain_detected:rainDetected,approaching,pixel_count:curr.count,max_dbz:curr.max_dbz,area_km2:curr.area_km2,width_km:curr.width_km,height_km:curr.height_km,min_dist_km:curr.min_dist_km,previous_min_dist_km:previous?.min_dist_km??null,centroid_dist:curr.centroid_dist,telegram_sent:sent,telegram_status:telegramStatus,telegram_error:telegramError};
 }
 
 export default {
   async fetch(request,env){
     const url=new URL(request.url);
-
-    if(url.pathname==="/test-cooldown"){
-      const now=Math.floor(Date.now()/1000);
-      const state=await getState(env.RADAR_DB);
-      const last=Number(state.last_alert_ts||0);
-      return new Response(JSON.stringify({
-        status:"cooldown_removed",
-        alert_rule:"RainViewer yağış tespiti + yaklaşma",
-        last_alert_ts:Number(state.last_alert_ts||0),
-        telegram_sent:false
-      }),{status:200,headers:{"content-type":"application/json","cache-control":"no-store"}});
-    }
 
     if (url.pathname === "/health") {
       const state = await getState(env.RADAR_DB);
