@@ -199,15 +199,18 @@ async function telegramPhoto(env,bytes,caption){
 
 async function getState(db){
   const r=await db.prepare("SELECT * FROM radar_state WHERE id=1").first();
-  return r||{history_json:"[]",last_alert_ts:0};
+  return r||{history_json:"[]",last_alert_ts:0,last_telegram_status:0,last_telegram_error:""};
 }
 
 async function saveState(db,s){
-  await db.prepare(`INSERT INTO radar_state(id,history_json,last_frame_ts,last_alert_ts,last_intensity,updated_at)
-    VALUES(1,?,?,?,?,?)
+  await db.prepare(`INSERT INTO radar_state(id,history_json,last_frame_ts,last_alert_ts,last_intensity,last_telegram_status,last_telegram_error,updated_at)
+    VALUES(1,?,?,?,?,?,?,?)
     ON CONFLICT(id) DO UPDATE SET history_json=excluded.history_json,last_frame_ts=excluded.last_frame_ts,
-    last_alert_ts=excluded.last_alert_ts,last_intensity=excluded.last_intensity,updated_at=excluded.updated_at`)
-    .bind(JSON.stringify(s.history),s.last_frame_ts||0,s.last_alert_ts||0,s.last_intensity||"",new Date().toISOString()).run();
+    last_alert_ts=excluded.last_alert_ts,last_intensity=excluded.last_intensity,
+    last_telegram_status=excluded.last_telegram_status,last_telegram_error=excluded.last_telegram_error,
+    updated_at=excluded.updated_at`)
+    .bind(JSON.stringify(s.history),s.last_frame_ts||0,s.last_alert_ts||0,s.last_intensity||"",
+      s.last_telegram_status||0,s.last_telegram_error||"",new Date().toISOString()).run();
 }
 
 function crc32(bytes){
