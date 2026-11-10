@@ -2015,177 +2015,19 @@ if(typeof renderBriefing==="function")renderBriefing();
     let ecmwfForecast=null,ecmwfLoading=false,ecmwfLastFetch=0;
     let activeModel="gfs";
     
-    function attachEcmwfComparisonTooltip(card,svg,runs,times,maps,spec,width,height,left,right,top,bottom){
-      if(!card||!svg||!times.length)return;
-      const tooltip=document.createElement("div");
-      tooltip.className="chart-tooltip ecmwf-chart-tooltip";
-      tooltip.hidden=true;
-      tooltip.setAttribute("role","tooltip");
-      card.appendChild(tooltip);
-      const ns="http://www.w3.org/2000/svg";
-      const cursorLine=document.createElementNS(ns,"line");
-      cursorLine.setAttribute("class","chart-crosshair");
-      cursorLine.setAttribute("y1",String(top));cursorLine.setAttribute("y2",String(height-bottom));
-      cursorLine.setAttribute("stroke","#e8fbf7");cursorLine.setAttribute("stroke-width","1");
-      cursorLine.setAttribute("stroke-dasharray","3 4");cursorLine.setAttribute("opacity",".8");
-      cursorLine.setAttribute("visibility","hidden");
-      const cursorDot=document.createElementNS(ns,"circle");
-      cursorDot.setAttribute("r","5");cursorDot.setAttribute("fill","#55D6D2");
-      cursorDot.setAttribute("stroke","#f4ffff");cursorDot.setAttribute("stroke-width","2");
-      cursorDot.setAttribute("visibility","hidden");
-      svg.append(cursorLine,cursorDot);
-      const x=index=>left+(times.length===1?0:index/(times.length-1))*(width-left-right);
-      const y=value=>{
-        let min=Math.min(...maps.flatMap(map=>times.map(time=>map.get(time))));
-        let max=Math.max(...maps.flatMap(map=>times.map(time=>map.get(time))));
-        if(spec.key==="precipitation_6h_mm")min=Math.min(0,min);
-        if(min===max){min-=1;max+=1;}
-        const pad=(max-min)*.12;min-=pad;max+=pad;if(spec.key==="precipitation_6h_mm")min=Math.max(0,min);
-        return top+(max-value)/(max-min)*(height-top-bottom);
-      };
-      const show=(index,event)=>{
-        const time=times[index];
-        const values=runs.map((run,i)=>({run,index:i,value:maps[i].get(time)})).filter(item=>Number.isFinite(item.value));
-        if(!values.length)return;
-        const pointY=y(values[values.length-1].value);
-        cursorLine.setAttribute("x1",String(x(index)));cursorLine.setAttribute("x2",String(x(index)));
-        cursorDot.setAttribute("cx",String(x(index)));cursorDot.setAttribute("cy",String(pointY));
-        cursorLine.setAttribute("visibility","visible");cursorDot.setAttribute("visibility","visible");
-        const dateLabel=new Intl.DateTimeFormat("tr-TR",{timeZone:"Europe/Istanbul",weekday:"short",day:"2-digit",month:"2-digit",hour:"2-digit",minute:"2-digit",hourCycle:"h23"}).format(new Date(time));
-        tooltip.innerHTML='<div class="chart-tooltip-time">'+esc(dateLabel+' TSİ')+'</div>'+values.map(item=>{
-          const runLabel=(item.index===runs.length-1?'YENİ · ':'')+formatRun(item.run);
-          return '<div class="ecmwf-tooltip-row"><span class="ecmwf-tooltip-swatch" style="background:'+colors[item.index%colors.length]+'"></span><span>'+esc(runLabel)+'</span><strong>'+esc(fmt(item.value,spec.key==="precipitation_6h_mm"?1:1))+' '+esc(spec.unit)+'</strong></div>';
-        }).join("");
-        tooltip.hidden=false;
-        const rect=card.getBoundingClientRect(),svgRect=svg.getBoundingClientRect();
-        const localX=(x(index)/width)*svgRect.width+(svgRect.left-rect.left);
-        const localY=(pointY/height)*svgRect.height+(svgRect.top-rect.top);
-        const tw=tooltip.offsetWidth,th=tooltip.offsetHeight,gap=10,pad=8;
-        let leftPos=localX-tw/2;
-        if(leftPos<pad)leftPos=localX+gap;
-        if(leftPos+tw>rect.width-pad)leftPos=localX-tw-gap;
-        leftPos=Math.max(pad,Math.min(rect.width-tw-pad,leftPos));
-        const above=localY-th-gap>=pad;
-        tooltip.style.left=Math.round(leftPos)+"px";
-        tooltip.style.top=Math.round(above?localY-th-gap:localY+gap)+"px";
-      };
-      const hide=()=>{clearScheduledTouchChartTooltip(hide);tooltip.hidden=true;cursorLine.setAttribute("visibility","hidden");cursorDot.setAttribute("visibility","hidden");};
-      const nearest=e=>{
-        const r=svg.getBoundingClientRect();if(!r.width)return;
-        const chartX=(e.clientX-r.left)*width/r.width;
-        let index=0,best=Math.abs(x(0)-chartX);
-        for(let i=1;i<times.length;i++){const d=Math.abs(x(i)-chartX);if(d<best){best=d;index=i;}}
-        show(index,e);
-      };
-      const hit=document.createElementNS(ns,"rect");
-      hit.setAttribute("class","chart-hit-area");hit.setAttribute("x",String(left));hit.setAttribute("y",String(top));
-      hit.setAttribute("width",String(width-left-right));hit.setAttribute("height",String(height-top-bottom));
-      hit.setAttribute("tabindex","0");hit.setAttribute("aria-label",spec.title+" grafiğinde tarih ve tüm ECMWF döngü değerlerini görüntüleyin");
-      hit.style.touchAction="pan-y";hit.style.webkitTapHighlightColor="transparent";
-      svg.appendChild(hit);
-      hit.addEventListener("pointermove",e=>{nearest(e);if(e.pointerType==="touch")scheduleTouchChartTooltipDismiss(hide);});
-      hit.addEventListener("pointerdown",e=>{nearest(e);if(e.pointerType==="touch"){try{hit.setPointerCapture(e.pointerId);}catch(_){ }scheduleTouchChartTooltipDismiss(hide);}});
-      hit.addEventListener("pointerup",e=>{if(e.pointerType==="touch")scheduleTouchChartTooltipDismiss(hide);});
-      hit.addEventListener("pointerleave",e=>{if(e.pointerType!=="touch")hide();});
-      hit.addEventListener("pointercancel",hide);
-      hit.addEventListener("keydown",e=>{
-        if(e.key!=="ArrowLeft"&&e.key!=="ArrowRight")return;e.preventDefault();
-        const current=Number(cursorLine.getAttribute("x1"));let index=times.findIndex((_,i)=>Math.abs(x(i)-current)<.5);
-        if(index<0)index=0;index=Math.max(0,Math.min(times.length-1,index+(e.key==="ArrowRight"?1:-1)));show(index,{clientX:window.innerWidth/2,clientY:window.innerHeight/2});
-      });
-    }
     function renderEcmwfReportImages(document){
       const holder=$("ecmwf-report-images");
       if(!holder)return;
-      const runs=Array.isArray(document.comparison_runs)?document.comparison_runs.filter(run=>Array.isArray(run&&run.forecast_6_hourly)&&run.forecast_6_hourly.length):[];
-      if(runs.length<2){
-        holder.innerHTML='<article class="chart-card"><div class="chart-empty">ECMWF son dört çıktı karşılaştırması için yeterli MeteoPT döngüsü henüz yok.</div></article>';
+      const images=Array.isArray(document.report_images)?document.report_images:[];
+      if(images.length<4){
+        holder.innerHTML='<article class="chart-card"><div class="chart-empty">Dört çıktının PNG raporu henüz yok.</div></article>';
         return;
       }
-      const colors=["#55D6D2","#7EB8FF","#FFC66D","#C3A5FF"];
-      const specs=[
-        {key:"temperature_2m_c",title:"Sıcaklık · 2 m",unit:"°C"},
-        {key:"temperature_850hpa_c",title:"Sıcaklık · 850 hPa",unit:"°C"},
-        {key:"precipitation_6h_mm",title:"Yağış",unit:"mm / 3 saat"},
-        {key:"wind_speed_10m_kmh",title:"Rüzgâr · 10 m",unit:"km/sa"}
-      ];
-      const escSvg=value=>String(value==null?"":value).replace(/&/g,"&amp;").replace(/</g,"&lt;").replace(/>/g,"&gt;").replace(/"/g,"&quot;");
-      const number=value=>{const n=Number(value);return Number.isFinite(n)?n:null;};
-      const formatRun=run=>{
-        const d=new Date(run.run_id_utc);
-        const local=new Intl.DateTimeFormat("tr-TR",{timeZone:"Europe/Istanbul",day:"2-digit",month:"2-digit",hour:"2-digit",minute:"2-digit"}).format(d);
-        return (d.getUTCHours()+"Z · "+local+" TSİ");
-      };
-      const buildSvg=spec=>{
-        const maps=runs.map(run=>{
-          const map=new Map();
-          (run.forecast_6_hourly||[]).forEach(point=>{
-            const value=number(point&&point[spec.key]);
-            if(value!==null&&point&&point.valid_time_utc)map.set(point.valid_time_utc,value);
-          });
-          return map;
-        });
-        let times=[...maps[0].keys()];
-        maps.slice(1).forEach(map=>{times=times.filter(time=>map.has(time));});
-        if(times.length<2)return '<div class="chart-empty">Ortak ECMWF geçerlilik saatleri oluşturulamadı.</div>';
-        const width=760,height=330,left=56,right=18,top=48,bottom=48;
-        const plotW=width-left-right,plotH=height-top-bottom;
-        let min=Math.min(...maps.flatMap(map=>times.map(time=>map.get(time))));
-        let max=Math.max(...maps.flatMap(map=>times.map(time=>map.get(time))));
-        if(spec.key==="precipitation_6h_mm")min=Math.min(0,min);
-        if(min===max){min-=1;max+=1;}
-        const pad=(max-min)*0.12;
-        min-=pad;max+=pad;
-        if(spec.key==="precipitation_6h_mm")min=Math.max(0,min);
-        const x=index=>left+(times.length===1?0:index/(times.length-1))*plotW;
-        const y=value=>top+(max-value)/(max-min)*plotH;
-        const pathFor=map=>times.map((time,index)=>(index?"L":"M")+x(index).toFixed(1)+","+y(map.get(time)).toFixed(1)).join(" ");
-        const grid=[];
-        for(let i=0;i<=4;i++){
-          const value=min+(max-min)*(i/4),yy=y(value);
-          grid.push('<line x1="'+left+'" y1="'+yy.toFixed(1)+'" x2="'+(width-right)+'" y2="'+yy.toFixed(1)+'" stroke="#456579" stroke-opacity=".45" stroke-width="1"/>');
-          grid.push('<text x="'+(left-8)+'" y="'+(yy+4).toFixed(1)+'" text-anchor="end" fill="#E7F2F6" font-size="11">'+escSvg(value.toFixed(1))+'</text>');
-        }
-        const labels=[];
-        const labelStep=Math.max(1,Math.ceil(times.length/6));
-        for(let i=0;i<times.length;i+=labelStep){
-          const d=new Date(times[i]);
-          const label=new Intl.DateTimeFormat("tr-TR",{timeZone:"Europe/Istanbul",day:"2-digit",hour:"2-digit",minute:"2-digit"}).format(d);
-          labels.push('<text x="'+x(i).toFixed(1)+'" y="'+(height-20)+'" text-anchor="middle" fill="#E7F2F6" font-size="10">'+escSvg(label)+'</text>');
-        }
-        const lines=runs.map((run,index)=>{
-          const label=(index===runs.length-1?"YENİ · ":"")+formatRun(run);
-          const endValue=maps[index].get(times[times.length-1]);
-          return '<path d="'+pathFor(maps[index])+'" fill="none" stroke="'+colors[index%colors.length]+'" stroke-width="2.6" stroke-linejoin="round" stroke-linecap="round"/>'+
-            '<circle cx="'+x(times.length-1).toFixed(1)+'" cy="'+y(endValue).toFixed(1)+'" r="3.5" fill="'+colors[index%colors.length]+'"/>'+
-            '<title>'+escSvg(label)+'</title>';
-        }).join("");
-        const legend=runs.map((run,index)=>{
-          const label=(index===runs.length-1?"YENİ · ":"")+formatRun(run);
-          const lx=left+(index%2)*330,ly=20+Math.floor(index/2)*18;
-          return '<circle cx="'+lx+'" cy="'+ly+'" r="4" fill="'+colors[index%colors.length]+'"/><text x="'+(lx+9)+'" y="'+(ly+4)+'" fill="#E7F2F6" font-size="10">'+escSvg(label)+'</text>';
-        }).join("");
-        return '<svg class="ecmwf-comparison-svg" width="100%" height="auto" style="display:block;width:100%;height:auto" viewBox="0 0 '+width+' '+height+'" role="img" aria-label="'+escSvg(spec.title)+' · son '+runs.length+' ECMWF döngüsü">'+
-          '<rect x="0" y="0" width="'+width+'" height="'+height+'" rx="18" fill="#0A1B29"/>'+
-          '<text x="'+left+'" y="42" fill="#FFFFFF" font-size="17" font-weight="700">'+escSvg(spec.title)+'</text>'+
-          '<text x="'+(width-right)+'" y="42" text-anchor="end" fill="#AFC4CF" font-size="11">'+escSvg(spec.unit)+'</text>'+
-          grid.join("")+lines+
-          '<line x1="'+left+'" y1="'+(height-bottom)+'" x2="'+(width-right)+'" y2="'+(height-bottom)+'" stroke="#416174" stroke-width="1"/>'+
-          labels.join("")+legend+
-          '</svg>';
-      };
-      holder.innerHTML=specs.map(spec=>'<article class="chart-card"><div class="chart-card-head"><div class="chart-title">'+escSvg(spec.title)+'</div><div class="chart-card-meta">MeteoPT ECMWF · son '+runs.length+' döngü</div></div>'+buildSvg(spec)+'</article>').join("");
-    }
-    function renderEcmwfDailyTable(items){
-      const holder=$("ecmwf-daily-table");
-      if(!holder)return;
-      if(!Array.isArray(items)||!items.length){holder.innerHTML='<div class="chart-empty">8 günlük ECMWF tablosu için veri bulunamadı.</div>';return;}
-      const rows=items.slice(0,8).map(item=>{
-        const date=new Date(item.date_istanbul+"T12:00:00+03:00");
-        const day=new Intl.DateTimeFormat("tr-TR",{timeZone:"Europe/Istanbul",weekday:"long",day:"2-digit",month:"2-digit"}).format(date);
-        return '<tr><th scope="row">'+esc(day)+'</th><td>'+fmt(item.temperature_min_c,1)+' °C</td><td>'+fmt(item.temperature_max_c,1)+' °C</td><td>'+fmt(item.precipitation_total_mm,1)+' mm</td><td>'+fmt(item.wind_speed_max_10m_kmh,0)+' km/sa</td></tr>';
+      const version=encodeURIComponent(document.updated_at_utc||"");
+      holder.innerHTML=images.slice(0,4).map(image=>{
+        const url="./data/ecmwf/"+image.path+"?v="+version;
+        return '<article class="chart-card"><div class="chart-card-head"><div class="chart-title">'+esc(image.label)+'</div></div><a class="notification-image-link" href="'+url+'" target="_blank" rel="noopener"><img class="notification-image" src="'+url+'" alt="'+esc(image.label)+' · son dört ECMWF çıktısı"></a></article>';
       }).join("");
-      holder.innerHTML='<div class="ecmwf-table-wrap"><table class="ecmwf-table ecmwf-daily-table"><thead><tr><th>Gün</th><th>Min</th><th>Max</th><th>Yağış</th><th>Rüzgâr maks.</th></tr></thead><tbody>'+rows+'</tbody></table></div>';
     }
     function renderEcmwfForecast(document){
       const forecasts=document.forecasts||[];
@@ -2200,10 +2042,58 @@ if(typeof renderBriefing==="function")renderBriefing();
       $("ecmwf-updated-chip").textContent="Yayınlandı · "+timeTR(document.updated_at_utc);
       $("ecmwf-valid-until").textContent="Son geçerlilik: "+new Intl.DateTimeFormat("tr-TR",{timeZone:"Europe/Istanbul",day:"2-digit",month:"2-digit"}).format(new Date(document.forecast_valid_until_utc));
       renderDaily(viewData.daily_summary,"ecmwf-daily-grid");
-      renderEcmwfDailyTable(viewData.daily_summary);
       renderEcmwfReportImages(document);
       renderFindings(viewData.regional_pressure_analysis&&viewData.regional_pressure_analysis.findings,first.mslp&&first.mslp.mean_hpa,"ecmwf-pressure-findings");
     }
     async function loadEcmwf(force=false){
       if(ecmwfLoading)return;
       if(!force&&ecmwfForecast&&Date.now()-ecmwfLastFetch<240000)return;
+      ecmwfLoading=true;
+      try{
+        const response=await fetch(ECMWF_DATA_URL+"?t="+Date.now(),{cache:"no-store"});
+        if(!response.ok)throw new Error("ECMWF veri paketi henüz yayımlanmamış (HTTP "+response.status+").");
+        const document=await response.json();
+        if(!document||document.schema!=="gfs-watch.ecmwf-eps.v1"||document.status!=="ready"||!Array.isArray(document.forecasts)||document.forecasts.length<8){
+          throw new Error("ECMWF IFS veri paketi eksik veya beklenen biçimde değil.");
+        }
+        renderEcmwfForecast(document);
+        ecmwfForecast=document;
+        ecmwfLastFetch=Date.now();
+        if(typeof renderBriefing==="function")renderBriefing();
+      }catch(error){
+      }finally{
+        ecmwfLoading=false;
+      }
+    }
+    function setModelView(mode,persist=true){
+      activeModel=mode==="ecmwf"?"ecmwf":"gfs";
+      const ecmwf=activeModel==="ecmwf";
+      const gfsButton=$("model-gfs-button");
+      const ecmwfButton=$("model-ecmwf-button");
+      const gfsView=$("gfs-model-view");
+      const ecmwfView=$("ecmwf-model-view");
+      if(gfsView)gfsView.hidden=ecmwf;
+      if(ecmwfView)ecmwfView.hidden=!ecmwf;
+      if(gfsButton){
+        gfsButton.classList.toggle("active",!ecmwf);
+        gfsButton.setAttribute("aria-pressed",String(!ecmwf));
+      }
+      if(ecmwfButton){
+        ecmwfButton.classList.toggle("active",ecmwf);
+        ecmwfButton.setAttribute("aria-pressed",String(ecmwf));
+      }
+      const nav=document.querySelector(".topbar nav");
+      if(nav)nav.hidden=ecmwf;
+      if(persist){try{localStorage.setItem("istanbul-hava-model-view",activeModel);}catch(_){}}
+      if(typeof renderBriefing==="function")renderBriefing();
+      loadEcmwf();
+    }
+    const modelGfsButton=$("model-gfs-button");
+    const modelEcmwfButton=$("model-ecmwf-button");
+    if(modelGfsButton)modelGfsButton.addEventListener("click",()=>setModelView("gfs"));
+    if(modelEcmwfButton)modelEcmwfButton.addEventListener("click",()=>setModelView("ecmwf"));
+    try{if(localStorage.getItem("istanbul-hava-model-view")==="ecmwf")activeModel="ecmwf";}catch(_){}
+    setModelView(activeModel,false);
+
+    startPage();
+  
