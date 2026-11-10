@@ -1,4 +1,5 @@
 import { METEOPT_GFS_API, METEOPT_SOURCE_POLICY, meteoptSourceMetadata } from "../../shared/meteopt-source.js";
+import { buildPanelAxis, formatAxisTick, formatPeakValue, peakUnit } from "../../shared/gfs-chart-axis.js";
 
 const API_BASE = METEOPT_GFS_API;
 const LOCATION = {
@@ -413,13 +414,6 @@ function svgNumber(value) {
     : number;
 }
 
-function svgFixed(value, digits = 1) {
-  return Number(value).toLocaleString("tr-TR", {
-    minimumFractionDigits: digits,
-    maximumFractionDigits: digits,
-  });
-}
-
 function svgValidKey(value) {
   const timestamp = Date.parse(String(value || ""));
   if (!Number.isFinite(timestamp)) return null;
@@ -444,7 +438,7 @@ function svgRunLabel(value, latest) {
   return latest ? "YENİ · " + label : label;
 }
 
-function buildKoyInteractiveSvg(comparison) {
+export function buildKoyInteractiveSvg(comparison) {
   const documents = (Array.isArray(comparison?.runs) ? comparison.runs : [])
     .filter(item => item && item.forecast_source === "meteopt" &&
       Array.isArray(item.forecast_6_hourly) && item.run_id_utc)
@@ -488,6 +482,19 @@ function buildKoyInteractiveSvg(comparison) {
   if (validKeys.length < 2) return null;
 
   const validDates = validKeys.map(key => new Date(key));
+  const validTimeRecords = validKeys.map(key => {
+    const date = new Date(key);
+    const year = date.getUTCFullYear();
+    const month = String(date.getUTCMonth() + 1).padStart(2, "0");
+    const day = String(date.getUTCDate()).padStart(2, "0");
+    const hour = String(date.getUTCHours()).padStart(2, "0");
+    const minute = String(date.getUTCMinutes()).padStart(2, "0");
+    return {
+      local_key: year + "-" + month + "-" + day + "T" + hour + ":" + minute,
+      label: day + "." + month + "." + year + " " + hour + ":" + minute + " TSİ",
+      utc_label: year + "-" + month + "-" + day + " " + hour + ":" + minute + " UTC",
+    };
+  });
   const offsets = validDates.map(date => (date.getTime() - firstTimestamp) / 3600000);
   const spanHours = offsets[offsets.length - 1] - offsets[0];
   const xMin = -1;
@@ -544,31 +551,8 @@ function buildKoyInteractiveSvg(comparison) {
       validKeys.map(key => svgNumber(item.points.get(key)?.[spec.field]))
     );
     const allValues = valuesBySeries.flat().filter(value => value !== null);
-    let low = 0;
-    let high = 1;
-    if (allValues.length) {
-      if (spec.field === "temperature_2m_c" || spec.field === "temperature_850hpa_c") {
-        low = Math.min(...allValues);
-        high = Math.max(...allValues);
-        const span = high - low;
-        if (span < 4) {
-          const center = (low + high) / 2;
-          low = center - 2;
-          high = center + 2;
-        } else {
-          const margin = Math.max(0.5, span * 0.08);
-          low -= margin;
-          high += margin;
-        }
-      } else {
-        low = 0;
-        high = Math.max(1, Math.max(...allValues) * 1.18);
-      }
-    }
-    if (!Number.isFinite(low) || !Number.isFinite(high) || high <= low) {
-      low = 0;
-      high = 1;
-    }
+    const axis = buildPanelAxis(spec.field, valuesBySeries);
+    const { low, high, ticks, latestPeak } = axis;
 
     const xPositions = offsets.map(offset => plotX + xRatio(offset) * plotWidth);
     const yFor = value => plotY + (high - value) * plotHeight / (high - low);
@@ -579,15 +563,14 @@ function buildKoyInteractiveSvg(comparison) {
       '<text x="' + (panelRight - 17) + '" y="' + (py + 30) + '" text-anchor="end" fill="#E7F2F6" font-size="12" font-weight="650" font-family="system-ui,-apple-system,BlinkMacSystemFont,Segoe UI,sans-serif">' + svgEscape(spec.unit) + '</text>'
     );
 
-    // Horizontal grid and value axis.
-    for (let tick = 0; tick <= 4; tick += 1) {
-      const value = high - (high - low) * tick / 4;
-      const y = plotY + plotHeight * tick / 4;
+    // Horizontal grid and value axis. Ticks are fixed integer steps, not the latest peak.
+    ticks.slice().reverse().forEach(value => {
+      const y = yFor(value);
       svgParts.push(
         '<line x1="' + plotX + '" y1="' + y + '" x2="' + (plotX + plotWidth) + '" y2="' + y + '" stroke="#456579" stroke-width="1" stroke-dasharray="2 4" opacity=".65"/>',
-        '<text x="' + (plotX - 10) + '" y="' + (y + 4) + '" text-anchor="end" fill="#E7F2F6" font-size="11" font-weight="600" font-family="system-ui,-apple-system,BlinkMacSystemFont,Segoe UI,sans-serif">' + svgEscape(svgFixed(value, 1)) + '</text>'
+        '<text x="' + (plotX - 10) + '" y="' + (y + 4) + '" text-anchor="end" fill="#E7F2F6" font-size="11" font-weight="600" font-family="system-ui,-apple-system,BlinkMacSystemFont,Segoe UI,sans-serif" data-axis-tick="true">' + svgEscape(formatAxisTick(value)) + '</text>'
       );
-    }
+    });
 
     // Date ticks follow the same 12-hour cadence as the former Matplotlib report.
     const tickIndexes = [];
@@ -648,6 +631,39 @@ function buildKoyInteractiveSvg(comparison) {
           );
         });
       }
+      if (latest && latestPeak !== null) {
+        let peakIndex = -1;
+        values.forEach((value, index) => {
+          if (value !== null && Math.abs(value - latestPeak) < 1e-9 && peakIndex < 0) peakIndex = index;
+        });
+        if (peakIndex >= 0) {
+          const peakX = xPositions[peakIndex];
+          const peakY = yPositions[peakIndex];
+          const label = formatPeakValue(latestPeak) + " " + peakUnit(spec.field);
+          const timeLabel = validTimeRecords[peakIndex]?.label || "";
+          const nearTop = peakY - plotY < 18;
+          const nearRight = peakX > plotX + plotWidth - 56;
+          const labelX = nearRight ? peakX - 10 : peakX + 10;
+          const labelY = nearTop ? peakY + 18 : peakY - 12;
+          const labelWidth = Math.max(36, label.length * 6.8 + 12);
+          const boxX = (nearRight ? labelX - labelWidth : labelX - 5);
+          const boxY = labelY - 12;
+          const fontFamily = "system-ui,-apple-system,BlinkMacSystemFont,Segoe UI,sans-serif";
+          svgParts.push(
+            '<g class="gfs-latest-peak-marker" data-latest-peak-value="' + svgEscape(label) +
+            '" data-latest-peak-time="' + svgEscape(timeLabel) + '">',
+            '<circle cx="' + Number(peakX).toFixed(3) + '" cy="' + peakY +
+            '" r="5.2" fill="' + item.color + '" stroke="#F7FDFF" stroke-width="1.4"/>',
+            '<rect x="' + Number(boxX).toFixed(3) + '" y="' + Number(boxY).toFixed(3) +
+            '" width="' + labelWidth.toFixed(1) + '" height="16" rx="3" fill="#0A1B29" fill-opacity=".88"/>',
+            '<text x="' + Number(labelX).toFixed(3) + '" y="' + Number(labelY).toFixed(3) +
+            '" text-anchor="' + (nearRight ? "end" : "start") +
+            '" fill="#F7FDFF" font-size="11" font-weight="800" font-family="' + fontFamily + '">' +
+            svgEscape(label) + '</text>',
+            '</g>'
+          );
+        }
+      }
 
       panelSeries.push({
         label: item.label,
@@ -657,21 +673,6 @@ function buildKoyInteractiveSvg(comparison) {
         y_positions: yPositions,
         directions_deg: directions,
       });
-    });
-
-    const validTimeRecords = validKeys.map(key => {
-      const date = new Date(key);
-      const year = date.getUTCFullYear();
-      const month = String(date.getUTCMonth() + 1).padStart(2, "0");
-      const day = String(date.getUTCDate()).padStart(2, "0");
-      const hour = String(date.getUTCHours()).padStart(2, "0");
-      const minute = String(date.getUTCMinutes()).padStart(2, "0");
-      const label = day + "." + month + "." + year + " " + hour + ":" + minute + " TSİ";
-      return {
-        local_key: year + "-" + month + "-" + day + "T" + hour + ":" + minute,
-        label,
-        utc_label: year + "-" + month + "-" + day + " " + hour + ":" + minute + " UTC",
-      };
     });
 
     panelMetadata.push({
