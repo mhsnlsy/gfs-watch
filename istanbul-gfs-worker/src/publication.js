@@ -265,6 +265,106 @@ export function buildIstanbulInteractiveSvg(runs) {
         if (value !== null) parts.push('<circle cx="' + xPositions[index].toFixed(3) + '" cy="' +
           yPositions[index] + '" r="2.8" fill="' + item.color + '"/>');
       });
+
+      // 10 m rüzgâr yönünü her 3 saatte bir, rüzgâr çizgisinin üzerinde
+      // meteorolojik "FROM" yönünü gösterecek küçük oklarla işaretle.
+      // GFS yayınındaki temel noktalar 6 saatlikse ara 3 saatlik yön,
+      // komşu yönlerin dairesel interpolasyonuyla hesaplanır.
+      if (latest && spec.field === "wind_speed_10m_kmh") {
+        const directionAtHour = hour => {
+          const exact = leadHours.findIndex(lead => lead === hour);
+          if (exact >= 0) return directions[exact];
+
+          let before = -1;
+          let after = -1;
+          for (let i = 0; i < leadHours.length; i += 1) {
+            const lead = leadHours[i];
+            if (lead === null) continue;
+            if (lead < hour) before = i;
+            if (lead > hour) { after = i; break; }
+          }
+          if (before < 0 || after < 0) return null;
+          const a = numeric(directions[before]);
+          const b = numeric(directions[after]);
+          if (a === null || b === null) return null;
+          const delta = ((b - a + 540) % 360) - 180;
+          const fraction = (hour - leadHours[before]) / (leadHours[after] - leadHours[before]);
+          return (a + delta * fraction + 360) % 360;
+        };
+
+        const speedAtHour = hour => {
+          const exact = leadHours.findIndex(lead => lead === hour);
+          if (exact >= 0) return values[exact];
+
+          let before = -1;
+          let after = -1;
+          for (let i = 0; i < leadHours.length; i += 1) {
+            const lead = leadHours[i];
+            if (lead === null) continue;
+            if (lead < hour) before = i;
+            if (lead > hour) { after = i; break; }
+          }
+          if (before < 0 || after < 0 || values[before] === null || values[after] === null) return null;
+          const fraction = (hour - leadHours[before]) / (leadHours[after] - leadHours[before]);
+          return values[before] + (values[after] - values[before]) * fraction;
+        };
+
+        const firstLead = leadHours.find(lead => lead !== null);
+        const lastLead = [...leadHours].reverse().find(lead => lead !== null);
+        if (firstLead !== undefined && lastLead !== undefined) {
+          const startHour = Math.ceil(firstLead / 3) * 3;
+          for (let hour = startHour; hour <= lastLead; hour += 3) {
+            const direction = numeric(directionAtHour(hour));
+            const speed = numeric(speedAtHour(hour));
+            if (direction === null || speed === null) continue;
+
+            const exactIndex = leadHours.findIndex(lead => lead === hour);
+            let x;
+            if (exactIndex >= 0) {
+              x = xPositions[exactIndex];
+            } else {
+              let before = -1;
+              let after = -1;
+              for (let i = 0; i < leadHours.length; i += 1) {
+                const lead = leadHours[i];
+                if (lead === null) continue;
+                if (lead < hour) before = i;
+                if (lead > hour) { after = i; break; }
+              }
+              if (before < 0 || after < 0) continue;
+              const fraction = (hour - leadHours[before]) / (leadHours[after] - leadHours[before]);
+              x = xPositions[before] + (xPositions[after] - xPositions[before]) * fraction;
+            }
+
+            const y = yFor(speed);
+            const arrowLength = 9;
+            const angle = direction * Math.PI / 180;
+            const endX = x + Math.sin(angle) * arrowLength;
+            const endY = y - Math.cos(angle) * arrowLength;
+            const baseX = x - Math.sin(angle) * 2;
+            const baseY = y + Math.cos(angle) * 2;
+            const headSize = 3.2;
+            const leftX = endX - Math.sin(angle + Math.PI / 4) * headSize;
+            const leftY = endY + Math.cos(angle + Math.PI / 4) * headSize;
+            const rightX = endX - Math.sin(angle - Math.PI / 4) * headSize;
+            const rightY = endY + Math.cos(angle - Math.PI / 4) * headSize;
+
+            parts.push(
+              '<g class="gfs-wind-direction-marker" data-wind-direction-deg="' + direction.toFixed(1) +
+              '" data-forecast-hour="' + hour + '" aria-label="' + hour + '. saat rüzgâr yönü ' +
+              direction.toFixed(0) + ' derece">',
+              '<line x1="' + baseX.toFixed(2) + '" y1="' + baseY.toFixed(2) +
+              '" x2="' + endX.toFixed(2) + '" y2="' + endY.toFixed(2) +
+              '" stroke="' + item.color + '" stroke-width="1.8" stroke-linecap="round"/>',
+              '<path d="M ' + leftX.toFixed(2) + ' ' + leftY.toFixed(2) + ' L ' +
+              endX.toFixed(2) + ' ' + endY.toFixed(2) + ' L ' + rightX.toFixed(2) + ' ' +
+              rightY.toFixed(2) + '" fill="none" stroke="' + item.color + '" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/>',
+              '</g>'
+            );
+          }
+        }
+      }
+
       panelSeries.push({
         label: item.label,
         run_id_utc: item.document.run_id_utc,
