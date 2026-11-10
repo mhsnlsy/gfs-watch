@@ -2086,7 +2086,7 @@ if(typeof renderBriefing==="function")renderBriefing();
           const lx=left+(index%2)*330,ly=20+Math.floor(index/2)*18;
           return '<circle cx="'+lx+'" cy="'+ly+'" r="4" fill="'+colors[index%colors.length]+'"/><text x="'+(lx+9)+'" y="'+(ly+4)+'" fill="#E7F2F6" font-size="10">'+escSvg(label)+'</text>';
         }).join("");
-        return '<svg class="ecmwf-comparison-svg" viewBox="0 0 '+width+' '+height+'" role="img" aria-label="'+escSvg(spec.title)+' · son '+runs.length+' ECMWF döngüsü">'+
+        return '<svg class="ecmwf-comparison-svg" width="100%" height="auto" style="display:block;width:100%;height:auto" viewBox="0 0 '+width+' '+height+'" role="img" aria-label="'+escSvg(spec.title)+' · son '+runs.length+' ECMWF döngüsü">'+
           '<rect x="0" y="0" width="'+width+'" height="'+height+'" rx="18" fill="#0A1B29"/>'+
           '<text x="'+left+'" y="42" fill="#FFFFFF" font-size="17" font-weight="700">'+escSvg(spec.title)+'</text>'+
           '<text x="'+(width-right)+'" y="42" text-anchor="end" fill="#AFC4CF" font-size="11">'+escSvg(spec.unit)+'</text>'+
