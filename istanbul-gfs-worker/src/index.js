@@ -110,7 +110,6 @@ function normalize(candidate, now) {
     snlevel: "snowln",
     tmp850mb: "temperature_850hpa_c",
     wind10m: "wind_speed_10m_kmh",
-    winddir10m: "wind_direction_10m_deg",
     wind850: "wind_speed_850hpa_kmh",
     apcp: "precipitation_6h_mm",
   };
@@ -118,6 +117,14 @@ function normalize(candidate, now) {
   for (const key of Object.keys(names)) {
     series[key] = candidate.document?.data?.[key]?.values || [];
   }
+  // MeteoPT names this field wind10mdir; some cached/legacy payloads used winddir10m.
+  // Prefer the canonical source name, then accept the legacy alias.
+  const windDirectionSeries =
+    candidate.document?.data?.wind10mdir?.values ||
+    candidate.document?.data?.wind10mdir?.data ||
+    candidate.document?.data?.winddir10m?.values ||
+    candidate.document?.data?.winddir10m?.data ||
+    [];
 
   const points = [];
   for (let index = 0; index < steps.length; index += 1) {
@@ -132,6 +139,7 @@ function normalize(candidate, now) {
     for (const [sourceKey, outputKey] of Object.entries(names)) {
       point[outputKey] = number(series[sourceKey], index);
     }
+    point.wind_direction_10m_deg = number(windDirectionSeries, index);
     points.push(point);
   }
 
@@ -242,11 +250,58 @@ async function writeCurrent(env, key, payload) {
 }
 
 async function archiveRun(env, payload) {
+  const existing = await env.GFS_DB.prepare(
+    "SELECT payload_json FROM gfs_runs WHERE run_id_utc = ?"
+  ).bind(payload.run_id_utc).first();
   const storedAt = new Date().toISOString();
-  const result = await env.GFS_DB.prepare(
-    "INSERT OR IGNORE INTO gfs_runs (run_id_utc, payload_json, published_at_utc, stored_at_utc) VALUES (?, ?, ?, ?)"
-  ).bind(payload.run_id_utc, JSON.stringify(payload), payload.published_at_utc, storedAt).run();
-  return Number(result.meta?.changes || 0) > 0;
+
+  if (!existing?.payload_json) {
+    const result = await env.GFS_DB.prepare(
+      "INSERT OR IGNORE INTO gfs_runs (run_id_utc, payload_json, published_at_utc, stored_at_utc) VALUES (?, ?, ?, ?)"
+    ).bind(payload.run_id_utc, JSON.stringify(payload), payload.published_at_utc, storedAt).run();
+    return Number(result.meta?.changes || 0) > 0;
+  }
+
+  const previous = JSON.parse(existing.payload_json);
+  const byHour = new Map();
+  for (const point of Array.isArray(previous.forecast_6_hourly) ? previous.forecast_6_hourly : []) {
+    const hour = Number(point?.forecast_hour);
+    if (Number.isFinite(hour)) byHour.set(hour, { ...point });
+  }
+  for (const point of Array.isArray(payload.forecast_6_hourly) ? payload.forecast_6_hourly : []) {
+    const hour = Number(point?.forecast_hour);
+    if (!Number.isFinite(hour)) continue;
+    const merged = { ...(byHour.get(hour) || {}) };
+    for (const [key, value] of Object.entries(point || {})) {
+      if (value !== null && value !== undefined) merged[key] = value;
+      else if (!(key in merged)) merged[key] = value;
+    }
+    byHour.set(hour, merged);
+  }
+
+  const mergedPayload = {
+    ...previous,
+    ...payload,
+    forecast_6_hourly: [...byHour.values()].sort((a, b) =>
+      Number(a.forecast_hour) - Number(b.forecast_hour)
+    ),
+  };
+  const comparable = value => {
+    const copy = { ...value };
+    delete copy.published_at_utc;
+    return JSON.stringify(copy);
+  };
+  if (comparable(previous) === comparable(mergedPayload)) return false;
+
+  await env.GFS_DB.prepare(
+    "UPDATE gfs_runs SET payload_json = ?, published_at_utc = ?, stored_at_utc = ? WHERE run_id_utc = ?"
+  ).bind(
+    JSON.stringify(mergedPayload),
+    mergedPayload.published_at_utc,
+    storedAt,
+    payload.run_id_utc
+  ).run();
+  return true;
 }
 
 async function listRuns(env, limit = 4) {
