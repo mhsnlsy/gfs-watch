@@ -988,7 +988,8 @@ async function api(request, env) {
     const key = decodeURIComponent(path.slice("/api/publication-asset/".length)).replace(/^\/+/, "");
     try {
       let row = await getPublicationAsset(env, key);
-      if (!row || !String(row.body || "").includes('id="gfs-renderer-version">')) {
+      const expectedRenderer = 'id="gfs-renderer-version">' + KOY_SVG_RENDERER_VERSION + '</metadata>';
+      if (!row || !String(row.body || "").includes(expectedRenderer)) {
         const published = await publishLatestKoySvg(env, key);
         if (published?.row) row = published.row;
       }
