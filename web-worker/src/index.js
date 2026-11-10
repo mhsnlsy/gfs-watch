@@ -263,6 +263,7 @@ export default {
 
     if (path === "/gfs/latest" || path === "/api/latest" ||
         path === "/gfs/f72" || path === "/api/f72" ||
+        path === "/ecmwf/latest" || path === "/api/ecmwf/latest" ||
         path === "/api/health" || path === "/gfs/comparison" || path === "/api/comparison") {
       const targetPath = path.startsWith("/gfs/") ? path : path;
       return callService(env.ISTANBUL_GFS, request, targetPath);
