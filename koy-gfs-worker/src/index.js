@@ -220,6 +220,9 @@ function normalizeDocument(candidate, now) {
       humidity_2m_percent: asNumber(series("rh2m"), i),
       temperature_850hpa_c: asNumber(series("tmp850mb"), i),
       wind_speed_10m_kmh: asNumber(series("wind10m"), i),
+      wind_direction_10m_deg: asNumber(
+        (series("wind10mdir").length ? series("wind10mdir") : series("winddir10m")), i
+      ),
       wind_speed_850hpa_kmh: asNumber(series("wind850"), i),
       precipitation_6h_mm: asNumber(series("apcp"), i),
       // MeteoPT "SnowLn" is the model snow-line altitude in metres.
@@ -715,8 +718,8 @@ export function buildKoyInteractiveSvg(comparison) {
               x = xPositions[before] + (xPositions[after] - xPositions[before]) * fraction;
             }
 
-            const y = yFor(speed);
-            const arrowLength = 9;
+            const y = Math.max(plotY + 10, yFor(speed) - 16);
+            const arrowLength = 13;
             const angle = direction * Math.PI / 180;
             const endX = x + Math.sin(angle) * arrowLength;
             const endY = y - Math.cos(angle) * arrowLength;
@@ -734,11 +737,23 @@ export function buildKoyInteractiveSvg(comparison) {
               direction.toFixed(0) + ' derece">',
               '<line x1="' + baseX.toFixed(2) + '" y1="' + baseY.toFixed(2) +
               '" x2="' + endX.toFixed(2) + '" y2="' + endY.toFixed(2) +
-              '" stroke="' + item.color + '" stroke-width="1.8" stroke-linecap="round"/>',
+              '" stroke="#0A1B29" stroke-width="5" stroke-linecap="round"/>',
+              '<line x1="' + baseX.toFixed(2) + '" y1="' + baseY.toFixed(2) +
+              '" x2="' + endX.toFixed(2) + '" y2="' + endY.toFixed(2) +
+              '" stroke="#FFFFFF" stroke-width="3.2" stroke-linecap="round"/>',
+              '<line x1="' + baseX.toFixed(2) + '" y1="' + baseY.toFixed(2) +
+              '" x2="' + endX.toFixed(2) + '" y2="' + endY.toFixed(2) +
+              '" stroke="' + item.color + '" stroke-width="2.2" stroke-linecap="round"/>',
+              '<path d="M ' + leftX.toFixed(2) + ' ' + leftY.toFixed(2) + ' L ' +
+              endX.toFixed(2) + ' ' + endY.toFixed(2) + ' L ' + rightX.toFixed(2) + ' ' +
+              rightY.toFixed(2) + '" fill="none" stroke="#0A1B29" stroke-width="5" stroke-linecap="round" stroke-linejoin="round"/>',
+              '<path d="M ' + leftX.toFixed(2) + ' ' + leftY.toFixed(2) + ' L ' +
+              endX.toFixed(2) + ' ' + endY.toFixed(2) + ' L ' + rightX.toFixed(2) + ' ' +
+              rightY.toFixed(2) + '" fill="none" stroke="#FFFFFF" stroke-width="3.2" stroke-linecap="round" stroke-linejoin="round"/>',
               '<path d="M ' + leftX.toFixed(2) + ' ' + leftY.toFixed(2) + ' L ' +
               endX.toFixed(2) + ' ' + endY.toFixed(2) + ' L ' + rightX.toFixed(2) + ' ' +
               rightY.toFixed(2) + '" fill="none" stroke="' + item.color +
-              '" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/>',
+              '" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"/>',
               '</g>'
             );
           }
