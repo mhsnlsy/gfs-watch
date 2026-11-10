@@ -123,6 +123,8 @@ def main() -> None:
     assert "R2" in web_worker
     assert "fetchD1PublicationAsset" in web_worker
     assert '"/gfs/publication-asset/" + normalized' in web_worker
+    assert 'path.startsWith("/gfs/publication-asset/")' in web_worker
+    assert 'path.startsWith("/api/publication-asset/")' in web_worker
     # Legacy SVG rebuild remains manual-only; production SVG generation is Cloudflare-native.
     assert "workflow_dispatch:" in istanbul_svg_workflow
     assert "push:" not in istanbul_svg_workflow
