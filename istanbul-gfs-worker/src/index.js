@@ -1142,6 +1142,38 @@ async function handleApi(request, env) {
   if (path === "/gfs/publication-upload") {
     return handlePublicationUpload(request, env);
   }
+  if (path === "/internal/regenerate-latest-chart") {
+    if (request.method !== "POST") return json({ ok: false, error: "Method not allowed" }, 405);
+    const token = request.headers.get("Authorization") || "";
+    if (!env.GFS_DISPATCH_TOKEN || token !== "Bearer " + env.GFS_DISPATCH_TOKEN) {
+      return json({ ok: false, error: "Unauthorized" }, 401);
+    }
+    try {
+      const archive = await env.GFS_DB.prepare(
+        "SELECT payload_json FROM gfs_runs ORDER BY run_id_utc DESC LIMIT 4"
+      ).all();
+      const runs = (archive.results || []).map(row => JSON.parse(row.payload_json))
+        .sort((a, b) => Date.parse(a.run_id_utc) - Date.parse(b.run_id_utc));
+      if (!runs.length) return json({ ok: false, error: "No archived GFS runs" }, 404);
+
+      const chart = buildIstanbulInteractiveSvg(runs);
+      await putPublicationAsset(env, {
+        key: chart.key,
+        run_id_utc: chart.run_id_utc,
+        content_type: "image/svg+xml; charset=utf-8",
+        encoding: "utf8",
+        body: chart.body,
+      });
+      return json({
+        ok: true,
+        run_id_utc: chart.run_id_utc,
+        key: chart.key,
+        cycles: runs.length,
+      });
+    } catch (error) {
+      return json({ ok: false, error: String(error?.message || error) }, 503);
+    }
+  }
   if (path === "/internal/reconcile") {
     if (request.method !== "POST") return json({ ok: false, error: "Method not allowed" }, 405);
     const token = request.headers.get("Authorization") || "";
