@@ -141,7 +141,7 @@ jobs:
           if (doc.ok !== true || doc.service !== "gfs-watch-koy-gfs" || doc.cron !== "*/10 * * * *") {
             throw new Error("Köy GFS Worker health contract failed");
           }
-          if (doc.svg_renderer !== "cloudflare-js-v1") {
+          if (doc.svg_renderer !== "cloudflare-js-v2") {
             throw new Error("Köy SVG renderer is not running in Cloudflare: " + doc.svg_renderer);
           }
           console.log(JSON.stringify(doc));
