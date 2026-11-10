@@ -1,3 +1,5 @@
+import { buildPanelAxis, formatAxisTick, formatPeakValue, peakUnit } from "../../shared/gfs-chart-axis.js";
+
 const CYCLE_COLORS = ["#8ABCE8", "#7DD3D7", "#F1C98B", "#B38BE8"];
 const PANELS = [
   { id: "temperature", field: "temperature_2m_c", title: "Sıcaklık", unit: "°C" },
@@ -56,59 +58,6 @@ function runLabel(runId, latest) {
     pad2(date.getUTCMonth() + 1) + " " + pad2(date.getUTCHours()) + ":00";
   return latest ? "YENİ · " + label : label;
 }
-
-
-
-function isTemperatureField(field) {
-  return field === "temperature_2m_c" || field === "temperature_850hpa_c";
-}
-
-function axisStep(field) {
-  if (field === "precipitation_6h_mm") return 2;
-  if (field === "wind_speed_10m_kmh") return 10;
-  return 5;
-}
-
-function peakUnit(field) {
-  if (field === "precipitation_6h_mm") return "mm";
-  if (field === "wind_speed_10m_kmh") return "km/sa";
-  return "°C";
-}
-
-function formatAxisTick(value) {
-  return String(Math.round(value));
-}
-
-function buildPanelAxis(field, valuesBySeries) {
-  const allValues = valuesBySeries.flat().filter(value => value !== null);
-  const latestValues = (valuesBySeries[valuesBySeries.length - 1] || []).filter(value => value !== null);
-  const latestPeak = latestValues.length ? Math.max(...latestValues) : null;
-  const temperature = isTemperatureField(field);
-  const step = axisStep(field);
-
-  let low = 0;
-  let high = step;
-  if (allValues.length) {
-    if (temperature) {
-      low = Math.floor(Math.min(...allValues) / step) * step;
-      high = Math.ceil(Math.max(...allValues) / step) * step;
-    } else {
-      low = 0;
-      high = Math.ceil(Math.max(0, ...allValues) / step) * step;
-    }
-  }
-  if (!Number.isFinite(low) || !Number.isFinite(high) || high <= low) {
-    low = temperature && Number.isFinite(low) ? low : 0;
-    high = low + step;
-  }
-
-  const ticks = [];
-  for (let value = low; value <= high + 1e-9; value += step) {
-    ticks.push(Math.round(value));
-  }
-  return { low, high, ticks, latestPeak };
-}
-
 
 function runStamp(runId) {
   const date = new Date(runId);
@@ -302,7 +251,7 @@ export function buildIstanbulInteractiveSvg(runs) {
         if (peakIndex >= 0) {
           const peakX = xPositions[peakIndex];
           const peakY = yPositions[peakIndex];
-          const label = formatNumber(latestPeak, 1) + " " + peakUnit(spec.field);
+          const label = formatPeakValue(latestPeak) + " " + peakUnit(spec.field);
           const timeLabel = localLabels[peakIndex]?.label || "";
           const nearTop = peakY - plotY < 18;
           const nearRight = peakX > plotX + plotWidth - 56;

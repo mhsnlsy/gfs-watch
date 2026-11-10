@@ -1,6 +1,7 @@
 import assert from "node:assert/strict";
 import { buildIstanbulInteractiveSvg, buildIstanbulReportText } from "../istanbul-gfs-worker/src/publication.js";
 import { loadIstanbulTelegramFont, renderIstanbulPhotoPng } from "../istanbul-gfs-worker/src/photo.js";
+import { buildPanelAxis } from "../shared/gfs-chart-axis.js";
 
 const base = Date.UTC(2026, 10, 1, 0, 0, 0);
 const runs = [];
@@ -162,7 +163,8 @@ const defaultPrecipTicks = axisTicks(chart.body, "precipitation");
 const defaultTempTicks = axisTicks(chart.body, "temperature");
 const default850Ticks = axisTicks(chart.body, "temperature_850");
 const defaultWindTicks = axisTicks(chart.body, "wind_10m");
-assertIntegerTicks(defaultPrecipTicks, 2, { start: 0, nonnegative: true });
+assert.deepEqual(defaultPrecipTicks.slice().reverse(), ["0", "1", "2"]);
+assertIntegerTicks(defaultPrecipTicks, 1, { start: 0, nonnegative: true });
 assertIntegerTicks(defaultTempTicks, 5);
 assertIntegerTicks(default850Ticks, 5);
 assertIntegerTicks(defaultWindTicks, 10, { start: 0, nonnegative: true });
@@ -189,6 +191,7 @@ const tempTicks = axisTicks(peakChart.body, "temperature");
 const ticks850 = axisTicks(peakChart.body, "temperature_850");
 const windTicks = axisTicks(peakChart.body, "wind_10m");
 assert.deepEqual(precipTicks.slice().reverse(), ["0", "2", "4", "6", "8", "10", "12", "14", "16", "18", "20", "22"]);
+assert.equal(buildPanelAxis("precipitation_6h_mm", [[22], [9.8]]).step, 2);
 assert.ok(!precipTicks.includes("9,8") && !peakChart.body.includes('data-latest-peak="true"'));
 assert.ok(peakChart.body.includes('data-latest-peak-value="9,8 mm"'));
 assert.ok(peakChart.body.includes("15.11.2026 09:00 TSİ"));
@@ -199,3 +202,33 @@ assertIntegerTicks(ticks850, 5);
 assert.ok(ticks850.includes("-10") && ticks850.includes("15"));
 assertIntegerTicks(windTicks, 10, { start: 0, nonnegative: true });
 assert.ok(windTicks.includes("0") && windTicks.includes("40"));
+
+const modestChart = buildIstanbulInteractiveSvg([
+  sixHourlySeries({
+    runId: "2026-11-14T18:00:00.000Z",
+    precipByLead: { 12: 4 },
+    temperature: 6.9,
+    temperature850: -6.1,
+    wind: 18,
+  }),
+  sixHourlySeries({
+    runId: "2026-11-15T00:00:00.000Z",
+    precipByLead: { 6: 9.8 },
+    temperature: 11,
+    temperature850: 2,
+    wind: 12,
+  }),
+]);
+const modestPrecipTicks = axisTicks(modestChart.body, "precipitation");
+assert.equal(buildPanelAxis("precipitation_6h_mm", [[4], [9.8]]).step, 1);
+assert.deepEqual(modestPrecipTicks.slice().reverse(), ["0", "1", "2", "3", "4", "5", "6", "7", "8", "9", "10"]);
+assert.ok(!modestPrecipTicks.includes("9,8"));
+assert.ok(modestChart.body.includes('data-latest-peak-value="9,8 mm"'));
+
+const atThreshold = buildPanelAxis("precipitation_6h_mm", [[0, 16]]);
+const aboveThreshold = buildPanelAxis("precipitation_6h_mm", [[16.1]]);
+assert.equal(atThreshold.step, 1);
+assert.equal(atThreshold.ticks.at(-1), 16);
+assert.equal(atThreshold.ticks[1] - atThreshold.ticks[0], 1);
+assert.equal(aboveThreshold.step, 2);
+assert.deepEqual(aboveThreshold.ticks, [0, 2, 4, 6, 8, 10, 12, 14, 16, 18]);
