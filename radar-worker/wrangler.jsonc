@@ -5,7 +5,7 @@
   "compatibility_date": "2026-11-08",
   "workers_dev": true,
   "observability": { "enabled": true },
-  "triggers": { "crons": ["*/6 * * * *"] },
+  "triggers": { "crons": ["*/6 * * * *", "45 16 * * *"] },
   "d1_databases": [
     {
       "binding": "RADAR_DB",

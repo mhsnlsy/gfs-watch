@@ -1,8 +1,8 @@
-name: Send Tomorrow Weather to Telegram
+name: Send Tomorrow Weather to Telegram (Manual Fallback)
 
+# The daily 19:45 TSİ message is now sent by the Cloudflare radar Worker
+# (radar-worker, cron "45 16 * * *"). This workflow is manual-only fallback.
 on:
-  schedule:
-    - cron: "45 16 * * *" # 19:45 TSİ
   workflow_dispatch:
 
 permissions:
