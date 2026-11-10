@@ -4546,3 +4546,15 @@ main.shell { padding-bottom:max(12px,env(safe-area-inset-bottom)); }
   .topbar nav a { font-size:10px; }
   .hero { padding-top:16px; }
 }
+
+.ecmwf-chart-tooltip{min-width:250px;max-width:min(330px,calc(100% - 16px));z-index:50}
+.ecmwf-tooltip-row{display:grid;grid-template-columns:8px minmax(0,1fr) auto;gap:6px;align-items:center;margin-top:5px;font-size:9px;color:#b9cbd4}
+.ecmwf-tooltip-row strong{font-size:10px;color:#f1faf8;white-space:nowrap}
+.ecmwf-tooltip-swatch{width:7px;height:7px;border-radius:50%;display:block}
+.ecmwf-daily-table th,.ecmwf-daily-table td{padding:10px 12px}
+@media(max-width:560px){
+  .ecmwf-chart-tooltip{min-width:210px;max-width:calc(100% - 10px)}
+  .ecmwf-tooltip-row{font-size:8px}
+  .ecmwf-tooltip-row strong{font-size:9px}
+  .ecmwf-table{min-width:520px;font-size:11px}
+}
