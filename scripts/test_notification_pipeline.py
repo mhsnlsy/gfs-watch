@@ -148,6 +148,9 @@ def main() -> None:
     assert '"public/ecmwf/**"' not in platform_workflow
     # Köy four-panel SVG rendering now runs inside the Cloudflare Worker and persists to D1.
     assert "gfs_publication_assets" in koy_worker
+    assert 'wind_direction_enrichment_checked: true' in koy_worker
+    assert 'needsWindDirectionEnrichment' in koy_worker
+    assert 'KOY_SVG_RENDERER_VERSION = "cloudflare-js-v2"' in koy_worker
     assert "function buildKoyInteractiveSvg" in koy_worker
     assert "function publishLatestKoySvg" in koy_worker
     assert 'const KOY_SVG_RENDERER_VERSION = "cloudflare-js-v1"' in koy_worker
