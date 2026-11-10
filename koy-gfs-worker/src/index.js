@@ -240,6 +240,10 @@ function normalizeDocument(candidate, now) {
     published_at_utc: new Date(now).toISOString(),
     forecast_source: "meteopt",
     meteopt_snowln_source_field: snowlineSeries.key,
+    wind_direction_enrichment_checked: true,
+    wind_direction_numeric_points: points.filter(point =>
+      Number.isFinite(Number(point.wind_direction_10m_deg))
+    ).length,
   };
 
   const f72Ready = Math.max(...steps) >= 72 && points.filter(p => p.forecast_hour > 0 && p.forecast_hour <= 72).length >= 12;
@@ -395,7 +399,7 @@ function decodePublicationAsset(row) {
   return new Response(row.body, { status: 200, headers });
 }
 
-const KOY_SVG_RENDERER_VERSION = "cloudflare-js-v1";
+const KOY_SVG_RENDERER_VERSION = "cloudflare-js-v2";
 const KOY_SVG_COLORS = ["#7DD3D7", "#8ABCE8", "#F1C98B", "#B38BE8"];
 const KOY_SVG_PANELS = [
   { id: "temperature", field: "temperature_2m_c", title: "Sıcaklık", unit: "°C" },
@@ -1036,7 +1040,11 @@ async function api(request, env) {
               (point.snowln === null || point.snowln === undefined ||
                point.humidity_2m_percent === null || point.humidity_2m_percent === undefined);
           })));
-      if (!current || needsSnowlineEnrichment) {
+      // One-time backfill for same-run D1 records created before 10 m wind direction
+      // was included in the canonical Köy forecast payload.
+      const needsWindDirectionEnrichment = Boolean(current &&
+        current.payload?.wind_direction_enrichment_checked !== true);
+      if (!current || needsSnowlineEnrichment || needsWindDirectionEnrichment) {
         await collect(env);
         current = await currentRun(env, "f72");
       }
