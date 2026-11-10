@@ -158,25 +158,6 @@ export function buildIstanbulInteractiveSvg(runs) {
       (latest ? "700" : "500") + '" font-family="' + FONT + '">' + escapeXml(item.label) + '</text>'
     );
   });
-  // Rüzgâr yönü sabit tek satır: oklar meteorolojik FROM yönünün
-  // tersine, yani rüzgârın GİDİŞ yönüne bakar. Örn. GB rüzgârı → KD.
-  const directionLegend = [
-    ["↓", "K → G"], ["↙", "KD → GB"], ["←", "D → B"], ["↖", "GD → KB"],
-    ["↑", "G → K"], ["↗", "GB → KD"], ["→", "B → D"], ["↘", "KB → GD"]
-  ];
-  parts.push(
-    '<text x="335" y="201" fill="#8EAEB7" font-size="10" font-weight="700" font-family="' + FONT + '">RÜZGÂR · GİDİŞ YÖNÜ</text>'
-  );
-  directionLegend.forEach((item, index) => {
-    const x = 430 + index * 66;
-    parts.push(
-      '<text x="' + x + '" y="201" text-anchor="middle" fill="#FFFFFF" font-size="15" font-weight="800" font-family="' + FONT + '">' +
-      item[0] + '</text>',
-      '<text x="' + x + '" y="213" text-anchor="middle" fill="#8EAEB7" font-size="7.5" font-weight="650" font-family="' + FONT + '">' +
-      item[1] + '</text>'
-    );
-  });
-
   const metadata = [];
   PANELS.forEach((spec, panelIndex) => {
     const column = panelIndex % 2;
