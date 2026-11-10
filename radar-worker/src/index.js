@@ -239,13 +239,24 @@ async function check(env){
   const h=history.slice(-HISTORY_LEN);
   const previous = h.length >= 2 ? h[h.length - 2] : null;
   const rainDetected = curr.count > 0 && curr.min_dist_km != null;
-  const approaching = Boolean(
-    previous &&
-    previous.min_dist_km != null &&
-    curr.min_dist_km < previous.min_dist_km
-  );
-  // Alert on every six-minute scan while RainViewer detects precipitation
-  // that is moving closer to Istanbul. No cooldown is applied.
+
+  // Detect approach from the motion of the RainViewer echo centroid, not
+  // from a noisy frame-to-frame minimum-pixel distance. Positive dot product
+  // means the echo is moving toward the Istanbul target. No dBZ, pixel-count,
+  // distance or cooldown gate is applied.
+  let approaching = false;
+  if (previous && rainDetected && previous.avg_dx != null && previous.avg_dy != null) {
+    const vx = curr.avg_dx - previous.avg_dx;
+    const vy = curr.avg_dy - previous.avg_dy;
+    const tx = -curr.avg_dx;
+    const ty = -curr.avg_dy;
+    const motionLen = Math.hypot(vx, vy);
+    const targetLen = Math.hypot(tx, ty);
+    approaching = motionLen >= 0.25 && targetLen > 0 && (vx * tx + vy * ty) / (motionLen * targetLen) > 0;
+  }
+
+  // RainViewer detects precipitation approaching Istanbul -> send Telegram.
+  // Intensity, pixel count, radius and cooldown are deliberately not filters.
   const alert = rainDetected && approaching;
 
   let intensity="HAFİF",emoji="🌦️";
