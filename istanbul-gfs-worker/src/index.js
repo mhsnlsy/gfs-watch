@@ -13,6 +13,7 @@ const LOCATION = {
 const CYCLES = [18, 12, 6, 0];
 const RETENTION_DAYS = 14;
 const UTC_OFFSET_MS = 3 * 60 * 60 * 1000;
+// ECMWF homepage publication endpoint: keep this service redeployable with the live MeteoPT source.
 const ECMWF_API_BASE = METEOPT_ECMWF_API;
 const ECMWF_SOURCE_URL = METEOPT_ECMWF_WEB + "?lat=41.0901&lon=28.9436";
 const ECMWF_LOCATION = {
