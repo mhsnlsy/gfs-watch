@@ -2018,16 +2018,84 @@ if(typeof renderBriefing==="function")renderBriefing();
     function renderEcmwfReportImages(document){
       const holder=$("ecmwf-report-images");
       if(!holder)return;
-      const images=Array.isArray(document.report_images)?document.report_images:[];
-      if(images.length<4){
-        holder.innerHTML='<article class="chart-card"><div class="chart-empty">Dört çıktının PNG raporu henüz yok.</div></article>';
+      const runs=Array.isArray(document.comparison_runs)?document.comparison_runs.filter(run=>Array.isArray(run&&run.forecast_6_hourly)&&run.forecast_6_hourly.length):[];
+      if(runs.length<2){
+        holder.innerHTML='<article class="chart-card"><div class="chart-empty">ECMWF son dört çıktı karşılaştırması için yeterli MeteoPT döngüsü henüz yok.</div></article>';
         return;
       }
-      const version=encodeURIComponent(document.updated_at_utc||"");
-      holder.innerHTML=images.slice(0,4).map(image=>{
-        const url="./data/ecmwf/"+image.path+"?v="+version;
-        return '<article class="chart-card"><div class="chart-card-head"><div class="chart-title">'+esc(image.label)+'</div></div><a class="notification-image-link" href="'+url+'" target="_blank" rel="noopener"><img class="notification-image" src="'+url+'" alt="'+esc(image.label)+' · son dört ECMWF çıktısı"></a></article>';
-      }).join("");
+      const colors=["#55D6D2","#7EB8FF","#FFC66D","#C3A5FF"];
+      const specs=[
+        {key:"temperature_2m_c",title:"Sıcaklık · 2 m",unit:"°C"},
+        {key:"temperature_850hpa_c",title:"Sıcaklık · 850 hPa",unit:"°C"},
+        {key:"precipitation_6h_mm",title:"Yağış",unit:"mm / 3 saat"},
+        {key:"wind_speed_10m_kmh",title:"Rüzgâr · 10 m",unit:"km/sa"}
+      ];
+      const escSvg=value=>String(value==null?"":value).replace(/&/g,"&amp;").replace(/</g,"&lt;").replace(/>/g,"&gt;").replace(/"/g,"&quot;");
+      const number=value=>{const n=Number(value);return Number.isFinite(n)?n:null;};
+      const formatRun=run=>{
+        const d=new Date(run.run_id_utc);
+        const local=new Intl.DateTimeFormat("tr-TR",{timeZone:"Europe/Istanbul",day:"2-digit",month:"2-digit",hour:"2-digit",minute:"2-digit"}).format(d);
+        return (d.getUTCHours()+"Z · "+local+" TSİ");
+      };
+      const buildSvg=spec=>{
+        const maps=runs.map(run=>{
+          const map=new Map();
+          (run.forecast_6_hourly||[]).forEach(point=>{
+            const value=number(point&&point[spec.key]);
+            if(value!==null&&point&&point.valid_time_utc)map.set(point.valid_time_utc,value);
+          });
+          return map;
+        });
+        let times=[...maps[0].keys()];
+        maps.slice(1).forEach(map=>{times=times.filter(time=>map.has(time));});
+        if(times.length<2)return '<div class="chart-empty">Ortak ECMWF geçerlilik saatleri oluşturulamadı.</div>';
+        const width=760,height=330,left=56,right=18,top=48,bottom=48;
+        const plotW=width-left-right,plotH=height-top-bottom;
+        let min=Math.min(...maps.flatMap(map=>times.map(time=>map.get(time))));
+        let max=Math.max(...maps.flatMap(map=>times.map(time=>map.get(time))));
+        if(spec.key==="precipitation_6h_mm")min=Math.min(0,min);
+        if(min===max){min-=1;max+=1;}
+        const pad=(max-min)*0.12;
+        min-=pad;max+=pad;
+        if(spec.key==="precipitation_6h_mm")min=Math.max(0,min);
+        const x=index=>left+(times.length===1?0:index/(times.length-1))*plotW;
+        const y=value=>top+(max-value)/(max-min)*plotH;
+        const pathFor=map=>times.map((time,index)=>(index?"L":"M")+x(index).toFixed(1)+","+y(map.get(time)).toFixed(1)).join(" ");
+        const grid=[];
+        for(let i=0;i<=4;i++){
+          const value=min+(max-min)*(i/4),yy=y(value);
+          grid.push('<line x1="'+left+'" y1="'+yy.toFixed(1)+'" x2="'+(width-right)+'" y2="'+yy.toFixed(1)+'" stroke="#456579" stroke-opacity=".45" stroke-width="1"/>');
+          grid.push('<text x="'+(left-8)+'" y="'+(yy+4).toFixed(1)+'" text-anchor="end" fill="#E7F2F6" font-size="11">'+escSvg(value.toFixed(1))+'</text>');
+        }
+        const labels=[];
+        const labelStep=Math.max(1,Math.ceil(times.length/6));
+        for(let i=0;i<times.length;i+=labelStep){
+          const d=new Date(times[i]);
+          const label=new Intl.DateTimeFormat("tr-TR",{timeZone:"Europe/Istanbul",day:"2-digit",hour:"2-digit",minute:"2-digit"}).format(d);
+          labels.push('<text x="'+x(i).toFixed(1)+'" y="'+(height-20)+'" text-anchor="middle" fill="#E7F2F6" font-size="10">'+escSvg(label)+'</text>');
+        }
+        const lines=runs.map((run,index)=>{
+          const label=(index===runs.length-1?"YENİ · ":"")+formatRun(run);
+          const endValue=maps[index].get(times[times.length-1]);
+          return '<path d="'+pathFor(maps[index])+'" fill="none" stroke="'+colors[index%colors.length]+'" stroke-width="2.6" stroke-linejoin="round" stroke-linecap="round"/>'+
+            '<circle cx="'+x(times.length-1).toFixed(1)+'" cy="'+y(endValue).toFixed(1)+'" r="3.5" fill="'+colors[index%colors.length]+'"/>'+
+            '<title>'+escSvg(label)+'</title>';
+        }).join("");
+        const legend=runs.map((run,index)=>{
+          const label=(index===runs.length-1?"YENİ · ":"")+formatRun(run);
+          const lx=left+(index%2)*330,ly=20+Math.floor(index/2)*18;
+          return '<circle cx="'+lx+'" cy="'+ly+'" r="4" fill="'+colors[index%colors.length]+'"/><text x="'+(lx+9)+'" y="'+(ly+4)+'" fill="#E7F2F6" font-size="10">'+escSvg(label)+'</text>';
+        }).join("");
+        return '<svg class="ecmwf-comparison-svg" viewBox="0 0 '+width+' '+height+'" role="img" aria-label="'+escSvg(spec.title)+' · son '+runs.length+' ECMWF döngüsü">'+
+          '<rect x="0" y="0" width="'+width+'" height="'+height+'" rx="18" fill="#0A1B29"/>'+
+          '<text x="'+left+'" y="42" fill="#FFFFFF" font-size="17" font-weight="700">'+escSvg(spec.title)+'</text>'+
+          '<text x="'+(width-right)+'" y="42" text-anchor="end" fill="#AFC4CF" font-size="11">'+escSvg(spec.unit)+'</text>'+
+          grid.join("")+lines+
+          '<line x1="'+left+'" y1="'+(height-bottom)+'" x2="'+(width-right)+'" y2="'+(height-bottom)+'" stroke="#416174" stroke-width="1"/>'+
+          labels.join("")+legend+
+          '</svg>';
+      };
+      holder.innerHTML=specs.map(spec=>'<article class="chart-card"><div class="chart-card-head"><div class="chart-title">'+escSvg(spec.title)+'</div><div class="chart-card-meta">MeteoPT ECMWF · son '+runs.length+' döngü</div></div>'+buildSvg(spec)+'</article>').join("");
     }
     function renderEcmwfForecast(document){
       const forecasts=document.forecasts||[];
@@ -2048,52 +2116,3 @@ if(typeof renderBriefing==="function")renderBriefing();
     async function loadEcmwf(force=false){
       if(ecmwfLoading)return;
       if(!force&&ecmwfForecast&&Date.now()-ecmwfLastFetch<240000)return;
-      ecmwfLoading=true;
-      try{
-        const response=await fetch(ECMWF_DATA_URL+"?t="+Date.now(),{cache:"no-store"});
-        if(!response.ok)throw new Error("ECMWF veri paketi henüz yayımlanmamış (HTTP "+response.status+").");
-        const document=await response.json();
-        if(!document||document.schema!=="gfs-watch.ecmwf-eps.v1"||document.status!=="ready"||!Array.isArray(document.forecasts)||document.forecasts.length<8){
-          throw new Error("ECMWF IFS veri paketi eksik veya beklenen biçimde değil.");
-        }
-        renderEcmwfForecast(document);
-        ecmwfForecast=document;
-        ecmwfLastFetch=Date.now();
-        if(typeof renderBriefing==="function")renderBriefing();
-      }catch(error){
-      }finally{
-        ecmwfLoading=false;
-      }
-    }
-    function setModelView(mode,persist=true){
-      activeModel=mode==="ecmwf"?"ecmwf":"gfs";
-      const ecmwf=activeModel==="ecmwf";
-      const gfsButton=$("model-gfs-button");
-      const ecmwfButton=$("model-ecmwf-button");
-      const gfsView=$("gfs-model-view");
-      const ecmwfView=$("ecmwf-model-view");
-      if(gfsView)gfsView.hidden=ecmwf;
-      if(ecmwfView)ecmwfView.hidden=!ecmwf;
-      if(gfsButton){
-        gfsButton.classList.toggle("active",!ecmwf);
-        gfsButton.setAttribute("aria-pressed",String(!ecmwf));
-      }
-      if(ecmwfButton){
-        ecmwfButton.classList.toggle("active",ecmwf);
-        ecmwfButton.setAttribute("aria-pressed",String(ecmwf));
-      }
-      const nav=document.querySelector(".topbar nav");
-      if(nav)nav.hidden=ecmwf;
-      if(persist){try{localStorage.setItem("istanbul-hava-model-view",activeModel);}catch(_){}}
-      if(typeof renderBriefing==="function")renderBriefing();
-      loadEcmwf();
-    }
-    const modelGfsButton=$("model-gfs-button");
-    const modelEcmwfButton=$("model-ecmwf-button");
-    if(modelGfsButton)modelGfsButton.addEventListener("click",()=>setModelView("gfs"));
-    if(modelEcmwfButton)modelEcmwfButton.addEventListener("click",()=>setModelView("ecmwf"));
-    try{if(localStorage.getItem("istanbul-hava-model-view")==="ecmwf")activeModel="ecmwf";}catch(_){}
-    setModelView(activeModel,false);
-
-    startPage();
-  
