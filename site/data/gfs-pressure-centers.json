@@ -13,48 +13,21 @@
     "centers": [
       {
         "type": "high",
-        "pressure_hpa": 1039.0,
-        "latitude": 43.25,
-        "longitude": 42.0,
-        "distance_km": 1103.2,
-        "bearing_deg": 73,
-        "direction": "DKD"
-      },
-      {
-        "type": "high",
-        "pressure_hpa": 1036.8,
-        "latitude": 40.25,
-        "longitude": 41.25,
-        "distance_km": 1040.6,
-        "bearing_deg": 91,
+        "pressure_hpa": 1032.8,
+        "latitude": 41.0,
+        "longitude": 42.75,
+        "distance_km": 1156.8,
+        "bearing_deg": 86,
         "direction": "D"
       },
       {
         "type": "high",
-        "pressure_hpa": 1032.2,
+        "pressure_hpa": 1031.2,
         "latitude": 40.0,
-        "longitude": 36.5,
-        "distance_km": 648.0,
-        "bearing_deg": 98,
+        "longitude": 38.0,
+        "distance_km": 773.0,
+        "bearing_deg": 95,
         "direction": "D"
-      },
-      {
-        "type": "high",
-        "pressure_hpa": 1030.6,
-        "latitude": 41.75,
-        "longitude": 33.75,
-        "distance_km": 408.7,
-        "bearing_deg": 77,
-        "direction": "DKD"
-      },
-      {
-        "type": "high",
-        "pressure_hpa": 1027.1,
-        "latitude": 33.5,
-        "longitude": 36.0,
-        "distance_km": 1042.0,
-        "bearing_deg": 141,
-        "direction": "GD"
       }
     ]
   },
@@ -68,8 +41,8 @@
     "lon_min": 12.0,
     "lon_max": 48.0
   },
-  "cycle_utc": "2026-11-10T00:00:00Z",
+  "cycle_utc": "2026-11-10T06:00:00Z",
   "forecast_hour": 0,
   "download_bytes": 24793,
-  "download_url": "https://nomads.ncep.noaa.gov/cgi-bin/filter_gfs_0p25.pl?file=gfs.t00z.pgrb2.0p25.f000&var_PRMSL=on&lev_mean_sea_level=on&subregion=&leftlon=12&rightlon=48&toplat=53&bottomlat=29&dir=%2Fgfs.20261110%2F00%2Fatmos"
+  "download_url": "https://nomads.ncep.noaa.gov/cgi-bin/filter_gfs_0p25.pl?file=gfs.t06z.pgrb2.0p25.f000&var_PRMSL=on&lev_mean_sea_level=on&subregion=&leftlon=12&rightlon=48&toplat=53&bottomlat=29&dir=%2Fgfs.20261110%2F06%2Fatmos"
 }
