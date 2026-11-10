@@ -4,7 +4,7 @@ const LON = 28.9438;
 const ANALYSIS_RADIUS_KM = 210;
 const THRESHOLD_DBZ_STRONG = 30;
 const ENTRY_ALERT_RADIUS_KM = 25;
-const RADAR_BUILD = "paid-cron-2026-11-10-grok-approach-eta-4frame-3";
+const RADAR_BUILD = "paid-cron-2026-11-10-approach-only-5";
 const HISTORY_LEN = 4;
 const ZOOM = 7;
 const TILE_SIZE = 256;
@@ -288,9 +288,9 @@ async function check(env){
 
   // RainViewer detects precipitation approaching Istanbul -> send Telegram.
   // Intensity, pixel count, radius and cooldown are deliberately not filters.
-  // Send only when a new approaching episode starts. Do not repeat every six minutes
-  // while the same precipitation system continues approaching.
-  const alert = rainDetected && motionInfo.approaching && !Boolean(previous?.approaching);
+  // No cooldown, episode gate, dBZ threshold, pixel-count threshold or distance gate.
+  // Every six-minute scan that detects precipitation approaching Istanbul may alert.
+  const alert = rainDetected && motionInfo.approaching;
 
   let intensity="HAFİF",emoji="🌦️";
   if(curr.max_dbz>=25){intensity="GÜÇLÜ";emoji="⛈️";}
@@ -299,7 +299,7 @@ async function check(env){
   const now=Math.floor(Date.now()/1000);
   let sent=false, telegramStatus=0, telegramError="";
   if(alert){
-    const caption = `${emoji} <b>${intensity} YAĞIŞ YAKLAŞIYOR — İstanbul</b>\\n📍 Merkez: ${curr.centroid_dist??"—"} km ${compassFromVector(curr.avg_dx,curr.avg_dy)}\\n💧 Maksimum: ${curr.max_dbz} dBZ\\n🧭 Hareket: ${motionInfo.motion_dir} yönünde\\n💨 Hız: ${motionInfo.speed_kmh??"—"} km/sa\\n⏱️ Tahmini varış: ${motionInfo.eta_min!=null?motionInfo.eta_min+" dakika":"hesaplanamıyor"}\\n⚠️ Varış süresi tahminidir.\\n📡 RainViewer: ${new Date(ts*1000).toLocaleString("tr-TR",{timeZone:"Europe/Istanbul"})}`;
+    const caption = `${emoji} <b>${intensity} YAĞIŞ YAKLAŞIYOR — İstanbul</b>\n📍 Merkez: ${curr.centroid_dist??"—"} km ${compassFromVector(curr.avg_dx,curr.avg_dy)}\n💧 Maksimum: ${curr.max_dbz} dBZ\n🧭 Hareket: ${motionInfo.motion_dir} yönünde\n💨 Hız: ${motionInfo.speed_kmh??"—"} km/sa\n⏱️ Tahmini varış: ${motionInfo.eta_min!=null?motionInfo.eta_min+" dakika":"hesaplanamıyor"}\n⚠️ Varış süresi tahminidir.\n📡 RainViewer: ${new Date(ts*1000).toLocaleString("tr-TR",{timeZone:"Europe/Istanbul"})}`;
     const baseTiles=await Promise.all(tiles.map(async t=>{const u=`https://tile.openstreetmap.org/${ZOOM}/${tx+t.ox}/${ty+t.oy}.png`;const r=await fetch(u,{cf:{cacheTtl:3600}});if(!r.ok)throw new Error("base_map_tile_download_failed");return {...t,bytes:await r.arrayBuffer()};}));
     const baseDecoded=await Promise.all(baseTiles.map(async t=>({...t,img:await decodePng(t.bytes)})));
     const baseMosaic={w:TILE_SIZE*3,h:TILE_SIZE*3,ct:baseDecoded[0].img.ct,data:new Uint8Array(TILE_SIZE*TILE_SIZE*9*(baseDecoded[0].img.ct===6?4:3))};
@@ -340,7 +340,7 @@ export default {
     const url=new URL(request.url);
 
     if (url.pathname === "/telegram-test") {
-      const r = await telegramText(env, "🧪 <b>RainViewer Telegram bağlantı testi</b>\\nCloudflare Worker Telegram API erişimi çalışıyor.");
+      const r = await telegramText(env, "🧪 <b>RainViewer Telegram bağlantı testi</b>\nCloudflare Worker Telegram API erişimi çalışıyor.");
       return new Response(JSON.stringify({ok:r.ok,status:r.status,error:r.ok?null:r.body}), {headers: {"content-type":"application/json"}});
     }
 
