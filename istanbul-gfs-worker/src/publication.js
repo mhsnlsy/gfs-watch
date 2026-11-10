@@ -158,6 +158,24 @@ export function buildIstanbulInteractiveSvg(runs) {
       (latest ? "700" : "500") + '" font-family="' + FONT + '">' + escapeXml(item.label) + '</text>'
     );
   });
+  // Rüzgâr yönü lejantı: yönleri oklarla göster.
+  // Bu satır mevcut GFS döngüsü lejantının hemen altında yer alır.
+  const directionLegend = [
+    ["↑", "K"], ["↗", "KD"], ["→", "D"], ["↘", "GD"],
+    ["↓", "G"], ["↙", "GB"], ["←", "B"], ["↖", "KB"]
+  ];
+  parts.push(
+    '<text x="335" y="201" fill="#8EAEB7" font-size="10" font-weight="700" font-family="' + FONT + '">RÜZGÂR YÖNÜ</text>'
+  );
+  directionLegend.forEach((item, index) => {
+    const x = 430 + index * 66;
+    parts.push(
+      '<text x="' + x + '" y="202" text-anchor="middle" fill="#FFFFFF" font-size="16" font-weight="800" font-family="' + FONT + '">' +
+      item[0] + '</text>',
+      '<text x="' + x + '" y="213" text-anchor="middle" fill="#8EAEB7" font-size="8" font-weight="650" font-family="' + FONT + '">' +
+      item[1] + '</text>'
+    );
+  });
 
   const metadata = [];
   PANELS.forEach((spec, panelIndex) => {
