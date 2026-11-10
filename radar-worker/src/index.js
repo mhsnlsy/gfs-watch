@@ -4,7 +4,7 @@ const LON = 28.9438;
 const ANALYSIS_RADIUS_KM = 210;
 const THRESHOLD_DBZ_STRONG = 30;
 const ENTRY_ALERT_RADIUS_KM = 25;
-const RADAR_BUILD = "paid-cron-2026-11-10-grok-approach-eta-4frame-2";
+const RADAR_BUILD = "paid-cron-2026-11-10-grok-approach-eta-4frame-3";
 const HISTORY_LEN = 4;
 const ZOOM = 7;
 const TILE_SIZE = 256;
@@ -103,20 +103,20 @@ function compassFromVector(dx,dy){
   const dirs=["K","K-KD","KD","D-KD","D","D-GD","GD","G-GD","G","G-GB","GB","B-GB","B","B-KB","KB","K-KB"];
   return dirs[Math.round(deg/22.5)%16];
 }
-function motionMetrics(curr,history){
+function motionMetrics(curr,history,currentTs){
   const samples=history.filter(p=>p && p.avg_dx!=null && p.avg_dy!=null && p.ts!=null);
   if(!samples.length || curr.avg_dx==null || curr.avg_dy==null || curr.centroid_dist==null)
     return {approaching:false,speed_kmh:null,eta_min:null,motion_dir:"—"};
 
   const prev=samples[samples.length-1];
-  const dtMin=Math.max((Date.now()/1000-prev.ts)/60,0.1);
+  const dtMin=Math.max((currentTs-prev.ts)/60,0.1);
   let vx=curr.avg_dx-prev.avg_dx, vy=curr.avg_dy-prev.avg_dy, dt=dtMin;
 
   // Use up to four consecutive radar frames to stabilize the motion vector.
   // This avoids an ETA being dominated by one noisy six-minute scan.
   if(samples.length>=2){
     const first=samples[Math.max(0,samples.length-3)];
-    const spanMin=Math.max((Date.now()/1000-first.ts)/60,dtMin);
+    const spanMin=Math.max((currentTs-first.ts)/60,dtMin);
     vx=(curr.avg_dx-first.avg_dx);
     vy=(curr.avg_dy-first.avg_dy);
     dt=spanMin;
@@ -279,7 +279,7 @@ async function check(env){
   const hBefore = history.slice(-HISTORY_LEN);
   const previous = hBefore.length ? hBefore[hBefore.length - 1] : null;
   const rainDetected = curr.count > 0 && curr.min_dist_km != null;
-  const motion = motionMetrics(curr,hBefore);
+  const motion = motionMetrics(curr,hBefore,ts);
   history.push({ts,avg_dx:curr.avg_dx,avg_dy:curr.avg_dy,min_dist_km:curr.min_dist_km,centroid_dist:curr.centroid_dist,max_dbz:curr.max_dbz,approaching:motion.approaching});
   const h=history.slice(-HISTORY_LEN);
 
