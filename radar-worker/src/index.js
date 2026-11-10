@@ -4,7 +4,7 @@ const LON = 28.9438;
 const ANALYSIS_RADIUS_KM = 210;
 const THRESHOLD_DBZ_STRONG = 30;
 const ENTRY_ALERT_RADIUS_KM = 25;
-const RADAR_BUILD = "paid-cron-2026-11-10-telegram-verify-1";
+const RADAR_BUILD = "paid-cron-2026-11-10-grok-approach-eta-1";
 const HISTORY_LEN = 4;
 const ZOOM = 7;
 const TILE_SIZE = 256;
@@ -97,6 +97,24 @@ function estimateDbz(r,g,b){
   return dist<80?best:0;
 }
 
+function compassFromVector(dx,dy){
+  if(dx==null||dy==null) return "—";
+  const deg=(Math.atan2(dx,-dy)*180/Math.PI+360)%360;
+  const dirs=["K","K-KD","KD","D-KD","D","D-GD","GD","G-GD","G","G-GB","GB","B-GB","B","B-KB","KB","K-KB"];
+  return dirs[Math.round(deg/22.5)%16];
+}
+function motionMetrics(curr,previous){
+  if(!previous || previous.avg_dx==null || previous.avg_dy==null) return {approaching:false,speed_kmh:null,eta_min:null,motion_dir:"—"};
+  const vx=curr.avg_dx-previous.avg_dx, vy=curr.avg_dy-previous.avg_dy;
+  const tx=-curr.avg_dx, ty=-curr.avg_dy;
+  const motionLen=Math.hypot(vx,vy), targetLen=Math.hypot(tx,ty);
+  if(motionLen<0.25 || targetLen<=0) return {approaching:false,speed_kmh:null,eta_min:null,motion_dir:compassFromVector(vx,vy)};
+  const toward=(vx*tx+vy*ty)/(motionLen*targetLen);
+  const speedKmh=motionLen*PIXEL_KM*10;
+  const radialKmPerMin=(motionLen*PIXEL_KM*toward)/6;
+  const etaMin=radialKmPerMin>0 ? curr.centroid_dist/radialKmPerMin : null;
+  return {approaching:toward>0,speed_kmh:Math.round(speedKmh*10)/10,eta_min:etaMin!=null?Math.round(etaMin):null,motion_dir:compassFromVector(vx,vy)};
+}
 function analyzeImage(img){
   const [px,py]=latlonToPixel(LAT,LON,ZOOM);
   const localX=(px%TILE_SIZE)+TILE_SIZE, localY=(py%TILE_SIZE)+TILE_SIZE, radius=ANALYSIS_RADIUS_PX;
@@ -239,25 +257,11 @@ async function check(env){
   const h=history.slice(-HISTORY_LEN);
   const previous = h.length >= 2 ? h[h.length - 2] : null;
   const rainDetected = curr.count > 0 && curr.min_dist_km != null;
-
-  // Detect approach from the motion of the RainViewer echo centroid, not
-  // from a noisy frame-to-frame minimum-pixel distance. Positive dot product
-  // means the echo is moving toward the Istanbul target. No dBZ, pixel-count,
-  // distance or cooldown gate is applied.
-  let approaching = false;
-  if (previous && rainDetected && previous.avg_dx != null && previous.avg_dy != null) {
-    const vx = curr.avg_dx - previous.avg_dx;
-    const vy = curr.avg_dy - previous.avg_dy;
-    const tx = -curr.avg_dx;
-    const ty = -curr.avg_dy;
-    const motionLen = Math.hypot(vx, vy);
-    const targetLen = Math.hypot(tx, ty);
-    approaching = motionLen >= 0.25 && targetLen > 0 && (vx * tx + vy * ty) / (motionLen * targetLen) > 0;
-  }
+  const motion = motionMetrics(curr,previous);
 
   // RainViewer detects precipitation approaching Istanbul -> send Telegram.
   // Intensity, pixel count, radius and cooldown are deliberately not filters.
-  const alert = rainDetected && approaching;
+  const alert = rainDetected && motion.approaching;
 
   let intensity="HAFİF",emoji="🌦️";
   if(curr.max_dbz>=25){intensity="GÜÇLÜ";emoji="⛈️";}
@@ -266,7 +270,7 @@ async function check(env){
   const now=Math.floor(Date.now()/1000);
   let sent=false, telegramStatus=0, telegramError="";
   if(alert){
-    const caption=`${emoji} <b>${intensity} YAĞIŞ UYARISI — İstanbul</b>\\nKonum: 41.0904 N, 28.9438 E\\nŞiddet: ${intensity} (${curr.max_dbz} dBZ)\\nYağış merkezi: ${curr.centroid_dist??"—" } km uzakta\\nAlan: ~${curr.area_km2} km²\\nDoğu-batı genişliği: ~${curr.width_km} km\\nKuzey-güney uzunluğu: ~${curr.height_km} km\\nRadar: Yağış ekosu İstanbul yönünde yaklaşıyor.\\n${new Date(ts*1000).toLocaleString("tr-TR",{timeZone:"Europe/Istanbul"})}\\n© OpenStreetMap contributors`;
+    const caption = `${emoji} <b>${intensity} YAĞIŞ YAKLAŞIYOR — İstanbul</b>\\n📍 Merkez: ${curr.centroid_dist??"—"} km ${compassFromVector(curr.avg_dx,curr.avg_dy)}\\n💧 Maksimum: ${curr.max_dbz} dBZ\\n🧭 Hareket: ${motion.motion_dir} yönünde\\n💨 Hız: ${motion.speed_kmh??"—"} km/sa\\n⏱️ Tahmini varış: ${motion.eta_min!=null?motion.eta_min+" dakika":"hesaplanamıyor"}\\n⚠️ Varış süresi tahminidir.\\n📡 RainViewer: ${new Date(ts*1000).toLocaleString("tr-TR",{timeZone:"Europe/Istanbul"})}`;
     const baseTiles=await Promise.all(tiles.map(async t=>{const u=`https://tile.openstreetmap.org/${ZOOM}/${tx+t.ox}/${ty+t.oy}.png`;const r=await fetch(u,{cf:{cacheTtl:3600}});if(!r.ok)throw new Error("base_map_tile_download_failed");return {...t,bytes:await r.arrayBuffer()};}));
     const baseDecoded=await Promise.all(baseTiles.map(async t=>({...t,img:await decodePng(t.bytes)})));
     const baseMosaic={w:TILE_SIZE*3,h:TILE_SIZE*3,ct:baseDecoded[0].img.ct,data:new Uint8Array(TILE_SIZE*TILE_SIZE*9*(baseDecoded[0].img.ct===6?4:3))};
@@ -299,7 +303,7 @@ async function check(env){
   }
   state.history=h;state.last_frame_ts=ts;
   await saveState(env.RADAR_DB,state);
-  return {status:"ok",frame_ts:ts,alert,rain_detected:rainDetected,approaching,pixel_count:curr.count,max_dbz:curr.max_dbz,area_km2:curr.area_km2,width_km:curr.width_km,height_km:curr.height_km,min_dist_km:curr.min_dist_km,previous_min_dist_km:previous?.min_dist_km??null,centroid_dist:curr.centroid_dist,telegram_sent:sent,telegram_status:telegramStatus,telegram_error:telegramError};
+  return {status:"ok",frame_ts:ts,alert,rain_detected:rainDetected,approaching:motion.approaching,motion_direction:motion.motion_dir,speed_kmh:motion.speed_kmh,eta_min:motion.eta_min,pixel_count:curr.count,max_dbz:curr.max_dbz,area_km2:curr.area_km2,width_km:curr.width_km,height_km:curr.height_km,min_dist_km:curr.min_dist_km,previous_min_dist_km:previous?.min_dist_km??null,centroid_dist:curr.centroid_dist,telegram_sent:sent,telegram_status:telegramStatus,telegram_error:telegramError};
 }
 
 export default {
