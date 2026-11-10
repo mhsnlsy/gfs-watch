@@ -11,6 +11,10 @@ const ENTRY_ALERT_RADIUS_KM = 25;
 const RADAR_BUILD = "paid-cron-2026-11-10-r25km-cd45-tomorrow-8";
 const RADAR_CRON = "*/6 * * * *";
 const TOMORROW_CRON = "45 16 * * *"; // 19:45 Europe/Istanbul
+// Hard gap between tomorrow-weather Telegram sends. Not seeded from today's tests,
+// so the next 19:45 cron is allowed through.
+const TOMORROW_COOLDOWN_MIN = 1438; // 23h 58m
+const TOMORROW_COOLDOWN_SEC = TOMORROW_COOLDOWN_MIN * 60;
 const HISTORY_LEN = 4;
 const ZOOM = 7;
 const TILE_SIZE = 256;
@@ -379,6 +383,7 @@ async function check(env){
 // Daily 19:45 (Europe/Istanbul) tomorrow-weather Telegram message.
 // Ported from scripts/build_tomorrow_weather_notification.mjs +
 // scripts/send_tomorrow_weather_telegram.py (formerly a GitHub Actions cron).
+// Every send path claims radar_tomorrow_send.last_tomorrow_ts in D1 before Telegram.
 // ---------------------------------------------------------------------------
 const TW_TZ = "Europe/Istanbul";
 const TW_API = "https://api.meteopt.com/gfs/json?lat=41.014&lon=28.95&lang=en";
@@ -432,10 +437,39 @@ async function telegramPlain(env,text){
   let body=""; try{body=await r.text();}catch{}
   return {ok:r.ok,status:r.status,body:body.slice(0,500)};
 }
+async function ensureTomorrowTable(db){
+  await db.prepare(`CREATE TABLE IF NOT EXISTS radar_tomorrow_send (
+    id INTEGER PRIMARY KEY CHECK (id = 1),
+    last_tomorrow_ts INTEGER NOT NULL DEFAULT 0
+  )`).run();
+  // Empty (0) on purpose: do not backfill today's test sends, or 19:45 tomorrow would be inside the 23h58m window.
+  await db.prepare(`INSERT INTO radar_tomorrow_send(id, last_tomorrow_ts) VALUES (1, 0) ON CONFLICT(id) DO NOTHING`).run();
+}
+async function readTomorrowTs(db){
+  await ensureTomorrowTable(db);
+  const row=await db.prepare(`SELECT last_tomorrow_ts FROM radar_tomorrow_send WHERE id=1`).first();
+  return Number(row&&row.last_tomorrow_ts||0);
+}
+// Atomic check-and-set. Only one concurrent caller can observe a row change.
+async function claimTomorrowSend(db){
+  await ensureTomorrowTable(db);
+  const nowSec=Math.floor(Date.now()/1000);
+  const cutoff=nowSec-TOMORROW_COOLDOWN_SEC;
+  const result=await db.prepare(`UPDATE radar_tomorrow_send SET last_tomorrow_ts=? WHERE id=1 AND last_tomorrow_ts<?`).bind(nowSec,cutoff).run();
+  const changes=Number(result&&result.meta&&result.meta.changes||0);
+  if(changes>0) return {claimed:true,last_tomorrow_ts:nowSec,cooldown_remaining_sec:TOMORROW_COOLDOWN_SEC};
+  const last=await readTomorrowTs(db);
+  const remaining=last>0?Math.max(0,TOMORROW_COOLDOWN_SEC-(nowSec-last)):0;
+  return {claimed:false,last_tomorrow_ts:last,cooldown_remaining_sec:remaining};
+}
 async function sendTomorrowWeather(env){
   const w=await buildTomorrowWeather();
+  const claim=await claimTomorrowSend(env.RADAR_DB);
+  if(!claim.claimed){
+    return {status:"cooldown",telegram_status:0,telegram_error:null,summary:w.summary,metadata:w.metadata,last_tomorrow_ts:claim.last_tomorrow_ts,cooldown_remaining_sec:claim.cooldown_remaining_sec};
+  }
   const r=await telegramPlain(env,w.text);
-  return {status:r.ok?"sent":"telegram_failed",telegram_status:r.status,telegram_error:r.ok?null:r.body,summary:w.summary,metadata:w.metadata};
+  return {status:r.ok?"sent":"telegram_failed",telegram_status:r.status,telegram_error:r.ok?null:r.body,summary:w.summary,metadata:w.metadata,last_tomorrow_ts:claim.last_tomorrow_ts,cooldown_remaining_sec:claim.cooldown_remaining_sec};
 }
 
 export default {
@@ -467,6 +501,8 @@ export default {
         alert_rule: "RainViewer yağış 25 km içinde + yaklaşma, 45 dk cooldown",
         center: { lat: LAT, lon: LON, radius_km: ANALYSIS_RADIUS_KM, cooldown_min: ALERT_COOLDOWN_SEC / 60 },
         crons: [RADAR_CRON, TOMORROW_CRON],
+        tomorrow_cooldown_min: TOMORROW_COOLDOWN_MIN,
+        last_tomorrow_ts: await readTomorrowTs(env.RADAR_DB),
         last_frame_ts: Number(state.last_frame_ts || 0),
         last_alert_ts: Number(state.last_alert_ts || 0),
         last_intensity: state.last_intensity || "",
