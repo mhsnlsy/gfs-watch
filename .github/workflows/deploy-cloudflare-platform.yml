@@ -258,6 +258,18 @@ jobs:
             --dump-header "$RUNNER_TEMP/live-gfs-svg-headers.txt" \
             "$WEB/data/notifications/$LIVE_SVG_PATH?verify=$(date +%s)" \
             -o "$RUNNER_TEMP/live-gfs-comparison.svg"
+          curl --silent --show-error --fail --max-time 30 \
+            "$WEB/gfs/publication-asset/notifications/$LIVE_SVG_PATH?verify=$(date +%s)" \
+            -o "$RUNNER_TEMP/live-gfs-d1-publication.svg"
+          node - "$RUNNER_TEMP/live-gfs-d1-publication.svg" <<'NODE'
+          const fs = require("fs");
+          const svg = fs.readFileSync(process.argv[2], "utf8");
+          const arrows = (svg.match(/gfs-wind-direction-marker/g) || []).length;
+          if (!svg.includes("<svg") || !svg.includes("cloudflare-js-v2") || arrows < 1) {
+            throw new Error("Live Istanbul D1 SVG publication route failed or has no wind-direction arrows: " + JSON.stringify({bytes: Buffer.byteLength(svg), arrows}));
+          }
+          console.log("Verified direct Istanbul D1 SVG route and wind direction arrows:", arrows);
+          NODE
           if grep -qi '^x-gfs-publication-source: D1' "$RUNNER_TEMP/live-gfs-svg-headers.txt"; then
             echo "Verified live GFS SVG publication source: D1"
           elif grep -qi '^x-gfs-archive-source: R2' "$RUNNER_TEMP/live-gfs-svg-headers.txt"; then
@@ -304,6 +316,18 @@ jobs:
             --dump-header "$RUNNER_TEMP/live-koy-svg-headers.txt" \
             "$WEB/koy-data/gfs/media/koy-gfs-$KOY_LIVE_SVG_STAMP-comparison.svg?verify=$(date +%s)" \
             -o "$RUNNER_TEMP/live-koy-latest.svg"
+          curl --silent --show-error --fail --max-time 45 \
+            "$WEB/api/publication-asset/media/koy-gfs-$KOY_LIVE_SVG_STAMP-comparison.svg?verify=$(date +%s)" \
+            -o "$RUNNER_TEMP/live-koy-d1-publication.svg"
+          node - "$RUNNER_TEMP/live-koy-d1-publication.svg" <<'NODE'
+          const fs = require("fs");
+          const svg = fs.readFileSync(process.argv[2], "utf8");
+          const arrows = (svg.match(/gfs-wind-direction-marker/g) || []).length;
+          if (!svg.includes("<svg") || !svg.includes("cloudflare-js-v2") || arrows < 1) {
+            throw new Error("Live Köy D1 SVG publication route failed or has no wind-direction arrows: " + JSON.stringify({bytes: Buffer.byteLength(svg), arrows}));
+          }
+          console.log("Verified direct Köy D1 SVG route and wind direction arrows:", arrows);
+          NODE
           if grep -qi '^x-gfs-publication-source: D1' "$RUNNER_TEMP/live-koy-svg-headers.txt"; then
             echo "Verified live Köy SVG publication source: D1"
           elif grep -qi '^x-gfs-archive-source: R2' "$RUNNER_TEMP/live-koy-svg-headers.txt"; then
