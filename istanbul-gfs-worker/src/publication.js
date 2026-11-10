@@ -165,7 +165,7 @@ export function buildIstanbulInteractiveSvg(runs) {
     ["↓", "G"], ["↙", "GB"], ["←", "B"], ["↖", "KB"]
   ];
   parts.push(
-    '<text x="335" y="201" fill="#8EAEB7" font-size="10" font-weight="700" font-family="' + FONT + '">RÜZGÂR YÖNÜ</text>'
+    '<text x="335" y="201" fill="#8EAEB7" font-size="10" font-weight="700" font-family="' + FONT + '">RÜZGÂR YÖNÜ · 3 SAAT</text>'
   );
   directionLegend.forEach((item, index) => {
     const x = 430 + index * 66;
