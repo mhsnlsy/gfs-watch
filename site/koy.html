@@ -1689,6 +1689,37 @@ html.ios12 .backdrop-filter{display:none}
     #next-180h-legend{display:none!important}
 </style>
   <link rel="stylesheet" href="./header-common.css?v=20261110-shared-header-1">
+  <style id="koy-model-picker-home-parity">
+    /* GFS / ECMWF model buttons: exact homepage sizing and mobile behavior. */
+    .topbar .model-picker{
+      gap:2px!important;
+      padding:3px!important;
+    }
+    .topbar .model-picker button{
+      min-height:0!important;
+      padding:7px 8px!important;
+      font-size:9.5px!important;
+    }
+    @media(max-width:390px){
+      .model-picker button{
+        min-height:44px!important;
+        min-width:44px!important;
+        padding:0 10px!important;
+      }
+    }
+    @media(max-width:560px){
+      .topbar .model-picker{
+        gap:2px!important;
+        padding:3px!important;
+      }
+      .topbar .model-picker button{
+        min-height:0!important;
+        padding:7px 8px!important;
+        font-size:9.5px!important;
+      }
+    }
+  </style>
+
   <style id="koy-snowln-table-layout">
     /* RH.2m scale shared visually with the Istanbul table. */
     #meteopt-gfs-table .rh2m-warm-1{color:#ff9b86!important;background:rgba(224,75,57,.22)!important;border:1px solid rgba(255,120,90,.2)}
