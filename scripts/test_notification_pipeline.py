@@ -137,6 +137,9 @@ def main() -> None:
     # ECMWF is now collected by the Istanbul GFS Worker from the canonical MeteoPT source and archived
     # directly into D1/R2; there is no separate ECMWF GitHub Actions workflow.
     assert "METEOPT_ECMWF_API" in gfs_worker
+    assert "wind10mdir" in gfs_worker
+    assert "wind_direction_10m_deg = number(windDirectionSeries, index)" in gfs_worker
+    assert 'UPDATE gfs_runs SET payload_json = ?' in gfs_worker
     assert "ECMWF_ARCHIVE" in gfs_worker
     assert "data/ecmwf/latest.json" in platform_workflow
     assert "Verified live ECMWF payload served from R2" in platform_workflow
