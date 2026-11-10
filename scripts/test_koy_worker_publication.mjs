@@ -69,6 +69,7 @@ assert.ok(modest, "four Köy cycles should render a comparison SVG");
 assert.equal(modest.key, "media/koy-gfs-20261115T00Z-comparison.svg");
 assert.ok(modest.body.includes('id="gfs-renderer-version">cloudflare-js-v1</metadata>'));
 assert.ok(modest.body.includes('id="gfs-interactive-data"'));
+assert.ok(modest.body.includes("gfs-wind-direction-marker"), "latest Köy GFS series must render 3-hour wind direction arrows");
 assert.ok(!modest.body.includes('data-latest-peak="true"'), "Y-axis ticks must not be bound to the latest-cycle peak");
 assert.ok(modest.body.includes('class="gfs-latest-peak-marker"'));
 assert.ok(modest.body.includes('data-latest-peak-value="9,8 mm"'));
