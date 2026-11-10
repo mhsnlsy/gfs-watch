@@ -399,7 +399,7 @@ function decodePublicationAsset(row) {
   return new Response(row.body, { status: 200, headers });
 }
 
-const KOY_SVG_RENDERER_VERSION = "cloudflare-js-v2";
+const KOY_SVG_RENDERER_VERSION = "cloudflare-js-v3";
 const KOY_SVG_COLORS = ["#7DD3D7", "#8ABCE8", "#F1C98B", "#B38BE8"];
 const KOY_SVG_PANELS = [
   { id: "temperature", field: "temperature_2m_c", title: "Sıcaklık", unit: "°C" },
