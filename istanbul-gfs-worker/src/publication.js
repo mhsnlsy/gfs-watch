@@ -326,7 +326,7 @@ export function buildIstanbulInteractiveSvg(runs) {
     parts.push("</g>");
   });
 
-  const metadataText = JSON.stringify({ version: 1, renderer: "cloudflare-js-v1", panels: metadata })
+  const metadataText = JSON.stringify({ version: 1, renderer: "cloudflare-js-v3", panels: metadata })
     .replace(/\]\]>/g, "]]\\u003e");
   parts.push(
     '<text x="63" y="810" fill="#E7F2F6" font-size="11" font-family="' + FONT + '">Aynı geçerlilik saatleri (TSİ) · ' +
