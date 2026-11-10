@@ -265,8 +265,8 @@ jobs:
           const fs = require("fs");
           const svg = fs.readFileSync(process.argv[2], "utf8");
           const arrows = (svg.match(/gfs-wind-direction-marker/g) || []).length;
-          if (!svg.includes("<svg") || !svg.includes("cloudflare-js-v2") || arrows < 1) {
-            throw new Error("Live Istanbul D1 SVG publication route failed or has no wind-direction arrows: " + JSON.stringify({bytes: Buffer.byteLength(svg), arrows}));
+          if (!svg.includes("<svg") || !svg.includes("cloudflare-js-v3") || !svg.includes("directions_deg")) {
+            throw new Error("Live Istanbul D1 SVG publication route failed or has no wind-direction metadata: " + JSON.stringify({bytes: Buffer.byteLength(svg), directions: svg.includes("directions_deg")}));
           }
           console.log("Verified direct Istanbul D1 SVG route and wind direction arrows:", arrows);
           NODE
@@ -323,8 +323,8 @@ jobs:
           const fs = require("fs");
           const svg = fs.readFileSync(process.argv[2], "utf8");
           const arrows = (svg.match(/gfs-wind-direction-marker/g) || []).length;
-          if (!svg.includes("<svg") || !svg.includes("cloudflare-js-v2") || arrows < 1) {
-            throw new Error("Live Köy D1 SVG publication route failed or has no wind-direction arrows: " + JSON.stringify({bytes: Buffer.byteLength(svg), arrows}));
+          if (!svg.includes("<svg") || !svg.includes("cloudflare-js-v3") || !svg.includes("directions_deg")) {
+            throw new Error("Live Köy D1 SVG publication route failed or has no wind-direction metadata: " + JSON.stringify({bytes: Buffer.byteLength(svg), directions: svg.includes("directions_deg")}));
           }
           console.log("Verified direct Köy D1 SVG route and wind direction arrows:", arrows);
           NODE
@@ -338,7 +338,7 @@ jobs:
           node - "$RUNNER_TEMP/live-koy-latest.svg" "$KOY_LIVE_SVG_STAMP" <<'NODE'
           const fs = require("fs");
           const svg = fs.readFileSync(process.argv[2], "utf8");
-          if (!svg.includes("<svg") || !svg.includes('id="gfs-interactive-data"') || !svg.includes('id="gfs-renderer-version">cloudflare-js-v2</metadata>') || Buffer.byteLength(svg, "utf8") < 10000) {
+          if (!svg.includes("<svg") || !svg.includes('id="gfs-interactive-data"') || !svg.includes('id="gfs-renderer-version">cloudflare-js-v3</metadata>') || Buffer.byteLength(svg, "utf8") < 10000) {
             throw new Error("Latest live Köy SVG is missing or malformed: " + process.argv[3]);
           }
           console.log("Latest live Köy SVG verified: " + process.argv[3] + " (" + Buffer.byteLength(svg, "utf8") + " bytes).");
