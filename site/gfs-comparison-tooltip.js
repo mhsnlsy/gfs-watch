@@ -308,6 +308,61 @@ function forceDarkGfsSvg(svg){
     card.style.setProperty("border-color","#17384A","important");
   }
 }
+function addMobileGfsDirectionLegend(panelHost,panel){
+  if(!panelHost||!panel||panel.id!=="wind_10m")return;
+  const legend=document.createElement("div");
+  legend.className="gfs-mobile-wind-direction-legend";
+  legend.setAttribute("aria-label","Rüzgâr yönü · gidiş yönü");
+  Object.assign(legend.style,{
+    position:"absolute",
+    top:"25px",
+    left:"10px",
+    right:"10px",
+    zIndex:"1101",
+    display:"flex",
+    alignItems:"center",
+    justifyContent:"space-between",
+    gap:"3px",
+    flexWrap:"nowrap",
+    pointerEvents:"none",
+    fontFamily:"inherit",
+    lineHeight:"1",
+    whiteSpace:"nowrap",
+    height:"18px"
+  });
+  const items=[
+    ["↓","K→G"],["↙","KD→GB"],["←","D→B"],["↖","GD→KB"],
+    ["↑","G→K"],["↗","GB→KD"],["→","B→D"],["↘","KB→GD"]
+  ];
+  items.forEach(([arrow,label])=>{
+    const item=document.createElement("span");
+    Object.assign(item.style,{
+      display:"inline-flex",
+      alignItems:"center",
+      gap:"2px",
+      color:"#E7F2F6",
+      fontSize:"8px",
+      fontWeight:"800",
+      textShadow:"0 1px 2px rgba(0,0,0,.85)",
+      flex:"0 0 auto"
+    });
+    const arrowEl=document.createElement("span");
+    arrowEl.textContent=arrow;
+    Object.assign(arrowEl.style,{
+      fontSize:"14px",
+      lineHeight:"14px",
+      fontWeight:"900",
+      color:"#FFFFFF"
+    });
+    const labelEl=document.createElement("span");
+    labelEl.textContent=label;
+    labelEl.style.color="#8EAEB7";
+    item.appendChild(arrowEl);
+    item.appendChild(labelEl);
+    legend.appendChild(item);
+  });
+  panelHost.appendChild(legend);
+}
 function addMobileGfsCycleLabels(panelHost,panel,panelSvg){
   if(!panelHost||!panel)return;
   const series=Array.isArray(panel.series)?panel.series:[];
@@ -431,7 +486,7 @@ function buildMobileGfsPanelViews(sourceSvg,metadata){
   panels.forEach((panel,index)=>{
     const plot=panel.plot||{};
     const padX=34;
-    const padTop=48;
+    const padTop=62;
     const padBottom=34;
     const minX=Math.max(0,Number(plot.x||0)-padX);
     const minY=Math.max(0,Number(plot.y||0)-padTop);
@@ -522,6 +577,7 @@ async function loadInteractiveGfsCharts(root){
             panelHost.style.setProperty("overflow","hidden","important");
             panelHost.style.setProperty("position","relative","important");
             addMobileGfsCycleLabels(panelHost,panelMetadata.panels && panelMetadata.panels[0],panelSvg);
+            addMobileGfsDirectionLegend(panelHost,panelMetadata.panels && panelMetadata.panels[0]);
             panelSvg.style.setProperty("overflow","hidden","important");
             panelHost.appendChild(panelSvg);
             host.appendChild(panelHost);
