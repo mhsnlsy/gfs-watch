@@ -400,6 +400,22 @@ function decodePublicationAsset(row) {
 }
 
 const KOY_SVG_RENDERER_VERSION = "cloudflare-js-v3";
+const FONT = "system-ui,-apple-system,BlinkMacSystemFont,Segoe UI,sans-serif";
+const KOY_SVG_ASSET_NAME = /^koy-gfs-\d{8}T\d{2}Z-comparison\.svg$/;
+
+export function koySvgKeyMatches(expectedKey, builtKey) {
+  if (!expectedKey) return true;
+  const expectedName = String(expectedKey).split("/").pop();
+  const builtName = String(builtKey || "").split("/").pop();
+  return expectedName === builtName && KOY_SVG_ASSET_NAME.test(builtName);
+}
+
+function koyAssetLookupKeys(key) {
+  const normalized = String(key || "").replace(/^\/+/, "");
+  const name = normalized.split("/").pop();
+  if (!KOY_SVG_ASSET_NAME.test(name)) return [normalized];
+  return [...new Set([normalized, "media/" + name, "notifications/" + name])];
+}
 const KOY_SVG_COLORS = ["#7DD3D7", "#8ABCE8", "#F1C98B", "#B38BE8"];
 const KOY_SVG_PANELS = [
   { id: "temperature", field: "temperature_2m_c", title: "Sıcaklık", unit: "°C" },
@@ -655,6 +671,38 @@ export function buildKoyInteractiveSvg(comparison) {
           );
         });
       }
+      if (latest && latestPeak !== null) {
+        let peakIndex = -1;
+        values.forEach((value, index) => {
+          if (value !== null && Math.abs(value - latestPeak) < 1e-9 && peakIndex < 0) peakIndex = index;
+        });
+        if (peakIndex >= 0) {
+          const peakX = xPositions[peakIndex];
+          const peakY = yPositions[peakIndex];
+          const label = formatPeakValue(latestPeak) + " " + peakUnit(spec.field);
+          const timeLabel = validTimeRecords[peakIndex]?.label || "";
+          const nearTop = peakY - plotY < 18;
+          const nearRight = peakX > plotX + plotWidth - 56;
+          const labelX = nearRight ? peakX - 10 : peakX + 10;
+          const labelY = nearTop ? peakY + 18 : peakY - 12;
+          const labelWidth = Math.max(36, label.length * 6.8 + 12);
+          const boxX = (nearRight ? labelX - labelWidth : labelX - 5);
+          const boxY = labelY - 12;
+          svgParts.push(
+            '<g class="gfs-latest-peak-marker" data-latest-peak-value="' + svgEscape(label) +
+            '" data-latest-peak-time="' + svgEscape(timeLabel) + '">',
+            '<circle cx="' + Number(peakX).toFixed(3) + '" cy="' + peakY +
+            '" r="5.2" fill="' + item.color + '" stroke="#F7FDFF" stroke-width="1.4"/>',
+            '<rect x="' + Number(boxX).toFixed(3) + '" y="' + Number(boxY).toFixed(3) +
+            '" width="' + labelWidth.toFixed(1) + '" height="16" rx="3" fill="#0A1B29" fill-opacity=".88"/>',
+            '<text x="' + Number(labelX).toFixed(3) + '" y="' + Number(labelY).toFixed(3) +
+            '" text-anchor="' + (nearRight ? "end" : "start") +
+            '" fill="#F7FDFF" font-size="11" font-weight="800" font-family="' + FONT + '">' +
+            svgEscape(label) + '</text>',
+            '</g>'
+          );
+        }
+      }
       panelSeries.push({
         label: item.label,
         color: item.color,
@@ -736,7 +784,7 @@ async function publishLatestKoySvg(env, expectedKey = null) {
     runs: latest,
   };
   const built = buildKoyInteractiveSvg(comparison);
-  if (!built || (expectedKey && expectedKey !== built.key)) return null;
+  if (!built || !koySvgKeyMatches(expectedKey, built.key)) return null;
 
   const existing = await getPublicationAsset(env, built.key);
   if (!existing || existing.body !== built.body ||
@@ -848,7 +896,11 @@ async function api(request, env) {
   if (path.startsWith("/api/publication-asset/")) {
     const key = decodeURIComponent(path.slice("/api/publication-asset/".length)).replace(/^\/+/, "");
     try {
-      let row = await getPublicationAsset(env, key);
+      let row = null;
+      for (const candidate of koyAssetLookupKeys(key)) {
+        row = await getPublicationAsset(env, candidate);
+        if (row) break;
+      }
       const expectedRenderer = 'id="gfs-renderer-version">' + KOY_SVG_RENDERER_VERSION + '</metadata>';
       if (!row || !String(row.body || "").includes(expectedRenderer)) {
         const published = await publishLatestKoySvg(env, key);

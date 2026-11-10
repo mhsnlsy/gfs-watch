@@ -1,5 +1,5 @@
 import assert from "node:assert/strict";
-import { buildKoyInteractiveSvg } from "../koy-gfs-worker/src/index.js";
+import { buildKoyInteractiveSvg, koySvgKeyMatches } from "../koy-gfs-worker/src/index.js";
 import { buildPanelAxis } from "../shared/gfs-chart-axis.js";
 
 function sixHourlySeries({ runId, precipByLead = {}, temperature = 10, temperature850 = 2, wind = 12 }) {
@@ -67,9 +67,18 @@ const modest = buildKoyInteractiveSvg({
 });
 assert.ok(modest, "four Köy cycles should render a comparison SVG");
 assert.equal(modest.key, "media/koy-gfs-20261115T00Z-comparison.svg");
-assert.ok(modest.body.includes('id="gfs-renderer-version">cloudflare-js-v1</metadata>'));
+assert.ok(modest.body.includes('id="gfs-renderer-version">cloudflare-js-v3</metadata>'));
+assert.ok(modest.body.includes("RÜZGÂR · GİDİŞ YÖNÜ"));
+assert.equal(koySvgKeyMatches(
+  "notifications/koy-gfs-20261115T00Z-comparison.svg",
+  modest.key
+), true);
+assert.equal(koySvgKeyMatches(
+  "notifications/koy-gfs-20261110T12Z-comparison.svg",
+  modest.key
+), false);
 assert.ok(modest.body.includes('id="gfs-interactive-data"'));
-assert.ok(modest.body.includes("gfs-wind-direction-marker"), "latest Köy GFS series must render 3-hour wind direction arrows");
+assert.ok(modest.body.includes("K → G") && modest.body.includes("GB → KD"), "Köy chart must render the fixed wind-direction legend");
 assert.ok(!modest.body.includes('data-latest-peak="true"'), "Y-axis ticks must not be bound to the latest-cycle peak");
 assert.ok(modest.body.includes('class="gfs-latest-peak-marker"'));
 assert.ok(modest.body.includes('data-latest-peak-value="9,8 mm"'));
