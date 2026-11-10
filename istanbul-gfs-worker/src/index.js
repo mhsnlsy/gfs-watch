@@ -1404,7 +1404,27 @@ async function handleApi(request, env) {
         row = await env.GFS_DB.prepare("SELECT payload_json FROM ecmwf_current WHERE key = 'latest'").first();
       }
       if (!row) return json({ ok: false, error: "No MeteoPT ECMWF run is available yet" }, 503);
-      return json(JSON.parse(row.payload_json));
+      const payload = JSON.parse(row.payload_json);
+      // Enrich legacy/current payloads with the newest four MeteoPT cycles on read.
+      // This makes the comparison available immediately after deployment, without
+      // waiting for the next 00Z/12Z collection.
+      const history = await env.GFS_DB.prepare(
+        "SELECT payload_json FROM ecmwf_runs ORDER BY run_id_utc DESC LIMIT 4"
+      ).all();
+      payload.comparison_runs = (history.results || [])
+        .map(item => {
+          try {
+            const run = JSON.parse(item.payload_json);
+            return {
+              run_id_utc: run.run_id_utc,
+              forecast_6_hourly: Array.isArray(run.forecast_6_hourly) ? run.forecast_6_hourly : [],
+            };
+          } catch (_) {
+            return null;
+          }
+        })
+        .filter(run => run && run.run_id_utc && run.forecast_6_hourly.length);
+      return json(payload);
     } catch (error) {
       return json({ ok: false, error: String(error?.message || error) }, 503);
     }
