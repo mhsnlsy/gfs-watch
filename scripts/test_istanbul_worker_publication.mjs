@@ -49,6 +49,8 @@ for (const id of ["patch_1", "patch_6", "patch_11", "patch_16", "patch_21", "gfs
 assert.ok(chart.body.includes("cloudflare-js-v1"));
 assert.ok(chart.body.includes("fill: #0a1b29"));
 assert.ok(chart.body.includes("fill: #102a3a"));
+assert.ok(!chart.body.includes('data-latest-peak="true"'), "Y-axis ticks must not be bound to the latest-cycle peak");
+assert.ok(chart.body.includes('class="gfs-latest-peak-marker"'), "latest-cycle peak should be marked on the series");
 
 const fontCache = new Map();
 const fontArchive = {
@@ -109,3 +111,91 @@ console.log(JSON.stringify({
   report_characters: report.length,
   telegram_photo_png_bytes: photoPng.length,
 }));
+
+
+function axisTicks(svg, panelId) {
+  const start = svg.indexOf('<g id="istanbul-panel-' + panelId + '">');
+  assert.ok(start >= 0, "missing panel " + panelId);
+  const next = svg.indexOf('<g id="istanbul-panel-', start + 10);
+  const chunk = next < 0 ? svg.slice(start) : svg.slice(start, next);
+  return [...chunk.matchAll(/data-axis-tick="true"[^>]*>([^<]+)</g)].map(match => match[1]);
+}
+
+function assertIntegerTicks(ticks, step, { start, nonnegative = false } = {}) {
+  assert.ok(ticks.length >= 2, "expected a fixed tick range, got " + ticks.join(","));
+  const values = ticks.map(tick => Number(tick.replace(",", ".")));
+  for (const value of values) {
+    assert.ok(Number.isInteger(value), "tick must be a whole number: " + value);
+    if (nonnegative) assert.ok(value >= 0, "tick must be >= 0: " + value);
+    assert.equal(Math.abs(value) % step, 0, "tick " + value + " must follow step " + step);
+  }
+  const sorted = [...values].sort((a, b) => a - b);
+  if (start !== undefined) assert.equal(sorted[0], start, "range should start at " + start + ": " + ticks.join(","));
+  for (let i = 1; i < sorted.length; i += 1) {
+    assert.equal(sorted[i] - sorted[i - 1], step, "ticks must be evenly spaced: " + ticks.join(","));
+  }
+}
+
+function sixHourlySeries({ runId, precipByLead, temperature = 10, temperature850 = 2, wind = 12 }) {
+  const startMs = Date.parse(runId);
+  const points = [];
+  for (let lead = 6; lead <= 180; lead += 6) {
+    points.push({
+      forecast_hour: lead,
+      valid_time_utc: new Date(startMs + lead * 3600000).toISOString(),
+      temperature_2m_c: temperature,
+      humidity_2m_percent: 70,
+      temperature_850hpa_c: temperature850,
+      precipitation_6h_mm: precipByLead[lead] || 0,
+      wind_speed_10m_kmh: wind,
+      wind_direction_10m_deg: 200,
+    });
+  }
+  return {
+    run_id_utc: runId,
+    published_at_utc: runId,
+    forecast_6_hourly: points,
+  };
+}
+
+const defaultPrecipTicks = axisTicks(chart.body, "precipitation");
+const defaultTempTicks = axisTicks(chart.body, "temperature");
+const default850Ticks = axisTicks(chart.body, "temperature_850");
+const defaultWindTicks = axisTicks(chart.body, "wind_10m");
+assertIntegerTicks(defaultPrecipTicks, 2, { start: 0, nonnegative: true });
+assertIntegerTicks(defaultTempTicks, 5);
+assertIntegerTicks(default850Ticks, 5);
+assertIntegerTicks(defaultWindTicks, 10, { start: 0, nonnegative: true });
+assert.ok(!defaultPrecipTicks.includes("9,8") && !defaultPrecipTicks.includes("1,5"));
+
+const peakChart = buildIstanbulInteractiveSvg([
+  sixHourlySeries({
+    runId: "2026-11-14T18:00:00.000Z",
+    precipByLead: { 12: 22 },
+    temperature: 6.9,
+    temperature850: -6.1,
+    wind: 38,
+  }),
+  sixHourlySeries({
+    runId: "2026-11-15T00:00:00.000Z",
+    precipByLead: { 6: 9.8 },
+    temperature: 19.6,
+    temperature850: 11.9,
+    wind: 37,
+  }),
+]);
+const precipTicks = axisTicks(peakChart.body, "precipitation");
+const tempTicks = axisTicks(peakChart.body, "temperature");
+const ticks850 = axisTicks(peakChart.body, "temperature_850");
+const windTicks = axisTicks(peakChart.body, "wind_10m");
+assert.deepEqual(precipTicks.slice().reverse(), ["0", "2", "4", "6", "8", "10", "12", "14", "16", "18", "20", "22"]);
+assert.ok(!precipTicks.includes("9,8") && !peakChart.body.includes('data-latest-peak="true"'));
+assert.ok(peakChart.body.includes('data-latest-peak-value="9,8 mm"'));
+assert.ok(peakChart.body.includes("15.11.2026 09:00 TSİ"));
+assert.ok(peakChart.body.includes('class="gfs-latest-peak-marker"'));
+assertIntegerTicks(tempTicks, 5);
+assert.ok(tempTicks.includes("5") && tempTicks.includes("20"));
+assertIntegerTicks(ticks850, 5);
+assert.ok(ticks850.includes("-10") && ticks850.includes("15"));
+assertIntegerTicks(windTicks, 10, { start: 0, nonnegative: true });
+assert.ok(windTicks.includes("0") && windTicks.includes("40"));

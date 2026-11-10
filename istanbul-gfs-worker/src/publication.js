@@ -57,6 +57,59 @@ function runLabel(runId, latest) {
   return latest ? "YENİ · " + label : label;
 }
 
+
+
+function isTemperatureField(field) {
+  return field === "temperature_2m_c" || field === "temperature_850hpa_c";
+}
+
+function axisStep(field) {
+  if (field === "precipitation_6h_mm") return 2;
+  if (field === "wind_speed_10m_kmh") return 10;
+  return 5;
+}
+
+function peakUnit(field) {
+  if (field === "precipitation_6h_mm") return "mm";
+  if (field === "wind_speed_10m_kmh") return "km/sa";
+  return "°C";
+}
+
+function formatAxisTick(value) {
+  return String(Math.round(value));
+}
+
+function buildPanelAxis(field, valuesBySeries) {
+  const allValues = valuesBySeries.flat().filter(value => value !== null);
+  const latestValues = (valuesBySeries[valuesBySeries.length - 1] || []).filter(value => value !== null);
+  const latestPeak = latestValues.length ? Math.max(...latestValues) : null;
+  const temperature = isTemperatureField(field);
+  const step = axisStep(field);
+
+  let low = 0;
+  let high = step;
+  if (allValues.length) {
+    if (temperature) {
+      low = Math.floor(Math.min(...allValues) / step) * step;
+      high = Math.ceil(Math.max(...allValues) / step) * step;
+    } else {
+      low = 0;
+      high = Math.ceil(Math.max(0, ...allValues) / step) * step;
+    }
+  }
+  if (!Number.isFinite(low) || !Number.isFinite(high) || high <= low) {
+    low = temperature && Number.isFinite(low) ? low : 0;
+    high = low + step;
+  }
+
+  const ticks = [];
+  for (let value = low; value <= high + 1e-9; value += step) {
+    ticks.push(Math.round(value));
+  }
+  return { low, high, ticks, latestPeak };
+}
+
+
 function runStamp(runId) {
   const date = new Date(runId);
   if (!Number.isFinite(date.getTime())) throw new Error("Invalid GFS run id for publication asset");
@@ -169,31 +222,8 @@ export function buildIstanbulInteractiveSvg(runs) {
     const plotHeight = 146;
     const valuesBySeries = pointsBySeries.map(points => points.map(point => numeric(point?.[spec.field])));
     const allValues = valuesBySeries.flat().filter(value => value !== null);
-    let low = 0;
-    let high = 1;
-    if (allValues.length) {
-      if (spec.field === "temperature_2m_c" || spec.field === "temperature_850hpa_c") {
-        low = Math.min(...allValues);
-        high = Math.max(...allValues);
-        const span = high - low;
-        if (span < 4) {
-          const center = (low + high) / 2;
-          low = center - 2;
-          high = center + 2;
-        } else {
-          const margin = Math.max(0.5, span * 0.08);
-          low -= margin;
-          high += margin;
-        }
-      } else {
-        low = 0;
-        high = Math.max(1, Math.max(...allValues) * 1.18);
-      }
-    }
-    if (!Number.isFinite(low) || !Number.isFinite(high) || high <= low) {
-      low = 0;
-      high = 1;
-    }
+    const axis = buildPanelAxis(spec.field, valuesBySeries);
+    const { low, high, ticks, latestPeak } = axis;
 
     const xPositions = offsets.map(offset => plotX + xRatio(offset) * plotWidth);
     const yFor = value => plotY + (high - value) * plotHeight / (high - low);
@@ -208,16 +238,15 @@ export function buildIstanbulInteractiveSvg(runs) {
       FONT + '">' + escapeXml(spec.unit) + '</text>'
     );
 
-    for (let tick = 0; tick <= 4; tick += 1) {
-      const value = high - (high - low) * tick / 4;
-      const y = plotY + plotHeight * tick / 4;
+    ticks.slice().reverse().forEach(value => {
+      const y = yFor(value);
       parts.push(
         '<line x1="' + plotX + '" y1="' + y + '" x2="' + (plotX + plotWidth) + '" y2="' + y +
         '" stroke="#456579" stroke-width="1" stroke-dasharray="2 4" opacity=".65"/>',
         '<text x="' + (plotX - 10) + '" y="' + (y + 4) + '" text-anchor="end" fill="#E7F2F6" font-size="11" font-weight="600" font-family="' +
-        FONT + '">' + value.toFixed(1) + '</text>'
+        FONT + '" data-axis-tick="true">' + formatAxisTick(value) + '</text>'
       );
-    }
+    });
 
     const tickIndexes = [];
     offsets.forEach((offset, index) => {
@@ -265,6 +294,38 @@ export function buildIstanbulInteractiveSvg(runs) {
         if (value !== null) parts.push('<circle cx="' + xPositions[index].toFixed(3) + '" cy="' +
           yPositions[index] + '" r="2.8" fill="' + item.color + '"/>');
       });
+      if (latest && latestPeak !== null) {
+        let peakIndex = -1;
+        values.forEach((value, index) => {
+          if (value !== null && Math.abs(value - latestPeak) < 1e-9 && peakIndex < 0) peakIndex = index;
+        });
+        if (peakIndex >= 0) {
+          const peakX = xPositions[peakIndex];
+          const peakY = yPositions[peakIndex];
+          const label = formatNumber(latestPeak, 1) + " " + peakUnit(spec.field);
+          const timeLabel = localLabels[peakIndex]?.label || "";
+          const nearTop = peakY - plotY < 18;
+          const nearRight = peakX > plotX + plotWidth - 56;
+          const labelX = nearRight ? peakX - 10 : peakX + 10;
+          const labelY = nearTop ? peakY + 18 : peakY - 12;
+          const labelWidth = Math.max(36, label.length * 6.8 + 12);
+          const boxX = (nearRight ? labelX - labelWidth : labelX - 5);
+          const boxY = labelY - 12;
+          parts.push(
+            '<g class="gfs-latest-peak-marker" data-latest-peak-value="' + escapeXml(label) +
+            '" data-latest-peak-time="' + escapeXml(timeLabel) + '">',
+            '<circle cx="' + Number(peakX).toFixed(3) + '" cy="' + peakY +
+            '" r="5.2" fill="' + item.color + '" stroke="#F7FDFF" stroke-width="1.4"/>',
+            '<rect x="' + Number(boxX).toFixed(3) + '" y="' + Number(boxY).toFixed(3) +
+            '" width="' + labelWidth.toFixed(1) + '" height="16" rx="3" fill="#0A1B29" fill-opacity=".88"/>',
+            '<text x="' + Number(labelX).toFixed(3) + '" y="' + Number(labelY).toFixed(3) +
+            '" text-anchor="' + (nearRight ? "end" : "start") +
+            '" fill="#F7FDFF" font-size="11" font-weight="800" font-family="' + FONT + '">' +
+            escapeXml(label) + '</text>',
+            '</g>'
+          );
+        }
+      }
 
       // 10 m rüzgâr yönünü her 3 saatte bir, rüzgâr çizgisinin üzerinde
       // meteorolojik "FROM" yönünü gösterecek küçük oklarla işaretle.
