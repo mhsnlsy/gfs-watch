@@ -4,7 +4,7 @@ const LON = 28.9438;
 const ANALYSIS_RADIUS_KM = 210;
 const THRESHOLD_DBZ_STRONG = 30;
 const ENTRY_ALERT_RADIUS_KM = 25;
-const RADAR_BUILD = "paid-cron-2026-11-10-grok-approach-eta-1";
+const RADAR_BUILD = "paid-cron-2026-11-10-grok-approach-eta-once-1";
 const HISTORY_LEN = 4;
 const ZOOM = 7;
 const TILE_SIZE = 256;
@@ -253,7 +253,7 @@ async function check(env){
   const curr=analyzeImage(img), state=await getState(env.RADAR_DB);
   const history=JSON.parse(state.history_json||"[]");
   if(history.length&&history[history.length-1].ts===ts)return {status:"duplicate_frame",frame_ts:ts};
-  history.push({ts,avg_dx:curr.avg_dx,avg_dy:curr.avg_dy,min_dist_km:curr.min_dist_km,centroid_dist:curr.centroid_dist,max_dbz:curr.max_dbz});
+  history.push({ts,avg_dx:curr.avg_dx,avg_dy:curr.avg_dy,min_dist_km:curr.min_dist_km,centroid_dist:curr.centroid_dist,max_dbz:curr.max_dbz,approaching:motion.approaching});
   const h=history.slice(-HISTORY_LEN);
   const previous = h.length >= 2 ? h[h.length - 2] : null;
   const rainDetected = curr.count > 0 && curr.min_dist_km != null;
@@ -261,7 +261,9 @@ async function check(env){
 
   // RainViewer detects precipitation approaching Istanbul -> send Telegram.
   // Intensity, pixel count, radius and cooldown are deliberately not filters.
-  const alert = rainDetected && motion.approaching;
+  // Send only when a new approaching episode starts. Do not repeat every six minutes
+  // while the same precipitation system continues approaching.
+  const alert = rainDetected && motion.approaching && !Boolean(previous?.approaching);
 
   let intensity="HAFİF",emoji="🌦️";
   if(curr.max_dbz>=25){intensity="GÜÇLÜ";emoji="⛈️";}
