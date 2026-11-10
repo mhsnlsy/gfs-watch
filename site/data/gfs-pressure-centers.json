@@ -13,21 +13,39 @@
     "centers": [
       {
         "type": "high",
-        "pressure_hpa": 1032.8,
-        "latitude": 41.0,
+        "pressure_hpa": 1034.5,
+        "latitude": 43.0,
         "longitude": 42.75,
-        "distance_km": 1156.8,
-        "bearing_deg": 86,
+        "distance_km": 1160.0,
+        "bearing_deg": 74,
+        "direction": "DKD"
+      },
+      {
+        "type": "high",
+        "pressure_hpa": 1029.4,
+        "latitude": 40.25,
+        "longitude": 41.25,
+        "distance_km": 1040.6,
+        "bearing_deg": 91,
         "direction": "D"
       },
       {
         "type": "high",
-        "pressure_hpa": 1031.2,
-        "latitude": 40.0,
-        "longitude": 38.0,
-        "distance_km": 773.0,
-        "bearing_deg": 95,
-        "direction": "D"
+        "pressure_hpa": 1026.5,
+        "latitude": 38.5,
+        "longitude": 36.5,
+        "distance_km": 703.0,
+        "bearing_deg": 111,
+        "direction": "DGD"
+      },
+      {
+        "type": "high",
+        "pressure_hpa": 1025.2,
+        "latitude": 41.75,
+        "longitude": 33.5,
+        "distance_km": 388.3,
+        "bearing_deg": 76,
+        "direction": "DKD"
       }
     ]
   },
@@ -41,8 +59,8 @@
     "lon_min": 12.0,
     "lon_max": 48.0
   },
-  "cycle_utc": "2026-11-10T06:00:00Z",
+  "cycle_utc": "2026-11-10T18:00:00Z",
   "forecast_hour": 0,
   "download_bytes": 24793,
-  "download_url": "https://nomads.ncep.noaa.gov/cgi-bin/filter_gfs_0p25.pl?file=gfs.t06z.pgrb2.0p25.f000&var_PRMSL=on&lev_mean_sea_level=on&subregion=&leftlon=12&rightlon=48&toplat=53&bottomlat=29&dir=%2Fgfs.20261110%2F06%2Fatmos"
+  "download_url": "https://nomads.ncep.noaa.gov/cgi-bin/filter_gfs_0p25.pl?file=gfs.t18z.pgrb2.0p25.f000&var_PRMSL=on&lev_mean_sea_level=on&subregion=&leftlon=12&rightlon=48&toplat=53&bottomlat=29&dir=%2Fgfs.20261110%2F18%2Fatmos"
 }
