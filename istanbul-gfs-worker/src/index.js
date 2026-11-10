@@ -1247,8 +1247,29 @@ async function handleApi(request, env) {
   if (path.startsWith("/gfs/publication-asset/")) {
     const key = decodeURIComponent(path.slice("/gfs/publication-asset/".length)).replace(/^\/+/, "");
     try {
-      const row = await getPublicationAsset(env, key);
+      let row = await getPublicationAsset(env, key);
       if (!row) return json({ ok: false, error: "Publication asset not found" }, 404);
+
+      // Eski D1 SVG'si canlıda kalmışsa, istek anında güncel renderer ile yenile.
+      // Böylece Worker deploy'u ile yayınlanan grafik arasında sürüm farkı kalmaz.
+      if (/\.svg$/i.test(key) && !String(row.body || "").includes('id="gfs-renderer-version">cloudflare-js-v3</metadata>')) {
+        const archive = await env.GFS_DB.prepare(
+          "SELECT payload_json FROM gfs_runs ORDER BY run_id_utc DESC LIMIT 4"
+        ).all();
+        const runs = (archive.results || []).map(item => JSON.parse(item.payload_json))
+          .sort((x, y) => Date.parse(x.run_id_utc) - Date.parse(y.run_id_utc));
+        if (runs.length) {
+          const chart = buildIstanbulInteractiveSvg(runs);
+          await putPublicationAsset(env, {
+            key: chart.key,
+            run_id_utc: chart.run_id_utc,
+            content_type: "image/svg+xml; charset=utf-8",
+            encoding: "utf8",
+            body: chart.body,
+          });
+          if (chart.key === key) row = await getPublicationAsset(env, key);
+        }
+      }
       return decodePublicationAsset(row);
     } catch (error) {
       return json({ ok: false, error: String(error?.message || error) }, 503);
