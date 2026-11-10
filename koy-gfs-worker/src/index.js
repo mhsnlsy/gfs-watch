@@ -540,23 +540,24 @@ export function buildKoyInteractiveSvg(comparison) {
     );
   });
 
-  // Rüzgâr yönü lejantı: GFS döngüsü lejantının hemen altında.
+  // Rüzgâr yönü sabit tek satır: oklar meteorolojik FROM yönünün
+  // tersine, yani rüzgârın GİDİŞ yönüne bakar. Örn. GB rüzgârı → KD.
   const directionLegend = [
-    ["↑", "K"], ["↗", "KD"], ["→", "D"], ["↘", "GD"],
-    ["↓", "G"], ["↙", "GB"], ["←", "B"], ["↖", "KB"]
+    ["↓", "K → G"], ["↙", "KD → GB"], ["←", "D → B"], ["↖", "GD → KB"],
+    ["↑", "G → K"], ["↗", "GB → KD"], ["→", "B → D"], ["↘", "KB → GD"]
   ];
   svgParts.push(
-    '<text x="335" y="201" fill="#8EAEB7" font-size="10" font-weight="700" font-family="system-ui,-apple-system,BlinkMacSystemFont,Segoe UI,sans-serif">RÜZGÂR YÖNÜ</text>'
+    '<text x="335" y="201" fill="#8EAEB7" font-size="10" font-weight="700" font-family="' + FONT + '">RÜZGÂR · GİDİŞ YÖNÜ</text>'
   );
   directionLegend.forEach((item, index) => {
     const x = 430 + index * 66;
     svgParts.push(
-      '<text x="' + x + '" y="202" text-anchor="middle" fill="#FFFFFF" font-size="16" font-weight="800" font-family="system-ui,-apple-system,BlinkMacSystemFont,Segoe UI,sans-serif">' + item[0] + '</text>',
-      '<text x="' + x + '" y="213" text-anchor="middle" fill="#8EAEB7" font-size="8" font-weight="650" font-family="system-ui,-apple-system,BlinkMacSystemFont,Segoe UI,sans-serif">' + item[1] + '</text>'
+      '<text x="' + x + '" y="201" text-anchor="middle" fill="#FFFFFF" font-size="15" font-weight="800" font-family="' + FONT + '">' +
+      item[0] + '</text>',
+      '<text x="' + x + '" y="213" text-anchor="middle" fill="#8EAEB7" font-size="7.5" font-weight="650" font-family="' + FONT + '">' +
+      item[1] + '</text>'
     );
-  });
-
-  const panelMetadata = [];
+  });  const panelMetadata = [];
 
   KOY_SVG_PANELS.forEach((spec, panelIndex) => {
     const column = panelIndex % 2;
@@ -654,150 +655,6 @@ export function buildKoyInteractiveSvg(comparison) {
           );
         });
       }
-      // 10 m rüzgâr yönünü her 3 saatte bir, son GFS döngüsünün
-      // rüzgâr çizgisi üzerinde gerçek derece değeriyle göster.
-      if (latest && spec.field === "wind_speed_10m_kmh") {
-        const directionAtHour = hour => {
-          const exact = leadHours.findIndex(lead => lead === hour);
-          if (exact >= 0) return directions[exact];
-
-          let before = -1;
-          let after = -1;
-          for (let i = 0; i < leadHours.length; i += 1) {
-            const lead = leadHours[i];
-            if (lead === null) continue;
-            if (lead < hour) before = i;
-            if (lead > hour) { after = i; break; }
-          }
-          if (before < 0 || after < 0) return null;
-          const a = svgNumber(directions[before]);
-          const b = svgNumber(directions[after]);
-          if (a === null || b === null) return null;
-          const delta = ((b - a + 540) % 360) - 180;
-          const fraction = (hour - leadHours[before]) / (leadHours[after] - leadHours[before]);
-          return (a + delta * fraction + 360) % 360;
-        };
-
-        const speedAtHour = hour => {
-          const exact = leadHours.findIndex(lead => lead === hour);
-          if (exact >= 0) return values[exact];
-
-          let before = -1;
-          let after = -1;
-          for (let i = 0; i < leadHours.length; i += 1) {
-            const lead = leadHours[i];
-            if (lead === null) continue;
-            if (lead < hour) before = i;
-            if (lead > hour) { after = i; break; }
-          }
-          if (before < 0 || after < 0 || values[before] === null || values[after] === null) return null;
-          const fraction = (hour - leadHours[before]) / (leadHours[after] - leadHours[before]);
-          return values[before] + (values[after] - values[before]) * fraction;
-        };
-
-        const firstLead = leadHours.find(lead => lead !== null);
-        const lastLead = [...leadHours].reverse().find(lead => lead !== null);
-        if (firstLead !== undefined && lastLead !== undefined) {
-          const startHour = Math.ceil(firstLead / 3) * 3;
-          for (let hour = startHour; hour <= lastLead; hour += 3) {
-            const direction = svgNumber(directionAtHour(hour));
-            const speed = svgNumber(speedAtHour(hour));
-            if (direction === null || speed === null) continue;
-
-            let x = null;
-            const exactIndex = leadHours.findIndex(lead => lead === hour);
-            if (exactIndex >= 0) {
-              x = xPositions[exactIndex];
-            } else {
-              let before = -1;
-              let after = -1;
-              for (let i = 0; i < leadHours.length; i += 1) {
-                const lead = leadHours[i];
-                if (lead === null) continue;
-                if (lead < hour) before = i;
-                if (lead > hour) { after = i; break; }
-              }
-              if (before < 0 || after < 0) continue;
-              const fraction = (hour - leadHours[before]) / (leadHours[after] - leadHours[before]);
-              x = xPositions[before] + (xPositions[after] - xPositions[before]) * fraction;
-            }
-
-            const y = Math.max(plotY + 10, yFor(speed) - 16);
-            const arrowLength = 13;
-            const angle = direction * Math.PI / 180;
-            const endX = x + Math.sin(angle) * arrowLength;
-            const endY = y - Math.cos(angle) * arrowLength;
-            const baseX = x - Math.sin(angle) * 2;
-            const baseY = y + Math.cos(angle) * 2;
-            const headSize = 3.2;
-            const leftX = endX - Math.sin(angle + Math.PI / 4) * headSize;
-            const leftY = endY + Math.cos(angle + Math.PI / 4) * headSize;
-            const rightX = endX - Math.sin(angle - Math.PI / 4) * headSize;
-            const rightY = endY + Math.cos(angle - Math.PI / 4) * headSize;
-
-            svgParts.push(
-              '<g class="gfs-wind-direction-marker" data-wind-direction-deg="' + direction.toFixed(1) +
-              '" data-forecast-hour="' + hour + '" aria-label="' + hour + '. saat rüzgâr yönü ' +
-              direction.toFixed(0) + ' derece">',
-              '<line x1="' + baseX.toFixed(2) + '" y1="' + baseY.toFixed(2) +
-              '" x2="' + endX.toFixed(2) + '" y2="' + endY.toFixed(2) +
-              '" stroke="#0A1B29" stroke-width="5" stroke-linecap="round"/>',
-              '<line x1="' + baseX.toFixed(2) + '" y1="' + baseY.toFixed(2) +
-              '" x2="' + endX.toFixed(2) + '" y2="' + endY.toFixed(2) +
-              '" stroke="#FFFFFF" stroke-width="3.2" stroke-linecap="round"/>',
-              '<line x1="' + baseX.toFixed(2) + '" y1="' + baseY.toFixed(2) +
-              '" x2="' + endX.toFixed(2) + '" y2="' + endY.toFixed(2) +
-              '" stroke="' + item.color + '" stroke-width="2.2" stroke-linecap="round"/>',
-              '<path d="M ' + leftX.toFixed(2) + ' ' + leftY.toFixed(2) + ' L ' +
-              endX.toFixed(2) + ' ' + endY.toFixed(2) + ' L ' + rightX.toFixed(2) + ' ' +
-              rightY.toFixed(2) + '" fill="none" stroke="#0A1B29" stroke-width="5" stroke-linecap="round" stroke-linejoin="round"/>',
-              '<path d="M ' + leftX.toFixed(2) + ' ' + leftY.toFixed(2) + ' L ' +
-              endX.toFixed(2) + ' ' + endY.toFixed(2) + ' L ' + rightX.toFixed(2) + ' ' +
-              rightY.toFixed(2) + '" fill="none" stroke="#FFFFFF" stroke-width="3.2" stroke-linecap="round" stroke-linejoin="round"/>',
-              '<path d="M ' + leftX.toFixed(2) + ' ' + leftY.toFixed(2) + ' L ' +
-              endX.toFixed(2) + ' ' + endY.toFixed(2) + ' L ' + rightX.toFixed(2) + ' ' +
-              rightY.toFixed(2) + '" fill="none" stroke="' + item.color +
-              '" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"/>',
-              '</g>'
-            );
-          }
-        }
-      }
-
-      if (latest && latestPeak !== null) {
-        let peakIndex = -1;
-        values.forEach((value, index) => {
-          if (value !== null && Math.abs(value - latestPeak) < 1e-9 && peakIndex < 0) peakIndex = index;
-        });
-        if (peakIndex >= 0) {
-          const peakX = xPositions[peakIndex];
-          const peakY = yPositions[peakIndex];
-          const label = formatPeakValue(latestPeak) + " " + peakUnit(spec.field);
-          const timeLabel = validTimeRecords[peakIndex]?.label || "";
-          const nearTop = peakY - plotY < 18;
-          const nearRight = peakX > plotX + plotWidth - 56;
-          const labelX = nearRight ? peakX - 10 : peakX + 10;
-          const labelY = nearTop ? peakY + 18 : peakY - 12;
-          const labelWidth = Math.max(36, label.length * 6.8 + 12);
-          const boxX = (nearRight ? labelX - labelWidth : labelX - 5);
-          const boxY = labelY - 12;
-          const fontFamily = "system-ui,-apple-system,BlinkMacSystemFont,Segoe UI,sans-serif";
-          svgParts.push(
-            '<g class="gfs-latest-peak-marker" data-latest-peak-value="' + svgEscape(label) +
-            '" data-latest-peak-time="' + svgEscape(timeLabel) + '">',
-            '<circle cx="' + Number(peakX).toFixed(3) + '" cy="' + peakY +
-            '" r="5.2" fill="' + item.color + '" stroke="#F7FDFF" stroke-width="1.4"/>',
-            '<rect x="' + Number(boxX).toFixed(3) + '" y="' + Number(boxY).toFixed(3) +
-            '" width="' + labelWidth.toFixed(1) + '" height="16" rx="3" fill="#0A1B29" fill-opacity=".88"/>',
-            '<text x="' + Number(labelX).toFixed(3) + '" y="' + Number(labelY).toFixed(3) +
-            '" text-anchor="' + (nearRight ? "end" : "start") +
-            '" fill="#F7FDFF" font-size="11" font-weight="800" font-family="' + fontFamily + '">' +
-            svgEscape(label) + '</text>',
-            '</g>'
-          );
-        }
-      }
-
       panelSeries.push({
         label: item.label,
         color: item.color,
