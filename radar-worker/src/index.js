@@ -8,7 +8,7 @@ const ANALYSIS_RADIUS_KM = 25;
 const ALERT_COOLDOWN_SEC = 45 * 60;
 const THRESHOLD_DBZ_STRONG = 30;
 const ENTRY_ALERT_RADIUS_KM = 25;
-const RADAR_BUILD = "paid-cron-2026-11-10-r25km-cd45-tomorrow-7";
+const RADAR_BUILD = "paid-cron-2026-11-10-r25km-cd45-tomorrow-8";
 const RADAR_CRON = "*/6 * * * *";
 const TOMORROW_CRON = "45 16 * * *"; // 19:45 Europe/Istanbul
 const HISTORY_LEN = 4;
@@ -376,7 +376,7 @@ async function check(env){
 
 
 // ---------------------------------------------------------------------------
-// Daily 19:45 (Europe/Istanbul) "Yarın hava nasıl?" Telegram message.
+// Daily 19:45 (Europe/Istanbul) tomorrow-weather Telegram message.
 // Ported from scripts/build_tomorrow_weather_notification.mjs +
 // scripts/send_tomorrow_weather_telegram.py (formerly a GitHub Actions cron).
 // ---------------------------------------------------------------------------
@@ -422,7 +422,7 @@ async function buildTomorrowWeather(nowDate=new Date()){
   const delta=tomorrowMax-todayMax;
   const tempSentence=Math.abs(delta)<0.05?"bugünle aynı sıcaklıkta":"bugünden "+twFmt(delta)+"°C daha "+(delta>0?"sıcak":"soğuk");
   const summary="Yarın hava "+twFmt(tomorrowMax)+"°C, "+tempSentence+", "+weatherLabel+".";
-  const title="İstanbul · Yarın hava nasıl?";
+  const title="İstanbul";
   return {title,summary,text:"🌤️ "+title+"\n\n"+summary,metadata:{run_id_utc:main.cycle.toISOString(),source,forecast_date_istanbul:tomorrow,today_max_c:todayMax,tomorrow_max_c:tomorrowMax,delta_c:Math.round(delta*10)/10,clouds_percent:cloudPoint?cloudPoint.clouds:null,precipitation_expected:rainTomorrow}};
 }
 async function telegramPlain(env,text){
