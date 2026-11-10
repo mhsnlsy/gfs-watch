@@ -1880,7 +1880,7 @@ if(typeof renderBriefing==="function")renderBriefing();
         );
         const assetRoot=window.location.pathname.startsWith("/gfs-watch/")?"/gfs-watch/":"/";
         const svgPath=assetRoot+"data/notifications/istanbul-gfs-"+runStamp+"-comparison.svg";
-        const svgUrl=new URL(svgPath,window.location.origin).href+"?v="+version;
+        const svgUrl=new URL(svgPath,window.location.origin).href+"?v="+encodeURIComponent(String(version)+"-"+String(Date.now()));
 
         latestNotificationItems=runs;
         renderNotifications([{
