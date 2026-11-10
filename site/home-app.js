@@ -2015,6 +2015,85 @@ if(typeof renderBriefing==="function")renderBriefing();
     let ecmwfForecast=null,ecmwfLoading=false,ecmwfLastFetch=0;
     let activeModel="gfs";
     
+    function attachEcmwfComparisonTooltip(card,svg,runs,times,maps,spec,width,height,left,right,top,bottom){
+      if(!card||!svg||!times.length)return;
+      const tooltip=document.createElement("div");
+      tooltip.className="chart-tooltip ecmwf-chart-tooltip";
+      tooltip.hidden=true;
+      tooltip.setAttribute("role","tooltip");
+      card.appendChild(tooltip);
+      const ns="http://www.w3.org/2000/svg";
+      const cursorLine=document.createElementNS(ns,"line");
+      cursorLine.setAttribute("class","chart-crosshair");
+      cursorLine.setAttribute("y1",String(top));cursorLine.setAttribute("y2",String(height-bottom));
+      cursorLine.setAttribute("stroke","#e8fbf7");cursorLine.setAttribute("stroke-width","1");
+      cursorLine.setAttribute("stroke-dasharray","3 4");cursorLine.setAttribute("opacity",".8");
+      cursorLine.setAttribute("visibility","hidden");
+      const cursorDot=document.createElementNS(ns,"circle");
+      cursorDot.setAttribute("r","5");cursorDot.setAttribute("fill","#55D6D2");
+      cursorDot.setAttribute("stroke","#f4ffff");cursorDot.setAttribute("stroke-width","2");
+      cursorDot.setAttribute("visibility","hidden");
+      svg.append(cursorLine,cursorDot);
+      const x=index=>left+(times.length===1?0:index/(times.length-1))*(width-left-right);
+      const y=value=>{
+        let min=Math.min(...maps.flatMap(map=>times.map(time=>map.get(time))));
+        let max=Math.max(...maps.flatMap(map=>times.map(time=>map.get(time))));
+        if(spec.key==="precipitation_6h_mm")min=Math.min(0,min);
+        if(min===max){min-=1;max+=1;}
+        const pad=(max-min)*.12;min-=pad;max+=pad;if(spec.key==="precipitation_6h_mm")min=Math.max(0,min);
+        return top+(max-value)/(max-min)*(height-top-bottom);
+      };
+      const show=(index,event)=>{
+        const time=times[index];
+        const values=runs.map((run,i)=>({run,index:i,value:maps[i].get(time)})).filter(item=>Number.isFinite(item.value));
+        if(!values.length)return;
+        const pointY=y(values[values.length-1].value);
+        cursorLine.setAttribute("x1",String(x(index)));cursorLine.setAttribute("x2",String(x(index)));
+        cursorDot.setAttribute("cx",String(x(index)));cursorDot.setAttribute("cy",String(pointY));
+        cursorLine.setAttribute("visibility","visible");cursorDot.setAttribute("visibility","visible");
+        const dateLabel=new Intl.DateTimeFormat("tr-TR",{timeZone:"Europe/Istanbul",weekday:"short",day:"2-digit",month:"2-digit",hour:"2-digit",minute:"2-digit",hourCycle:"h23"}).format(new Date(time));
+        tooltip.innerHTML='<div class="chart-tooltip-time">'+esc(dateLabel+' TSİ')+'</div>'+values.map(item=>{
+          const runLabel=(item.index===runs.length-1?'YENİ · ':'')+formatRun(item.run);
+          return '<div class="ecmwf-tooltip-row"><span class="ecmwf-tooltip-swatch" style="background:'+colors[item.index%colors.length]+'"></span><span>'+esc(runLabel)+'</span><strong>'+esc(fmt(item.value,spec.key==="precipitation_6h_mm"?1:1))+' '+esc(spec.unit)+'</strong></div>';
+        }).join("");
+        tooltip.hidden=false;
+        const rect=card.getBoundingClientRect(),svgRect=svg.getBoundingClientRect();
+        const localX=(x(index)/width)*svgRect.width+(svgRect.left-rect.left);
+        const localY=(pointY/height)*svgRect.height+(svgRect.top-rect.top);
+        const tw=tooltip.offsetWidth,th=tooltip.offsetHeight,gap=10,pad=8;
+        let leftPos=localX-tw/2;
+        if(leftPos<pad)leftPos=localX+gap;
+        if(leftPos+tw>rect.width-pad)leftPos=localX-tw-gap;
+        leftPos=Math.max(pad,Math.min(rect.width-tw-pad,leftPos));
+        const above=localY-th-gap>=pad;
+        tooltip.style.left=Math.round(leftPos)+"px";
+        tooltip.style.top=Math.round(above?localY-th-gap:localY+gap)+"px";
+      };
+      const hide=()=>{clearScheduledTouchChartTooltip(hide);tooltip.hidden=true;cursorLine.setAttribute("visibility","hidden");cursorDot.setAttribute("visibility","hidden");};
+      const nearest=e=>{
+        const r=svg.getBoundingClientRect();if(!r.width)return;
+        const chartX=(e.clientX-r.left)*width/r.width;
+        let index=0,best=Math.abs(x(0)-chartX);
+        for(let i=1;i<times.length;i++){const d=Math.abs(x(i)-chartX);if(d<best){best=d;index=i;}}
+        show(index,e);
+      };
+      const hit=document.createElementNS(ns,"rect");
+      hit.setAttribute("class","chart-hit-area");hit.setAttribute("x",String(left));hit.setAttribute("y",String(top));
+      hit.setAttribute("width",String(width-left-right));hit.setAttribute("height",String(height-top-bottom));
+      hit.setAttribute("tabindex","0");hit.setAttribute("aria-label",spec.title+" grafiğinde tarih ve tüm ECMWF döngü değerlerini görüntüleyin");
+      hit.style.touchAction="pan-y";hit.style.webkitTapHighlightColor="transparent";
+      svg.appendChild(hit);
+      hit.addEventListener("pointermove",e=>{nearest(e);if(e.pointerType==="touch")scheduleTouchChartTooltipDismiss(hide);});
+      hit.addEventListener("pointerdown",e=>{nearest(e);if(e.pointerType==="touch"){try{hit.setPointerCapture(e.pointerId);}catch(_){ }scheduleTouchChartTooltipDismiss(hide);}});
+      hit.addEventListener("pointerup",e=>{if(e.pointerType==="touch")scheduleTouchChartTooltipDismiss(hide);});
+      hit.addEventListener("pointerleave",e=>{if(e.pointerType!=="touch")hide();});
+      hit.addEventListener("pointercancel",hide);
+      hit.addEventListener("keydown",e=>{
+        if(e.key!=="ArrowLeft"&&e.key!=="ArrowRight")return;e.preventDefault();
+        const current=Number(cursorLine.getAttribute("x1"));let index=times.findIndex((_,i)=>Math.abs(x(i)-current)<.5);
+        if(index<0)index=0;index=Math.max(0,Math.min(times.length-1,index+(e.key==="ArrowRight"?1:-1)));show(index,{clientX:window.innerWidth/2,clientY:window.innerHeight/2});
+      });
+    }
     function renderEcmwfReportImages(document){
       const holder=$("ecmwf-report-images");
       if(!holder)return;
@@ -2097,6 +2176,17 @@ if(typeof renderBriefing==="function")renderBriefing();
       };
       holder.innerHTML=specs.map(spec=>'<article class="chart-card"><div class="chart-card-head"><div class="chart-title">'+escSvg(spec.title)+'</div><div class="chart-card-meta">MeteoPT ECMWF · son '+runs.length+' döngü</div></div>'+buildSvg(spec)+'</article>').join("");
     }
+    function renderEcmwfDailyTable(items){
+      const holder=$("ecmwf-daily-table");
+      if(!holder)return;
+      if(!Array.isArray(items)||!items.length){holder.innerHTML='<div class="chart-empty">8 günlük ECMWF tablosu için veri bulunamadı.</div>';return;}
+      const rows=items.slice(0,8).map(item=>{
+        const date=new Date(item.date_istanbul+"T12:00:00+03:00");
+        const day=new Intl.DateTimeFormat("tr-TR",{timeZone:"Europe/Istanbul",weekday:"long",day:"2-digit",month:"2-digit"}).format(date);
+        return '<tr><th scope="row">'+esc(day)+'</th><td>'+fmt(item.temperature_min_c,1)+' °C</td><td>'+fmt(item.temperature_max_c,1)+' °C</td><td>'+fmt(item.precipitation_total_mm,1)+' mm</td><td>'+fmt(item.wind_speed_max_10m_kmh,0)+' km/sa</td></tr>';
+      }).join("");
+      holder.innerHTML='<div class="ecmwf-table-wrap"><table class="ecmwf-table ecmwf-daily-table"><thead><tr><th>Gün</th><th>Min</th><th>Max</th><th>Yağış</th><th>Rüzgâr maks.</th></tr></thead><tbody>'+rows+'</tbody></table></div>';
+    }
     function renderEcmwfForecast(document){
       const forecasts=document.forecasts||[];
       const first=forecasts[0],last=forecasts[forecasts.length-1];
@@ -2110,6 +2200,7 @@ if(typeof renderBriefing==="function")renderBriefing();
       $("ecmwf-updated-chip").textContent="Yayınlandı · "+timeTR(document.updated_at_utc);
       $("ecmwf-valid-until").textContent="Son geçerlilik: "+new Intl.DateTimeFormat("tr-TR",{timeZone:"Europe/Istanbul",day:"2-digit",month:"2-digit"}).format(new Date(document.forecast_valid_until_utc));
       renderDaily(viewData.daily_summary,"ecmwf-daily-grid");
+      renderEcmwfDailyTable(viewData.daily_summary);
       renderEcmwfReportImages(document);
       renderFindings(viewData.regional_pressure_analysis&&viewData.regional_pressure_analysis.findings,first.mslp&&first.mslp.mean_hpa,"ecmwf-pressure-findings");
     }
