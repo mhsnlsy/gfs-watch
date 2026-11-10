@@ -224,7 +224,7 @@ jobs:
               --dump-header "$RUNNER_TEMP/koy-svg-headers.txt" \
               --output "$RUNNER_TEMP/koy-comparison.svg"
             grep -qi '^x-gfs-publication-source: D1' "$RUNNER_TEMP/koy-svg-headers.txt"
-            grep -q 'id="gfs-renderer-version">cloudflare-js-v1</metadata>' "$RUNNER_TEMP/koy-comparison.svg"
+            grep -q 'id="gfs-renderer-version">cloudflare-js-v2</metadata>' "$RUNNER_TEMP/koy-comparison.svg"
             grep -q 'id="gfs-interactive-data"' "$RUNNER_TEMP/koy-comparison.svg"
             echo "Worker-native Köy SVG is generated and stored in D1."
           else
