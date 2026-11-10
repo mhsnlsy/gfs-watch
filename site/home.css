@@ -2127,7 +2127,7 @@ html.ios12 .footer > *{
     display:grid!important;
     grid-template-columns:repeat(4,minmax(0,1fr))!important;
     gap:5px!important;
-    margin-top:6px!important;
+    margin-top:80px!important;
     padding:0!important;
     overflow:visible!important;
     white-space:nowrap!important;
