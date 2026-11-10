@@ -8,7 +8,7 @@ const ANALYSIS_RADIUS_KM = 25;
 const ALERT_COOLDOWN_SEC = 45 * 60;
 const THRESHOLD_DBZ_STRONG = 30;
 const ENTRY_ALERT_RADIUS_KM = 25;
-const RADAR_BUILD = "paid-cron-2026-11-10-r25km-cd45-tomorrow-8";
+const RADAR_BUILD = "paid-cron-2026-11-10-dbz-classes-9";
 const RADAR_CRON = "*/6 * * * *";
 const TOMORROW_CRON = "45 16 * * *"; // 19:45 Europe/Istanbul
 // Hard gap between tomorrow-weather Telegram sends. Not seeded from today's tests,
@@ -23,12 +23,52 @@ const PIXEL_KM = 156543.03392 * Math.cos(LAT * Math.PI / 180) / (2 ** ZOOM) / 10
 const ANALYSIS_CFG = `${LAT},${LON},${ANALYSIS_RADIUS_KM},${ZOOM}`;
 const ANALYSIS_RADIUS_PX = Math.ceil(ANALYSIS_RADIUS_KM / PIXEL_KM);
 
+// RainViewer tile color is scheme 2 (Universal Blue): /{size}/{z}/{x}/{y}/2/1_1.png.
+// RGB values are the rain column of https://www.rainviewer.com/api/color-schemes.html
+// (CSV: rainviewer_api_colors_table.csv). dBZ 1–14 are tan and semi-transparent;
+// their alpha is 78–190, above the analyzer's alpha > 40 gate, so 1–9 dBZ is visible.
 const DBZ_HINTS = [
-  [10, [0,220,220]], [15, [0,190,220]], [20, [0,163,224]],
-  [25, [0,119,170]], [30, [0,85,136]], [35, [255,238,0]],
-  [40, [255,170,0]], [45, [255,68,0]], [50, [193,0,0]],
-  [55, [255,170,255]]
+  [1,[133,125,106]],[2,[136,128,108]],[3,[139,130,109]],[4,[142,133,111]],[5,[146,136,113]],
+  [6,[158,147,117]],[7,[170,158,121]],[8,[182,169,126]],[9,[194,180,130]],[10,[206,192,135]],
+  [11,[210,196,139]],[12,[214,200,143]],[13,[218,204,147]],[14,[222,208,151]],[15,[136,221,238]],
+  [16,[108,209,235]],[17,[81,197,232]],[18,[54,186,229]],[19,[27,174,226]],[20,[0,163,224]],
+  [21,[0,154,213]],[22,[0,145,202]],[23,[0,136,191]],[24,[0,127,180]],[25,[0,119,170]],
+  [26,[0,112,163]],[27,[0,105,156]],[28,[0,98,149]],[29,[0,91,142]],[30,[0,85,136]],
+  [31,[0,81,128]],[32,[0,78,120]],[33,[0,74,112]],[34,[0,71,104]],[35,[255,238,0]],
+  [36,[255,224,0]],[37,[255,210,0]],[38,[255,197,0]],[39,[255,183,0]],[40,[255,170,0]],
+  [41,[255,159,0]],[42,[255,149,0]],[43,[255,139,0]],[44,[255,129,0]],[45,[255,68,0]],
+  [46,[242,54,0]],[47,[230,40,0]],[48,[217,27,0]],[49,[205,13,0]],[50,[193,0,0]],
+  [51,[168,0,0]],[52,[143,0,0]],[53,[118,0,0]],[54,[93,0,0]],[55,[255,170,255]],
+  [56,[255,159,255]],[57,[255,149,255]],[58,[255,139,255]],[59,[255,129,255]],[60,[255,119,255]],
+  [61,[255,108,255]],[62,[255,98,255]],[63,[255,88,255]],[64,[255,78,255]]
 ];
+
+// Lower-inclusive bins: [1,5), [5,10), [10,20), [20,30), [30,40), [40,50), >=50.
+export const DBZ_CLASSES = [
+  { min: 1, max: 5, label: "Çok hafif yağmur", emoji: "🌦️" },
+  { min: 5, max: 10, label: "Hafif", emoji: "☔" },
+  { min: 10, max: 20, label: "Orta", emoji: "🌧️" },
+  { min: 20, max: 30, label: "Güçlü", emoji: "⛈️" },
+  { min: 30, max: 40, label: "Çok güçlü", emoji: "🌩️" },
+  { min: 40, max: 50, label: "Çok çok güçlü", emoji: "⚠️" },
+  { min: 50, max: null, label: "Dolu ihtimali", emoji: "🧊" },
+];
+
+export function classifyDbz(dbz) {
+  const n = Number(dbz);
+  if (!Number.isFinite(n)) return { label: "", emoji: "", min: null, max: null };
+  for (const cls of DBZ_CLASSES) {
+    if (n >= cls.min && (cls.max === null || n < cls.max)) return cls;
+  }
+  return { label: "", emoji: "", min: null, max: null };
+}
+
+export function formatIntensityLine(dbz) {
+  const cls = classifyDbz(dbz);
+  const n = Number(dbz);
+  const shown = Number.isFinite(n) ? String(Math.round(n)) : "—";
+  return "Yağış şiddeti: " + (cls.label || "—") + " (≈" + shown + " dBZ)";
+}
 
 function haversine(a,b,c,d){
   const R=6371, p1=a*Math.PI/180, p2=c*Math.PI/180;
@@ -113,7 +153,7 @@ async function decodePng(buf){
   return {w,h,ct,data:out};
 }
 
-function estimateDbz(r,g,b){
+export function estimateDbz(r,g,b){
   let best=0, dist=999;
   for(const [dbz,[tr,tg,tb]] of DBZ_HINTS){
     const d=Math.abs(r-tr)+Math.abs(g-tg)+Math.abs(b-tb);
@@ -325,14 +365,15 @@ async function check(env){
   const wouldAlert = withinRadius && motionInfo.approaching;
   const alert = wouldAlert && cooldownRemainingSec===0;
 
-  let intensity="HAFİF",emoji="🌦️";
-  if(curr.max_dbz>=25){intensity="GÜÇLÜ";emoji="⛈️";}
-  else if(curr.max_dbz>=15){intensity="ORTA";emoji="🌧️";}
+  const intensityClass = classifyDbz(curr.max_dbz);
+  const intensity = intensityClass.label;
+  const emoji = intensityClass.emoji || "🌦️";
+  const intensityLine = formatIntensityLine(curr.max_dbz);
 
   const now=Math.floor(Date.now()/1000);
   let sent=false, telegramStatus=0, telegramError="";
   if(alert){ try{
-    const caption = `${emoji} <b>${intensity} YAĞIŞ YAKLAŞIYOR — İstanbul</b>\n📍 Merkez: ${curr.centroid_dist??"—"} km ${compassFromVector(curr.avg_dx,curr.avg_dy)}\n💧 Maksimum: ${curr.max_dbz} dBZ\n🧭 Hareket: ${motionInfo.motion_dir} yönünde\n💨 Hız: ${motionInfo.speed_kmh??"—"} km/sa\n⏱️ Tahmini varış: ${motionInfo.eta_min!=null?motionInfo.eta_min+" dakika":"hesaplanamıyor"}\n⚠️ Varış süresi tahminidir.\n📡 RainViewer: ${new Date(ts*1000).toLocaleString("tr-TR",{timeZone:"Europe/Istanbul"})}`;
+    const caption = `${emoji} <b>YAĞIŞ YAKLAŞIYOR — İstanbul</b>\n${intensityLine}\n📍 Merkez: ${curr.centroid_dist??"—"} km ${compassFromVector(curr.avg_dx,curr.avg_dy)}\n🧭 Hareket: ${motionInfo.motion_dir} yönünde\n💨 Hız: ${motionInfo.speed_kmh??"—"} km/sa\n⏱️ Tahmini varış: ${motionInfo.eta_min!=null?motionInfo.eta_min+" dakika":"hesaplanamıyor"}\n⚠️ Varış süresi tahminidir.\n📡 RainViewer: ${new Date(ts*1000).toLocaleString("tr-TR",{timeZone:"Europe/Istanbul"})}`;
     let reportPhotoBytes=null;
     try{
     const baseTiles=await Promise.all(tiles.map(async t=>{const u=`https://tile.openstreetmap.org/${ZOOM}/${tx+t.ox}/${ty+t.oy}.png`;const r=await fetch(u,{cf:{cacheTtl:3600},headers:{"User-Agent":"gfs-watch-radar-monitor/1.0 (+https://github.com/mhsnlsy/gfs-watch)"}});if(!r.ok)throw new Error("base_map_tile_download_failed");return {...t,bytes:await r.arrayBuffer()};}));
@@ -375,7 +416,7 @@ async function check(env){
   } }
   state.history=h;state.last_frame_ts=ts;
   await saveState(env.RADAR_DB,state);
-  return {status:"ok",build:RADAR_BUILD,frame_ts:ts,alert,would_alert:wouldAlert,cooldown_remaining_sec:cooldownRemainingSec,rain_detected:rainDetected,approaching:motionInfo.approaching,motion_direction:motionInfo.motion_dir,speed_kmh:motionInfo.speed_kmh,eta_min:motionInfo.eta_min,pixel_count:curr.count,max_dbz:curr.max_dbz,area_km2:curr.area_km2,width_km:curr.width_km,height_km:curr.height_km,min_dist_km:curr.min_dist_km,previous_min_dist_km:previous?.min_dist_km??null,centroid_dist:curr.centroid_dist,telegram_sent:sent,telegram_status:telegramStatus,telegram_error:telegramError};
+  return {status:"ok",build:RADAR_BUILD,frame_ts:ts,alert,would_alert:wouldAlert,cooldown_remaining_sec:cooldownRemainingSec,rain_detected:rainDetected,approaching:motionInfo.approaching,motion_direction:motionInfo.motion_dir,speed_kmh:motionInfo.speed_kmh,eta_min:motionInfo.eta_min,pixel_count:curr.count,max_dbz:curr.max_dbz,intensity,intensity_line:intensityLine,area_km2:curr.area_km2,width_km:curr.width_km,height_km:curr.height_km,min_dist_km:curr.min_dist_km,previous_min_dist_km:previous?.min_dist_km??null,centroid_dist:curr.centroid_dist,telegram_sent:sent,telegram_status:telegramStatus,telegram_error:telegramError};
 }
 
 
@@ -499,6 +540,13 @@ export default {
         interval: "6m",
         build: RADAR_BUILD,
         alert_rule: "RainViewer yağış 25 km içinde + yaklaşma, 45 dk cooldown",
+        info: DBZ_CLASSES.map(cls => (cls.min + "–" + (cls.max === null ? "∞" : cls.max) + " dBZ: " + cls.label)).join("; "),
+        intensity_classes: DBZ_CLASSES.map(cls => ({
+          min_dbz: cls.min,
+          max_dbz_exclusive: cls.max,
+          label: cls.label,
+          emoji: cls.emoji,
+        })),
         center: { lat: LAT, lon: LON, radius_km: ANALYSIS_RADIUS_KM, cooldown_min: ALERT_COOLDOWN_SEC / 60 },
         crons: [RADAR_CRON, TOMORROW_CRON],
         tomorrow_cooldown_min: TOMORROW_COOLDOWN_MIN,
