@@ -364,8 +364,8 @@ export function buildIstanbulInteractiveSvg(runs) {
               x = xPositions[before] + (xPositions[after] - xPositions[before]) * fraction;
             }
 
-            const y = yFor(speed);
-            const arrowLength = 9;
+            const y = Math.max(plotY + 10, yFor(speed) - 16);
+            const arrowLength = 13;
             const angle = direction * Math.PI / 180;
             const endX = x + Math.sin(angle) * arrowLength;
             const endY = y - Math.cos(angle) * arrowLength;
@@ -383,10 +383,22 @@ export function buildIstanbulInteractiveSvg(runs) {
               direction.toFixed(0) + ' derece">',
               '<line x1="' + baseX.toFixed(2) + '" y1="' + baseY.toFixed(2) +
               '" x2="' + endX.toFixed(2) + '" y2="' + endY.toFixed(2) +
-              '" stroke="' + item.color + '" stroke-width="1.8" stroke-linecap="round"/>',
+              '" stroke="#0A1B29" stroke-width="5" stroke-linecap="round"/>',
+              '<line x1="' + baseX.toFixed(2) + '" y1="' + baseY.toFixed(2) +
+              '" x2="' + endX.toFixed(2) + '" y2="' + endY.toFixed(2) +
+              '" stroke="#FFFFFF" stroke-width="3.2" stroke-linecap="round"/>',
+              '<line x1="' + baseX.toFixed(2) + '" y1="' + baseY.toFixed(2) +
+              '" x2="' + endX.toFixed(2) + '" y2="' + endY.toFixed(2) +
+              '" stroke="' + item.color + '" stroke-width="2.2" stroke-linecap="round"/>',
               '<path d="M ' + leftX.toFixed(2) + ' ' + leftY.toFixed(2) + ' L ' +
               endX.toFixed(2) + ' ' + endY.toFixed(2) + ' L ' + rightX.toFixed(2) + ' ' +
-              rightY.toFixed(2) + '" fill="none" stroke="' + item.color + '" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/>',
+              rightY.toFixed(2) + '" fill="none" stroke="#0A1B29" stroke-width="5" stroke-linecap="round" stroke-linejoin="round"/>',
+              '<path d="M ' + leftX.toFixed(2) + ' ' + leftY.toFixed(2) + ' L ' +
+              endX.toFixed(2) + ' ' + endY.toFixed(2) + ' L ' + rightX.toFixed(2) + ' ' +
+              rightY.toFixed(2) + '" fill="none" stroke="#FFFFFF" stroke-width="3.2" stroke-linecap="round" stroke-linejoin="round"/>',
+              '<path d="M ' + leftX.toFixed(2) + ' ' + leftY.toFixed(2) + ' L ' +
+              endX.toFixed(2) + ' ' + endY.toFixed(2) + ' L ' + rightX.toFixed(2) + ' ' +
+              rightY.toFixed(2) + '" fill="none" stroke="' + item.color + '" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"/>',
               '</g>'
             );
           }
@@ -432,7 +444,7 @@ export function buildIstanbulInteractiveSvg(runs) {
     validKeys.length + ' ortak nokta · ' + series.length + ' döngü</text>',
     '<text x="1090" y="810" text-anchor="end" fill="#E7F2F6" font-size="10" font-family="' + FONT +
     '">Kaynak: MeteoPT GFS · İstanbul nokta tahmini</text>',
-    '<metadata id="gfs-renderer-version">cloudflare-js-v1</metadata>',
+    '<metadata id="gfs-renderer-version">cloudflare-js-v2</metadata>',
     '<metadata id="gfs-interactive-data"><![CDATA[' + metadataText + ']]></metadata>',
     '<g id="gfs-interaction-layer">'
   );
