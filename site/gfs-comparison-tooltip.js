@@ -118,7 +118,10 @@ function attachGfsSvgInteractions(host,svg,metadata,syncGroup,latestOnly){
       clientY:rect.top+(y-vb.y)*(rect.height/vb.height)
     };
   }
-  function show(panel,index,event){
+  function show(panel,index,event){    if(host.__gfsDirectionLegend && panel.id==="wind_10m" && typeof host.__gfsDirectionLegend.__renderWindDirection==="function"){
+      host.__gfsDirectionLegend.__renderWindDirection(index);
+    }
+
     if(!panel || !Array.isArray(panel.valid_times) || !panel.valid_times[index])return;
     const validTime=panel.valid_times[index];
     const overlay=svg.querySelector('.gfs-panel-interaction[data-panel-id="'+panel.id+'"]');
@@ -308,60 +311,75 @@ function forceDarkGfsSvg(svg){
     card.style.setProperty("border-color","#17384A","important");
   }
 }
+function windDestination(deg){
+  const n=Number(deg);
+  if(!Number.isFinite(n))return null;
+  const d=((n+180)%360+360)%360;
+  const dirs=[
+    ["K","↓"],["KD","↙"],["D","←"],["GD","↖"],
+    ["G","↑"],["GB","↗"],["B","→"],["KB","↘"]
+  ];
+  return dirs[Math.round(d/45)%8];
+}
 function addMobileGfsDirectionLegend(panelHost,panel){
-  if(!panelHost||!panel||panel.id!=="wind_10m")return;
+  if(!panelHost||!panel||panel.id!=="wind_10m")return null;
   const legend=document.createElement("div");
   legend.className="gfs-mobile-wind-direction-legend";
-  legend.setAttribute("aria-label","Rüzgâr yönü · gidiş yönü");
+  legend.setAttribute("aria-label","Seçili saatte rüzgâr yönleri");
   Object.assign(legend.style,{
     position:"absolute",
     top:"25px",
-    left:"10px",
-    right:"10px",
+    left:"8px",
+    right:"8px",
     zIndex:"1101",
     display:"flex",
     alignItems:"center",
-    justifyContent:"space-between",
-    gap:"3px",
+    justifyContent:"center",
+    gap:"4px",
     flexWrap:"nowrap",
     pointerEvents:"none",
     fontFamily:"inherit",
     lineHeight:"1",
     whiteSpace:"nowrap",
+    overflow:"hidden",
     height:"18px"
   });
-  const items=[
-    ["↓","K→G"],["↙","KD→GB"],["←","D→B"],["↖","GD→KB"],
-    ["↑","G→K"],["↗","GB→KD"],["→","B→D"],["↘","KB→GD"]
-  ];
-  items.forEach(([arrow,label])=>{
-    const item=document.createElement("span");
-    Object.assign(item.style,{
-      display:"inline-flex",
-      alignItems:"center",
-      gap:"2px",
-      color:"#E7F2F6",
-      fontSize:"8px",
-      fontWeight:"800",
-      textShadow:"0 1px 2px rgba(0,0,0,.85)",
-      flex:"0 0 auto"
-    });
-    const arrowEl=document.createElement("span");
-    arrowEl.textContent=arrow;
-    Object.assign(arrowEl.style,{
-      fontSize:"14px",
-      lineHeight:"14px",
-      fontWeight:"900",
-      color:"#FFFFFF"
-    });
-    const labelEl=document.createElement("span");
-    labelEl.textContent=label;
-    labelEl.style.color="#8EAEB7";
-    item.appendChild(arrowEl);
-    item.appendChild(labelEl);
-    legend.appendChild(item);
+  const text=document.createElement("div");
+  Object.assign(text.style,{
+    width:"100%",
+    overflow:"hidden",
+    textOverflow:"clip",
+    textAlign:"center",
+    color:"#DDEBF0",
+    fontSize:"8px",
+    fontWeight:"800",
+    textShadow:"0 1px 2px rgba(0,0,0,.9)"
   });
+  legend.appendChild(text);
   panelHost.appendChild(legend);
+
+  function render(index){
+    const times=Array.isArray(panel.valid_times)?panel.valid_times:[];
+    const selected=times[index]||times[0];
+    const label=String(selected?.label||"");
+    const timeMatch=label.match(/(\d{2}:\d{2})\s*TSİ/);
+    const time=timeMatch?timeMatch[1]:"";
+    const series=Array.isArray(panel.series)?panel.series:[];
+    const parts=[];
+    series.slice().sort((a,b)=>{
+      const ah=String(a.label||"").match(/(00|06|12|18)Z/i);
+      const bh=String(b.label||"").match(/(00|06|12|18)Z/i);
+      return Number(ah?.[1]||0)-Number(bh?.[1]||0);
+    }).forEach(item=>{
+      const dir=windDestination(item.directions_deg&&item.directions_deg[index]);
+      const cycle=String(item.label||"").match(/(00|06|12|18)Z/i)?.[1];
+      if(cycle&&dir)parts.push(cycle+"Z "+dir[1]+" "+dir[0]);
+    });
+    text.textContent=(time?time+" · ":"")+parts.join(" · ");
+  }
+  render(0);
+  legend.__renderWindDirection=render;
+  return legend;
 }
 function addMobileGfsCycleLabels(panelHost,panel,panelSvg){
   if(!panelHost||!panel)return;
@@ -577,7 +595,8 @@ async function loadInteractiveGfsCharts(root){
             panelHost.style.setProperty("overflow","hidden","important");
             panelHost.style.setProperty("position","relative","important");
             addMobileGfsCycleLabels(panelHost,panelMetadata.panels && panelMetadata.panels[0],panelSvg);
-            addMobileGfsDirectionLegend(panelHost,panelMetadata.panels && panelMetadata.panels[0]);
+            const directionLegend=addMobileGfsDirectionLegend(panelHost,panelMetadata.panels && panelMetadata.panels[0]);
+            panelHost.__gfsDirectionLegend=directionLegend;
             panelSvg.style.setProperty("overflow","hidden","important");
             panelHost.appendChild(panelSvg);
             host.appendChild(panelHost);
