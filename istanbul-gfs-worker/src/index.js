@@ -795,12 +795,35 @@ async function collectEcmwf(env) {
     return { updated: false, run_id_utc: runId, source: "meteopt" };
   }
   const payload = await fetchEcmwfDocument(runDt);
+  const storedAt = new Date().toISOString();
+  // Keep the four newest MeteoPT ECMWF cycles in the live payload so the
+  // homepage can render the comparison directly from the canonical Worker.
   await env.GFS_DB.prepare(
     "INSERT INTO ecmwf_runs (run_id_utc, payload_json, published_at_utc, stored_at_utc) VALUES (?, ?, ?, ?) ON CONFLICT(run_id_utc) DO UPDATE SET payload_json=excluded.payload_json, published_at_utc=excluded.published_at_utc, stored_at_utc=excluded.stored_at_utc"
-  ).bind(runId, JSON.stringify(payload), runId, new Date().toISOString()).run();
+  ).bind(runId, JSON.stringify(payload), runId, storedAt).run();
+  const history = await env.GFS_DB.prepare(
+    "SELECT payload_json FROM ecmwf_runs ORDER BY run_id_utc DESC LIMIT 4"
+  ).all();
+  payload.comparison_runs = (history.results || [])
+    .map(row => {
+      try {
+        const item = JSON.parse(row.payload_json);
+        return {
+          run_id_utc: item.run_id_utc,
+          forecast_6_hourly: Array.isArray(item.forecast_6_hourly) ? item.forecast_6_hourly : [],
+        };
+      } catch (_) {
+        return null;
+      }
+    })
+    .filter(item => item && item.run_id_utc && item.forecast_6_hourly.length);
+  const payloadJson = JSON.stringify(payload);
+  await env.GFS_DB.prepare(
+    "UPDATE ecmwf_runs SET payload_json = ?, stored_at_utc = ? WHERE run_id_utc = ?"
+  ).bind(payloadJson, storedAt, runId).run();
   await env.GFS_DB.prepare(
     "INSERT INTO ecmwf_current (key, run_id_utc, payload_json, updated_at_utc) VALUES ('latest', ?, ?, ?) ON CONFLICT(key) DO UPDATE SET run_id_utc=excluded.run_id_utc, payload_json=excluded.payload_json, updated_at_utc=excluded.updated_at_utc"
-  ).bind(runId, JSON.stringify(payload), new Date().toISOString()).run();
+  ).bind(runId, payloadJson, new Date().toISOString()).run();
   if (env.ECMWF_ARCHIVE) {
     await env.ECMWF_ARCHIVE.put("data/ecmwf/latest.json", JSON.stringify(payload));
     await env.ECMWF_ARCHIVE.put("data/ecmwf/" + runId.replaceAll(":", "").replaceAll("+", "") + ".json", JSON.stringify(payload));
