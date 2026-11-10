@@ -182,6 +182,27 @@ jobs:
             warnings: result.warnings
           }));
           NODE
+      - name: Regenerate latest GFS chart asset
+        env:
+          ISTANBUL_GFS_API: https://gfs-watch-istanbul-gfs.muhsin-ulusoy.workers.dev
+          GFS_DISPATCH_TOKEN: ${{ secrets.GFS_DISPATCH_TOKEN }}
+        run: |
+          set -euo pipefail
+          curl --fail --silent --show-error --max-time 60 \
+            --request POST \
+            --url "$ISTANBUL_GFS_API/internal/regenerate-latest-chart?check=$(date +%s)" \
+            --header "Authorization: Bearer $GFS_DISPATCH_TOKEN" \
+            --header "Accept: application/json" \
+            -o "$RUNNER_TEMP/istanbul-chart-regeneration.json"
+          node - "$RUNNER_TEMP/istanbul-chart-regeneration.json" <<'NODE'
+          const fs = require("fs");
+          const doc = JSON.parse(fs.readFileSync(process.argv[2], "utf8"));
+          if (doc.ok !== true || !doc.run_id_utc || !doc.key) {
+            throw new Error("Latest GFS chart regeneration failed: " + JSON.stringify(doc));
+          }
+          console.log(JSON.stringify(doc));
+          NODE
+
       - name: Verify active ENKA station panel contract
         env:
           STATIONS_API: https://gfs-watch-stations.muhsin-ulusoy.workers.dev
