@@ -4,7 +4,7 @@ const LON = 28.9438;
 const ANALYSIS_RADIUS_KM = 210;
 const THRESHOLD_DBZ_STRONG = 30;
 const ENTRY_ALERT_RADIUS_KM = 25;
-const RADAR_BUILD = "paid-cron-2026-11-10-approach-every-6m-1";
+const RADAR_BUILD = "paid-cron-2026-11-10-telegram-verify-1";
 const HISTORY_LEN = 4;
 const ZOOM = 7;
 const TILE_SIZE = 256;
@@ -293,6 +293,8 @@ async function check(env){
       telegramError=textResult.ok?"":(textResult.body||telegramError);
       sent=textResult.ok;
     }
+    state.last_telegram_status=telegramStatus;
+    state.last_telegram_error=telegramError;
     if(sent) {state.last_alert_ts=now;state.last_intensity=intensity;}
   }
   state.history=h;state.last_frame_ts=ts;
@@ -304,6 +306,11 @@ export default {
   async fetch(request,env){
     const url=new URL(request.url);
 
+    if (url.pathname === "/telegram-test") {
+      const r = await telegramText(env, "🧪 <b>RainViewer Telegram bağlantı testi</b>\\nCloudflare Worker Telegram API erişimi çalışıyor.");
+      return new Response(JSON.stringify({ok:r.ok,status:r.status,error:r.ok?null:r.body}), {headers: {"content-type":"application/json"}});
+    }
+
     if (url.pathname === "/health") {
       const state = await getState(env.RADAR_DB);
       const health = {
@@ -314,7 +321,10 @@ export default {
         alert_rule: "RainViewer yağış tespiti + yaklaşma",
         last_frame_ts: Number(state.last_frame_ts || 0),
         last_alert_ts: Number(state.last_alert_ts || 0),
-        last_intensity: state.last_intensity || ""
+        last_intensity: state.last_intensity || "",
+        telegram_configured: Boolean(env.TELEGRAM_TOKEN && env.CHAT_ID),
+        last_telegram_status: Number(state.last_telegram_status || 0),
+        last_telegram_error: state.last_telegram_error || ""
       };
       return new Response(JSON.stringify(health), {
         headers: { "content-type": "application/json" }
