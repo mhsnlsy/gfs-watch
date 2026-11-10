@@ -11,7 +11,7 @@
     height:auto!important;
     padding:10px 0!important;
     column-gap:10px!important;
-    row-gap:40px!important;
+    row-gap:30px!important;
   }
   .topbar .brand{grid-column:1;grid-row:1!important;margin:0!important}
   .topbar .top-right{grid-column:2;grid-row:1!important;margin-left:0!important}
