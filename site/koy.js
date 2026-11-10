@@ -751,9 +751,11 @@ function renderRuns(d,f180){
    const runDate=new Date(latestSvgRun.run_id_utc);
    const runStamp=runDate.getUTCFullYear()+String(runDate.getUTCMonth()+1).padStart(2,"0")+String(runDate.getUTCDate()).padStart(2,"0")+"T"+String(runDate.getUTCHours()).padStart(2,"0")+"Z";
    const version=encodeURIComponent((d && d.updated_at_utc||latestSvgRun.published_at_utc||latestSvgRun.run_id_utc)+"|koy-svg-absolute-path-v5");
-   const assetRoot=window.location.pathname.startsWith("/gfs-watch/")?"/gfs-watch/":"/";
-   const svgPath=assetRoot+"koy-data/gfs/media/koy-gfs-"+runStamp+"-comparison.svg";
-   const svgUrl=new URL(svgPath,window.location.origin).href+"?v="+version;
+   // Use the canonical D1 publication asset from the Köy GFS Worker.
+   // This bypasses the legacy static /koy-data/gfs/media archive.
+   const publicationApi=(window.GFS_WATCH_API_BASE||window.location.origin).replace(/\/$/,"");
+   const svgPath=publicationApi+"/api/publication-asset/notifications/koy-gfs-"+runStamp+"-comparison.svg";
+   const svgUrl=svgPath+"?v="+encodeURIComponent(version+"-d1-svg-v2-"+Date.now());
    if(svgContainer.dataset.svgSrc!==svgUrl){
     svgContainer.dataset.svgSrc=svgUrl;
     svgContainer.innerHTML="";
