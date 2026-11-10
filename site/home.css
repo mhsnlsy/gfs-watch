@@ -4093,6 +4093,7 @@ html.ios12 #enka-camera-panel .enka-camera-frame{
     font-size:9px!important;
     line-height:1.45!important;
   }
+  .dashboard-left .station-card .delta-badge:empty{display:none!important}
   .dashboard-left .station-card .delta-badge{
     margin-top:2px!important;
   }
