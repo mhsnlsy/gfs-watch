@@ -279,15 +279,15 @@ async function check(env){
   const hBefore = history.slice(-HISTORY_LEN);
   const previous = hBefore.length ? hBefore[hBefore.length - 1] : null;
   const rainDetected = curr.count > 0 && curr.min_dist_km != null;
-  const motion = motionMetrics(curr,hBefore,ts);
-  history.push({ts,avg_dx:curr.avg_dx,avg_dy:curr.avg_dy,min_dist_km:curr.min_dist_km,centroid_dist:curr.centroid_dist,max_dbz:curr.max_dbz,approaching:motion.approaching});
+  const motionInfo = motionMetrics(curr,hBefore,ts);
+  history.push({ts,avg_dx:curr.avg_dx,avg_dy:curr.avg_dy,min_dist_km:curr.min_dist_km,centroid_dist:curr.centroid_dist,max_dbz:curr.max_dbz,approaching:motionInfo.approaching});
   const h=history.slice(-HISTORY_LEN);
 
   // RainViewer detects precipitation approaching Istanbul -> send Telegram.
   // Intensity, pixel count, radius and cooldown are deliberately not filters.
   // Send only when a new approaching episode starts. Do not repeat every six minutes
   // while the same precipitation system continues approaching.
-  const alert = rainDetected && motion.approaching && !Boolean(previous?.approaching);
+  const alert = rainDetected && motionInfo.approaching && !Boolean(previous?.approaching);
 
   let intensity="HAFİF",emoji="🌦️";
   if(curr.max_dbz>=25){intensity="GÜÇLÜ";emoji="⛈️";}
@@ -296,7 +296,7 @@ async function check(env){
   const now=Math.floor(Date.now()/1000);
   let sent=false, telegramStatus=0, telegramError="";
   if(alert){
-    const caption = `${emoji} <b>${intensity} YAĞIŞ YAKLAŞIYOR — İstanbul</b>\\n📍 Merkez: ${curr.centroid_dist??"—"} km ${compassFromVector(curr.avg_dx,curr.avg_dy)}\\n💧 Maksimum: ${curr.max_dbz} dBZ\\n🧭 Hareket: ${motion.motion_dir} yönünde\\n💨 Hız: ${motion.speed_kmh??"—"} km/sa\\n⏱️ Tahmini varış: ${motion.eta_min!=null?motion.eta_min+" dakika":"hesaplanamıyor"}\\n⚠️ Varış süresi tahminidir.\\n📡 RainViewer: ${new Date(ts*1000).toLocaleString("tr-TR",{timeZone:"Europe/Istanbul"})}`;
+    const caption = `${emoji} <b>${intensity} YAĞIŞ YAKLAŞIYOR — İstanbul</b>\\n📍 Merkez: ${curr.centroid_dist??"—"} km ${compassFromVector(curr.avg_dx,curr.avg_dy)}\\n💧 Maksimum: ${curr.max_dbz} dBZ\\n🧭 Hareket: ${motionInfo.motion_dir} yönünde\\n💨 Hız: ${motionInfo.speed_kmh??"—"} km/sa\\n⏱️ Tahmini varış: ${motionInfo.eta_min!=null?motionInfo.eta_min+" dakika":"hesaplanamıyor"}\\n⚠️ Varış süresi tahminidir.\\n📡 RainViewer: ${new Date(ts*1000).toLocaleString("tr-TR",{timeZone:"Europe/Istanbul"})}`;
     const baseTiles=await Promise.all(tiles.map(async t=>{const u=`https://tile.openstreetmap.org/${ZOOM}/${tx+t.ox}/${ty+t.oy}.png`;const r=await fetch(u,{cf:{cacheTtl:3600}});if(!r.ok)throw new Error("base_map_tile_download_failed");return {...t,bytes:await r.arrayBuffer()};}));
     const baseDecoded=await Promise.all(baseTiles.map(async t=>({...t,img:await decodePng(t.bytes)})));
     const baseMosaic={w:TILE_SIZE*3,h:TILE_SIZE*3,ct:baseDecoded[0].img.ct,data:new Uint8Array(TILE_SIZE*TILE_SIZE*9*(baseDecoded[0].img.ct===6?4:3))};
@@ -329,7 +329,7 @@ async function check(env){
   }
   state.history=h;state.last_frame_ts=ts;
   await saveState(env.RADAR_DB,state);
-  return {status:"ok",frame_ts:ts,alert,rain_detected:rainDetected,approaching:motion.approaching,motion_direction:motion.motion_dir,speed_kmh:motion.speed_kmh,eta_min:motion.eta_min,pixel_count:curr.count,max_dbz:curr.max_dbz,area_km2:curr.area_km2,width_km:curr.width_km,height_km:curr.height_km,min_dist_km:curr.min_dist_km,previous_min_dist_km:previous?.min_dist_km??null,centroid_dist:curr.centroid_dist,telegram_sent:sent,telegram_status:telegramStatus,telegram_error:telegramError};
+  return {status:"ok",frame_ts:ts,alert,rain_detected:rainDetected,approaching:motionInfo.approaching,motion_direction:motionInfo.motion_dir,speed_kmh:motionInfo.speed_kmh,eta_min:motionInfo.eta_min,pixel_count:curr.count,max_dbz:curr.max_dbz,area_km2:curr.area_km2,width_km:curr.width_km,height_km:curr.height_km,min_dist_km:curr.min_dist_km,previous_min_dist_km:previous?.min_dist_km??null,centroid_dist:curr.centroid_dist,telegram_sent:sent,telegram_status:telegramStatus,telegram_error:telegramError};
 }
 
 export default {
