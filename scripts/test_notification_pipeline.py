@@ -153,7 +153,7 @@ def main() -> None:
     assert 'KOY_SVG_RENDERER_VERSION = "cloudflare-js-v2"' in koy_worker
     assert "function buildKoyInteractiveSvg" in koy_worker
     assert "function publishLatestKoySvg" in koy_worker
-    assert 'const KOY_SVG_RENDERER_VERSION = "cloudflare-js-v1"' in koy_worker
+    assert 'const KOY_SVG_RENDERER_VERSION = "cloudflare-js-v2"' in koy_worker
     assert 'path === "/api/comparison.svg"' in koy_worker
     assert "comparison_svg_published" in koy_worker
     assert "svg_renderer: KOY_SVG_RENDERER_VERSION" in koy_worker
