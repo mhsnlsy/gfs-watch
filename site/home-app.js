@@ -655,6 +655,7 @@
           heavy.textContent="Kuvvetli yağış uyarısı: "+when+" "+fmt(target.mm,2)+" mm / 3 saat (2,00 mm üzeri) tahmin ediliyor.";
         }else{
           heavy.textContent="";
+          heavy.hidden=true;
         }
       }
     }
