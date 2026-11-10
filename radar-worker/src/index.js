@@ -4,7 +4,7 @@ const LON = 28.9438;
 const ANALYSIS_RADIUS_KM = 210;
 const THRESHOLD_DBZ_STRONG = 30;
 const ENTRY_ALERT_RADIUS_KM = 25;
-const RADAR_BUILD = "paid-cron-2026-11-10-grok-approach-eta-once-1";
+const RADAR_BUILD = "paid-cron-2026-11-10-grok-approach-eta-4frame-2";
 const HISTORY_LEN = 4;
 const ZOOM = 7;
 const TILE_SIZE = 256;
@@ -103,17 +103,40 @@ function compassFromVector(dx,dy){
   const dirs=["K","K-KD","KD","D-KD","D","D-GD","GD","G-GD","G","G-GB","GB","B-GB","B","B-KB","KB","K-KB"];
   return dirs[Math.round(deg/22.5)%16];
 }
-function motionMetrics(curr,previous){
-  if(!previous || previous.avg_dx==null || previous.avg_dy==null) return {approaching:false,speed_kmh:null,eta_min:null,motion_dir:"—"};
-  const vx=curr.avg_dx-previous.avg_dx, vy=curr.avg_dy-previous.avg_dy;
+function motionMetrics(curr,history){
+  const samples=history.filter(p=>p && p.avg_dx!=null && p.avg_dy!=null && p.ts!=null);
+  if(!samples.length || curr.avg_dx==null || curr.avg_dy==null || curr.centroid_dist==null)
+    return {approaching:false,speed_kmh:null,eta_min:null,motion_dir:"—"};
+
+  const prev=samples[samples.length-1];
+  const dtMin=Math.max((Date.now()/1000-prev.ts)/60,0.1);
+  let vx=curr.avg_dx-prev.avg_dx, vy=curr.avg_dy-prev.avg_dy, dt=dtMin;
+
+  // Use up to four consecutive radar frames to stabilize the motion vector.
+  // This avoids an ETA being dominated by one noisy six-minute scan.
+  if(samples.length>=2){
+    const first=samples[Math.max(0,samples.length-3)];
+    const spanMin=Math.max((Date.now()/1000-first.ts)/60,dtMin);
+    vx=(curr.avg_dx-first.avg_dx);
+    vy=(curr.avg_dy-first.avg_dy);
+    dt=spanMin;
+  }
+
   const tx=-curr.avg_dx, ty=-curr.avg_dy;
   const motionLen=Math.hypot(vx,vy), targetLen=Math.hypot(tx,ty);
-  if(motionLen<0.25 || targetLen<=0) return {approaching:false,speed_kmh:null,eta_min:null,motion_dir:compassFromVector(vx,vy)};
+  if(motionLen<0.25 || targetLen<=0)
+    return {approaching:false,speed_kmh:null,eta_min:null,motion_dir:compassFromVector(vx,vy)};
+
   const toward=(vx*tx+vy*ty)/(motionLen*targetLen);
-  const speedKmh=motionLen*PIXEL_KM*10;
-  const radialKmPerMin=(motionLen*PIXEL_KM*toward)/6;
+  const speedKmh=motionLen*PIXEL_KM*(60/dt);
+  const radialKmPerMin=(motionLen*PIXEL_KM*toward)/dt;
   const etaMin=radialKmPerMin>0 ? curr.centroid_dist/radialKmPerMin : null;
-  return {approaching:toward>0,speed_kmh:Math.round(speedKmh*10)/10,eta_min:etaMin!=null?Math.round(etaMin):null,motion_dir:compassFromVector(vx,vy)};
+  return {
+    approaching:toward>0,
+    speed_kmh:Math.round(speedKmh*10)/10,
+    eta_min:etaMin!=null?Math.max(1,Math.round(etaMin)):null,
+    motion_dir:compassFromVector(vx,vy)
+  };
 }
 function analyzeImage(img){
   const [px,py]=latlonToPixel(LAT,LON,ZOOM);
@@ -253,11 +276,12 @@ async function check(env){
   const curr=analyzeImage(img), state=await getState(env.RADAR_DB);
   const history=JSON.parse(state.history_json||"[]");
   if(history.length&&history[history.length-1].ts===ts)return {status:"duplicate_frame",frame_ts:ts};
+  const hBefore = history.slice(-HISTORY_LEN);
+  const previous = hBefore.length ? hBefore[hBefore.length - 1] : null;
+  const rainDetected = curr.count > 0 && curr.min_dist_km != null;
+  const motion = motionMetrics(curr,hBefore);
   history.push({ts,avg_dx:curr.avg_dx,avg_dy:curr.avg_dy,min_dist_km:curr.min_dist_km,centroid_dist:curr.centroid_dist,max_dbz:curr.max_dbz,approaching:motion.approaching});
   const h=history.slice(-HISTORY_LEN);
-  const previous = h.length >= 2 ? h[h.length - 2] : null;
-  const rainDetected = curr.count > 0 && curr.min_dist_km != null;
-  const motion = motionMetrics(curr,previous);
 
   // RainViewer detects precipitation approaching Istanbul -> send Telegram.
   // Intensity, pixel count, radius and cooldown are deliberately not filters.
