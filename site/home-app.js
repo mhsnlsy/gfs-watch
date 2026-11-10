@@ -18,7 +18,10 @@
       const fallback=DATA_URL_FALLBACK.replace("/gfs/latest",path);
       return fetch(fallback,{cache:"no-store",mode:"cors"});
     }
-    const ECMWF_DATA_URL="./data/ecmwf/latest.json";
+    // Live ECMWF source: MeteoPT point series at 41.0901N, 28.9436E.
+    // The gateway calls the canonical Istanbul ECMWF Worker endpoint, which
+    // fetches the same MeteoPT source and fills the current forecast payload.
+    const ECMWF_DATA_URL="/api/ecmwf/latest";
     function applyAppVersion(doc){
       if(!doc||!doc.name||!doc.version)return;
       document.querySelectorAll("[data-app-name]").forEach(node=>{node.textContent=doc.name;});
