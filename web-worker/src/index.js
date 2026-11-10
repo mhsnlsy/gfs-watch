@@ -251,6 +251,16 @@ export default {
       return isStaticAssetFallback;
     }
 
+    // Direct, canonical D1 publication-asset routes used by the live homepage charts.
+    // These must be Worker-first on the custom domain; otherwise Static Assets returns 404.
+    if (path.startsWith("/gfs/publication-asset/")) {
+      return callService(env.ISTANBUL_GFS, request, path);
+    }
+
+    if (path.startsWith("/api/publication-asset/")) {
+      return callService(env.KOY_GFS, request, path);
+    }
+
     if (path === "/gfs/latest" || path === "/api/latest" ||
         path === "/gfs/f72" || path === "/api/f72" ||
         path === "/api/health" || path === "/gfs/comparison" || path === "/api/comparison") {
