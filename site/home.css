@@ -4515,3 +4515,33 @@ html.ios12 #enka-camera-panel .enka-camera-frame{
     max-width:100%!important;
   }
 }
+
+
+/* Header parity with Köy page — shared responsive rules */
+:root { --page-gutter: clamp(14px, 2.2vw, 32px); }
+html { min-height:100%; scroll-padding-top:calc(76px + env(safe-area-inset-top)); }
+body { min-height:100vh; min-height:100dvh; padding-left:env(safe-area-inset-left); padding-right:env(safe-area-inset-right); }
+.shell { width:min(1480px,calc(100% - var(--page-gutter)*2)); }
+main.shell { padding-bottom:max(12px,env(safe-area-inset-bottom)); }
+.topbar { min-height:76px; height:auto; padding-top:max(8px,env(safe-area-inset-top)); gap:18px; }
+
+@media (min-width:1600px) {
+  .shell { width:min(1560px,calc(100% - 64px)); }
+}
+@media (max-width:700px) {
+  html { scroll-padding-top:calc(64px + env(safe-area-inset-top)); }
+  .shell { width:calc(100% - 24px); }
+  .topbar { padding-top:max(8px,env(safe-area-inset-top)); }
+}
+@media (max-width:390px) {
+  .shell { width:calc(100% - 20px); }
+  .brand { font-size:13px; }
+  .brand small { font-size:7px; }
+  .model-picker button { padding:7px 8px; font-size:9px; }
+}
+@media (orientation:landscape) and (max-height:600px) and (pointer:coarse) {
+  .topbar { min-height:54px; flex-wrap:nowrap; padding-top:env(safe-area-inset-top); }
+  .topbar nav { display:flex; order:initial; width:auto; overflow-x:auto; gap:12px; }
+  .topbar nav a { font-size:10px; }
+  .hero { padding-top:16px; }
+}
