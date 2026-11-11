@@ -141,7 +141,7 @@ jobs:
           if (doc.ok !== true || doc.service !== "gfs-watch-koy-gfs" || doc.cron !== "*/10 * * * *") {
             throw new Error("Köy GFS Worker health contract failed");
           }
-          if (doc.svg_renderer !== "cloudflare-js-v4") {
+          if (doc.svg_renderer !== "cloudflare-js-v5-raw-forecast-hour") {
             throw new Error("Köy SVG renderer is not running in Cloudflare: " + doc.svg_renderer);
           }
           console.log(JSON.stringify(doc));
@@ -224,7 +224,7 @@ jobs:
               --dump-header "$RUNNER_TEMP/koy-svg-headers.txt" \
               --output "$RUNNER_TEMP/koy-comparison.svg"
             grep -qi '^x-gfs-publication-source: D1' "$RUNNER_TEMP/koy-svg-headers.txt"
-            grep -q 'id="gfs-renderer-version">cloudflare-js-v4</metadata>' "$RUNNER_TEMP/koy-comparison.svg"
+            grep -q 'id="gfs-renderer-version">cloudflare-js-v5-raw-forecast-hour</metadata>' "$RUNNER_TEMP/koy-comparison.svg"
             grep -q 'id="gfs-interactive-data"' "$RUNNER_TEMP/koy-comparison.svg"
             echo "Worker-native Köy SVG is generated and stored in D1."
           else
