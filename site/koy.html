@@ -1494,6 +1494,7 @@ html.ios12 .backdrop-filter{display:none}
   </header>
   <main class="shell" data-ui-build="responsive-2026-11-01">
     <section class="dashboard-top" aria-label="Çanakçı anlık MGM gözlemi, geçmiş ve 72 saatlik GFS tahmini">
+  <div class="dashboard-left">
       <div class="dashboard-left">
       <article class="weather-card station-card" role="region" aria-labelledby="station-card-title">
         <div class="weather-top"><div><div class="label">GERÇEK İSTASYON GÖZLEMİ</div><div class="place" id="station-card-title">Köy Ev · 363 m</div></div><span class="model-state" id="freshness">Veri bekleniyor</span></div>
@@ -1549,8 +1550,6 @@ html.ios12 .backdrop-filter{display:none}
         <div class="history-source-note" id="history-source-note">Sıcaklık ve yağış: MGM Çanakçı gerçek istasyon ölçümleri.</div>
       </section>
       </article>
-
-      </div>
       <section class="dashboard-briefing station-briefing-inline" aria-label="Kısa tahmin özeti">
         <div class="briefing" id="briefing" aria-live="polite">
           <div class="briefing-row" id="brief-rain">
@@ -1563,14 +1562,11 @@ html.ios12 .backdrop-filter{display:none}
           </div>
         </div>
       </section>
+  </div>
+
+  <div class="dashboard-right">
+    <div id="gfs-model-view">
     <section class="section" id="bildirimler">
-      <div class="section-head report-head">
-        <div><div class="section-kicker">SON GFS RAPORU</div><h2>Son hava raporu</h2></div>
-        <div class="notification-controls">
-          <button class="notification-button" id="enable-notifications" type="button">Cihaz bildirimlerini aç</button>
-          <span id="notification-status" class="notification-status" aria-live="polite">Yalnızca yeni GFS raporları için bildirim</span>
-        </div>
-      </div>
       <div id="notifications-list" class="notification-list" aria-live="polite">
         <article class="notification-card koy-gfs-report-card">
           <div class="notification-images koy-fullframe-images koy-gfs-svg-images" id="koy-gfs-comparison-container" data-svg-src="">
@@ -1611,8 +1607,10 @@ html.ios12 .backdrop-filter{display:none}
       </article>
     </section>
     </div>
-  </section>
-  <footer class="shell footer"><span><strong data-app-name>İstanbul Havası</strong> <span data-app-version>4.0-koy</span></span><span>Veri kaynakları: MGM Çanakçı · MeteoPT GFS · Otomatik yenileme: 5 dakika</span></footer>
+
+    </div>
+  </div>
+</section>  <footer class="shell footer"><span><strong data-app-name>İstanbul Havası</strong> <span data-app-version>4.0-koy</span></span><span>Veri kaynakları: MGM Çanakçı · MeteoPT GFS · Otomatik yenileme: 5 dakika</span></footer>
   <style>
     #pull-refresh-indicator{position:fixed;z-index:99999;top:calc(env(safe-area-inset-top,0px) + 9px);left:50%;transform:translate(-50%,-150%);opacity:0;pointer-events:none;display:flex;align-items:center;gap:9px;padding:10px 15px;border:1px solid rgba(125,211,215,.35);border-radius:999px;background:rgba(8,25,39,.96);color:#d8f7f1;font:600 12px "DM Sans",sans-serif;box-shadow:0 8px 28px rgba(0,0,0,.32);transition:transform .18s ease,opacity .18s ease}
     #pull-refresh-indicator.visible{transform:translate(-50%,0);opacity:1}
@@ -1651,6 +1649,6 @@ html.ios12 .backdrop-filter{display:none}
 
 
 
-</body>
+<link rel="stylesheet" href="./home.css?v=20261111-koy-home-parity-1">\n\n</body>
 </html>
 
