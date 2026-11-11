@@ -600,7 +600,7 @@ function buildKoyInteractiveSvg(comparison) {
     parts.push(
       '<g id="' + patchId + '"><rect x="' + px + '" y="' + py + '" width="' + panelWidth + '" height="' +
       panelHeight + '" rx="13" style="fill: #102a3a" stroke="#416174" stroke-width="1"/></g>',
-      '<g id="istanbul-panel-' + spec.id + '">',
+      '<g id="koy-panel-' + spec.id + '">',
       '<text x="' + (px + 18) + '" y="' + (py + 31) + '" fill="#FFFFFF" font-size="18" font-weight="700" font-family="' +
       FONT + '">' + svgEscape(spec.title) + '</text>',
       '<text x="' + (px + panelWidth - 17) + '" y="' + (py + 30) + '" text-anchor="end" fill="#E7F2F6" font-size="12" font-weight="650" font-family="' +
