@@ -443,7 +443,7 @@ const KOY_SVG_COLORS = ["#7DD3D7", "#8ABCE8", "#F1C98B", "#B38BE8"];
 const KOY_SVG_PANELS = [
   { id: "temperature", field: "temperature_2m_c", title: "Sıcaklık", unit: "°C" },
   { id: "temperature_850", field: "temperature_850hpa_c", title: "850 hPa sıcaklık", unit: "°C" },
-  { id: "precipitation", field: "precipitation_6h_mm", title: "Yağış", unit: "mm / 6 saat" },
+  { id: "precipitation", field: "precipitation_6h_mm", title: "Yağış", unit: "mm / 3 saat" },
   { id: "wind_10m", field: "wind_speed_10m_kmh", title: "10 m rüzgâr hızı", unit: "km/sa" },
 ];
 
