@@ -68,6 +68,21 @@ const modest = buildKoyInteractiveSvg({
 assert.ok(modest, "four Köy cycles should render a comparison SVG");
 assert.equal(modest.key, "media/koy-gfs-20261115T00Z-comparison.svg");
 assert.ok(modest.body.includes('id="gfs-renderer-version">cloudflare-js-v9-homepage-identical</metadata>'));
+assert.ok(modest.body.includes('<svg xmlns="http://www.w3.org/2000/svg" width="1152" height="838"'));
+assert.ok(modest.body.includes('x="55" y="214" width="505" height="250"'));
+assert.ok(modest.body.includes('x="592" y="493" width="505" height="250"'));
+assert.ok(modest.body.includes('mm / 3 saat'), "precipitation panel must use the homepage 3-hour unit");
+assert.ok(!modest.body.includes("comparison_precipitation_3h_mm"), "use the same raw per-point rainfall field as the homepage renderer");
+const metadataMatch = modest.body.match(/<metadata id="gfs-interactive-data"><!\[CDATA\[([\s\S]*?)\]\]><\/metadata>/);
+assert.ok(metadataMatch, "shared interactive metadata must be present");
+const chartMetadata = JSON.parse(metadataMatch[1]);
+assert.equal(chartMetadata.renderer, "cloudflare-js-v9-homepage-identical");
+assert.equal(chartMetadata.panels.length, 4);
+for (const panel of chartMetadata.panels) {
+  assert.equal(panel.series.length, 4, "each panel must contain four GFS cycles");
+  assert.equal(panel.valid_times.length, panel.series[0].values.length, "each series must align on the same valid-time axis");
+}
+
 assert.ok(!modest.body.includes("RÜZGÂR · GİDİŞ YÖNÜ"));
 assert.equal(koySvgKeyMatches(
   "notifications/koy-gfs-20261115T00Z-comparison.svg",
