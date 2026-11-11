@@ -556,22 +556,26 @@ export function buildKoyInteractiveSvg(comparison) {
   const xMax = offsets[offsets.length - 1];
   const xRatio = offset => (offset - xMin) / (xMax - xMin);
 
-  const W = 1152;
-  const H = 838;
-  const panelWidth = 505;
-  const panelHeight = 250;
-  const panelLeft = [55, 592];
-  const panelTop = [180, 459];
+  // Homepage chart system: 1120px shell, 22px card padding, 21px radius,
+  // DM Sans body + Manrope headings. The SVG is intentionally rebuilt around
+  // the same dashboard geometry instead of the old compact report layout.
+  const W = 1120;
+  const H = 820;
+  const panelWidth = 540;
+  const panelHeight = 300;
+  const panelLeft = [0, 580];
+  const panelTop = [122, 440];
   const svgParts = [
     '<svg xmlns="http://www.w3.org/2000/svg" xmlns:xlink="http://www.w3.org/1999/xlink" width="' + W + '" height="' + H + '" viewBox="0 0 ' + W + ' ' + H + '" role="img" aria-labelledby="koy-gfs-svg-title koy-gfs-svg-desc">',
     '<title id="koy-gfs-svg-title">Köy GFS · Giresun / Çanakçı · Dört döngü karşılaştırması</title>',
     '<desc id="koy-gfs-svg-desc">Dört GFS tahmin döngüsü aynı UTC geçerlilik saatlerinde hizalanmıştır. Grafikler sıcaklık, 850 hPa sıcaklık, yağış ve 10 metre rüzgârını gösterir.</desc>',
-    '<rect x="0" y="0" width="' + W + '" height="' + H + '" fill="#0A1B29"/>',
-    '<text x="63" y="34" fill="#7DD3D7" font-size="12" font-weight="700" letter-spacing="1.5" font-family="system-ui,-apple-system,BlinkMacSystemFont,Segoe UI,sans-serif">GFS · GİRESUN ÇANAKÇI</text>',
-    '<text x="63" y="76" fill="#FFFFFF" font-size="27" font-weight="750" font-family="system-ui,-apple-system,BlinkMacSystemFont,Segoe UI,sans-serif">Son GFS raporu · 4’lü döngü karşılaştırması</text>',
-    '<text x="63" y="108" fill="#E7F2F6" font-size="14" font-family="system-ui,-apple-system,BlinkMacSystemFont,Segoe UI,sans-serif">Dört Köy GFS çıktısı aynı geçerlilik saatlerinde (TSİ) üst üste karşılaştırılır.</text>',
-    '<rect x="850" y="20" width="245" height="36" rx="11" fill="#0A1B29" stroke="#416174" stroke-width="1"/>',
-    '<text x="972.5" y="43" text-anchor="middle" fill="#B8D7DF" font-size="12" font-family="system-ui,-apple-system,BlinkMacSystemFont,Segoe UI,sans-serif">4 GFS döngüsü karşılaştırılıyor</text>',
+    '<rect x="0" y="0" width="' + W + '" height="' + H + '" fill="#071521"/>',
+    '<defs><linearGradient id="panelGradient" x1="0" y1="0" x2="1" y2="1"><stop offset="0" stop-color="#122B3D"/><stop offset="1" stop-color="#0C1F2E"/></linearGradient></defs>',
+    '<text x="22" y="27" fill="#7DD3D7" font-size="10" font-weight="700" letter-spacing="1.5" font-family="DM Sans,sans-serif">GFS · GİRESUN ÇANAKÇI</text>',
+    '<text x="22" y="62" fill="#EDF5F8" font-size="23" font-weight="800" letter-spacing="-0.6" font-family="Manrope,sans-serif">Son GFS raporu · 4’lü döngü karşılaştırması</text>',
+    '<text x="22" y="87" fill="#9BB1BF" font-size="11" font-family="DM Sans,sans-serif">Dört Köy GFS çıktısı aynı geçerlilik saatlerinde (TSİ) karşılaştırılır.</text>',
+    '<rect x="872" y="18" width="226" height="32" rx="999" fill="#102535" stroke="rgba(204,225,239,.11)" stroke-width="1"/>',
+    '<text x="985" y="39" text-anchor="middle" fill="#B7CBD3" font-size="10" font-weight="600" font-family="DM Sans,sans-serif">4 GFS döngüsü karşılaştırılıyor</text>',
   ];
 
   // A two-column legend preserves the four-cycle order used by the historical SVG.
@@ -584,7 +588,7 @@ export function buildKoyInteractiveSvg(comparison) {
     svgParts.push(
       '<line x1="' + x + '" y1="' + y + '" x2="' + (x + 38) + '" y2="' + y + '" stroke="' + item.color + '" stroke-width="' + (latest ? 3.2 : 1.8) + '"' +
       (latest ? "" : ' stroke-dasharray="4 3"') + ' stroke-linecap="round"/>',
-      '<text x="' + (x + 49) + '" y="' + (y + 4) + '" fill="#FFFFFF" font-size="12" font-weight="' + (latest ? "700" : "500") + '" font-family="system-ui,-apple-system,BlinkMacSystemFont,Segoe UI,sans-serif">' + svgEscape(item.label) + '</text>'
+      '<text x="' + (x + 49) + '" y="' + (y + 4) + '" fill="#FFFFFF" font-size="12" font-weight="' + (latest ? "700" : "500") + '" font-family="DM Sans,sans-serif">' + svgEscape(item.label) + '</text>'
     );
   });
 
@@ -595,10 +599,10 @@ export function buildKoyInteractiveSvg(comparison) {
     const row = Math.floor(panelIndex / 2);
     const px = panelLeft[column];
     const py = panelTop[row];
-    const plotX = px + 50;
-    const plotY = py + 57;
-    const plotWidth = panelWidth - 73;
-    const plotHeight = 146;
+    const plotX = px + 58;
+    const plotY = py + 72;
+    const plotWidth = panelWidth - 78;
+    const plotHeight = 178;
     const panelRight = px + panelWidth;
     const panelBottom = py + panelHeight;
 
@@ -613,9 +617,9 @@ export function buildKoyInteractiveSvg(comparison) {
     const yFor = value => plotY + (high - value) * plotHeight / (high - low);
     svgParts.push(
       '<g id="koy-panel-' + spec.id + '">',
-      '<rect x="' + px + '" y="' + py + '" width="' + panelWidth + '" height="' + panelHeight + '" rx="13" fill="#102A3A" stroke="#416174" stroke-width="1"/>',
-      '<text x="' + (px + 18) + '" y="' + (py + 31) + '" fill="#FFFFFF" font-size="18" font-weight="700" font-family="system-ui,-apple-system,BlinkMacSystemFont,Segoe UI,sans-serif">' + svgEscape(spec.title) + '</text>',
-      '<text x="' + (panelRight - 17) + '" y="' + (py + 30) + '" text-anchor="end" fill="#E7F2F6" font-size="12" font-weight="650" font-family="system-ui,-apple-system,BlinkMacSystemFont,Segoe UI,sans-serif">' + svgEscape(spec.unit) + '</text>'
+      '<rect x="' + px + '" y="' + py + '" width="' + panelWidth + '" height="' + panelHeight + '" rx="21" fill="url(#panelGradient)" stroke="rgba(204,225,239,.11)" stroke-width="1"/>',
+      '<text x="' + (px + 22) + '" y="' + (py + 31) + '" fill="#EDF5F8" font-size="18" font-weight="700" letter-spacing="-0.4" font-family="Manrope,sans-serif">' + svgEscape(spec.title) + '</text>',
+      '<text x="' + (panelRight - 22) + '" y="' + (py + 30) + '" text-anchor="end" fill="#9BB1BF" font-size="10" font-weight="600" font-family="DM Sans,sans-serif">' + svgEscape(spec.unit) + '</text>'
     );
 
     // Horizontal grid and value axis. Ticks are fixed integer steps, not the latest peak.
