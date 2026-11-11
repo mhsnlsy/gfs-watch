@@ -515,7 +515,7 @@ function meteoptTableValue(value,field,digits=1){
 function meteoptWindValue(speed,direction){
  if(speed==null)return '<span class="meteopt-value">—</span>';
  const band=meteoptTableBand("wind",speed);
- const arrow=direction==null?"":'<span class="meteopt-wind-arrow" style="--wind-angle:'+((Number(direction)+180)%360)+'deg" aria-label="Rüzgâr yönü '+Math.round(direction)+'°">↑</span>';
+ const arrow=direction==null?"":'<span class="meteopt-wind-arrow" style="--wind-angle:'+direction+'deg" aria-label="Rüzgâr yönü '+Math.round(direction)+'°">↑</span>';
  return '<span class="meteopt-value '+band+' meteopt-wind-value">'+fmt(speed,0)+arrow+'</span>';
 }
 function renderF180(d){
