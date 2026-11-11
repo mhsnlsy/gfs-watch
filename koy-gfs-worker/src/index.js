@@ -920,8 +920,38 @@ async function api(request, env) {
   if (path === "/api/comparison.svg") {
     try {
       const published = await publishLatestKoySvg(env);
-      if (!published?.row) return json({ ok: false, error: "Four complete Köy GFS cycles are not available" }, 404);
-      return decodePublicationAsset(published.row);
+      if (published?.row) return decodePublicationAsset(published.row);
+
+      // The chart itself must remain available even if the D1 publication write
+      // is temporarily contended. Build directly from the four canonical raw
+      // GFS documents and return the SVG without requiring a publication write.
+      const result = await env.GFS_DB.prepare(
+        "SELECT payload_json FROM gfs_runs ORDER BY run_id_utc DESC LIMIT 4"
+      ).all();
+      const runs = (result.results || []).map(row => JSON.parse(row.payload_json));
+      if (runs.length < 4) {
+        return json({ ok: false, error: "Four complete Köy GFS cycles are not available" }, 404);
+      }
+      const ordered = runs.slice().sort((a, b) =>
+        Date.parse(a.run_id_utc) - Date.parse(b.run_id_utc)
+      );
+      const built = buildKoyInteractiveSvg({
+        schema: "koy-gfs.comparison.v1",
+        location: LOCATION,
+        updated_at_utc: ordered[ordered.length - 1]?.published_at_utc || null,
+        runs: ordered,
+      });
+      if (!built) return json({ ok: false, error: "Köy GFS SVG could not be rendered" }, 503);
+      return new Response(built.body, {
+        status: 200,
+        headers: {
+          "Content-Type": "image/svg+xml; charset=utf-8",
+          "Cache-Control": "public, max-age=300, s-maxage=600",
+          "Access-Control-Allow-Origin": "*",
+          "X-GFS-Publication-Source": "D1",
+          "X-GFS-SVG-Fallback": "direct-render",
+        },
+      });
     } catch (error) {
       return json({ ok: false, error: String(error?.message || error) }, 503);
     }
