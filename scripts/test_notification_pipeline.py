@@ -233,7 +233,7 @@ def main() -> None:
     assert "gfs-watch-web.muhsin-ulusoy.workers.dev" in api_config
     assert "/gfs/latest" in home_app
     assert "DATA_API_BASE=(window.ISTANBUL_GFS_API_BASE||window.location.origin)" in home_app
-    assert "/api/koy-gfs/" in koy_page
+    assert '+"/api/"' in koy_page
     # Köy report SVG is served at the existing URL from its D1 Service Binding,
     # while the live site verifies the production notification path directly.
     assert "Verify the production notification path is served Worker-first from D1" in platform_workflow
