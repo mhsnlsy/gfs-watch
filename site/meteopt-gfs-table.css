@@ -1994,3 +1994,35 @@ html,body{
     font-size:9px!important;
   }
 }
+
+
+/* Wind direction indicators in MeteoPT forecast table. */
+#meteopt-gfs-table .meteopt-wind-value{
+  display:inline-flex!important;
+  align-items:center!important;
+  justify-content:center!important;
+  gap:3px!important;
+  white-space:nowrap!important;
+}
+#meteopt-gfs-table .meteopt-wind-arrow{
+  display:inline-block!important;
+  width:9px!important;
+  height:9px!important;
+  font-size:9px!important;
+  line-height:9px!important;
+  font-weight:800!important;
+  transform:rotate(var(--wind-angle))!important;
+  transform-origin:50% 50%!important;
+  opacity:.9!important;
+}
+@media (max-width:850px), (pointer:coarse){
+  #meteopt-gfs-table .meteopt-wind-value{
+    gap:2px!important;
+  }
+  #meteopt-gfs-table .meteopt-wind-arrow{
+    width:8px!important;
+    height:8px!important;
+    font-size:8px!important;
+    line-height:8px!important;
+  }
+}
