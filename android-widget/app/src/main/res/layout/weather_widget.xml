@@ -1,0 +1,137 @@
+<?xml version="1.0" encoding="utf-8"?>
+<LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    android:id="@+id/widget_root"
+    android:layout_width="match_parent"
+    android:layout_height="match_parent"
+    android:orientation="vertical"
+    android:padding="14dp"
+    android:background="@drawable/widget_bg">
+
+    <LinearLayout
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:gravity="center_vertical"
+        android:orientation="horizontal">
+
+        <LinearLayout
+            android:layout_width="0dp"
+            android:layout_height="wrap_content"
+            android:layout_weight="1"
+            android:orientation="vertical">
+            <TextView
+                android:id="@+id/title"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:text="İSTANBUL HAVASI"
+                android:textColor="#8FDCE2"
+                android:textSize="11sp"
+                android:textStyle="bold"/>
+            <TextView
+                android:id="@+id/station"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:text="MGM Eyüpsultan"
+                android:textColor="#EAF6FA"
+                android:textSize="14sp"
+                android:textStyle="bold"/>
+        </LinearLayout>
+
+        <TextView
+            android:id="@+id/updated"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:text="güncelleniyor"
+            android:textColor="#88AAB7"
+            android:textSize="9sp"/>
+    </LinearLayout>
+
+    <LinearLayout
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:layout_marginTop="6dp"
+        android:gravity="center_vertical"
+        android:orientation="horizontal">
+
+        <TextView
+            android:id="@+id/temp"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:text="15,3°"
+            android:textColor="#FFFFFF"
+            android:textSize="34sp"
+            android:textStyle="bold"/>
+
+        <LinearLayout
+            android:layout_width="0dp"
+            android:layout_height="wrap_content"
+            android:layout_weight="1"
+            android:layout_marginStart="12dp"
+            android:orientation="vertical">
+
+            <TextView
+                android:id="@+id/feels"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:text="Hissedilen 13,0°"
+                android:textColor="#B6D0D9"
+                android:textSize="10sp"/>
+
+            <TextView
+                android:id="@+id/details"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:text="Rüzgâr 14 km/sa SW · Nem 77%"
+                android:textColor="#9FC1CB"
+                android:textSize="9sp"
+                android:layout_marginTop="3dp"/>
+        </LinearLayout>
+
+        <TextView
+            android:id="@+id/rain_now"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:text="Yağış 0,0 mm"
+            android:textColor="#8FDCE2"
+            android:textSize="10sp"
+            android:textStyle="bold"/>
+    </LinearLayout>
+
+    <View
+        android:layout_width="match_parent"
+        android:layout_height="1dp"
+        android:layout_marginTop="7dp"
+        android:layout_marginBottom="5dp"
+        android:background="#345261"/>
+
+    <TextView
+        android:id="@+id/rain_days_title"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:text="YAĞIŞ GÜNLERİ · SICAKLIK"
+        android:textColor="#8FDCE2"
+        android:textSize="9sp"
+        android:textStyle="bold"/>
+
+    <LinearLayout
+        android:id="@+id/days_row"
+        android:layout_width="match_parent"
+        android:layout_height="0dp"
+        android:layout_weight="1"
+        android:layout_marginTop="3dp"
+        android:orientation="horizontal">
+
+        <LinearLayout android:id="@+id/day1" style="@style/DayCell"/>
+        <LinearLayout android:id="@+id/day2" style="@style/DayCell"/>
+        <LinearLayout android:id="@+id/day3" style="@style/DayCell"/>
+        <LinearLayout android:id="@+id/day4" style="@style/DayCell"/>
+    </LinearLayout>
+
+    <TextView
+        android:id="@+id/source"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:text="MGM Eyüpsultan · GFS MeteoPT"
+        android:textColor="#607F8C"
+        android:textSize="8sp"
+        android:gravity="center_vertical"/>
+</LinearLayout>
