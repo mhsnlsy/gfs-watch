@@ -33,6 +33,11 @@ jobs:
         with:
           node-version: "22"
 
+      - name: Verify homepage-identical Köy SVG renderer
+        run: |
+          node --check koy-gfs-worker/src/index.js
+          node scripts/test_koy_worker_publication.mjs
+
       - name: Verify Cloudflare credentials
         env:
           CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
