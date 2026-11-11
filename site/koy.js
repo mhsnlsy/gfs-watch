@@ -32,7 +32,7 @@
 (() => {
 "use strict";
 const GFS_CYCLE_THEME=window.GFS_CYCLE_THEME;
-const BASE=(window.GFS_WATCH_API_BASE||window.location.origin)+"/api/koy-gfs/", COLORS=GFS_CYCLE_THEME.colors;
+const BASE=(window.GFS_WATCH_API_BASE||"https://gfs-watch-koy-gfs.muhsin-ulusoy.workers.dev")+"/api/", COLORS=GFS_CYCLE_THEME.colors;
 const STATIONS_API=(window.GFS_WATCH_API_BASE||window.location.origin)+"/api";
 const $=id=>document.getElementById(id);
 const num=v=>v==null||v===""||!Number.isFinite(Number(v))?null:Number(v);
