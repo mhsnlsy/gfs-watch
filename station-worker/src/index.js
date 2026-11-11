@@ -268,8 +268,11 @@ async function fetchEnka() {
 
   try {
     const camera = await fetchEnkaCamera();
-    if (camera && camera.is_stale !== true) {
-      console.log("[ENKA] WeatherLink unavailable/stale -> camera OCR fallback active");
+    if (camera) {
+      console.log(
+        "[ENKA] WeatherLink unavailable/stale -> camera OCR fallback active · " +
+        (camera.is_stale ? "OCR ölçümü de gecikmeli" : "OCR canlı")
+      );
       return camera;
     }
   } catch (error) {
