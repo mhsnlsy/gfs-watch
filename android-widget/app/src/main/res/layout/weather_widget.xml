@@ -120,10 +120,29 @@
         android:layout_marginTop="3dp"
         android:orientation="horizontal">
 
-        <LinearLayout android:id="@+id/day1" style="@style/DayCell"/>
-        <LinearLayout android:id="@+id/day2" style="@style/DayCell"/>
-        <LinearLayout android:id="@+id/day3" style="@style/DayCell"/>
-        <LinearLayout android:id="@+id/day4" style="@style/DayCell"/>
+        <LinearLayout android:id="@+id/day1" style="@style/DayCell">
+            <TextView android:id="@+id/day1_date" style="@style/DayText" android:text="Çar"/>
+            <TextView android:id="@+id/day1_rain" style="@style/DayRain" android:text="☂ 0,0"/>
+            <TextView android:id="@+id/day1_temp" style="@style/DayTemp" android:text="18° / 11°"/>
+        </LinearLayout>
+
+        <LinearLayout android:id="@+id/day2" style="@style/DayCell">
+            <TextView android:id="@+id/day2_date" style="@style/DayText" android:text="Per"/>
+            <TextView android:id="@+id/day2_rain" style="@style/DayRain" android:text="☂ 0,0"/>
+            <TextView android:id="@+id/day2_temp" style="@style/DayTemp" android:text="18° / 11°"/>
+        </LinearLayout>
+
+        <LinearLayout android:id="@+id/day3" style="@style/DayCell">
+            <TextView android:id="@+id/day3_date" style="@style/DayText" android:text="Cum"/>
+            <TextView android:id="@+id/day3_rain" style="@style/DayRain" android:text="☂ 0,0"/>
+            <TextView android:id="@+id/day3_temp" style="@style/DayTemp" android:text="18° / 11°"/>
+        </LinearLayout>
+
+        <LinearLayout android:id="@+id/day4" style="@style/DayCell">
+            <TextView android:id="@+id/day4_date" style="@style/DayText" android:text="Cmt"/>
+            <TextView android:id="@+id/day4_rain" style="@style/DayRain" android:text="☂ 0,0"/>
+            <TextView android:id="@+id/day4_temp" style="@style/DayTemp" android:text="18° / 11°"/>
+        </LinearLayout>
     </LinearLayout>
 
     <TextView
