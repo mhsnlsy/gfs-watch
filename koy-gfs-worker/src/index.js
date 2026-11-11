@@ -967,11 +967,46 @@ async function api(request, env) {
       }
       const expectedRenderer = 'id="gfs-renderer-version">' + KOY_SVG_RENDERER_VERSION + '</metadata>';
       if (!row || !String(row.body || "").includes(expectedRenderer)) {
-        const published = await publishLatestKoySvg(env, key);
-        if (published?.row) row = published.row;
+        try {
+          const published = await publishLatestKoySvg(env, key);
+          if (published?.row) row = published.row;
+        } catch (publicationError) {
+          console.warn(JSON.stringify({
+            event: "koy_svg_publication_fallback",
+            message: String(publicationError?.message || publicationError),
+          }));
+        }
       }
-      if (!row) return json({ ok: false, error: "Publication asset not found" }, 404);
-      return decodePublicationAsset(row);
+      if (row) return decodePublicationAsset(row);
+
+      // D1 publication writes can be temporarily contended. The requested
+      // chart remains renderable directly from the same four raw GFS payloads.
+      const result = await env.GFS_DB.prepare(
+        "SELECT payload_json FROM gfs_runs ORDER BY run_id_utc DESC LIMIT 4"
+      ).all();
+      const runs = (result.results || []).map(row => JSON.parse(row.payload_json));
+      const ordered = runs.slice().sort((a, b) =>
+        Date.parse(a.run_id_utc) - Date.parse(b.run_id_utc)
+      );
+      const built = buildKoyInteractiveSvg({
+        schema: "koy-gfs.comparison.v1",
+        location: LOCATION,
+        updated_at_utc: ordered[ordered.length - 1]?.published_at_utc || null,
+        runs: ordered,
+      });
+      if (!built || !koySvgKeyMatches(key, built.key)) {
+        return json({ ok: false, error: "Publication asset not found" }, 404);
+      }
+      return new Response(built.body, {
+        status: 200,
+        headers: {
+          "Content-Type": "image/svg+xml; charset=utf-8",
+          "Cache-Control": "public, max-age=300, s-maxage=600",
+          "Access-Control-Allow-Origin": "*",
+          "X-GFS-Publication-Source": "D1",
+          "X-GFS-SVG-Fallback": "direct-render",
+        },
+      });
     } catch (error) {
       return json({ ok: false, error: String(error?.message || error) }, 503);
     }
