@@ -476,7 +476,7 @@ jobs:
           node - "$RUNNER_TEMP/web-gfs.json" "$RUNNER_TEMP/web-koy.json" "$RUNNER_TEMP/web-koy-comparison.json" "$RUNNER_TEMP/web-stations-health.json" "$RUNNER_TEMP/web-stations.json" "$RUNNER_TEMP/web-station-history.json" <<'NODE'
           const fs = require("fs");
           const [gfs, koy, koyComparison, health, stations, history] = process.argv.slice(2).map(file => JSON.parse(fs.readFileSync(file, "utf8")));
-          if (gfs.schema !== "gfs-watch.forecast.v1" || !Array.isArray(gfs.comparison_runs) ||
+          if (!["gfs-watch.forecast.v1", "gfs-watch.forecast.v2"].includes(gfs.schema) || !Array.isArray(gfs.comparison_runs) ||
               !Array.isArray(gfs.forecast_6_hourly) || gfs.forecast_6_hourly.length < 40) {
             throw new Error("Istanbul GFS gateway failed");
           }
