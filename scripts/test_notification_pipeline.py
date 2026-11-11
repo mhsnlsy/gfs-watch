@@ -15,6 +15,7 @@ def main() -> None:
     publisher = read(".github/workflows/publish-live-site.yml")
     report_workflow_path = ROOT / ".github/workflows/istanbul-gfs-10min.yml"
     platform_workflow = read(".github/workflows/deploy-cloudflare-platform.yml")
+    validate_workflow = read(".github/workflows/validate.yml")
     archive_sync = read(".github/workflows/sync-cloudflare-live-archive.yml")
     istanbul_deploy = read(".github/workflows/deploy-istanbul-gfs-worker.yml")
     guardian = read("gfs-guardian/src/index.js")
@@ -197,6 +198,9 @@ def main() -> None:
     assert "firstMs + 180 * 3600000" in gfs_publication
     assert 'unit: "mm / 3 saat"' in koy_worker
     assert 'data-gfs-series-run-id' in koy_worker
+    assert "node scripts/test_koy_worker_publication.mjs" in validate_workflow
+    assert "node --check koy-gfs-worker/src/index.js" in validate_workflow
+    assert "node --check site/gfs-comparison-tooltip.js" in validate_workflow
     assert "matplotlib" not in koy_svg_workflow.lower()
     assert "workflow_run:" not in platform_workflow
     assert "actions/workflows/istanbul-gfs-10min.yml/dispatches" not in gfs_worker
