@@ -2245,6 +2245,39 @@ html.ios12 .backdrop-filter{display:none}
   }
 }
 </style>
+<style id="koy-home-briefing-parity">
+.briefing{display:grid;gap:4px;margin-top:8px}
+.briefing-row{display:grid;grid-template-columns:86px minmax(0,1fr);gap:8px;align-items:start;padding:5px 8px;border-radius:10px;background:rgba(2,15,24,.28);border:1px solid rgba(143,184,196,.16)}
+.briefing-k{font-size:9px;letter-spacing:.06em;font-weight:700;color:#8fd0c8;text-transform:uppercase;padding-top:2px}
+.briefing-v{font-size:12.5px;line-height:1.35;color:#e7f2f6}
+.brief-spell{font-size:12.5px;line-height:1.4;color:#e7f2f6}
+.brief-temp-swings{display:grid;gap:2px;margin-top:4px}
+.brief-temp-swing{font-size:12.5px;line-height:1.35;color:#e7f2f6}
+#brief-rain-lines,#brief-rain-lines .brief-spell,#brief-temperature-trend,#brief-temperature-trend .brief-temp-swing{font-size:10.5px}
+@media(min-width:901px){
+  .dashboard-top{
+    grid-template-areas:
+      "left report"
+      "brief report"
+      "table table"!important;
+    row-gap:16px!important;
+  }
+  .dashboard-left{grid-area:left!important}
+  .dashboard-top>.station-briefing-inline{
+    grid-area:brief!important;
+    width:100%!important;
+    min-width:0!important;
+    margin:0!important;
+    padding:0!important;
+    align-self:start!important;
+  }
+  .dashboard-top>.station-briefing-inline .briefing{width:100%!important;margin-top:0!important}
+}
+@media(max-width:900px){
+  .station-briefing-inline{width:100%;padding-top:0}
+  .briefing-row{grid-template-columns:78px minmax(0,1fr);gap:6px;padding:5px 7px}
+}
+</style>
 </body>
 </html>
 
