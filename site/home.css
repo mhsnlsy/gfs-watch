@@ -4629,3 +4629,13 @@ main.shell { padding-bottom:max(12px,env(safe-area-inset-bottom)); }
     padding-bottom:16.2px!important;
   }
 }
+
+
+/* Desktop GFS comparison: reduce the embedded report/graph height by 5% while preserving width. */
+@media (min-width:851px){
+  #bildirimler .notification-card.koy-gfs-report-card .gfs-interactive-chart{
+    transform:scaleY(.95)!important;
+    transform-origin:top center!important;
+    margin-bottom:-5%!important;
+  }
+}
