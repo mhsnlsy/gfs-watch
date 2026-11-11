@@ -3,10 +3,18 @@
   "name": "gfs-watch-stations",
   "main": "src/index.js",
   "compatibility_date": "2026-11-06",
-  "compatibility_flags": ["nodejs_compat"],
+  "compatibility_flags": [
+    "nodejs_compat"
+  ],
   "workers_dev": true,
-  "observability": { "enabled": true },
-  "triggers": { "crons": ["*/2 * * * *"] },
+  "observability": {
+    "enabled": true
+  },
+  "triggers": {
+    "crons": [
+      "*/2 * * * *"
+    ]
+  },
   "d1_databases": [
     {
       "binding": "STATIONS_DB",
@@ -14,5 +22,8 @@
       "database_id": "__D1_DATABASE_ID__",
       "migrations_dir": "migrations"
     }
-  ]
+  ],
+  "ai": {
+    "binding": "AI"
+  }
 }
