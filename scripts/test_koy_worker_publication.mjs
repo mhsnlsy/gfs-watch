@@ -67,7 +67,7 @@ const modest = buildKoyInteractiveSvg({
 });
 assert.ok(modest, "four Köy cycles should render a comparison SVG");
 assert.equal(modest.key, "media/koy-gfs-20261115T00Z-comparison.svg");
-assert.ok(modest.body.includes('id="gfs-renderer-version">cloudflare-js-v4</metadata>'));
+assert.ok(modest.body.includes('id="gfs-renderer-version">cloudflare-js-v9-homepage-identical</metadata>'));
 assert.ok(!modest.body.includes("RÜZGÂR · GİDİŞ YÖNÜ"));
 assert.equal(koySvgKeyMatches(
   "notifications/koy-gfs-20261115T00Z-comparison.svg",
@@ -78,7 +78,7 @@ assert.equal(koySvgKeyMatches(
   modest.key
 ), false);
 assert.ok(modest.body.includes('id="gfs-interactive-data"'));
-assert.ok(modest.body.includes("K → G") && modest.body.includes("GB → KD"), "Köy chart must render the fixed wind-direction legend");
+assert.ok(modest.body.includes('"directions_deg"'), "Köy chart metadata must retain wind directions for the shared tooltip");
 assert.ok(!modest.body.includes('data-latest-peak="true"'), "Y-axis ticks must not be bound to the latest-cycle peak");
 assert.ok(modest.body.includes('class="gfs-latest-peak-marker"'));
 assert.ok(!modest.body.includes("gfs-latest-trough-marker"), "flat Köy temperature series must not repeat the peak label");
@@ -112,7 +112,7 @@ assert.equal(buildPanelAxis("precipitation_6h_mm", [[22], [1], [1], [9.8]]).step
 assert.deepEqual(heavyPrecip.slice().reverse(), ["0", "2", "4", "6", "8", "10", "12", "14", "16", "18", "20", "22"]);
 assert.ok(!heavyPrecip.includes("9,8"));
 assert.ok(heavy.body.includes('data-latest-peak-value="9,8 mm"'));
-assert.ok(heavy.body.includes("15.11.2026 12:00 TSİ"));
+assert.ok(heavy.body.includes("15.11.2026 15:00 TSİ"));
 assertIntegerTicks(axisTicks(heavy.body, "temperature"), 5);
 assert.ok(axisTicks(heavy.body, "temperature").includes("5") && axisTicks(heavy.body, "temperature").includes("20"));
 assertIntegerTicks(axisTicks(heavy.body, "temperature_850"), 5);
