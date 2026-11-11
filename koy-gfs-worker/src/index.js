@@ -422,7 +422,7 @@ function decodePublicationAsset(row) {
   return new Response(row.body, { status: 200, headers });
 }
 
-const KOY_SVG_RENDERER_VERSION = "cloudflare-js-v7-3h-valid-time";
+const KOY_SVG_RENDERER_VERSION = "cloudflare-js-v8-homepage-chart";
 const FONT = "system-ui,-apple-system,BlinkMacSystemFont,Segoe UI,sans-serif";
 const KOY_SVG_ASSET_NAME = /^koy-gfs-\d{8}T\d{2}Z-comparison\.svg$/;
 
@@ -494,20 +494,59 @@ export function buildKoyInteractiveSvg(comparison) {
 
   if (documents.length !== 4) return null;
 
-  // VALID-TIME GFS COMPARISON:
-  // All four cycles are aligned by the actual valid_time_utc of each forecast
-  // point. A previous cycle therefore uses a different forecast_hour when
-  // necessary to represent the same valid instant as the newest cycle.
-  // Raw model values are used unchanged; only the x-axis alignment changes.
+  // HOMEPAGE-MATCHED VALID-TIME COMPARISON
+  // The comparison uses the same chart geometry, typography, line weights,
+  // grid density and three-hour precipitation aggregation as site/home-app.js.
+  // The only intentional difference is that the X axis is valid_time_utc so
+  // four model cycles are compared at the same real valid instant.
   const series = documents.map((document, index) => {
+    const raw = Array.isArray(document.forecast_6_hourly)
+      ? document.forecast_6_hourly
+        .map(point => ({ ...point, lead: Number(point?.forecast_hour) }))
+        .filter(point => Number.isFinite(point.lead) && point.lead > 0 && point.lead <= 180)
+        .sort((a, b) => a.lead - b.lead)
+      : [];
+
     const points = new Map();
-    for (const point of document.forecast_6_hourly || []) {
-      const validKey = svgValidKey(point?.valid_time_utc);
-      const lead = Number(point?.forecast_hour);
-      if (validKey && Number.isFinite(lead) && lead > 0 && lead <= 180) {
-        points.set(validKey, point);
+
+    if (raw.length) {
+      if (KOY_SVG_PANELS.some(spec => spec.field === "precipitation_6h_mm")) {
+        const rainPoints = raw
+          .filter(point => point.lead % 3 === 0)
+          .map(endpoint => {
+            const startLead = endpoint.lead - 3;
+            const intervalPoints = raw.filter(point =>
+              point.lead > startLead && point.lead <= endpoint.lead
+            );
+            const expectedCount = endpoint.lead <= 120 ? 3 : 1;
+            const measured = intervalPoints.filter(point =>
+              svgNumber(point.precipitation_6h_mm) !== null
+            );
+            if (measured.length !== expectedCount) return null;
+            const value = measured.reduce(
+              (total, point) => total + Number(point.precipitation_6h_mm), 0
+            );
+            const validKey = svgValidKey(endpoint.valid_time_utc);
+            if (!validKey) return null;
+            return { ...endpoint, comparison_precipitation_3h_mm: value, validKey };
+          })
+          .filter(Boolean);
+
+        for (const point of raw) {
+          const validKey = svgValidKey(point.valid_time_utc);
+          if (validKey) points.set(validKey, point);
+        }
+        for (const point of rainPoints) {
+          points.set(point.validKey, point);
+        }
+      } else {
+        for (const point of raw) {
+          const validKey = svgValidKey(point.valid_time_utc);
+          if (validKey) points.set(validKey, point);
+        }
       }
     }
+
     if (!points.size) return null;
     return {
       document,
@@ -519,20 +558,16 @@ export function buildKoyInteractiveSvg(comparison) {
 
   if (series.some(item => !item)) return null;
 
-  // Build one chronological axis from the actual valid times present in
-  // the four cycles. Every plotted value is looked up by valid_time_utc;
-  // forecast_hour is never used to position a point on the graph.
-  // This is especially important for precipitation: F3/F6/F9... from
-  // different cycles must land on their real valid instant, not on the
-  // same forecast-hour slot.
+  // One chronological valid-time axis. Never use forecast_hour for X position.
   const validTimeKeySet = new Set();
   for (const item of series) {
     for (const key of item.points.keys()) {
       if (Number.isFinite(Date.parse(key))) validTimeKeySet.add(key);
     }
   }
-  const validTimeKeys = [...validTimeKeySet]
-    .sort((a, b) => Date.parse(a) - Date.parse(b));
+  const validTimeKeys = [...validTimeKeySet].sort(
+    (a, b) => Date.parse(a) - Date.parse(b)
+  );
   if (validTimeKeys.length < 2) return null;
 
   const validTimeRecords = validTimeKeys.map(key => {
@@ -550,39 +585,36 @@ export function buildKoyInteractiveSvg(comparison) {
     };
   });
 
-  // Use actual valid-time spacing on the x-axis.
   const offsets = validTimeRecords.map(record => record.timestamp_ms);
   const xMin = offsets[0];
   const xMax = offsets[offsets.length - 1];
-  const xRatio = offset => (offset - xMin) / (xMax - xMin);
+  const xRatio = offset => xMax === xMin ? 0 : (offset - xMin) / (xMax - xMin);
 
-  // Homepage chart system: 1120px shell, 22px card padding, 21px radius,
-  // DM Sans body + Manrope headings. The SVG is intentionally rebuilt around
-  // the same dashboard geometry instead of the old compact report layout.
+  // Homepage chart geometry: 900x250, 48/18/18/40 plot margins.
+  // Each comparison card preserves that same graph proportions.
   const W = 1120;
-  const H = 820;
+  const H = 720;
   const panelWidth = 540;
-  const panelHeight = 300;
+  const panelHeight = 250;
   const panelLeft = [0, 580];
-  const panelTop = [122, 440];
+  const panelTop = [116, 392];
   const svgParts = [
-    '<svg xmlns="http://www.w3.org/2000/svg" xmlns:xlink="http://www.w3.org/1999/xlink" width="' + W + '" height="' + H + '" viewBox="0 0 ' + W + ' ' + H + '" role="img" aria-labelledby="koy-gfs-svg-title koy-gfs-svg-desc">',
+    '<svg xmlns="http://www.w3.org/2000/svg" width="' + W + '" height="' + H + '" viewBox="0 0 ' + W + ' ' + H + '" role="img" aria-labelledby="koy-gfs-svg-title koy-gfs-svg-desc">',
     '<title id="koy-gfs-svg-title">Köy GFS · Giresun / Çanakçı · Dört döngü karşılaştırması</title>',
-    '<desc id="koy-gfs-svg-desc">Dört GFS tahmin döngüsü aynı UTC geçerlilik saatlerinde hizalanmıştır. Grafikler sıcaklık, 850 hPa sıcaklık, yağış ve 10 metre rüzgârını gösterir.</desc>',
+    '<desc id="koy-gfs-svg-desc">Anasayfadaki grafik düzeniyle dört GFS tahmin döngüsü gerçek geçerlilik zamanına göre karşılaştırılır.</desc>',
     '<rect x="0" y="0" width="' + W + '" height="' + H + '" fill="#071521"/>',
-    '<defs><linearGradient id="panelGradient" x1="0" y1="0" x2="1" y2="1"><stop offset="0" stop-color="#122B3D"/><stop offset="1" stop-color="#0C1F2E"/></linearGradient></defs>',
     '<text x="22" y="27" fill="#7DD3D7" font-size="10" font-weight="700" letter-spacing="1.5" font-family="DM Sans,sans-serif">GFS · GİRESUN ÇANAKÇI</text>',
     '<text x="22" y="62" fill="#EDF5F8" font-size="23" font-weight="800" letter-spacing="-0.6" font-family="Manrope,sans-serif">Son GFS raporu · 4’lü döngü karşılaştırması</text>',
-    '<text x="22" y="87" fill="#9BB1BF" font-size="11" font-family="DM Sans,sans-serif">Dört Köy GFS çıktısı aynı geçerlilik saatlerinde (TSİ) karşılaştırılır.</text>',
+    '<text x="22" y="87" fill="#9BB1BF" font-size="11" font-family="DM Sans,sans-serif">Dört Köy GFS çıktısı aynı geçerlilik saatlerinde (TSİ) üst üste karşılaştırılır.</text>',
     '<rect x="872" y="18" width="226" height="32" rx="999" fill="#102535" stroke="rgba(204,225,239,.11)" stroke-width="1"/>',
     '<text x="985" y="39" text-anchor="middle" fill="#B7CBD3" font-size="10" font-weight="600" font-family="DM Sans,sans-serif">4 GFS döngüsü karşılaştırılıyor</text>',
   ];
 
-  // A two-column legend preserves the four-cycle order used by the historical SVG.
+  // Homepage-style two-column legend.
   series.slice().reverse().forEach((item, index) => {
     const column = index % 2;
     const row = Math.floor(index / 2);
-    const x = 335 + column * 290;
+    const x = 330 + column * 285;
     const y = 105 + row * 18;
     const latest = item === series[series.length - 1];
     svgParts.push(
@@ -599,76 +631,73 @@ export function buildKoyInteractiveSvg(comparison) {
     const row = Math.floor(panelIndex / 2);
     const px = panelLeft[column];
     const py = panelTop[row];
-    const plotX = px + 58;
-    const plotY = py + 72;
-    const plotWidth = panelWidth - 78;
-    const plotHeight = 178;
+
+    // Match homepage renderChart() geometry proportionally inside the 540px card.
+    const plotX = px + 48;
+    const plotY = py + 55;
+    const plotWidth = panelWidth - 66;
+    const plotHeight = 150;
     const panelRight = px + panelWidth;
-    const panelBottom = py + panelHeight;
 
     const valuesBySeries = series.map(item =>
-      validTimeKeys.map(key => svgNumber(item.points.get(key)?.[spec.field]))
+      validTimeKeys.map(key => {
+        const point = item.points.get(key);
+        if (!point) return null;
+        if (spec.field === "precipitation_6h_mm") {
+          return svgNumber(point.comparison_precipitation_3h_mm);
+        }
+        return svgNumber(point[spec.field]);
+      })
     );
+
     const allValues = valuesBySeries.flat().filter(value => value !== null);
     const axis = buildPanelAxis(spec.field, valuesBySeries);
     const { low, high, ticks, latestPeak, latestTrough } = axis;
-
+    const yFor = value => plotY + ((high - value) / (high - low)) * plotHeight;
     const xPositions = offsets.map(offset => plotX + xRatio(offset) * plotWidth);
-    const yFor = value => plotY + (high - value) * plotHeight / (high - low);
+
     svgParts.push(
       '<g id="koy-panel-' + spec.id + '">',
-      '<rect x="' + px + '" y="' + py + '" width="' + panelWidth + '" height="' + panelHeight + '" rx="21" fill="url(#panelGradient)" stroke="rgba(204,225,239,.11)" stroke-width="1"/>',
-      '<text x="' + (px + 22) + '" y="' + (py + 31) + '" fill="#EDF5F8" font-size="18" font-weight="700" letter-spacing="-0.4" font-family="Manrope,sans-serif">' + svgEscape(spec.title) + '</text>',
-      '<text x="' + (panelRight - 22) + '" y="' + (py + 30) + '" text-anchor="end" fill="#9BB1BF" font-size="10" font-weight="600" font-family="DM Sans,sans-serif">' + svgEscape(spec.unit) + '</text>'
+      '<rect x="' + px + '" y="' + py + '" width="' + panelWidth + '" height="' + panelHeight + '" rx="21" fill="linear-gradient(145deg,rgba(18,43,61,.94),rgba(12,31,46,.96))" stroke="rgba(204,225,239,.11)" stroke-width="1"/>',
+      '<rect x="' + px + '" y="' + py + '" width="' + panelWidth + '" height="' + panelHeight + '" rx="21" fill="#102535" fill-opacity=".96"/>',
+      '<text x="' + (px + 22) + '" y="' + (py + 34) + '" fill="#EDF5F8" font-size="18" font-weight="700" letter-spacing="-0.4" font-family="Manrope,sans-serif">' + svgEscape(spec.title) + '</text>',
+      '<text x="' + (panelRight - 22) + '" y="' + (py + 33) + '" text-anchor="end" fill="#EDF5F8" font-size="11" font-weight="600" font-family="DM Sans,sans-serif">' + svgEscape(spec.unit) + '</text>'
     );
 
-    // Horizontal grid and value axis. Ticks are fixed integer steps, not the latest peak.
+    // Homepage-style four horizontal grid levels.
     ticks.slice().reverse().forEach(value => {
       const y = yFor(value);
       svgParts.push(
-        '<line x1="' + plotX + '" y1="' + y + '" x2="' + (plotX + plotWidth) + '" y2="' + y + '" stroke="#456579" stroke-width="1" stroke-dasharray="2 4" opacity=".65"/>',
-        '<text x="' + (plotX - 10) + '" y="' + (y + 4) + '" text-anchor="end" fill="#E7F2F6" font-size="11" font-weight="600" font-family="system-ui,-apple-system,BlinkMacSystemFont,Segoe UI,sans-serif" data-axis-tick="true">' + svgEscape(formatAxisTick(value)) + '</text>'
+        '<line x1="' + plotX + '" y1="' + y + '" x2="' + (plotX + plotWidth) + '" y2="' + y + '" stroke="rgba(194,220,232,.12)" stroke-width="1" stroke-dasharray="4 6"/>',
+        '<text x="' + (plotX - 10) + '" y="' + (y + 4) + '" fill="#91A9B8" font-size="11" text-anchor="end" font-family="DM Sans,sans-serif">' + svgEscape(formatAxisTick(value)) + '</text>'
       );
     });
 
-    // Date ticks follow the same 12-hour cadence as the former Matplotlib report.
-    const tickIndexes = [];
-    validTimeRecords.forEach((record, index) => {
+    // Homepage has only three X labels. Keep that rule so labels never collide.
+    const labelIndexes = [...new Set([0, Math.floor((validTimeKeys.length - 1) / 2), validTimeKeys.length - 1])];
+    labelIndexes.forEach((index, labelIndex) => {
+      const record = validTimeRecords[index];
       const date = new Date(record.timestamp_ms);
-      const hour = date.getUTCHours();
-      if (index === 0 || hour % 12 === 0) tickIndexes.push(index);
-    });
-    if (tickIndexes[tickIndexes.length - 1] !== validTimeRecords.length - 1) {
-      tickIndexes.push(validTimeRecords.length - 1);
-    }
-    tickIndexes.forEach(index => {
-      const date = new Date(validTimeRecords[index].timestamp_ms);
       const x = xPositions[index];
       const day = String(date.getUTCDate()).padStart(2, "0");
-      const weekdays = ["Paz", "Pzt", "Sal", "Çar", "Per", "Cum", "Cmt"];
-      const weekday = weekdays[date.getUTCDay()];
       const hour = String(date.getUTCHours()).padStart(2, "0");
       const minute = String(date.getUTCMinutes()).padStart(2, "0");
-      const anchor = index === 0 ? "start" : index === validTimeRecords.length - 1 ? "end" : "middle";
+      const anchor = labelIndex === 0 ? "start" : labelIndex === labelIndexes.length - 1 ? "end" : "middle";
       svgParts.push(
-        '<text x="' + x + '" y="' + (plotY + plotHeight + 19) + '" text-anchor="' + anchor + '" fill="#E7F2F6" font-size="10" font-weight="650" font-family="system-ui,-apple-system,BlinkMacSystemFont,Segoe UI,sans-serif">' +
-        '<tspan x="' + x + '">' + day + ' ' + weekday + '</tspan><tspan x="' + x + '" dy="13">' + hour + ':' + minute + ' TSİ</tspan></text>'
+        '<text x="' + x + '" y="' + (plotY + plotHeight + 18) + '" text-anchor="' + anchor + '" fill="#91A9B8" font-size="10" font-family="DM Sans,sans-serif">' +
+        '<tspan x="' + x + '">' + day + '.' + String(date.getUTCMonth() + 1).padStart(2, "0") + '</tspan>' +
+        '<tspan x="' + x + '" dy="13">' + hour + ':' + minute + ' TSİ</tspan></text>'
       );
     });
 
     const panelSeries = [];
+
     series.forEach((item, seriesIndex) => {
-      const values = validTimeKeys.map(key => svgNumber(item.points.get(key)?.[spec.field]));
+      const values = valuesBySeries[seriesIndex];
       const yPositions = values.map(value => value === null ? null : Number(yFor(value).toFixed(3)));
       const directions = validTimeKeys.map(key => {
         if (spec.field !== "wind_speed_10m_kmh") return null;
         return svgNumber(item.points.get(key)?.wind_direction_10m_deg);
-      });
-      const forecastHours = validTimeKeys.map(key => {
-        const point = item.points.get(key);
-        return point && Number.isFinite(Number(point.forecast_hour))
-          ? Number(point.forecast_hour)
-          : null;
       });
 
       let pathData = "";
@@ -678,24 +707,23 @@ export function buildKoyInteractiveSvg(comparison) {
           open = false;
           return;
         }
-        pathData += (open ? " L " : " M ") + xPositions[index].toFixed(3) + " " + yPositions[index];
+        pathData += (open ? "L" : "M") + xPositions[index].toFixed(2) + " " + yPositions[index];
         open = true;
       });
 
       const latest = seriesIndex === series.length - 1;
       svgParts.push(
-        '<path d="' + pathData + '" fill="none" stroke="' + item.color + '" stroke-width="' + (latest ? 3.2 : 1.8) + '"' +
-        (latest ? "" : ' stroke-dasharray="4 3"') +
-        ' stroke-linecap="round" stroke-linejoin="round" opacity="' + (latest ? "1" : ".94") + '"/>'
+        '<path d="' + pathData + '" fill="none" stroke="' + item.color + '" stroke-width="' + (latest ? 3 : 1.8) + '"' +
+        (latest ? "" : ' stroke-dasharray="4 3"') + ' stroke-linecap="round" stroke-linejoin="round" opacity="' + (latest ? "1" : ".92") + '"/>'
       );
+
       if (latest) {
         values.forEach((value, index) => {
           if (value === null) return;
-          svgParts.push(
-            '<circle cx="' + xPositions[index].toFixed(3) + '" cy="' + yPositions[index] + '" r="2.8" fill="' + item.color + '"/>'
-          );
+          svgParts.push('<circle cx="' + xPositions[index].toFixed(2) + '" cy="' + yPositions[index] + '" r="2.5" fill="' + item.color + '"/>');
         });
       }
+
       const pushExtremeMarker = (kind, extreme, avoidBoxes) => {
         if (extreme === null) return null;
         let extremeIndex = -1;
@@ -714,33 +742,28 @@ export function buildKoyInteractiveSvg(comparison) {
         const timeAttr = kind === "trough" ? "data-latest-trough-time" : "data-latest-peak-time";
         const className = kind === "trough" ? "gfs-latest-trough-marker" : "gfs-latest-peak-marker";
         svgParts.push(
-          '<g class="' + className + '" ' + valueAttr + '="' + svgEscape(label) +
-          '" ' + timeAttr + '="' + svgEscape(timeLabel) + '">',
-          '<circle cx="' + Number(pointX).toFixed(3) + '" cy="' + pointY +
-          '" r="5.2" fill="' + item.color + '" stroke="#F7FDFF" stroke-width="1.4"/>',
-          '<rect x="' + Number(place.boxX).toFixed(3) + '" y="' + Number(place.boxY).toFixed(3) +
-          '" width="' + place.labelWidth.toFixed(1) + '" height="16" rx="3" fill="#0A1B29" fill-opacity=".88"/>',
-          '<text x="' + Number(place.labelX).toFixed(3) + '" y="' + Number(place.labelY).toFixed(3) +
-          '" text-anchor="' + (place.nearRight ? "end" : "start") +
-          '" fill="#F7FDFF" font-size="11" font-weight="800" font-family="' + FONT + '">' +
-          svgEscape(label) + '</text>',
+          '<g class="' + className + '" ' + valueAttr + '="' + svgEscape(label) + '" ' + timeAttr + '="' + svgEscape(timeLabel) + '">',
+          '<circle cx="' + Number(pointX).toFixed(3) + '" cy="' + pointY + '" r="5.2" fill="' + item.color + '" stroke="#F7FDFF" stroke-width="1.4"/>',
+          '<rect x="' + Number(place.boxX).toFixed(3) + '" y="' + Number(place.boxY).toFixed(3) + '" width="' + place.labelWidth.toFixed(1) + '" height="16" rx="3" fill="#0A1B29" fill-opacity=".88"/>',
+          '<text x="' + Number(place.labelX).toFixed(3) + '" y="' + Number(place.labelY).toFixed(3) + '" text-anchor="' + (place.nearRight ? "end" : "start") + '" fill="#F7FDFF" font-size="11" font-weight="800" font-family="DM Sans,sans-serif">' + svgEscape(label) + '</text>',
           '</g>'
         );
         return { box: place.box, x: pointX, y: pointY };
       };
+
       if (latest) {
         const peak = pushExtremeMarker("peak", latestPeak, []);
-        const avoid = [];
-        if (peak) {
-          avoid.push(peak.box);
-          avoid.push({ x: peak.x - 8, y: peak.y - 8, width: 16, height: 16 });
-        }
+        const avoid = peak ? [peak.box, { x: peak.x - 8, y: peak.y - 8, width: 16, height: 16 }] : [];
         pushExtremeMarker("trough", latestTrough, avoid);
       }
+
       panelSeries.push({
         label: item.label,
         color: item.color,
-        lead_hours: forecastHours,
+        lead_hours: validTimeKeys.map(key => {
+          const point = item.points.get(key);
+          return point && Number.isFinite(Number(point.forecast_hour)) ? Number(point.forecast_hour) : null;
+        }),
         values,
         y_positions: yPositions,
         directions_deg: directions,
@@ -758,10 +781,9 @@ export function buildKoyInteractiveSvg(comparison) {
     });
 
     if (!allValues.length) {
-      svgParts.push(
-        '<text x="' + (plotX + plotWidth / 2) + '" y="' + (plotY + plotHeight / 2) + '" text-anchor="middle" fill="#E7F2F6" font-size="13" font-family="system-ui,-apple-system,BlinkMacSystemFont,Segoe UI,sans-serif">Bu değişken için veri yok</text>'
-      );
+      svgParts.push('<text x="' + (plotX + plotWidth / 2) + '" y="' + (plotY + plotHeight / 2) + '" text-anchor="middle" fill="#9BB1BF" font-size="13" font-family="DM Sans,sans-serif">Bu değişken için veri yok</text>');
     }
+
     svgParts.push("</g>");
   });
 
