@@ -215,7 +215,7 @@
     .station-trend-source{font-size:8px;color:#91aab5;margin-top:4px;text-align:right;white-space:nowrap}
     .station-card .weather-stats{
       display:grid;
-      grid-template-columns:repeat(4,minmax(0,1fr));
+      grid-template-columns:repeat(3,minmax(0,1fr));
       gap:0;
       margin-top:12px;
       padding-top:9px;
@@ -265,6 +265,19 @@
     .station-card .stat .value{font-size:16px}
     .station-card .stat .unit{font-size:9px}
     .station-card .stat .detail{font-size:9px}
+    /* Live observation metrics: 3 columns × 2 rows on desktop, matching the requested compact dashboard layout. */
+    @media(min-width:851px){
+      .station-card .weather-stats{
+        grid-template-columns:repeat(3,minmax(0,1fr));
+        row-gap:9px;
+      }
+      .station-card .stat:nth-child(3){
+        border-right:0;
+      }
+      .station-card .stat:nth-child(4){
+        border-right:1px solid rgba(213,237,240,.11);
+      }
+    }
     @media(max-width:850px){.station-card{width:min(100%,480px)}}
     @media(max-width:560px){
       .station-overview{grid-template-columns:minmax(0,1fr) minmax(136px,42%);gap:9px;margin-top:9px}
