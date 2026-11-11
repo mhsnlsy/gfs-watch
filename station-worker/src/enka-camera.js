@@ -194,8 +194,13 @@ export function parseCameraOverlayText(metricLines, timeText) {
   const pressure = firstNumber(lines[2], /(\d{3,4}\.\d)/);
   const windKnots = firstNumber(lines[3], /(\d{1,2}\.\d)/);
   const windDirection = directionFrom(String(lines[3] || "").replace(/^.*?(\d{1,2}\.\d)/, ""));
-  const compactTime = String(timeText || "").replace(/[^0-9:-]/g, "");
-  const stamp = compactTime.match(/(\d{2})-(\d{2})-(\d{4})(\d{2}):(\d{2}):(\d{2})/);
+  const normalizedTime = String(timeText || "")
+    .replace(/[Oo]/g, "0")
+    .replace(/[Il]/g, "1")
+    .replace(/\s+/g, " ")
+    .trim();
+  const stamp = normalizedTime.match(/(\d{1,2})[-\/.](\d{1,2})[-\/.](\d{2,4})\s*(\d{1,2})[:.](\d{2})[:.](\d{2})/)
+    || normalizedTime.match(/(\d{2})(\d{2})(\d{4})\s*(\d{2})[:.](\d{2})[:.](\d{2})/);
   if (temperature == null || humidity == null || pressure == null || windKnots == null || !stamp) return null;
   if (temperature < -40 || temperature > 50) return null;
   if (humidity < 0 || humidity > 100) return null;
@@ -203,7 +208,8 @@ export function parseCameraOverlayText(metricLines, timeText) {
   if (windKnots < 0 || windKnots > 80) return null;
   const day = Number(stamp[1]);
   const month = Number(stamp[2]);
-  const year = Number(stamp[3]);
+  let year = Number(stamp[3]);
+  if (year < 100) year += 2000;
   const hour = Number(stamp[4]);
   const minute = Number(stamp[5]);
   const second = Number(stamp[6]);
@@ -230,31 +236,48 @@ export function recognizeCameraOverlay(jpegBytes) {
   // The ENKA camera overlay is a real image rather than a text endpoint.
   // Use several luminance thresholds so compression, glare and night/day
   // exposure changes do not make the backup OCR fail on a single threshold.
-  const thresholds = [160, 180, 200, 220];
+  const thresholds = [150, 160, 175, 190, 205, 220, 235];
+  const metricRegions = [
+    [0.72, 0.70, 1.00, 0.99],
+    [0.76, 0.68, 1.00, 0.99],
+    [0.68, 0.72, 1.00, 0.99],
+    [0.55, 0.65, 1.00, 0.99]
+  ];
+  const timeRegions = [
+    [0.00, 0.72, 0.72, 0.99],
+    [0.20, 0.68, 0.90, 0.99],
+    [0.00, 0.55, 1.00, 0.99]
+  ];
   let lastMetrics = [];
   let lastTimeText = "";
 
   for (const threshold of thresholds) {
-    const metrics = readRegion(
-      luma, width, height,
-      Math.floor(width * 0.78),
-      Math.floor(height * 0.74),
-      width - 1,
-      Math.floor(height * 0.97),
-      threshold
-    );
-    const timeLines = readRegion(
-      luma, width, height,
-      280, 560, 540, height - 1,
-      threshold
-    );
-    const timeText = timeLines[0] || "";
-    lastMetrics = metrics;
-    lastTimeText = timeText;
-
-    const reading = parseCameraOverlayText(metrics, timeText);
-    if (reading) {
-      return { ...reading, metric_lines: metrics, time_text: timeText, ocr_threshold: threshold };
+    for (const mr of metricRegions) {
+      const metrics = readRegion(
+        luma, width, height,
+        Math.floor(width * mr[0]),
+        Math.floor(height * mr[1]),
+        Math.floor(width * mr[2]),
+        Math.floor(height * mr[3]),
+        threshold
+      );
+      lastMetrics = metrics;
+      for (const tr of timeRegions) {
+        const timeLines = readRegion(
+          luma, width, height,
+          Math.floor(width * tr[0]),
+          Math.floor(height * tr[1]),
+          Math.floor(width * tr[2]),
+          Math.floor(height * tr[3]),
+          threshold
+        );
+        const timeText = timeLines.join(" ");
+        lastTimeText = timeText;
+        const reading = parseCameraOverlayText(metrics, timeText);
+        if (reading) {
+          return { ...reading, metric_lines: metrics, time_text: timeText, ocr_threshold: threshold };
+        }
+      }
     }
   }
 
