@@ -49,7 +49,7 @@ assert.equal("precipitation_daily_mm" in parsed, false);
 
 const observation = observationFromCameraReading(parsed, 20, Date.parse("2026-11-11T04:38:00.000Z"));
 assert.equal(observation.observation_method, "enka-camera-overlay");
-assert.equal(observation.source, "ENKA kamera · yedek kaynak");
+assert.equal(observation.source, "ENKA · OCR");
 assert.equal(observation.is_stale, false);
 assert.equal(observation.status, "live");
 assert.equal(observation.wind_speed_10m_kmh, 3.1);
