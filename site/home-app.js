@@ -1030,7 +1030,9 @@
       // Rainfall source: Balmumcu uses Şişli MGM; Eyüpsultan and Şişli use their own MGM observation.
       const rainSource=activeStation==="enka"||activeStation==="sisli"?sisliStationObservation:eyupsultanStationObservation;
       const rain1h=rainSource&&typeof rainSource.precipitation_1h_mm==="number"?rainSource.precipitation_1h_mm:null;
-      $("rain").innerHTML=numeric(rain1h)?fmt(rain1h,1)+'<span class="unit">mm</span>':'—<span class="unit">mm</span>';\n      setStationWeatherIcon(numeric(rain1h)?rain1h:0,new Date());
+      $("rain").innerHTML=numeric(rain1h)?fmt(rain1h,1)+'<span class="unit">mm</span>':'—<span class="unit">mm</span>';
+      window.__stationRain1h=numeric(rain1h)?rain1h:0;
+      setStationWeatherIcon(window.__stationRain1h,new Date());
       const rainBriefCurrent=$("rain-brief-current");
       if(rainBriefCurrent){
         if(numeric(rain1h)){
@@ -1095,10 +1097,8 @@
       const d=now instanceof Date?now:new Date();
       const sky=skyApi.istanbulSky(d);
       if(line)line.textContent=sky.text;
-      const station=activeStation==="enka"?enkaStationObservation:activeStation==="sisli"?sisliStationObservation:eyupsultanStationObservation;
-      const rain=station&&typeof station.precipitation_1h_mm==="number"?station.precipitation_1h_mm:0;
-      setStationWeatherIcon(rain,d);
-    }
+      const rain=typeof window.__stationRain1h==="number"?window.__stationRain1h:0;
+      setStationWeatherIcon(rain,d);    }
     updateStationSky();
     window.setInterval(updateStationSky,60000);
     function renderStationGap(){
