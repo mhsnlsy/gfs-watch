@@ -224,6 +224,11 @@ function normalizeDocument(candidate, now) {
         (series("wind10mdir").length ? series("wind10mdir") : series("winddir10m")), i
       ),
       wind_speed_850hpa_kmh: asNumber(series("wind850"), i),
+      wind_direction_850hpa_deg: asNumber(
+        (series("wind850mdir").length ? series("wind850mdir") :
+         series("wind850dir").length ? series("wind850dir") :
+         series("winddir850")), i
+      ),
       precipitation_6h_mm: asNumber(series("apcp"), i),
       // MeteoPT "SnowLn" is the model snow-line altitude in metres.
       snowln: asNumber(snowlineSeries.values, i),
