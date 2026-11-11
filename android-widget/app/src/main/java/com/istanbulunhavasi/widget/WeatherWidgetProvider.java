@@ -45,7 +45,6 @@ public class WeatherWidgetProvider extends AppWidgetProvider {
             JSONObject station = null, gfs = null;
             try { station = new JSONObject(fetch(STATION_URL)); } catch (Exception ignored) {}
             try { gfs = new JSONObject(fetch(GFS_URL)); } catch (Exception ignored) {}
-
             RemoteViews rv = buildViews(context, station, gfs);
             new Handler(Looper.getMainLooper()).post(() -> manager.updateAppWidget(widgetId, rv));
         });
@@ -60,8 +59,7 @@ public class WeatherWidgetProvider extends AppWidgetProvider {
                 rv.setTextViewText(R.id.temp, fmt(s.optDouble("temperature_2m_c", Double.NaN), 1) + "°");
                 rv.setTextViewText(R.id.feels, "Hissedilen " + fmt(apparent(s), 1) + "°");
                 String wind = fmt(s.optDouble("wind_speed_10m_kmh", Double.NaN), 0) + " km/sa " + s.optString("wind_direction_cardinal", "");
-                String details = "Rüzgâr " + wind + " · Nem " + fmt(s.optDouble("humidity_percent", Double.NaN), 0) + "%";
-                rv.setTextViewText(R.id.details, details);
+                rv.setTextViewText(R.id.details, "Rüzgâr " + wind + " · Nem " + fmt(s.optDouble("humidity_percent", Double.NaN), 0) + "%");
                 rv.setTextViewText(R.id.rain_now, "Yağış " + fmt(s.optDouble("precipitation_1h_mm", Double.NaN), 1) + " mm");
                 rv.setTextViewText(R.id.updated, "son ölçüm " + clock(s.optString("observed_at_utc", "")));
             } else {
@@ -70,17 +68,16 @@ public class WeatherWidgetProvider extends AppWidgetProvider {
 
             if (gfs != null) {
                 JSONArray days = gfs.optJSONArray("daily_summary");
-                if (days != null) {
-                    for (int i = 0; i < 4; i++) {
-                        if (i < days.length()) {
-                            JSONObject d = days.getJSONObject(i);
-                            int id = dayId(i);
-                            rv.setTextViewText(id, dayLabel(d.optString("date_istanbul", "")));
-                            rv.setTextViewText(id + 100, rainText(d.optDouble("precipitation_total_mm", 0)));
-                            rv.setTextViewText(id + 200, tempRange(d));
-                        } else {
-                            clearDay(rv, i);
-                        }
+                for (int i = 0; i < 4; i++) {
+                    if (days != null && i < days.length()) {
+                        JSONObject d = days.getJSONObject(i);
+                        rv.setTextViewText(dateId(i), dayLabel(d.optString("date_istanbul", "")));
+                        rv.setTextViewText(rainId(i), rainText(d.optDouble("precipitation_total_mm", 0)));
+                        rv.setTextViewText(tempId(i), tempRange(d));
+                    } else {
+                        rv.setTextViewText(dateId(i), "—");
+                        rv.setTextViewText(rainId(i), "☂ —");
+                        rv.setTextViewText(tempId(i), "— / —");
                     }
                 }
             }
@@ -91,13 +88,9 @@ public class WeatherWidgetProvider extends AppWidgetProvider {
         return rv;
     }
 
-    // Widget layout uses dynamically addressed child IDs defined below by generated helper views.
-    private static int dayId(int i) { return new int[]{R.id.day1, R.id.day2, R.id.day3, R.id.day4}[i]; }
-
-    private static void clearDay(RemoteViews rv, int i) {
-        int root = dayId(i);
-        rv.setTextViewText(root, "");
-    }
+    private static int dateId(int i) { return new int[]{R.id.day1_date,R.id.day2_date,R.id.day3_date,R.id.day4_date}[i]; }
+    private static int rainId(int i) { return new int[]{R.id.day1_rain,R.id.day2_rain,R.id.day3_rain,R.id.day4_rain}[i]; }
+    private static int tempId(int i) { return new int[]{R.id.day1_temp,R.id.day2_temp,R.id.day3_temp,R.id.day4_temp}[i]; }
 
     private static String fetch(String urlString) throws Exception {
         HttpURLConnection c = (HttpURLConnection) new URL(urlString).openConnection();
@@ -118,29 +111,29 @@ public class WeatherWidgetProvider extends AppWidgetProvider {
         double rh = s.optDouble("humidity_percent", Double.NaN);
         double w = s.optDouble("wind_speed_10m_kmh", Double.NaN);
         if (Double.isNaN(t)) return Double.NaN;
+        if (Double.isNaN(rh)) return t;
         double e = (rh / 100.0) * 6.105 * Math.exp(17.27 * t / (237.7 + t));
-        double td = 237.7 * Math.log(Math.max(e, 0.01) / 6.105) / (17.27 - Math.log(Math.max(e, 0.01) / 6.105));
-        double heat = 0.5 * (t + td);
+        double ln = Math.log(Math.max(e, 0.01) / 6.105);
+        double td = 237.7 * ln / (17.27 - ln);
         if (t <= 10 && w > 4.8) {
             double windMs = w / 3.6;
             return 13.12 + 0.6215*t - 11.37*Math.pow(windMs, 0.16) + 0.3965*t*Math.pow(windMs,0.16);
         }
-        return heat;
+        return 0.5 * (t + td);
     }
 
     private static String fmt(double v, int digits) {
         if (Double.isNaN(v) || Double.isInfinite(v)) return "—";
-        DecimalFormat f = digits == 0 ? new DecimalFormat("0") : new DecimalFormat("0.0");
+        DecimalFormat f = new DecimalFormat(digits == 0 ? "0" : "0.0");
         return f.format(v);
     }
 
     private static String clock(String iso) {
         if (iso == null || iso.length() < 16) return "—";
         try {
-            String hhmm = iso.substring(11,16);
-            int h = Integer.parseInt(hhmm.substring(0,2)) + 3;
+            int h = Integer.parseInt(iso.substring(11,13)) + 3;
             if (h >= 24) h -= 24;
-            return String.format(Locale.ROOT, "%02d:%s TSİ", h, hhmm.substring(3));
+            return String.format(Locale.ROOT, "%02d:%s TSİ", h, iso.substring(14,16));
         } catch (Exception e) { return "—"; }
     }
 
@@ -150,13 +143,11 @@ public class WeatherWidgetProvider extends AppWidgetProvider {
     }
 
     private static String rainText(double mm) {
-        if (Double.isNaN(mm)) return "—";
         return "☂ " + fmt(mm,1) + " mm";
     }
 
     private static String tempRange(JSONObject d) {
-        double hi = d.optDouble("temperature_max_c", Double.NaN);
-        double lo = d.optDouble("temperature_min_c", Double.NaN);
-        return fmt(hi,0) + "° / " + fmt(lo,0) + "°";
+        return fmt(d.optDouble("temperature_max_c", Double.NaN),0) + "° / " +
+               fmt(d.optDouble("temperature_min_c", Double.NaN),0) + "°";
     }
 }
