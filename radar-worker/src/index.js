@@ -1,3 +1,5 @@
+import { tomorrowLocalWind } from "../../shared/tomorrow-local-wind.js";
+
 // RADAR CRON LIVE — Cloudflare Paid
 // Same monitored centre as the "Radar Uyarı" bot (Istanbul, Fatih).
 const LAT = 41.015;
@@ -443,9 +445,11 @@ async function twFetchRun(run){
   const cycle=new Date(Date.UTC(+digits.slice(0,4),+digits.slice(4,6)-1,+digits.slice(6,8),+digits.slice(8,10)));
   const d=doc.data, tmp=(d.tmp2m&&d.tmp2m.values)||[], apcp=(d.apcp&&d.apcp.values)||[];
   const clouds=((d.tcdc&&d.tcdc.values)||(d.clouds&&d.clouds.values)||[]);
+  const wind=(d.wind10m&&d.wind10m.values)||[];
+  const windDir=(d.wind10mdir&&d.wind10mdir.values)||(d.winddir10m&&d.winddir10m.values)||[];
   const points=[];
   doc.steps.values.forEach((s,i)=>{ const lead=twFinite(s); if(lead===null||lead<=0) return; const valid=new Date(cycle.getTime()+lead*3600000);
-    points.push({lead,valid,date:twDateKey(valid),hour:twHour(valid),temp:twFinite(tmp[i]),precip:twFinite(apcp[i]),clouds:twFinite(clouds[i])}); });
+    points.push({lead,valid,date:twDateKey(valid),hour:twHour(valid),temp:twFinite(tmp[i]),precip:twFinite(apcp[i]),clouds:twFinite(clouds[i]),wind:twFinite(wind[i]),windDir:twFinite(windDir[i])}); });
   return {digits,cycle,points};
 }
 async function buildTomorrowWeather(nowDate=new Date()){
@@ -467,9 +471,10 @@ async function buildTomorrowWeather(nowDate=new Date()){
   const weatherLabel=rainTomorrow?"yağmurlu":(cloudPoint&&twCloudLabel(cloudPoint.clouds))||"bulutlu";
   const delta=tomorrowMax-todayMax;
   const tempSentence=Math.abs(delta)<0.05?"bugünle aynı sıcaklıkta":"bugünden "+twFmt(delta)+"°C daha "+(delta>0?"sıcak":"soğuk");
-  const summary="Yarın hava "+twFmt(tomorrowMax)+"°C, "+tempSentence+", "+weatherLabel+".";
+  const localWind=tomorrowLocalWind(main.points.filter(p=>p.date===tomorrow).map(p=>({speed:p.wind,direction:p.windDir})));
+  const summary="Yarın hava "+twFmt(tomorrowMax)+"°C, "+tempSentence+", "+weatherLabel+(localWind?", "+localWind.phrase:"")+".";
   const title="İstanbul";
-  return {title,summary,text:"🌤️ "+title+"\n\n"+summary,metadata:{run_id_utc:main.cycle.toISOString(),source,forecast_date_istanbul:tomorrow,today_max_c:todayMax,tomorrow_max_c:tomorrowMax,delta_c:Math.round(delta*10)/10,clouds_percent:cloudPoint?cloudPoint.clouds:null,precipitation_expected:rainTomorrow}};
+  return {title,summary,text:"🌤️ "+title+"\n\n"+summary,metadata:{run_id_utc:main.cycle.toISOString(),source,forecast_date_istanbul:tomorrow,today_max_c:todayMax,tomorrow_max_c:tomorrowMax,delta_c:Math.round(delta*10)/10,clouds_percent:cloudPoint?cloudPoint.clouds:null,precipitation_expected:rainTomorrow,local_wind:localWind?localWind.phrase:null,local_wind_max_kmh:localWind?localWind.max_speed_kmh:null,local_wind_direction_deg:localWind?localWind.direction_deg:null}};
 }
 async function telegramPlain(env,text){
   if(!env.TELEGRAM_TOKEN||!env.CHAT_ID)return {ok:false,status:0,body:"telegram credentials missing"};

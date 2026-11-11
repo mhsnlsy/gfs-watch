@@ -78,6 +78,9 @@ jobs:
       - name: Test 5-day temperature swings and rain hours
         run: node scripts/test_briefing_swings.mjs
 
+      - name: Test tomorrow local wind phrase
+        run: node scripts/test_tomorrow_local_wind.mjs
+
       - name: Test Istanbul worker publication
         run: node scripts/test_istanbul_worker_publication.mjs
 

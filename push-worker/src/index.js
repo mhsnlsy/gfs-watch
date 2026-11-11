@@ -1,4 +1,5 @@
 import webPush from "web-push";
+import { tomorrowLocalWind } from "../../shared/tomorrow-local-wind.js";
 
 const DEFAULT_ORIGIN = "https://gfs-watch-web.muhsin-ulusoy.workers.dev";
 const GFS_12Z_URL = "https://api.meteopt.com/gfs/json?lat=41.014&lon=28.95&run=12&lang=en";
@@ -91,6 +92,8 @@ async function buildTomorrowWeather() {
   const temps = doc.data?.tmp2m?.values || [];
   const precip = doc.data?.apcp?.values || [];
   const clouds = doc.data?.clouds?.values || [];
+  const wind = doc.data?.wind10m?.values || [];
+  const windDir = doc.data?.wind10mdir?.values || doc.data?.winddir10m?.values || [];
   const points = [];
 
   for (let i = 0; i < steps.length; i++) {
@@ -103,7 +106,9 @@ async function buildTomorrowWeather() {
       hour: localHour(valid),
       temp: toNumber(temps[i]),
       precip: toNumber(precip[i]),
-      clouds: toNumber(clouds[i])
+      clouds: toNumber(clouds[i]),
+      wind: toNumber(wind[i]),
+      windDir: toNumber(windDir[i])
     });
   }
 
@@ -142,7 +147,8 @@ async function buildTomorrowWeather() {
     ? "bugünle aynı sıcaklıkta"
     : "bugünden " + formatTemperature(delta) + "°C daha " + (delta > 0 ? "sıcak" : "soğuk");
 
-  const body = "Yarın hava " + formatTemperature(tomorrowMax) + "°C, " + comparison + ", " + weather + ".";
+  const localWind = tomorrowLocalWind(points.filter(p => p.date === tomorrow).map(p => ({ speed: p.wind, direction: p.windDir })));
+  const body = "Yarın hava " + formatTemperature(tomorrowMax) + "°C, " + comparison + ", " + weather + (localWind ? ", " + localWind.phrase : "") + ".";
 
   return {
     run: digits + "Z",
