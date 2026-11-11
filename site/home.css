@@ -4639,3 +4639,19 @@ main.shell { padding-bottom:max(12px,env(safe-area-inset-bottom)); }
     margin-bottom:-5%!important;
   }
 }
+
+
+/* Moon phase badge: place directly below the live measurement badge. */
+.weather-top-right{
+  display:flex;
+  flex-direction:column;
+  align-items:flex-end;
+  gap:8px;
+}
+.weather-top-right .moon-phase{
+  margin-left:0;
+  justify-content:flex-end;
+}
+@media(max-width:560px){
+  .weather-top-right{gap:6px}
+}
