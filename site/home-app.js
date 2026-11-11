@@ -1544,9 +1544,9 @@
       const stepH=gaps.length?gaps[Math.floor(gaps.length/2)]:3;
       const cover=(startHour,endHour)=>{
         if(startHour>=18&&endHour>=18)return "akşam";
-        if(startHour>=18&&endHour<=5)return "gece";
+        if(startHour>=18&&endHour<=5)return "";
         if(endHour>=18&&startHour<18)return "öğleden sonra–akşam";
-        if(endHour<=5)return "gece";
+        if(endHour<=5)return "";
         if(startHour>=6&&endHour<=11)return "sabah";
         if(startHour>=12&&endHour<=17)return "öğleden sonra";
         if(startHour>=18)return "akşam";
