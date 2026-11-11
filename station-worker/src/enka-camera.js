@@ -189,11 +189,24 @@ function directionFrom(text) {
 
 export function parseCameraOverlayText(metricLines, timeText) {
   const lines = Array.isArray(metricLines) ? metricLines : [];
-  const temperature = firstNumber(lines[0], /(\d{1,2}\.\d)/);
-  const humidity = firstNumber(lines[1], /(\d{1,3})/);
-  const pressure = firstNumber(lines[2], /(\d{3,4}\.\d)/);
-  const windKnots = firstNumber(lines[3], /(\d{1,2}\.\d)/);
-  const windDirection = directionFrom(String(lines[3] || "").replace(/^.*?(\d{1,2}\.\d)/, ""));
+  const metricsText = lines.join(" | ");
+
+  // Do not depend on the overlay being segmented into exactly four OCR lines.
+  // Camera compression/exposure can merge or split glyph bands, so parse the
+  // measurements from the complete metric region as well.
+  const temperature = firstNumber(metricsText, /(-?\d{1,2}[.,]\d)\s*(?:°|º|C)?/i);
+  const humidityMatch = metricsText.match(/(\d{1,3})\s*%/);
+  const pressureMatch = metricsText.match(/(\d{3,4}[.,]\d)\s*(?:hPa)?/i);
+  const windMatch = metricsText.match(/(\d{1,2}[.,]\d)\s*(?:kt|kts|knots)?\s*([NSEW]{1,3})?/i);
+
+  const humidity = humidityMatch ? Number(humidityMatch[1]) : firstNumber(lines[1], /(\d{1,3})/);
+  const pressure = pressureMatch ? Number(pressureMatch[1].replace(",", ".")) : firstNumber(lines[2], /(\d{3,4}[.,]\d)/);
+  const windKnots = windMatch ? Number(windMatch[1].replace(",", ".")) : firstNumber(lines[3], /(\d{1,2}[.,]\d)/);
+  const windDirection = directionFrom(
+    (windMatch && windMatch[2]) ||
+    String(lines[3] || "").replace(/^.*?(\d{1,2}[.,]\d)/, "")
+  );
+
   const normalizedTime = String(timeText || "")
     .replace(/[Oo]/g, "0")
     .replace(/[Il]/g, "1")
@@ -201,11 +214,13 @@ export function parseCameraOverlayText(metricLines, timeText) {
     .trim();
   const stamp = normalizedTime.match(/(\d{1,2})[-\/.](\d{1,2})[-\/.](\d{2,4})\s*(\d{1,2})[:.](\d{2})[:.](\d{2})/)
     || normalizedTime.match(/(\d{2})(\d{2})(\d{4})\s*(\d{2})[:.](\d{2})[:.](\d{2})/);
+
   if (temperature == null || humidity == null || pressure == null || windKnots == null || !stamp) return null;
   if (temperature < -40 || temperature > 50) return null;
   if (humidity < 0 || humidity > 100) return null;
   if (pressure < 900 || pressure > 1100) return null;
   if (windKnots < 0 || windKnots > 80) return null;
+
   const day = Number(stamp[1]);
   const month = Number(stamp[2]);
   let year = Number(stamp[3]);
@@ -215,6 +230,7 @@ export function parseCameraOverlayText(metricLines, timeText) {
   const second = Number(stamp[6]);
   const observedAt = new Date(Date.UTC(year, month - 1, day, hour, minute, second) - 3 * 60 * 60 * 1000);
   if (!Number.isFinite(observedAt.getTime())) return null;
+
   return {
     temperature_c: temperature,
     humidity_percent: humidity,
@@ -224,7 +240,6 @@ export function parseCameraOverlayText(metricLines, timeText) {
     observed_at_utc: observedAt.toISOString()
   };
 }
-
 export function recognizeCameraOverlay(jpegBytes) {
   const decoded = jpeg.decode(jpegBytes, { useTArray: true, formatAsRGBA: true });
   const { width, height, data } = decoded;
