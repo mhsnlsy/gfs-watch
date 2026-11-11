@@ -172,6 +172,7 @@ def main() -> None:
     assert "push:" not in koy_svg_workflow
     assert "comparison.svg" in koy_svg_workflow
     assert "cloudflare-js-v9-homepage-identical" in koy_svg_workflow
+    assert "node scripts/test_koy_worker_publication.mjs" in koy_deploy
     assert "cloudflare-js-v9-homepage-identical" in platform_workflow
     assert "cloudflare-js-v5-raw-forecast-hour" not in platform_workflow
 
