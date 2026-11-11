@@ -477,7 +477,7 @@ jobs:
           const fs = require("fs");
           const [gfs, koy, koyComparison, health, stations, history] = process.argv.slice(2).map(file => JSON.parse(fs.readFileSync(file, "utf8")));
           if (!["gfs-watch.forecast.v1", "gfs-watch.forecast.v2"].includes(gfs.schema) || !Array.isArray(gfs.comparison_runs) ||
-              !Array.isArray(gfs.forecast_6_hourly) || gfs.forecast_6_hourly.length < 40) {
+              !Array.isArray(gfs.forecast_6_hourly) || gfs.forecast_6_hourly.length < 24 || Number(gfs.forecast_horizon_hours || 0) < 72) {
             throw new Error("Istanbul GFS gateway failed");
           }
           if (!Array.isArray(koy.forecast_6_hourly) || koy.forecast_6_hourly.length < 12) throw new Error("Köy legacy F72 gateway failed");
