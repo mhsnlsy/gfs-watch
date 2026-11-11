@@ -2655,6 +2655,265 @@ html.ios12 h1{font-size:48px!important;}
   }
 }
 </style>
+<style id="koy-home-typography-final">
+/* FINAL TYPOGRAPHY PARITY: all font/font-size declarations from homepage CSS,
+   appended last so Köy-specific earlier overrides cannot change them. */
+.brand{font-size:18px;}
+.brand small{font:500 10px "DM Sans",sans-serif;}
+nav{font-size:13px;}
+.version{font-size:11px;}
+.eyebrow{font-size:11px;}
+h1{font:800 clamp(36px,5.3vw,62px)/1.04 Manrope,sans-serif;}
+.intro{font-size:15px;}
+.meta-chip{font-size:11px;}
+.station-alert{font-size:11px;}
+.label{font-size:10px;}
+.place{font:700 18px Manrope,sans-serif;}
+.model-state{font-size:10px;}
+.temperature{font:700 clamp(55px,7vw,76px)/1 Manrope,sans-serif;}
+.weather-symbol{font-size:45px;}
+.temp-caption{font-size:12px;}
+.stat .name{font-size:10px;}
+.stat .value{font:700 19px Manrope,sans-serif;}
+.stat .unit{font:500 10px "DM Sans",sans-serif;}
+.section-kicker{font-size:10px;}
+h2{font:700 23px Manrope,sans-serif;}
+.section-note{font-size:11px;}
+.day-name{font-size:11px;}
+.day-icon{font-size:23px;}
+.day-range{font:700 14px Manrope,sans-serif;}
+.day-rain,.day-wind{font-size:10px;}
+.tab{font:600 11px "DM Sans",sans-serif;}
+.chart-empty{font-size:13px;}
+.pressure-list li{font-size:13px;}
+.pressure-icon{font-size:15px;}
+.pressure-explainer{font-size:12px;}
+.pressure-empty{font-size:12px;}
+.pressure-explainer{font-size:11px;}
+.info-card p{font-size:12px;}
+.source-row{font-size:10px;}
+.footer{font-size:11px;}
+.loading,.error{font-size:12px;}
+.delta-badge{font-size:11px;}
+.feels-like-24h-badge{font-size:9px;}
+@media(max-width:560px){.feels-like-24h-badge{font-size:8px;}}
+@media(max-width:560px){.rain-brief .delta-badge{font-size:10px;}}
+.dew-point{font-size:11px;}
+.stat .detail{font-size:9px;}
+@media(max-width:560px){.stat .name{font-size:9px;}}
+@media(max-width:560px){.stat .value{font-size:14px;}}
+@media(max-width:560px){.stat .detail{font-size:8px;}}
+@media(max-width:560px){.brand{font-size:15px;}}
+@media(max-width:560px){.version{font-size:10px;}}
+@media(max-width:560px){h1{font-size:42px;}}
+@media(max-width:560px){.temperature{font-size:64px;}}
+@media(max-width:560px){.stat .value{font-size:17px;}}
+@media(max-width:560px){.day-range{font-size:12px;}}
+.chart-title{font:700 18px Manrope,sans-serif;}
+.chart-subtitle,.chart-count{font-size:11px;}
+.section-description{font-size:12px;}
+.notification-card h3{font:700 17px Manrope,sans-serif;}
+.media-pending{font-size:11px;}
+@media(max-width:560px){.brand{font-size:14px;}}
+@media(max-width:560px){.brand small{font-size:8px;}}
+@media(max-width:560px){.version{font-size:9px;}}
+@media(max-width:560px){h1{font-size:clamp(38px,11vw,46px);}}
+@media(max-width:560px){.intro{font-size:13px;}}
+@media(max-width:560px){.meta-chip{font-size:10px;}}
+@media(max-width:560px){.label{font-size:9px;}}
+@media(max-width:560px){.place{font-size:16px;}}
+@media(max-width:560px){.model-state{font-size:9px;}}
+@media(max-width:560px){.temperature{font-size:60px;}}
+@media(max-width:560px){.weather-symbol{font-size:36px;}}
+@media(max-width:560px){.temp-caption{font-size:10px;}}
+@media(max-width:560px){.stat .name{font-size:9px;}}
+@media(max-width:560px){.stat .value{font-size:15px;}}
+@media(max-width:560px){.stat .unit{font-size:9px;}}
+@media(max-width:560px){h2{font-size:21px;}}
+@media(max-width:560px){.section-note{font-size:10px;}}
+@media(max-width:560px){.day-icon{font-size:20px;}}
+@media(max-width:560px){.day-name{font-size:10px;}}
+@media(max-width:560px){.day-range{font-size:13px;}}
+@media(max-width:560px){.day-rain,.day-wind{font-size:9px;}}
+@media(max-width:560px){.chart-title{font-size:16px;}}
+@media(max-width:560px){.chart-subtitle,.chart-count{font-size:9px;}}
+@media(max-width:560px){.notification-card h3{font-size:15px;}}
+@media(max-width:560px){.source-row{font-size:9px;}}
+@media(max-width:560px){.footer{font-size:10px;}}
+@media(max-width:560px){.topbar nav a{font-size:11px;}}
+#rainviewer-map .leaflet-control-attribution{font-size:9px;}
+.station-card .label{font-size:9px;}
+.station-card .place{font-size:16px;}
+.station-card .model-state{font-size:9px;}
+.station-card .temperature{font-size:clamp(42px,4.6vw,58px);}
+.station-card .weather-symbol{font-size:29px;}
+.station-card .temp-caption{font-size:9px;}
+.station-trend-title{font-size:8px;}
+.station-trend-unit{font-size:8px;}
+.station-trend-empty{font-size:9px;}
+.station-trend-source{font-size:8px;}
+.station-card .stat .name{font-size:8px;}
+.station-card .stat .value{font:700 14px/1.2 Manrope,sans-serif;}
+.station-card .stat .unit{font:500 8px "DM Sans",sans-serif;}
+.station-card .stat .detail{font-size:8px;}
+.station-card .station-alert{font-size:10px;}
+@media(max-width:560px){.station-card .temperature{font-size:clamp(39px,10.5vw,46px);}}
+@media(max-width:560px){.station-card .weather-symbol{font-size:23px;}}
+@media(max-width:560px){.station-trend-title{font-size:7px;}}
+@media(max-width:560px){.station-trend-source{font-size:7px;}}
+@media(max-width:560px){.station-card .stat .value{font-size:12px;}}
+@media(max-width:560px){.station-card .stat .detail{font-size:7px;}}
+.station-trend-title{font-size:9px;}
+.station-trend-unit{font-size:9px;}
+.station-trend-source{font-size:9px;}
+.station-card .stat .name{font-size:9px;}
+.station-card .stat .value{font-size:16px;}
+.station-card .stat .unit{font-size:9px;}
+.station-card .stat .detail{font-size:9px;}
+@media(max-width:560px){.station-trend-title{font-size:8px;}}
+@media(max-width:560px){.station-trend-unit{font-size:8px;}}
+@media(max-width:560px){.station-trend-source{font-size:8px;}}
+@media(max-width:560px){.station-card .stat .name{font-size:9px;}}
+@media(max-width:560px){.station-card .stat .value{font-size:14px;}}
+@media(max-width:560px){.station-card .stat .unit{font-size:8px;}}
+@media(max-width:560px){.station-card .stat .detail{font-size:8px;}}
+.chart-tooltip{font-size:10px;}
+.chart-tooltip-time{font-size:10px;}
+.chart-tooltip-value{font:700 13px Manrope,sans-serif;}
+.chart-tooltip-meta{font-size:9px;}
+@media(max-width:560px){.chart-tooltip{font-size:9px;}}
+@media(max-width:560px){.chart-tooltip-time{font-size:9px;}}
+@media(max-width:560px){.chart-tooltip-value{font-size:12px;}}
+@media(max-width:560px){.chart-tooltip-meta{font-size:8px;}}
+.dashboard-top .station-card .temperature{font-size:clamp(54px,5vw,72px);}
+.dashboard-top .station-card .temp-caption{font-size:11px;}
+.station-history-tooltip{font-size:11px;}
+.station-history-tooltip-time{font-size:10px;}
+.station-history-tooltip-value{font:700 15px Manrope,sans-serif;}
+.station-history-tooltip-detail{font-size:10px;}
+.history-panel-head h2{font-size:21px;}
+.history-chart-head h3{font:700 14px Manrope,sans-serif;}
+.history-chart-head p{font-size:9px;}
+.history-chart-icon{font:700 18px Manrope,sans-serif;}
+.history-chart-meta{font-size:9px;}
+.history-source-note{font-size:9px;}
+.model-picker button{font:700 11px "DM Sans",sans-serif;}
+.ecmwf-model-status{font-size:11px;}
+.ecmwf-summary-label{font-size:10px;}
+.ecmwf-summary-value{font:700 clamp(22px,3vw,30px)/1.15 Manrope,sans-serif;}
+.ecmwf-summary-spread{font-size:11px;}
+.ecmwf-table{font-size:12px;}
+.ecmwf-table th{font-size:10px;}
+.ecmwf-source-note{font-size:10px;}
+@media(max-width:720px){.model-picker button{font-size:10px;}}
+@media(max-width:560px){.model-picker button{font-size:9.5px;}}
+.station-switch button{font:700 10px "DM Sans",sans-serif;}
+@media(max-width:560px){.station-switch button{font-size:9px;}}
+.dashboard-left .history-panel-head h2{font-size:17px;}
+.dashboard-left .history-chart-head h3{font-size:12px;}
+.dashboard-left .history-chart-head p,.dashboard-left .history-chart-meta,.dashboard-left .history-source-note{font-size:8px;}
+.briefing-k{font-size:9px;}
+.briefing-v{font-size:12.5px;}
+.brief-temperature-source{font-size:9px;}
+.brief-spell{font-size:12.5px;}
+.brief-temp-swing{font-size:12.5px;}
+#brief-rain-lines,
+#brief-rain-lines .brief-spell,
+#brief-temperature-trend,
+#brief-temperature-trend .brief-temp-swing{font-size:10.5px;}
+.brief-meta{font-size:11px;}
+.dashboard-top .station-card .temperature{font-size:clamp(44px,4.8vw,62px);}
+.station-history-inline .history-panel-head h2{font-size:15px;}
+.station-history-inline .section-kicker{font-size:8px;}
+.station-history-inline .history-chart-head h3{font-size:10px;}
+.station-history-inline .history-chart-head p{font-size:7px;}
+.station-history-inline .history-chart-meta{font-size:7px;}
+.station-history-inline .history-source-note{font-size:7px;}
+.daily-grid .day-name{font-size:10px;}
+.daily-grid .day-icon{font-size:19px;}
+.daily-grid .day-range{font-size:12px;}
+.daily-grid .day-rain,.daily-grid .day-wind{font-size:8px;}
+@media(max-width:560px){.station-history-inline .history-chart-meta{font-size:6.5px;}}
+.station-history-tooltip{font-size:10px;}
+.station-history-tooltip-value{font-size:13px;}
+@media (min-width:1600px){h2{font-size:26px;}}
+@media (max-width:390px){.brand{font-size:13px;}}
+@media (max-width:390px){.brand small{font-size:7px;}}
+@media (max-width:390px){.model-picker button{font-size:9px;}}
+@media (max-width:390px){.dashboard-top .station-card .stat .value{font-size:11px;}}
+@media (max-width:390px){.station-switch button{font-size:8px;}}
+@media (max-width: 640px){.station-card .stat .name{font-size:6.5px !important;}}
+@media (max-width: 640px){.station-card .stat .value{font-size:11px !important;}}
+@media (max-width: 640px){.station-card .stat .detail{font-size:6px !important;}}
+@media (max-width: 640px){.station-card .stat .unit{font-size:6.5px !important;}}
+.station-card .stat .name{font-size:7px !important;}
+.station-card .stat .value{font-size:11px !important;}
+.station-card .stat .detail{font-size:6.5px !important;}
+.station-card .stat .unit{font-size:6.5px !important;}
+.dashboard-top .station-card .stat .name{font-size:11px!important;}
+.dashboard-top .station-card .stat .value{font-size:20px!important;}
+.dashboard-top .station-card .stat .unit{font-size:11px!important;}
+.dashboard-top .station-card .stat .detail{font-size:11px!important;}
+@media(max-width:1180px){.dashboard-top .station-card .stat .value{font-size:18px!important;}}
+@media(max-width:560px){.dashboard-top .station-card .stat .name{font-size:10px!important;}}
+@media(max-width:560px){.dashboard-top .station-card .stat .value{font-size:16px!important;}}
+@media(max-width:560px){.dashboard-top .station-card .stat .detail,.dashboard-top .station-card .stat .unit{font-size:10px!important;}}
+.dashboard-top .station-card .stat .name{font-size:11px!important;}
+.dashboard-top .station-card .stat .value{font-size:clamp(17px,1.5vw,21px)!important;}
+.dashboard-top .station-card .stat .unit{font-size:11px!important;}
+.dashboard-top .station-card .stat .detail{font-size:10px!important;}
+@media(max-width:900px){.dashboard-top .station-card .stat .name{font-size:10px!important;}}
+@media(max-width:900px){.dashboard-top .station-card .stat .value{font-size:16px!important;}}
+@media(max-width:900px){.dashboard-top .station-card .stat .unit,.dashboard-top .station-card .stat .detail{font-size:9px!important;}}
+@media(max-width:560px){.dashboard-top .station-card .stat .name{font-size:9px!important;}}
+@media(max-width:560px){.dashboard-top .station-card .stat .value{font-size:15px!important;}}
+@media(max-width:560px){.dashboard-top .station-card .stat .unit,.dashboard-top .station-card .stat .detail{font-size:8px!important;}}
+.gfs-chart-tooltip{font:12px/1.5 "DM Sans",system-ui,sans-serif;}
+.gfs-chart-tooltip-title{font-size:11px;}
+.gfs-chart-tooltip-time{font-size:12px;}
+.gfs-chart-tooltip-cycle{font-size:11px;}
+.gfs-chart-tooltip-lead{font-size:10px;}
+.gfs-chart-tooltip-value{font-size:13px;}
+.gfs-chart-tooltip-value small{font-size:10px;}
+.gfs-chart-tooltip-hint{font-size:9px;}
+.gfs-chart-loading,.gfs-chart-error{font:12px/1.5 "DM Sans",sans-serif;}
+@media (max-width: 600px){.gfs-chart-tooltip{font-size:9px;}}
+@media (max-width: 600px){.gfs-chart-tooltip-title{font-size:9px;}}
+@media (max-width: 600px){.gfs-chart-tooltip-time{font-size:9px;}}
+@media (max-width: 600px){.gfs-chart-tooltip-cycle{font-size:9px;}}
+@media (max-width: 600px){.gfs-chart-tooltip-lead{font-size:8px;}}
+@media (max-width: 600px){.gfs-chart-tooltip-value{font-size:11px;}}
+@media (max-width: 600px){.gfs-chart-tooltip-value small{font-size:8px;}}
+@media (max-width: 600px){.gfs-chart-tooltip-hint{font-size:7.5px;}}
+@media(max-width:700px){.gfs-chart-tooltip-time{font-size:11px;}}
+@media(max-width:600px){.gfs-chart-tooltip-time{font-size:9px;}}
+html.ios12 h1{font-size:48px!important;}
+html.ios12 .temperature{font-size:64px!important;}
+html.ios12 .station-card .temperature{font-size:56px!important;}
+@media(max-width:560px){html.ios12 h1{font-size:42px!important;}}
+html.ios12 h1{font-size:48px!important;}
+@media(max-width:700px){html.ios12 h1{font-size:40px!important;}}
+@media(max-width:700px){html.ios12 .temperature{font-size:58px!important;}}
+@media(max-width:390px){html.ios12 h1{font-size:36px!important;}}
+@media(max-width:390px){html.ios12 .temperature{font-size:52px!important;}}
+#pull-refresh-indicator{font:600 12px "DM Sans",sans-serif;}
+#pull-refresh-indicator .pull-refresh-icon{font-size:17px;}
+/* MOBILE UX FIX — iPhone / narrow touch screens
+   Keep desktop geometry unchanged. On narrow screens every primary control gets
+   a 44px touch target, station content stacks, and wide data visualizations
+   scroll inside their own bounded viewport instead of expanding the page. */
+@media (max-width: 700px), (pointer: coarse){font-size:9.5px!important;font-size:16px!important;font-size:11px!important;}
+@media (max-width:390px){.topbar nav a{font-size:11px!important;}}
+@media (max-width:390px){.station-switch button{font-size:10px!important;}}
+@media (max-width:390px){.dashboard-top .station-card .stat .value{font-size:15px!important;}}
+@media (max-width:390px){#meteopt-gfs-table .meteopt-data-table{font-size:7.5px!important;}}
+@media (max-width:390px){#meteopt-gfs-table .meteopt-data-table th{font-size:7.5px!important;}}
+@media (max-width:390px){.brand{font-size:13px;}}
+@media (max-width:390px){.brand small{font-size:7px;}}
+@media (max-width:390px){.model-picker button{font-size:9px;}}
+@media (orientation:landscape) and (max-height:600px) and (pointer:coarse){.topbar nav a{font-size:10px;}}
+@media(max-width:560px){.ecmwf-table{font-size:11px;}}
+</style>
 </body>
 </html>
 
