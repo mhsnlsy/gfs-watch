@@ -484,6 +484,25 @@ function svgRunLabel(value, latest) {
   return latest ? "YENİ · " + label : label;
 }
 
+function koyIsoMinute(value) {
+  const date = new Date(value);
+  return Number.isFinite(date.getTime()) ? date.toISOString().slice(0, 16) : null;
+}
+function koyLocalDate(value) {
+  return new Date(new Date(value).getTime() + 3 * 60 * 60 * 1000);
+}
+function koyPad2(value) {
+  return String(value).padStart(2, "0");
+}
+function koyFormatTrDate(date, includeTime = true) {
+  const base = koyPad2(date.getUTCDate()) + "." + koyPad2(date.getUTCMonth() + 1) + "." + date.getUTCFullYear();
+  return includeTime ? base + " " + koyPad2(date.getUTCHours()) + ":" + koyPad2(date.getUTCMinutes()) : base;
+}
+function koyFormatUtcDate(date) {
+  return koyPad2(date.getUTCDate()) + "." + koyPad2(date.getUTCMonth() + 1) + "." + date.getUTCFullYear() +
+    " " + koyPad2(date.getUTCHours()) + ":" + koyPad2(date.getUTCMinutes());
+}
+
 function buildKoySeries(runs) {
   const docs = (Array.isArray(runs) ? runs : [])
     .filter(run => run && run.run_id_utc && Array.isArray(run.forecast_6_hourly))
