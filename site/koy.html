@@ -2279,6 +2279,17 @@ html.ios12 .backdrop-filter{display:none}
 }
 </style>
 <style id="koy-home-desktop-final-parity">
+/* Köy briefing text: +1px desktop */
+@media (min-width:1200px) and (pointer:fine){
+  .dashboard-top>.station-briefing-inline .briefing-k,
+  .dashboard-top>.station-briefing-inline .briefing-v,
+  .dashboard-top>.station-briefing-inline #brief-rain-lines,
+  .dashboard-top>.station-briefing-inline #brief-temperature-trend,
+  .dashboard-top>.station-briefing-inline .brief-spell,
+  .dashboard-top>.station-briefing-inline .brief-temp-swing{
+    font-size:calc(1em + 1px)!important;
+  }
+}
 /* Köy desktop = homepage desktop geometry */
 @media (min-width:1200px) and (pointer:fine){
   main.shell{
