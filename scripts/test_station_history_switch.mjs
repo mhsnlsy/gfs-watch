@@ -43,7 +43,9 @@ function node(id) {
 
 const sandbox = {
   $: node,
-  window: { addEventListener() {} },
+  window: { addEventListener() {}, setInterval() { return 1; }, clearInterval() {} },
+  setInterval() { return 1; },
+  clearInterval() {},
   attachStationHistoryTooltip() {},
   document: {
     querySelector() { return null; },
