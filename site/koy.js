@@ -96,12 +96,13 @@ const HOME_ELEVATION_M=363;
 const MGM_STATION_ELEVATION_M=146;
 const HOME_DELTA_M=HOME_ELEVATION_M-MGM_STATION_ELEVATION_M;
 const HOME_STANDARD_LAPSE_K_PER_KM=6.5;
+const MGM_HOME_TEMP_CORRECTION_C=HOME_DELTA_M/1000*HOME_STANDARD_LAPSE_K_PER_KM;
 
 function buildVirtualHomeObservation(source){
  if(!source)return null;
  const t=num(source.temperature_2m_c),rh=num(source.humidity_percent),wind=num(source.wind_speed_10m_kmh);
  if(t==null)return null;
- const correctedT=Number((t-HOME_GFS_TEMP_CORRECTION_C).toFixed(1));
+ const correctedT=Number((t-MGM_HOME_TEMP_CORRECTION_C).toFixed(1));
  const p=num(source.pressure_hpa);
  let correctedP=null;
  if(p!=null){
@@ -115,7 +116,7 @@ function buildVirtualHomeHistory(source){
  const samples=source.samples.map(s=>{
   const t=num(s.temperature_2m_c),rh=num(s.humidity_percent),wind=num(s.wind_speed_10m_kmh);
   if(t==null)return null;
-  const correctedT=Number((t-HOME_GFS_TEMP_CORRECTION_C).toFixed(1));
+  const correctedT=Number((t-MGM_HOME_TEMP_CORRECTION_C).toFixed(1));
   const p=num(s.pressure_hpa);
   let correctedP=null;
   if(p!=null){const tk=t+273.15,tev=correctedT+273.15,L=HOME_STANDARD_LAPSE_K_PER_KM/1000;correctedP=Number((p*Math.pow(tev/tk,9.80665/(287.05*L))).toFixed(1));}
