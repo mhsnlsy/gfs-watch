@@ -254,7 +254,7 @@ async function fetchEnkaCamera(env) {
   console.log("[ENKA CAMERA OCR SUCCESS] temp=" + reading.temperature_c + "°C humidity=" + reading.humidity_percent + "% pressure=" + reading.pressure_hpa + "hPa wind=" + reading.wind_knots + "kt " + (reading.wind_direction_cardinal || "?") + " observed=" + reading.observed_at_utc);
   return observationFromCameraReading(reading, MAX_SOURCE_AGE_MINUTES);
 }
-async function fetchEnka() {
+async function fetchEnka(env) {
   let weatherlink = null;
   let weatherlinkError = null;
 
@@ -608,7 +608,7 @@ async function persistFailure(env, key, error) {
 }
 async function collectAll(env) {
   const tasks = await Promise.allSettled([
-    fetchEnka().then(value => ({ key: "enka", value })),
+    fetchEnka(env).then(value => ({ key: "enka", value })),
     fetchMgm("eyupsultan").then(value => ({ key: "eyupsultan", value })),
     fetchMgm("sisli").then(value => ({ key: "sisli", value })),
     fetchMgm("canakci").then(value => ({ key: "canakci", value }))
