@@ -152,6 +152,25 @@
     window.__METEOPT_CANONICAL_DATE_LABEL=meteoptCanonicalDateLabel;
     const forecastClockUTC=value=>meteoptCanonicalDateLabel(value).split(" · ")[1].replace(" TSİ","");
     const symbolFor=rain=>rain>=5?"🌧️":rain>=1?"🌦️":"⛅";
+    function setStationWeatherIcon(rain,now){
+      const el=$("weather-symbol");
+      if(!el)return;
+      const d=now instanceof Date?now:new Date();
+      const sky=window.IstanbulSky&&typeof window.IstanbulSky.istanbulSky==="function"
+        ?window.IstanbulSky.istanbulSky(d):null;
+      const night=!!(sky&&sky.night);
+      if(!night){
+        el.textContent=rain>=5?"🌧️":rain>=1?"🌦️":"⛅";
+        return;
+      }
+      const moonSvg=window.IstanbulSky&&typeof window.IstanbulSky.moonPhaseSvg==="function"
+        ?window.IstanbulSky.moonPhaseSvg(d):"🌑";
+      if(rain>=5){
+        el.innerHTML='<span class="station-weather-moon">'+moonSvg+'</span><span class="station-weather-rain">🌧️</span>';
+      }else{
+        el.innerHTML='<span class="station-weather-moon">'+moonSvg+'</span><span class="station-weather-cloud">☁️</span>';
+      }
+    }
     function renderDaily(items,targetId="daily-grid"){
       const grid=$(targetId);
       if(!Array.isArray(items)||!items.length){grid.innerHTML='<div class="chart-empty">Günlük tahmin verisi bulunamadı.</div>';return;}
@@ -1011,7 +1030,7 @@
       // Rainfall source: Balmumcu uses Şişli MGM; Eyüpsultan and Şişli use their own MGM observation.
       const rainSource=activeStation==="enka"||activeStation==="sisli"?sisliStationObservation:eyupsultanStationObservation;
       const rain1h=rainSource&&typeof rainSource.precipitation_1h_mm==="number"?rainSource.precipitation_1h_mm:null;
-      $("rain").innerHTML=numeric(rain1h)?fmt(rain1h,1)+'<span class="unit">mm</span>':'—<span class="unit">mm</span>';
+      $("rain").innerHTML=numeric(rain1h)?fmt(rain1h,1)+'<span class="unit">mm</span>':'—<span class="unit">mm</span>';\n      setStationWeatherIcon(numeric(rain1h)?rain1h:0,new Date());
       const rainBriefCurrent=$("rain-brief-current");
       if(rainBriefCurrent){
         if(numeric(rain1h)){
@@ -1072,17 +1091,13 @@
     function updateStationSky(now){
       const skyApi=window.IstanbulSky;
       const line=$("station-sun-times");
-      const moon=$("station-moon");
       if(!skyApi||typeof skyApi.istanbulSky!=="function")return;
-      const sky=skyApi.istanbulSky(now instanceof Date?now:new Date());
+      const d=now instanceof Date?now:new Date();
+      const sky=skyApi.istanbulSky(d);
       if(line)line.textContent=sky.text;
-      if(!moon)return;
-      moon.hidden=!sky.night;
-      if(!sky.night)return;
-      const icon=$("station-moon-icon");
-      const name=$("station-moon-name");
-      if(icon)icon.innerHTML=skyApi.moonPhaseSvg(now instanceof Date?now:new Date());
-      if(name)name.textContent=sky.moon.name;
+      const station=activeStation==="enka"?enkaStationObservation:activeStation==="sisli"?sisliStationObservation:eyupsultanStationObservation;
+      const rain=station&&typeof station.precipitation_1h_mm==="number"?station.precipitation_1h_mm:0;
+      setStationWeatherIcon(rain,d);
     }
     updateStationSky();
     window.setInterval(updateStationSky,60000);
