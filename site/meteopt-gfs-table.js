@@ -82,13 +82,10 @@
 
     if (!Number.isFinite(rawDate.getTime())) return "—";
 
-    // Use the same canonical clock as the live homepage forecast badges.
-    if (typeof window !== "undefined" && typeof window.__METEOPT_CANONICAL_DATE_LABEL === "function") {
-      return window.__METEOPT_CANONICAL_DATE_LABEL(rawDate.getTime());
-    }
-
-    // Fallback for standalone table rendering.
-    let date = new Date(rawDate.getTime() - 3 * 3600000);
+    // MeteoPT table convention: valid timestamp is shifted back 3h, then
+    // displayed as English abbreviated weekday + day + month + hour in TSİ.
+    // Example: Wed 11 Nov 15 TSİ
+    const date = new Date(rawDate.getTime() - 3 * 3600000);
 
     const datePart = new Intl.DateTimeFormat("en-GB", {
       timeZone: "Europe/Istanbul",
