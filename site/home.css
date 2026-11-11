@@ -4615,3 +4615,8 @@ main.shell { padding-bottom:max(12px,env(safe-area-inset-bottom)); }
     margin-right:-1.7%!important;
   }
 }
+
+/* Desktop: bring briefing text 1px closer to its heading */
+@media (min-width:561px){
+  .dashboard-briefing .briefing-row{gap:7px!important}
+}
