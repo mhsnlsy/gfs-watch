@@ -179,6 +179,7 @@ def main() -> None:
     # desktop/mobile view pipeline as the homepage Istanbul comparison.
     assert 'class="notification-card notification-chart-only koy-gfs-report-card"' in koy_html
     assert 'koy-homepage-report-parity' in koy_html
+    assert koy_html.index('home.css?v=20261111-koy-home-parity-1') < koy_html.index('koy-homepage-report-parity') < koy_html.index('</head>')
     assert 'width:90%!important' in koy_html
     assert 'koy-homepage-identical-v9' in koy_client
     assert 'buildMobileGfsPanelViews' in comparison_tooltip
