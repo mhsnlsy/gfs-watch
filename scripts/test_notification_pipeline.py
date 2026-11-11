@@ -36,6 +36,9 @@ def main() -> None:
     assert "METEOPT_GFS_API" in koy_worker
     assert "METEOPT_SOURCE_POLICY" in koy_worker
     koy_svg_workflow = read(".github/workflows/rebuild-koy-gfs-interactive-svg.yml")
+    koy_html = read("site/koy.html")
+    koy_client = read("site/koy.js")
+    comparison_tooltip = read("site/gfs-comparison-tooltip.js")
     istanbul_svg_workflow = read(".github/workflows/rebuild-istanbul-gfs-images.yml")
     koy_deploy = read(".github/workflows/deploy-koy-gfs-worker.yml")
     poller = read("scripts/poll_istanbul_gfs_10min.py")
@@ -168,6 +171,32 @@ def main() -> None:
     assert "push:" not in koy_svg_workflow
     assert "comparison.svg" in koy_svg_workflow
     assert "cloudflare-js-v9-homepage-identical" in koy_svg_workflow
+
+    # Köy uses the same SVG chart geometry, common-valid-time window and
+    # desktop/mobile view pipeline as the homepage Istanbul comparison.
+    assert 'class="notification-card notification-chart-only koy-gfs-report-card"' in koy_html
+    assert 'koy-homepage-report-parity' in koy_html
+    assert 'width:90%!important' in koy_html
+    assert 'cloudflare-js-v9-homepage-identical' in koy_client
+    assert 'buildMobileGfsPanelViews' in comparison_tooltip
+    assert 'isMobileGfsLayout()' in comparison_tooltip
+    assert 'attachGfsSvgInteractions' in comparison_tooltip
+    for geometry in [
+        "const W = 1152;",
+        "const H = 838;",
+        "const panelWidth = 505;",
+        "const panelHeight = 250;",
+        "const panelLeft = [55, 592];",
+        "const panelTop = [214, 493];",
+    ]:
+        assert geometry in koy_worker
+        assert geometry in gfs_publication
+    assert "common = common.filter(key => item.points.has(key))" in koy_worker
+    assert "common = common.filter(key => item.points.has(key))" in gfs_publication
+    assert "firstMs + 180 * 3600000" in koy_worker
+    assert "firstMs + 180 * 3600000" in gfs_publication
+    assert 'unit: "mm / 3 saat"' in koy_worker
+    assert 'data-gfs-series-run-id' in koy_worker
     assert "matplotlib" not in koy_svg_workflow.lower()
     assert "workflow_run:" not in platform_workflow
     assert "actions/workflows/istanbul-gfs-10min.yml/dispatches" not in gfs_worker
