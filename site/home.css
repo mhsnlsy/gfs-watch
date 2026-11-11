@@ -4655,3 +4655,11 @@ main.shell { padding-bottom:max(12px,env(safe-area-inset-bottom)); }
 @media(max-width:560px){
   .weather-top-right{gap:6px}
 }
+
+
+/* Move the new-moon badge 1px left. */
+@media (min-width:851px){
+  .weather-top-right .moon-phase{
+    transform:translateX(-1px);
+  }
+}
