@@ -177,7 +177,7 @@ def main() -> None:
     assert 'class="notification-card notification-chart-only koy-gfs-report-card"' in koy_html
     assert 'koy-homepage-report-parity' in koy_html
     assert 'width:90%!important' in koy_html
-    assert 'cloudflare-js-v9-homepage-identical' in koy_client
+    assert 'koy-homepage-identical-v9' in koy_client
     assert 'buildMobileGfsPanelViews' in comparison_tooltip
     assert 'isMobileGfsLayout()' in comparison_tooltip
     assert 'attachGfsSvgInteractions' in comparison_tooltip
