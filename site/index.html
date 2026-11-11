@@ -97,7 +97,18 @@
 
   <link rel="stylesheet" href="./home.css?v=20261111-mobile-gfs-center-1">
 <link rel="stylesheet" href="./header-common.css?v=20261110-shared-header-1">
-<!-- desktop-dashboard-width-cache --><!-- desktop-dashboard-width-600 --></head>
+<!-- desktop-dashboard-width-cache --><!-- desktop-dashboard-width-600 --><style id="pressure-center-dashboard-style">
+.pressure-center-dashboard{padding:18px}
+.pressure-summary{display:grid;grid-template-columns:1fr 1fr;gap:14px;margin-bottom:14px}
+.pressure-summary-block,.pressure-current{background:rgba(255,255,255,.025);border:1px solid rgba(255,255,255,.08);border-radius:12px;padding:12px}
+.pressure-summary-title{display:block;font-size:12px;font-weight:800;letter-spacing:.04em;margin-bottom:7px}
+.pressure-forecast-list{margin:0!important;padding-left:0!important;list-style:none}
+.pressure-forecast-list li{padding:4px 0;font-size:12px;line-height:1.35}
+.pressure-forecast-list em{font-style:normal;opacity:.65}
+.pressure-current .pressure-list{margin-top:4px}
+.pressure-impact{margin-top:12px;padding:10px 12px;border-radius:10px;background:rgba(255,255,255,.045);font-size:12px;line-height:1.45}
+@media(max-width:760px){.pressure-summary{grid-template-columns:1fr}.pressure-center-dashboard{padding:14px}}
+</style></head>
 <body>
   <header class="shell topbar">
     <a class="brand" href="/?station=eyupsultan" aria-label="İstanbul Havası · Şehir için hava tahmini"><span class="brand-mark" aria-hidden="true"><img src="/favicon-192x192.png?v=20261108-city-icon-3" alt="" width="38" height="38" style="display:block;width:100%;height:100%;object-fit:contain;border-radius:inherit"></span><span>İstanbul Havası<small>Şehir için hava tahmini</small></span></a>
@@ -181,14 +192,42 @@
       </div>
     </section>
 
-                <aside class="section gfs-pressure-panel" id="basinc">
+                <aside class="section gfs-pressure-panel" id="basinc" aria-label="Basınç merkezleri analizi">
               <div class="section-head">
                 <div>
-                  </div>
+                  <div class="section-kicker">GFS · BASINÇ MERKEZİ ANALİZİ</div>
+                  <h2>Basınç merkezleri · 120 saat</h2>
+                </div>
+                <div class="section-note">Anlık analiz + model tahmini<br>11–16 Kasım</div>
               </div>
-              <article class="pressure-card">
-                <div class="label">Bölgesel basınç merkezleri ve İstanbul'a etkisi</div>
-                <ul class="pressure-list" id="pressure-findings"><li class="loading">Analiz yükleniyor…</li></ul><div class="pressure-explainer">İstanbul merkezli 2500 km çapındaki alanda GFS deniz seviyesi basıncından belirlenen anlamlı merkezler. Eşikler: yüksek ≥1023 hPa · alçak ≤1013 hPa.</div>
+              <article class="pressure-card pressure-center-dashboard">
+                <div class="pressure-summary">
+                  <div class="pressure-summary-block">
+                    <span class="pressure-summary-title">🔴 Siklonlar</span>
+                    <ul class="pressure-list pressure-forecast-list" id="pressure-cyclone-forecast">
+                      <li><strong>11 Kas</strong> · Adriyatik / Kuzey Balkanlar · ~1010 hPa · <em>mevcut</em></li>
+                      <li><strong>12 Kas</strong> · Kuzey İtalya–Adriyatik · ~1000–1005 hPa · <em>güçleniyor</em></li>
+                      <li><strong>13 Kas</strong> · Adriyatik–İyon Denizi · ~1000–1005 hPa · <em>doğuya ilerliyor</em></li>
+                      <li><strong>14 Kas</strong> · Ege–Batı Anadolu · ~995–1005 hPa · <em>en etkili dönem</em></li>
+                      <li><strong>15 Kas</strong> · Batı/Orta Karadeniz · ~995–1005 hPa · <em>kuzeye çekiliyor</em></li>
+                      <li><strong>16 Kas</strong> · Karadeniz kuzeyi / Ukrayna · ~1000–1010 hPa · <em>zayıflıyor</em></li>
+                    </ul>
+                  </div>
+                  <div class="pressure-summary-block">
+                    <span class="pressure-summary-title">🔵 Yüksek basınç</span>
+                    <ul class="pressure-list pressure-forecast-list" id="pressure-high-forecast">
+                      <li><strong>11 Kas</strong> · Doğu Karadeniz · ~1022 hPa · <em>mevcut</em></li>
+                      <li><strong>12–13 Kas</strong> · Balkanlar · <em>zayıflıyor</em></li>
+                      <li><strong>15–16 Kas</strong> · Balkanlar / Orta Avrupa · ~1020+ hPa · <em>güçleniyor</em></li>
+                    </ul>
+                  </div>
+                </div>
+                <div class="pressure-current">
+                  <div class="pressure-summary-title">📍 Anlık GFS merkezleri</div>
+                  <ul class="pressure-list" id="pressure-findings"><li class="loading">Analiz yükleniyor…</li></ul>
+                </div>
+                <div class="pressure-impact"><strong>İstanbul özeti:</strong> 11–12 Kas sakin → 13 Kas değişim → 14–15 Kas siklonik etki → 16 Kas yüksek basınç arkası.</div>
+                <div class="pressure-explainer">Anlık merkezler NOAA GFS 0.25° deniz seviyesi basıncı analizinden; 120 saatlik merkezler modelin öngördüğü sinoptik gelişimdir. Tahmini merkezler kesin konum değil, model senaryosudur.</div>
               </article>
             </aside>
   </div>
