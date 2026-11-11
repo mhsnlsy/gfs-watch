@@ -1343,6 +1343,7 @@
       const station=eyupsultanStationObservation;
       if(!stationObservationIsFresh(station)){
         holder.textContent="Eyüpsultan istasyonunun güncel ölçümü bekleniyor; eski ölçümle sıcaklık eğilimi üretilmiyor.";
+        appendTemperatureSwings(holder);
         return;
       }
       const points=forecastData&&Array.isArray(forecastData.forecast_6_hourly)?forecastData.forecast_6_hourly:[];
@@ -1360,6 +1361,7 @@
       const current=Number(station.temperature_2m_c);
       if(windows.length<3){
         holder.textContent="Önümüzdeki 5 gün için yeterli sıcaklık tahmini henüz yayımlanmadı. Eyüpsultan şu an "+fmt(current,1)+"°C.";
+        appendTemperatureSwings(holder);
         return;
       }
       const nearTerm=valid.filter(point=>point.stamp<=now+12*3600000).map(point=>point.temp);
@@ -1442,12 +1444,137 @@
         textNode.textContent=summary;
         holder.appendChild(textNode);
       }
+      appendTemperatureSwings(holder);
       if(run){
         const source=document.createElement("small");
         source.className="brief-temperature-source";
         source.textContent="Kaynak: GFS "+run+" çıktısı";
         holder.appendChild(source);
       }
+    }
+    function tableForecastDayKey(ms){
+      return new Intl.DateTimeFormat("en-CA",{timeZone:"UTC",year:"numeric",month:"2-digit",day:"2-digit"}).format(new Date(ms));
+    }
+    function tableForecastClock(ms){
+      return forecastClockUTC(ms);
+    }
+    function tableForecastDayTitle(dayKey){
+      const name=new Intl.DateTimeFormat("tr-TR",{timeZone:"UTC",weekday:"long"}).format(new Date(dayKey+"T12:00:00Z"));
+      return name.charAt(0).toLocaleUpperCase("tr-TR")+name.slice(1);
+    }
+    function istanbulCivilDayKeys(nowMs,count){
+      const today=new Intl.DateTimeFormat("en-CA",{timeZone:"Europe/Istanbul",year:"numeric",month:"2-digit",day:"2-digit"}).format(new Date(nowMs));
+      const keys=[];
+      for(let offset=0;offset<count;offset++){
+        const start=Date.parse(today+"T00:00:00+03:00")+offset*86400000;
+        keys.push(new Intl.DateTimeFormat("en-CA",{timeZone:"Europe/Istanbul",year:"numeric",month:"2-digit",day:"2-digit"}).format(new Date(start+12*3600000)));
+      }
+      return keys;
+    }
+    function briefingForecastPoints(){
+      const canonical=window.__METEOPT_F180_DOCUMENT;
+      if(canonical&&Array.isArray(canonical.forecast_6_hourly))return canonical.forecast_6_hourly;
+      return forecastData&&Array.isArray(forecastData.forecast_6_hourly)?forecastData.forecast_6_hourly:[];
+    }
+    function formatSwingAmount(delta){
+      const digits=Math.abs(delta).toLocaleString("tr-TR",{minimumFractionDigits:1,maximumFractionDigits:1});
+      return (delta<0?"−":"+")+digits+"°C";
+    }
+    function temperatureSwingLines(points,nowMs){
+      const dayKeys=istanbulCivilDayKeys(nowMs,5);
+      const wanted=new Set(dayKeys);
+      const rows=(points||[]).map(point=>{
+        const stamp=Date.parse(point&&point.valid_time_utc);
+        const temp=Number(point&&point.temperature_2m_c);
+        const step=Number(point&&point.forecast_hour);
+        return {stamp,temp,step};
+      }).filter(point=>Number.isFinite(point.stamp)&&Number.isFinite(point.temp)&&point.step>0&&point.step<=180&&point.step%3===0)
+        .sort((a,b)=>a.stamp-b.stamp);
+      const byDay=new Map();
+      for(let index=1;index<rows.length;index++){
+        const hours=(rows[index].stamp-rows[index-1].stamp)/3600000;
+        if(hours<2.5||hours>3.5)continue;
+        const delta=rows[index].temp-rows[index-1].temp;
+        if(Math.abs(delta)<4)continue;
+        const day=tableForecastDayKey(rows[index-1].stamp);
+        if(!wanted.has(day))continue;
+        if(!byDay.has(day))byDay.set(day,[]);
+        byDay.get(day).push({start:rows[index-1].stamp,end:rows[index].stamp,delta});
+      }
+      return dayKeys.filter(day=>byDay.has(day)).map(day=>{
+        const swings=byDay.get(day).sort((a,b)=>Math.abs(b.delta)-Math.abs(a.delta)).slice(0,3)
+          .sort((a,b)=>a.start-b.start);
+        const parts=swings.map(swing=>tableForecastClock(swing.start)+"–"+tableForecastClock(swing.end)+" "+formatSwingAmount(swing.delta));
+        return tableForecastDayTitle(day)+" · "+parts.join(" · ");
+      });
+    }
+    function appendTemperatureSwings(holder){
+      const lines=temperatureSwingLines(briefingForecastPoints(),Date.now());
+      if(!lines.length)return;
+      const list=document.createElement("div");
+      list.className="brief-temp-swings";
+      for(const text of lines){
+        const line=document.createElement("div");
+        line.className="brief-temp-swing";
+        line.textContent=text;
+        list.appendChild(line);
+      }
+      holder.appendChild(list);
+    }
+    function rainDayLines(points,nowMs){
+      const rows=(points||[]).map(point=>{
+        const stamp=Date.parse(point&&point.valid_time_utc);
+        const step=Number(point&&point.forecast_hour);
+        const mm=Number(point&&point.precipitation_6h_mm);
+        return {stamp,step,mm:Number.isFinite(mm)?mm:0};
+      }).filter(point=>Number.isFinite(point.stamp)&&( !Number.isFinite(point.step)||(point.step>0&&point.step<=180)))
+        .sort((a,b)=>a.stamp-b.stamp);
+      const steps=rows.map(point=>point.step).filter(Number.isFinite).sort((a,b)=>a-b);
+      const gaps=steps.slice(1).map((step,index)=>step-steps[index]).filter(gap=>gap>0&&gap<=6).sort((a,b)=>a-b);
+      const stepH=gaps.length?gaps[Math.floor(gaps.length/2)]:3;
+      const cover=(startHour,endHour)=>{
+        if(startHour>=18&&endHour>=18)return "akşam";
+        if(startHour>=18&&endHour<=5)return "gece";
+        if(endHour>=18&&startHour<18)return "öğleden sonra–akşam";
+        if(endHour<=5)return "gece";
+        if(startHour>=6&&endHour<=11)return "sabah";
+        if(startHour>=12&&endHour<=17)return "öğleden sonra";
+        if(startHour>=18)return "akşam";
+        if(endHour<12)return "öğleden önce";
+        if(startHour>=12)return "öğleden sonra";
+        return "";
+      };
+      const lines=[];
+      for(const key of istanbulCivilDayKeys(nowMs,4)){
+        const dayPoints=rows.filter(point=>tableForecastDayKey(point.stamp)===key&&point.stamp>=nowMs-30*60000);
+        if(!dayPoints.length)continue;
+        const wet=dayPoints.filter(point=>point.mm>=0.2);
+        const spells=[];
+        let current=null;
+        for(const item of wet){
+          if(!current||item.stamp-current.end>stepH*3600000+60000){
+            current={start:item.stamp,end:item.stamp,sum:0};
+            spells.push(current);
+          }
+          current.end=item.stamp;
+          current.sum+=item.mm;
+        }
+        const daySum=spells.reduce((sum,spell)=>sum+spell.sum,0);
+        const visible=spells.filter(spell=>spell.sum>=0.5||daySum<2);
+        const titled=tableForecastDayTitle(key);
+        if(!visible.length){
+          lines.push(titled+" · yağış yok");
+          continue;
+        }
+        for(const spell of visible){
+          const whenText=tableForecastClock(spell.start)+(spell.start===spell.end?"":"–"+tableForecastClock(spell.end));
+          const startHour=Number(new Intl.DateTimeFormat("en-GB",{timeZone:"UTC",hour:"2-digit",hourCycle:"h23"}).format(new Date(spell.start)));
+          const endHour=Number(new Intl.DateTimeFormat("en-GB",{timeZone:"UTC",hour:"2-digit",hourCycle:"h23"}).format(new Date(spell.end)));
+          const period=cover(startHour,endHour);
+          lines.push(titled+" · "+whenText+(period?" · "+period:"")+" · "+spell.sum.toLocaleString("tr-TR",{minimumFractionDigits:1,maximumFractionDigits:1})+" mm");
+        }
+      }
+      return lines;
     }
     function renderBriefing(){
       const selectedStation=activeStation==="eyupsultan"?eyupsultanStationObservation:enkaStationObservation;
@@ -1470,6 +1597,7 @@
       // The F180 table is the canonical rain timing source; refresh the
       // briefing immediately when that payload arrives or is refreshed.
       try{renderRainDays();}catch(error){console.warn("Rain briefing refresh skipped:",error);}
+      try{renderTemperatureTrend();}catch(error){console.warn("Temperature swing refresh skipped:",error);}
     });
     function dayWindow(offset){
       const key=new Intl.DateTimeFormat("en-CA",{timeZone:"Europe/Istanbul",year:"numeric",month:"2-digit",day:"2-digit"}).format(new Date());
@@ -1479,76 +1607,20 @@
     function renderRainDays(){
       const holder=$("brief-rain-lines");
       if(!holder)return;
-      // Use the same canonical F180 MeteoPT payload as the 180-hour table.
-      // The table's displayed TSİ clock is its source of truth, so the rain
-      // arrival shown in the live briefing cannot drift to a different hour.
-      const canonicalF180=window.__METEOPT_F180_DOCUMENT;
-      const points=canonicalF180&&Array.isArray(canonicalF180.forecast_6_hourly)
-        ? canonicalF180.forecast_6_hourly
-        : (forecastData&&Array.isArray(forecastData.forecast_6_hourly)?forecastData.forecast_6_hourly:[]);
-      const tableClockOffsetMs=canonicalF180 ? -3*3600000 : 0;
-      const horizon=Date.now()+72*3600000;
-      const clock=ms=>forecastClockUTC(ms+tableClockOffsetMs);
-      const hourOf=ms=>Number(new Intl.DateTimeFormat("en-GB",{timeZone:"UTC",hour:"2-digit",hourCycle:"h23"}).format(new Date(ms)));
-      const cover=(startHour,endHour)=>{
-        if(endHour<=5)return "gece";
-        if(startHour>=6&&endHour<=11)return "sabah";
-        if(startHour>=12&&endHour<=17)return "öğleden sonra";
-        if(startHour>=18)return "akşam";
-        if(endHour<12)return "öğleden önce";
-        if(startHour>=12)return "öğleden sonra";
-        return "";
-      };
-      const hours=points.map(point=>Number(point.forecast_hour)).filter(Number.isFinite).sort((a,b)=>a-b);
-      const gaps=hours.slice(1).map((hour,index)=>hour-hours[index]).filter(gap=>gap>0).sort((a,b)=>a-b);
-      const stepH=gaps.length?gaps[Math.floor(gaps.length/2)]:1;
+      // Same F180 rows and the same TSİ clock as the MeteoPT table. A full
+      // Istanbul calendar day stays in the list, including its evening, even
+      // when that evening is past the old 72-hour cutoff.
+      const lines=rainDayLines(briefingForecastPoints(),Date.now());
       holder.replaceChildren();
-      let shown=0;
-      for(let offset=0;offset<4;offset++){
-        const [start,end]=dayWindow(offset);
-        if(start>=horizon)break;
-        const dayPoints=points.filter(point=>{
-          const rawStamp=new Date(point.valid_time_utc).getTime();
-          const stamp=rawStamp+tableClockOffsetMs;
-          return stamp>=Math.max(start,Date.now()-30*60000)&&stamp<end&&stamp<=horizon+60000;
-        });
-        if(!dayPoints.length)continue;
-        const wet=dayPoints.filter(point=>(point.precipitation_6h_mm||0)>=0.2).map(point=>({stamp:new Date(point.valid_time_utc).getTime()+tableClockOffsetMs,mm:point.precipitation_6h_mm})).sort((a,b)=>a.stamp-b.stamp);
-        const spells=[];
-        let current=null;
-        for(const item of wet){
-          const begin=item.stamp;
-          if(!current||begin-current.end>2*3600000){
-            current={start:begin,end:item.stamp,sum:0};
-            spells.push(current);
-          }
-          current.end=item.stamp;
-          current.sum+=item.mm;
-        }
-        const daySum=spells.reduce((sum,spell)=>sum+spell.sum,0);
-        const visible=spells.filter(spell=>spell.sum>=0.5||daySum<2);
-        const dayName=new Intl.DateTimeFormat("tr-TR",{timeZone:"Europe/Istanbul",weekday:"long"}).format(new Date(start+12*3600000));
-        const titled=dayName.charAt(0).toLocaleUpperCase("tr-TR")+dayName.slice(1);
-        if(!visible.length){
-          const line=document.createElement("div");
-          line.className="brief-spell";
-          line.textContent=titled+" · yağış yok";
-          holder.appendChild(line);
-          shown++;
-          continue;
-        }
-        for(const spell of visible){
-          const line=document.createElement("div");
-          line.className="brief-spell";
-          const whenText=clock(spell.start)+(spell.start===spell.end?"":"–"+clock(spell.end));
-          const period=cover(hourOf(spell.start),hourOf(spell.end));
-          line.textContent=titled+" · "+whenText+(period?" · "+period:"")+" · "+fmt(spell.sum,1)+" mm";
-          holder.appendChild(line);
-          shown++;
-        }
+      if(!lines.length){
+        holder.textContent="Önümüzdeki günler için çıktı yok.";
+        return;
       }
-      if(!shown){
-        holder.textContent="Önümüzdeki 72 saat için çıktı yok.";
+      for(const text of lines){
+        const line=document.createElement("div");
+        line.className="brief-spell";
+        line.textContent=text;
+        holder.appendChild(line);
       }
     }
     function trustedLeadHours(kind){

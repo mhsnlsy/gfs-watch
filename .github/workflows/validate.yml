@@ -75,6 +75,9 @@ jobs:
       - name: Test station history switching
         run: node scripts/test_station_history_switch.mjs
 
+      - name: Test 5-day temperature swings and rain hours
+        run: node scripts/test_briefing_swings.mjs
+
       - name: Test Istanbul worker publication
         run: node scripts/test_istanbul_worker_publication.mjs
 
