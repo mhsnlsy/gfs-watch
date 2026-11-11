@@ -205,9 +205,6 @@ async function fetchEnkaWeatherLink() {
       const rows = cellRows(html);
       const plain = stripHtml(html);
       const observedAt = parseEnkaTimestamp(html);
-  const rows = cellRows(html);
-  const plain = stripHtml(html);
-  const observedAt = parseEnkaTimestamp(html);
   const tempCell = enkaCurrentCell(rows, "Day Temperature");
   const pressureCell = enkaCurrentCell(rows, "Barometer (hPa)");
   const humidityCell = enkaCurrentCell(rows, "Humidity");
