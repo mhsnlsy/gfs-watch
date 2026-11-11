@@ -1051,7 +1051,7 @@
         const stale=!isFresh;
         const observedText=observedValid?new Intl.DateTimeFormat("tr-TR",{timeZone:"Europe/Istanbul",dateStyle:"short",timeStyle:"short"}).format(observed):"zaman bilinmiyor";
         const ageText=ageMinutes===null?"":ageMinutes<60?Math.round(ageMinutes)+" dk önce":(ageMinutes/60).toFixed(1).replace(".",",")+" saat önce";
-        const sourceLabel=station.observation_method==="enka-camera-overlay"?"ENKA kamera · yedek kaynak":station.station_id==="18101"?"MGM 18101":station.station_id==="18401"?"MGM 18401":station.station_id==="ENKA-BALMUMCU-WEATHERLINK"||station.observation_method==="weatherlink-currentvalues-html"?"ENKA WeatherLink":(station.source||"İstasyon");
+        const sourceLabel=station.observation_method==="enka-camera-overlay"?"ENKA · OCR":station.station_id==="18101"?"MGM 18101":station.station_id==="18401"?"MGM 18401":station.station_id==="ENKA-BALMUMCU-WEATHERLINK"||station.observation_method==="weatherlink-currentvalues-html"?"ENKA WeatherLink":(station.source||"İstasyon");
         $("station-observation-meta").textContent=(stale?"Gecikmeli ölçüm":"Son ölçüm")+" · "+observedText+" TSİ · "+ageText+" · "+sourceLabel;
         updateStation24hDiff(isFresh?station:null);
         $("freshness").textContent=stale?"ÖLÇÜM ESKİ":"CANLI ÖLÇÜM";
