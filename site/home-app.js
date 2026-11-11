@@ -1085,7 +1085,7 @@
       if(name)name.textContent=sky.moon.name;
     }
     updateStationSky();
-    setInterval(updateStationSky,60000);
+    window.setInterval(updateStationSky,60000);
     function renderStationGap(){
       const node=$("station-temp-compare");
       if(!node)return;
