@@ -66,6 +66,15 @@
     return '<span class="meteopt-value ' + cls + '">' + display(value, digits) + '</span>';
   }
 
+  function windValueCell(speed, direction, digits = 0) {
+    if (speed === null) return '<span class="meteopt-value">—</span>';
+    const cls = colour("wind", speed);
+    const arrow = direction === null
+      ? ""
+      : '<span class="meteopt-wind-arrow" style="--wind-angle:' + direction + 'deg" aria-label="Rüzgâr yönü ' + Math.round(direction) + '°">↑</span>';
+    return '<span class="meteopt-value ' + cls + ' meteopt-wind-value">' + display(speed, digits) + arrow + '</span>';
+  }
+
   function dateLabel(point, runId, step) {
     const rawDate = point && point.valid_time_utc
       ? new Date(point.valid_time_utc)
@@ -122,7 +131,9 @@
 
       const point = item.point || pointByHour.get(item.step) || null;
       const wind10 = point ? number(point.wind_speed_10m_kmh) : null;
+      const wind10Direction = point ? number(point.wind_direction_10m_deg) : null;
       const wind850 = point ? number(point.wind_speed_850hpa_kmh) : null;
+      const wind850Direction = point ? number(point.wind_direction_850hpa_deg) : null;
       const precip = point ? number(point.precipitation_6h_mm) : null;
       const temp2 = point ? number(point.temperature_2m_c) : null;
       const rh2m = point ? number(point.humidity_2m_percent) : null;
@@ -132,9 +143,9 @@
       const values = [
         valueCell(temp2, "t2m"),
         valueCell(precip, "precip"),
-        valueCell(wind10, "wind", 0),
+        windValueCell(wind10, wind10Direction, 0),
         valueCell(temp850, "t850"),
-        valueCell(wind850, "wind", 0),
+        windValueCell(wind850, wind850Direction, 0),
         valueCell(rh2m, "rh2m", 0),
         valueCell(dewpoint(temp2, rh2m), "dewpoint"),
         valueCell(snowln, "snowln", 0)
