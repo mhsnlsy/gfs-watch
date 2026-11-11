@@ -422,7 +422,7 @@ function decodePublicationAsset(row) {
   return new Response(row.body, { status: 200, headers });
 }
 
-const KOY_SVG_RENDERER_VERSION = "cloudflare-js-v8-homepage-chart";
+const KOY_SVG_RENDERER_VERSION = "cloudflare-js-v9-homepage-identical";
 const FONT = "system-ui,-apple-system,BlinkMacSystemFont,Segoe UI,sans-serif";
 const KOY_SVG_ASSET_NAME = /^koy-gfs-\d{8}T\d{2}Z-comparison\.svg$/;
 
@@ -439,7 +439,7 @@ function koyAssetLookupKeys(key) {
   if (!KOY_SVG_ASSET_NAME.test(name)) return [normalized];
   return [...new Set([normalized, "media/" + name, "notifications/" + name])];
 }
-const KOY_SVG_COLORS = ["#7DD3D7", "#8ABCE8", "#F1C98B", "#B38BE8"];
+const KOY_SVG_COLORS = ["#8ABCE8", "#7DD3D7", "#F1C98B", "#B38BE8"];
 const KOY_SVG_PANELS = [
   { id: "temperature", field: "temperature_2m_c", title: "Sıcaklık", unit: "°C" },
   { id: "temperature_850", field: "temperature_850hpa_c", title: "850 hPa sıcaklık", unit: "°C" },
@@ -484,246 +484,182 @@ function svgRunLabel(value, latest) {
   return latest ? "YENİ · " + label : label;
 }
 
-export function buildKoyInteractiveSvg(comparison) {
-  const documents = (Array.isArray(comparison?.runs) ? comparison.runs : [])
-    .filter(item => item && item.forecast_source === "meteopt" &&
-      Array.isArray(item.forecast_6_hourly) && item.run_id_utc)
+function buildKoySeries(runs) {
+  const docs = (Array.isArray(runs) ? runs : [])
+    .filter(run => run && run.run_id_utc && Array.isArray(run.forecast_6_hourly))
     .slice()
     .sort((a, b) => Date.parse(a.run_id_utc) - Date.parse(b.run_id_utc))
     .slice(-4);
+  if (docs.length < 1) throw new Error("At least one complete GFS run is required; found " + docs.length);
 
-  if (documents.length !== 4) return null;
-
-  // HOMEPAGE-MATCHED VALID-TIME COMPARISON
-  // The comparison uses the same chart geometry, typography, line weights,
-  // grid density and three-hour precipitation aggregation as site/home-app.js.
-  // The only intentional difference is that the X axis is valid_time_utc so
-  // four model cycles are compared at the same real valid instant.
-  const series = documents.map((document, index) => {
-    const raw = Array.isArray(document.forecast_6_hourly)
-      ? document.forecast_6_hourly
-        .map(point => ({ ...point, lead: Number(point?.forecast_hour) }))
-        .filter(point => Number.isFinite(point.lead) && point.lead > 0 && point.lead <= 180)
-        .sort((a, b) => a.lead - b.lead)
-      : [];
-
+  const series = docs.map((document, index) => {
     const points = new Map();
-
-    if (raw.length) {
-      if (KOY_SVG_PANELS.some(spec => spec.field === "precipitation_6h_mm")) {
-        const rainPoints = raw
-          .filter(point => point.lead % 3 === 0)
-          .map(endpoint => {
-            const startLead = endpoint.lead - 3;
-            const intervalPoints = raw.filter(point =>
-              point.lead > startLead && point.lead <= endpoint.lead
-            );
-            const expectedCount = endpoint.lead <= 120 ? 3 : 1;
-            const measured = intervalPoints.filter(point =>
-              svgNumber(point.precipitation_6h_mm) !== null
-            );
-            if (measured.length !== expectedCount) return null;
-            const value = measured.reduce(
-              (total, point) => total + Number(point.precipitation_6h_mm), 0
-            );
-            const validKey = svgValidKey(endpoint.valid_time_utc);
-            if (!validKey) return null;
-            return { ...endpoint, comparison_precipitation_3h_mm: value, validKey };
-          })
-          .filter(Boolean);
-
-        for (const point of raw) {
-          const validKey = svgValidKey(point.valid_time_utc);
-          if (validKey) points.set(validKey, point);
-        }
-        for (const point of rainPoints) {
-          points.set(point.validKey, point);
-        }
-      } else {
-        for (const point of raw) {
-          const validKey = svgValidKey(point.valid_time_utc);
-          if (validKey) points.set(validKey, point);
-        }
-      }
+    for (const point of document.forecast_6_hourly) {
+      const key = koyIsoMinute(point?.valid_time_utc);
+      if (key) points.set(key, point);
     }
-
-    if (!points.size) return null;
+    if (!points.size) throw new Error("No valid forecast points for " + document.run_id_utc);
     return {
       document,
       points,
-      label: svgRunLabel(document.run_id_utc, index === documents.length - 1),
-      color: KOY_SVG_COLORS[index],
+      label: svgRunLabel(document.run_id_utc, index === docs.length - 1),
+      color: KOY_SVG_COLORS.slice(-docs.length)[index],
     };
   });
 
-  if (series.some(item => !item)) return null;
+  let common = [...series[series.length - 1].points.keys()];
+  for (const item of series.slice(0, -1)) common = common.filter(key => item.points.has(key));
+  common.sort();
+  if (common.length < 2) throw new Error("The available GFS cycles have fewer than two common valid times");
 
-  // One chronological valid-time axis. Never use forecast_hour for X position.
-  const validTimeKeySet = new Set();
-  for (const item of series) {
-    for (const key of item.points.keys()) {
-      if (Number.isFinite(Date.parse(key))) validTimeKeySet.add(key);
-    }
-  }
-  const validTimeKeys = [...validTimeKeySet].sort(
-    (a, b) => Date.parse(a) - Date.parse(b)
-  );
-  if (validTimeKeys.length < 2) return null;
+  const firstMs = Date.parse(common[0] + ":00Z");
+  const validKeys = common.filter(key => {
+    const timestamp = Date.parse(key + ":00Z");
+    return timestamp >= firstMs && timestamp <= firstMs + 180 * 3600000;
+  });
+  if (validKeys.length < 2) throw new Error("The common valid-time window is too short");
 
-  const validTimeRecords = validTimeKeys.map(key => {
-    const date = new Date(key);
-    const year = date.getUTCFullYear();
-    const month = String(date.getUTCMonth() + 1).padStart(2, "0");
-    const day = String(date.getUTCDate()).padStart(2, "0");
-    const h = String(date.getUTCHours()).padStart(2, "0");
-    const minute = String(date.getUTCMinutes()).padStart(2, "0");
+  const pointsBySeries = series.map(item => validKeys.map(key => item.points.get(key)));
+  const localLabels = validKeys.map(key => {
+    const utc = new Date(key + ":00Z");
+    const local = koyLocalDate(utc);
     return {
-      local_key: year + "-" + month + "-" + day + "T" + h + ":" + minute,
-      label: day + "." + month + "." + year + " " + h + ":" + minute + " TSİ",
-      utc_label: year + "-" + month + "-" + day + " " + h + ":" + minute + " UTC",
-      timestamp_ms: date.getTime(),
+      localKey: local.getUTCFullYear() + "-" + koyPad2(local.getUTCMonth() + 1) + "-" +
+        koyPad2(local.getUTCDate()) + "T" + koyPad2(local.getUTCHours()) + ":" + koyPad2(local.getUTCMinutes()),
+      label: koyFormatTrDate(local) + " TSİ",
+      utcLabel: koyFormatUtcDate(utc) + " UTC",
     };
   });
+  const dates = validKeys.map(key => new Date(key + ":00Z"));
+  const offsets = dates.map(date => (date.getTime() - firstMs) / 3600000);
+  return { series, validKeys, pointsBySeries, localLabels, dates, offsets };
+}
 
-  const offsets = validTimeRecords.map(record => record.timestamp_ms);
-  const xMin = offsets[0];
-  const xMax = offsets[offsets.length - 1];
-  const xRatio = offset => xMax === xMin ? 0 : (offset - xMin) / (xMax - xMin);
-
-  // Homepage chart geometry: 900x250, 48/18/18/40 plot margins.
-  // Each comparison card preserves that same graph proportions.
-  const W = 1120;
-  const H = 720;
-  const panelWidth = 540;
+function buildKoyInteractiveSvg(comparison) {
+  const chart = buildKoySeries(comparison?.runs);
+  const { series, validKeys, pointsBySeries, localLabels, dates, offsets } = chart;
+  const W = 1152;
+  const H = 838;
+  const panelWidth = 505;
   const panelHeight = 250;
-  const panelLeft = [0, 580];
-  const panelTop = [116, 392];
-  const svgParts = [
-    '<svg xmlns="http://www.w3.org/2000/svg" width="' + W + '" height="' + H + '" viewBox="0 0 ' + W + ' ' + H + '" role="img" aria-labelledby="koy-gfs-svg-title koy-gfs-svg-desc">',
-    '<title id="koy-gfs-svg-title">Köy GFS · Giresun / Çanakçı · Dört döngü karşılaştırması</title>',
-    '<desc id="koy-gfs-svg-desc">Anasayfadaki grafik düzeniyle dört GFS tahmin döngüsü gerçek geçerlilik zamanına göre karşılaştırılır.</desc>',
-    '<rect x="0" y="0" width="' + W + '" height="' + H + '" fill="#071521"/>',
-    '<text x="22" y="27" fill="#7DD3D7" font-size="10" font-weight="700" letter-spacing="1.5" font-family="DM Sans,sans-serif">GFS · GİRESUN ÇANAKÇI</text>',
-    '<text x="22" y="62" fill="#EDF5F8" font-size="23" font-weight="800" letter-spacing="-0.6" font-family="Manrope,sans-serif">Son GFS raporu · 4’lü döngü karşılaştırması</text>',
-    '<text x="22" y="87" fill="#9BB1BF" font-size="11" font-family="DM Sans,sans-serif">Dört Köy GFS çıktısı aynı geçerlilik saatlerinde (TSİ) üst üste karşılaştırılır.</text>',
-    '<rect x="872" y="18" width="226" height="32" rx="999" fill="#102535" stroke="rgba(204,225,239,.11)" stroke-width="1"/>',
-    '<text x="985" y="39" text-anchor="middle" fill="#B7CBD3" font-size="10" font-weight="600" font-family="DM Sans,sans-serif">4 GFS döngüsü karşılaştırılıyor</text>',
+  const panelLeft = [55, 592];
+  const panelTop = [214, 493];
+  const firstOffset = offsets[0];
+  const spanHours = offsets[offsets.length - 1] - firstOffset;
+  const xMin = -1;
+  const xMax = spanHours + Math.max(1, spanHours * 0.015);
+  const xRatio = value => (value - xMin) / (xMax - xMin);
+
+  const parts = [
+    '<svg xmlns="http://www.w3.org/2000/svg" width="' + W + '" height="' + H + '" viewBox="0 0 ' + W + ' ' + H + '" role="img" aria-labelledby="istanbul-gfs-svg-title istanbul-gfs-svg-desc">',
+    '<title id="istanbul-gfs-svg-title">Köy GFS · dört döngü valid-time karşılaştırması</title>',
+    '<desc id="istanbul-gfs-svg-desc">Dört Köy GFS tahmin döngüsü aynı geçerlilik saatlerinde hizalanmıştır. Sıcaklık, 850 hPa sıcaklığı, yağış ve 10 metre rüzgârı karşılaştırılır.</desc>',
+    '<g id="patch_1"><rect x="0" y="0" width="1152" height="838" style="fill: #0a1b29"/></g>',
+    '<text x="63" y="34" fill="#7DD3D7" font-size="12" font-weight="700" letter-spacing="1.5" font-family="' + FONT + '">GFS · GİRESUN ÇANAKÇI</text>',
+    '<text x="1090" y="34" text-anchor="end" fill="#8EAEB7" font-size="8" font-weight="500" font-family="' + FONT + '">Giresun / Çanakçı Havası v' + APP_VERSION + '</text>',
+    '<text x="63" y="76" fill="#FFFFFF" font-size="27" font-weight="750" font-family="' + FONT + '">Son GFS raporu · ' + series.length + ' döngü karşılaştırması</text>',
+    '<text x="63" y="108" fill="#E7F2F6" font-size="14" font-family="' + FONT + '">Mevcut GFS çıktıları aynı geçerlilik saatlerinde (TSİ) üst üste karşılaştırılır.</text>',
+    '<rect x="850" y="20" width="245" height="36" rx="11" fill="#0A1B29" stroke="#416174" stroke-width="1"/>',
+    '<text x="972.5" y="43" text-anchor="middle" fill="#B8D7DF" font-size="12" font-family="' + FONT + '">' + series.length + ' GFS döngüsü karşılaştırılıyor</text>',
   ];
 
-  // Homepage-style two-column legend.
   series.slice().reverse().forEach((item, index) => {
     const column = index % 2;
     const row = Math.floor(index / 2);
-    const x = 330 + column * 285;
-    const y = 105 + row * 18;
+    const x = 335 + column * 290;
+    const y = 148 + row * 26;
     const latest = item === series[series.length - 1];
-    svgParts.push(
-      '<line x1="' + x + '" y1="' + y + '" x2="' + (x + 38) + '" y2="' + y + '" stroke="' + item.color + '" stroke-width="' + (latest ? 3.2 : 1.8) + '"' +
-      (latest ? "" : ' stroke-dasharray="4 3"') + ' stroke-linecap="round"/>',
-      '<text x="' + (x + 49) + '" y="' + (y + 4) + '" fill="#FFFFFF" font-size="12" font-weight="' + (latest ? "700" : "500") + '" font-family="DM Sans,sans-serif">' + svgEscape(item.label) + '</text>'
+    parts.push(
+      '<line x1="' + x + '" y1="' + y + '" x2="' + (x + 38) + '" y2="' + y + '" stroke="' + item.color +
+      '" stroke-width="' + (latest ? 3.2 : 1.8) + '"' + (latest ? "" : ' stroke-dasharray="4 3"') + ' stroke-linecap="round"/>',
+      '<text x="' + (x + 49) + '" y="' + (y + 4) + '" fill="#FFFFFF" font-size="12" font-weight="' +
+      (latest ? "700" : "500") + '" font-family="' + FONT + '">' + svgEscape(item.label) + '</text>'
     );
   });
-
-  const panelMetadata = [];
-
-  KOY_SVG_PANELS.forEach((spec, panelIndex) => {
+  const metadata = [];
+  PANELS.forEach((spec, panelIndex) => {
     const column = panelIndex % 2;
     const row = Math.floor(panelIndex / 2);
     const px = panelLeft[column];
     const py = panelTop[row];
-
-    // Match homepage renderChart() geometry proportionally inside the 540px card.
-    const plotX = px + 48;
-    const plotY = py + 55;
-    const plotWidth = panelWidth - 66;
-    const plotHeight = 150;
-    const panelRight = px + panelWidth;
-
-    const valuesBySeries = series.map(item =>
-      validTimeKeys.map(key => {
-        const point = item.points.get(key);
-        if (!point) return null;
-        if (spec.field === "precipitation_6h_mm") {
-          return svgNumber(point.comparison_precipitation_3h_mm);
-        }
-        return svgNumber(point[spec.field]);
-      })
-    );
-
+    const plotX = px + 50;
+    const plotY = py + 57;
+    const plotWidth = panelWidth - 73;
+    const plotHeight = 146;
+    const valuesBySeries = pointsBySeries.map(points => points.map(point => svgNumber(point?.[spec.field])));
     const allValues = valuesBySeries.flat().filter(value => value !== null);
     const axis = buildPanelAxis(spec.field, valuesBySeries);
     const { low, high, ticks, latestPeak, latestTrough } = axis;
-    const yFor = value => plotY + ((high - value) / (high - low)) * plotHeight;
-    const xPositions = offsets.map(offset => plotX + xRatio(offset) * plotWidth);
 
-    svgParts.push(
-      '<g id="koy-panel-' + spec.id + '">',
-      '<rect x="' + px + '" y="' + py + '" width="' + panelWidth + '" height="' + panelHeight + '" rx="21" fill="linear-gradient(145deg,rgba(18,43,61,.94),rgba(12,31,46,.96))" stroke="rgba(204,225,239,.11)" stroke-width="1"/>',
-      '<rect x="' + px + '" y="' + py + '" width="' + panelWidth + '" height="' + panelHeight + '" rx="21" fill="#102535" fill-opacity=".96"/>',
-      '<text x="' + (px + 22) + '" y="' + (py + 34) + '" fill="#EDF5F8" font-size="18" font-weight="700" letter-spacing="-0.4" font-family="Manrope,sans-serif">' + svgEscape(spec.title) + '</text>',
-      '<text x="' + (panelRight - 22) + '" y="' + (py + 33) + '" text-anchor="end" fill="#EDF5F8" font-size="11" font-weight="600" font-family="DM Sans,sans-serif">' + svgEscape(spec.unit) + '</text>'
+    const xPositions = offsets.map(offset => plotX + xRatio(offset) * plotWidth);
+    const yFor = value => plotY + (high - value) * plotHeight / (high - low);
+    const patchId = ["patch_6", "patch_11", "patch_16", "patch_21"][panelIndex];
+    parts.push(
+      '<g id="' + patchId + '"><rect x="' + px + '" y="' + py + '" width="' + panelWidth + '" height="' +
+      panelHeight + '" rx="13" style="fill: #102a3a" stroke="#416174" stroke-width="1"/></g>',
+      '<g id="istanbul-panel-' + spec.id + '">',
+      '<text x="' + (px + 18) + '" y="' + (py + 31) + '" fill="#FFFFFF" font-size="18" font-weight="700" font-family="' +
+      FONT + '">' + svgEscape(spec.title) + '</text>',
+      '<text x="' + (px + panelWidth - 17) + '" y="' + (py + 30) + '" text-anchor="end" fill="#E7F2F6" font-size="12" font-weight="650" font-family="' +
+      FONT + '">' + svgEscape(spec.unit) + '</text>'
     );
 
-    // Homepage-style four horizontal grid levels.
     ticks.slice().reverse().forEach(value => {
       const y = yFor(value);
-      svgParts.push(
-        '<line x1="' + plotX + '" y1="' + y + '" x2="' + (plotX + plotWidth) + '" y2="' + y + '" stroke="rgba(194,220,232,.12)" stroke-width="1" stroke-dasharray="4 6"/>',
-        '<text x="' + (plotX - 10) + '" y="' + (y + 4) + '" fill="#91A9B8" font-size="11" text-anchor="end" font-family="DM Sans,sans-serif">' + svgEscape(formatAxisTick(value)) + '</text>'
+      parts.push(
+        '<line x1="' + plotX + '" y1="' + y + '" x2="' + (plotX + plotWidth) + '" y2="' + y +
+        '" stroke="#456579" stroke-width="1" stroke-dasharray="2 4" opacity=".65"/>',
+        '<text x="' + (plotX - 10) + '" y="' + (y + 4) + '" text-anchor="end" fill="#E7F2F6" font-size="11" font-weight="600" font-family="' +
+        FONT + '" data-axis-tick="true">' + formatAxisTick(value) + '</text>'
       );
     });
 
-    // Homepage has only three X labels. Keep that rule so labels never collide.
-    const labelIndexes = [...new Set([0, Math.floor((validTimeKeys.length - 1) / 2), validTimeKeys.length - 1])];
-    labelIndexes.forEach((index, labelIndex) => {
-      const record = validTimeRecords[index];
-      const date = new Date(record.timestamp_ms);
-      const x = xPositions[index];
-      const day = String(date.getUTCDate()).padStart(2, "0");
-      const hour = String(date.getUTCHours()).padStart(2, "0");
-      const minute = String(date.getUTCMinutes()).padStart(2, "0");
-      const anchor = labelIndex === 0 ? "start" : labelIndex === labelIndexes.length - 1 ? "end" : "middle";
-      svgParts.push(
-        '<text x="' + x + '" y="' + (plotY + plotHeight + 18) + '" text-anchor="' + anchor + '" fill="#91A9B8" font-size="10" font-family="DM Sans,sans-serif">' +
-        '<tspan x="' + x + '">' + day + '.' + String(date.getUTCMonth() + 1).padStart(2, "0") + '</tspan>' +
-        '<tspan x="' + x + '" dy="13">' + hour + ':' + minute + ' TSİ</tspan></text>'
+    const tickIndexes = [];
+    offsets.forEach((offset, index) => {
+      if (index === 0 || Math.abs(offset % 12) < 0.01) tickIndexes.push(index);
+    });
+    if (tickIndexes[tickIndexes.length - 1] !== offsets.length - 1) tickIndexes.push(offsets.length - 1);
+    tickIndexes.forEach(index => {
+      const d = koyLocalDate(dates[index]);
+      const day = koyPad2(d.getUTCDate());
+      const weekday = ["Paz", "Pzt", "Sal", "Çar", "Per", "Cum", "Cmt"][d.getUTCDay()];
+      const anchor = index === 0 ? "start" : index === offsets.length - 1 ? "end" : "middle";
+      parts.push(
+        '<text x="' + xPositions[index] + '" y="' + (plotY + plotHeight + 19) + '" text-anchor="' + anchor +
+        '" fill="#E7F2F6" font-size="10" font-weight="650" font-family="' + FONT + '"><tspan x="' +
+        xPositions[index] + '">' + day + '</tspan><tspan x="' + xPositions[index] + '" dy="13">' + weekday + '</tspan></text>'
       );
     });
 
     const panelSeries = [];
-
     series.forEach((item, seriesIndex) => {
       const values = valuesBySeries[seriesIndex];
       const yPositions = values.map(value => value === null ? null : Number(yFor(value).toFixed(3)));
-      const directions = validTimeKeys.map(key => {
-        if (spec.field !== "wind_speed_10m_kmh") return null;
-        return svgNumber(item.points.get(key)?.wind_direction_10m_deg);
+      const leadHours = pointsBySeries[seriesIndex].map(point => {
+        const n = Number(point?.forecast_hour);
+        return Number.isFinite(n) ? Math.round(n) : null;
       });
-
+      const directions = pointsBySeries[seriesIndex].map(point =>
+        spec.field === "wind_speed_10m_kmh" ? svgNumber(point?.wind_direction_10m_deg) : null
+      );
       let pathData = "";
       let open = false;
       values.forEach((value, index) => {
-        if (value === null) {
-          open = false;
-          return;
-        }
-        pathData += (open ? "L" : "M") + xPositions[index].toFixed(2) + " " + yPositions[index];
+        if (value === null) { open = false; return; }
+        pathData += (open ? " L " : " M ") + xPositions[index].toFixed(3) + " " + yPositions[index];
         open = true;
       });
-
       const latest = seriesIndex === series.length - 1;
-      svgParts.push(
-        '<path d="' + pathData + '" fill="none" stroke="' + item.color + '" stroke-width="' + (latest ? 3 : 1.8) + '"' +
-        (latest ? "" : ' stroke-dasharray="4 3"') + ' stroke-linecap="round" stroke-linejoin="round" opacity="' + (latest ? "1" : ".92") + '"/>'
+      parts.push(
+        '<path id="gfs-series-' + spec.id + '-' + seriesIndex + '" data-gfs-series-run-id="' +
+        svgEscape(item.document.run_id_utc) + '" d="' + pathData + '" fill="none" stroke="' + item.color + '" stroke-width="' +
+        (latest ? 3.2 : 1.8) + '"' + (latest ? "" : ' stroke-dasharray="4 3"') +
+        ' stroke-linecap="round" stroke-linejoin="round" opacity="' + (latest ? "1" : ".94") + '"/>'
       );
-
-      if (latest) {
-        values.forEach((value, index) => {
-          if (value === null) return;
-          svgParts.push('<circle cx="' + xPositions[index].toFixed(2) + '" cy="' + yPositions[index] + '" r="2.5" fill="' + item.color + '"/>');
-        });
-      }
-
+      if (latest) values.forEach((value, index) => {
+        if (value !== null) parts.push('<circle cx="' + xPositions[index].toFixed(3) + '" cy="' +
+          yPositions[index] + '" r="2.8" fill="' + item.color + '"/>');
+      });
       const pushExtremeMarker = (kind, extreme, avoidBoxes) => {
         if (extreme === null) return null;
         let extremeIndex = -1;
@@ -734,92 +670,104 @@ export function buildKoyInteractiveSvg(comparison) {
         const pointX = xPositions[extremeIndex];
         const pointY = yPositions[extremeIndex];
         const label = formatPeakValue(extreme) + " " + peakUnit(spec.field);
-        const timeLabel = validTimeRecords[extremeIndex]?.label || "";
+        const timeLabel = localLabels[extremeIndex]?.label || "";
         const place = seriesCalloutPlacement({
           x: pointX, y: pointY, plotX, plotY, plotWidth, plotHeight, label, avoidBoxes
         });
         const valueAttr = kind === "trough" ? "data-latest-trough-value" : "data-latest-peak-value";
         const timeAttr = kind === "trough" ? "data-latest-trough-time" : "data-latest-peak-time";
         const className = kind === "trough" ? "gfs-latest-trough-marker" : "gfs-latest-peak-marker";
-        svgParts.push(
-          '<g class="' + className + '" ' + valueAttr + '="' + svgEscape(label) + '" ' + timeAttr + '="' + svgEscape(timeLabel) + '">',
-          '<circle cx="' + Number(pointX).toFixed(3) + '" cy="' + pointY + '" r="5.2" fill="' + item.color + '" stroke="#F7FDFF" stroke-width="1.4"/>',
-          '<rect x="' + Number(place.boxX).toFixed(3) + '" y="' + Number(place.boxY).toFixed(3) + '" width="' + place.labelWidth.toFixed(1) + '" height="16" rx="3" fill="#0A1B29" fill-opacity=".88"/>',
-          '<text x="' + Number(place.labelX).toFixed(3) + '" y="' + Number(place.labelY).toFixed(3) + '" text-anchor="' + (place.nearRight ? "end" : "start") + '" fill="#F7FDFF" font-size="11" font-weight="800" font-family="DM Sans,sans-serif">' + svgEscape(label) + '</text>',
+        parts.push(
+          '<g class="' + className + '" ' + valueAttr + '="' + svgEscape(label) +
+          '" ' + timeAttr + '="' + svgEscape(timeLabel) + '">',
+          '<circle cx="' + Number(pointX).toFixed(3) + '" cy="' + pointY +
+          '" r="5.2" fill="' + item.color + '" stroke="#F7FDFF" stroke-width="1.4"/>',
+          '<rect x="' + Number(place.boxX).toFixed(3) + '" y="' + Number(place.boxY).toFixed(3) +
+          '" width="' + place.labelWidth.toFixed(1) + '" height="16" rx="3" fill="#0A1B29" fill-opacity=".88"/>',
+          '<text x="' + Number(place.labelX).toFixed(3) + '" y="' + Number(place.labelY).toFixed(3) +
+          '" text-anchor="' + (place.nearRight ? "end" : "start") +
+          '" fill="#F7FDFF" font-size="11" font-weight="800" font-family="' + FONT + '">' +
+          svgEscape(label) + '</text>',
           '</g>'
         );
         return { box: place.box, x: pointX, y: pointY };
       };
-
       if (latest) {
         const peak = pushExtremeMarker("peak", latestPeak, []);
-        const avoid = peak ? [peak.box, { x: peak.x - 8, y: peak.y - 8, width: 16, height: 16 }] : [];
+        const avoid = [];
+        if (peak) {
+          avoid.push(peak.box);
+          avoid.push({ x: peak.x - 8, y: peak.y - 8, width: 16, height: 16 });
+        }
         pushExtremeMarker("trough", latestTrough, avoid);
       }
 
       panelSeries.push({
         label: item.label,
+        run_id_utc: item.document.run_id_utc,
         color: item.color,
-        lead_hours: validTimeKeys.map(key => {
-          const point = item.points.get(key);
-          return point && Number.isFinite(Number(point.forecast_hour)) ? Number(point.forecast_hour) : null;
-        }),
+        lead_hours: leadHours,
         values,
         y_positions: yPositions,
         directions_deg: directions,
       });
     });
 
-    panelMetadata.push({
+    metadata.push({
       id: spec.id,
       title: spec.title,
       unit: spec.unit,
       plot: { x: plotX, y: plotY, width: plotWidth, height: plotHeight },
       x_positions: xPositions.map(value => Number(value.toFixed(3))),
-      valid_times: validTimeRecords,
+      valid_times: localLabels.map(item => ({
+        local_key: item.localKey,
+        label: item.label,
+        utc_label: item.utcLabel,
+      })),
       series: panelSeries,
     });
 
     if (!allValues.length) {
-      svgParts.push('<text x="' + (plotX + plotWidth / 2) + '" y="' + (plotY + plotHeight / 2) + '" text-anchor="middle" fill="#9BB1BF" font-size="13" font-family="DM Sans,sans-serif">Bu değişken için veri yok</text>');
+      parts.push('<text x="' + (plotX + plotWidth / 2) + '" y="' + (plotY + plotHeight / 2) +
+        '" text-anchor="middle" fill="#E7F2F6" font-size="13" font-family="' + FONT + '">Bu değişken için veri yok</text>');
     }
-
-    svgParts.push("</g>");
+    parts.push("</g>");
   });
 
-  const location = comparison.location || LOCATION;
-  const locationName = String(location.name || "Giresun / Çanakçı");
-  const sourceName = String(series[series.length - 1].document.source || "MeteoPT GFS").trim();
-  const metadata = { version: 1, renderer: KOY_SVG_RENDERER_VERSION, panels: panelMetadata };
-  const metadataText = JSON.stringify(metadata).replace(/\]\]>/g, "]]\\u003e");
-  const footer = "Kaynak: Köy GFS · " + sourceName + " · " + locationName + " nokta tahmini";
-  svgParts.push(
-    '<text x="63" y="810" fill="#E7F2F6" font-size="11" font-family="system-ui,-apple-system,BlinkMacSystemFont,Segoe UI,sans-serif">Geçerlilik zamanı ekseni · ' + validTimeRecords[0].label + ' → ' + validTimeRecords[validTimeRecords.length - 1].label + ' · ' + validTimeRecords.length + ' nokta</text>',
-    '<text x="1090" y="810" text-anchor="end" fill="#E7F2F6" font-size="10" font-family="system-ui,-apple-system,BlinkMacSystemFont,Segoe UI,sans-serif">' + svgEscape(footer) + '</text>',
-    '<metadata id="gfs-renderer-version">' + KOY_SVG_RENDERER_VERSION + '</metadata>',
+  const metadataText = JSON.stringify({ version: 1, renderer: KOY_SVG_RENDERER_VERSION, panels: metadata })
+    .replace(/\]\]>/g, "]]\\u003e");
+  parts.push(
+    '<text x="63" y="810" fill="#E7F2F6" font-size="11" font-family="' + FONT + '">Aynı geçerlilik saatleri (TSİ) · ' +
+    validKeys.length + ' ortak nokta · ' + series.length + ' döngü</text>',
+    '<text x="1090" y="810" text-anchor="end" fill="#E7F2F6" font-size="10" font-family="' + FONT +
+    '">Kaynak: MeteoPT GFS · Giresun / Çanakçı nokta tahmini</text>',
+    '<metadata id="gfs-renderer-version">cloudflare-js-v9-homepage-identical</metadata>',
     '<metadata id="gfs-interactive-data"><![CDATA[' + metadataText + ']]></metadata>',
     '<g id="gfs-interaction-layer">'
   );
-
-  panelMetadata.forEach(panel => {
+  metadata.forEach(panel => {
     const plot = panel.plot;
     const xStart = panel.x_positions[0];
-    svgParts.push(
+    parts.push(
       '<g class="gfs-panel-interaction" data-panel-id="' + panel.id + '">',
-      '<rect class="gfs-hit-area" data-panel-id="' + panel.id + '" x="' + plot.x + '" y="' + plot.y + '" width="' + plot.width + '" height="' + plot.height + '" fill="transparent" pointer-events="all" tabindex="0" role="group" aria-label="' + svgEscape(panel.title) + ' grafiği; ok tuşlarıyla geçerlilik saatleri arasında gezinin"/>',
-      '<line class="gfs-tooltip-crosshair" x1="' + xStart + '" x2="' + xStart + '" y1="' + plot.y + '" y2="' + (plot.y + plot.height) + '" stroke="#EAF5F8" stroke-width="1.1" stroke-dasharray="4 4" opacity=".78" visibility="hidden" pointer-events="none"/>',
+      '<rect class="gfs-hit-area" data-panel-id="' + panel.id + '" x="' + plot.x + '" y="' + plot.y +
+      '" width="' + plot.width + '" height="' + plot.height + '" fill="transparent" pointer-events="all" tabindex="0" role="group" aria-label="' +
+      svgEscape(panel.title) + ' grafiği; ok tuşlarıyla geçerlilik saatleri arasında gezinin"/>',
+      '<line class="gfs-tooltip-crosshair" x1="' + xStart + '" x2="' + xStart + '" y1="' + plot.y +
+      '" y2="' + (plot.y + plot.height) + '" stroke="#EAF5F8" stroke-width="1.1" stroke-dasharray="4 4" opacity=".78" visibility="hidden" pointer-events="none"/>',
       '<g class="gfs-tooltip-markers" pointer-events="none"></g>',
       "</g>"
     );
   });
-
-  svgParts.push("</g></svg>");
-  const body = svgParts.join("");
-  if (body.length > 1900000) throw new Error("Generated Köy SVG exceeds the D1 row safety limit");
+  parts.push("</g></svg>");
+  const body = parts.join("");
+  if (body.length > 1800000) throw new Error("Generated Köy SVG exceeds the D1 publication row safety limit");
+  const latest = series[series.length - 1].document;
   return {
-    key: "media/koy-gfs-" + svgRunStamp(series[series.length - 1].document.run_id_utc) + "-comparison.svg",
-    run_id_utc: series[series.length - 1].document.run_id_utc,
+    key: "media/koy-gfs-" + svgRunStamp(latest.run_id_utc) + "-comparison.svg",
+    run_id_utc: latest.run_id_utc,
     body,
+    common_valid_time_count: validKeys.length,
   };
 }
 
