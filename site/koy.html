@@ -1653,6 +1653,8 @@ html.ios12 .backdrop-filter{display:none}
 
       </article>
     </section>
+    </div>
+  </section>
   <footer class="shell footer"><span><strong data-app-name>İstanbul Havası</strong> <span data-app-version>4.0-koy</span></span><span>Veri kaynakları: MGM Çanakçı · MeteoPT GFS · Otomatik yenileme: 5 dakika</span></footer>
   <style>
     #pull-refresh-indicator{position:fixed;z-index:99999;top:calc(env(safe-area-inset-top,0px) + 9px);left:50%;transform:translate(-50%,-150%);opacity:0;pointer-events:none;display:flex;align-items:center;gap:9px;padding:10px 15px;border:1px solid rgba(125,211,215,.35);border-radius:999px;background:rgba(8,25,39,.96);color:#d8f7f1;font:600 12px "DM Sans",sans-serif;box-shadow:0 8px 28px rgba(0,0,0,.32);transition:transform .18s ease,opacity .18s ease}
@@ -1745,6 +1747,70 @@ html.ios12 .backdrop-filter{display:none}
   .shell{width:min(1560px,calc(100% - 64px))!important}
   .dashboard-top{
     grid-template-columns:minmax(420px,.78fr) minmax(0,1.22fr)!important;
+  }
+}
+</style>
+<style id="koy-desktop-gfs-table-exact">
+@media (min-width:851px){
+  .dashboard-top > .water-gfs-layout{
+    grid-area:table!important;
+    display:block!important;
+    width:100%!important;
+    min-width:0!important;
+    max-width:none!important;
+    margin:0!important;
+    padding:0!important;
+  }
+  .dashboard-top > .water-gfs-layout #meteopt-gfs-table{
+    display:block!important;
+    width:100%!important;
+    max-width:none!important;
+    min-width:0!important;
+    margin:0!important;
+    padding:0!important;
+  }
+  .dashboard-top > .water-gfs-layout #meteopt-gfs-table .meteopt-table-card{
+    box-sizing:border-box!important;
+    width:100%!important;
+    max-width:none!important;
+    min-width:0!important;
+    margin:0!important;
+    padding:10px!important;
+  }
+  .dashboard-top > .water-gfs-layout #meteopt-gfs-table .meteopt-table-scroll{
+    width:100%!important;
+    max-width:100%!important;
+    overflow-x:auto!important;
+    overflow-y:hidden!important;
+  }
+  .dashboard-top > .water-gfs-layout #meteopt-gfs-table .meteopt-data-table{
+    display:table!important;
+    width:100%!important;
+    min-width:0!important;
+    max-width:none!important;
+    table-layout:fixed!important;
+    font-size:10px!important;
+  }
+  .dashboard-top > .water-gfs-layout #meteopt-gfs-table .meteopt-data-table th,
+  .dashboard-top > .water-gfs-layout #meteopt-gfs-table .meteopt-data-table td{
+    box-sizing:border-box!important;
+  }
+  .dashboard-top > .water-gfs-layout #meteopt-gfs-table .meteopt-data-table th:first-child,
+  .dashboard-top > .water-gfs-layout #meteopt-gfs-table .meteopt-data-table td:first-child{
+    width:6%!important;
+    min-width:0!important;
+  }
+  .dashboard-top > .water-gfs-layout #meteopt-gfs-table .meteopt-data-table th:nth-child(2),
+  .dashboard-top > .water-gfs-layout #meteopt-gfs-table .meteopt-data-table td:nth-child(2){
+    width:20%!important;
+    min-width:0!important;
+    padding-left:6px!important;
+    padding-right:6px!important;
+  }
+  .dashboard-top > .water-gfs-layout #meteopt-gfs-table .meteopt-data-table th:nth-child(n+3),
+  .dashboard-top > .water-gfs-layout #meteopt-gfs-table .meteopt-data-table td:nth-child(n+3){
+    width:9.25%!important;
+    min-width:0!important;
   }
 }
 </style>
