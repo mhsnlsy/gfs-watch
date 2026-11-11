@@ -158,6 +158,20 @@ jobs:
             exit 1
           fi
 
+          node - "$RUNNER_TEMP/station-health.json" <<'NODE'
+          const fs = require("fs");
+          const doc = JSON.parse(fs.readFileSync(process.argv[2], "utf8"));
+          const enka = (doc.stations || []).find(row => row.key === "enka");
+          if (enka?.status === "stale") {
+            if (enka.observation_method !== "enka-camera-overlay") {
+              throw new Error("ENKA is stale but camera OCR fallback is not active: " + JSON.stringify(enka));
+            }
+            console.log("Verified ENKA stale-source fallback: ENKA · OCR");
+          } else {
+            console.log("ENKA WeatherLink is live; camera OCR fallback remains armed for stale/incomplete data.");
+          }
+          NODE
+
           for key in enka eyupsultan sisli canakci; do
             curl --silent --show-error --fail --max-time 12 "$STATIONS_API/history/$key?hours=72" -o "$RUNNER_TEMP/history-$key.json"
             node - "$RUNNER_TEMP/history-$key.json" "$key" <<'NODE'
