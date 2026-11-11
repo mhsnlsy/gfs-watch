@@ -80,7 +80,7 @@ Canlı web arayüzü, API geçidi ve veri toplama Cloudflare üzerinde çalış�
 - Cron: `*/2 * * * *`.
 - D1 binding `STATIONS_DB`, veritabanı `gfs-watch-stations`. Geçmiş ölçümler bu veritabanında tutulur.
 - Kaynaklar, birbirinden bağımsız toplanır:
-  - ENKA Balmumcu: WeatherLink current values HTML (`https://w.enka.com/weather/currentvalues.html`). Ana sayfadaki canlı kamera ayrı bir JPEG'dir (`https://w.enka.com/camhd/cam1/c.jpg`); ölçüm bu görüntüden okunmaz.
+  - ENKA Balmumcu: önce WeatherLink current values HTML (`https://w.enka.com/weather/currentvalues.html`). Ölçüm 20 dakikadan eskiyse veya sayfa okunamazsa Worker, canlı kamera JPEG'indeki (`https://w.enka.com/camhd/cam1/c.jpg`) sağ alt yazıyı yerinde okur. Kameradan yalnızca sıcaklık, nem, basınç, rüzgâr (knot → km/sa, 1 kt = 1,852 km/sa) ve zaman damgası alınır. Yağış kameradan yazılmaz; karttaki yağış Eyüpsultan/Şişli yolunda kalır. Kaynak etiketi `ENKA kamera · yedek kaynak` olur. JPEG çözümü için `station-worker` bağımlılığı `jpeg-js`; ek bir secret veya OCR servisi yoktur.
   - MGM Eyüpsultan, istasyon 18101.
   - MGM Şişli, istasyon 18401.
   - MGM Çanakçı.

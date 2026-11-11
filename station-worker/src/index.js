@@ -1,3 +1,10 @@
+import {
+  ENKA_CAMERA_URL,
+  observationFromCameraReading,
+  recognizeCameraOverlay,
+  shouldUseCameraFallback
+} from "./enka-camera.js";
+
 const STATION_DEFS = {
   enka: {
     station_id: "ENKA-BALMUMCU-WEATHERLINK",
@@ -173,7 +180,7 @@ function valueMatch(cell, regex, label, fallbackText) {
   if (!match) throw new Error("ENKA " + label + " Current Value alanı okunamadı");
   return match;
 }
-async function fetchEnka() {
+async function fetchEnkaWeatherLink() {
   const url = "https://w.enka.com/weather/currentvalues.html?_station_poll=" + Date.now();
   const response = await fetchWithTimeout(url, {
     headers: { "Accept": "text/html,application/xhtml+xml", "Referer": "https://w.enka.com/weather/" }
@@ -232,6 +239,33 @@ async function fetchEnka() {
     precipitation_source: "MGM 18401 · Şişli",
     observation_method: "weatherlink-current-values-current-value"
   };
+}
+async function fetchEnkaCamera() {
+  const response = await fetchWithTimeout(ENKA_CAMERA_URL + "?_station_poll=" + Date.now(), {
+    headers: { "Accept": "image/jpeg", "User-Agent": "gfs-watch-stations/1.0" }
+  }, 18000);
+  const bytes = new Uint8Array(await response.arrayBuffer());
+  const reading = recognizeCameraOverlay(bytes);
+  if (!reading) throw new Error("ENKA kamera yazısı okunamadı");
+  return observationFromCameraReading(reading, MAX_SOURCE_AGE_MINUTES);
+}
+async function fetchEnka() {
+  let weatherlink = null;
+  let weatherlinkError = null;
+  try {
+    weatherlink = await fetchEnkaWeatherLink();
+  } catch (error) {
+    weatherlinkError = error;
+  }
+  if (!shouldUseCameraFallback(weatherlink, MAX_SOURCE_AGE_MINUTES)) return weatherlink;
+  try {
+    const camera = await fetchEnkaCamera();
+    if (camera && camera.is_stale !== true) return camera;
+  } catch (error) {
+    console.error("[ENKA CAMERA]", error && error.message ? error.message : error);
+  }
+  if (weatherlink) return weatherlink;
+  throw weatherlinkError || new Error("ENKA ölçümü alınamadı");
 }
 async function fetchMgmArray(url) {
   const response = await fetchWithTimeout(url + (url.includes("?") ? "&" : "?") + "_station_poll=" + Date.now(), {

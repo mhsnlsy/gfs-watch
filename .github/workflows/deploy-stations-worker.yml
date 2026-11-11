@@ -104,6 +104,10 @@ jobs:
           CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
         run: wrangler d1 migrations apply gfs-watch-stations --remote --config wrangler.jsonc
 
+      - name: Install station worker JPEG decoder
+        working-directory: station-worker
+        run: npm install --no-audit --no-fund --no-progress
+
       - name: Deploy the two-minute-cron Worker
         working-directory: station-worker
         env:

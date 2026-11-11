@@ -3,6 +3,7 @@
   "name": "gfs-watch-stations",
   "main": "src/index.js",
   "compatibility_date": "2026-11-06",
+  "compatibility_flags": ["nodejs_compat"],
   "workers_dev": true,
   "observability": { "enabled": true },
   "triggers": { "crons": ["*/2 * * * *"] },
