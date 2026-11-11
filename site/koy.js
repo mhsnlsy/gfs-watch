@@ -512,10 +512,16 @@ function meteoptTableValue(value,field,digits=1){
  const display=field==="snowln" ? String(Math.round(value)) : fmt(value,digits);
  return '<span class="meteopt-value '+band+'">'+display+'</span>';
 }
+function meteoptWindValue(speed,direction){
+ if(speed==null)return '<span class="meteopt-value">—</span>';
+ const band=meteoptTableBand("wind",speed);
+ const arrow=direction==null?"":'<span class="meteopt-wind-arrow" style="--wind-angle:'+direction+'deg" aria-label="Rüzgâr yönü '+Math.round(direction)+'°">↑</span>';
+ return '<span class="meteopt-value '+band+' meteopt-wind-value">'+fmt(speed,0)+arrow+'</span>';
+}
 function renderF180(d){
  const pts=pointsOf(d,180);
  const body=$("meteopt-table-body");
- body.innerHTML=pts.length?pts.map(p=>'<tr><td>'+p.forecast_hour+'</td><td>'+tsGfsValid(p.valid_time_utc)+'</td><td>'+meteoptTableValue(num(p.temperature_2m_c),"t2m")+'</td><td>'+meteoptTableValue(num(p.precipitation_6h_mm),"precip")+'</td><td>'+meteoptTableValue(num(p.wind_speed_10m_kmh),"wind",0)+'</td><td>'+meteoptTableValue(num(p.temperature_850hpa_c),"t850")+'</td><td>'+meteoptTableValue(num(p.wind_speed_850hpa_kmh),"wind",0)+'</td><td>'+meteoptTableValue(num(p.humidity_2m_percent),"rh2m",0)+'</td><td>'+meteoptTableValue(dewpoint(num(p.temperature_2m_c),num(p.humidity_2m_percent)),"dewpoint")+'</td><td>'+meteoptTableValue(num(p.snowln),"snowln",3)+'</td></tr>').join(""):'<tr><td colspan="10" class="meteopt-table-empty">F180 tahmin adımları henüz yok.</td></tr>';
+ body.innerHTML=pts.length?pts.map(p=>'<tr><td>'+p.forecast_hour+'</td><td>'+tsGfsValid(p.valid_time_utc)+'</td><td>'+meteoptTableValue(num(p.temperature_2m_c),"t2m")+'</td><td>'+meteoptTableValue(num(p.precipitation_6h_mm),"precip")+'</td><td>'+meteoptWindValue(num(p.wind_speed_10m_kmh),num(p.wind_direction_10m_deg))+'</td><td>'+meteoptTableValue(num(p.temperature_850hpa_c),"t850")+'</td><td>'+meteoptWindValue(num(p.wind_speed_850hpa_kmh),num(p.wind_direction_850hpa_deg))+'</td><td>'+meteoptTableValue(num(p.humidity_2m_percent),"rh2m",0)+'</td><td>'+meteoptTableValue(dewpoint(num(p.temperature_2m_c),num(p.humidity_2m_percent)),"dewpoint")+'</td><td>'+meteoptTableValue(num(p.snowln),"snowln",3)+'</td></tr>').join(""):'<tr><td colspan="10" class="meteopt-table-empty">F180 tahmin adımları henüz yok.</td></tr>';
  const intervals=Array.from(new Set(pts.slice(1).map((point,index)=>Number(point.forecast_hour)-Number(pts[index].forecast_hour)).filter(value=>Number.isFinite(value)&&value>0))).sort((a,b)=>a-b);
  const cadence=intervals.length?intervals.map(value=>value+" saat").join("/"):"model";
  $("meteopt-table-status").textContent=pts.length+" adım · "+cadence+" aralıklı · 180. saate kadar";
