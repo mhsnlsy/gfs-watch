@@ -1875,6 +1875,142 @@ html.ios12 .backdrop-filter{display:none}
     <script src="./gfs-api-config.js?v=20261111-api-config-1"></script>
     <script src="./koy.js?v=20261111-api-config-2" defer></script>
 
+<style id="koy-desktop-home-layout-parity">
+/* Desktop Köy layout: use the same geometry, gutters, columns and report sizing as the İstanbul homepage. */
+@media (min-width: 851px) {
+  :root { --page-gutter: clamp(14px, 2.2vw, 32px); }
+
+  .shell {
+    width: min(1480px, calc(100% - var(--page-gutter) * 2)) !important;
+  }
+
+  .dashboard-top {
+    grid-template-columns: minmax(360px, .82fr) minmax(0, 1.18fr) !important;
+    gap: clamp(14px, 1.5vw, 24px) !important;
+    padding: 18px 0 16px !important;
+    align-items: stretch !important;
+  }
+
+  .dashboard-left {
+    min-width: 0 !important;
+    display: block !important;
+  }
+
+  .dashboard-top .station-card {
+    width: 100% !important;
+    max-width: none !important;
+    min-height: 0 !important;
+    align-self: stretch !important;
+    padding: 16px 17px 13px !important;
+  }
+
+  .dashboard-top .station-overview {
+    display: block !important;
+    margin-top: 12px !important;
+  }
+
+  .dashboard-top .station-card .temperature {
+    font-size: clamp(44px, 4.8vw, 62px) !important;
+  }
+
+  .dashboard-top .station-card .weather-stats {
+    grid-template-columns: repeat(4, minmax(0, 1fr)) !important;
+    gap: 0 !important;
+    margin-top: 13px !important;
+    padding-top: 9px !important;
+  }
+
+  .dashboard-top .station-card .stat {
+    padding: 2px 7px 0 !important;
+  }
+
+  /* Homepage has no report heading/control above the GFS frame. */
+  #bildirimler {
+    padding: 0 !important;
+    min-width: 0 !important;
+    width: 100% !important;
+    align-self: stretch !important;
+  }
+
+  #bildirimler .report-head {
+    display: none !important;
+  }
+
+  #bildirimler .notification-list {
+    display: block !important;
+    width: 100% !important;
+    max-width: 100% !important;
+    margin: 0 !important;
+  }
+
+  #bildirimler .notification-card.koy-gfs-report-card {
+    box-sizing: border-box !important;
+    width: 100% !important;
+    max-width: 100% !important;
+    min-width: 0 !important;
+    margin: 0 !important;
+    padding: 0 !important;
+    border: 0 !important;
+    border-radius: 18px !important;
+    overflow: hidden !important;
+    background: transparent !important;
+  }
+
+  #bildirimler .notification-card .koy-gfs-svg-images {
+    width: 100% !important;
+    max-width: 100% !important;
+    margin: 0 !important;
+    padding: 0 !important;
+  }
+
+  #bildirimler .notification-card .koy-gfs-svg-images .gfs-interactive-chart,
+  #bildirimler .notification-card .koy-gfs-svg-images .gfs-mobile-panel-stack {
+    width: 100% !important;
+    max-width: 100% !important;
+    margin-left: auto !important;
+    margin-right: auto !important;
+  }
+
+  #bildirimler .notification-card .koy-gfs-svg-images .gfs-mobile-panel-host {
+    width: 100% !important;
+    max-width: 100% !important;
+  }
+
+  #bildirimler .notification-card .gfs-interactive-svg {
+    display: block !important;
+    width: 100% !important;
+    max-width: 100% !important;
+    height: auto !important;
+    margin: 0 auto !important;
+  }
+}
+
+@media (min-width: 1600px) {
+  .shell {
+    width: min(1560px, calc(100% - 64px)) !important;
+  }
+
+  .dashboard-top {
+    grid-template-columns: minmax(420px, .78fr) minmax(0, 1.22fr) !important;
+  }
+
+  .section {
+    padding-top: 36px !important;
+    padding-bottom: 36px !important;
+  }
+
+  h2 {
+    font-size: 26px !important;
+  }
+}
+
+/* Keep the existing mobile layout untouched. */
+@media (max-width: 850px) {
+  .dashboard-top {
+    grid-template-columns: minmax(0, 1fr) !important;
+  }
+}
+</style>
 </body>
 </html>
 
