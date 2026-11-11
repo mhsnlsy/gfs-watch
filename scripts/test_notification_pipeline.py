@@ -172,6 +172,8 @@ def main() -> None:
     assert "push:" not in koy_svg_workflow
     assert "comparison.svg" in koy_svg_workflow
     assert "cloudflare-js-v9-homepage-identical" in koy_svg_workflow
+    assert "cloudflare-js-v9-homepage-identical" in platform_workflow
+    assert "cloudflare-js-v5-raw-forecast-hour" not in platform_workflow
 
     # Köy uses the same SVG chart geometry, common-valid-time window and
     # desktop/mobile view pipeline as the homepage Istanbul comparison.
