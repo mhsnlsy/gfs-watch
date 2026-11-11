@@ -519,11 +519,19 @@ export function buildKoyInteractiveSvg(comparison) {
 
   if (series.some(item => !item)) return null;
 
-  // The newest run defines the chronological valid-time axis. Every older
-  // cycle is looked up by the same valid timestamp, never by forecast_hour.
-  const latestPoints = series[series.length - 1].points;
-  const validTimeKeys = [...latestPoints.keys()]
-    .filter(key => Number.isFinite(Date.parse(key)))
+  // Build one chronological axis from the actual valid times present in
+  // the four cycles. Every plotted value is looked up by valid_time_utc;
+  // forecast_hour is never used to position a point on the graph.
+  // This is especially important for precipitation: F3/F6/F9... from
+  // different cycles must land on their real valid instant, not on the
+  // same forecast-hour slot.
+  const validTimeKeySet = new Set();
+  for (const item of series) {
+    for (const key of item.points.keys()) {
+      if (Number.isFinite(Date.parse(key))) validTimeKeySet.add(key);
+    }
+  }
+  const validTimeKeys = [...validTimeKeySet]
     .sort((a, b) => Date.parse(a) - Date.parse(b));
   if (validTimeKeys.length < 2) return null;
 
