@@ -338,7 +338,7 @@ jobs:
           node - "$RUNNER_TEMP/live-koy-latest.svg" "$KOY_LIVE_SVG_STAMP" <<'NODE'
           const fs = require("fs");
           const svg = fs.readFileSync(process.argv[2], "utf8");
-          if (!svg.includes("<svg") || !svg.includes('id="gfs-interactive-data"') || !svg.includes('id="gfs-renderer-version">cloudflare-js-v3</metadata>') || Buffer.byteLength(svg, "utf8") < 10000) {
+          if (!svg.includes("<svg") || !svg.includes('id="gfs-interactive-data"') || !svg.includes('id="gfs-renderer-version">cloudflare-js-v4</metadata>') || Buffer.byteLength(svg, "utf8") < 10000) {
             throw new Error("Latest live Köy SVG is missing or malformed: " + process.argv[3]);
           }
           console.log("Latest live Köy SVG verified: " + process.argv[3] + " (" + Buffer.byteLength(svg, "utf8") + " bytes).");
