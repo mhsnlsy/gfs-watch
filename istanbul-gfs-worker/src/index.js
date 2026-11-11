@@ -126,6 +126,16 @@ function normalize(candidate, now) {
     candidate.document?.data?.winddir10m?.values ||
     candidate.document?.data?.winddir10m?.data ||
     [];
+  // MeteoPT may expose the 850 hPa wind direction under one of these
+  // aliases. Keep the field optional so older payloads remain valid.
+  const wind850DirectionSeries =
+    candidate.document?.data?.wind850mdir?.values ||
+    candidate.document?.data?.wind850mdir?.data ||
+    candidate.document?.data?.wind850dir?.values ||
+    candidate.document?.data?.wind850dir?.data ||
+    candidate.document?.data?.winddir850?.values ||
+    candidate.document?.data?.winddir850?.data ||
+    [];
 
   const points = [];
   for (let index = 0; index < steps.length; index += 1) {
@@ -141,6 +151,7 @@ function normalize(candidate, now) {
       point[outputKey] = number(series[sourceKey], index);
     }
     point.wind_direction_10m_deg = number(windDirectionSeries, index);
+    point.wind_direction_850hpa_deg = number(wind850DirectionSeries, index);
     points.push(point);
   }
 
@@ -179,6 +190,12 @@ function normalize(candidate, now) {
       wind_speed_max_10m_kmh: wind.length ? Math.max(...wind) : null,
       wind_direction_max_10m_deg: windPeak ? windPeak.wind_direction_10m_deg ?? null : null,
       wind_speed_max_850hpa_kmh: wind850.length ? Math.max(...wind850) : null,
+      wind_direction_max_850hpa_deg: (() => {
+        const peak = dayPoints
+          .filter(point => number(point.wind_speed_850hpa_kmh) !== null)
+          .sort((a, b) => Number(b.wind_speed_850hpa_kmh) - Number(a.wind_speed_850hpa_kmh))[0] || null;
+        return peak ? peak.wind_direction_850hpa_deg ?? null : null;
+      })(),
     });
   }
 
