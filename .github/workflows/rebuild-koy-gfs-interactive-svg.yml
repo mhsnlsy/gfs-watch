@@ -32,7 +32,7 @@ jobs:
           const fs = require("fs");
           const health = JSON.parse(fs.readFileSync(process.argv[2], "utf8"));
           if (health.ok !== true) throw new Error("Köy GFS Worker health is not OK");
-          if (health.svg_renderer !== "cloudflare-js-v4") {
+          if (health.svg_renderer !== "cloudflare-js-v5-raw-forecast-hour") {
             throw new Error("Cloudflare SVG renderer is not active: " + health.svg_renderer);
           }
           if (Number(health.archived_runs || 0) < 4) {
@@ -48,7 +48,7 @@ jobs:
 
           grep -qi '^content-type: image/svg+xml' "$RUNNER_TEMP/koy-svg-headers.txt"
           grep -qi '^x-gfs-publication-source: D1' "$RUNNER_TEMP/koy-svg-headers.txt"
-          grep -q 'id="gfs-renderer-version">cloudflare-js-v4</metadata>' "$RUNNER_TEMP/koy-comparison.svg"
+          grep -q 'id="gfs-renderer-version">cloudflare-js-v5-raw-forecast-hour</metadata>' "$RUNNER_TEMP/koy-comparison.svg"
           grep -q 'id="gfs-interactive-data"' "$RUNNER_TEMP/koy-comparison.svg"
 
           node - "$RUNNER_TEMP/koy-comparison.svg" <<'NODE'
@@ -57,7 +57,7 @@ jobs:
           const match = svg.match(/<metadata id="gfs-interactive-data"><!\[CDATA\[([\s\S]*?)\]\]><\/metadata>/);
           if (!match) throw new Error("Interactive SVG metadata is missing");
           const data = JSON.parse(match[1]);
-          if (data.renderer !== "cloudflare-js-v4") throw new Error("Unexpected SVG renderer");
+          if (data.renderer !== "cloudflare-js-v5-raw-forecast-hour") throw new Error("Unexpected SVG renderer");
           if (!Array.isArray(data.panels) || data.panels.length !== 4) throw new Error("Four graph panels are required");
           for (const panel of data.panels) {
             if (!Array.isArray(panel.valid_times) || panel.valid_times.length < 2) {
