@@ -2,16 +2,16 @@ import assert from "node:assert/strict";
 import { buildKoyInteractiveSvg, koySvgKeyMatches } from "../koy-gfs-worker/src/index.js";
 import { buildPanelAxis } from "../shared/gfs-chart-axis.js";
 
-function sixHourlySeries({ runId, precipByLead = {}, temperature = 10, temperature850 = 2, wind = 12 }) {
+function sixHourlySeries({ runId, precipByLead = {}, temperature = 10, temperature850 = 2, temperatureByLead = {}, temperature850ByLead = {}, wind = 12 }) {
   const startMs = Date.parse(runId);
   const points = [];
   for (let lead = 6; lead <= 180; lead += 6) {
     points.push({
       forecast_hour: lead,
       valid_time_utc: new Date(startMs + lead * 3600000).toISOString(),
-      temperature_2m_c: temperature,
+      temperature_2m_c: temperatureByLead[lead] ?? temperature,
       humidity_2m_percent: 70,
-      temperature_850hpa_c: temperature850,
+      temperature_850hpa_c: temperature850ByLead[lead] ?? temperature850,
       precipitation_6h_mm: precipByLead[lead] || 0,
       wind_speed_10m_kmh: wind,
       wind_direction_10m_deg: 200,
@@ -81,6 +81,7 @@ assert.ok(modest.body.includes('id="gfs-interactive-data"'));
 assert.ok(modest.body.includes("K → G") && modest.body.includes("GB → KD"), "Köy chart must render the fixed wind-direction legend");
 assert.ok(!modest.body.includes('data-latest-peak="true"'), "Y-axis ticks must not be bound to the latest-cycle peak");
 assert.ok(modest.body.includes('class="gfs-latest-peak-marker"'));
+assert.ok(!modest.body.includes("gfs-latest-trough-marker"), "flat Köy temperature series must not repeat the peak label");
 assert.ok(modest.body.includes('data-latest-peak-value="9,8 mm"'));
 assert.ok(!axisTicks(modest.body, "precipitation").includes("9,8"));
 
@@ -120,6 +121,29 @@ assertIntegerTicks(axisTicks(heavy.body, "wind_10m"), 10, { start: 0, nonnegativ
 assert.ok(axisTicks(heavy.body, "wind_10m").includes("0") && axisTicks(heavy.body, "wind_10m").includes("40"));
 
 assert.equal(buildKoyInteractiveSvg({ runs: fourCycles(() => ({})).slice(0, 3) }), null);
+assert.ok(!heavy.body.includes("gfs-latest-trough-marker"), "flat Köy latest temperatures must not repeat the peak label");
+
+function panelChunk(svg, panelId) {
+  const start = svg.indexOf('<g id="koy-panel-' + panelId + '">');
+  const next = svg.indexOf('<g id="koy-panel-', start + 10);
+  return next < 0 ? svg.slice(start) : svg.slice(start, next);
+}
+const troughChart = buildKoyInteractiveSvg({
+  runs: fourCycles(cycle => ({
+    temperature: 10,
+    temperature850: 8,
+    temperatureByLead: cycle === 3 ? { 6: 9.7, 18: 19.6 } : {},
+    temperature850ByLead: cycle === 3 ? { 12: 3.4, 24: 12.2 } : {},
+  })),
+});
+const troughTemp = panelChunk(troughChart.body, "temperature");
+const trough850 = panelChunk(troughChart.body, "temperature_850");
+assert.ok(troughTemp.includes('data-latest-peak-value="19,6 °C"'));
+assert.ok(troughTemp.includes('data-latest-trough-value="9,7 °C"'));
+assert.ok(trough850.includes('data-latest-peak-value="12,2 °C"'));
+assert.ok(trough850.includes('data-latest-trough-value="3,4 °C"'));
+assert.ok(!panelChunk(troughChart.body, "precipitation").includes("gfs-latest-trough-marker"));
+assert.ok(!panelChunk(troughChart.body, "wind_10m").includes("gfs-latest-trough-marker"));
 
 console.log(JSON.stringify({
   ok: true,

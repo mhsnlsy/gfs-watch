@@ -1,7 +1,7 @@
 import assert from "node:assert/strict";
 import { buildIstanbulInteractiveSvg, buildIstanbulReportText } from "../istanbul-gfs-worker/src/publication.js";
 import { loadIstanbulTelegramFont, renderIstanbulPhotoPng } from "../istanbul-gfs-worker/src/photo.js";
-import { buildPanelAxis } from "../shared/gfs-chart-axis.js";
+import { buildPanelAxis, seriesCalloutPlacement } from "../shared/gfs-chart-axis.js";
 
 const base = Date.UTC(2026, 10, 1, 0, 0, 0);
 const runs = [];
@@ -47,6 +47,61 @@ assert.ok(chart.common_valid_time_count >= 20, "common UTC valid times should be
 for (const id of ["patch_1", "patch_6", "patch_11", "patch_16", "patch_21", "gfs-interactive-data"]) {
   assert.ok(chart.body.includes(id), "SVG should include " + id);
 }
+function panelChunk(svg, panelId) {
+  const start = svg.indexOf('<g id="istanbul-panel-' + panelId + '">');
+  const next = svg.indexOf('<g id="istanbul-panel-', start + 10);
+  return next < 0 ? svg.slice(start) : svg.slice(start, next);
+}
+const defaultTempPanel = panelChunk(chart.body, "temperature");
+assert.ok(defaultTempPanel.includes('class="gfs-latest-trough-marker"'));
+assert.ok(defaultTempPanel.includes('class="gfs-latest-peak-marker"'));
+assert.ok(!panelChunk(chart.body, "precipitation").includes("gfs-latest-trough-marker"));
+assert.ok(!panelChunk(chart.body, "wind_10m").includes("gfs-latest-trough-marker"));
+const flatTempChart = buildIstanbulInteractiveSvg([
+  sixHourlySeries({
+    runId: "2026-11-15T00:00:00.000Z",
+    precipByLead: { 6: 1 },
+    temperature: 19.6,
+    temperature850: 11.9,
+  }),
+]);
+assert.ok(flatTempChart.body.includes('class="gfs-latest-peak-marker"'));
+assert.ok(!flatTempChart.body.includes("gfs-latest-trough-marker"), "a flat latest temperature series must not repeat the peak label");
+const troughChart = buildIstanbulInteractiveSvg([
+  sixHourlySeries({
+    runId: "2026-11-14T18:00:00.000Z",
+    precipByLead: { 6: 1 },
+    temperature: 8,
+    temperature850: 1,
+  }),
+  sixHourlySeries({
+    runId: "2026-11-15T00:00:00.000Z",
+    precipByLead: { 6: 1 },
+    temperature: 14,
+    temperature850: 8,
+    temperatureByLead: { 6: 9.7, 18: 19.6 },
+    temperature850ByLead: { 12: 3.4, 24: 12.2 },
+  }),
+]);
+const troughTemp = panelChunk(troughChart.body, "temperature");
+const trough850 = panelChunk(troughChart.body, "temperature_850");
+assert.ok(troughTemp.includes('data-latest-peak-value="19,6 °C"'));
+assert.ok(troughTemp.includes('data-latest-trough-value="9,7 °C"'));
+assert.ok(trough850.includes('data-latest-peak-value="12,2 °C"'));
+assert.ok(trough850.includes('data-latest-trough-value="3,4 °C"'));
+assert.equal(buildPanelAxis("temperature_2m_c", [[8], [9.7, 19.6, 14]]).latestTrough, 9.7);
+assert.equal(buildPanelAxis("temperature_2m_c", [[19.6, 19.6]]).latestTrough, null);
+assert.equal(buildPanelAxis("precipitation_6h_mm", [[0, 9.8]]).latestTrough, null);
+assert.equal(buildPanelAxis("wind_speed_10m_kmh", [[12, 40]]).latestTrough, null);
+const peakPlace = seriesCalloutPlacement({
+  x: 100, y: 40, plotX: 50, plotY: 20, plotWidth: 400, plotHeight: 146, label: "19,6 °C"
+});
+const troughPlace = seriesCalloutPlacement({
+  x: 110, y: 52, plotX: 50, plotY: 20, plotWidth: 400, plotHeight: 146, label: "9,7 °C",
+  avoidBoxes: [peakPlace.box]
+});
+assert.equal(peakPlace.below, false);
+assert.equal(troughPlace.below, true);
 assert.ok(chart.body.includes("cloudflare-js-v1"));
 assert.ok(chart.body.includes("fill: #0a1b29"));
 assert.ok(chart.body.includes("fill: #102a3a"));
@@ -137,16 +192,16 @@ function assertIntegerTicks(ticks, step, { start, nonnegative = false } = {}) {
   }
 }
 
-function sixHourlySeries({ runId, precipByLead, temperature = 10, temperature850 = 2, wind = 12 }) {
+function sixHourlySeries({ runId, precipByLead, temperature = 10, temperature850 = 2, temperatureByLead = {}, temperature850ByLead = {}, wind = 12 }) {
   const startMs = Date.parse(runId);
   const points = [];
   for (let lead = 6; lead <= 180; lead += 6) {
     points.push({
       forecast_hour: lead,
       valid_time_utc: new Date(startMs + lead * 3600000).toISOString(),
-      temperature_2m_c: temperature,
+      temperature_2m_c: temperatureByLead[lead] ?? temperature,
       humidity_2m_percent: 70,
-      temperature_850hpa_c: temperature850,
+      temperature_850hpa_c: temperature850ByLead[lead] ?? temperature850,
       precipitation_6h_mm: precipByLead[lead] || 0,
       wind_speed_10m_kmh: wind,
       wind_direction_10m_deg: 200,

@@ -1,4 +1,4 @@
-import { buildPanelAxis, formatAxisTick, formatPeakValue, peakUnit } from "../../shared/gfs-chart-axis.js";
+import { buildPanelAxis, formatAxisTick, formatPeakValue, peakUnit, seriesCalloutPlacement } from "../../shared/gfs-chart-axis.js";
 
 const CYCLE_COLORS = ["#8ABCE8", "#7DD3D7", "#F1C98B", "#B38BE8"];
 const PANELS = [
@@ -171,7 +171,7 @@ export function buildIstanbulInteractiveSvg(runs) {
     const valuesBySeries = pointsBySeries.map(points => points.map(point => numeric(point?.[spec.field])));
     const allValues = valuesBySeries.flat().filter(value => value !== null);
     const axis = buildPanelAxis(spec.field, valuesBySeries);
-    const { low, high, ticks, latestPeak } = axis;
+    const { low, high, ticks, latestPeak, latestTrough } = axis;
 
     const xPositions = offsets.map(offset => plotX + xRatio(offset) * plotWidth);
     const yFor = value => plotY + (high - value) * plotHeight / (high - low);
@@ -242,37 +242,46 @@ export function buildIstanbulInteractiveSvg(runs) {
         if (value !== null) parts.push('<circle cx="' + xPositions[index].toFixed(3) + '" cy="' +
           yPositions[index] + '" r="2.8" fill="' + item.color + '"/>');
       });
-      if (latest && latestPeak !== null) {
-        let peakIndex = -1;
+      const pushExtremeMarker = (kind, extreme, avoidBoxes) => {
+        if (extreme === null) return null;
+        let extremeIndex = -1;
         values.forEach((value, index) => {
-          if (value !== null && Math.abs(value - latestPeak) < 1e-9 && peakIndex < 0) peakIndex = index;
+          if (value !== null && Math.abs(value - extreme) < 1e-9 && extremeIndex < 0) extremeIndex = index;
         });
-        if (peakIndex >= 0) {
-          const peakX = xPositions[peakIndex];
-          const peakY = yPositions[peakIndex];
-          const label = formatPeakValue(latestPeak) + " " + peakUnit(spec.field);
-          const timeLabel = localLabels[peakIndex]?.label || "";
-          const nearTop = peakY - plotY < 18;
-          const nearRight = peakX > plotX + plotWidth - 56;
-          const labelX = nearRight ? peakX - 10 : peakX + 10;
-          const labelY = nearTop ? peakY + 18 : peakY - 12;
-          const labelWidth = Math.max(36, label.length * 6.8 + 12);
-          const boxX = (nearRight ? labelX - labelWidth : labelX - 5);
-          const boxY = labelY - 12;
-          parts.push(
-            '<g class="gfs-latest-peak-marker" data-latest-peak-value="' + escapeXml(label) +
-            '" data-latest-peak-time="' + escapeXml(timeLabel) + '">',
-            '<circle cx="' + Number(peakX).toFixed(3) + '" cy="' + peakY +
-            '" r="5.2" fill="' + item.color + '" stroke="#F7FDFF" stroke-width="1.4"/>',
-            '<rect x="' + Number(boxX).toFixed(3) + '" y="' + Number(boxY).toFixed(3) +
-            '" width="' + labelWidth.toFixed(1) + '" height="16" rx="3" fill="#0A1B29" fill-opacity=".88"/>',
-            '<text x="' + Number(labelX).toFixed(3) + '" y="' + Number(labelY).toFixed(3) +
-            '" text-anchor="' + (nearRight ? "end" : "start") +
-            '" fill="#F7FDFF" font-size="11" font-weight="800" font-family="' + FONT + '">' +
-            escapeXml(label) + '</text>',
-            '</g>'
-          );
+        if (extremeIndex < 0) return null;
+        const pointX = xPositions[extremeIndex];
+        const pointY = yPositions[extremeIndex];
+        const label = formatPeakValue(extreme) + " " + peakUnit(spec.field);
+        const timeLabel = localLabels[extremeIndex]?.label || "";
+        const place = seriesCalloutPlacement({
+          x: pointX, y: pointY, plotX, plotY, plotWidth, plotHeight, label, avoidBoxes
+        });
+        const valueAttr = kind === "trough" ? "data-latest-trough-value" : "data-latest-peak-value";
+        const timeAttr = kind === "trough" ? "data-latest-trough-time" : "data-latest-peak-time";
+        const className = kind === "trough" ? "gfs-latest-trough-marker" : "gfs-latest-peak-marker";
+        parts.push(
+          '<g class="' + className + '" ' + valueAttr + '="' + escapeXml(label) +
+          '" ' + timeAttr + '="' + escapeXml(timeLabel) + '">',
+          '<circle cx="' + Number(pointX).toFixed(3) + '" cy="' + pointY +
+          '" r="5.2" fill="' + item.color + '" stroke="#F7FDFF" stroke-width="1.4"/>',
+          '<rect x="' + Number(place.boxX).toFixed(3) + '" y="' + Number(place.boxY).toFixed(3) +
+          '" width="' + place.labelWidth.toFixed(1) + '" height="16" rx="3" fill="#0A1B29" fill-opacity=".88"/>',
+          '<text x="' + Number(place.labelX).toFixed(3) + '" y="' + Number(place.labelY).toFixed(3) +
+          '" text-anchor="' + (place.nearRight ? "end" : "start") +
+          '" fill="#F7FDFF" font-size="11" font-weight="800" font-family="' + FONT + '">' +
+          escapeXml(label) + '</text>',
+          '</g>'
+        );
+        return { box: place.box, x: pointX, y: pointY };
+      };
+      if (latest) {
+        const peak = pushExtremeMarker("peak", latestPeak, []);
+        const avoid = [];
+        if (peak) {
+          avoid.push(peak.box);
+          avoid.push({ x: peak.x - 8, y: peak.y - 8, width: 16, height: 16 });
         }
+        pushExtremeMarker("trough", latestTrough, avoid);
       }
 
       panelSeries.push({
