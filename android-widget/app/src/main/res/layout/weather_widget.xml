@@ -1,156 +1,50 @@
 <?xml version="1.0" encoding="utf-8"?>
 <LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
-    android:id="@+id/widget_root"
-    android:layout_width="match_parent"
-    android:layout_height="match_parent"
-    android:orientation="vertical"
-    android:padding="14dp"
-    android:background="@drawable/widget_bg">
-
-    <LinearLayout
-        android:layout_width="match_parent"
-        android:layout_height="wrap_content"
-        android:gravity="center_vertical"
-        android:orientation="horizontal">
-
-        <LinearLayout
-            android:layout_width="0dp"
-            android:layout_height="wrap_content"
-            android:layout_weight="1"
-            android:orientation="vertical">
-            <TextView
-                android:id="@+id/title"
-                android:layout_width="wrap_content"
-                android:layout_height="wrap_content"
-                android:text="İSTANBUL HAVASI"
-                android:textColor="#8FDCE2"
-                android:textSize="11sp"
-                android:textStyle="bold"/>
-            <TextView
-                android:id="@+id/station"
-                android:layout_width="wrap_content"
-                android:layout_height="wrap_content"
-                android:text="MGM Eyüpsultan"
-                android:textColor="#EAF6FA"
-                android:textSize="14sp"
-                android:textStyle="bold"/>
+    android:id="@+id/widget_root" android:layout_width="match_parent" android:layout_height="match_parent"
+    android:orientation="vertical" android:padding="12dp" android:background="@drawable/widget_bg">
+    <TextView android:id="@+id/title" android:layout_width="match_parent" android:layout_height="wrap_content"
+        android:text="İSTANBUL HAVASI" android:textColor="#8FDCE2" android:textSize="10sp" android:textStyle="bold"/>
+    <LinearLayout android:layout_width="match_parent" android:layout_height="wrap_content" android:orientation="horizontal" android:gravity="center_vertical">
+        <LinearLayout android:layout_width="0dp" android:layout_height="wrap_content" android:layout_weight="1" android:orientation="vertical">
+            <TextView android:id="@+id/station" android:layout_width="wrap_content" android:layout_height="wrap_content"
+                android:text="MGM Eyüpsultan" android:textColor="#EAF6FA" android:textSize="13sp" android:textStyle="bold"/>
+            <TextView android:id="@+id/updated" android:layout_width="wrap_content" android:layout_height="wrap_content"
+                android:text="güncelleniyor…" android:textColor="#88AAB7" android:textSize="8sp"/>
         </LinearLayout>
-
-        <TextView
-            android:id="@+id/updated"
-            android:layout_width="wrap_content"
-            android:layout_height="wrap_content"
-            android:text="güncelleniyor"
-            android:textColor="#88AAB7"
-            android:textSize="9sp"/>
+        <TextView android:id="@+id/temp" android:layout_width="wrap_content" android:layout_height="wrap_content"
+            android:text="15,3°" android:textColor="#FFFFFF" android:textSize="32sp" android:textStyle="bold"/>
     </LinearLayout>
-
-    <LinearLayout
-        android:layout_width="match_parent"
-        android:layout_height="wrap_content"
-        android:layout_marginTop="6dp"
-        android:gravity="center_vertical"
-        android:orientation="horizontal">
-
-        <TextView
-            android:id="@+id/temp"
-            android:layout_width="wrap_content"
-            android:layout_height="wrap_content"
-            android:text="15,3°"
-            android:textColor="#FFFFFF"
-            android:textSize="34sp"
-            android:textStyle="bold"/>
-
-        <LinearLayout
-            android:layout_width="0dp"
-            android:layout_height="wrap_content"
-            android:layout_weight="1"
-            android:layout_marginStart="12dp"
-            android:orientation="vertical">
-
-            <TextView
-                android:id="@+id/feels"
-                android:layout_width="wrap_content"
-                android:layout_height="wrap_content"
-                android:text="Hissedilen 13,0°"
-                android:textColor="#B6D0D9"
-                android:textSize="10sp"/>
-
-            <TextView
-                android:id="@+id/details"
-                android:layout_width="wrap_content"
-                android:layout_height="wrap_content"
-                android:text="Rüzgâr 14 km/sa SW · Nem 77%"
-                android:textColor="#9FC1CB"
-                android:textSize="9sp"
-                android:layout_marginTop="3dp"/>
+    <TextView android:id="@+id/feels" android:layout_width="match_parent" android:layout_height="wrap_content"
+        android:text="Hissedilen 13,0°" android:textColor="#B6D0D9" android:textSize="9sp"/>
+    <TextView android:id="@+id/details" android:layout_width="match_parent" android:layout_height="wrap_content"
+        android:text="Rüzgâr 14 km/sa SW · Nem 77%" android:textColor="#9FC1CB" android:textSize="9sp"/>
+    <TextView android:id="@+id/rain_now" android:layout_width="match_parent" android:layout_height="wrap_content"
+        android:text="Yağış 0,0 mm" android:textColor="#8FDCE2" android:textSize="9sp" android:textStyle="bold"/>
+    <View android:layout_width="match_parent" android:layout_height="1dp" android:layout_marginTop="5dp" android:layout_marginBottom="4dp" android:background="#345261"/>
+    <TextView android:id="@+id/rain_days_title" android:layout_width="match_parent" android:layout_height="wrap_content"
+        android:text="YAĞIŞ · SICAKLIK" android:textColor="#8FDCE2" android:textSize="8sp" android:textStyle="bold"/>
+    <LinearLayout android:layout_width="match_parent" android:layout_height="wrap_content" android:orientation="horizontal">
+        <LinearLayout android:id="@+id/day1" android:layout_width="0dp" android:layout_height="wrap_content" android:layout_weight="1" android:orientation="vertical" android:gravity="center_horizontal">
+            <TextView android:id="@+id/day1_date" android:layout_width="wrap_content" android:layout_height="wrap_content" android:text="Çar" android:textColor="#C9E0E6" android:textSize="8sp"/>
+            <TextView android:id="@+id/day1_rain" android:layout_width="wrap_content" android:layout_height="wrap_content" android:text="☂ 0,0" android:textColor="#8FDCE2" android:textSize="7sp"/>
+            <TextView android:id="@+id/day1_temp" android:layout_width="wrap_content" android:layout_height="wrap_content" android:text="18° / 11°" android:textColor="#FFFFFF" android:textSize="9sp" android:textStyle="bold"/>
         </LinearLayout>
-
-        <TextView
-            android:id="@+id/rain_now"
-            android:layout_width="wrap_content"
-            android:layout_height="wrap_content"
-            android:text="Yağış 0,0 mm"
-            android:textColor="#8FDCE2"
-            android:textSize="10sp"
-            android:textStyle="bold"/>
-    </LinearLayout>
-
-    <View
-        android:layout_width="match_parent"
-        android:layout_height="1dp"
-        android:layout_marginTop="7dp"
-        android:layout_marginBottom="5dp"
-        android:background="#345261"/>
-
-    <TextView
-        android:id="@+id/rain_days_title"
-        android:layout_width="wrap_content"
-        android:layout_height="wrap_content"
-        android:text="YAĞIŞ GÜNLERİ · SICAKLIK"
-        android:textColor="#8FDCE2"
-        android:textSize="9sp"
-        android:textStyle="bold"/>
-
-    <LinearLayout
-        android:id="@+id/days_row"
-        android:layout_width="match_parent"
-        android:layout_height="0dp"
-        android:layout_weight="1"
-        android:layout_marginTop="3dp"
-        android:orientation="horizontal">
-
-        <LinearLayout android:id="@+id/day1" style="@style/DayCell">
-            <TextView android:id="@+id/day1_date" style="@style/DayText" android:text="Çar"/>
-            <TextView android:id="@+id/day1_rain" style="@style/DayRain" android:text="☂ 0,0"/>
-            <TextView android:id="@+id/day1_temp" style="@style/DayTemp" android:text="18° / 11°"/>
+        <LinearLayout android:id="@+id/day2" android:layout_width="0dp" android:layout_height="wrap_content" android:layout_weight="1" android:orientation="vertical" android:gravity="center_horizontal">
+            <TextView android:id="@+id/day2_date" android:layout_width="wrap_content" android:layout_height="wrap_content" android:text="Per" android:textColor="#C9E0E6" android:textSize="8sp"/>
+            <TextView android:id="@+id/day2_rain" android:layout_width="wrap_content" android:layout_height="wrap_content" android:text="☂ 0,0" android:textColor="#8FDCE2" android:textSize="7sp"/>
+            <TextView android:id="@+id/day2_temp" android:layout_width="wrap_content" android:layout_height="wrap_content" android:text="18° / 11°" android:textColor="#FFFFFF" android:textSize="9sp" android:textStyle="bold"/>
         </LinearLayout>
-
-        <LinearLayout android:id="@+id/day2" style="@style/DayCell">
-            <TextView android:id="@+id/day2_date" style="@style/DayText" android:text="Per"/>
-            <TextView android:id="@+id/day2_rain" style="@style/DayRain" android:text="☂ 0,0"/>
-            <TextView android:id="@+id/day2_temp" style="@style/DayTemp" android:text="18° / 11°"/>
+        <LinearLayout android:id="@+id/day3" android:layout_width="0dp" android:layout_height="wrap_content" android:layout_weight="1" android:orientation="vertical" android:gravity="center_horizontal">
+            <TextView android:id="@+id/day3_date" android:layout_width="wrap_content" android:layout_height="wrap_content" android:text="Cum" android:textColor="#C9E0E6" android:textSize="8sp"/>
+            <TextView android:id="@+id/day3_rain" android:layout_width="wrap_content" android:layout_height="wrap_content" android:text="☂ 0,0" android:textColor="#8FDCE2" android:textSize="7sp"/>
+            <TextView android:id="@+id/day3_temp" android:layout_width="wrap_content" android:layout_height="wrap_content" android:text="18° / 11°" android:textColor="#FFFFFF" android:textSize="9sp" android:textStyle="bold"/>
         </LinearLayout>
-
-        <LinearLayout android:id="@+id/day3" style="@style/DayCell">
-            <TextView android:id="@+id/day3_date" style="@style/DayText" android:text="Cum"/>
-            <TextView android:id="@+id/day3_rain" style="@style/DayRain" android:text="☂ 0,0"/>
-            <TextView android:id="@+id/day3_temp" style="@style/DayTemp" android:text="18° / 11°"/>
-        </LinearLayout>
-
-        <LinearLayout android:id="@+id/day4" style="@style/DayCell">
-            <TextView android:id="@+id/day4_date" style="@style/DayText" android:text="Cmt"/>
-            <TextView android:id="@+id/day4_rain" style="@style/DayRain" android:text="☂ 0,0"/>
-            <TextView android:id="@+id/day4_temp" style="@style/DayTemp" android:text="18° / 11°"/>
+        <LinearLayout android:id="@+id/day4" android:layout_width="0dp" android:layout_height="wrap_content" android:layout_weight="1" android:orientation="vertical" android:gravity="center_horizontal">
+            <TextView android:id="@+id/day4_date" android:layout_width="wrap_content" android:layout_height="wrap_content" android:text="Cmt" android:textColor="#C9E0E6" android:textSize="8sp"/>
+            <TextView android:id="@+id/day4_rain" android:layout_width="wrap_content" android:layout_height="wrap_content" android:text="☂ 0,0" android:textColor="#8FDCE2" android:textSize="7sp"/>
+            <TextView android:id="@+id/day4_temp" android:layout_width="wrap_content" android:layout_height="wrap_content" android:text="18° / 11°" android:textColor="#FFFFFF" android:textSize="9sp" android:textStyle="bold"/>
         </LinearLayout>
     </LinearLayout>
-
-    <TextView
-        android:id="@+id/source"
-        android:layout_width="match_parent"
-        android:layout_height="wrap_content"
-        android:text="MGM Eyüpsultan · GFS MeteoPT"
-        android:textColor="#607F8C"
-        android:textSize="8sp"
-        android:gravity="center_vertical"/>
+    <TextView android:id="@+id/source" android:layout_width="match_parent" android:layout_height="wrap_content"
+        android:text="MGM Eyüpsultan · GFS MeteoPT · 30 dk" android:textColor="#607F8C" android:textSize="7sp"/>
 </LinearLayout>
