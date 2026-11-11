@@ -194,17 +194,23 @@ export function parseCameraOverlayText(metricLines, timeText) {
   // Do not depend on the overlay being segmented into exactly four OCR lines.
   // Camera compression/exposure can merge or split glyph bands, so parse the
   // measurements from the complete metric region as well.
-  const temperature = firstNumber(metricsText, /(-?\d{1,2}[.,]\d)\s*(?:°|º|C)?/i);
+  const temperature = firstNumber(lines[0], /(-?\d{1,2}[.,]\d)/)
+    ?? firstNumber(metricsText, /(-?\d{1,2}[.,]\d)/);
   const humidityMatch = metricsText.match(/(\d{1,3})\s*%/);
-  const pressureMatch = metricsText.match(/(\d{3,4}[.,]\d)\s*(?:hPa)?/i);
-  const windMatch = metricsText.match(/(\d{1,2}[.,]\d)\s*(?:kt|kts|knots)?\s*([NSEW]{1,3})?/i);
-
-  const humidity = humidityMatch ? Number(humidityMatch[1]) : firstNumber(lines[1], /(\d{1,3})/);
-  const pressure = pressureMatch ? Number(pressureMatch[1].replace(",", ".")) : firstNumber(lines[2], /(\d{3,4}[.,]\d)/);
-  const windKnots = windMatch ? Number(windMatch[1].replace(",", ".")) : firstNumber(lines[3], /(\d{1,2}[.,]\d)/);
+  const pressureCandidates = [...metricsText.matchAll(/(\d{3,4}[.,]\d)/g)]
+    .map(m => Number(m[1].replace(",", ".")))
+    .filter(v => v >= 900 && v <= 1100);
+  const pressure = pressureCandidates[0] ?? firstNumber(lines[2], /(\d{3,4}[.,]\d)/);
+  const windLine = String(lines[3] || "");
+  const windMatch = windLine.match(/(\d{1,2}[.,]\d)/);
+  const windKnots = windMatch
+    ? Number(windMatch[1].replace(",", "."))
+    : (() => {
+        const candidates = [...metricsText.matchAll(/(\d{1,2}[.,]\d)\s*(?:kt|kts|knots)/ig)];
+        return candidates.length ? Number(candidates[0][1].replace(",", ".")) : null;
+      })();
   const windDirection = directionFrom(
-    (windMatch && windMatch[2]) ||
-    String(lines[3] || "").replace(/^.*?(\d{1,2}[.,]\d)/, "")
+    windLine.replace(/^.*?(\d{1,2}[.,]\d)/, "")
   );
 
   const normalizedTime = String(timeText || "")
