@@ -536,7 +536,9 @@ function buildKoySeries(runs) {
 }
 
 function buildKoyInteractiveSvg(comparison) {
-  const chart = buildKoySeries(comparison?.runs);
+  const candidateRuns = Array.isArray(comparison?.runs) ? comparison.runs : [];
+  if (candidateRuns.length < 4) return null;
+  const chart = buildKoySeries(candidateRuns);
   const { series, validKeys, pointsBySeries, localLabels, dates, offsets } = chart;
   const W = 1152;
   const H = 838;
@@ -551,9 +553,9 @@ function buildKoyInteractiveSvg(comparison) {
   const xRatio = value => (value - xMin) / (xMax - xMin);
 
   const parts = [
-    '<svg xmlns="http://www.w3.org/2000/svg" width="' + W + '" height="' + H + '" viewBox="0 0 ' + W + ' ' + H + '" role="img" aria-labelledby="istanbul-gfs-svg-title istanbul-gfs-svg-desc">',
-    '<title id="istanbul-gfs-svg-title">Köy GFS · dört döngü valid-time karşılaştırması</title>',
-    '<desc id="istanbul-gfs-svg-desc">Dört Köy GFS tahmin döngüsü aynı geçerlilik saatlerinde hizalanmıştır. Sıcaklık, 850 hPa sıcaklığı, yağış ve 10 metre rüzgârı karşılaştırılır.</desc>',
+    '<svg xmlns="http://www.w3.org/2000/svg" width="' + W + '" height="' + H + '" viewBox="0 0 ' + W + ' ' + H + '" role="img" aria-labelledby="koy-gfs-svg-title koy-gfs-svg-desc">',
+    '<title id="koy-gfs-svg-title">Köy GFS · dört döngü valid-time karşılaştırması</title>',
+    '<desc id="koy-gfs-svg-desc">Dört Köy GFS tahmin döngüsü aynı geçerlilik saatlerinde hizalanmıştır. Sıcaklık, 850 hPa sıcaklığı, yağış ve 10 metre rüzgârı karşılaştırılır.</desc>',
     '<g id="patch_1"><rect x="0" y="0" width="1152" height="838" style="fill: #0a1b29"/></g>',
     '<text x="63" y="34" fill="#7DD3D7" font-size="12" font-weight="700" letter-spacing="1.5" font-family="' + FONT + '">GFS · GİRESUN ÇANAKÇI</text>',
     '<text x="1090" y="34" text-anchor="end" fill="#8EAEB7" font-size="8" font-weight="500" font-family="' + FONT + '">Giresun / Çanakçı Havası v' + APP_VERSION + '</text>',
@@ -577,7 +579,7 @@ function buildKoyInteractiveSvg(comparison) {
     );
   });
   const metadata = [];
-  PANELS.forEach((spec, panelIndex) => {
+  KOY_SVG_PANELS.forEach((spec, panelIndex) => {
     const column = panelIndex % 2;
     const row = Math.floor(panelIndex / 2);
     const px = panelLeft[column];
