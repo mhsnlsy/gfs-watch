@@ -252,6 +252,29 @@ export function parseCameraOverlayText(metricLines, timeText) {
     observed_at_utc: observedAt.toISOString()
   };
 }
+export async function recognizeCameraOverlayWithAI(jpegBytes, ai) {
+  if (!ai || typeof ai.run !== "function") return null;
+  try {
+    const result = await ai.run("@cf/llava-hf/llava-1.5-7b-hf", {
+      image: Array.from(jpegBytes),
+      prompt: "Read ONLY the white weather-station overlay. Return exactly: TEMP=<number>; RH=<integer>; PRESS=<number>; WIND=<number>kt <cardinal>; TIME=<DD-MM-YYYY HH:MM:SS>. Do not guess values."
+    });
+    const text = String(result?.response || result?.description || result || "");
+    const temp = text.match(/TEMP\s*=\s*(-?\d+(?:[.,]\d+)?)/i);
+    const rh = text.match(/RH\s*=\s*(\d{1,3})/i);
+    const press = text.match(/PRESS\s*=\s*(\d{3,4}(?:[.,]\d+)?)/i);
+    const wind = text.match(/WIND\s*=\s*(\d+(?:[.,]\d+)?)\s*(?:kt|kts|knots)\s*([NSEW]{1,3})/i);
+    const time = text.match(/TIME\s*=\s*(\d{1,2}[-/.]\d{1,2}[-/.]\d{2,4}\s+\d{1,2}:\d{2}:\d{2})/i);
+    if (!temp || !rh || !press || !wind || !time) return null;
+    const parsed = parseCameraOverlayText([temp[1], rh[1] + "%", press[1], wind[1] + " " + wind[2]], time[1]);
+    if (!parsed) return null;
+    console.log("[ENKA CAMERA AI OCR SUCCESS] " + text.slice(0, 300));
+    return parsed;
+  } catch (error) {
+    console.warn("[ENKA CAMERA AI OCR] " + (error?.message || error));
+    return null;
+  }
+}
 export function recognizeCameraOverlay(jpegBytes) {
   const decoded = jpeg.decode(jpegBytes, { useTArray: true, formatAsRGBA: true });
   const { width, height, data } = decoded;
