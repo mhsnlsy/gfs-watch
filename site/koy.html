@@ -639,25 +639,1494 @@
     @media (max-width:1100px) {
       .dashboard-top { grid-template-columns:minmax(0,1fr); }
       .dashboard-left { display:block; }
-      .dashboard-top .station-card {
+      .dashboard-top .station-card { width:100%; }
+      .next-180h-grid { grid-template-columns:repeat(2,minmax(0,1fr)); }
+    }
+    @media (max-width:700px) {
+      html { scroll-padding-top:calc(64px + env(safe-area-inset-top)); }
+      .shell { width:calc(100% - 24px); }
+      .topbar { padding-top:max(8px,env(safe-area-inset-top)); }
+      .dashboard-top { grid-template-columns:minmax(0,1fr); }
+      .dashboard-left { display:block; }
+      .dashboard-top .station-card { width:100%; max-width:none; }
+      .next-180h-grid { grid-template-columns:minmax(0,1fr); }
+      .next-180h-chart { height:clamp(160px,42vw,210px); }
+      .chart-wrap { overflow-x:auto; -webkit-overflow-scrolling:touch; }
+      .chart-wrap svg { min-width:560px; }
+      .ecmwf-chart { overflow-x:auto; -webkit-overflow-scrolling:touch; }
+      .ecmwf-chart svg { min-width:520px; }
+      .notification-images { grid-template-columns:minmax(0,1fr)!important; }
+      .daily-grid { grid-template-columns:repeat(4,minmax(0,1fr)); }
+      .notification-controls { align-items:stretch; width:100%; }
+      .notification-button { width:100%; }
+    }
+    @media (max-width:390px) {
+      .shell { width:calc(100% - 20px); }
+      .brand { font-size:13px; }
+      .brand small { font-size:7px; }
+      .model-picker button { padding:7px 8px; font-size:9px; }
+      .dashboard-top .station-card { padding:12px 11px; }
+      .dashboard-top .station-card .stat { padding-left:4px; padding-right:4px; }
+      .dashboard-top .station-card .stat .value { font-size:11px; }
+      .station-switch { width:100%; }
+      .station-switch button { flex:1; padding-left:5px; padding-right:5px; font-size:8px; }
+      .daily-grid { grid-template-columns:repeat(2,minmax(0,1fr)); }
+    }
+    /* Portrait mobile: compact the 180-hour forecast and remove excess chart whitespace. */
+    @media (max-width:700px) and (orientation:portrait) {
+      .dashboard-top { gap:8px; padding-top:10px; padding-bottom:8px; }
+      .next-180h-panel { padding:10px 9px; border-radius:15px; }
+      .next-180h-head { gap:7px; margin-bottom:6px; }
+      .next-180h-head h2 { margin-top:2px; font-size:17px; line-height:1.15; }
+      .next-180h-head p { margin-top:3px; line-height:1.3; }
+      .next-180h-badge { padding:4px 6px; font-size:8px; }
+      .next-180h-grid { gap:7px; }
+      .next-180h-card { padding:7px 7px 5px; border-radius:11px; }
+      .next-180h-card-head h3 { font-size:12px; }
+      .next-180h-chart { height:132px; min-height:0; margin-top:3px; }
+      .briefing { gap:4px; margin-top:6px; }
+      .briefing-row { grid-template-columns:78px minmax(0,1fr); gap:6px; padding:5px 7px; }
+      .briefing-v,.brief-spell { font-size:12px; line-height:1.32; }
+      .brief-days { gap:3px; }
+    }
+    /* iPhone landscape / 16:8-class phone viewports: compact chrome, retain two-column forecast. */
+    @media (orientation:landscape) and (max-height:600px) and (pointer:coarse) {
+      .topbar { min-height:54px; flex-wrap:nowrap; padding-top:env(safe-area-inset-top); }
+      .topbar nav { display:flex; order:initial; width:auto; overflow-x:auto; gap:12px; }
+      .topbar nav a { font-size:10px; }
+      .hero { padding-top:16px; }
+      .dashboard-top { grid-template-columns:minmax(270px,.8fr) minmax(0,1.2fr); gap:10px; }
+      .dashboard-left { display:block; }
+      .next-180h-grid { grid-template-columns:repeat(2,minmax(0,1fr)); gap:8px; }
+      .next-180h-chart { height:125px; }
+      .station-history-inline .history-charts { grid-template-columns:repeat(2,minmax(0,1fr)); }
+      .daily-grid { grid-template-columns:repeat(4,minmax(0,1fr)); }
+      .section { padding-top:16px; padding-bottom:16px; }
+    }
+    @media (prefers-reduced-motion:reduce) {
+      *,*::before,*::after { scroll-behavior:auto!important; animation-duration:.01ms!important; transition-duration:.01ms!important; }
+    }
+
+
+    
+    }
+
+
+    
+    }
+
+
+    
+    }
+
+
+    /* Ultra-compact single row */
+    @media (max-width: 640px) {
+      .station-card .weather-stats {
+        display: grid !important;
+        grid-template-columns: repeat(5, minmax(0, 1fr)) !important;
+        gap: 2px !important;
+        margin-top: 10px !important;
+      }
+      .station-card .stat {
+        padding: 4px 2px !important;
+        text-align: center;
+        min-width: 0;
+        border-radius: 8px !important;
+      }
+      .station-card .stat .name { 
+        font-size: 6.5px !important; 
+        letter-spacing: -0.01em;
+        white-space: nowrap;
+        overflow: hidden;
+        text-overflow: ellipsis;
+        line-height: 1.1;
+      }
+      .station-card .stat .value { 
+        font-size: 11px !important; 
+        margin-top: 1px; 
+        white-space: nowrap;
+        line-height: 1.15;
+      }
+      .station-card .stat .detail { 
+        font-size: 6px !important; 
+        margin-top: 0; 
+        white-space: nowrap;
+        overflow: hidden;
+        text-overflow: ellipsis;
+        line-height: 1.1;
+      }
+      .station-card .stat .unit { font-size: 6.5px !important; margin-left: 1px !important; }
+    }
+
+
+    /* Ultra-tight layout */
+    .station-card .weather-stats {
+      gap: 1.5px !important;
+    }
+    .station-card .stat {
+      padding: 5px 3px !important;
+    }
+    .station-card .temp-meta {
+      margin-top: 2px !important;
+    }
+    .delta-badge {
+      margin-top: 3px !important;
+      padding: 2px 7px !important;
+    }
+    .station-card .temp-row {
+      gap: 6px !important;
+      margin-top: 8px !important;
+    }
+    .station-card .weather-top {
+      gap: 4px;
+    }
+    @media (max-width: 640px) {
+      .station-card .weather-stats {
+        gap: 1.5px !important;
+        margin-top: 8px !important;
+      }
+      .station-card .stat {
+        padding: 3px 1.5px !important;
+      }
+      .station-card .stat .name { font-size: 6.5px !important; }
+      .station-card .stat .value { font-size: 11px !important; margin-top: 1px !important; }
+      .station-card .stat .detail { font-size: 6px !important; }
+      .station-card .stat .unit { font-size: 6.5px !important; }
+    }
+
+
+    /* Force all station stats into one continuous row */
+    .station-card .weather-stats {
+      display: flex !important;
+      flex-wrap: nowrap !important;
+      gap: 1.5px !important;
+      margin-top: 10px !important;
+      overflow-x: auto;
+    }
+    .station-card .stat {
+      flex: 1 1 0 !important;
+      min-width: 0 !important;
+      padding: 4px 2px !important;
+      text-align: center;
+    }
+    .station-card .stat .name { font-size: 7px !important; letter-spacing: 0; }
+    .station-card .stat .value { font-size: 11px !important; margin-top: 1px !important; }
+    .station-card .stat .detail { font-size: 6.5px !important; }
+    .station-card .stat .unit { font-size: 6.5px !important; }
+
+    /* Use the empty area beside the temperature. Data sizes stay unchanged. */
+    .dashboard-top{align-items:start!important;padding:8px 0 6px!important;gap:8px!important}
+    .dashboard-top .station-card{
+      display:grid!important;
+      grid-template-columns:auto minmax(0,1fr);
+      column-gap:8px;
+      row-gap:2px;
+      align-items:center;
+      align-self:start!important;
+      height:auto!important;
+      min-height:0!important;
+      padding:6px 8px 4px!important;
+    }
+    .dashboard-top .station-card>.weather-top,
+    .dashboard-top .station-card>.station-switch,
+    .dashboard-top .station-card>.station-alert,
+    .dashboard-top .station-card>.station-history-inline{grid-column:1 / -1}
+    .dashboard-top .station-card>.station-overview{grid-column:1;margin:0!important}
+    .dashboard-top .station-card>.weather-stats{
+      grid-column:2;margin:0!important;padding-top:0!important;align-self:center;
+      display:flex!important;flex-wrap:nowrap!important;width:100%;min-width:0!important;
+      overflow:visible!important;
+    }
+    .station-card .stat .name,.station-card .stat .value{white-space:nowrap}
+    .station-card .stat .detail{white-space:normal!important;overflow-wrap:anywhere!important;line-height:1.15}
+    .station-card .place{margin-top:1px}
+    .station-switch{margin-top:2px!important;padding:2px}
+    .station-switch button{min-height:0!important;padding:5px 10px!important}
+    .station-card .temp-row,.dashboard-top .station-card .temp-row{margin:0!important}
+    .station-current .temp-meta{margin-top:0!important}
+    .station-card .temp-caption{margin-top:0}
+    .delta-badge{margin-top:2px!important}
+    .station-history-inline{margin-top:2px!important;padding-top:4px!important}
+    .station-history-inline .history-panel-head{margin:0 0 2px!important}
+    .station-history-inline .history-chart-head{margin-bottom:1px}
+    .station-history-inline .history-chart-meta,.station-history-inline .history-source-note{margin-top:1px}
+    @media(max-width:560px){
+      .dashboard-top .station-card{grid-template-columns:minmax(0,1fr)}
+      .dashboard-top .station-card>.station-overview,
+      .dashboard-top .station-card>.weather-stats{grid-column:1}
+    }
+
+    /* Readable station details: fill the space beside the temperature. */
+    .dashboard-top{
+      grid-template-columns:minmax(480px,1fr) minmax(0,1.08fr)!important;
+      align-items:stretch!important;
+    }
+    .dashboard-top .station-card{
+      align-items:stretch!important;
+      column-gap:14px!important;
+      row-gap:8px!important;
+    }
+    .dashboard-top .station-card>.station-overview{align-self:center}
+    .dashboard-top .station-card>.weather-stats{
+      display:grid!important;
+      grid-template-columns:repeat(3,minmax(0,1fr))!important;
+      grid-column:2;
+      gap:6px 8px!important;
+      width:auto!important;
+      min-width:0!important;
+      margin:0!important;
+      padding:0!important;
+      overflow:visible!important;
+      transform:none!important;
+      align-self:stretch;
+      align-content:space-between;
+    }
+    .dashboard-top .station-card .stat{
+      flex:none!important;
+      min-width:0!important;
+      padding:2px 4px!important;
+      text-align:left;
+      border-right:0!important;
+    }
+    .dashboard-top .station-card .stat .name{
+      font-size:11px!important;
+      letter-spacing:.04em!important;
+      white-space:nowrap!important;
+      overflow:hidden;
+      text-overflow:ellipsis;
+    }
+    .dashboard-top .station-card .stat .value{
+      font-size:20px!important;
+      margin-top:1px!important;
+      white-space:nowrap!important;
+      letter-spacing:-.03em;
+    }
+    .dashboard-top .station-card .stat .unit{font-size:11px!important;margin-left:2px!important}
+    .dashboard-top .station-card .stat .detail{
+      font-size:11px!important;
+      margin-top:1px!important;
+      line-height:1.2!important;
+      white-space:normal!important;
+    }
+    @media(max-width:1180px){
+      .dashboard-top .station-card>.weather-stats{grid-template-columns:repeat(2,minmax(0,1fr))!important}
+      .dashboard-top .station-card .stat .value{font-size:18px!important}
+    }
+    @media(max-width:900px){
+      .dashboard-top{grid-template-columns:minmax(0,1fr)!important}
+    }
+    @media(max-width:560px){
+      .dashboard-top .station-card>.weather-stats{
+        grid-column:1!important;
+        grid-template-columns:repeat(3,minmax(0,1fr))!important;
+        gap:8px 6px!important;
+        margin-top:8px!important;
+      }
+      .dashboard-top .station-card .stat .name{font-size:10px!important}
+      .dashboard-top .station-card .stat .value{font-size:16px!important}
+      .dashboard-top .station-card .stat .detail,.dashboard-top .station-card .stat .unit{font-size:10px!important}
+    }
+
+    /* Left and right panels share one top and one bottom, both stations. */
+    .dashboard-top{align-items:stretch!important}
+    .dashboard-left{
+      display:flex!important;
+      flex-direction:column!important;
+      align-self:stretch!important;
+      height:100%!important;
+      min-height:100%!important;
+      margin:0!important;
+      padding:0!important;
+    }
+    .dashboard-top .station-card{
+      flex:1 1 auto!important;
+      height:100%!important;
+      min-height:100%!important;
+      margin:0!important;
+      align-self:stretch!important;
+      grid-template-rows:auto auto auto minmax(0,1fr) auto!important;
+    }
+    .dashboard-top .next-180h-panel{
+      margin:0!important;
+      align-self:stretch!important;
+      height:100%!important;
+    }
+    .dashboard-top .station-card>.station-history-inline{
+      grid-column:1 / -1!important;
+      grid-row:4!important;
+      display:flex!important;
+      flex-direction:column!important;
+      min-height:0!important;
+      height:100%!important;
+      margin-top:8px!important;
+    }
+    .dashboard-top .station-card>.station-alert{grid-column:1 / -1!important;grid-row:5!important}
+    .dashboard-top .station-history-inline .history-charts{
+      flex:1 1 auto!important;
+      min-height:0!important;
+      display:grid!important;
+      grid-template-rows:minmax(0,1fr) minmax(0,1fr)!important;
+      align-content:stretch!important;
+    }
+    .dashboard-top .station-history-inline .history-chart-card{
+      display:flex!important;
+      flex-direction:column!important;
+      min-height:0!important;
+    }
+    .dashboard-top .station-history-inline .history-chart{
+      flex:none!important;
+      height:140px!important;
+      min-height:0!important;
+    }
+    .dashboard-top{align-items:start!important}
+    .dashboard-left,
+    .dashboard-top .station-card,
+    .dashboard-top .next-180h-panel{
+      height:auto!important;
+      min-height:0!important;
+      flex:0 0 auto!important;
+    }
+    .dashboard-top .station-card{grid-template-rows:auto auto auto auto auto auto!important}
+    .dashboard-top .station-card>.station-history-inline,
+    .dashboard-top .station-history-inline .history-charts{
+      height:auto!important;
+      flex:none!important;
+    }
+    .dashboard-top .station-history-inline .history-charts{grid-template-rows:auto!important}
+    @media(max-width:900px){
+      .dashboard-left{height:auto!important;min-height:0!important}
+      .dashboard-top .station-card,
+      .dashboard-top .next-180h-panel{
+        flex:0 0 auto!important;
+        height:auto!important;
+        min-height:0!important;
+      }
+      .dashboard-top .station-card{grid-template-rows:auto auto auto auto auto auto!important}
+      .dashboard-top .station-card>.station-overview{grid-row:3!important}
+      .dashboard-top .station-card>.weather-stats{
+        grid-row:4!important;
+        grid-column:1!important;
+        align-self:start!important;
+        align-content:start!important;
+        margin-top:8px!important;
+      }
+      .dashboard-top .station-card>.station-history-inline{
+        grid-row:5!important;
+        height:auto!important;
+      }
+      .dashboard-top .station-card>.station-alert{grid-row:6!important}
+      .dashboard-top .station-history-inline .history-charts{
+        flex:none!important;
+        height:auto!important;
+        grid-template-rows:none!important;
+        align-content:start!important;
+      }
+      .dashboard-top .station-history-inline .history-chart{
+        flex:none!important;
+        height:128px!important;
+        min-height:0!important;
+      }
+    }
+
+
+    /* Station card alignment repair: keep observation metrics beside the temperature. */
+    .dashboard-top .station-card{
+      display:grid!important;grid-template-columns:minmax(0,1fr) minmax(300px,42%)!important;
+      grid-template-rows:auto auto auto auto!important;align-items:start!important;align-content:start!important;
+      column-gap:18px!important;row-gap:10px!important;height:auto!important;min-height:0!important;padding:16px 17px 14px!important;
+    }
+    .dashboard-top .station-card>.weather-top,.dashboard-top .station-card>.station-switch,
+    .dashboard-top .station-card>.station-alert,.dashboard-top .station-card>.station-history-inline{grid-column:1 / -1!important}
+    .dashboard-top .station-card>.station-overview{display:contents!important}
+    .dashboard-top .station-card .station-current{grid-column:1!important;grid-row:3!important;min-width:0!important;align-self:start!important}
+    .dashboard-top .station-card>.weather-stats{
+      grid-column:2!important;grid-row:3!important;display:grid!important;grid-template-columns:repeat(2,minmax(0,1fr))!important;
+      gap:12px 14px!important;width:100%!important;min-width:0!important;margin:0!important;padding:8px 0 0!important;
+      overflow:visible!important;align-self:center!important;align-content:center!important;
+    }
+    .dashboard-top .station-card .stat{min-width:0!important;padding:4px 7px!important;text-align:left!important;border-right:0!important;overflow:visible!important}
+    .dashboard-top .station-card .stat .name{font-size:11px!important;white-space:nowrap!important;overflow:visible!important;text-overflow:clip!important}
+    .dashboard-top .station-card .stat .value{font-size:clamp(17px,1.5vw,21px)!important;white-space:nowrap!important;overflow:visible!important;overflow-wrap:normal!important}
+    .dashboard-top .station-card .stat .unit{font-size:11px!important}
+    .dashboard-top .station-card .stat .detail{font-size:10px!important;line-height:1.3!important;white-space:normal!important;overflow-wrap:normal!important;word-break:normal!important}
+    .dashboard-top .station-card .station-history-inline{grid-column:1 / -1!important;grid-row:auto!important;width:100%!important;min-width:0!important;margin-top:8px!important}
+    .dashboard-top .station-card .rain-brief{max-width:100%;min-width:0}
+    .dashboard-top .station-card .rain-brief .delta-badge{max-width:100%;white-space:normal!important;overflow-wrap:anywhere;line-height:1.35}
+    @media(max-width:900px){
+      .dashboard-top .station-card{grid-template-columns:minmax(0,1fr)!important;grid-template-rows:auto auto auto auto auto!important}
+      .dashboard-top .station-card .station-current{grid-column:1!important;grid-row:3!important}
+      .dashboard-top .station-card>.weather-stats{grid-column:1!important;grid-row:4!important;grid-template-columns:repeat(3,minmax(0,1fr))!important;gap:10px 8px!important;margin-top:10px!important;padding-top:8px!important}
+      .dashboard-top .station-card>.station-history-inline{grid-column:1!important;grid-row:5!important}
+      .dashboard-top .station-card .stat .name{font-size:10px!important}
+      .dashboard-top .station-card .stat .value{font-size:16px!important}
+      .dashboard-top .station-card .stat .unit,.dashboard-top .station-card .stat .detail{font-size:9px!important}
+    }
+    @media(max-width:560px){
+      .dashboard-top .station-card{padding:14px 12px 12px!important;row-gap:8px!important}
+      .dashboard-top .station-card>.weather-stats{grid-template-columns:repeat(2,minmax(0,1fr))!important;gap:9px 7px!important}
+      .dashboard-top .station-card .stat{padding:4px 5px!important}
+      .dashboard-top .station-card .stat .name{font-size:9px!important}
+      .dashboard-top .station-card .stat .value{font-size:15px!important}
+      .dashboard-top .station-card .stat .unit,.dashboard-top .station-card .stat .detail{font-size:8px!important}
+    }
+
+
+    /* Final mobile density override: trim chart and card whitespace by ~25%. */
+    @media (max-width:700px) and (orientation:portrait) {
+      .next-180h-panel { padding:9px 8px!important; }
+      .next-180h-head { margin-bottom:6px!important; gap:5px!important; }
+      .next-180h-grid { row-gap:13px!important; column-gap:8px!important; }
+      .next-180h-card { padding:2px 1px 0!important; }
+      .next-180h-chart {
+        height:129px!important;
+        min-height:0!important;
+        margin-top:2px!important;
+      }
+      .next-180h-chart svg { height:100%!important; }
+      .briefing { margin-top:5px!important; gap:3px!important; }
+      .briefing-row { padding:4px 6px!important; }
+    }
+
+.meteopt-wind-value{display:inline-flex!important;align-items:center!important;justify-content:center!important;gap:3px!important;white-space:nowrap!important}
+.meteopt-wind-arrow{display:inline-block!important;width:9px!important;height:9px!important;font-size:9px!important;line-height:9px!important;font-weight:800!important;transform:rotate(var(--wind-angle))!important;transform-origin:50% 50%!important;opacity:.9!important}
+@media (max-width:850px),(pointer:coarse){.meteopt-wind-value{gap:2px!important}.meteopt-wind-arrow{width:8px!important;height:8px!important;font-size:8px!important;line-height:8px!important}}
+
+</style>
+  <link rel="stylesheet" href="./meteopt-gfs-table.css?v=20261109-frame-fit-snowln-2">
+
+    <style id="next-180h-legend-styles">
+    .next-180h-legend{
+      display:flex;flex-wrap:wrap;align-items:center;gap:12px 34px;
+      margin:18px 2px 0;
+      padding:18px 4px 8px;
+      border-top:1px solid rgba(204,225,239,.10);
+    }
+    .next-180h-legend-item{
+      display:inline-flex;align-items:center;gap:10px;
+      color:#c2d3dc;font-size:14px;line-height:1.35;white-space:nowrap;
+    }
+    .next-180h-legend-line{
+      display:inline-block;width:42px;flex:none;
+      border-top:3px dashed var(--run-color);
+    }
+    .next-180h-legend-item.is-latest .next-180h-legend-line{
+      border-top:4px solid var(--run-color);
+    }
+    .next-180h-legend-tag{
+      color:#8fd7ba;background:rgba(39,166,105,.13);
+      border:1px solid rgba(143,215,186,.22);
+      border-radius:999px;padding:2px 6px;
+      font-size:8px;font-weight:800;letter-spacing:.04em;
+    }
+    .next-180h-legend-note{
+      display:none;
+    }
+    @media(max-width:560px){
+      .next-180h-legend{gap:8px 13px;margin-top:3px;padding-top:9px}
+      .next-180h-legend-item{font-size:10px;white-space:normal}
+      .next-180h-legend-line{width:23px}
+      .next-180h-legend-note{font-size:9px}
+    }
+  </style>
+  <style id="station-history-tooltip-position">
+    /* Anchor station measurement popups to their own chart, not the chart card. */
+    .history-chart{position:relative;overflow:visible}
+    .history-chart .station-history-tooltip{z-index:30}
+  </style>
+  <style id="gfs-chart-hover-tooltip-styles">
+    .next-180h-chart{position:relative}
+    .gfs-point-tooltip{
+      position:absolute;z-index:40;min-width:166px;max-width:min(220px,calc(100% - 12px));
+      padding:8px 10px;border:1px solid rgba(125,211,215,.38);border-radius:10px;
+      background:rgba(4,18,29,.97);box-shadow:0 9px 25px rgba(0,0,0,.42);
+      color:#eaf5f8;font-size:10px;line-height:1.4;pointer-events:none;
+      backdrop-filter:blur(8px)
+    }
+    .gfs-point-tooltip[hidden]{display:none}
+    .gfs-point-tooltip-head{display:flex;align-items:center;gap:7px;color:#d8f4f0;font-size:10px}
+    .gfs-point-tooltip-head i{width:8px;height:8px;flex:none;border-radius:50%}
+    .gfs-point-tooltip-time{margin-top:5px;color:#a9bfca;font-size:9px}
+    .gfs-point-tooltip-value{margin-top:3px;color:#fff;font:700 16px/1.2 Manrope,sans-serif}
+    .gfs-point-tooltip-value small{font:500 9px "DM Sans",sans-serif;color:#a9bfca}
+    .gfs-point-tooltip-meta{margin-top:4px;color:#8fa7b5;font-size:9px}
+    @media(max-width:560px){
+      .gfs-point-tooltip{min-width:150px;max-width:min(200px,calc(100% - 12px));padding:7px 9px}
+      .gfs-point-tooltip-value{font-size:14px}
+    }
+  </style>
+  <style id="koy-fullframe-png-styles">
+    /* Match İstanbul's report cards: one image frame, no nested card or inset padding. */
+    .koy-fullframe-images{grid-template-columns:repeat(2,minmax(0,1fr));align-items:start}
+    .koy-fullframe-images .notification-image-item{min-width:0}
+    .koy-fullframe-images .chart-wrap{width:100%;margin:0;overflow:visible}
+    .koy-fullframe-images .notification-image-link{
+      display:block;width:100%;margin:0;border:1px solid var(--line);
+      border-radius:12px;overflow:hidden;background:#0b1c29;
+    }
+    .koy-fullframe-images .notification-image{
+      display:block;width:100%;height:auto;max-width:100%;max-height:none;
+      object-fit:contain;margin:0;
+    }
+    @media(max-width:560px){
+      .koy-fullframe-images{grid-template-columns:minmax(0,1fr);gap:10px}
+      .koy-fullframe-images .notification-image-caption{margin-bottom:5px}
+    }
+  </style>
+  <style id="gfs-istanbul-chart-template">
+    /* İstanbul GFS grafik şablonu — Köy verisi korunur. */
+    .next-180h-head{
+      display:flex!important;
+      justify-content:space-between!important;
+      align-items:flex-start!important;
+      gap:12px!important;
+      margin-bottom:16px!important;
+    }
+    .next-180h-head h2{
+      font:650 22px/1.28 system-ui,-apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif!important;
+      letter-spacing:-.015em!important;
+      margin:5px 0 0!important;
+    }
+    .next-180h-head p{
+      font-size:13px!important;
+      color:var(--muted)!important;
+      margin:7px 0 0!important;
+      line-height:1.6!important;
+    }
+    .next-180h-badge{
+      font-size:10px!important;
+      color:#b8d7df!important;
+      border:1px solid var(--line)!important;
+      padding:7px 10px!important;
+      border-radius:9px!important;
+      white-space:nowrap!important;
+      max-width:42%!important;
+    }
+    .next-180h-grid{
+      display:grid!important;
+      grid-template-columns:repeat(2,minmax(0,1fr))!important;
+      gap:18px 20px!important;
+    }
+    .next-180h-card{
+      position:relative!important;
+      min-width:0!important;
+      padding:12px 0 12px!important;
+      border:1px solid rgba(204,225,239,.12)!important;
+      border-radius:16px!important;
+      background:rgba(4,19,29,.17)!important;
+      overflow:hidden!important;
+    }
+    .next-180h-card-head{
+      display:flex!important;
+      align-items:center!important;
+      justify-content:space-between!important;
+      gap:8px!important;
+      padding:0 14px!important;
+    }
+    .next-180h-card-head h3{
+      font:650 18px/1.3 system-ui,-apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif!important;
+      letter-spacing:0!important;
+      margin:0!important;
+    }
+    .next-180h-card-head span{
+      font-size:12px!important;
+      color:var(--muted)!important;
+      white-space:nowrap!important;
+    }
+    .next-180h-chart{
+      height:clamp(220px,20vw,285px)!important;
+      width:100%!important;
+      margin-top:10px!important;
+      min-width:0!important;
+      min-height:0!important;
+      position:relative!important;
+      overflow:hidden!important;
+      padding:0!important;
+    }
+    .next-180h-chart svg{
+      display:block!important;
+      width:100%!important;
+      height:100%!important;
+      overflow:visible!important;
+    }
+    .next-180h-legend{
+      display:flex!important;
+      flex-wrap:wrap!important;
+      align-items:center!important;
+      gap:11px 22px!important;
+      margin:10px 2px 0!important;
+      padding:14px 2px 9px!important;
+      border-top:1px solid rgba(204,225,239,.10)!important;
+    }
+    .next-180h-legend-item{
+      display:inline-flex!important;
+      align-items:center!important;
+      gap:10px!important;
+      color:#d0dce3!important;
+      font-size:13px!important;
+      font-weight:500!important;
+      line-height:1.55!important;
+      white-space:nowrap!important;
+    }
+    .next-180h-legend-line{
+      display:inline-block!important;
+      width:34px!important;
+      flex:none!important;
+      border-top:2px dashed var(--run-color)!important;
+    }
+    .next-180h-legend-item.is-latest .next-180h-legend-line{
+      border-top:4px solid var(--run-color)!important;
+    }
+    .next-180h-legend-tag{
+      color:#8fd7ba!important;
+      background:rgba(39,166,105,.13)!important;
+      border:1px solid rgba(143,215,186,.22)!important;
+      border-radius:999px!important;
+      padding:3px 7px!important;
+      font-size:9px!important;
+      font-weight:800!important;
+      letter-spacing:.04em!important;
+    }
+
+    /* Tooltip typography matches the İstanbul GFS comparison panel. */
+    .gfs-point-tooltip{
+      position:absolute!important;z-index:40!important;min-width:190px!important;
+      max-width:min(260px,calc(100% - 12px))!important;padding:10px 12px!important;
+      border:1px solid rgba(125,211,215,.38)!important;border-radius:12px!important;
+      background:rgba(4,18,29,.97)!important;box-shadow:0 9px 25px rgba(0,0,0,.42)!important;
+      color:#eaf5f8!important;font-family:system-ui,-apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif!important;
+      font-size:12px!important;line-height:1.55!important;pointer-events:none!important;
+      backdrop-filter:blur(8px)!important;
+    }
+    .gfs-point-tooltip[hidden]{display:none!important}
+    .gfs-point-tooltip-head{display:flex!important;align-items:center!important;gap:8px!important;color:#d8f4f0!important;font-size:12px!important;font-weight:600!important}
+    .gfs-point-tooltip-head i{width:8px!important;height:8px!important;flex:none!important}
+    .gfs-point-tooltip-time{margin-top:7px!important;color:#b7c7d0!important;font-size:11px!important}
+    .gfs-point-tooltip-value{margin-top:5px!important;color:#fff!important;font:700 19px/1.3 system-ui,-apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif!important}
+    .gfs-point-tooltip-value small{font:500 10px "DM Sans",sans-serif!important;color:#a9bfca!important}
+    .gfs-point-tooltip-meta{margin-top:6px!important;color:#a8bac5!important;font-size:11px!important}
+    @media(max-width:700px){
+      .next-180h-grid{grid-template-columns:minmax(0,1fr)!important}
+      .next-180h-chart{height:230px!important}
+    }
+    @media(max-width:560px){.gfs-point-tooltip{min-width:160px!important;max-width:min(220px,calc(100% - 12px))!important;padding:8px 10px!important}.gfs-point-tooltip-value{font-size:16px!important}}
+    @media(max-width:560px){
+      .next-180h-head h2{font-size:20px!important}
+      .next-180h-head p{font-size:11px!important}
+      .next-180h-grid{gap:10px!important}
+      .next-180h-card{padding:10px 0 10px!important}
+      .next-180h-card-head h3{font-size:15px!important}
+      .next-180h-card-head span{font-size:10px!important}
+      .next-180h-chart{height:210px!important}
+      .next-180h-legend{gap:9px 14px!important;margin-top:6px!important;padding-top:11px!important}
+      .next-180h-legend-item{font-size:11px!important;white-space:normal!important}
+      .next-180h-legend-line{width:26px!important}
+    }
+  </style>
+  <style id="koy-gfs-interactive-svg-styles">
+    /* Same report SVG and tooltip presentation as the Istanbul home page. */
+    .koy-gfs-svg-images{
+      display:grid!important;
+      grid-template-columns:minmax(0,1fr)!important;
+      width:100%!important;
+      max-width:100%!important;
+      margin:0!important;
+      gap:0!important;
+    }
+    .koy-gfs-svg-images .notification-image-item{
+      width:100%!important;
+      min-width:0!important;
+    }
+    .gfs-interactive-chart{position:relative;width:100%;max-width:none;min-width:0;margin-inline:0;line-height:0;overflow:visible;background:transparent;touch-action:auto;-webkit-user-select:none;user-select:none}
+    .gfs-interactive-svg{display:block;width:100%;height:auto;max-width:100%;overflow:visible;background:transparent}
+    .gfs-interactive-svg .gfs-hit-area{cursor:crosshair;outline:none}
+    .gfs-interactive-svg .gfs-hit-area:focus{stroke:rgba(125,211,215,.5);stroke-width:1;stroke-dasharray:4 4}
+    .gfs-chart-tooltip{position:absolute;z-index:30;min-width:230px;max-width:min(310px,calc(100% - 16px));padding:11px 13px;border:1px solid rgba(125,211,215,.42);border-radius:13px;background:rgba(4,18,29,.97);box-shadow:0 10px 28px rgba(0,0,0,.46);color:#eaf5f8;font:12px/1.5 "DM Sans",system-ui,sans-serif;pointer-events:none;backdrop-filter:blur(9px);white-space:normal}
+    .gfs-chart-tooltip[hidden]{display:none!important}
+    .gfs-chart-tooltip-head{display:flex;justify-content:space-between;align-items:flex-start;gap:12px;padding-bottom:8px;margin-bottom:7px;border-bottom:1px solid rgba(125,211,215,.18)}
+    .gfs-chart-tooltip-title{font-size:11px;font-weight:800;letter-spacing:.08em;color:#7dd3d7;text-transform:uppercase}
+    .gfs-chart-tooltip-time{font-size:12px;font-weight:700;color:#f1f7fa;white-space:nowrap}
+    .gfs-chart-tooltip-row{display:grid;grid-template-columns:minmax(0,1fr) auto;gap:10px;align-items:center;padding:4px 0}
+    .gfs-chart-tooltip-cycle{display:flex;align-items:center;gap:7px;min-width:0;color:#c9d9e1;font-size:11px}
+    .gfs-chart-tooltip-swatch{display:inline-block;width:9px;height:9px;border-radius:50%;flex:none}
+    .gfs-chart-tooltip-cycle-name{overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+    .gfs-chart-tooltip-lead{display:block;color:#8fa8b7;font-size:10px;margin-top:1px}
+    .gfs-chart-tooltip-value{font-size:13px;font-weight:800;color:#fff;white-space:nowrap;text-align:right;font-variant-numeric:tabular-nums}
+    .gfs-chart-tooltip-value small{font-size:10px;font-weight:500;color:#9fb4c0}
+    .gfs-chart-tooltip-hint{margin-top:7px;padding-top:6px;border-top:1px solid rgba(125,211,215,.14);font-size:9px;color:#8fa8b7}
+    .gfs-chart-loading,.gfs-chart-error{padding:12px;color:#9bb0bc;font:12px/1.5 "DM Sans",sans-serif}
+    @media(max-width:700px){
+      .gfs-chart-tooltip{min-width:0;width:150px;max-width:calc(100vw - 28px);padding:7px 8px;border-radius:9px;font-size:9px;line-height:1.25;box-shadow:0 6px 16px rgba(0,0,0,.4)}
+      .gfs-chart-tooltip-head{gap:5px;padding-bottom:5px;margin-bottom:4px}
+      .gfs-chart-tooltip-title{font-size:9px}
+      .gfs-chart-tooltip-time{font-size:9px}
+      .gfs-chart-tooltip-row{gap:5px;padding:2px 0}
+      .gfs-chart-tooltip-cycle{gap:5px;font-size:9px}
+      .gfs-chart-tooltip-swatch{width:7px;height:7px}
+      .gfs-chart-tooltip-lead{font-size:8px;margin-top:0}
+      .gfs-chart-tooltip-value{font-size:11px}
+      .gfs-chart-tooltip-value small{font-size:8px}
+      .gfs-chart-tooltip-hint{margin-top:4px;padding-top:4px;font-size:7.5px}
+      .gfs-chart-tooltip-row:nth-child(n+3){display:none}
+    }
+  </style>
+  
+  <style id="gfs-mobile-svg-stack">
+    /* Mobile: crop the four internal SVG panels into a vertical stack.
+       The outer report frame remains the single scaling container. */
+    .notification-chart-only{
+      width:100%!important;
+      max-width:100%!important;
+      min-width:0!important;
+      overflow:hidden!important;
+    }
+    .notification-chart-only .notification-images{
+      width:100%!important;
+      max-width:100%!important;
+      min-width:0!important;
+      margin:0!important;
+      display:grid!important;
+      grid-template-columns:minmax(0,1fr)!important;
+    }
+    .gfs-mobile-panel-stack{
+      display:grid!important;
+      grid-template-columns:minmax(0,1fr)!important;
+      gap:14px!important;
+      width:100%!important;
+      max-width:100%!important;
+      min-width:0!important;
+      margin:0!important;
+      padding:0!important;
+    }
+    .gfs-mobile-panel-host{
+      width:100%!important;
+      max-width:100%!important;
+      min-width:0!important;
+      margin:0!important;
+      padding:0!important;
+      position:relative!important;
+      line-height:0!important;
+      overflow:hidden!important;
+    }
+    .gfs-mobile-panel-host .gfs-mobile-panel-svg{
+      display:block!important;
+      width:100%!important;
+      max-width:100%!important;
+      min-width:0!important;
+      height:auto!important;
+      margin:0!important;
+    }
+    @media(max-width:700px),(pointer:coarse){
+      .notification-chart-only{
+        padding:0!important;
+      }
+      .notification-chart-only .notification-images{
+        gap:0!important;
+      }
+      .gfs-mobile-panel-stack{
+        gap:12px!important;
+      }
+    }
+  </style>
+
+  <style id="koy-gfs-report-scale-90">
+  /* Keep the four-panel report proportions and center it at 90% width. */
+  .koy-gfs-svg-images .gfs-interactive-chart,
+  .koy-gfs-svg-images .gfs-mobile-panel-stack{
+    width:90%!important;
+    max-width:90%!important;
+    margin-left:auto!important;
+    margin-right:auto!important;
+  }
+  .koy-gfs-svg-images .gfs-mobile-panel-host{width:100%!important}
+</style>
+<style id="koy-remove-legacy-report-copy">
+  /* Defensive removal of legacy report text if an old card shell is still present. */
+  #notifications-list .notification-card-top,
+  #notifications-list .notification-summary,
+  #notifications-list .comparison-heading,
+  #notifications-list .notification-kicker,
+  #notifications-list .notification-meta,
+  #notifications-list .notification-card h3 {
+    display:none!important;
+  }
+</style>
+<style id="koy-gfs-frame-scale-80">
+  /* Scale the complete Köy GFS report frame (border + four-panel chart) to 80%. */
+  #bildirimler .notification-list{
+    display:flex!important;
+    justify-content:center!important;
+  }
+  #bildirimler .notification-card{
+    box-sizing:border-box!important;
+    width:80%!important;
+    max-width:80%!important;
+    min-width:0!important;
+    margin-left:auto!important;
+    margin-right:auto!important;
+  }
+  #bildirimler .notification-card .koy-gfs-svg-images{
+    width:100%!important;
+    max-width:100%!important;
+    margin:0!important;
+  }
+  #bildirimler .notification-card .gfs-interactive-chart,
+  #bildirimler .notification-card .gfs-mobile-panel-stack{
+    width:100%!important;
+    max-width:100%!important;
+    margin-left:0!important;
+    margin-right:0!important;
+  }
+  #bildirimler .notification-card .gfs-mobile-panel-host{
+    width:100%!important;
+    max-width:100%!important;
+  }
+</style>
+<style id="koy-gfs-report-match-home">
+  /* Köy GFS raporu: İstanbul ana sayfadaki frame ve grafik referans ölçülerini birebir kullan. */
+  #bildirimler .notification-list{
+    display:block!important;
+    width:100%!important;
+    max-width:100%!important;
+  }
+  #bildirimler .notification-card.koy-gfs-report-card{
+    box-sizing:border-box!important;
+    width:100%!important;
+    max-width:100%!important;
+    min-width:0!important;
+    margin-left:auto!important;
+    margin-right:auto!important;
+  }
+  #bildirimler .notification-card .koy-gfs-svg-images{
+    width:100%!important;
+    max-width:100%!important;
+    margin:0!important;
+  }
+  #bildirimler .notification-card .koy-gfs-svg-images .gfs-interactive-chart,
+  #bildirimler .notification-card .koy-gfs-svg-images .gfs-mobile-panel-stack{
+    width:90%!important;
+    max-width:90%!important;
+    margin-left:auto!important;
+    margin-right:auto!important;
+  }
+  #bildirimler .notification-card .koy-gfs-svg-images .gfs-mobile-panel-host{
+    width:100%!important;
+    max-width:100%!important;
+  }
+</style>
+</style>
+
+
+<style id="ios12-css-fallback">
+html.ios12 h1{font-size:48px!important;line-height:1.08!important}
+html.ios12 .temperature{font-size:64px!important;line-height:1!important}
+html.ios12 .temperature{letter-spacing:-.05em!important}
+html.ios12 .station-card .temperature{font-size:56px!important}
+html.ios12 .daily-grid{grid-template-columns:repeat(4,minmax(0,1fr))}
+html.ios12 .hero{grid-template-columns:1fr 1fr}
+html.ios12 .lower-grid{grid-template-columns:1.2fr .8fr}
+html.ios12 .chart-wrap{overflow-x:auto;-webkit-overflow-scrolling:touch}
+html.ios12 .chart-wrap svg{min-width:640px}
+html.ios12 .notification-images{grid-template-columns:repeat(2,minmax(0,1fr))}
+html.ios12 .notification-button{min-height:42px}
+html.ios12 .backdrop-filter{display:none}
+@media(max-width:850px){
+  html.ios12 .hero{grid-template-columns:1fr}
+  html.ios12 .lower-grid{grid-template-columns:1fr}
+}
+@media(max-width:560px){
+  html.ios12 h1{font-size:42px!important}
+  html.ios12 .hero{grid-template-columns:1fr}
+  html.ios12 .daily-grid{grid-template-columns:repeat(2,minmax(0,1fr))}
+  html.ios12 .notification-images{grid-template-columns:minmax(0,1fr)}
+}
+@supports not (gap:1px){
+  html.ios12 .daily-grid>.day{margin-right:8px;margin-bottom:8px}
+  html.ios12 .weather-stats>.stat{margin-right:7px;margin-bottom:7px}
+  html.ios12 .chart-stack>.chart-card{margin-bottom:14px}
+  html.ios12 .notification-list>.notification-card{margin-bottom:13px}
+}
+</style>
+<style id="koy-home-station-visual-match">
+/* Köy live observation card: match the Anasayfa station-card geometry. */
+@media (min-width:701px){
+  .dashboard-top .station-card{
+    width:100%!important;
+    max-width:none!important;
+    min-height:0!important;
+    padding:16px 17px 13px!important;
+    align-self:stretch!important;
+  }
+  .dashboard-top .station-overview{
+    display:block!important;
+    margin-top:12px!important;
+  }
+  .dashboard-top .station-card .temperature{
+    font-size:clamp(44px,4.8vw,62px)!important;
+  }
+  .dashboard-top .station-card .temp-row{
+    margin-top:14px!important;
+  }
+  .dashboard-top .station-card .weather-stats{
+    grid-template-columns:repeat(2,minmax(0,1fr))!important;
+    gap:0!important;
+    row-gap:12px!important;
+    margin-top:13px!important;
+    padding-top:9px!important;
+  }
+  .dashboard-top .station-card .stat{
+    padding:2px 10px 0!important;
+    border-right:1px solid rgba(213,237,240,.10)!important;
+    border-radius:0!important;
+    background:transparent!important;
+  }
+  .dashboard-top .station-card .stat:nth-child(2n){
+    border-right:0!important;
+  }
+  .dashboard-top .station-card .stat .value{
+    font-size:19px!important;
+  }
+}
+@media (max-width:560px){
+  .dashboard-top .station-card{
+    padding:17px!important;
+  }
+  .dashboard-top .station-card .weather-stats{
+    grid-template-columns:repeat(2,minmax(0,1fr))!important;
+    row-gap:8px!important;
+    margin-top:17px!important;
+  }
+  .dashboard-top .station-card .stat{
+    padding:5px 7px!important;
+  }
+}
+</style>
+</head>
+<body data-default-station="home">
+  <script>
+    // Köy page is intentionally Köy Ev-first. Set the visual state before
+    // the deferred application JavaScript loads, preventing a stale MGM state.
+    document.documentElement.dataset.koyDefaultStation="home";
+    window.__KOY_DEFAULT_STATION="home";
+  </script>
+  <header class="shell topbar">
+    <a class="brand" href="https://istanbulunhavasi.com/" aria-label="İstanbul Havası ana sayfası"><span class="brand-mark" aria-hidden="true"><img src="/favicon-192x192.png?v=20261108-city-icon-3" alt="" width="38" height="38" style="display:block;width:100%;height:100%;object-fit:contain;border-radius:inherit"></span><span>İstanbul Havası<small>Şehir için hava tahmini</small></span></a>
+    <nav aria-label="Ana gezinme"><a href="https://istanbulunhavasi.com/">Anasayfa</a><a href="#bildirimler">Raporlar</a><a href="./koy.html">Köy</a></nav>
+    <div class="top-right"><div class="model-picker" role="group" aria-label="Tahmin modeli"><button type="button" id="model-gfs-button" class="active" aria-pressed="true">GFS</button><button type="button" id="model-ecmwf-button" aria-pressed="false">ECMWF IFS</button></div><span class="version"><span data-app-name>İstanbul Havası</span> <span data-app-version>4.0-koy</span></span></div>
+  </header>
+  <main class="shell" data-ui-build="responsive-2026-11-01">
+    <section class="dashboard-top" aria-label="Çanakçı anlık MGM gözlemi, geçmiş ve 72 saatlik GFS tahmini">
+      <div class="dashboard-left">
+      <article class="weather-card station-card" role="region" aria-labelledby="station-card-title">
+        <div class="weather-top"><div><div class="label">GERÇEK İSTASYON GÖZLEMİ</div><div class="place" id="station-card-title">Köy Ev · 363 m</div></div><span class="model-state" id="freshness">Veri bekleniyor</span></div>
+        <div class="station-switch" role="group" aria-label="İstasyon seçimi">
+          <button type="button" id="station-enka-button" aria-pressed="false">Çanakçı MGM</button>
+          <button type="button" id="station-home-button" class="active" aria-pressed="true">Köy Ev · 363 m</button>
+        </div>
+        <script>
+          // Hard HTML bootstrap: Köy Ev is the initial station before any deferred JS executes.
+          (function(){
+            var home=document.getElementById("station-home-button");
+            var mgm=document.getElementById("station-enka-button");
+            if(home){home.classList.add("active");home.setAttribute("aria-pressed","true");}
+            if(mgm){mgm.classList.remove("active");mgm.setAttribute("aria-pressed","false");}
+            var title=document.getElementById("station-card-title");
+            if(title)title.textContent="Köy Ev · 363 m";
+          })();
+        </script>
+        <div class="station-overview">
+  <div class="station-current">
+    <div class="temp-row">
+      <div class="temperature" id="temperature">—°</div>
+      <div class="weather-symbol" id="weather-symbol" aria-hidden="true">☁️</div>
+    </div>
+    <div class="temp-meta">
+      <div class="temp-caption" id="station-observation-meta">Son istasyon ölçümü bekleniyor</div>
+      <div class="delta-badge" id="station-24h-diff"></div>
+      <div class="delta-badge" id="station-gap" hidden></div>
+      <div class="rain-brief" id="rain-brief" aria-live="polite">
+        <div class="delta-badge" id="rain-brief-current">MGM yağış ölçümü bekleniyor.</div>
+        <div class="delta-badge" id="rain-brief-forecast">MeteoPT GFS tahmini bekleniyor.</div>
+        <div class="delta-badge" id="rain-brief-heavy" hidden></div>
+      </div>
+      
+    </div>
+  </div>
+</div>
+        <div class="weather-stats">
+  <div class="stat feels-like-stat"><div class="name">Hissedilen</div><div class="value" id="feels-like">—<span class="unit">°</span></div><div class="feels-like-24h-badge" id="feels-like-24h" hidden aria-label="Hissedilen son 24 saat minimum ve maksimum"></div></div>
+  <div class="stat"><div class="name">Rüzgâr</div><div class="value" id="wind">—<span class="unit">km/sa</span></div><div class="detail" id="wind-direction">—</div></div>
+  <div class="stat"><div class="name">Nem</div><div class="value" id="humidity">—<span class="unit">%</span></div></div>
+  <div class="stat"><div class="name">Çiğ Noktası</div><div class="value" id="dewpoint-value">—<span class="unit">°</span></div></div>
+  <div class="stat"><div class="name">Yağış</div><div class="value" id="rain">—<span class="unit">mm</span></div><div class="detail" id="rain-detail">Son 12 saat</div></div>
+  <div class="stat"><div class="name">Basınç</div><div class="value" id="pressure">—<span class="unit">hPa</span></div><div class="detail" id="pressure-detail"></div></div>
+</div>
+        <div class="station-alert" id="station-alert" role="status" aria-live="polite" hidden></div>
+      <section class="station-history-inline history-panel" id="station-history-panel" aria-label="Çanakçı MGM son 24 saat geçmişi">
+        <div class="history-panel-head"><div><div class="section-kicker" id="history-station-source">ÇANAKÇI · GERÇEK ÖLÇÜMLER</div><h2>Son 24 saat</h2></div></div>
+        <div class="history-charts">
+          <article class="history-chart-card"><div class="history-chart-head"><div><h3>Sıcaklık</h3><p>°C · 30 dk ortalama, min–maks</p></div><span class="history-chart-icon">℃</span></div><div class="history-chart" id="station-temperature-trend"><div class="station-trend-empty">Sıcaklık kayıtları bekleniyor…</div></div><div class="history-chart-meta" id="station-trend-meta">Çanakçı MGM ölçüm geçmişi</div></article>
+          <article class="history-chart-card"><div class="history-chart-head"><div><h3 id="station-rain-title">Yağış</h3><p id="station-rain-caption">mm · kayan 1 saatlik toplam</p></div><span class="history-chart-icon">☂</span></div><div class="history-chart" id="station-rain-trend"><div class="station-trend-empty">Yağış geçmişi oluşturuluyor…</div></div><span class="rain-maximum-badge" id="station-rain-max" hidden></span><div class="history-chart-meta" id="station-rain-meta">Çanakçı · MGM</div></article>
+        </div>
+        <div class="history-source-note" id="history-source-note">Sıcaklık ve yağış: MGM Çanakçı gerçek istasyon ölçümleri.</div>
+      </section>
+      </article>
+
+      </div>
+    <section class="section" id="bildirimler">
+      <div class="section-head report-head">
+        <div><div class="section-kicker">SON GFS RAPORU</div><h2>Son hava raporu</h2></div>
+        <div class="notification-controls">
+          <button class="notification-button" id="enable-notifications" type="button">Cihaz bildirimlerini aç</button>
+          <span id="notification-status" class="notification-status" aria-live="polite">Yalnızca yeni GFS raporları için bildirim</span>
+        </div>
+      </div>
+      <div id="notifications-list" class="notification-list" aria-live="polite">
+        <article class="notification-card koy-gfs-report-card">
+          <div class="notification-images koy-fullframe-images koy-gfs-svg-images" id="koy-gfs-comparison-container" data-svg-src="">
+            <div class="notification-image-item">
+              <div class="gfs-chart-loading">Köy GFS dört döngülü etkileşimli SVG raporu bekleniyor…</div>
+            </div>
+          </div>
+        </article>
+      </div>
+    </section>
+
+    <div class="water-gfs-layout">
+    <section class="section gfs-table-section" id="meteopt-gfs-table" aria-label="MeteoPT GFS ham model tablosu">
+      <article class="meteopt-table-card">
+        <div class="meteopt-table-panel-head">
+          <div class="meteopt-table-title">
+            <div class="section-kicker">METEOPT GFS</div>
+            <h2>GFS · Önümüzdeki 180 saat</h2>
+          </div>
+          <div class="meteopt-table-cycle">
+            <span id="meteopt-table-run">Model döngüsü bekleniyor</span>
+            <span id="meteopt-table-updated">Veri bekleniyor</span>
+          </div>
+        </div>
+        <div class="meteopt-table-toolbar">
+          <span class="meteopt-table-source"><span class="meteopt-table-dot"></span> Kaynak: MeteoPT GFS</span>
+          <span id="meteopt-table-status" role="status" aria-live="polite">Veri yükleniyor…</span>
+        </div>
+        <div class="meteopt-table-scroll" aria-label="GFS tahmin tablosu">
+          <table class="meteopt-data-table koy-snowln-table">
+            <thead><tr>
+              <th>Steps</th><th>Date/Hour (TSİ)</th><th>T.2m</th><th>Prec.</th><th>W.10m</th><th>T.850</th><th>W.850</th><th>RH.2m<br>(%)</th><th>Dew Point<br>(°C)</th><th>Snowln<br>(m)</th>
+            </tr></thead>
+            <tbody id="meteopt-table-body"><tr><td colspan="10" class="meteopt-table-empty">MeteoPT verisi yükleniyor…</td></tr></tbody>
+          </table>
+        </div>
+
+      </article>
+    </section>
+    </div>
+  </section>
+  <footer class="shell footer"><span><strong data-app-name>İstanbul Havası</strong> <span data-app-version>4.0-koy</span></span><span>Veri kaynakları: MGM Çanakçı · MeteoPT GFS · Otomatik yenileme: 5 dakika</span></footer>
+  <style>
+    #pull-refresh-indicator{position:fixed;z-index:99999;top:calc(env(safe-area-inset-top,0px) + 9px);left:50%;transform:translate(-50%,-150%);opacity:0;pointer-events:none;display:flex;align-items:center;gap:9px;padding:10px 15px;border:1px solid rgba(125,211,215,.35);border-radius:999px;background:rgba(8,25,39,.96);color:#d8f7f1;font:600 12px "DM Sans",sans-serif;box-shadow:0 8px 28px rgba(0,0,0,.32);transition:transform .18s ease,opacity .18s ease}
+    #pull-refresh-indicator.visible{transform:translate(-50%,0);opacity:1}
+    #pull-refresh-indicator .pull-refresh-icon{display:inline-block;font-size:17px;line-height:1;transition:transform .12s ease}
+    #pull-refresh-indicator.loading .pull-refresh-icon{animation:pull-refresh-spin .8s linear infinite}
+    @keyframes pull-refresh-spin{to{transform:rotate(360deg)}}
+    @media(prefers-reduced-motion:reduce){#pull-refresh-indicator{transition:none}#pull-refresh-indicator.loading .pull-refresh-icon{animation:none}}
+  
+    /* Keep the legend DOM for chart JS, but remove its visible cycle labels. */
+    #next-180h-legend{display:none!important}
+</style>
+  <style id="koy-desktop-home-layout-exact">
+@media (min-width: 901px){
+  .shell{width:min(1480px,calc(100% - var(--page-gutter)*2))!important}
+  .dashboard-top{
+    display:grid!important;
+    grid-template-columns:minmax(360px,.82fr) minmax(0,1.18fr)!important;
+    grid-template-areas:
+      "left report"
+      "left table"!important;
+    column-gap:clamp(14px,1.5vw,24px)!important;
+    row-gap:16px!important;
+    align-items:start!important;
+    padding:18px 0 16px!important;
+  }
+  .dashboard-left{
+    grid-area:left!important;
+    display:block!important;
+    width:100%!important;
+    min-width:0!important;
+    margin:0!important;
+  }
+  .dashboard-top > #bildirimler{
+    grid-area:report!important;
+    width:100%!important;
+    min-width:0!important;
+    margin:0!important;
+    padding:0!important;
+  }
+  .dashboard-top > .water-gfs-layout{
+    grid-area:table!important;
+    width:100%!important;
+    min-width:0!important;
+    margin:0!important;
+    padding:0!important;
+  }
+  #bildirimler .report-head{
+    display:none!important;
+  }
+  #bildirimler .notification-list{
+    display:block!important;
+    width:100%!important;
+    max-width:100%!important;
+    margin:0!important;
+  }
+  #bildirimler .notification-card.koy-gfs-report-card{
+    width:100%!important;
+    max-width:100%!important;
+    margin:0!important;
+    padding:0!important;
+    border:0!important;
+    background:transparent!important;
+  }
+  #bildirimler .koy-gfs-svg-images{
+    width:100%!important;
+    max-width:100%!important;
+    margin:0!important;
+    padding:0!important;
+  }
+  #bildirimler .gfs-interactive-chart,
+  #bildirimler .gfs-mobile-panel-stack{
+    width:100%!important;
+    max-width:100%!important;
+    margin:0 auto!important;
+  }
+  .dashboard-top > .water-gfs-layout .section{
+    width:100%!important;
+    max-width:100%!important;
+    margin:0!important;
+    padding:0!important;
+  }
+  .dashboard-top > .water-gfs-layout .meteopt-table-card{
+    width:100%!important;
+    max-width:100%!important;
+    margin:0!important;
+  }
+}
+@media (min-width:1600px){
+  .shell{width:min(1560px,calc(100% - 64px))!important}
+  .dashboard-top{
+    grid-template-columns:minmax(420px,.78fr) minmax(0,1.22fr)!important;
+  }
+}
+</style>
+<style id="koy-desktop-gfs-table-exact">
+@media (min-width:851px){
+  .dashboard-top > .water-gfs-layout{
+    grid-area:table!important;
+    display:block!important;
+    width:100%!important;
+    min-width:0!important;
+    max-width:none!important;
+    margin:0!important;
+    padding:0!important;
+  }
+  .dashboard-top > .water-gfs-layout #meteopt-gfs-table{
+    display:block!important;
+    width:100%!important;
+    max-width:none!important;
+    min-width:0!important;
+    margin:0!important;
+    padding:0!important;
+  }
+  .dashboard-top > .water-gfs-layout #meteopt-gfs-table .meteopt-table-card{
+    box-sizing:border-box!important;
+    width:100%!important;
+    max-width:none!important;
+    min-width:0!important;
+    margin:0!important;
+    padding:10px!important;
+  }
+  .dashboard-top > .water-gfs-layout #meteopt-gfs-table .meteopt-table-scroll{
+    width:100%!important;
+    max-width:100%!important;
+    overflow-x:auto!important;
+    overflow-y:hidden!important;
+  }
+  .dashboard-top > .water-gfs-layout #meteopt-gfs-table .meteopt-data-table{
+    display:table!important;
+    width:100%!important;
+    min-width:0!important;
+    max-width:none!important;
+    table-layout:fixed!important;
+    font-size:10px!important;
+  }
+  .dashboard-top > .water-gfs-layout #meteopt-gfs-table .meteopt-data-table th,
+  .dashboard-top > .water-gfs-layout #meteopt-gfs-table .meteopt-data-table td{
+    box-sizing:border-box!important;
+  }
+  .dashboard-top > .water-gfs-layout #meteopt-gfs-table .meteopt-data-table th:first-child,
+  .dashboard-top > .water-gfs-layout #meteopt-gfs-table .meteopt-data-table td:first-child{
+    width:6%!important;
+    min-width:0!important;
+  }
+  .dashboard-top > .water-gfs-layout #meteopt-gfs-table .meteopt-data-table th:nth-child(2),
+  .dashboard-top > .water-gfs-layout #meteopt-gfs-table .meteopt-data-table td:nth-child(2){
+    width:20%!important;
+    min-width:0!important;
+    padding-left:6px!important;
+    padding-right:6px!important;
+  }
+  .dashboard-top > .water-gfs-layout #meteopt-gfs-table .meteopt-data-table th:nth-child(n+3),
+  .dashboard-top > .water-gfs-layout #meteopt-gfs-table .meteopt-data-table td:nth-child(n+3){
+    width:9.25%!important;
+    min-width:0!important;
+  }
+}
+</style>
+<link rel="stylesheet" href="./header-common.css?v=20261110-shared-header-1">
+  <style id="koy-header-home-parity">
+    /* Header: Köy uses the exact homepage shell/header geometry. */
+    :root{--page-gutter:clamp(14px,2.2vw,32px)}
+    html{scroll-padding-top:calc(76px + env(safe-area-inset-top))}
+    body{
+      min-height:100vh;
+      min-height:100dvh;
+      padding-left:env(safe-area-inset-left);
+      padding-right:env(safe-area-inset-right);
+    }
+    .shell{width:min(1480px,calc(100% - var(--page-gutter)*2))}
+    .topbar{
+      min-height:76px;
+      height:auto;
+      padding-top:max(8px,env(safe-area-inset-top));
+      gap:18px;
+    }
+    .brand{
+      display:flex;
+      align-items:center;
+      gap:12px;
+      font-size:18px;
+    }
+    .brand-mark{
+      width:38px;
+      height:38px;
+      border-radius:13px;
+    }
+    .brand small{
+      font-size:10px;
+      letter-spacing:.12em;
+      margin-top:2px;
+    }
+    .top-right{
+      display:flex;
+      align-items:center;
+      gap:10px;
+    }
+    .model-picker{
+      display:flex;
+      align-items:center;
+      gap:5px;
+      padding:4px;
+    }
+    .model-picker button{
+      padding:8px 12px;
+      font-size:11px;
+    }
+    nav{
+      display:flex;
+      gap:25px;
+      font-size:13px;
+    }
+
+    @media(max-width:850px){
+      .shell{width:min(100% - 32px,1120px)}
+      .topbar{gap:10px}
+    }
+
+    @media(max-width:700px){
+      .shell{width:calc(100% - 24px)}
+      .topbar{padding-top:max(8px,env(safe-area-inset-top))}
+    }
+
+    @media(max-width:560px){
+      .topbar{
+        flex-wrap:wrap!important;
+        align-items:center!important;
+        justify-content:flex-start!important;
+        min-height:64px!important;
+        height:auto!important;
+        padding:10px 0!important;
+        gap:0!important;
+      }
+      .topbar .brand{
+        font-size:14px!important;
+        gap:9px!important;
+      }
+      .topbar .brand-mark{
+        width:32px!important;
+        height:32px!important;
+        border-radius:10px!important;
+      }
+      .topbar .brand small{
+        font-size:8px!important;
+        letter-spacing:.09em!important;
+        margin-bottom:1px!important;
+      }
+      .topbar .top-right{
+        margin-left:auto!important;
+        gap:4px!important;
+      }
+      .topbar .model-picker{
+        gap:2px!important;
+        padding:3px!important;
+      }
+      .topbar .model-picker button{
+        min-height:0!important;
+        padding:7px 8px!important;
+        font-size:9.5px!important;
+      }
+      .topbar nav{
+        display:flex!important;
+        order:3!important;
+        width:100%!important;
+        max-width:100%!important;
+        overflow-x:auto!important;
+        gap:16px!important;
+        padding:6px 0 2px!important;
+        margin-top:0!important;
+        white-space:nowrap!important;
+        scrollbar-width:none!important;
+      }
+      .topbar nav::-webkit-scrollbar{display:none!important}
+      .topbar nav a{
+        display:inline!important;
+        min-height:0!important;
+        height:auto!important;
+        width:auto!important;
+        flex:none!important;
+        padding:0!important;
+        margin:0!important;
+        border:0!important;
+        border-radius:0!important;
+        background:transparent!important;
+        box-shadow:none!important;
+        font-size:11px!important;
+        line-height:1.2!important;
+        color:#b5c7d1!important;
+      }
+      .topbar nav a:hover,
+      .topbar nav a:focus{
+        border:0!important;
+        background:transparent!important;
+        box-shadow:none!important;
+      }
+    }
+
+    @media(max-width:390px){
+      .shell{width:calc(100% - 20px)!important}
+      .brand{font-size:13px!important}
+      .brand small{font-size:7px!important}
+      .model-picker button{padding:7px 8px!important;font-size:9px!important}
+    }
+
+    @media(orientation:landscape) and (max-height:600px) and (pointer:coarse){
+      .topbar{
+        min-height:54px;
+        flex-wrap:nowrap;
+        padding-top:env(safe-area-inset-top);
+      }
+      .topbar nav{
+        display:flex;
+        order:initial;
+        width:auto;
+        overflow-x:auto;
+        gap:12px;
+      }
+      .topbar nav a{font-size:10px}
+    }
+  </style>
+
+  <style id="koy-model-picker-home-parity">
+    /* GFS / ECMWF model buttons: exact homepage sizing and mobile behavior. */
+    .topbar .model-picker{
+      gap:2px!important;
+      padding:3px!important;
+    }
+    .topbar .model-picker button{
+      min-height:0!important;
+      padding:7px 8px!important;
+      font-size:9.5px!important;
+    }
+    @media(max-width:390px){
+      .model-picker button{
+        min-height:44px!important;
+        min-width:44px!important;
+        padding:0 10px!important;
+      }
+    }
+    @media(max-width:560px){
+      .topbar .model-picker{
+        gap:2px!important;
+        padding:3px!important;
+      }
+      .topbar .model-picker button{
+        min-height:0!important;
+        padding:7px 8px!important;
+        font-size:9.5px!important;
+      }
+    }
+  </style>
+
+  <style id="koy-snowln-table-layout">
+    /* RH.2m scale shared visually with the Istanbul table. */
+    #meteopt-gfs-table .rh2m-warm-1{color:#ff9b86!important;background:rgba(224,75,57,.22)!important;border:1px solid rgba(255,120,90,.2)}
+    #meteopt-gfs-table .rh2m-warm-2{color:#ffb477!important;background:rgba(229,117,50,.2)!important;border:1px solid rgba(255,174,105,.18)}
+    #meteopt-gfs-table .rh2m-warm-3{color:#ffe08a!important;background:rgba(220,174,48,.19)!important;border:1px solid rgba(255,224,138,.16)}
+    #meteopt-gfs-table .rh2m-cool-1{color:#b7e58c!important;background:rgba(111,177,73,.18)!important;border:1px solid rgba(183,229,140,.15)}
+    #meteopt-gfs-table .rh2m-cool-2{color:#82dfbe!important;background:rgba(39,166,145,.18)!important;border:1px solid rgba(130,223,190,.16)}
+    #meteopt-gfs-table .rh2m-cool-3{color:#8fd7ff!important;background:rgba(42,145,218,.2)!important;border:1px solid rgba(143,215,255,.18)}
+    /* Column widths are shared from meteopt-gfs-table.css. */
+  </style>
+  <div id="pull-refresh-indicator" role="status" aria-live="polite"><span class="pull-refresh-icon">↓</span><span class="pull-refresh-label">Yenilemek için aşağı çek</span></div>
+    <script src="./gfs-comparison-tooltip.js?v=20261109-mobile-legend-fix-2"></script>
+    <script src="./gfs-cycle-theme.js?v=20261111-theme-fix-1"></script>
+    <script src="./gfs-api-config.js?v=20261111-api-config-1"></script>
+    <script src="./koy.js?v=20261111-api-config-2" defer></script>
+
+<style id="koy-desktop-home-layout-parity">
+/* Desktop Köy layout: use the same geometry, gutters, columns and report sizing as the İstanbul homepage. */
+@media (min-width: 851px) {
+  :root { --page-gutter: clamp(14px, 2.2vw, 32px); }
+
+  .shell {
+    width: min(1480px, calc(100% - var(--page-gutter) * 2)) !important;
+  }
+
+  .dashboard-top {
+    grid-template-columns: minmax(360px, .82fr) minmax(0, 1.18fr) !important;
+    gap: clamp(14px, 1.5vw, 24px) !important;
+    padding: 18px 0 16px !important;
+    align-items: stretch !important;
+  }
+
+  .dashboard-left {
+    min-width: 0 !important;
+    display: block !important;
+  }
+
+  .dashboard-top .station-card {
     width: 100% !important;
     max-width: none !important;
     min-height: 0 !important;
     align-self: stretch !important;
-    padding: 19px 20px 15px !important;
+    padding: 16px 17px 13px !important;
   }
 
   .dashboard-top .station-overview {
     display: block !important;
-    margin-top: 22px !important;
+    margin-top: 12px !important;
   }
 
   .dashboard-top .station-card .temperature {
-    font-size: clamp(54px, 5vw, 72px) !important;
-  }
-
-  .dashboard-top .station-card .temp-caption {
-    font-size: 11px !important;
+    font-size: clamp(44px, 4.8vw, 62px) !important;
   }
 
   .dashboard-top .station-card .weather-stats {
@@ -665,6 +2134,7 @@
     row-gap: 12px !important;
     gap: 0 !important;
     margin-top: 23px !important;
+    padding-top: 9px !important;
   }
 
   .dashboard-top .station-card .stat {
