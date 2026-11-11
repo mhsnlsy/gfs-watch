@@ -1558,7 +1558,11 @@
           continue;
         }
         for(const spell of visible){
-          const whenText=tableForecastClock(spell.start)+(spell.start===spell.end?"":"–"+tableForecastClock(spell.end));
+          // Each table Prec. row is the 3-hour block that starts at that TSİ
+          // hour. 21:00 therefore runs until 00:00; the 00:00 row stays on the
+          // next calendar day and is not counted twice.
+          const intervalEnd=spell.end+stepH*3600000;
+          const whenText=tableForecastClock(spell.start)+"–"+tableForecastClock(intervalEnd);
           const startHour=Number(new Intl.DateTimeFormat("en-GB",{timeZone:"UTC",hour:"2-digit",hourCycle:"h23"}).format(new Date(spell.start)));
           const endHour=Number(new Intl.DateTimeFormat("en-GB",{timeZone:"UTC",hour:"2-digit",hourCycle:"h23"}).format(new Date(spell.end)));
           const period=cover(startHour,endHour);

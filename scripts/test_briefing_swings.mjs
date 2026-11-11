@@ -50,11 +50,11 @@ assert.deepEqual(thresholdSwings, ["Çarşamba · 12:00–15:00 +4,2°C"]);
 
 const rain = [...sandbox.rainDayLines(points, now)];
 assert.deepEqual([...new Set(rain.map(line => line.split(" · ")[0]))], ["Çarşamba", "Perşembe", "Cuma", "Cumartesi", "Pazar"]);
-assert.ok(rain.includes("Cumartesi · 18:00–21:00 · akşam · 8,4 mm"));
+assert.ok(rain.includes("Cumartesi · 18:00–00:00 · akşam · 8,4 mm"));
 assert.ok(!rain.some(line => line.startsWith("Cumartesi") && line.includes("yağış yok")));
-assert.ok(rain.includes("Pazar · 00:00 · 11,8 mm"));
+assert.ok(rain.includes("Pazar · 00:00–03:00 · 11,8 mm"));
 assert.ok(!rain.some(line => line.includes("gece")));
-assert.ok(rain.some(line => line.startsWith("Pazar") && line.includes("21:00") && line.includes("2,0 mm")));
+assert.ok(rain.some(line => line.startsWith("Pazar") && line.includes("21:00–00:00") && line.includes("2,0 mm")));
 assert.ok(!rain.some(line => line.startsWith("Pazartesi")), "hour 120 is the next calendar day, past the five-day window");
 assert.ok(!rain.some(line => line.includes("9,0")), "precipitation past 120 hours is outside the analysis window");
 assert.ok(rain.includes("Çarşamba · yağış yok"));
@@ -73,6 +73,6 @@ const traced = points.map(point => point.valid_time_utc.startsWith("2026-11-14T1
   ? { ...point, precipitation_6h_mm: 0.5 }
   : point);
 const tracedRain = [...sandbox.rainDayLines(traced, now)].find(line => line.startsWith("Cumartesi"));
-assert.equal(tracedRain, "Cumartesi · 15:00–21:00 · öğleden sonra–akşam · 8,9 mm");
+assert.equal(tracedRain, "Cumartesi · 15:00–00:00 · öğleden sonra–akşam · 8,9 mm");
 
 console.log(JSON.stringify({ ok: true, swings, saturday: rain.find(line => line.startsWith("Cumartesi")) }));
