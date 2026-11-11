@@ -752,7 +752,7 @@ function renderRuns(d,f180){
    const latestSvgRun=svgRuns[0];
    const runDate=new Date(latestSvgRun.run_id_utc);
    const runStamp=runDate.getUTCFullYear()+String(runDate.getUTCMonth()+1).padStart(2,"0")+String(runDate.getUTCDate()).padStart(2,"0")+"T"+String(runDate.getUTCHours()).padStart(2,"0")+"Z";
-   const version=encodeURIComponent((d && d.updated_at_utc||latestSvgRun.published_at_utc||latestSvgRun.run_id_utc)+"|koy-svg-absolute-path-v5");
+   const version=encodeURIComponent((d && d.updated_at_utc||latestSvgRun.published_at_utc||latestSvgRun.run_id_utc)+"|koy-homepage-identical-v9");
    // Use the canonical D1 publication asset from the Köy GFS Worker.
    // This bypasses the legacy static /koy-data/gfs/media archive.
    // Köy comparison SVG is generated and served canonically by the dedicated
@@ -761,7 +761,7 @@ function renderRuns(d,f180){
    // four-run D1 asset and can rebuild it when necessary.
    const publicationApi="https://gfs-watch-koy-gfs.muhsin-ulusoy.workers.dev";
    const svgPath=publicationApi+"/api/comparison.svg";
-   const svgUrl=svgPath+"?v="+encodeURIComponent(version+"-d1-svg-v5-"+Date.now());
+   const svgUrl=svgPath+"?v="+encodeURIComponent(version+"-d1-svg-v9-"+Date.now());
    if(svgContainer.dataset.svgSrc!==svgUrl){
     svgContainer.dataset.svgSrc=svgUrl;
     svgContainer.innerHTML="";
