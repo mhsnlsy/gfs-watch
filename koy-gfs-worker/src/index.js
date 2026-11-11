@@ -583,7 +583,7 @@ export function buildKoyInteractiveSvg(comparison) {
     const column = index % 2;
     const row = Math.floor(index / 2);
     const x = 335 + column * 290;
-    const y = 148 + row * 26;
+    const y = 105 + row * 18;
     const latest = item === series[series.length - 1];
     svgParts.push(
       '<line x1="' + x + '" y1="' + y + '" x2="' + (x + 38) + '" y2="' + y + '" stroke="' + item.color + '" stroke-width="' + (latest ? 3.2 : 1.8) + '"' +
