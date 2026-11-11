@@ -43,7 +43,7 @@ def main() -> None:
         'id="ecmwf-basinc"',
         'id="ecmwf-pressure-findings"',
         'id="ecmwf-valid-until"',
-        'const ECMWF_DATA_URL="./data/ecmwf/latest.json";',
+        'const ECMWF_DATA_URL="/api/ecmwf/latest";',
         'localStorage.setItem("istanbul-hava-model-view",activeModel)',
         'localStorage.getItem("istanbul-hava-model-view")',
         'document.forecasts.length<8',
