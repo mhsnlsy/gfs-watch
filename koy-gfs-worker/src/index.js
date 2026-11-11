@@ -625,7 +625,7 @@ export function buildKoyInteractiveSvg(comparison) {
       tickIndexes.push(offsets.length - 1);
     }
     tickIndexes.forEach(index => {
-      const date = validDates[index];
+      const date = new Date(validTimeRecords[index].local_key + ":00Z");
       const x = xPositions[index];
       const day = String(date.getUTCDate()).padStart(2, "0");
       const weekdays = ["Paz", "Pzt", "Sal", "Çar", "Per", "Cum", "Cmt"];
