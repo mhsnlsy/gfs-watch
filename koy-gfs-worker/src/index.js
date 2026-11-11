@@ -379,7 +379,7 @@ async function getPublicationAsset(env, key) {
 }
 
 async function putPublicationAsset(env, asset) {
-  await env.GFS_DB.prepare(
+  const statement = env.GFS_DB.prepare(
     "INSERT INTO gfs_publication_assets (asset_key, run_id_utc, content_type, body, updated_at_utc) " +
     "VALUES (?, ?, ?, ?, ?) " +
     "ON CONFLICT(asset_key) DO UPDATE SET run_id_utc=excluded.run_id_utc, " +
@@ -390,7 +390,25 @@ async function putPublicationAsset(env, asset) {
     asset.content_type,
     asset.body,
     new Date().toISOString(),
-  ).run();
+  );
+
+  // D1 is single-threaded per database. A Cron collection and a page/API
+  // request can legitimately collide on this publication write. Retry only
+  // the idempotent upsert with short backoff so a transient D1 overload does
+  // not turn the public SVG endpoint into HTTP 503.
+  let lastError = null;
+  for (let attempt = 0; attempt < 3; attempt += 1) {
+    try {
+      await statement.run();
+      return;
+    } catch (error) {
+      lastError = error;
+      if (attempt < 2) {
+        await new Promise(resolve => setTimeout(resolve, 150 * (attempt + 1)));
+      }
+    }
+  }
+  throw lastError;
 }
 
 function decodePublicationAsset(row) {
