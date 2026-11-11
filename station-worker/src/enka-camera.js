@@ -195,7 +195,11 @@ export function parseCameraOverlayText(metricLines, timeText) {
   // Camera compression/exposure can merge or split glyph bands, so parse the
   // measurements from the complete metric region as well.
   const temperature = firstNumber(lines[0], /(-?\d{1,2}[.,]\d)/)
-    ?? firstNumber(metricsText, /(-?\d{1,2}[.,]\d)/);
+    ?? firstNumber(metricsText, /(-?\d{1,2}[.,]\d)/)
+    ?? (() => {
+      const m = metricsText.match(/(?:^|\s)(-?\d{2})(?=\s*(?:S|N|E|W|°|C|$))/i);
+      return m ? Number(m[1]) / 10 : null;
+    })();
   const humidityMatch = metricsText.match(/(\d{1,3})\s*%/);
   const pressureCandidates = [...metricsText.matchAll(/(\d{3,4}[.,]\d)/g)]
     .map(m => Number(m[1].replace(",", ".")))
@@ -210,8 +214,8 @@ export function parseCameraOverlayText(metricLines, timeText) {
         return candidates.length ? Number(candidates[0][1].replace(",", ".")) : null;
       })();
   const windDirection = directionFrom(
-    windLine.replace(/^.*?(\d{1,2}[.,]\d)/, "")
-  );
+    windLine.replace(/^.*?(\d{1,2}[.,]\d)/, "") || metricsText
+  ) || directionFrom(metricsText);
 
   const normalizedTime = String(timeText || "")
     .replace(/[Oo]/g, "0")
@@ -219,7 +223,9 @@ export function parseCameraOverlayText(metricLines, timeText) {
     .replace(/\s+/g, " ")
     .trim();
   const stamp = normalizedTime.match(/(\d{1,2})[-\/.](\d{1,2})[-\/.](\d{2,4})\s*(\d{1,2})[:.](\d{2})[:.](\d{2})/)
-    || normalizedTime.match(/(\d{2})(\d{2})(\d{4})\s*(\d{2})[:.](\d{2})[:.](\d{2})/);
+    || normalizedTime.match(/(\d{2})(\d{2})(\d{4})\s*(\d{2})[:.](\d{2})[:.](\d{2})/)
+    || normalizedTime.match(/(\d{2})(\d{2})(\d{4})(\d{2})(\d{2})(\d{2})/)
+    || normalizedTime.match(/(\d{2})(\d{2})(\d{2})(\d{2})(\d{2})(\d{2})/);
 
   if (temperature == null || humidity == null || pressure == null || windKnots == null || !stamp) return null;
   if (temperature < -40 || temperature > 50) return null;
@@ -257,7 +263,7 @@ export function recognizeCameraOverlay(jpegBytes) {
   // The ENKA camera overlay is a real image rather than a text endpoint.
   // Use several luminance thresholds so compression, glare and night/day
   // exposure changes do not make the backup OCR fail on a single threshold.
-  const thresholds = [150, 160, 175, 190, 205, 220, 235];
+  const thresholds = [120, 135, 150, 160, 175, 190, 205, 220, 235, 245];
   const metricRegions = [
     [0.72, 0.70, 1.00, 0.99],
     [0.76, 0.68, 1.00, 0.99],
@@ -372,3 +378,5 @@ export function observationFromCameraReading(reading, staleAfterMinutes = 20, no
     observation_method: "enka-camera-overlay"
   };
 }
+
+
