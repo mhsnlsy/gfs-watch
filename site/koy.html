@@ -2278,6 +2278,108 @@ html.ios12 .backdrop-filter{display:none}
   .briefing-row{grid-template-columns:78px minmax(0,1fr);gap:6px;padding:5px 7px}
 }
 </style>
+<style id="koy-home-desktop-final-parity">
+/* FINAL DESKTOP PARITY WITH HOMEPAGE */
+@media (min-width:1200px) and (pointer:fine){
+  main.shell{
+    width:min(1680px,calc(100% - 64px))!important;
+    max-width:1680px!important;
+    margin-left:auto!important;
+    margin-right:auto!important;
+  }
+  .dashboard-top{
+    display:grid!important;
+    grid-template-columns:600px minmax(0,1fr)!important;
+    grid-template-areas:
+      "left report"
+      "left table"!important;
+    column-gap:24px!important;
+    row-gap:0!important;
+    width:100%!important;
+    max-width:100%!important;
+    margin:0!important;
+    padding:18px 0 24px!important;
+    align-items:start!important;
+  }
+  .dashboard-left{
+    grid-area:left!important;
+    display:block!important;
+    width:600px!important;
+    min-width:0!important;
+    max-width:600px!important;
+    margin:0!important;
+    align-self:start!important;
+  }
+  .dashboard-left>.station-card,
+  .dashboard-left .station-card{
+    display:grid!important;
+    width:600px!important;
+    min-width:0!important;
+    max-width:600px!important;
+    box-sizing:border-box!important;
+    margin:0!important;
+    align-self:start!important;
+    height:auto!important;
+  }
+  .dashboard-top>.station-briefing-inline{
+    grid-area:left!important;
+    width:600px!important;
+    max-width:600px!important;
+    min-width:0!important;
+    margin:8px 0 0!important;
+    padding:0!important;
+  }
+  .dashboard-top>.station-briefing-inline .briefing{
+    width:100%!important;
+    margin:0!important;
+  }
+  .dashboard-top>.station-briefing-inline .briefing-row{
+    width:100%!important;
+  }
+  .dashboard-top>.water-gfs-layout{
+    grid-area:table!important;
+    width:100%!important;
+    min-width:0!important;
+    max-width:none!important;
+    margin:0!important;
+    padding:0!important;
+    display:block!important;
+  }
+  .dashboard-top>.water-gfs-layout #meteopt-gfs-table{
+    width:100%!important;
+    max-width:none!important;
+    min-width:0!important;
+    margin:0!important;
+    padding:0!important;
+  }
+  .dashboard-top>.water-gfs-layout #meteopt-gfs-table .meteopt-table-card{
+    width:100%!important;
+    max-width:none!important;
+    min-width:0!important;
+    margin:0!important;
+    box-sizing:border-box!important;
+  }
+  .dashboard-top>.water-gfs-layout #meteopt-gfs-table .meteopt-table-scroll{
+    width:100%!important;
+    max-width:100%!important;
+    min-width:0!important;
+    overflow-x:auto!important;
+    overflow-y:hidden!important;
+  }
+  .dashboard-top>.water-gfs-layout #meteopt-gfs-table .meteopt-data-table{
+    width:100%!important;
+    min-width:0!important;
+    max-width:none!important;
+    table-layout:fixed!important;
+    white-space:nowrap!important;
+  }
+}
+@media (min-width:1600px) and (pointer:fine){
+  main.shell{
+    width:min(1680px,calc(100% - 64px))!important;
+  }
+}
+</style>
 </body>
 </html>
 
