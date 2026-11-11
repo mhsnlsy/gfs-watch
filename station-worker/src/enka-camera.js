@@ -96,12 +96,15 @@ function classifyGlyph(bits) {
   const right = density(bits, 0, height, Math.floor(2 * width / 3), width);
   const center = density(bits, Math.floor(height / 3), Math.floor(2 * height / 3), Math.floor(width / 3), Math.max(Math.floor(width / 3) + 1, Math.floor(2 * width / 3)));
   if (aspect < 0.5 && right > 0.7 && holeCount === 0 && width <= 8) return "1";
+  if (right > left + 0.2 && bot > 0.35 && top < 0.42 && mid < 0.5) return "4";
   if (holeCount >= 2 && aspect < 0.85) return "8";
   if (holeCount === 1 && center < 0.15) return "0";
   if (holeCount === 1 && left > right + 0.04 && bot + 0.05 >= top) return "6";
   if (holeCount === 1 && center >= 0.15 && bot < mid - 0.02) return "9";
   if (holeCount === 0 && mid < 0.18 && bot > 0.35 && top > 0.3) return "2";
   if (holeCount === 0 && top > 0.38 && bot < 0.22 && mid < 0.28) return "7";
+  if (holeCount === 0 && right > left + 0.2 && bot > 0.35 && top < 0.4) return "4";
+  if (holeCount === 0 && left + 0.02 >= right && mid > 0.28 && top > 0.3 && bot > 0.25 && center > 0.15) return "5";
   if (holeCount === 0 && right > left + 0.08 && mid >= 0.16 && top > 0.25 && bot > 0.2) return "3";
   if (holeCount === 0 && aspect > 1.2) return "W";
   if (holeCount === 0 && aspect >= 0.65 && aspect <= 1.05 && top > 0.25 && bot > 0.25 && mid < 0.32) return "S";
@@ -226,7 +229,13 @@ export function recognizeCameraOverlay(jpegBytes) {
   const metrics = readRegion(luma, width, height, Math.floor(width * 0.78), Math.floor(height * 0.74), width - 1, Math.floor(height * 0.97));
   const timeLines = readRegion(luma, width, height, 280, 560, 540, height - 1);
   const reading = parseCameraOverlayText(metrics, timeLines[0] || "");
-  return reading ? { ...reading, metric_lines: metrics, time_text: timeLines[0] || "" } : null;
+  if (!reading) {
+    const error = new Error("ENKA kamera yazısı okunamadı: " + metrics.join(" / ") + " | " + (timeLines[0] || ""));
+    error.metric_lines = metrics;
+    error.time_text = timeLines[0] || "";
+    throw error;
+  }
+  return { ...reading, metric_lines: metrics, time_text: timeLines[0] || "" };
 }
 
 function round1(value) {
