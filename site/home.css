@@ -4590,3 +4590,11 @@ main.shell { padding-bottom:max(12px,env(safe-area-inset-bottom)); }
   .dashboard-briefing .briefing-k{font-size:11px!important}
   .dashboard-briefing .briefing-v{font-size:14.5px!important}
 }
+
+/* 2px increase for briefing body text — desktop only */
+@media (min-width:561px){
+  #brief-rain-lines,
+  #brief-rain-lines .brief-spell,
+  #brief-temperature-trend,
+  #brief-temperature-trend .brief-temp-swing{font-size:12.5px!important}
+}
