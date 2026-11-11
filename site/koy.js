@@ -47,10 +47,18 @@ let busy=false, f180=null, comparison=null, stationHistory=null, rainHistory=nul
 window.__KOY_DEFAULT_STATION="home";
 async function get(path){const url=BASE+path;const r=await fetch(url+"?v="+Date.now(),{cache:"no-store"});if(!r.ok)throw Error("HTTP "+r.status+" · "+url);return r.json()}
 async function getStation(path){
- const url=STATIONS_API+path+(path.includes("?")?"&":"?")+"v="+Date.now();
- const r=await fetch(url,{cache:"no-store"});
- if(!r.ok)throw Error("HTTP "+r.status+" · "+url);
- const doc=await r.json();
+ const bases=[STATIONS_API,"https://gfs-watch-stations.muhsin-ulusoy.workers.dev/api"];
+ let lastError=null,doc=null;
+ for(const base of bases){
+  const url=base+path+(path.includes("?")?"&":"?")+"v="+Date.now();
+  try{
+   const r=await fetch(url,{cache:"no-store"});
+   if(!r.ok)throw Error("HTTP "+r.status+" · "+url);
+   doc=await r.json();
+   break;
+  }catch(error){lastError=error;}
+ }
+ if(!doc)throw lastError||Error("Station API unavailable");
  if(path.includes("/history/")&&Array.isArray(doc.samples)){
   doc.samples=doc.samples.map(s=>({...s,
    temperature_2m_c:s.temperature_2m_c == null ? s.temperature_c : s.temperature_2m_c,
