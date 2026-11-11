@@ -4584,3 +4584,7 @@ main.shell { padding-bottom:max(12px,env(safe-area-inset-bottom)); }
   .moon-phase{font-size:10px}
   .moon-phase-name{white-space:normal}
 }
+
+/* 2px text increase for forecast briefing cards */
+.dashboard-briefing .briefing-k{font-size:11px!important}
+.dashboard-briefing .briefing-v{font-size:14.5px!important}
