@@ -1,0 +1,5 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="app_name">İstanbul Havası</string>
+    <string name="widget_description">İstanbul canlı hava ve 4 günlük tahmin</string>
+</resources>
