@@ -300,7 +300,7 @@ export function observationFromCameraReading(reading, staleAfterMinutes = 20, no
   return {
     station_id: "ENKA-BALMUMCU-WEATHERLINK",
     station_name: "ENKA Balmumcu",
-    source: "ENKA kamera · OCR yedek kaynak",
+    source: "ENKA · OCR",
     source_url: ENKA_CAMERA_URL,
     observed_at_utc: reading.observed_at_utc,
     fetched_at_utc: new Date(now).toISOString(),
