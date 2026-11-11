@@ -257,7 +257,7 @@ export async function recognizeCameraOverlayWithAI(jpegBytes, ai) {
   try {
     const result = await ai.run("@cf/llava-hf/llava-1.5-7b-hf", {
       image: Array.from(jpegBytes),
-      prompt: "Read ONLY the white weather-station overlay. Return exactly: TEMP=<number>; RH=<integer>; PRESS=<number>; WIND=<number>kt <cardinal>; TIME=<DD-MM-YYYY HH:MM:SS>. Do not guess values."
+      prompt: "Read ONLY the white weather-station overlay in this image. First locate the overlay, then transcribe these five fields. Return ONLY one line in this exact format: TEMP=14.9; RH=72; PRESS=1018.4; WIND=5.2kt NE; TIME=11-11-2026 18:05:00. Replace every example with the actual visible value. If a field is not clearly readable, return UNKNOWN for that field. Do not infer, calculate, or guess. Use decimal point and one decimal place for TEMP, PRESS and WIND."
     });
     const text = String(result?.response || result?.description || result || "");
     const temp = text.match(/TEMP\s*=\s*(-?\d+(?:[.,]\d+)?)/i);
