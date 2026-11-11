@@ -150,10 +150,10 @@ def main() -> None:
     assert "gfs_publication_assets" in koy_worker
     assert 'wind_direction_enrichment_checked: true' in koy_worker
     assert 'needsWindDirectionEnrichment' in koy_worker
-    assert 'KOY_SVG_RENDERER_VERSION = "cloudflare-js-v2"' in koy_worker
+    assert 'KOY_SVG_RENDERER_VERSION = "cloudflare-js-v3"' in koy_worker
     assert "function buildKoyInteractiveSvg" in koy_worker
     assert "function publishLatestKoySvg" in koy_worker
-    assert 'const KOY_SVG_RENDERER_VERSION = "cloudflare-js-v2"' in koy_worker
+    assert 'const KOY_SVG_RENDERER_VERSION = "cloudflare-js-v3"' in koy_worker
     assert 'path === "/api/comparison.svg"' in koy_worker
     assert "comparison_svg_published" in koy_worker
     assert "svg_renderer: KOY_SVG_RENDERER_VERSION" in koy_worker
@@ -167,7 +167,7 @@ def main() -> None:
     assert "schedule:" not in koy_svg_workflow
     assert "push:" not in koy_svg_workflow
     assert "comparison.svg" in koy_svg_workflow
-    assert "cloudflare-js-v1" in koy_svg_workflow
+    assert "cloudflare-js-v3" in koy_svg_workflow
     assert "matplotlib" not in koy_svg_workflow.lower()
     assert "workflow_run:" not in platform_workflow
     assert "actions/workflows/istanbul-gfs-10min.yml/dispatches" not in gfs_worker
