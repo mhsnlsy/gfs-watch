@@ -1346,18 +1346,15 @@
         appendTemperatureSwings(holder);
         return;
       }
-      const points=forecastData&&Array.isArray(forecastData.forecast_6_hourly)?forecastData.forecast_6_hourly:[];
-      const now=Date.now(),dayMs=86400000;
-      const valid=points.map(point=>({stamp:Date.parse(point.valid_time_utc),temp:Number(point.temperature_2m_c)}))
-        .filter(point=>Number.isFinite(point.stamp)&&Number.isFinite(point.temp)&&point.stamp>=now-30*60000&&point.stamp<now+5*dayMs)
+      const now=Date.now();
+      const windows=briefingDayMeans(briefingForecastPoints(),now).map(item=>({
+        day:item.day,
+        stamp:Date.parse(item.key+"T12:00:00Z"),
+        mean:item.mean
+      }));
+      const valid=briefingWindowPoints(briefingForecastPoints(),now)
+        .map(point=>({stamp:point.stamp,temp:point.temp}))
         .sort((a,b)=>a.stamp-b.stamp);
-      const windows=[];
-      for(let day=0;day<5;day++){
-        const [start,end]=dayWindow(day);
-        const values=valid.filter(point=>point.stamp>=start&&point.stamp<end).map(point=>point.temp);
-        if(values.length<2)continue;
-        windows.push({day,stamp:start+12*3600000,mean:values.reduce((sum,value)=>sum+value,0)/values.length});
-      }
       const current=Number(station.temperature_2m_c);
       if(windows.length<3){
         holder.textContent="Önümüzdeki 5 gün için yeterli sıcaklık tahmini henüz yayımlanmadı. Eyüpsultan şu an "+fmt(current,1)+"°C.";
@@ -1373,7 +1370,8 @@
       };
       const magnitude=value=>fmt(Math.abs(value),1)+"°C";
       const currentText="Eyüpsultan şu an "+fmt(current,1)+"°C.";
-      const run=forecastData&&forecastData.run_id_utc?timeUTC(forecastData.run_id_utc)+" UTC":null;
+      const sourceRun=(window.__METEOPT_F180_DOCUMENT&&window.__METEOPT_F180_DOCUMENT.run_id_utc)||(forecastData&&forecastData.run_id_utc);
+      const run=sourceRun?timeUTC(sourceRun)+" UTC":null;
       const series=windows.map((item,index)=>({
         ...item,
         delta:item.mean-(index===0?baseline:windows[index-1].mean),
@@ -1476,20 +1474,39 @@
       if(canonical&&Array.isArray(canonical.forecast_6_hourly))return canonical.forecast_6_hourly;
       return forecastData&&Array.isArray(forecastData.forecast_6_hourly)?forecastData.forecast_6_hourly:[];
     }
+    const BRIEFING_WINDOW_HOURS=120;
+    const BRIEFING_DAY_COUNT=5;
+    function briefingWindowPoints(points,nowMs){
+      const wanted=new Set(istanbulCivilDayKeys(nowMs,BRIEFING_DAY_COUNT));
+      return (points||[]).map(point=>{
+        const stamp=Date.parse(point&&point.valid_time_utc);
+        const step=Number(point&&point.forecast_hour);
+        const temp=Number(point&&point.temperature_2m_c);
+        const mm=Number(point&&point.precipitation_6h_mm);
+        return {stamp,step,temp,mm:Number.isFinite(mm)?mm:0};
+      }).filter(point=>Number.isFinite(point.stamp)&&point.step>0&&point.step<=BRIEFING_WINDOW_HOURS&&point.step%3===0&&point.stamp>=nowMs-30*60000&&wanted.has(tableForecastDayKey(point.stamp)))
+        .sort((a,b)=>a.stamp-b.stamp);
+    }
+    function briefingDayMeans(points,nowMs){
+      const dayKeys=istanbulCivilDayKeys(nowMs,BRIEFING_DAY_COUNT);
+      const buckets=new Map(dayKeys.map(key=>[key,[]]));
+      for(const point of briefingWindowPoints(points,nowMs)){
+        if(!Number.isFinite(point.temp))continue;
+        buckets.get(tableForecastDayKey(point.stamp)).push(point.temp);
+      }
+      return dayKeys.map((key,day)=>{
+        const temps=buckets.get(key);
+        if(temps.length<2)return null;
+        return {day,key,count:temps.length,mean:temps.reduce((sum,value)=>sum+value,0)/temps.length};
+      }).filter(Boolean);
+    }
     function formatSwingAmount(delta){
       const digits=Math.abs(delta).toLocaleString("tr-TR",{minimumFractionDigits:1,maximumFractionDigits:1});
       return (delta<0?"−":"+")+digits+"°C";
     }
     function temperatureSwingLines(points,nowMs){
-      const dayKeys=istanbulCivilDayKeys(nowMs,5);
-      const wanted=new Set(dayKeys);
-      const rows=(points||[]).map(point=>{
-        const stamp=Date.parse(point&&point.valid_time_utc);
-        const temp=Number(point&&point.temperature_2m_c);
-        const step=Number(point&&point.forecast_hour);
-        return {stamp,temp,step};
-      }).filter(point=>Number.isFinite(point.stamp)&&Number.isFinite(point.temp)&&point.step>0&&point.step<=180&&point.step%3===0)
-        .sort((a,b)=>a.stamp-b.stamp);
+      const dayKeys=istanbulCivilDayKeys(nowMs,BRIEFING_DAY_COUNT);
+      const rows=briefingWindowPoints(points,nowMs).filter(point=>Number.isFinite(point.temp));
       const byDay=new Map();
       for(let index=1;index<rows.length;index++){
         const hours=(rows[index].stamp-rows[index-1].stamp)/3600000;
@@ -1497,7 +1514,6 @@
         const delta=rows[index].temp-rows[index-1].temp;
         if(Math.abs(delta)<4)continue;
         const day=tableForecastDayKey(rows[index-1].stamp);
-        if(!wanted.has(day))continue;
         if(!byDay.has(day))byDay.set(day,[]);
         byDay.get(day).push({start:rows[index-1].stamp,end:rows[index].stamp,delta});
       }
@@ -1522,13 +1538,7 @@
       holder.appendChild(list);
     }
     function rainDayLines(points,nowMs){
-      const rows=(points||[]).map(point=>{
-        const stamp=Date.parse(point&&point.valid_time_utc);
-        const step=Number(point&&point.forecast_hour);
-        const mm=Number(point&&point.precipitation_6h_mm);
-        return {stamp,step,mm:Number.isFinite(mm)?mm:0};
-      }).filter(point=>Number.isFinite(point.stamp)&&( !Number.isFinite(point.step)||(point.step>0&&point.step<=180)))
-        .sort((a,b)=>a.stamp-b.stamp);
+      const rows=briefingWindowPoints(points,nowMs);
       const steps=rows.map(point=>point.step).filter(Number.isFinite).sort((a,b)=>a-b);
       const gaps=steps.slice(1).map((step,index)=>step-steps[index]).filter(gap=>gap>0&&gap<=6).sort((a,b)=>a-b);
       const stepH=gaps.length?gaps[Math.floor(gaps.length/2)]:3;
@@ -1545,8 +1555,8 @@
         return "";
       };
       const lines=[];
-      for(const key of istanbulCivilDayKeys(nowMs,4)){
-        const dayPoints=rows.filter(point=>tableForecastDayKey(point.stamp)===key&&point.stamp>=nowMs-30*60000);
+      for(const key of istanbulCivilDayKeys(nowMs,BRIEFING_DAY_COUNT)){
+        const dayPoints=rows.filter(point=>tableForecastDayKey(point.stamp)===key);
         if(!dayPoints.length)continue;
         const wet=dayPoints.filter(point=>point.mm>=0.2);
         const spells=[];
@@ -1607,9 +1617,8 @@
     function renderRainDays(){
       const holder=$("brief-rain-lines");
       if(!holder)return;
-      // Same F180 rows and the same TSİ clock as the MeteoPT table. A full
-      // Istanbul calendar day stays in the list, including its evening, even
-      // when that evening is past the old 72-hour cutoff.
+      // Same 180-hour MeteoPT series and TSİ clock as the GFS table.
+      // The boxes analyze the first 120 hours, five Istanbul days.
       const lines=rainDayLines(briefingForecastPoints(),Date.now());
       holder.replaceChildren();
       if(!lines.length){

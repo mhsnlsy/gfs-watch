@@ -24,6 +24,8 @@ for (let step = 3; step <= 150; step += 3) {
   if (iso.startsWith("2026-11-14T21")) { temp = 11.6; mm = 6.1; }
   if (iso.startsWith("2026-11-15T00")) { temp = 11.1; mm = 11.8; }
   if (iso > "2026-11-15T00") temp = 11.6;
+  if (iso.startsWith("2026-11-15T21")) mm = 2;
+  if (iso.startsWith("2026-11-16T03")) { temp = 20; mm = 9; }
   if (iso.startsWith("2026-11-16T18")) mm = 3.2;
   if (iso.startsWith("2026-11-16T21")) mm = 1.1;
   points.push({
@@ -47,15 +49,24 @@ const thresholdSwings = [...sandbox.temperatureSwingLines(thresholdPoints, now)]
 assert.deepEqual(thresholdSwings, ["Çarşamba · 12:00–15:00 +4,2°C"]);
 
 const rain = [...sandbox.rainDayLines(points, now)];
+assert.deepEqual([...new Set(rain.map(line => line.split(" · ")[0]))], ["Çarşamba", "Perşembe", "Cuma", "Cumartesi", "Pazar"]);
 assert.ok(rain.includes("Cumartesi · 18:00–21:00 · akşam · 8,4 mm"));
 assert.ok(!rain.some(line => line.startsWith("Cumartesi") && line.includes("yağış yok")));
-assert.ok(!rain.some(line => line.includes("00:00") && line.startsWith("Cumartesi")), "Sunday 00:00 rain stays on Sunday");
+assert.ok(rain.includes("Pazar · 00:00 · gece · 11,8 mm"));
+assert.ok(rain.some(line => line.startsWith("Pazar") && line.includes("21:00") && line.includes("2,0 mm")));
+assert.ok(!rain.some(line => line.startsWith("Pazartesi")), "hour 120 is the next calendar day, past the five-day window");
+assert.ok(!rain.some(line => line.includes("9,0")), "precipitation past 120 hours is outside the analysis window");
 assert.ok(rain.includes("Çarşamba · yağış yok"));
+
+const means = [...sandbox.briefingDayMeans(points, now)];
+assert.deepEqual(means.map(item => item.key), ["2026-11-11", "2026-11-12", "2026-11-13", "2026-11-14", "2026-11-15"]);
+assert.ok(means.every(item => item.count >= 2));
+assert.ok(!swings.some(line => line.startsWith("Pazartesi")));
 
 const fromThursday = [...sandbox.rainDayLines(points, Date.parse("2026-11-12T06:00:00Z"))];
 assert.ok(fromThursday.some(line => line.startsWith("Pazar") && line.includes("11,8")));
 const fromFriday = [...sandbox.rainDayLines(points, Date.parse("2026-11-13T06:00:00Z"))];
-assert.ok(fromFriday.some(line => line.startsWith("Pazartesi") && line.includes("18:00–21:00") && line.includes("akşam")));
+assert.ok(!fromFriday.some(line => line.includes("18:00–21:00") && line.startsWith("Pazartesi")));
 
 const traced = points.map(point => point.valid_time_utc.startsWith("2026-11-14T15")
   ? { ...point, precipitation_6h_mm: 0.5 }
