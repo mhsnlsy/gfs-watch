@@ -193,15 +193,18 @@ export function moonPhaseSvg(date) {
   const lightOnRight = waxing;
   const sweep = lightOnRight ? 1 : 0;
   const terminatorSweep = mag > 0 ? (lightOnRight ? 1 : 0) : (lightOnRight ? 0 : 1);
-  const lit = phase.fraction > 0.02 && phase.fraction < 0.98;
+  // Yeni ay tamamen boş görünür; doldukça aydınlanan bölüm ay rengiyle dolar.
+  const isNewMoon = phase.index === 0;
+  const lit = !isNewMoon && phase.fraction > 0.02 && phase.fraction < 0.98;
   const path = lit
     ? "M " + cx + " " + (cy - r) +
       " A " + r + " " + r + " 0 0 " + sweep + " " + cx + " " + (cy + r) +
       " A " + rx.toFixed(3) + " " + r + " 0 0 " + terminatorSweep + " " + cx + " " + (cy - r) + " Z"
     : "";
-  const disk = phase.fraction > 0.47 && phase.fraction < 0.53 ? "#f4ead2" : "#102433";
+  const disk = isNewMoon ? "#102433" : "#f4ead2";
+  const stroke = isNewMoon ? "rgba(177,203,211,0.72)" : "#f4ead2";
   return "<svg class=\"moon-phase-svg\" viewBox=\"0 0 24 24\" width=\"22\" height=\"22\" aria-hidden=\"true\">" +
-    "<circle cx=\"12\" cy=\"12\" r=\"9\" fill=\"" + disk + "\" stroke=\"#f4ead2\" stroke-width=\"1.1\"/>" +
+    "<circle cx=\"12\" cy=\"12\" r=\"9\" fill=\"" + disk + "\" stroke=\"" + stroke + "\" stroke-width=\"1.1\"/>" +
     (path ? "<path fill=\"#f4ead2\" d=\"" + path + "\"/>" : "") +
     "</svg>";
 }
