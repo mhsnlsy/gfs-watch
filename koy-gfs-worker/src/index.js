@@ -422,7 +422,7 @@ function decodePublicationAsset(row) {
   return new Response(row.body, { status: 200, headers });
 }
 
-const KOY_SVG_RENDERER_VERSION = "cloudflare-js-v5-raw-forecast-hour";
+const KOY_SVG_RENDERER_VERSION = "cloudflare-js-v6-valid-time";
 const FONT = "system-ui,-apple-system,BlinkMacSystemFont,Segoe UI,sans-serif";
 const KOY_SVG_ASSET_NAME = /^koy-gfs-\d{8}T\d{2}Z-comparison\.svg$/;
 
@@ -494,17 +494,19 @@ export function buildKoyInteractiveSvg(comparison) {
 
   if (documents.length !== 4) return null;
 
-  // RAW GFS COMPARISON:
-  // Each cycle is plotted at its own forecast_hour (F6, F12, ... F180).
-  // There is deliberately NO common-valid-time intersection, interpolation,
-  // resampling, altitude correction, smoothing, or value transformation.
-  // The plotted value is exactly the numeric field stored in that run's
-  // forecast_6_hourly point.
+  // VALID-TIME GFS COMPARISON:
+  // All four cycles are aligned by the actual valid_time_utc of each forecast
+  // point. A previous cycle therefore uses a different forecast_hour when
+  // necessary to represent the same valid instant as the newest cycle.
+  // Raw model values are used unchanged; only the x-axis alignment changes.
   const series = documents.map((document, index) => {
     const points = new Map();
     for (const point of document.forecast_6_hourly || []) {
+      const validKey = svgValidKey(point?.valid_time_utc);
       const lead = Number(point?.forecast_hour);
-      if (Number.isFinite(lead) && lead > 0) points.set(Math.round(lead), point);
+      if (validKey && Number.isFinite(lead) && lead > 0 && lead <= 180) {
+        points.set(validKey, point);
+      }
     }
     if (!points.size) return null;
     return {
@@ -517,17 +519,16 @@ export function buildKoyInteractiveSvg(comparison) {
 
   if (series.some(item => !item)) return null;
 
-  // Use the newest run's actual forecast steps as the x-axis. Other runs are
-  // read at the same forecast step when available; missing steps stay missing.
-  const leadHours = [...series[series.length - 1].points.keys()]
-    .filter(hour => hour > 0 && hour <= 180)
-    .sort((a, b) => a - b);
-  if (leadHours.length < 2) return null;
-
+  // The newest run defines the chronological valid-time axis. Every older
+  // cycle is looked up by the same valid timestamp, never by forecast_hour.
   const latestPoints = series[series.length - 1].points;
-  const validTimeRecords = leadHours.map(hour => {
-    const point = latestPoints.get(hour) || {};
-    const date = new Date(point.valid_time_utc);
+  const validTimeKeys = [...latestPoints.keys()]
+    .filter(key => Number.isFinite(Date.parse(key)))
+    .sort((a, b) => Date.parse(a) - Date.parse(b));
+  if (validTimeKeys.length < 2) return null;
+
+  const validTimeRecords = validTimeKeys.map(key => {
+    const date = new Date(key);
     const year = date.getUTCFullYear();
     const month = String(date.getUTCMonth() + 1).padStart(2, "0");
     const day = String(date.getUTCDate()).padStart(2, "0");
@@ -537,12 +538,14 @@ export function buildKoyInteractiveSvg(comparison) {
       local_key: year + "-" + month + "-" + day + "T" + h + ":" + minute,
       label: day + "." + month + "." + year + " " + h + ":" + minute + " TSİ",
       utc_label: year + "-" + month + "-" + day + " " + h + ":" + minute + " UTC",
+      timestamp_ms: date.getTime(),
     };
   });
 
-  const offsets = leadHours.map(hour => hour);
-  const xMin = 0;
-  const xMax = Math.max(180, leadHours[leadHours.length - 1]);
+  // Use actual valid-time spacing on the x-axis.
+  const offsets = validTimeRecords.map(record => record.timestamp_ms);
+  const xMin = offsets[0];
+  const xMax = offsets[offsets.length - 1];
   const xRatio = offset => (offset - xMin) / (xMax - xMin);
 
   const W = 1152;
@@ -592,7 +595,7 @@ export function buildKoyInteractiveSvg(comparison) {
     const panelBottom = py + panelHeight;
 
     const valuesBySeries = series.map(item =>
-      leadHours.map(hour => svgNumber(item.points.get(hour)?.[spec.field]))
+      validTimeKeys.map(key => svgNumber(item.points.get(key)?.[spec.field]))
     );
     const allValues = valuesBySeries.flat().filter(value => value !== null);
     const axis = buildPanelAxis(spec.field, valuesBySeries);
@@ -618,32 +621,42 @@ export function buildKoyInteractiveSvg(comparison) {
 
     // Date ticks follow the same 12-hour cadence as the former Matplotlib report.
     const tickIndexes = [];
-    offsets.forEach((offset, index) => {
-      if (index === 0 || Math.abs(offset % 12) < 0.01) tickIndexes.push(index);
+    validTimeRecords.forEach((record, index) => {
+      const date = new Date(record.timestamp_ms);
+      const hour = date.getUTCHours();
+      if (index === 0 || hour % 12 === 0) tickIndexes.push(index);
     });
-    if (tickIndexes[tickIndexes.length - 1] !== offsets.length - 1) {
-      tickIndexes.push(offsets.length - 1);
+    if (tickIndexes[tickIndexes.length - 1] !== validTimeRecords.length - 1) {
+      tickIndexes.push(validTimeRecords.length - 1);
     }
     tickIndexes.forEach(index => {
-      const date = new Date(validTimeRecords[index].local_key + ":00Z");
+      const date = new Date(validTimeRecords[index].timestamp_ms);
       const x = xPositions[index];
       const day = String(date.getUTCDate()).padStart(2, "0");
       const weekdays = ["Paz", "Pzt", "Sal", "Çar", "Per", "Cum", "Cmt"];
       const weekday = weekdays[date.getUTCDay()];
-      const anchor = index === 0 ? "start" : index === offsets.length - 1 ? "end" : "middle";
+      const hour = String(date.getUTCHours()).padStart(2, "0");
+      const minute = String(date.getUTCMinutes()).padStart(2, "0");
+      const anchor = index === 0 ? "start" : index === validTimeRecords.length - 1 ? "end" : "middle";
       svgParts.push(
         '<text x="' + x + '" y="' + (plotY + plotHeight + 19) + '" text-anchor="' + anchor + '" fill="#E7F2F6" font-size="10" font-weight="650" font-family="system-ui,-apple-system,BlinkMacSystemFont,Segoe UI,sans-serif">' +
-        '<tspan x="' + x + '">F' + leadHours[index] + '</tspan><tspan x="' + x + '" dy="13">' + day + ' ' + weekday + '</tspan></text>'
+        '<tspan x="' + x + '">' + day + ' ' + weekday + '</tspan><tspan x="' + x + '" dy="13">' + hour + ':' + minute + ' TSİ</tspan></text>'
       );
     });
 
     const panelSeries = [];
     series.forEach((item, seriesIndex) => {
-      const values = leadHours.map(hour => svgNumber(item.points.get(hour)?.[spec.field]));
+      const values = validTimeKeys.map(key => svgNumber(item.points.get(key)?.[spec.field]));
       const yPositions = values.map(value => value === null ? null : Number(yFor(value).toFixed(3)));
-      const directions = leadHours.map(hour => {
+      const directions = validTimeKeys.map(key => {
         if (spec.field !== "wind_speed_10m_kmh") return null;
-        return svgNumber(item.points.get(hour)?.wind_direction_10m_deg);
+        return svgNumber(item.points.get(key)?.wind_direction_10m_deg);
+      });
+      const forecastHours = validTimeKeys.map(key => {
+        const point = item.points.get(key);
+        return point && Number.isFinite(Number(point.forecast_hour))
+          ? Number(point.forecast_hour)
+          : null;
       });
 
       let pathData = "";
@@ -715,7 +728,7 @@ export function buildKoyInteractiveSvg(comparison) {
       panelSeries.push({
         label: item.label,
         color: item.color,
-        lead_hours: leadHours,
+        lead_hours: forecastHours,
         values,
         y_positions: yPositions,
         directions_deg: directions,
@@ -747,7 +760,7 @@ export function buildKoyInteractiveSvg(comparison) {
   const metadataText = JSON.stringify(metadata).replace(/\]\]>/g, "]]\\u003e");
   const footer = "Kaynak: Köy GFS · " + sourceName + " · " + locationName + " nokta tahmini";
   svgParts.push(
-    '<text x="63" y="810" fill="#E7F2F6" font-size="11" font-family="system-ui,-apple-system,BlinkMacSystemFont,Segoe UI,sans-serif">Ham GFS tahmin adımları · F' + leadHours[0] + '–F' + leadHours[leadHours.length - 1] + ' · ' + leadHours.length + ' nokta</text>',
+    '<text x="63" y="810" fill="#E7F2F6" font-size="11" font-family="system-ui,-apple-system,BlinkMacSystemFont,Segoe UI,sans-serif">Geçerlilik zamanı ekseni · ' + validTimeRecords[0].label + ' → ' + validTimeRecords[validTimeRecords.length - 1].label + ' · ' + validTimeRecords.length + ' nokta</text>',
     '<text x="1090" y="810" text-anchor="end" fill="#E7F2F6" font-size="10" font-family="system-ui,-apple-system,BlinkMacSystemFont,Segoe UI,sans-serif">' + svgEscape(footer) + '</text>',
     '<metadata id="gfs-renderer-version">' + KOY_SVG_RENDERER_VERSION + '</metadata>',
     '<metadata id="gfs-interactive-data"><![CDATA[' + metadataText + ']]></metadata>',
