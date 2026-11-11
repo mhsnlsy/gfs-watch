@@ -755,13 +755,13 @@ function renderRuns(d,f180){
    const version=encodeURIComponent((d && d.updated_at_utc||latestSvgRun.published_at_utc||latestSvgRun.run_id_utc)+"|koy-svg-absolute-path-v5");
    // Use the canonical D1 publication asset from the Köy GFS Worker.
    // This bypasses the legacy static /koy-data/gfs/media archive.
-   // Köy comparison SVG is served by the dedicated Köy GFS Worker.
-   // The main site gateway must not be used here: on the custom domain
-   // window.GFS_WATCH_API_BASE points to gfs-watch-web, which has no Köy
-   // publication-asset route.
+   // Köy comparison SVG is generated and served canonically by the dedicated
+   // Köy GFS Worker. Use its stable comparison endpoint instead of constructing
+   // a publication-asset key in the browser; the Worker resolves the latest
+   // four-run D1 asset and can rebuild it when necessary.
    const publicationApi="https://gfs-watch-koy-gfs.muhsin-ulusoy.workers.dev";
-   const svgPath=publicationApi+"/api/publication-asset/notifications/koy-gfs-"+runStamp+"-comparison.svg";
-   const svgUrl=svgPath+"?v="+encodeURIComponent(version+"-d1-svg-v2-"+Date.now());
+   const svgPath=publicationApi+"/api/comparison.svg";
+   const svgUrl=svgPath+"?v="+encodeURIComponent(version+"-d1-svg-v5-"+Date.now());
    if(svgContainer.dataset.svgSrc!==svgUrl){
     svgContainer.dataset.svgSrc=svgUrl;
     svgContainer.innerHTML="";
