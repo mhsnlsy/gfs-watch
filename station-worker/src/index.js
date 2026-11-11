@@ -706,7 +706,7 @@ async function handleApi(request, env) {
         cron: "*/2 * * * *",
         station_count: rows.length,
         latest_fetch_at_utc: latest,
-        stations: rows.map(row => ({ key: row.station_key, status: row.status, fetched_at_utc: row.fetched_at_utc, last_success_utc: row.last_success_utc, last_attempt_utc: row.last_attempt_utc, last_error: row.last_error }))
+        stations: rows.map(row => ({ key: row.station_key, station_id: row.station_id, status: row.status, fetched_at_utc: row.fetched_at_utc, last_success_utc: row.last_success_utc, last_attempt_utc: row.last_attempt_utc, last_error: row.last_error, observation_method: (() => { try { return JSON.parse(row.payload_json || "{}").observation_method || null; } catch (_) { return null; } })(), source: (() => { try { return JSON.parse(row.payload_json || "{}").source || null; } catch (_) { return null; } })(), observed_at_utc: (() => { try { return JSON.parse(row.payload_json || "{}").observed_at_utc || null; } catch (_) { return null; } })() }))
       });
     } catch (error) {
       return json({ ok: false, service: "gfs-watch-stations", error: String(error.message || error) }, 503);
