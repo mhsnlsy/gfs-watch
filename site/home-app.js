@@ -1370,8 +1370,6 @@
       };
       const magnitude=value=>fmt(Math.abs(value),1)+"°C";
       const currentText="Eyüpsultan şu an "+fmt(current,1)+"°C.";
-      const sourceRun=(window.__METEOPT_F180_DOCUMENT&&window.__METEOPT_F180_DOCUMENT.run_id_utc)||(forecastData&&forecastData.run_id_utc);
-      const run=sourceRun?timeUTC(sourceRun)+" UTC":null;
       const series=windows.map((item,index)=>({
         ...item,
         delta:item.mean-(index===0?baseline:windows[index-1].mean),
@@ -1429,26 +1427,9 @@
       summary+=" "+currentText;
       holder.replaceChildren();
       const textNode=document.createElement("span");
-      const breakAt="başlıyor;";
-      const breakIndex=summary.indexOf(breakAt);
-      if(breakIndex>=0){
-        textNode.textContent=summary.slice(0,breakIndex+breakAt.length);
-        holder.appendChild(textNode);
-        holder.appendChild(document.createElement("br"));
-        const rest=document.createElement("span");
-        rest.textContent=summary.slice(breakIndex+breakAt.length).replace(/^\\s+/,"");
-        holder.appendChild(rest);
-      }else{
-        textNode.textContent=summary;
-        holder.appendChild(textNode);
-      }
+      textNode.textContent=summary;
+      holder.appendChild(textNode);
       appendTemperatureSwings(holder);
-      if(run){
-        const source=document.createElement("small");
-        source.className="brief-temperature-source";
-        source.textContent="Kaynak: GFS "+run+" çıktısı";
-        holder.appendChild(source);
-      }
     }
     function tableForecastDayKey(ms){
       return new Intl.DateTimeFormat("en-CA",{timeZone:"UTC",year:"numeric",month:"2-digit",day:"2-digit"}).format(new Date(ms));

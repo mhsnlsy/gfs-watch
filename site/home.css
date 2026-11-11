@@ -408,6 +408,8 @@
 .brief-spell+.brief-spell{margin-top:2px}
 .brief-temp-swings{display:grid;gap:2px;margin-top:4px}
 .brief-temp-swing{font-size:12.5px;line-height:1.35;color:#e7f2f6}
+#brief-temperature-trend{font-size:11.5px}
+#brief-temperature-trend .brief-temp-swing{font-size:11.5px}
 .brief-meta{margin-top:3px;font-size:11px;line-height:1.35;color:#a8c0ca}
 
     /* Integrated observation card: station history is part of the live card. */
@@ -583,6 +585,7 @@
       .briefing { gap:4px; margin-top:6px; }
       .briefing-row { grid-template-columns:78px minmax(0,1fr); gap:6px; padding:5px 7px; }
       .briefing-v,.brief-spell { font-size:12px; line-height:1.32; }
+      #brief-temperature-trend{font-size:11px}
       .brief-days { gap:3px; }
     }
     /* iPhone landscape / 16:8-class phone viewports: compact chrome, retain two-column forecast. */
@@ -3791,6 +3794,9 @@ html.ios12 #enka-camera-panel .enka-camera-frame{
   .dashboard-left > .station-briefing-inline .briefing-v{
     font-size:14px!important;
     line-height:1.42!important;
+  }
+  .dashboard-left > .station-briefing-inline #brief-temperature-trend{
+    font-size:13px!important;
   }
 }
 
