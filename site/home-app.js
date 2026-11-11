@@ -998,7 +998,7 @@
       const stationName=station&&station.station_name?station.station_name:(activeStation==="enka"?"ENKA Balmumcu":activeStation==="sisli"?"Şişli":"Eyüpsultan");
       $("station-card-title").textContent=stationName+" · İstanbul";
       const fallbackLabel=$("station-source-fallback");
-      if(fallbackLabel)fallbackLabel.hidden=!(activeStation==="enka"&&hasStation&&(station.station_id==="ENKA-BALMUMCU-WEATHERLINK"||station.observation_method==="tesseract-ocr"));
+      if(fallbackLabel)fallbackLabel.hidden=!(activeStation==="enka"&&hasStation&&station.observation_method==="enka-camera-overlay");
       const observed=hasStation&&station.observed_at_utc?new Date(station.observed_at_utc):null;
       const observedValid=observed&&!Number.isNaN(observed.getTime());
       const ageMinutes=observedValid?Math.max(0,(Date.now()-observed.getTime())/60000):null;
