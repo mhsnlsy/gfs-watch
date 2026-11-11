@@ -126,29 +126,16 @@ function buildVirtualHomeHistory(source){
  const feels=recent.map(s=>num(s.feels_like_c)).filter(v=>v!=null);
  return {...source,schema:"koy-mgm.virtual-home-history.v1",station_id:"KOY-EV-363M",station_name:"Köy Ev",source_station_name:"Çanakçı",source_station_elevation_m:MGM_STATION_ELEVATION_M,elevation_m:HOME_ELEVATION_M,elevation_delta_m:HOME_DELTA_M,adjustment_method:"6.5 K/km environmental lapse rate",feels_like_24h_min_c:feels.length?Number(Math.min(...feels).toFixed(1)):null,feels_like_24h_max_c:feels.length?Number(Math.max(...feels).toFixed(1)):null,samples};
 }
-function adjustGfsPointForHome(point){
- const copy={...point};
- const t=num(copy.temperature_2m_c);
- if(t!=null)copy.temperature_2m_c=Number((t-HOME_GFS_TEMP_CORRECTION_C).toFixed(1));
- copy.virtual_station="Köy Ev";
- copy.elevation_m=HOME_ELEVATION_M;
- copy.elevation_delta_m=HOME_DELTA_M;
- copy.adjustment_method="6.5 K/km environmental lapse rate";
- return copy;
-}
+// Köy GFS uses one canonical MeteoPT source point only.
+// Coordinate: 40.9557°N, 39.0065°E.
+// IMPORTANT: raw GFS values are passed through unchanged. No altitude,
+// temperature, pressure, humidity, wind, precipitation or other correction
+// is applied to the GFS dataset used by the table, charts or briefing.
 function homeGfsDocument(doc){
- if(!doc||!Array.isArray(doc.forecast_6_hourly))return doc;
- return {...doc,location:{...(doc.location||{}),name:"Giresun / Çanakçı · Köy Ev 363 m"},
-   virtual_station:"Köy Ev",elevation_m:HOME_ELEVATION_M,elevation_delta_m:HOME_DELTA_M,
-   adjustment_method:"6.5 K/km environmental lapse rate",
-   forecast_6_hourly:doc.forecast_6_hourly.map(adjustGfsPointForHome)};
+ return doc;
 }
 function homeGfsComparison(doc){
- if(!doc||!Array.isArray(doc.runs))return doc;
- return {...doc,location:{...(doc.location||{}),name:"Giresun / Çanakçı · Köy Ev 363 m"},
-   virtual_station:"Köy Ev",elevation_m:HOME_ELEVATION_M,elevation_delta_m:HOME_DELTA_M,
-   adjustment_method:"6.5 K/km environmental lapse rate",
-   runs:doc.runs.map(homeGfsDocument)};
+ return doc;
 }
 function realizedErrorStats(runs,samples,metric){
  if(!samples||metric!=="temperature_2m_c")return null;
