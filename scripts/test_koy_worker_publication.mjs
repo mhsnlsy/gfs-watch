@@ -68,7 +68,7 @@ const modest = buildKoyInteractiveSvg({
 assert.ok(modest, "four Köy cycles should render a comparison SVG");
 assert.equal(modest.key, "media/koy-gfs-20261115T00Z-comparison.svg");
 assert.ok(modest.body.includes('id="gfs-renderer-version">cloudflare-js-v3</metadata>'));
-assert.ok(modest.body.includes("RÜZGÂR · GİDİŞ YÖNÜ"));
+assert.ok(!modest.body.includes("RÜZGÂR · GİDİŞ YÖNÜ"));
 assert.equal(koySvgKeyMatches(
   "notifications/koy-gfs-20261115T00Z-comparison.svg",
   modest.key
