@@ -182,11 +182,29 @@ function valueMatch(cell, regex, label, fallbackText) {
   return match;
 }
 async function fetchEnkaWeatherLink() {
-  const url = "https://w.enka.com/weather/currentvalues.html?_station_poll=" + Date.now();
-  const response = await fetchWithTimeout(url, {
-    headers: { "Accept": "text/html,application/xhtml+xml", "Referer": "https://w.enka.com/weather/" }
-  }, 18000);
-  const html = await response.text();
+  // ENKA WeatherLink is live again. Poll the current-values endpoint directly,
+  // bypassing intermediate caches, and retry transient upstream failures.
+  const baseUrl = "https://w.enka.com/weather/currentvalues.html";
+  let lastError = null;
+  for (let attempt = 1; attempt <= 3; attempt++) {
+    const url = baseUrl + "?_station_poll=" + Date.now() + "-" + attempt;
+    try {
+      const response = await fetchWithTimeout(url, {
+        headers: {
+          "Accept": "text/html,application/xhtml+xml,text/plain;q=0.9,*/*;q=0.8",
+          "Accept-Encoding": "gzip, deflate, br",
+          "Cache-Control": "no-cache, no-store, max-age=0",
+          "Pragma": "no-cache",
+          "Referer": "https://w.enka.com/weather/",
+          "User-Agent": "Mozilla/5.0 (compatible; GFS-Watch-Stations/1.0)"
+        }
+      }, 18000);
+      if (!response.ok) throw new Error("ENKA HTTP " + response.status);
+      const html = await response.text();
+      if (!html || html.length < 200) throw new Error("ENKA current-values boş/eksik yanıt döndürdü");
+      const rows = cellRows(html);
+      const plain = stripHtml(html);
+      const observedAt = parseEnkaTimestamp(html);
   const rows = cellRows(html);
   const plain = stripHtml(html);
   const observedAt = parseEnkaTimestamp(html);
@@ -239,7 +257,14 @@ async function fetchEnkaWeatherLink() {
     precipitation_daily_mm: dailyRainMatch ? round(Number(dailyRainMatch[1].replace(",", ".")), 1) : null,
     precipitation_source: "MGM 18401 · Şişli",
     observation_method: "weatherlink-current-values-current-value"
-  };
+      };
+    } catch (error) {
+      lastError = error;
+      console.warn("[ENKA WEATHERLINK RETRY] attempt " + attempt + "/3: " + (error?.message || error));
+      if (attempt < 3) await new Promise(resolve => setTimeout(resolve, 1500));
+    }
+  }
+  throw lastError || new Error("ENKA WeatherLink ölçümü alınamadı");
 }
 async function fetchEnkaCamera(env) {
   const response = await fetchWithTimeout(ENKA_CAMERA_URL + "?_station_poll=" + Date.now(), {
