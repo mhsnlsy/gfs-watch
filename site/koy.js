@@ -31,7 +31,7 @@
 
 (() => {
 "use strict";
-const GFS_CYCLE_THEME=window.GFS_CYCLE_THEME;
+const GFS_CYCLE_THEME=window.GFS_CYCLE_THEME||{colors:["#b38be8","#f1c98b","#8abce8","#7dd3d7"],latestStrokeWidth:6,previousStrokeWidth:1.8,previousStrokeDasharray:"5 4"};
 const BASE=(window.GFS_WATCH_API_BASE||"https://gfs-watch-koy-gfs.muhsin-ulusoy.workers.dev")+"/api/", COLORS=GFS_CYCLE_THEME.colors;
 const STATIONS_API=(window.GFS_WATCH_API_BASE||window.location.origin)+"/api";
 const $=id=>document.getElementById(id);
