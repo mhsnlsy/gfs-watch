@@ -1046,6 +1046,7 @@
       $("pressure-detail").textContent="";
       $("pressure-detail").hidden=true;
       $("weather-symbol").textContent=symbolFor(numeric(rain1h)?rain1h:0);
+      updateStationSky();
       if(hasStation){
         const stale=!isFresh;
         const observedText=observedValid?new Intl.DateTimeFormat("tr-TR",{timeZone:"Europe/Istanbul",dateStyle:"short",timeStyle:"short"}).format(observed):"zaman bilinmiyor";
@@ -1068,6 +1069,23 @@
       }
       fitStationStats();
     }
+    function updateStationSky(now){
+      const skyApi=window.IstanbulSky;
+      const line=$("station-sun-times");
+      const moon=$("station-moon");
+      if(!skyApi||typeof skyApi.istanbulSky!=="function")return;
+      const sky=skyApi.istanbulSky(now instanceof Date?now:new Date());
+      if(line)line.textContent=sky.text;
+      if(!moon)return;
+      moon.hidden=!sky.night;
+      if(!sky.night)return;
+      const icon=$("station-moon-icon");
+      const name=$("station-moon-name");
+      if(icon)icon.innerHTML=skyApi.moonPhaseSvg(now instanceof Date?now:new Date());
+      if(name)name.textContent=sky.moon.name;
+    }
+    updateStationSky();
+    setInterval(updateStationSky,60000);
     function renderStationGap(){
       const node=$("station-temp-compare");
       if(!node)return;

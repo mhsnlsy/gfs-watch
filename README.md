@@ -86,6 +86,7 @@ Canlı web arayüzü, API geçidi ve veri toplama Cloudflare üzerinde çalış�
   - MGM Çanakçı.
 - API: `/api/stations`, `/api/stations/{station}`, `/api/history/{station}?hours=72`.
 - Ana sayfa ve Köy, istasyon Worker'ına doğrudan gitmez; web Worker Service Binding kullanır.
+- Ana sayfadaki canlı gözlem kartı İstanbul (41.015°N / 28.950°E) için sivil gün doğumu ve gün batımını (güneş yüksekliği −0,833°) her zaman gösterir. Ay evresi simgesi yalnızca gün batımından ertesi gün doğumuna kadar görünür. Hesap tarayıcıda yapılır; dış servis yoktur.
 
 ### ECMWF
 
