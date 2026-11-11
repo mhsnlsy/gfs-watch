@@ -4663,3 +4663,32 @@ main.shell { padding-bottom:max(12px,env(safe-area-inset-bottom)); }
     transform:translateX(-1px);
   }
 }
+
+
+/* Station temperature weather icon: daytime weather + textured moon at night. */
+.station-current .temp-row .weather-symbol{
+  display:inline-flex;
+  align-items:center;
+  justify-content:center;
+  gap:2px;
+  min-width:52px;
+  line-height:1;
+}
+.station-weather-moon{
+  display:inline-flex;
+  width:42px;
+  height:42px;
+  align-items:center;
+  justify-content:center;
+}
+.station-weather-moon .moon-phase-svg{
+  width:42px!important;
+  height:42px!important;
+  display:block;
+}
+.station-weather-cloud,
+.station-weather-rain{
+  display:inline-block;
+  font-size:30px;
+  line-height:1;
+}
