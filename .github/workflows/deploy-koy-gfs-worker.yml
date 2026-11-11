@@ -219,13 +219,27 @@ jobs:
           )"
           if [ "$ARCHIVED_RUNS" -ge 4 ]; then
             echo "Testing Worker-native four-panel SVG rendering and D1 persistence..."
-            curl --silent --show-error --fail --max-time 45 \
-              "$KOY_GFS_API/comparison.svg?deploy_check=$(date +%s)" \
-              --dump-header "$RUNNER_TEMP/koy-svg-headers.txt" \
-              --output "$RUNNER_TEMP/koy-comparison.svg"
-            grep -qi '^x-gfs-publication-source: D1' "$RUNNER_TEMP/koy-svg-headers.txt"
-            grep -q 'id="gfs-renderer-version">cloudflare-js-v5-raw-forecast-hour</metadata>' "$RUNNER_TEMP/koy-comparison.svg"
-            grep -q 'id="gfs-interactive-data"' "$RUNNER_TEMP/koy-comparison.svg"
+            SVG_OK=0
+            for svg_attempt in $(seq 1 3); do
+              if curl --silent --show-error --fail --max-time 45 \
+                "$KOY_GFS_API/comparison.svg?deploy_check=$(date +%s)-$svg_attempt" \
+                --dump-header "$RUNNER_TEMP/koy-svg-headers.txt" \
+                --output "$RUNNER_TEMP/koy-comparison.svg"; then
+                if grep -qi '^x-gfs-publication-source: D1' "$RUNNER_TEMP/koy-svg-headers.txt" &&
+                   grep -q 'id="gfs-renderer-version">cloudflare-js-v5-raw-forecast-hour</metadata>' "$RUNNER_TEMP/koy-comparison.svg" &&
+                   grep -q 'id="gfs-interactive-data"' "$RUNNER_TEMP/koy-comparison.svg"; then
+                  SVG_OK=1
+                  break
+                fi
+              fi
+              echo "Waiting for Worker-native Köy SVG/D1 asset... ($svg_attempt/3)"
+              sleep 5
+            done
+            if [ "$SVG_OK" -ne 1 ]; then
+              echo "::error::Worker-native Köy SVG/D1 persistence check failed."
+              [ -s "$RUNNER_TEMP/koy-comparison.svg" ] && head -c 4000 "$RUNNER_TEMP/koy-comparison.svg" || true
+              exit 1
+            fi
             echo "Worker-native Köy SVG is generated and stored in D1."
           else
             echo "::notice::Four archived cycles are not available yet; Köy SVG generation will activate automatically when D1 has four cycles."
