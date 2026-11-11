@@ -1,7 +1,8 @@
 import {
   ENKA_CAMERA_URL,
   observationFromCameraReading,
-  recognizeCameraOverlay,\n  recognizeCameraOverlayWithAI,
+  recognizeCameraOverlay,
+  recognizeCameraOverlayWithAI,
   shouldUseCameraFallback
 } from "./enka-camera.js";
 
