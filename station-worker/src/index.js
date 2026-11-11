@@ -1,7 +1,7 @@
 import {
   ENKA_CAMERA_URL,
   observationFromCameraReading,
-  recognizeCameraOverlay,
+  recognizeCameraOverlay,\n  recognizeCameraOverlayWithAI,
   shouldUseCameraFallback
 } from "./enka-camera.js";
 
@@ -240,13 +240,17 @@ async function fetchEnkaWeatherLink() {
     observation_method: "weatherlink-current-values-current-value"
   };
 }
-async function fetchEnkaCamera() {
+async function fetchEnkaCamera(env) {
   const response = await fetchWithTimeout(ENKA_CAMERA_URL + "?_station_poll=" + Date.now(), {
     headers: { "Accept": "image/jpeg", "User-Agent": "gfs-watch-stations/1.0" }
   }, 18000);
   const bytes = new Uint8Array(await response.arrayBuffer());
-  const reading = recognizeCameraOverlay(bytes);
-  if (!reading) throw new Error("ENKA kamera yazısı okunamadı");
+  let reading = null;
+  try { reading = recognizeCameraOverlay(bytes); }
+  catch (error) { console.warn("[ENKA CAMERA OCR LOCAL] " + (error?.message || error) + " · trying AI OCR"); }
+  if (!reading && env?.AI) reading = await recognizeCameraOverlayWithAI(bytes, env.AI);
+  if (!reading) throw new Error("ENKA kamera OCR yazısı okunamadı");
+  console.log("[ENKA CAMERA OCR SUCCESS] temp=" + reading.temperature_c + "°C humidity=" + reading.humidity_percent + "% pressure=" + reading.pressure_hpa + "hPa wind=" + reading.wind_knots + "kt " + (reading.wind_direction_cardinal || "?") + " observed=" + reading.observed_at_utc);
   return observationFromCameraReading(reading, MAX_SOURCE_AGE_MINUTES);
 }
 async function fetchEnka() {
@@ -267,7 +271,7 @@ async function fetchEnka() {
   }
 
   try {
-    const camera = await fetchEnkaCamera();
+    const camera = await fetchEnkaCamera(env);
     if (camera) {
       console.log(
         "[ENKA] WeatherLink unavailable/stale -> camera OCR fallback active · " +
