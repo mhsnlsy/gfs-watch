@@ -4692,3 +4692,47 @@ main.shell { padding-bottom:max(12px,env(safe-area-inset-bottom)); }
   font-size:30px;
   line-height:1;
 }
+
+
+/* 20261111 MOBILE ONLY: GFS iframe/chart alignment.
+   Keep the mobile report within 10px edge padding and center the graph
+   inside its report frame. Desktop layout is intentionally untouched. */
+@media (max-width:700px), (pointer:coarse) {
+  #bildirimler .notification-card.koy-gfs-report-card {
+    width:100%!important;
+    max-width:100%!important;
+    min-width:0!important;
+    margin:0 auto!important;
+    padding:10px!important;
+    box-sizing:border-box!important;
+    overflow:hidden!important;
+  }
+
+  #bildirimler .notification-card.koy-gfs-report-card .koy-gfs-svg-images {
+    width:100%!important;
+    max-width:100%!important;
+    min-width:0!important;
+    margin:0 auto!important;
+    padding:0!important;
+    box-sizing:border-box!important;
+  }
+
+  #bildirimler .notification-card.koy-gfs-report-card .gfs-interactive-chart {
+    width:100%!important;
+    max-width:100%!important;
+    min-width:0!important;
+    margin-left:auto!important;
+    margin-right:auto!important;
+    box-sizing:border-box!important;
+    transform:none!important;
+  }
+
+  #bildirimler .notification-card.koy-gfs-report-card .gfs-interactive-svg {
+    display:block!important;
+    width:100%!important;
+    max-width:100%!important;
+    height:auto!important;
+    margin-left:auto!important;
+    margin-right:auto!important;
+  }
+}
