@@ -4558,7 +4558,6 @@ main.shell { padding-bottom:max(12px,env(safe-area-inset-bottom)); }
   .ecmwf-tooltip-row strong{font-size:9px}
   .ecmwf-table{min-width:520px;font-size:11px}
 }
-.sun-times{margin-top:4px;color:#d5e4ea;font-size:11px;font-weight:650;letter-spacing:.01em;line-height:1.4}
 .station-card .temp-row{align-items:center}
 .moon-phase{display:inline-flex;align-items:center;gap:6px;margin-left:2px;color:#f4ead2;font-size:11px;font-weight:650;line-height:1.2}
 .moon-phase[hidden]{display:none}
@@ -4566,7 +4565,6 @@ main.shell { padding-bottom:max(12px,env(safe-area-inset-bottom)); }
 .moon-phase-svg{display:block;width:22px;height:22px}
 .moon-phase-name{white-space:nowrap}
 @media(max-width:560px){
-  .sun-times{font-size:10px}
   .moon-phase{font-size:10px}
   .moon-phase-name{white-space:normal}
 }
