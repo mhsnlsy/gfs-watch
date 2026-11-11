@@ -252,18 +252,32 @@ async function fetchEnkaCamera() {
 async function fetchEnka() {
   let weatherlink = null;
   let weatherlinkError = null;
+
+  // WeatherLink is the primary source. Any fetch/parsing/validation failure,
+  // or stale/incomplete data, immediately activates the camera OCR fallback.
   try {
     weatherlink = await fetchEnkaWeatherLink();
   } catch (error) {
     weatherlinkError = error;
+    console.error("[ENKA WEATHERLINK]", error && error.message ? error.message : error);
   }
-  if (!shouldUseCameraFallback(weatherlink, MAX_SOURCE_AGE_MINUTES)) return weatherlink;
+
+  if (!shouldUseCameraFallback(weatherlink, MAX_SOURCE_AGE_MINUTES)) {
+    return weatherlink;
+  }
+
   try {
     const camera = await fetchEnkaCamera();
-    if (camera && camera.is_stale !== true) return camera;
+    if (camera && camera.is_stale !== true) {
+      console.log("[ENKA] WeatherLink unavailable/stale -> camera OCR fallback active");
+      return camera;
+    }
   } catch (error) {
-    console.error("[ENKA CAMERA]", error && error.message ? error.message : error);
+    console.error("[ENKA CAMERA OCR]", error && error.message ? error.message : error);
   }
+
+  // Preserve the last WeatherLink observation only as a last-resort stale
+  // record; never pretend it is live when the primary source failed.
   if (weatherlink) return weatherlink;
   throw weatherlinkError || new Error("ENKA ölçümü alınamadı");
 }
