@@ -1665,7 +1665,90 @@ html.ios12 .backdrop-filter{display:none}
     /* Keep the legend DOM for chart JS, but remove its visible cycle labels. */
     #next-180h-legend{display:none!important}
 </style>
-  <link rel="stylesheet" href="./header-common.css?v=20261110-shared-header-1">
+  <style id="koy-desktop-home-layout-exact">
+@media (min-width: 901px){
+  .shell{width:min(1480px,calc(100% - var(--page-gutter)*2))!important}
+  .dashboard-top{
+    display:grid!important;
+    grid-template-columns:minmax(360px,.82fr) minmax(0,1.18fr)!important;
+    grid-template-areas:
+      "left report"
+      "left table"!important;
+    column-gap:clamp(14px,1.5vw,24px)!important;
+    row-gap:16px!important;
+    align-items:start!important;
+    padding:18px 0 16px!important;
+  }
+  .dashboard-left{
+    grid-area:left!important;
+    display:block!important;
+    width:100%!important;
+    min-width:0!important;
+    margin:0!important;
+  }
+  .dashboard-top > #bildirimler{
+    grid-area:report!important;
+    width:100%!important;
+    min-width:0!important;
+    margin:0!important;
+    padding:0!important;
+  }
+  .dashboard-top > .water-gfs-layout{
+    grid-area:table!important;
+    width:100%!important;
+    min-width:0!important;
+    margin:0!important;
+    padding:0!important;
+  }
+  #bildirimler .report-head{
+    display:none!important;
+  }
+  #bildirimler .notification-list{
+    display:block!important;
+    width:100%!important;
+    max-width:100%!important;
+    margin:0!important;
+  }
+  #bildirimler .notification-card.koy-gfs-report-card{
+    width:100%!important;
+    max-width:100%!important;
+    margin:0!important;
+    padding:0!important;
+    border:0!important;
+    background:transparent!important;
+  }
+  #bildirimler .koy-gfs-svg-images{
+    width:100%!important;
+    max-width:100%!important;
+    margin:0!important;
+    padding:0!important;
+  }
+  #bildirimler .gfs-interactive-chart,
+  #bildirimler .gfs-mobile-panel-stack{
+    width:100%!important;
+    max-width:100%!important;
+    margin:0 auto!important;
+  }
+  .dashboard-top > .water-gfs-layout .section{
+    width:100%!important;
+    max-width:100%!important;
+    margin:0!important;
+    padding:0!important;
+  }
+  .dashboard-top > .water-gfs-layout .meteopt-table-card{
+    width:100%!important;
+    max-width:100%!important;
+    margin:0!important;
+  }
+}
+@media (min-width:1600px){
+  .shell{width:min(1560px,calc(100% - 64px))!important}
+  .dashboard-top{
+    grid-template-columns:minmax(420px,.78fr) minmax(0,1.22fr)!important;
+  }
+}
+</style>
+<link rel="stylesheet" href="./header-common.css?v=20261110-shared-header-1">
   <style id="koy-header-home-parity">
     /* Header: Köy uses the exact homepage shell/header geometry. */
     :root{--page-gutter:clamp(14px,2.2vw,32px)}
