@@ -599,7 +599,7 @@ function buildKoyInteractiveSvg(comparison) {
     );
   });
   const metadata = [];
-  KOY_SVG_KOY_SVG_PANELS.forEach((spec, panelIndex) => {
+  KOY_SVG_PANELS.forEach((spec, panelIndex) => {
     const column = panelIndex % 2;
     const row = Math.floor(panelIndex / 2);
     const px = panelLeft[column];
