@@ -2279,7 +2279,7 @@ html.ios12 .backdrop-filter{display:none}
 }
 </style>
 <style id="koy-home-desktop-final-parity">
-/* FINAL DESKTOP PARITY WITH HOMEPAGE */
+/* Köy desktop = homepage desktop geometry */
 @media (min-width:1200px) and (pointer:fine){
   main.shell{
     width:min(1680px,calc(100% - 64px))!important;
@@ -2287,96 +2287,101 @@ html.ios12 .backdrop-filter{display:none}
     margin-left:auto!important;
     margin-right:auto!important;
   }
+
   .dashboard-top{
     display:grid!important;
     grid-template-columns:600px minmax(0,1fr)!important;
     grid-template-areas:
       "left report"
-      "left table"!important;
+      "brief report"
+      "table table"!important;
     column-gap:24px!important;
-    row-gap:0!important;
+    row-gap:16px!important;
     width:100%!important;
     max-width:100%!important;
     margin:0!important;
     padding:18px 0 24px!important;
     align-items:start!important;
   }
+
   .dashboard-left{
     grid-area:left!important;
-    display:block!important;
     width:600px!important;
     min-width:0!important;
     max-width:600px!important;
     margin:0!important;
-    align-self:start!important;
   }
-  .dashboard-left>.station-card,
+
   .dashboard-left .station-card{
-    display:grid!important;
     width:600px!important;
-    min-width:0!important;
     max-width:600px!important;
-    box-sizing:border-box!important;
+    min-width:0!important;
     margin:0!important;
-    align-self:start!important;
-    height:auto!important;
+    box-sizing:border-box!important;
   }
+
+  /* Homepage-style two briefing boxes under the live observation card. */
   .dashboard-top>.station-briefing-inline{
-    grid-area:left!important;
+    grid-area:brief!important;
     width:600px!important;
     max-width:600px!important;
     min-width:0!important;
-    margin:8px 0 0!important;
+    margin:0!important;
     padding:0!important;
   }
+
   .dashboard-top>.station-briefing-inline .briefing{
+    display:grid!important;
+    grid-template-columns:minmax(0,1fr) minmax(0,1fr)!important;
+    gap:16px!important;
     width:100%!important;
     margin:0!important;
   }
+
   .dashboard-top>.station-briefing-inline .briefing-row{
+    min-width:0!important;
     width:100%!important;
+    box-sizing:border-box!important;
+    margin:0!important;
   }
+
+  .dashboard-top>.station-briefing-inline #brief-rain-lines,
+  .dashboard-top>.station-briefing-inline #brief-temperature-trend{
+    min-width:0!important;
+  }
+
   .dashboard-top>.water-gfs-layout{
     grid-area:table!important;
     width:100%!important;
     min-width:0!important;
-    max-width:none!important;
+    max-width:100%!important;
     margin:0!important;
     padding:0!important;
-    display:block!important;
   }
+
   .dashboard-top>.water-gfs-layout #meteopt-gfs-table{
-    width:100%!important;
-    max-width:none!important;
-    min-width:0!important;
-    margin:0!important;
-    padding:0!important;
-  }
-  .dashboard-top>.water-gfs-layout #meteopt-gfs-table .meteopt-table-card{
-    width:100%!important;
-    max-width:none!important;
-    min-width:0!important;
-    margin:0!important;
-    box-sizing:border-box!important;
-  }
-  .dashboard-top>.water-gfs-layout #meteopt-gfs-table .meteopt-table-scroll{
     width:100%!important;
     max-width:100%!important;
     min-width:0!important;
-    overflow-x:auto!important;
-    overflow-y:hidden!important;
+    margin:0!important;
+    padding:0!important;
   }
-  .dashboard-top>.water-gfs-layout #meteopt-gfs-table .meteopt-data-table{
+
+  .dashboard-top>.water-gfs-layout .meteopt-table-card{
     width:100%!important;
+    max-width:100%!important;
     min-width:0!important;
-    max-width:none!important;
-    table-layout:fixed!important;
-    white-space:nowrap!important;
+    box-sizing:border-box!important;
   }
-}
-@media (min-width:1600px) and (pointer:fine){
-  main.shell{
-    width:min(1680px,calc(100% - 64px))!important;
+
+  .dashboard-top>.water-gfs-layout .meteopt-table-scroll{
+    width:100%!important;
+    max-width:100%!important;
+    overflow-x:auto!important;
+  }
+
+  .dashboard-top>.water-gfs-layout .meteopt-data-table{
+    max-width:100%!important;
   }
 }
 </style>
