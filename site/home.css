@@ -4620,3 +4620,12 @@ main.shell { padding-bottom:max(12px,env(safe-area-inset-bottom)); }
 @media (min-width:561px){
   .dashboard-briefing .briefing-row{gap:7px!important}
 }
+
+
+/* Desktop GFS comparison: reduce vertical padding by 10% without changing chart dimensions. */
+@media (min-width:851px){
+  #bildirimler .notification-card.koy-gfs-report-card{
+    padding-top:16.2px!important;
+    padding-bottom:16.2px!important;
+  }
+}
