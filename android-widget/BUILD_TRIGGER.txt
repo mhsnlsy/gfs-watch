@@ -1,0 +1,1 @@
+RemoteViews-safe widget layout: no bare View class.
