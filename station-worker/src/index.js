@@ -466,6 +466,8 @@ function apiStation(key, payload, status, lastError, lastSuccess, lastAttempt) {
     station_name: payload.station_name,
     source: payload.source,
     source_url: payload.source_url,
+    observation_method: payload.observation_method || null,
+    observation_method: payload.observation_method || null,
     observed_at_utc: payload.observed_at_utc,
     fetched_at_utc: payload.fetched_at_utc,
     // Canonical panel fields.
