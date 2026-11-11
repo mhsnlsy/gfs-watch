@@ -111,8 +111,8 @@ function classifyGlyph(bits) {
   return "?";
 }
 
-function readRegion(luma, width, height, x0, y0, x1, y1) {
-  const bright = (x, y) => luma[y * width + x] > 190;
+function readRegion(luma, width, height, x0, y0, x1, y1, threshold = 190) {
+  const bright = (x, y) => luma[y * width + x] > threshold;
   const rows = [];
   for (let y = y0; y < y1; y += 1) {
     let count = 0;
@@ -226,16 +226,47 @@ export function recognizeCameraOverlay(jpegBytes) {
   for (let i = 0, p = 0; i < luma.length; i += 1, p += 4) {
     luma[i] = (data[p] + data[p + 1] + data[p + 2]) / 3;
   }
-  const metrics = readRegion(luma, width, height, Math.floor(width * 0.78), Math.floor(height * 0.74), width - 1, Math.floor(height * 0.97));
-  const timeLines = readRegion(luma, width, height, 280, 560, 540, height - 1);
-  const reading = parseCameraOverlayText(metrics, timeLines[0] || "");
-  if (!reading) {
-    const error = new Error("ENKA kamera yazısı okunamadı: " + metrics.join(" / ") + " | " + (timeLines[0] || ""));
-    error.metric_lines = metrics;
-    error.time_text = timeLines[0] || "";
-    throw error;
+
+  // The ENKA camera overlay is a real image rather than a text endpoint.
+  // Use several luminance thresholds so compression, glare and night/day
+  // exposure changes do not make the backup OCR fail on a single threshold.
+  const thresholds = [160, 180, 200, 220];
+  let lastMetrics = [];
+  let lastTimeText = "";
+
+  for (const threshold of thresholds) {
+    const metrics = readRegion(
+      luma, width, height,
+      Math.floor(width * 0.78),
+      Math.floor(height * 0.74),
+      width - 1,
+      Math.floor(height * 0.97),
+      threshold
+    );
+    const timeLines = readRegion(
+      luma, width, height,
+      280, 560, 540, height - 1,
+      threshold
+    );
+    const timeText = timeLines[0] || "";
+    lastMetrics = metrics;
+    lastTimeText = timeText;
+
+    const reading = parseCameraOverlayText(metrics, timeText);
+    if (reading) {
+      return { ...reading, metric_lines: metrics, time_text: timeText, ocr_threshold: threshold };
+    }
   }
-  return { ...reading, metric_lines: metrics, time_text: timeLines[0] || "" };
+
+  const error = new Error(
+    "ENKA kamera OCR yazısı okunamadı: " +
+    lastMetrics.join(" / ") +
+    " | " +
+    lastTimeText
+  );
+  error.metric_lines = lastMetrics;
+  error.time_text = lastTimeText;
+  throw error;
 }
 
 function round1(value) {
