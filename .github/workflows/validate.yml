@@ -85,11 +85,15 @@ jobs:
       - name: Test Istanbul worker publication
         run: node scripts/test_istanbul_worker_publication.mjs
 
+      - name: Test Köy worker homepage-identical SVG publication
+        run: node scripts/test_koy_worker_publication.mjs
+
       - name: Validate worker JavaScript syntax
         run: |
           node --check web-worker/src/index.js
           node --check istanbul-gfs-worker/src/index.js
           node --check istanbul-gfs-worker/src/publication.js
+          node --check koy-gfs-worker/src/index.js
 
   website:
     name: Website JavaScript syntax
