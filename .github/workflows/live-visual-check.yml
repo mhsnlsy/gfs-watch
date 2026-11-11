@@ -36,7 +36,9 @@ jobs:
           npm install --no-audit --no-fund --omit=dev playwright@1.60.0
           export LIVE_VISUAL
           test -f "$LIVE_VISUAL/node_modules/playwright/package.json"
-          "$LIVE_VISUAL/node_modules/.bin/playwright" install --with-deps chromium
+          # The hosted Ubuntu image already includes Chromium runtime libraries.
+          # Avoid install --with-deps: it invokes apt and can fail on transient runner DNS/mirror outages.
+          "$LIVE_VISUAL/node_modules/.bin/playwright" install chromium
           node -e 'console.log("Playwright:", require(process.env.LIVE_VISUAL + "/node_modules/playwright/package.json").version)'
 
       - name: Verify production homepage in desktop and mobile browsers
@@ -72,7 +74,6 @@ jobs:
                 page.on("pageerror",e=>diagnostics.page_errors.push({viewport:view.name,text:String(e)}));
                 page.on("requestfailed", r => {
                   const error = r.failure()?.errorText || "failed";
-                  // ERR_ABORTED is expected for browser/app-cancelled image and third-party requests.
                   if (error !== "net::ERR_ABORTED") {
                     diagnostics.failed_requests.push({
                       viewport: view.name,
