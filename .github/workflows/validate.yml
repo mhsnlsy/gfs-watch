@@ -1,5 +1,6 @@
 name: Validate GFS Watch
 # Trigger validation on the current main HEAD after repository changes.
+# Force a fresh validation run after contract-only CI updates.
 
 on:
   push:
