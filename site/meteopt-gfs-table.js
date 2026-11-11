@@ -71,7 +71,7 @@
     const cls = colour("wind", speed);
     const arrow = direction === null
       ? ""
-      : '<span class="meteopt-wind-arrow" style="--wind-angle:' + direction + 'deg" aria-label="Rüzgâr yönü ' + Math.round(direction) + '°">↑</span>';
+      : '<span class="meteopt-wind-arrow" style="--wind-angle:' + ((Number(direction) + 180) % 360) + 'deg" aria-label="Rüzgâr yönü ' + Math.round(direction) + '°">↑</span>';
     return '<span class="meteopt-value ' + cls + ' meteopt-wind-value">' + display(speed, digits) + arrow + '</span>';
   }
 
