@@ -592,7 +592,7 @@ export function buildKoyInteractiveSvg(comparison) {
     const panelBottom = py + panelHeight;
 
     const valuesBySeries = series.map(item =>
-      validKeys.map(key => svgNumber(item.points.get(key)?.[spec.field]))
+      leadHours.map(hour => svgNumber(item.points.get(hour)?.[spec.field]))
     );
     const allValues = valuesBySeries.flat().filter(value => value !== null);
     const axis = buildPanelAxis(spec.field, valuesBySeries);
