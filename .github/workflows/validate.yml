@@ -126,3 +126,4 @@ jobs:
             node --check "$file"
           done
           node --check site/koy.js
+          node --check site/gfs-comparison-tooltip.js
