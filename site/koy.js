@@ -849,7 +849,9 @@ async function refresh(){if(busy)return;busy=true;
  const selectedObservation=stationMode==="home"?evObservation:window.__koyMgmObservation;
  const selectedHistory=stationMode==="home"?evHistory:stationHistory;
  if(selectedObservation)renderMgmObservation(selectedObservation,selectedHistory,f180);
+ renderKoyBriefing();
  renderRuns(stationMode==="home"?homeGfsComparison(comparison):comparison,stationMode==="home"?homeGfsDocument(f180):f180);
+ renderKoyBriefing();
  } catch(error) {
   console.error("Köy hava verileri yenileme hatası:",error);
   const freshness=$("freshness");
@@ -860,6 +862,97 @@ async function refresh(){if(busy)return;busy=true;
  } finally {
   busy=false;
  }
+}
+function briefingDayKey(ms){
+ const d=new Date(ms);
+ return Number.isFinite(d.getTime())?new Intl.DateTimeFormat("en-CA",{timeZone:"Europe/Istanbul",year:"numeric",month:"2-digit",day:"2-digit"}).format(d):"";
+}
+function briefingDayTitle(key){
+ const d=new Date(key+"T12:00:00Z");
+ const name=new Intl.DateTimeFormat("tr-TR",{timeZone:"UTC",weekday:"long"}).format(d);
+ return name.charAt(0).toLocaleUpperCase("tr-TR")+name.slice(1);
+}
+function briefingClock(ms){
+ return new Intl.DateTimeFormat("tr-TR",{timeZone:"Europe/Istanbul",hour:"2-digit",minute:"2-digit",hourCycle:"h23"}).format(new Date(ms));
+}
+function briefingDayKeys(nowMs,count){
+ const today=briefingDayKey(nowMs),out=[];
+ const base=Date.parse(today+"T00:00:00+03:00");
+ for(let i=0;i<count;i++)out.push(briefingDayKey(base+i*86400000+12*3600000));
+ return out;
+}
+function briefingPoints(points,nowMs){
+ const keys=new Set(briefingDayKeys(nowMs,5));
+ return (points||[]).map(p=>({
+   stamp:Date.parse(p&&p.valid_time_utc||""),
+   step:Number(p&&p.forecast_hour),
+   temp:num(p&&p.temperature_2m_c),
+   mm:num(p&&p.precipitation_6h_mm)||0
+ })).filter(p=>Number.isFinite(p.stamp)&&p.step>0&&p.step<=120&&keys.has(briefingDayKey(p.stamp)));
+}
+function briefingRainLines(points,nowMs){
+ const rows=briefingPoints(points,nowMs),steps=rows.map(p=>p.step).sort((a,b)=>a-b);
+ const gaps=steps.slice(1).map((s,i)=>s-steps[i]).filter(g=>g>0&&g<=6);
+ const stepH=gaps.length?gaps[Math.floor(gaps.length/2)]:3;
+ const period=(a,b)=>b>=18&&a<18?"öğleden sonra–akşam":a>=12&&b<=17?"öğleden sonra":a>=6&&b<=11?"sabah":b<6?"":"akşam";
+ const lines=[];
+ for(const key of briefingDayKeys(nowMs,5)){
+  const day=rows.filter(p=>briefingDayKey(p.stamp)===key),wet=day.filter(p=>p.mm>=0.2),spells=[];
+  let cur=null;
+  for(const p of wet){
+   if(!cur||p.stamp-cur.end>stepH*3600000+60000){cur={start:p.stamp,end:p.stamp,sum:0};spells.push(cur);}
+   cur.end=p.stamp;cur.sum+=p.mm;
+  }
+  const daySum=spells.reduce((s,x)=>s+x.sum,0),visible=spells.filter(x=>x.sum>=0.5||daySum<2);
+  if(!visible.length){lines.push(briefingDayTitle(key)+" · yağış yok");continue;}
+  for(const s of visible){
+   const end=s.end+stepH*3600000;
+   const a=Number(new Intl.DateTimeFormat("en-GB",{timeZone:"Europe/Istanbul",hour:"2-digit",hourCycle:"h23"}).format(new Date(s.start)));
+   const b=Number(new Intl.DateTimeFormat("en-GB",{timeZone:"Europe/Istanbul",hour:"2-digit",hourCycle:"h23"}).format(new Date(s.end)));
+   const p=period(a,b);
+   lines.push(briefingDayTitle(key)+" · "+briefingClock(s.start)+"–"+briefingClock(end)+(p?" · "+p:"")+" · "+s.sum.toLocaleString("tr-TR",{minimumFractionDigits:1,maximumFractionDigits:1})+" mm");
+  }
+ }
+ return lines;
+}
+function briefingTempSummary(points,nowMs,current){
+ const rows=briefingPoints(points,nowMs).filter(p=>Number.isFinite(p.temp)).sort((a,b)=>a.stamp-b.stamp);
+ if(rows.length<3)return "Önümüzdeki 5 gün için yeterli sıcaklık tahmini henüz yayımlanmadı. Köy Ev şu an "+fmt(current,1)+"°C.";
+ const keys=briefingDayKeys(nowMs,5),means=keys.map((key,i)=>{
+  const xs=rows.filter(p=>briefingDayKey(p.stamp)===key).map(p=>p.temp);
+  return xs.length?{key,day:i,mean:xs.reduce((s,v)=>s+v,0)/xs.length}:null;
+ }).filter(Boolean);
+ if(means.length<3)return "Önümüzdeki 5 gün için yeterli sıcaklık tahmini henüz yayımlanmadı. Köy Ev şu an "+fmt(current,1)+"°C.";
+ const near=rows.filter(p=>p.stamp<=nowMs+12*3600000).map(p=>p.temp),baseline=near.length?near.reduce((s,v)=>s+v,0)/near.length:current;
+ let firstFall=null;
+ for(let i=0;i<means.length;i++){const d=means[i].mean-(i?means[i-1].mean:baseline);if(d<=-1){firstFall={i,d};break;}}
+ let summary="";
+ if(firstFall){
+  const m=means[firstFall.i],when=firstFall.i===0?"bugün":firstFall.i===1?"yarın":firstFall.i+" gün sonra";
+  summary="Hava "+when+" ("+briefingDayTitle(m.key)+") soğumaya başlıyor; günlük ortalama yaklaşık "+Math.abs(firstFall.d).toLocaleString("tr-TR",{minimumFractionDigits:1,maximumFractionDigits:1})+"°C düşüyor.";
+  const rise=means.slice(firstFall.i+1).some((m,i)=>m.mean-(means[firstFall.i+i].mean)>=1);
+  if(!rise)summary+=" Beş günlük tahmin aralığında yeniden ısınma görünmüyor.";
+ }else{
+  const rise=means.find((m,i)=>m.mean-(i?means[i-1].mean:baseline)>=1);
+  summary=rise?"Hava "+(rise.i===1?"yarın":rise.i+" gün sonra")+" ("+briefingDayTitle(rise.key)+") ısınmaya başlıyor.":"Önümüzdeki beş gün boyunca sıcaklık belirgin değişim göstermeden stabil seyrediyor.";
+ }
+ summary+=" Köy Ev şu an "+fmt(current,1)+"°C.";
+ const swings=[];
+ for(let i=1;i<rows.length;i++){const d=rows[i].temp-rows[i-1].temp;if(Math.abs(d)>=4)swings.push({p:rows[i-1],q:rows[i],d});}
+ if(swings.length){
+  const s=swings.sort((a,b)=>Math.abs(b.d)-Math.abs(a.d))[0];
+  summary+="<div class='brief-temp-swings'><div class='brief-temp-swing'>"+briefingDayTitle(briefingDayKey(s.p.stamp))+" · "+briefingClock(s.p.stamp)+"–"+briefingClock(s.q.stamp)+" "+(s.d<0?"−":"+")+Math.abs(s.d).toLocaleString("tr-TR",{minimumFractionDigits:1,maximumFractionDigits:1})+"°C</div></div>";
+ }
+ return summary;
+}
+function renderKoyBriefing(){
+ const rain=$("brief-rain-lines"),temp=$("brief-temperature-trend");
+ if(!rain||!temp)return;
+ const points=f180&&Array.isArray(f180.forecast_6_hourly)?homeGfsDocument(f180).forecast_6_hourly:[];
+ const current=evObservation&&num(evObservation.temperature_2m_c);
+ if(!points.length){rain.textContent="Köy GFS tahmini bekleniyor.";temp.textContent="Köy Ev ölçümü ve tahmin verisi bekleniyor.";return;}
+ rain.replaceChildren(...briefingRainLines(points,Date.now()).map(t=>{const el=document.createElement("div");el.className="brief-spell";el.textContent=t;return el;}));
+ temp.innerHTML=briefingTempSummary(points,Date.now(),current==null?0:current);
 }
 function pressureRegionNameKoy(latitude,longitude){
   const lat=Number(latitude),lon=Number(longitude);
