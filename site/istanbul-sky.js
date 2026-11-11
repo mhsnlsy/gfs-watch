@@ -193,7 +193,6 @@ export function moonPhaseSvg(date) {
   const lightOnRight = waxing;
   const sweep = lightOnRight ? 1 : 0;
   const terminatorSweep = mag > 0 ? (lightOnRight ? 1 : 0) : (lightOnRight ? 0 : 1);
-  // Yeni ay tamamen boş görünür; doldukça aydınlanan bölüm ay rengiyle dolar.
   const isNewMoon = phase.index === 0;
   const lit = !isNewMoon && phase.fraction > 0.02 && phase.fraction < 0.98;
   const path = lit
@@ -201,14 +200,22 @@ export function moonPhaseSvg(date) {
       " A " + r + " " + r + " 0 0 " + sweep + " " + cx + " " + (cy + r) +
       " A " + rx.toFixed(3) + " " + r + " 0 0 " + terminatorSweep + " " + cx + " " + (cy - r) + " Z"
     : "";
-  const disk = isNewMoon ? "#102433" : "#f4ead2";
-  const stroke = isNewMoon ? "rgba(177,203,211,0.72)" : "#f4ead2";
-  return "<svg class=\"moon-phase-svg\" viewBox=\"0 0 24 24\" width=\"22\" height=\"22\" aria-hidden=\"true\">" +
-    "<circle cx=\"12\" cy=\"12\" r=\"9\" fill=\"" + disk + "\" stroke=\"" + stroke + "\" stroke-width=\"1.1\"/>" +
-    (path ? "<path fill=\"#f4ead2\" d=\"" + path + "\"/>" : "") +
+  const base = isNewMoon ? "#07151f" : "#8e9ca5";
+  const light = "#e9edf0";
+  const id = "moonTex_" + Math.round(date.getTime() / 60000);
+  return "<svg class=\"moon-phase-svg moon-realistic\" viewBox=\"0 0 24 24\" width=\"42\" height=\"42\" aria-hidden=\"true\">" +
+    "<defs>" +
+      "<radialGradient id=\"" + id + "_g\" cx=\"35%\" cy=\"30%\" r=\"75%\"><stop offset=\"0\" stop-color=\"" + (isNewMoon ? "#10222e" : "#b8c2c8") + "\"/><stop offset=\"1\" stop-color=\"" + base + "\"/></radialGradient>" +
+      "<clipPath id=\"" + id + "_c\"><circle cx=\"12\" cy=\"12\" r=\"9\"/></clipPath>" +
+    "</defs>" +
+    "<circle cx=\"12\" cy=\"12\" r=\"9\" fill=\"url(#" + id + "_g)\"/>" +
+    "<g clip-path=\"url(#" + id + "_c)\" opacity=\".42\" fill=\"#46535b\">" +
+      "<circle cx=\"7.2\" cy=\"8.1\" r=\"1.35\"/><circle cx=\"15.8\" cy=\"6.8\" r=\".9\"/><circle cx=\"16.7\" cy=\"14.8\" r=\"1.5\"/><circle cx=\"9.5\" cy=\"16.2\" r=\"1.05\"/><circle cx=\"5.9\" cy=\"13.2\" r=\".7\"/>" +
+    "</g>" +
+    (path ? "<path fill=\"" + light + "\" d=\"" + path + "\"/>" : "") +
+    (lit ? "<g clip-path=\"url(#" + id + "_c)\" opacity=\".28\" fill=\"#68747c\"><circle cx=\"8\" cy=\"9\" r=\"1.1\"/><circle cx=\"15\" cy=\"15\" r=\".8\"/></g>" : "") +
     "</svg>";
 }
-
 export function istanbulSky(date = new Date(), latitude = ISTANBUL_LATITUDE, longitude = ISTANBUL_LONGITUDE) {
   const today = istanbulParts(date);
   const yesterday = addDays(today.year, today.month, today.day, -1);
