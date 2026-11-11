@@ -399,7 +399,7 @@ function decodePublicationAsset(row) {
   return new Response(row.body, { status: 200, headers });
 }
 
-const KOY_SVG_RENDERER_VERSION = "cloudflare-js-v3";
+const KOY_SVG_RENDERER_VERSION = "cloudflare-js-v4";
 const FONT = "system-ui,-apple-system,BlinkMacSystemFont,Segoe UI,sans-serif";
 const KOY_SVG_ASSET_NAME = /^koy-gfs-\d{8}T\d{2}Z-comparison\.svg$/;
 
@@ -529,7 +529,7 @@ export function buildKoyInteractiveSvg(comparison) {
   const panelWidth = 505;
   const panelHeight = 250;
   const panelLeft = [55, 592];
-  const panelTop = [214, 493];
+  const panelTop = [180, 459];
   const svgParts = [
     '<svg xmlns="http://www.w3.org/2000/svg" xmlns:xlink="http://www.w3.org/1999/xlink" width="' + W + '" height="' + H + '" viewBox="0 0 ' + W + ' ' + H + '" role="img" aria-labelledby="koy-gfs-svg-title koy-gfs-svg-desc">',
     '<title id="koy-gfs-svg-title">Köy GFS · Giresun / Çanakçı · Dört döngü karşılaştırması</title>',
@@ -556,24 +556,7 @@ export function buildKoyInteractiveSvg(comparison) {
     );
   });
 
-  // Rüzgâr yönü sabit tek satır: oklar meteorolojik FROM yönünün
-  // tersine, yani rüzgârın GİDİŞ yönüne bakar. Örn. GB rüzgârı → KD.
-  const directionLegend = [
-    ["↓", "K → G"], ["↙", "KD → GB"], ["←", "D → B"], ["↖", "GD → KB"],
-    ["↑", "G → K"], ["↗", "GB → KD"], ["→", "B → D"], ["↘", "KB → GD"]
-  ];
-  svgParts.push(
-    '<text x="335" y="201" fill="#8EAEB7" font-size="10" font-weight="700" font-family="' + FONT + '">RÜZGÂR · GİDİŞ YÖNÜ</text>'
-  );
-  directionLegend.forEach((item, index) => {
-    const x = 430 + index * 66;
-    svgParts.push(
-      '<text x="' + x + '" y="201" text-anchor="middle" fill="#FFFFFF" font-size="15" font-weight="800" font-family="' + FONT + '">' +
-      item[0] + '</text>',
-      '<text x="' + x + '" y="213" text-anchor="middle" fill="#8EAEB7" font-size="7.5" font-weight="650" font-family="' + FONT + '">' +
-      item[1] + '</text>'
-    );
-  });  const panelMetadata = [];
+  const panelMetadata = [];
 
   KOY_SVG_PANELS.forEach((spec, panelIndex) => {
     const column = panelIndex % 2;
