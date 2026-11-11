@@ -4598,3 +4598,20 @@ main.shell { padding-bottom:max(12px,env(safe-area-inset-bottom)); }
   #brief-temperature-trend,
   #brief-temperature-trend .brief-temp-swing{font-size:12.5px!important}
 }
+
+
+/* Desktop GFS comparison sizing: 10% tighter iframe padding + 10% larger embedded chart. */
+@media (min-width:851px){
+  #bildirimler .notification-card.koy-gfs-report-card{
+    padding:18px!important;
+  }
+  #bildirimler .notification-card.koy-gfs-report-card .koy-fullframe-images{
+    width:100%!important;
+  }
+  #bildirimler .notification-card.koy-gfs-report-card .gfs-interactive-chart{
+    width:103.4%!important;
+    max-width:none!important;
+    margin-left:-1.7%!important;
+    margin-right:-1.7%!important;
+  }
+}
