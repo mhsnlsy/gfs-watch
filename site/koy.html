@@ -1547,6 +1547,60 @@ html.ios12 .backdrop-filter{display:none}
   html.ios12 .notification-list>.notification-card{margin-bottom:13px}
 }
 </style>
+<style id="koy-home-station-visual-match">
+/* Köy live observation card: match the Anasayfa station-card geometry. */
+@media (min-width:701px){
+  .dashboard-top .station-card{
+    width:100%!important;
+    max-width:none!important;
+    min-height:0!important;
+    padding:16px 17px 13px!important;
+    align-self:stretch!important;
+  }
+  .dashboard-top .station-overview{
+    display:block!important;
+    margin-top:12px!important;
+  }
+  .dashboard-top .station-card .temperature{
+    font-size:clamp(44px,4.8vw,62px)!important;
+  }
+  .dashboard-top .station-card .temp-row{
+    margin-top:14px!important;
+  }
+  .dashboard-top .station-card .weather-stats{
+    grid-template-columns:repeat(2,minmax(0,1fr))!important;
+    gap:0!important;
+    row-gap:12px!important;
+    margin-top:13px!important;
+    padding-top:9px!important;
+  }
+  .dashboard-top .station-card .stat{
+    padding:2px 10px 0!important;
+    border-right:1px solid rgba(213,237,240,.10)!important;
+    border-radius:0!important;
+    background:transparent!important;
+  }
+  .dashboard-top .station-card .stat:nth-child(2n){
+    border-right:0!important;
+  }
+  .dashboard-top .station-card .stat .value{
+    font-size:19px!important;
+  }
+}
+@media (max-width:560px){
+  .dashboard-top .station-card{
+    padding:17px!important;
+  }
+  .dashboard-top .station-card .weather-stats{
+    grid-template-columns:repeat(2,minmax(0,1fr))!important;
+    row-gap:8px!important;
+    margin-top:17px!important;
+  }
+  .dashboard-top .station-card .stat{
+    padding:5px 7px!important;
+  }
+}
+</style>
 </head>
 <body data-default-station="home">
   <script>
