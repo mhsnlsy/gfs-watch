@@ -1074,6 +1074,11 @@
       .briefing { margin-top:5px!important; gap:3px!important; }
       .briefing-row { padding:4px 6px!important; }
     }
+
+.meteopt-wind-value{display:inline-flex!important;align-items:center!important;justify-content:center!important;gap:3px!important;white-space:nowrap!important}
+.meteopt-wind-arrow{display:inline-block!important;width:9px!important;height:9px!important;font-size:9px!important;line-height:9px!important;font-weight:800!important;transform:rotate(var(--wind-angle))!important;transform-origin:50% 50%!important;opacity:.9!important}
+@media (max-width:850px),(pointer:coarse){.meteopt-wind-value{gap:2px!important}.meteopt-wind-arrow{width:8px!important;height:8px!important;font-size:8px!important;line-height:8px!important}}
+
 </style>
   <link rel="stylesheet" href="./meteopt-gfs-table.css?v=20261109-frame-fit-snowln-2">
 
@@ -1894,7 +1899,7 @@ html.ios12 .backdrop-filter{display:none}
   </style>
   <div id="pull-refresh-indicator" role="status" aria-live="polite"><span class="pull-refresh-icon">↓</span><span class="pull-refresh-label">Yenilemek için aşağı çek</span></div>
     <script src="./gfs-comparison-tooltip.js?v=20261109-mobile-legend-fix-2"></script>
-    <script src="./koy.js?v=20261110-d1-publication-route-fix-1" defer></script>
+    <script src="./koy.js?v=20261111-wind-arrows-1" defer></script>
 
 </body>
 </html>
