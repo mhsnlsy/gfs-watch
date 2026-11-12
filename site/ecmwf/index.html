@@ -1,37 +1,111 @@
 <!doctype html>
-<html lang="tr"><head>
-<meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
-<meta name="theme-color" content="#081827"><meta name="description" content="İstanbul ECMWF IFS tahmini ve son dört ECMWF döngüsü karşılaştırması.">
+<html lang="tr">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<meta name="theme-color" content="#081827">
+<meta name="description" content="İstanbul ECMWF IFS tahmini · GFS görünümüyle bire bir karşılaştırma grafikleri ve 180 saatlik MeteoPT tablosu.">
 <title>İstanbul Havası — ECMWF IFS</title>
 <link rel="icon" href="/favicon.svg" type="image/svg+xml">
-<link rel="stylesheet" href="/home.css?v=20261112-ecmwf-clone-1"><link rel="stylesheet" href="/header-common.css?v=20261110-shared-header-1"><link rel="stylesheet" href="/meteopt-gfs-table.css?v=20261111-wind-arrows-1">
+<link rel="stylesheet" href="/home.css?v=20261112-gfs-clone-1">
+<link rel="stylesheet" href="/header-common.css?v=20261110-shared-header-1">
+<link rel="stylesheet" href="/meteopt-gfs-table.css?v=20261111-wind-arrows-1">
 <style>
-.ecmwf-page .chart-stack{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:18px 16px}
-.ecmwf-page .chart-card{min-width:0;overflow:hidden}.ecmwf-page .chart-card-head{padding:12px 14px 0}.ecmwf-page .chart-title{font-size:12px;font-weight:800;letter-spacing:.04em;text-transform:uppercase}
-.ecmwf-page .notification-image{display:block;width:100%;height:auto}.ecmwf-page .ecmwf-table-wrap{overflow-x:auto;-webkit-overflow-scrolling:touch}
-.ecmwf-page .ecmwf-table{width:100%;min-width:760px;border-collapse:collapse;font-size:12px;font-variant-numeric:tabular-nums}
-.ecmwf-page .ecmwf-table th,.ecmwf-page .ecmwf-table td{padding:10px 12px;text-align:right;border-bottom:1px solid var(--line);white-space:nowrap}
-.ecmwf-page .ecmwf-table th{color:#a9c4cf;font-size:10px;letter-spacing:.06em;text-transform:uppercase;background:rgba(255,255,255,.035)}
-.ecmwf-page .ecmwf-table th:first-child,.ecmwf-page .ecmwf-table td:first-child{text-align:left}.ecmwf-page .ecmwf-table td{color:#d8e7ed}
-.ecmwf-page .ecmwf-table tr:last-child td{border-bottom:0}.ecmwf-page .ecmwf-meta{display:flex;justify-content:space-between;gap:12px;flex-wrap:wrap;padding:0 0 12px}
-.ecmwf-page .ecmwf-meta span{font-size:11px;color:#a9c4cf}.ecmwf-page .source-card{display:grid;grid-template-columns:1fr 1fr;gap:14px}
-@media(max-width:850px){.ecmwf-page .chart-stack{grid-template-columns:1fr}.ecmwf-page .source-card{grid-template-columns:1fr}}
-@media(max-width:560px){.ecmwf-page .chart-card-head{padding:10px 11px 0}.ecmwf-page .ecmwf-table{font-size:11px}}
-</style></head>
+  .ecmwf-page .gfs-clone-wrap{padding-top:26px}
+  .ecmwf-page .gfs-clone-report{margin-top:0}
+  .ecmwf-page .gfs-clone-svg{background:#0A1B29!important;border-radius:13px;overflow:hidden;min-height:300px}
+  .ecmwf-page .gfs-clone-svg svg{display:block;width:100%;height:auto;background:#0A1B29}
+  .ecmwf-page .gfs-clone-table{margin-top:18px}
+  .ecmwf-page .ecmwf-table-source-note{font-size:11px;color:#8EAEB7;margin-top:8px}
+  @media(max-width:700px){
+    .ecmwf-page .gfs-clone-wrap{padding-top:16px}
+    .ecmwf-page .gfs-clone-svg{border-radius:10px}
+  }
+</style>
+</head>
 <body>
 <header class="shell topbar">
-<a class="brand" href="/" aria-label="İstanbul Havası"><span class="brand-mark"><img src="/favicon-192x192.png" alt="" width="38" height="38" style="display:block;width:100%;height:100%;object-fit:contain;border-radius:inherit"></span><span>İstanbul Havası<small>Şehir için hava tahmini</small></span></a>
-<nav aria-label="Ana gezinme"><a href="/">Anasayfa</a><a href="/ecmwf" aria-current="page">ECMWF</a><a href="/koy.html">Köy</a></nav>
-<div class="top-right"><div class="model-picker" role="group" aria-label="Tahmin modeli"><a href="/" class="model-picker-link">GFS</a><a href="/ecmwf" class="model-picker-link active" aria-current="page">ECMWF IFS</a></div><span class="version">İstanbul Havası 1.5.0</span></div>
+  <a class="brand" href="/" aria-label="İstanbul Havası · Şehir için hava tahmini">
+    <span class="brand-mark"><img src="/favicon-192x192.png" alt="" width="38" height="38" style="display:block;width:100%;height:100%;object-fit:contain;border-radius:inherit"></span>
+    <span>İstanbul Havası<small>Şehir için hava tahmini</small></span>
+  </a>
+  <nav aria-label="Ana gezinme">
+    <a href="/">Anasayfa</a>
+    <a href="/ecmwf" aria-current="page">ECMWF</a>
+    <a href="/koy.html">Köy</a>
+  </nav>
+  <div class="top-right">
+    <div class="model-picker" role="group" aria-label="Tahmin modeli">
+      <a href="/" class="model-picker-link">GFS</a>
+      <a href="/ecmwf" class="model-picker-link active" aria-current="page">ECMWF IFS</a>
+    </div>
+    <span class="version"><span data-app-name>İstanbul Havası</span> <span data-app-version>1.5.0</span></span>
+  </div>
 </header>
+
 <main class="shell ecmwf-page">
-<div class="section-head" style="padding-top:26px"><div><div class="section-kicker">ECMWF IFS · HRES + ENS</div><h2>ECMWF IFS · İstanbul</h2><p class="section-description">MeteoPT ECMWF nokta serisi · 41.0901°N, 28.9436°E · 3 saatlik tahmin</p></div><div class="section-note"><span id="ecmwf-run-meta">ECMWF döngüsü yükleniyor…</span><br><span id="ecmwf-updated">Yayın zamanı bekleniyor</span></div></div>
-<section class="section"><div class="section-head"><div><div class="section-kicker">ECMWF IFS · SON DÖRT ÇIKTI</div><h2>4'lü çevrim karşılaştırması</h2><p class="section-description">Son dört yayımlanmış ECMWF döngüsü aynı geçerlilik saatlerine göre karşılaştırılır.</p></div><div class="section-note">2 m sıcaklık · 850 hPa sıcaklık<br>Yağış · 10 m rüzgâr</div></div>
-<div class="chart-stack" id="ecmwf-report-images"><article class="chart-card"><div class="chart-empty">Dört ECMWF çıktısı yükleniyor…</div></article></div></section>
-<section class="section"><div class="section-head"><div><div class="section-kicker">METEOPT ECMWF</div><h2>ECMWF · Önümüzdeki 180 saat</h2></div><div class="section-note"><span id="ecmwf-table-run">Döngü bekleniyor</span><br><span id="ecmwf-table-updated">Veri bekleniyor</span></div></div>
-<article class="meteopt-table-card"><div class="meteopt-table-toolbar"><span class="meteopt-table-source"><span class="meteopt-table-dot"></span> Kaynak: MeteoPT ECMWF</span><span id="ecmwf-table-status" role="status">Veri yükleniyor…</span></div>
-<div class="ecmwf-table-wrap"><table class="ecmwf-table"><thead><tr><th>Steps</th><th>Date/Hour (TSİ)</th><th>T.2m</th><th>Prec.</th><th>W.10m</th><th>T.850</th><th>W.850</th><th>MSLP</th></tr></thead><tbody id="ecmwf-table-body"><tr><td colspan="8">MeteoPT ECMWF verisi yükleniyor…</td></tr></tbody></table></div></article></section>
-<section class="section"><div class="section-head"><div><div class="section-kicker">ECMWF IFS · MODEL TAHMİNİ</div><h2>8 günlük tahmin</h2></div><div class="section-note">HRES yüzey tahmini · günlük min / maks</div></div><div class="daily-grid" id="ecmwf-daily-grid"><div class="chart-empty">ECMWF günlük tahmini yükleniyor…</div></div></section>
-<section class="section"><div class="section-head"><div><div class="section-kicker">ECMWF · VERİ KAYNAĞI</div><h2>Model ve kaynak</h2></div></div><div class="source-card"><article class="info-card"><div class="label">MeteoPT ECMWF noktası</div><p>2 m sıcaklık, 10 m rüzgâr, yağış, 850 hPa sıcaklık/rüzgâr ve deniz seviyesi basıncı aynı MeteoPT ECMWF nokta serisinden alınır.</p><div class="source-row"><span>Koordinat: <strong>41.0901°N · 28.9436°E</strong></span><span id="ecmwf-valid-until">Geçerlilik: —</span></div></article><article class="info-card"><div class="label">Kaynak</div><p><a href="https://www.meteopt.com/modelos/ecmwf?lat=41.0901&lon=28.9436" target="_blank" rel="noopener">MeteoPT ECMWF</a></p><p>ECMWF Open Data GRIB2 kullanılmaz; bu sayfa MeteoPT ECMWF nokta serisini kullanır.</p></article></div></section>
-</main><footer class="shell footer"><span><strong>İstanbul Havası</strong> 1.5.0</span><span>ECMWF · MeteoPT · 41.0901°N 28.9436°E</span></footer>
-<script src="/ecmwf-app.js?v=20261112-clone-1" defer></script></body></html>
+  <div class="gfs-clone-wrap">
+    <section class="section gfs-clone-report" id="bildirimler">
+      <div class="section-head">
+        <div>
+          <div class="section-kicker">ECMWF IFS · DÖRT DÖNGÜ KARŞILAŞTIRMASI</div>
+          <h2>ECMWF · aynı geçerlilik saatleri (TSİ)</h2>
+          <p class="section-description">Anasayfadaki GFS grafik görünümünün bire bir SVG yapısı · son dört ECMWF döngüsü.</p>
+        </div>
+        <div class="section-note">
+          <span id="ecmwf-run-meta">ECMWF döngüsü yükleniyor…</span><br>
+          <span id="ecmwf-updated">Yayın zamanı bekleniyor</span>
+        </div>
+      </div>
+      <article class="notification-card notification-chart-only koy-gfs-report-card">
+        <div class="notification-images koy-fullframe-images koy-gfs-svg-images" id="ecmwf-gfs-comparison-container" style="background:#0A1B29!important">
+          <div class="notification-image-item">
+            <div class="gfs-interactive-chart gfs-clone-svg" data-chart-label="ECMWF dört döngü valid-time karşılaştırması">
+              <div class="gfs-chart-loading">ECMWF dört döngülü etkileşimli SVG raporu bekleniyor…</div>
+            </div>
+          </div>
+        </div>
+      </article>
+    </section>
+
+    <div class="water-gfs-layout gfs-clone-table">
+      <section class="section gfs-table-section" id="meteopt-gfs-table" aria-label="MeteoPT ECMWF 180 saatlik model tablosu">
+        <article class="meteopt-table-card">
+          <div class="meteopt-table-panel-head">
+            <div class="meteopt-table-title">
+              <div class="section-kicker">METEOPT ECMWF</div>
+              <h2>ECMWF · Önümüzdeki 180 saat</h2>
+            </div>
+            <div class="meteopt-table-cycle">
+              <span id="ecmwf-table-run">Model döngüsü bekleniyor</span>
+              <span id="ecmwf-table-updated">Veri bekleniyor</span>
+            </div>
+          </div>
+          <div class="meteopt-table-toolbar">
+            <span class="meteopt-table-source"><span class="meteopt-table-dot"></span> Kaynak: MeteoPT ECMWF</span>
+            <span id="ecmwf-table-status" role="status" aria-live="polite">Veri yükleniyor…</span>
+          </div>
+          <div class="meteopt-table-scroll" aria-label="ECMWF 180 saatlik tahmin tablosu">
+            <table class="meteopt-data-table">
+              <thead><tr>
+                <th>Steps</th><th>Date/Hour (TSİ)</th><th>T.2m</th><th>Prec.</th><th>W.10m</th><th>T.850</th><th>W.850</th><th>RH.2m<br>(%)</th><th>Dew Point<br>(°C)</th><th>Snowln<br>(m)</th>
+              </tr></thead>
+              <tbody id="meteopt-table-body"><tr><td colspan="10" class="meteopt-table-empty">MeteoPT ECMWF verisi yükleniyor…</td></tr></tbody>
+            </table>
+          </div>
+          <div class="ecmwf-table-source-note">ECMWF nokta serisinde RH.2m ve Snowln alanları yayınlanmadığı için bu iki hücre veri yoksa “—” gösterir.</div>
+        </article>
+      </section>
+    </div>
+  </div>
+</main>
+
+<footer class="shell footer">
+  <span><strong data-app-name>İstanbul Havası</strong> <span data-app-version>1.5.0</span></span>
+  <span>Veri kaynağı: MeteoPT ECMWF · 41.0901°N 28.9436°E</span>
+</footer>
+
+<script src="/gfs-comparison-tooltip.js?v=20261109-mobile-legend-fix-2"></script>
+<script src="/ecmwf-app.js?v=20261112-gfs-clone-2" defer></script>
+</body>
+</html>
