@@ -1,10 +1,12 @@
 #!/usr/bin/env python3
 import json
+import math
 import os
 import tempfile
 import urllib.parse
 import urllib.request
 from datetime import datetime, timedelta, timezone
+from pathlib import Path
 
 from analyze_grib2 import analyze_file
 
@@ -88,6 +90,7 @@ def analyze_cycle(cycle):
                 pass
 
     first = steps[0]
+    tracks = build_tracks(steps)
     return {
         "status": "ok",
         "source": "NOAA GFS 0.25° GRIB2 · NOMADS",
@@ -104,9 +107,95 @@ def analyze_cycle(cycle):
         "forecast_hour": 0,
         "forecast_max_hour": 120,
         "forecast_interval_hours": 6,
+        "tracks": tracks,
+        "checkpoint_hours": [0, 12, 24, 48, 72, 96, 120],
         "download_bytes": total_bytes,
         "download_url": build_url(cycle, 0),
     }
+
+
+def haversine_km(lat1, lon1, lat2, lon2):
+    r = 6371.0
+    p1, p2 = math.radians(lat1), math.radians(lat2)
+    dp = math.radians(lat2 - lat1)
+    dl = math.radians(lon2 - lon1)
+    a = math.sin(dp / 2) ** 2 + math.cos(p1) * math.cos(p2) * math.sin(dl / 2) ** 2
+    return 2 * r * math.asin(math.sqrt(a))
+
+
+def bearing_deg(lat1, lon1, lat2, lon2):
+    p1, p2 = math.radians(lat1), math.radians(lat2)
+    dl = math.radians(lon2 - lon1)
+    y = math.sin(dl) * math.cos(p2)
+    x = math.cos(p1) * math.sin(p2) - math.sin(p1) * math.cos(p2) * math.cos(dl)
+    return (math.degrees(math.atan2(y, x)) + 360) % 360
+
+
+def direction(deg):
+    names = ["K", "KKD", "KD", "DKD", "D", "DGD", "GD", "GGD", "G", "GGB", "GB", "BGB", "B", "BKB", "KB", "KKB"]
+    return names[round(deg / 22.5) % 16]
+
+
+def build_tracks(steps):
+    tracks = []
+    next_id = 1
+    for step in steps:
+        candidates = list(step.get("centers", []))
+        used = set()
+        for track in tracks:
+            if not track["points"]:
+                continue
+            last = track["points"][-1]
+            same = [
+                (haversine_km(last["latitude"], last["longitude"], c["latitude"], c["longitude"]), idx, c)
+                for idx, c in enumerate(candidates)
+                if idx not in used and c.get("type") == track["type"]
+            ]
+            if same:
+                distance, idx, c = min(same, key=lambda x: x[0])
+                if distance <= 700:
+                    used.add(idx)
+                    track["points"].append({
+                        "forecast_hour": step["forecast_hour"],
+                        "valid_time_utc": step["valid_time_utc"],
+                        "pressure_hpa": c["pressure_hpa"],
+                        "latitude": c["latitude"],
+                        "longitude": c["longitude"],
+                    })
+        for idx, c in enumerate(candidates):
+            if idx in used:
+                continue
+            tracks.append({
+                "id": f"{c.get('type', 'center')}-{next_id}",
+                "type": c.get("type"),
+                "points": [{
+                    "forecast_hour": step["forecast_hour"],
+                    "valid_time_utc": step["valid_time_utc"],
+                    "pressure_hpa": c["pressure_hpa"],
+                    "latitude": c["latitude"],
+                    "longitude": c["longitude"],
+                }],
+            })
+            next_id += 1
+    enriched = []
+    for track in tracks:
+        points = track["points"]
+        if len(points) < 2:
+            continue
+        a, b = points[0], points[-1]
+        move = haversine_km(a["latitude"], a["longitude"], b["latitude"], b["longitude"])
+        bearing = bearing_deg(a["latitude"], a["longitude"], b["latitude"], b["longitude"])
+        pressures = [float(p["pressure_hpa"]) for p in points]
+        track.update({
+            "movement_km": round(move, 1),
+            "movement_bearing_deg": round(bearing, 0),
+            "movement_direction": direction(bearing),
+            "pressure_change_hpa": round(float(b["pressure_hpa"]) - float(a["pressure_hpa"]), 1),
+            "min_pressure_hpa": round(min(pressures), 1),
+            "max_pressure_hpa": round(max(pressures), 1),
+        })
+        enriched.append(track)
+    return enriched
 
 
 def main():
