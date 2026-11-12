@@ -560,7 +560,6 @@ public class WeatherWidgetProvider extends AppWidgetProvider {
         connection.setRequestProperty("Cache-Control", "no-cache");
         connection.setRequestProperty("Pragma", "no-cache");
         connection.setRequestProperty("User-Agent", "Mozilla/5.0 (Linux; Android) AppleWebKit/537.36 IstanbulHavasi/1.0");
-        connection.setRequestProperty("Accept-Encoding", "gzip");
         try {
             int status = connection.getResponseCode();
             if (status < 200 || status >= 300) throw new IllegalStateException("HTTP " + status + " · " + url.getHost());
