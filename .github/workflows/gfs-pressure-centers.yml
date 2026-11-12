@@ -2,6 +2,11 @@ name: GFS Pressure Centers
 
 on:
   workflow_dispatch:
+  push:
+    branches: [main]
+    paths:
+      - ".github/workflows/gfs-pressure-centers.yml"
+      - "scripts/pressure_centers/**"
   schedule:
     # Poll frequently so each 00/06/12/18Z GFS cycle is picked up
     # as soon as f000 becomes available. The script itself only
