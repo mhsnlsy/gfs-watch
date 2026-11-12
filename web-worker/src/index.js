@@ -212,8 +212,19 @@ export default {
     // manifests keep D1 first; all other stores are fallback layers.
     if (isArchivePath(path)) {
       const isMutableNotificationManifest = path === "/data/notifications/latest.json";
+      const isLiveEcmwfLatest = path === "/data/ecmwf/latest.json";
+
       if (isMutableNotificationManifest) {
         const published = await fetchD1PublicationAsset(request, env, "notifications/latest.json");
+        if (published) return published;
+      }
+
+      // ECMWF latest is a live model payload, not a static archive. The
+      // Istanbul GFS service is authoritative because it refreshes directly
+      // from the canonical MeteoPT ECMWF source and rejects partial cycles.
+      // R2 remains the fallback for outage resilience.
+      if (isLiveEcmwfLatest) {
+        const published = await fetchD1PublicationAsset(request, env, "data/ecmwf/latest.json");
         if (published) return published;
       }
 
