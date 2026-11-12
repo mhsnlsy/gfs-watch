@@ -429,6 +429,12 @@ function renderMgmObservation(o,history,f180){
  $("freshness").classList.toggle("stale",cachedObservation);
  const currentFeels=num(o.feels_like_c)!=null?num(o.feels_like_c):feelsLike(t,rh,wind);
  $("feels-like").innerHTML=fmt(currentFeels)+'<span class="unit">°</span>';
+ const rangeSamples=Array.isArray(history && history.samples)?history.samples:[];
+ const rangeNow=Date.now(),rangeCutoff=rangeNow-24*3600000;
+ const recentRangeSamples=rangeSamples.filter(s=>{
+  const stamp=Date.parse(s.observed_at_utc||s.logged_at_utc||"");
+  return Number.isFinite(stamp)&&stamp>=rangeCutoff&&stamp<=rangeNow+300000;
+ });
  const feelsLiveRangeEl=$("station-live-feels-range");
  if(feelsLiveRangeEl){
   const vals=recentRangeSamples.map(s=>{
