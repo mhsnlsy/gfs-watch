@@ -4998,3 +4998,38 @@ main.shell { padding-bottom:max(12px,env(safe-area-inset-bottom)); }
     margin-top:5px!important;
   }
 }
+
+
+/* FINAL STATION CARD LOCK — temperature/icon/comparison alignment */
+@media (min-width:1200px) and (pointer:fine){
+  .dashboard-left .station-card .station-current .temp-row{
+    display:flex!important;
+    align-items:center!important;
+    column-gap:10px!important;
+  }
+  .dashboard-left .station-card .station-current .weather-symbol{
+    margin-left:-2px!important;
+    transform:none!important;
+  }
+  .dashboard-left .station-card .station-current .station-inline-badges{
+    display:flex!important;
+    flex-direction:column!important;
+    align-items:flex-start!important;
+    justify-content:center!important;
+    gap:5px!important;
+    margin-left:0!important;
+    margin-top:0!important;
+    flex:0 1 auto!important;
+    min-width:0!important;
+  }
+  .dashboard-left .station-card .station-current .station-inline-badges .delta-badge,
+  .dashboard-left .station-card .station-current .station-inline-badges .station-temp-compare{
+    margin:0!important;
+  }
+  .dashboard-left .station-card{
+    padding-bottom:14px!important;
+  }
+  .dashboard-left .station-card .station-history-inline .history-source-note{
+    margin-bottom:0!important;
+  }
+}
