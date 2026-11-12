@@ -1179,9 +1179,14 @@ const __hideEmptyBadges=()=>{document.querySelectorAll('[class*="badge"],[class*
           const v=rawWindDirection.toUpperCase().replace(/[İI]/g,"I");
           const map={
             "N":"N","NORTH":"N","KUZEY":"N",
+            "NNE":"NNE","NORTH-NORTHEAST":"NNE","KUZEY-KUZEYDOĞU":"NNE","KUZEY KUZEYDOĞU":"NNE",
+            "NNW":"NNW","NORTH-NORTHWEST":"NNW","KUZEY-KUZEYBATI":"NNW","KUZEY KUZEYBATI":"NNW",
             "NW":"NW","NORTHWEST":"NW","KUZEYBATI":"NW","KUZEY BATI":"NW",
             "NE":"NE","NORTHEAST":"NE","KUZEYDOĞU":"NE","KUZEY DOĞU":"NE","KUZEYDOGU":"NE","KUZEY DOGU":"NE",
+            "NEE":"NE","NWW":"NW",
             "S":"S","SOUTH":"S","GÜNEY":"S","GUNEY":"S",
+            "SSW":"SSW","SOUTH-SOUTHWEST":"SSW","GÜNEY-GÜNEYBATI":"SSW","GÜNEY GÜNEYBATI":"SSW",
+            "SSE":"SSE","SOUTH-SOUTHEAST":"SSE","GÜNEY-GÜNEYDOĞU":"SSE","GÜNEY GÜNEYDOĞU":"SSE",
             "SW":"SW","SOUTHWEST":"SW","GÜNEYBATI":"SW","GÜNEY BATI":"SW","GUNEYBATI":"SW","GUNEY BATI":"SW"
           };
           if(map[v]) return map[v];
@@ -1190,22 +1195,23 @@ const __hideEmptyBadges=()=>{document.querySelectorAll('[class*="badge"],[class*
             station.wind_direction
           ));
           if(Number.isFinite(d)){
-            return ["N","NE","E","SE","S","SW","W","NW"][Math.round((((d%360)+360)%360)/45)%8];
+            return ["N","NNE","NE","ENE","E","ESE","SE","SSE","S","SSW","SW","WSW","W","WNW","NW","NNW"][Math.round((((d%360)+360)%360)/22.5)%16];
           }
           return "";
         })();
         let windBadge="";
         if(Number.isFinite(windSpeed)&&windSpeed>15){
-          if(windCardinal==="N") windBadge="Rüzgarlı";
+          if(windCardinal==="N"||windCardinal==="NNE"||windCardinal==="NNW") windBadge="Rüzgarlı";
           else if(windCardinal==="NW") windBadge="Karayel hakim";
           else if(windCardinal==="NE") windBadge="Poyraz hakim";
           else if(windCardinal==="S"||windCardinal==="SSW"||windCardinal==="SW"||windCardinal==="SSE") windBadge="Lodos hakim";
         }
-        if(rain1h!==null && rain1h>0){
-          rainBriefCurrent.textContent="Anlık istasyon yağışı: "+fmt(rain1h,1)+" mm / son 1 saat";
-        }else{
-          rainBriefCurrent.textContent=windBadge||"Yağış yok";
-        }
+        const rainLabel=(rain1h!==null && rain1h>0)
+          ? "Yağışlı · "+fmt(rain1h,1)+" mm / son 1 saat"
+          : "Yağış yok";
+        rainBriefCurrent.textContent=windBadge
+          ? rainLabel+" · "+windBadge
+          : rainLabel;
       }
       const rainDetail=$("rain-detail");
       if(rainDetail)rainDetail.textContent="Son 1 saat";
