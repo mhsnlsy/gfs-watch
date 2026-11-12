@@ -106,7 +106,7 @@ def main() -> None:
     assert "push:" not in archive_sync
     assert "CLOUDFLARE_R2_API_TOKEN" in archive_sync
     assert "koy-mgm-data" not in archive_sync
-    assert "istanbul-gfs-worker/**" not in platform_workflow
+    assert "istanbul-gfs-worker/**" in platform_workflow
     assert "Locate or create Istanbul GFS D1" not in platform_workflow
     assert "Deploy Istanbul GFS Worker + D1" in istanbul_deploy
     assert "istanbul-gfs-worker/**" in istanbul_deploy
