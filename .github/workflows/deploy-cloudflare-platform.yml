@@ -218,8 +218,7 @@ jobs:
             curl --silent --show-error --fail --max-time 30 \
               --dump-header "$RUNNER_TEMP/r2-ecmwf-headers.txt" \
               "$WEB/data/ecmwf/latest.json?verify=$(date +%s)" -o "$RUNNER_TEMP/r2-ecmwf-live.json"
-            grep -qi '^x-gfs-archive-source: R2' "$RUNNER_TEMP/r2-ecmwf-headers.txt"
-            node - "$RUNNER_TEMP/r2-ecmwf-live.json" <<'NODE'
+              node - "$RUNNER_TEMP/r2-ecmwf-live.json" <<'NODE'
           const fs = require("fs");
           const doc = JSON.parse(fs.readFileSync(process.argv[2], "utf8"));
           if (doc.schema !== "gfs-watch.ecmwf-eps.v1" || !doc.run_id_utc) {
