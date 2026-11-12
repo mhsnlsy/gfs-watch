@@ -2,6 +2,8 @@ package com.istanbulunhavasi.widget;
 
 import android.appwidget.AppWidgetManager;
 import android.appwidget.AppWidgetProvider;
+import android.app.PendingIntent;
+import android.content.Intent;
 import android.content.Context;
 import android.os.Handler;
 import android.os.Looper;
@@ -52,9 +54,19 @@ public class WeatherWidgetProvider extends AppWidgetProvider {
     private static final DateTimeFormatter ISTANBUL_DATE = DateTimeFormatter.ofPattern("yyyy-MM-dd", TR).withZone(ISTANBUL);
     private static final DateTimeFormatter UTC_DATE = DateTimeFormatter.ofPattern("yyyy-MM-dd", TR).withZone(UTC);
     private static final ExecutorService EXECUTOR = Executors.newSingleThreadExecutor();
+    private static final String ACTION_REFRESH = "com.istanbulunhavasi.widget.REFRESH";
 
     @Override
-    public void onUpdate(Context context, AppWidgetManager manager, int[] widgetIds) {
+    public void onReceive(Context context, Intent intent) {
+        super.onReceive(context, intent);
+        if (ACTION_REFRESH.equals(intent.getAction())) {
+            AppWidgetManager manager = AppWidgetManager.getInstance(context);
+            int[] ids = manager.getAppWidgetIds(new android.content.ComponentName(context, WeatherWidgetProvider.class));
+            if (ids.length > 0) updateWidgets(context, manager, ids);
+        }
+    }
+
+    private void updateWidgets(Context context, AppWidgetManager manager, int[] widgetIds) {
         if (widgetIds == null || widgetIds.length == 0) return;
         final int[] ids = widgetIds.clone();
         final PendingResult pending = goAsync();
@@ -75,11 +87,22 @@ public class WeatherWidgetProvider extends AppWidgetProvider {
         });
     }
 
+    @Override
+    public void onUpdate(Context context, AppWidgetManager manager, int[] widgetIds) {
+        updateWidgets(context, manager, widgetIds);
+    }
+
     private static RemoteViews buildViews(Context context, JSONObject stationDoc, JSONObject forecastDoc, JSONObject historyDoc) {
         RemoteViews views = new RemoteViews(context.getPackageName(), R.layout.weather_widget);
         JSONObject station = stationObject(stationDoc);
 
         renderStation(views, station);
+        Intent refreshIntent = new Intent(context, WeatherWidgetProvider.class).setAction(ACTION_REFRESH);
+        PendingIntent refreshPending = PendingIntent.getBroadcast(
+            context, 1001, refreshIntent,
+            PendingIntent.FLAG_UPDATE_CURRENT | PendingIntent.FLAG_IMMUTABLE);
+        views.setOnClickPendingIntent(R.id.refresh_button, refreshPending);
+        views.setTextViewText(R.id.last_refresh, "Son güncelleme " + IST_TIME.format(Instant.now()));
         renderHistory(views, historyDoc);
         renderDailyTiles(views, forecastDoc);
         renderRainHours(views, forecastDoc);
@@ -119,6 +142,11 @@ public class WeatherWidgetProvider extends AppWidgetProvider {
             feels = apparentTemperature(temperature, humidity, wind);
         }
         views.setTextViewText(R.id.feels, "Hissedilen " + fmt(feels, 1) + "°");
+        views.setTextViewText(R.id.wind_stat, fmt(wind, 1) + " km/sa" + (windDirection.isEmpty() ? "" : " · " + windDirection));
+        views.setTextViewText(R.id.humidity_stat, fmt(humidity, 0) + "%");
+        views.setTextViewText(R.id.rain_stat, fmt(rain, 1) + " mm");
+        double dewPoint = dewPoint(temperature, humidity);
+        views.setTextViewText(R.id.dew_stat, fmt(dewPoint, 1) + "°");
 
         String windDirection = station.optString("wind_direction_cardinal", "");
         String windText = fmt(wind, 0) + " km/sa";
@@ -631,6 +659,13 @@ public class WeatherWidgetProvider extends AppWidgetProvider {
         double a = 17.27, b = 237.7;
         double alpha = Math.log(humidity / 100.0) + (a * temp) / (b + temp);
         return (b * alpha) / (a - alpha);
+    }
+
+    private static double dewPoint(double temperature, double humidity) {
+        if (Double.isNaN(temperature) || Double.isNaN(humidity)) return Double.NaN;
+        double gamma = Math.log(Math.max(humidity, 1.0) / 100.0)
+            + (17.27 * temperature) / (237.7 + temperature);
+        return (237.7 * gamma) / (17.27 - gamma);
     }
 
     private static double apparentTemperature(double temp, double humidity, double windKmh) {
