@@ -62,6 +62,12 @@ export function buildPanelAxis(field, valuesBySeries) {
       high = Math.ceil(Math.max(0, ...latestValues) / step) * step;
     }
   }
+  // Reserve headroom when the newest peak is on/near the top tick.
+  // This keeps the latest marker and value label fully inside the chart.
+  if (latestValues.length && Number.isFinite(high) && Number.isFinite(latestPeak) &&
+      high - latestPeak <= step * 0.25) {
+    high += step;
+  }
   if (!Number.isFinite(low) || !Number.isFinite(high) || high <= low) {
     low = temperature && Number.isFinite(low) ? low : 0;
     high = low + step;
