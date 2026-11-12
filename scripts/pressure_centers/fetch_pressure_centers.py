@@ -222,7 +222,7 @@ def build_tracks(steps):
                 elif next_delta is not None and next_delta <= -tendency_threshold_hpa:
                     lifecycle = "zayıflıyor"
                 else:
-                    lifecycle = None
+                    lifecycle = "aktif"
 
             point["lifecycle"] = lifecycle
         a, b = points[0], points[-1]
