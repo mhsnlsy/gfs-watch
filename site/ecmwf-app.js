@@ -11,6 +11,16 @@
     : "—";
 
   const COLORS = ["#8ABCE8", "#7DD3D7", "#F1C98B", "#B38BE8"];
+  const CYCLE_COLORS = COLORS;
+  const PANELS = [
+    { id: "temperature", field: "temperature_2m_c", title: "Sıcaklık", unit: "°C" },
+    { id: "temperature_850", field: "temperature_850hpa_c", title: "850 hPa sıcaklık", unit: "°C" },
+    { id: "precipitation", field: "precipitation_6h_mm", title: "Yağış", unit: "mm / 3 saat" },
+    { id: "wind_10m", field: "wind_speed_10m_kmh", title: "10 m rüzgâr hızı", unit: "km/sa" },
+  ];
+  const TR_OFFSET_MS = 3 * 60 * 60 * 1000;
+  const FONT = "system-ui,-apple-system,BlinkMacSystemFont,Segoe UI,sans-serif";
+  const APP_VERSION = "1.5.0";
 
   function tsLabel(utc) {
     const d = new Date(utc);
@@ -127,7 +137,7 @@ function buildPanelAxis(field, valuesBySeries, options = {}) {
     .slice()
     .sort((a, b) => Date.parse(a.run_id_utc) - Date.parse(b.run_id_utc))
     .slice(-4);
-  if (docs.length < 1) throw new Error("At least one complete GFS run is required; found " + docs.length);
+  if (docs.length < 1) throw new Error("At least one complete ECMWF run is required; found " + docs.length);
 
   const series = docs.map((document, index) => {
     const points = new Map();
@@ -147,7 +157,7 @@ function buildPanelAxis(field, valuesBySeries, options = {}) {
   let common = [...series[series.length - 1].points.keys()];
   for (const item of series.slice(0, -1)) common = common.filter(key => item.points.has(key));
   common.sort();
-  if (common.length < 2) throw new Error("The available GFS cycles have fewer than two common valid times");
+  if (common.length < 2) throw new Error("The available ECMWF cycles have fewer than two common valid times");
 
   const firstMs = Date.parse(common[0] + ":00Z");
   const validKeys = common.filter(key => {
@@ -405,10 +415,10 @@ function buildSvg(runs) {
   });
   parts.push("</g></svg>");
   const body = parts.join("");
-  if (body.length > 1800000) throw new Error("Generated Istanbul SVG exceeds the D1 publication row safety limit");
+  if (body.length > 1800000) throw new Error("Generated Istanbul ECMWF SVG exceeds the D1 publication row safety limit");
   const latest = series[series.length - 1].document;
   return {
-    key: "notifications/istanbul-gfs-" + runStamp(latest.run_id_utc) + "-comparison.svg",
+    key: "notifications/istanbul-ecmwf-" + runStamp(latest.run_id_utc) + "-comparison.svg",
     run_id_utc: latest.run_id_utc,
     body,
     common_valid_time_count: validKeys.length,
