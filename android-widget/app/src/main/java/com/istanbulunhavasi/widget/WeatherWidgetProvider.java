@@ -47,7 +47,7 @@ public class WeatherWidgetProvider extends AppWidgetProvider {
     private static final ZoneOffset UTC = ZoneOffset.UTC;
     private static final Locale TR = Locale.forLanguageTag("tr-TR");
     private static final DateTimeFormatter UTC_TIME = DateTimeFormatter.ofPattern("HH:mm", TR).withZone(UTC);
-    private static final DateTimeFormatter IST_TIME = DateTimeFormatter.ofPattern("HH:mm", TR).withZone(ISTANBUL);
+    private static final DateTimeFormatter IST_TIME = DateTimeFormatter.ofPattern("HH:mm", TR).withZone(ISTANBUL);\n    private static final DateTimeFormatter ISTANBUL_DATE = DateTimeFormatter.ofPattern("yyyy-MM-dd", TR).withZone(ISTANBUL);
     private static final DateTimeFormatter UTC_DATE = DateTimeFormatter.ofPattern("yyyy-MM-dd", TR).withZone(UTC);
     private static final ExecutorService EXECUTOR = Executors.newSingleThreadExecutor();
 
@@ -202,7 +202,7 @@ public class WeatherWidgetProvider extends AppWidgetProvider {
         for (LocalDate date : days) {
             List<ForecastPoint> dayPoints = new ArrayList<>();
             for (ForecastPoint point : rows) {
-                if (point.utcDate.equals(date.toString())) dayPoints.add(point);
+                if (point.istanbulDate.equals(date.toString())) dayPoints.add(point);
             }
             if (dayPoints.isEmpty()) {
                 double dailyRain = dailyRainFor(forecastDoc, date);
@@ -246,7 +246,7 @@ public class WeatherWidgetProvider extends AppWidgetProvider {
             for (RainSpell spell : visible) {
                 Instant intervalEnd = spell.end.plusSeconds(stepHours * 3600L);
                 String period = periodLabel(spell.start, spell.end);
-                String line = weekday(date) + " · " + UTC_TIME.format(spell.start) + "–" + UTC_TIME.format(intervalEnd);
+                String line = weekday(date) + " · " + IST_TIME.format(spell.start) + "–" + IST_TIME.format(intervalEnd);
                 if (!period.isEmpty()) line += " · " + period;
                 line += " · " + fmt(spell.total, 1) + " mm";
                 appendLine(output, line);
@@ -296,7 +296,7 @@ public class WeatherWidgetProvider extends AppWidgetProvider {
         for (ForecastPoint point : rows) {
             if (!Double.isNaN(point.temperature)) {
                 if (point.stamp.toEpochMilli() <= now + 12 * 3600000L) nearTemps.add(point.temperature);
-                if (wanted.contains(point.utcDate)) {
+                if (wanted.contains(point.istanbulDate)) {
                     byDay.computeIfAbsent(point.utcDate, key -> new ArrayList<>()).add(point.temperature);
                 }
             }
@@ -402,7 +402,7 @@ public class WeatherWidgetProvider extends AppWidgetProvider {
             if (hours < 2.5 || hours > 3.5) continue;
             double delta = after.temperature - before.temperature;
             if (Math.abs(delta) < 4.0) continue;
-            byDay.computeIfAbsent(before.utcDate, key -> new ArrayList<>())
+            byDay.computeIfAbsent(before.istanbulDate, key -> new ArrayList<>())
                 .add(new TempSwing(before.stamp, after.stamp, delta));
         }
 
@@ -417,7 +417,7 @@ public class WeatherWidgetProvider extends AppWidgetProvider {
             for (int i = 0; i < swings.size(); i++) {
                 TempSwing swing = swings.get(i);
                 if (i > 0) line.append(" · ");
-                line.append(UTC_TIME.format(swing.start)).append("–").append(UTC_TIME.format(swing.end)).append(" ")
+                line.append(IST_TIME.format(swing.start)).append("–").append(IST_TIME.format(swing.end)).append(" ")
                     .append(swing.delta < 0 ? "−" : "+").append(fmt(Math.abs(swing.delta), 1)).append("°C");
             }
             appendLine(result, line.toString());
@@ -438,7 +438,7 @@ public class WeatherWidgetProvider extends AppWidgetProvider {
                 Instant stamp = Instant.parse(item.optString("valid_time_utc", ""));
                 int step = item.optInt("forecast_hour", -1);
                 if (step <= 0) continue;
-                String utcDate = UTC_DATE.format(stamp);
+                String utcDate = UTC_DATE.format(stamp);\n                String istanbulDate = ISTANBUL_DATE.format(stamp);
                 points.add(new ForecastPoint(
                     stamp,
                     step,
