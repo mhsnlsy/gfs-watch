@@ -953,6 +953,16 @@
     }
 
 
+    /* Desktop overflow guard: every dashboard column must be shrinkable inside the shell. */
+    .dashboard-top{min-width:0;max-width:100%;}
+    .dashboard-top>.dashboard-left,
+    .dashboard-top>.dashboard-right{min-width:0;max-width:100%;}
+    .dashboard-top .station-card{min-width:0;max-width:100%;}
+    .dashboard-top .station-current,
+    .dashboard-top .station-card .temp-meta,
+    .dashboard-top .station-card .rain-brief{min-width:0;max-width:100%;}
+    .dashboard-top .station-card .rain-brief .delta-badge{min-width:0;max-width:100%;box-sizing:border-box;overflow-wrap:anywhere;}
+
     /* GFS 180h panel: do not stretch the forecast card to the height of adjacent content. */
       height:auto!important;
       min-height:0!important;
