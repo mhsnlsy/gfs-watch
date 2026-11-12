@@ -493,7 +493,7 @@ function renderMgmObservation(o,history,f180){
  if(precipitationPhase==="snow")$("rain-brief-current").textContent="Kar yağışı tespit edildi · Çanakçı MGM ("+fmt(mgmRain)+" mm/son 1 saat).";
  else if(precipitationPhase==="rain")$("rain-brief-current").textContent="Yağışlı.";
  else $("rain-brief-current").textContent="Çanakçı MGM ölçümünde son 1 saatte yağış yok.";
- const pts=pointsOf(f180||{},72),future=pts.filter(p=>num(p.precipitation_6h_mm)>0.1);
+ const pts=pointsOf(f180||{},120),future=pts.filter(p=>num(p.precipitation_6h_mm)>0.1);
  if(future.length){
   const firstRain=pts.find(p=>num(p.precipitation_6h_mm)>0.1);
   const firstRainIndex=pts.findIndex(p=>num(p.precipitation_6h_mm)>0.1);
@@ -504,7 +504,7 @@ function renderMgmObservation(o,history,f180){
     ?"MeteoPT GFS tahminine göre ilk kuru zaman: "+tsGfsValid(firstDry.valid_time_utc)+"."
     :"MeteoPT GFS tahminine göre yağış tahmin süresinin sonuna kadar devam ediyor.";
  }else{
-  $("rain-brief-forecast").textContent="MeteoPT GFS tahmininde önümüzdeki 72 saatte anlamlı yağış görünmüyor.";
+  $("rain-brief-forecast").textContent="MeteoPT GFS tahmininde önümüzdeki 120 saatte anlamlı yağış görünmüyor.";
  }
  $("history-station-source").textContent=isHome?"KÖY EV · 363 M · RAKIM DÜZELTMELİ":"ÇANAKÇI · GERÇEK ÖLÇÜMLER";
  $("station-trend-meta").textContent=isHome?"Köy Ev · 363 m · rakım düzeltilmiş arşiv":"Çanakçı MGM ölçüm geçmişi";
