@@ -62,11 +62,12 @@ public class WeatherWidgetProvider extends AppWidgetProvider {
             try {
                 JSONObject stationDoc = null;
                 JSONObject forecastDoc = null;
+                JSONObject historyDoc = null;
                 try { stationDoc = fetchJson(STATION_URL, STATION_FALLBACK_URL); } catch (Exception ignored) { }
                 try { forecastDoc = fetchJson(GFS_URL, GFS_FALLBACK_URL); } catch (Exception ignored) { }
                 try { historyDoc = fetchJson(HISTORY_URL, null); } catch (Exception ignored) { }
 
-                RemoteViews views = buildViews(context, stationDoc, forecastDoc);
+                RemoteViews views = buildViews(context, stationDoc, forecastDoc, historyDoc);
                 for (int id : ids) manager.updateAppWidget(id, views);
             } finally {
                 pending.finish();
@@ -74,7 +75,7 @@ public class WeatherWidgetProvider extends AppWidgetProvider {
         });
     }
 
-    private static RemoteViews buildViews(Context context, JSONObject stationDoc, JSONObject forecastDoc) {
+    private static RemoteViews buildViews(Context context, JSONObject stationDoc, JSONObject forecastDoc, JSONObject historyDoc) {
         RemoteViews views = new RemoteViews(context.getPackageName(), R.layout.weather_widget);
         JSONObject station = stationObject(stationDoc);
 
