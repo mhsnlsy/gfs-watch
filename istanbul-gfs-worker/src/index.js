@@ -723,7 +723,7 @@ async function fetchEcmwfDocument(runDt) {
       rain: ecmwfNumber(rain[i]),
       pressure: ecmwfNumber(pressure[i]),
     };
-    if (Object.values(values).some(value => value === null)) continue;
+    if (["temperature", "temperature850", "wind", "windDirection", "wind850", "rain", "pressure"].some(key => values[key] === null)) continue;
     const valid = new Date(runDt.getTime() + steps[i] * 3600000);
     const local = new Date(valid.getTime() + UTC_OFFSET_MS);
     forecasts.push({
