@@ -209,7 +209,7 @@ def build_tracks(steps):
                 elif next_delta is not None and next_delta >= tendency_threshold_hpa:
                     lifecycle = "zayıflıyor"
                 else:
-                    lifecycle = "aktif"
+                    lifecycle = None
             else:
                 if prev_delta is not None and next_delta is not None and prev_delta >= tendency_threshold_hpa and next_delta <= -tendency_threshold_hpa:
                     lifecycle = "olgunlaşıyor"
@@ -222,7 +222,7 @@ def build_tracks(steps):
                 elif next_delta is not None and next_delta <= -tendency_threshold_hpa:
                     lifecycle = "zayıflıyor"
                 else:
-                    lifecycle = "aktif"
+                    lifecycle = None
 
             point["lifecycle"] = lifecycle
         a, b = points[0], points[-1]
@@ -277,7 +277,7 @@ def main():
     if state_path.exists():
         try:
             existing = json.loads(state_path.read_text(encoding="utf-8"))
-            if existing.get("status") == "ok" and existing.get("cycle_utc") == current_cycle.strftime("%Y-%m-%dT%H:%M:%SZ") and len(existing.get("forecast_steps", [])) == len(FORECAST_HOURS):
+            if existing.get("status") == "ok" and existing.get("cycle_utc") == current_cycle.strftime("%Y-%m-%dT%H:%M:%SZ") and len(existing.get("forecast_steps", [])) == len(FORECAST_HOURS) and all("lifecycle" in point for track in existing.get("tracks", []) for point in track.get("points", [])):
                 print(json.dumps(existing, ensure_ascii=False, indent=2))
                 return
         except Exception:
