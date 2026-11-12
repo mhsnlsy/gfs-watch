@@ -1199,7 +1199,7 @@ const __hideEmptyBadges=()=>{document.querySelectorAll('[class*="badge"],[class*
           if(windCardinal==="N") windBadge="Rüzgarlı";
           else if(windCardinal==="NW") windBadge="Karayel hakim";
           else if(windCardinal==="NE") windBadge="Poyraz hakim";
-          else if(windCardinal==="S"||windCardinal==="SW") windBadge="Lodos hakim";
+          else if(windCardinal==="S"||windCardinal==="SSW"||windCardinal==="SW"||windCardinal==="SSE") windBadge="Lodos hakim";
         }
         if(rain1h!==null && rain1h>0){
           rainBriefCurrent.textContent="Anlık istasyon yağışı: "+fmt(rain1h,1)+" mm / son 1 saat";
