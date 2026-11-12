@@ -13,14 +13,15 @@
 [class*="badge"][hidden]{display:none!important}
 
 /* Optimized station observation polish */
+    .station-current .temp-row{position:relative;padding-bottom:31px}
     .station-current .temp-meta{margin-top:6px}
     .delta-badge{display:inline-flex;align-items:center;gap:4px;margin-top:6px;padding:3px 9px;border-radius:999px;background:rgba(125,211,215,.12);border:1px solid rgba(125,211,215,.28);color:var(--cyan);font-size:11px;font-weight:600;letter-spacing:.01em;min-height:22px}
     .delta-badge:empty{display:none}
-    .station-temp-compare{display:inline-flex;align-items:center;justify-content:center;align-self:center;white-space:nowrap;max-width:180px;box-sizing:border-box;padding:4px 8px;border-radius:999px;background:rgba(125,211,215,.10);border:1px solid rgba(125,211,215,.28);color:var(--cyan);font-size:10px;line-height:1.2;font-weight:600;letter-spacing:.01em}
+    .station-temp-compare{position:absolute;left:0;bottom:0;display:inline-flex;align-items:center;justify-content:center;white-space:nowrap;max-width:min(260px,100%);box-sizing:border-box;padding:4px 8px;border-radius:999px;background:rgba(125,211,215,.10);border:1px solid rgba(125,211,215,.28);color:var(--cyan);font-size:10px;line-height:1.2;font-weight:600;letter-spacing:.01em}
     .station-temp-compare[hidden]{display:none}
-    @media(max-width:560px){.station-temp-compare{max-width:145px;padding:3px 7px;font-size:9px}}
+    @media(max-width:560px){.station-current .temp-row{padding-bottom:28px}.station-temp-compare{max-width:100%;padding:3px 7px;font-size:9px}}
     .feels-like-stat{min-width:0}
-    .feels-like-24h-badge{display:inline-flex;align-items:center;justify-content:center;white-space:nowrap;width:max-content;max-width:100%;box-sizing:border-box;margin:5px auto 0;padding:3px 7px;border-radius:999px;background:rgba(125,211,215,.09);border:1px solid rgba(125,211,215,.24);color:#a9c8d2;font-size:9px;line-height:1.25;font-weight:600;letter-spacing:.01em}
+    .feels-like-24h-badge{display:flex;align-items:center;justify-content:center;white-space:nowrap;width:100%;max-width:100%;box-sizing:border-box;margin:5px 0 0;padding:3px 7px;border-radius:999px;background:rgba(125,211,215,.09);border:1px solid rgba(125,211,215,.24);color:#a9c8d2;font-size:9px;line-height:1.25;font-weight:600;letter-spacing:.01em;overflow:hidden;text-overflow:ellipsis}
     .feels-like-24h-badge[hidden]{display:none}
     @media(max-width:560px){.feels-like-24h-badge{font-size:8px;padding:3px 6px;margin-top:4px}}
 
