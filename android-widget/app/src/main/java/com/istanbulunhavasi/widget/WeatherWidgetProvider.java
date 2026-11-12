@@ -142,13 +142,13 @@ public class WeatherWidgetProvider extends AppWidgetProvider {
             feels = apparentTemperature(temperature, humidity, wind);
         }
         views.setTextViewText(R.id.feels, "Hissedilen " + fmt(feels, 1) + "°");
+
+        String windDirection = station.optString("wind_direction_cardinal", "");
         views.setTextViewText(R.id.wind_stat, fmt(wind, 1) + " km/sa" + (windDirection.isEmpty() ? "" : " · " + windDirection));
         views.setTextViewText(R.id.humidity_stat, fmt(humidity, 0) + "%");
         views.setTextViewText(R.id.rain_stat, fmt(rain, 1) + " mm");
         double dewPoint = dewPoint(temperature, humidity);
         views.setTextViewText(R.id.dew_stat, fmt(dewPoint, 1) + "°");
-
-        String windDirection = station.optString("wind_direction_cardinal", "");
         String windText = fmt(wind, 0) + " km/sa";
         if (!windDirection.isEmpty() && !"null".equalsIgnoreCase(windDirection)) {
             windText += " " + windDirection;
