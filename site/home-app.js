@@ -1,3 +1,5 @@
+const __hideEmptyBadges=()=>{document.querySelectorAll('[class*="badge"],[class*="Badge"]').forEach(el=>{const text=(el.textContent||"").replace(/\u00a0/g," ").trim();if(!text)el.hidden=true;else if(el.hidden&&el.dataset.emptyBadgeHidden==="1"){el.hidden=false;delete el.dataset.emptyBadgeHidden;}})};const __emptyBadgeObserver=new MutationObserver(__hideEmptyBadges);__emptyBadgeObserver.observe(document.body,{subtree:true,childList:true,characterData:true});__hideEmptyBadges();
+
 
     // Keep the full F180 payload for long-range charts and briefings; the dedicated 72-hour table reads /gfs/f72 separately.
     const DATA_API_BASE=(window.ISTANBUL_GFS_API_BASE||window.location.origin);
