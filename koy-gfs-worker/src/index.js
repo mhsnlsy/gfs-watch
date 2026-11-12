@@ -609,8 +609,9 @@ export function buildKoyInteractiveSvg(comparison) {
     const plotWidth = panelWidth - 73;
     const plotHeight = 146;
     const valuesBySeries = pointsBySeries.map(points => points.map(point => svgNumber(point?.[spec.field])));
-    const allValues = valuesBySeries.flat().filter(value => value !== null);
-    const axis = buildPanelAxis(spec.field, valuesBySeries);
+    const axis = buildPanelAxis(spec.field, valuesBySeries, {
+      includeOlderSeriesForScale: false,
+    });
     const { low, high, ticks, latestPeak, latestTrough } = axis;
 
     const xPositions = offsets.map(offset => plotX + xRatio(offset) * plotWidth);
