@@ -290,11 +290,12 @@
 }
 
 
-/* Desktop only: enlarge the complete MeteoPT GFS panel by 20%.
-   Mobile and touch layouts retain their existing dimensions. */
+/* Desktop: keep the MeteoPT GFS panel at its actual grid width.
+   The previous 1.2 zoom enlarged the CSS box beyond the viewport and
+   caused the production desktop overflow check to fail. */
 @media (min-width: 851px) and (pointer: fine) {
   #meteopt-gfs-table {
-    zoom: 1.2;
+    zoom: 1;
   }
 }
 
