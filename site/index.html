@@ -106,7 +106,7 @@
 .pressure-forecast-list li{padding:4px 0;font-size:12px;line-height:1.35}
 .pressure-forecast-list em{font-style:normal;opacity:.65}
 .pressure-current .pressure-list{margin-top:4px}
-.pressure-impact{margin-top:12px;padding:10px 12px;border-radius:10px;background:rgba(255,255,255,.045);font-size:12px;line-height:1.45}
+.pressure-trend{margin-top:12px;padding:10px 12px;border-radius:10px;background:rgba(255,255,255,.035);font-size:12px;line-height:1.45}.pressure-impact{margin-top:12px;padding:10px 12px;border-radius:10px;background:rgba(255,255,255,.045);font-size:12px;line-height:1.45}
 @media(max-width:760px){.pressure-summary{grid-template-columns:1fr}.pressure-center-dashboard{padding:14px}}
 </style></head>
 <body>
@@ -219,7 +219,7 @@
                   <div class="pressure-summary-title">📍 Anlık GFS merkezleri</div>
                   <ul class="pressure-list" id="pressure-findings"><li class="loading">Analiz yükleniyor…</li></ul>
                 </div>
-                <div class="pressure-impact"><strong>İstanbul özeti:</strong> 0–120 saatlik GFS basınç merkezi tahmini, her yeni GFS döngüsünde otomatik yenilenir.</div>
+                <div class="pressure-trend" id="pressure-trend"><strong>Hareket ve trend:</strong> GFS merkez hareketi ve basınç eğilimi hesaplanıyor…</div><div class="pressure-impact"><strong>İstanbul özeti:</strong> 0–120 saatlik GFS basınç merkezi tahmini, her yeni GFS döngüsünde otomatik yenilenir.</div>
                 <div class="pressure-explainer">Anlık merkezler NOAA GFS 0.25° deniz seviyesi basıncı analizinden; 120 saatlik merkezler modelin öngördüğü sinoptik gelişimdir. Tahmini merkezler kesin konum değil, model senaryosudur.</div>
               </article>
             </aside>
