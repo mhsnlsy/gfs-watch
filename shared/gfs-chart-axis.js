@@ -1,7 +1,8 @@
 // Shared Y-axis scale for the Istanbul and Köy GFS comparison charts.
-// Temperature and wind scales use the newest (solid) GFS cycle.
-// Precipitation uses all comparison cycles so a larger dashed-cycle peak
-// can widen the precipitation axis without changing the latest-cycle marker.
+// Temperature, 850 hPa temperature, and precipitation scales use all
+// comparison cycles so the four-cycle comparison remains visually stable.
+// Wind keeps the fixed 10 km/sa scale. Latest-cycle markers are still derived
+// exclusively from the newest series.
 // Ticks are whole numbers. Temperature and 850 hPa step by 5, wind by 10.
 // Precipitation steps by 1 (0, 1, 2, 3, …). Above 16 the labels get too dense,
 // so that panel alone widens to a step of 2.
@@ -50,10 +51,13 @@ export function buildPanelAxis(field, valuesBySeries, options = {}) {
     ? latestMin
     : null;
   const allValues = valuesBySeries.flat().filter(value => value !== null);
-  // Precipitation is deliberately scaled from every comparison cycle.
-  // Example: an older cycle peaking at 22 mm and the latest at 9.8 mm
-  // must still produce a 0–22 mm axis with 2 mm spacing.
-  const scaleValues = field === "precipitation_6h_mm" && includeOlderSeriesForScale ? allValues : latestValues;
+  // Precipitation can opt out for Köy, where only the latest cycle defines
+  // the rainfall scale. Temperature panels remain comparison-stable across
+  // all cycles so an older cold/warm cycle is not clipped from the axis.
+  const scaleValues =
+    field === "precipitation_6h_mm"
+      ? (includeOlderSeriesForScale ? allValues : latestValues)
+      : allValues;
   const scaleMax = scaleValues.length ? Math.max(...scaleValues) : null;
   const step = axisStep(field, scaleMax);
 
@@ -63,8 +67,8 @@ export function buildPanelAxis(field, valuesBySeries, options = {}) {
     if (temperature) {
       // Keep temperature charts readable around the latest cycle instead of
       // collapsing a nearly-flat forecast into a single 5-degree band.
-      low = Math.floor(Math.min(...latestValues) / step) * step - step;
-      high = Math.ceil(Math.max(...latestValues) / step) * step;
+      low = Math.floor(Math.min(...scaleValues) / step) * step;
+      high = Math.ceil(Math.max(...scaleValues) / step) * step;
     } else {
       low = 0;
       high = Math.ceil(Math.max(0, ...scaleValues) / step) * step;
