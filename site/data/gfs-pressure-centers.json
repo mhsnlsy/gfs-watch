@@ -899,7 +899,7 @@
           "pressure_hpa": 1012.4,
           "latitude": 42.5,
           "longitude": 18.0,
-          "lifecycle": "aktif"
+          "lifecycle": null
         },
         {
           "forecast_hour": 108,
@@ -907,7 +907,7 @@
           "pressure_hpa": 1011.5,
           "latitude": 40.75,
           "longitude": 15.0,
-          "lifecycle": "aktif"
+          "lifecycle": null
         }
       ],
       "movement_km": 911.6,
@@ -937,7 +937,7 @@
           "pressure_hpa": 1024.3,
           "latitude": 43.0,
           "longitude": 42.5,
-          "lifecycle": "aktif"
+          "lifecycle": null
         },
         {
           "forecast_hour": 12,
@@ -993,7 +993,7 @@
           "pressure_hpa": 1027.2,
           "latitude": 41.0,
           "longitude": 43.75,
-          "lifecycle": "aktif"
+          "lifecycle": null
         },
         {
           "forecast_hour": 54,
@@ -1017,7 +1017,7 @@
           "pressure_hpa": 1023.9,
           "latitude": 40.5,
           "longitude": 40.0,
-          "lifecycle": "aktif"
+          "lifecycle": null
         },
         {
           "forecast_hour": 78,
@@ -1065,7 +1065,7 @@
           "pressure_hpa": 1029.9,
           "latitude": 43.0,
           "longitude": 42.75,
-          "lifecycle": "aktif"
+          "lifecycle": null
         }
       ],
       "movement_km": 0.0,
@@ -1087,7 +1087,7 @@
           "pressure_hpa": 1029.2,
           "latitude": 38.25,
           "longitude": 42.75,
-          "lifecycle": "aktif"
+          "lifecycle": null
         },
         {
           "forecast_hour": 6,
@@ -1095,7 +1095,7 @@
           "pressure_hpa": 1028.6,
           "latitude": 39.75,
           "longitude": 43.0,
-          "lifecycle": "aktif"
+          "lifecycle": null
         },
         {
           "forecast_hour": 18,
@@ -1111,7 +1111,7 @@
           "pressure_hpa": 1025.0,
           "latitude": 43.0,
           "longitude": 42.25,
-          "lifecycle": "aktif"
+          "lifecycle": null
         },
         {
           "forecast_hour": 42,
@@ -1119,7 +1119,7 @@
           "pressure_hpa": 1025.5,
           "latitude": 40.5,
           "longitude": 39.75,
-          "lifecycle": "aktif"
+          "lifecycle": null
         },
         {
           "forecast_hour": 48,
@@ -1135,7 +1135,7 @@
           "pressure_hpa": 1023.9,
           "latitude": 40.5,
           "longitude": 39.0,
-          "lifecycle": "aktif"
+          "lifecycle": null
         },
         {
           "forecast_hour": 72,
@@ -1143,7 +1143,7 @@
           "pressure_hpa": 1024.1,
           "latitude": 37.25,
           "longitude": 34.25,
-          "lifecycle": "aktif"
+          "lifecycle": null
         },
         {
           "forecast_hour": 78,
@@ -1151,7 +1151,7 @@
           "pressure_hpa": 1024.1,
           "latitude": 34.25,
           "longitude": 36.0,
-          "lifecycle": "aktif"
+          "lifecycle": null
         },
         {
           "forecast_hour": 90,
@@ -1159,7 +1159,7 @@
           "pressure_hpa": 1023.4,
           "latitude": 37.25,
           "longitude": 34.25,
-          "lifecycle": "aktif"
+          "lifecycle": null
         }
       ],
       "movement_km": 755.3,
@@ -1197,7 +1197,7 @@
           "pressure_hpa": 1026.3,
           "latitude": 38.25,
           "longitude": 42.75,
-          "lifecycle": "aktif"
+          "lifecycle": null
         },
         {
           "forecast_hour": 48,
@@ -1289,7 +1289,7 @@
           "pressure_hpa": 1006.8,
           "latitude": 42.0,
           "longitude": 24.75,
-          "lifecycle": "aktif"
+          "lifecycle": null
         },
         {
           "forecast_hour": 30,
@@ -1327,7 +1327,7 @@
           "pressure_hpa": 1025.4,
           "latitude": 38.0,
           "longitude": 35.5,
-          "lifecycle": "aktif"
+          "lifecycle": null
         },
         {
           "forecast_hour": 54,
@@ -1351,7 +1351,7 @@
           "pressure_hpa": 1024.8,
           "latitude": 34.25,
           "longitude": 36.0,
-          "lifecycle": "aktif"
+          "lifecycle": null
         },
         {
           "forecast_hour": 72,
@@ -1359,7 +1359,7 @@
           "pressure_hpa": 1023.9,
           "latitude": 34.25,
           "longitude": 36.0,
-          "lifecycle": "aktif"
+          "lifecycle": null
         }
       ],
       "movement_km": 419.4,
@@ -1405,7 +1405,7 @@
           "pressure_hpa": 1030.9,
           "latitude": 45.5,
           "longitude": 24.25,
-          "lifecycle": "aktif"
+          "lifecycle": null
         },
         {
           "forecast_hour": 78,
