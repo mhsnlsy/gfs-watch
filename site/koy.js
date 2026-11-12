@@ -429,6 +429,31 @@ function renderMgmObservation(o,history,f180){
  $("freshness").classList.toggle("stale",cachedObservation);
  const currentFeels=num(o.feels_like_c)!=null?num(o.feels_like_c):feelsLike(t,rh,wind);
  $("feels-like").innerHTML=fmt(currentFeels)+'<span class="unit">°</span>';
+ const rangeSamples=Array.isArray(history && history.samples)?history.samples:[];
+ const rangeNow=Date.now(),rangeCutoff=rangeNow-24*3600000;
+ const recentRangeSamples=rangeSamples.filter(s=>{
+  const stamp=Date.parse(s.observed_at_utc||s.logged_at_utc||"");
+  return Number.isFinite(stamp)&&stamp>=rangeCutoff&&stamp<=rangeNow+300000;
+ });
+ const tempRangeEl=$("station-live-temp-range");
+ if(tempRangeEl){
+  const vals=recentRangeSamples.map(s=>num(s.temperature_2m_c)).filter(v=>v!=null);
+  if(vals.length){tempRangeEl.textContent="min "+fmt(Math.min(...vals),1)+"° · maks "+fmt(Math.max(...vals),1)+"°";tempRangeEl.hidden=false}else{tempRangeEl.hidden=true}
+ }
+ const rainRangeEl=$("station-live-rain-range");
+ if(rainRangeEl){
+  const vals=recentRangeSamples.map(s=>num(s.precipitation_1h_mm)).filter(v=>v!=null&&v>=0);
+  if(num(rain)!=null)vals.push(num(rain));
+  if(vals.length){rainRangeEl.textContent="min "+fmt(Math.min(...vals),1)+" mm · maks "+fmt(Math.max(...vals),1)+" mm";rainRangeEl.hidden=false}else{rainRangeEl.hidden=true}
+ }
+ const feelsLiveRangeEl=$("station-live-feels-range");
+ if(feelsLiveRangeEl){
+  const vals=recentRangeSamples.map(s=>{
+   const stored=num(s.feels_like_c);
+   return stored!=null?stored:feelsLike(num(s.temperature_2m_c),num(s.humidity_percent),num(s.wind_speed_10m_kmh));
+  }).filter(v=>v!=null);
+  if(vals.length){feelsLiveRangeEl.textContent="min "+fmt(Math.min(...vals),1)+"° · maks "+fmt(Math.max(...vals),1)+"°";feelsLiveRangeEl.hidden=false}else{feelsLiveRangeEl.hidden=true}
+ }
  const feelsRangeEl=$("feels-like-24h");
  if(feelsRangeEl){
   const now=Date.now(),cutoff=now-24*3600000;
