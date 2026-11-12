@@ -1489,45 +1489,46 @@ html.ios12 .backdrop-filter{display:none}
       max-width:100%!important;
     }
     #notifications-list .notification-card.notification-chart-only{
+      display:block!important;
       box-sizing:border-box!important;
       width:100%!important;
       max-width:100%!important;
       min-width:0!important;
       margin:0!important;
-      padding:0!important;
+      padding:12px!important;
       overflow:hidden!important;
-      background:#0A1B29!important;
-      border-color:#17384A!important;
+      border:1px solid rgba(125,211,215,.24)!important;
+      border-radius:18px!important;
+      background:linear-gradient(145deg,rgba(7,34,51,.96),rgba(5,25,39,.98))!important;
+      box-shadow:none!important;
     }
-    #notifications-list .notification-card.notification-chart-only .notification-images{
+    #notifications-list .notification-card.notification-chart-only .notification-images,
+    #notifications-list .notification-card.notification-chart-only .gfs-interactive-chart{
+      display:block!important;
+      width:100%!important;
+      min-width:0!important;
+      max-width:100%!important;
+      margin:0!important;
+      box-sizing:border-box!important;
+      background:transparent!important;
+    }
+    #notifications-list .notification-card.notification-chart-only .notification-image-item{
+      display:block!important;
+      width:100%!important;
+      max-width:100%!important;
+      min-width:0!important;
+      margin:0!important;
+      padding:0!important;
+      background:transparent!important;
+    }
+    #notifications-list .notification-card.notification-chart-only .gfs-mobile-panel-stack{
       display:grid!important;
       grid-template-columns:minmax(0,1fr)!important;
       width:100%!important;
-      max-width:100%!important;
       min-width:0!important;
+      max-width:100%!important;
       margin:0!important;
       padding:0!important;
-      gap:0!important;
-      background:#0A1B29!important;
-    }
-    #notifications-list .notification-card.notification-chart-only .notification-image-item{
-      display:flex!important;
-      align-items:center!important;
-      justify-content:center!important;
-      width:100%!important;
-      max-width:100%!important;
-      min-width:0!important;
-      margin:0!important;
-      padding:0!important;
-      background:#0A1B29!important;
-    }
-    #notifications-list .notification-card.notification-chart-only .gfs-interactive-chart,
-    #notifications-list .notification-card.notification-chart-only .gfs-mobile-panel-stack{
-      width:90%!important;
-      max-width:90%!important;
-      min-width:0!important;
-      margin-left:auto!important;
-      margin-right:auto!important;
     }
     #notifications-list .notification-card.notification-chart-only .gfs-mobile-panel-host{
       width:100%!important;
