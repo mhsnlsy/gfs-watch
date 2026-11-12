@@ -67,7 +67,7 @@ def main() -> None:
         'id="meteopt-table-body"',
         '<th>Steps</th><th>Date/Hour (TSİ)</th><th>T.2m</th><th>Prec.</th><th>W.10m</th><th>T.850</th><th>W.850</th><th>RH.2m',
         '41.0901°N 28.9436°E',
-        'https://www.meteopt.com/modelos/ecmwf?lat=41.0901&lon=28.9436',
+        'https://www.meteopt.com/modelos/ecmwf?lat=41.0901',
     )
     missing_ecmwf = [item for item in ecmwf_required if item not in ecmwf_page]
     if missing_ecmwf:
