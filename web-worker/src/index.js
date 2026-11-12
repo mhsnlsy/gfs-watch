@@ -252,6 +252,7 @@ export default {
     }
 
     // Dedicated ECMWF page. GFS routing and GFS behavior remain unchanged.
+    // ECMWF live-data verification: service binding now refreshes stale MeteoPT point data.
     // Keep this route explicit so /ecmwf is served as a first-class page on the custom domain.
     if (path === "/ecmwf" || path === "/ecmwf/") {
       const assetUrl = new URL("/ecmwf/index.html", url);
