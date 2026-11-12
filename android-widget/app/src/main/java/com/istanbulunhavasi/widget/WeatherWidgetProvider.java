@@ -654,16 +654,9 @@ public class WeatherWidgetProvider extends AppWidgetProvider {
         }
     }
 
-    private static double dewPoint(double temp, double humidity) {
-        if (humidity <= 0 || humidity > 100) return Double.NaN;
-        double a = 17.27, b = 237.7;
-        double alpha = Math.log(humidity / 100.0) + (a * temp) / (b + temp);
-        return (b * alpha) / (a - alpha);
-    }
-
     private static double dewPoint(double temperature, double humidity) {
-        if (Double.isNaN(temperature) || Double.isNaN(humidity)) return Double.NaN;
-        double gamma = Math.log(Math.max(humidity, 1.0) / 100.0)
+        if (Double.isNaN(temperature) || Double.isNaN(humidity) || humidity <= 0 || humidity > 100) return Double.NaN;
+        double gamma = Math.log(humidity / 100.0)
             + (17.27 * temperature) / (237.7 + temperature);
         return (237.7 * gamma) / (17.27 - gamma);
     }
