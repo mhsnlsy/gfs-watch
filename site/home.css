@@ -5107,3 +5107,41 @@ main.shell { padding-bottom:max(12px,env(safe-area-inset-bottom)); }
     line-height:1.25!important;
   }
 }
+
+
+/* 20261112 MOBILE HORIZONTAL-LOCK — never allow the page to slide sideways.
+   Keep the document and both dashboard columns inside the physical viewport. */
+@media (max-width:1199px), (pointer:coarse){
+  html,
+  body{
+    width:100%!important;
+    max-width:100%!important;
+    overflow-x:hidden!important;
+  }
+  body{
+    margin-left:0!important;
+    margin-right:0!important;
+  }
+  .shell,
+  main.shell,
+  header.shell{
+    width:100%!important;
+    max-width:100%!important;
+    min-width:0!important;
+    box-sizing:border-box!important;
+    margin-left:0!important;
+    margin-right:0!important;
+  }
+  .dashboard-top,
+  .dashboard-left,
+  .dashboard-right,
+  #gfs-model-view,
+  #ecmwf-model-view,
+  #bildirimler,
+  .water-gfs-layout{
+    width:100%!important;
+    max-width:100%!important;
+    min-width:0!important;
+    box-sizing:border-box!important;
+  }
+}
