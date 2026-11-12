@@ -125,8 +125,6 @@ public class WeatherWidgetProvider extends AppWidgetProvider {
         if (!windDirection.isEmpty() && !"null".equalsIgnoreCase(windDirection)) {
             windText += " " + windDirection;
         }
-        views.setTextViewText(R.id.details, "Rüzgâr " + windText + " · Nem " + fmt(humidity, 0) + "%");
-        views.setTextViewText(R.id.rain_now, "Anlık yağış " + fmt(rain, 1) + " mm");
 
         String observed = station.optString("observed_at_utc", "");
         boolean stale = station.optBoolean("is_stale", false)
