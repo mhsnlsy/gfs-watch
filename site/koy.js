@@ -442,8 +442,10 @@ function renderMgmObservation(o,history,f180){
   const min24=values.length?Math.min(...values):null;
   const max24=values.length?Math.max(...values):null;
   if(min24!=null&&max24!=null){
+   feelsRangeEl.dataset.min=fmt(min24,1);
+   feelsRangeEl.dataset.max=fmt(max24,1);
    feelsRangeEl.hidden=false;
-   feelsRangeEl.textContent="24 sa · min "+fmt(min24,1)+"° · maks "+fmt(max24,1)+"°";
+   feelsRangeEl.textContent="";
   }else{
    feelsRangeEl.hidden=true;
    feelsRangeEl.textContent="";
