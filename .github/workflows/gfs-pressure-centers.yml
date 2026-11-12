@@ -11,6 +11,10 @@ on:
 permissions:
   contents: write
 
+concurrency:
+  group: gfs-pressure-centers
+  cancel-in-progress: false
+
 jobs:
   analyze:
     runs-on: ubuntu-latest
