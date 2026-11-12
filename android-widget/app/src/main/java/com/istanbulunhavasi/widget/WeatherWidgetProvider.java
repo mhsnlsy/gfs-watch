@@ -39,8 +39,10 @@ import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 
 public class WeatherWidgetProvider extends AppWidgetProvider {
-    private static final String STATION_URL = "https://istanbulunhavasi.com/api/stations/eyupsultan";
-    private static final String GFS_URL = "https://gfs-watch-istanbul-gfs.muhsin-ulusoy.workers.dev/gfs/latest";
+    private static final String STATION_URL = "https://gfs-watch-stations.muhsin-ulusoy.workers.dev/api/stations/eyupsultan";
+    private static final String STATION_FALLBACK_URL = "https://istanbulunhavasi.com/api/stations/eyupsultan";
+    private static final String GFS_URL = "https://gfs-watch-web.muhsin-ulusoy.workers.dev/gfs/latest";
+    private static final String GFS_FALLBACK_URL = "https://gfs-watch-istanbul-gfs.muhsin-ulusoy.workers.dev/gfs/latest";
     private static final ZoneId ISTANBUL = ZoneId.of("Europe/Istanbul");
     private static final ZoneOffset UTC = ZoneOffset.UTC;
     private static final Locale TR = Locale.forLanguageTag("tr-TR");
@@ -58,8 +60,8 @@ public class WeatherWidgetProvider extends AppWidgetProvider {
             try {
                 JSONObject stationDoc = null;
                 JSONObject forecastDoc = null;
-                try { stationDoc = new JSONObject(fetch(STATION_URL)); } catch (Exception ignored) { }
-                try { forecastDoc = new JSONObject(fetch(GFS_URL)); } catch (Exception ignored) { }
+                try { stationDoc = fetchJson(STATION_URL, STATION_FALLBACK_URL); } catch (Exception ignored) { }
+                try { forecastDoc = fetchJson(GFS_URL, GFS_FALLBACK_URL); } catch (Exception ignored) { }
 
                 RemoteViews views = buildViews(context, stationDoc, forecastDoc);
                 for (int id : ids) manager.updateAppWidget(id, views);
@@ -532,6 +534,22 @@ public class WeatherWidgetProvider extends AppWidgetProvider {
         return new int[]{R.id.day1_temp, R.id.day2_temp, R.id.day3_temp, R.id.day4_temp, R.id.day5_temp};
     }
 
+    private static JSONObject fetchJson(String primary, String fallback) throws Exception {
+        Exception first = null;
+        try {
+            return new JSONObject(fetch(primary));
+        } catch (Exception error) {
+            first = error;
+        }
+        if (fallback != null && !fallback.equals(primary)) {
+            try {
+                return new JSONObject(fetch(fallback));
+            } catch (Exception ignored) {
+            }
+        }
+        throw first != null ? first : new IllegalStateException("Veri alınamadı");
+    }
+
     private static String fetch(String urlString) throws Exception {
         URL url = new URL(urlString + (urlString.contains("?") ? "&" : "?") + "t=" + System.currentTimeMillis());
         HttpURLConnection connection = (HttpURLConnection) url.openConnection();
@@ -541,7 +559,8 @@ public class WeatherWidgetProvider extends AppWidgetProvider {
         connection.setRequestProperty("Accept", "application/json");
         connection.setRequestProperty("Cache-Control", "no-cache");
         connection.setRequestProperty("Pragma", "no-cache");
-        connection.setRequestProperty("User-Agent", "IstanbulHavasiAndroidWidget/0.2");
+        connection.setRequestProperty("User-Agent", "Mozilla/5.0 (Linux; Android) AppleWebKit/537.36 IstanbulHavasi/1.0");
+        connection.setRequestProperty("Accept-Encoding", "gzip");
         try {
             int status = connection.getResponseCode();
             if (status < 200 || status >= 300) throw new IllegalStateException("HTTP " + status + " · " + url.getHost());
