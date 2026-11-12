@@ -112,26 +112,38 @@
   .gfs-pressure-panel{margin-top:0}
 }
 </style><script>
-(function(){
-  const panel=document.getElementById("basinc");
-  const main=document.querySelector("main.shell");
-  if(!panel || !main) return;
-  const originalParent=panel.parentElement;
-  const originalNext=panel.nextElementSibling;
-  const mq=window.matchMedia("(max-width:760px)");
-  const apply=()=>{
-    if(mq.matches){
-      if(panel.parentElement!==main) main.appendChild(panel);
-    }else{
-      if(panel.parentElement!==originalParent){
-        if(originalNext && originalNext.parentElement===originalParent) originalParent.insertBefore(panel,originalNext);
-        else originalParent.appendChild(panel);
+document.addEventListener("DOMContentLoaded", () => {
+  const panel = document.getElementById("basinc");
+  const main = document.querySelector("main.shell");
+  if (!panel || !main) return;
+
+  const originalParent = panel.parentElement;
+  const originalNext = panel.nextElementSibling;
+  const mq = window.matchMedia("(max-width:760px)");
+
+  const apply = () => {
+    if (mq.matches) {
+      // Mobil: Basınç Merkezleri, ENKA kameranın hemen üstünde.
+      const camera = document.getElementById("enka-kamera");
+      if (camera && camera.parentElement === main) {
+        main.insertBefore(panel, camera);
+      } else {
+        main.appendChild(panel);
+      }
+    } else if (panel.parentElement !== originalParent) {
+      // Masaüstü: mevcut dashboard konumunu geri yükle.
+      if (originalNext && originalNext.parentElement === originalParent) {
+        originalParent.insertBefore(panel, originalNext);
+      } else {
+        originalParent.appendChild(panel);
       }
     }
   };
+
   apply();
-  mq.addEventListener ? mq.addEventListener("change",apply) : mq.addListener(apply);
-})();
+  if (mq.addEventListener) mq.addEventListener("change", apply);
+  else mq.addListener(apply);
+});
 </script></head>
 <body>
   <header class="shell topbar">
