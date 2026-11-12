@@ -55,7 +55,9 @@ export function buildPanelAxis(field, valuesBySeries) {
   let high = step;
   if (latestValues.length) {
     if (temperature) {
-      low = Math.floor(Math.min(...latestValues) / step) * step;
+      // Keep temperature charts readable around the latest cycle instead of
+      // collapsing a nearly-flat forecast into a single 5-degree band.
+      low = Math.floor(Math.min(...latestValues) / step) * step - step;
       high = Math.ceil(Math.max(...latestValues) / step) * step;
     } else {
       low = 0;
