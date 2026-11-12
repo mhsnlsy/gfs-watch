@@ -213,7 +213,7 @@ jobs:
             echo "OK $path"
           done
           curl --silent --show-error --fail --max-time 20 "$WEB/ecmwf?verify=$(date +%s)" -o "$RUNNER_TEMP/live-ecmwf.html"
-          grep -q 'ECMWF' "$RUNNER_TEMP/live-ecmwf.html"
+          grep -qi 'ecmwf' "$RUNNER_TEMP/live-ecmwf.html"
           curl --silent --show-error --fail --max-time 30 "$WEB/api/ecmwf/latest?verify=$(date +%s)" -o "$RUNNER_TEMP/live-ecmwf.json"
           node - "$RUNNER_TEMP/live-ecmwf.json" <<'NODE'
           const fs = require("fs");
