@@ -1777,17 +1777,17 @@ html,body{
 }
 
 
-/* 20261109: requested final typography scale for both MeteoPT tables.
-   Desktop: 14px data / 15px column headers.
-   Tablet + mobile: 11px; narrow mobile (<=390px): 12px. */
+/* 20261112: requested final typography scale — +1px from the previous MeteoPT table size.
+   Desktop: 15px data / 16px column headers.
+   Tablet + mobile: 12px; narrow mobile (<=390px): 13px. */
 @media (min-width: 851px) {
   #meteopt-gfs-table .meteopt-data-table,
   #meteopt-gfs-table .meteopt-data-table td,
   #meteopt-gfs-table .meteopt-data-table .meteopt-value {
-    font-size: 14px !important;
+    font-size: 15px !important;
   }
   #meteopt-gfs-table .meteopt-data-table th {
-    font-size: 15px !important;
+    font-size: 16px !important;
   }
 }
 @media (max-width: 850px) {
@@ -1795,7 +1795,7 @@ html,body{
   #meteopt-gfs-table .meteopt-data-table th,
   #meteopt-gfs-table .meteopt-data-table td,
   #meteopt-gfs-table .meteopt-data-table .meteopt-value {
-    font-size: 11px !important;
+    font-size: 12px !important;
   }
 }
 @media (max-width: 390px) {
@@ -1803,7 +1803,7 @@ html,body{
   #meteopt-gfs-table .meteopt-data-table th,
   #meteopt-gfs-table .meteopt-data-table td,
   #meteopt-gfs-table .meteopt-data-table .meteopt-value {
-    font-size: 12px !important;
+    font-size: 13px !important;
   }
 }
 
