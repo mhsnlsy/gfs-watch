@@ -1171,7 +1171,16 @@ const __hideEmptyBadges=()=>{document.querySelectorAll('[class*="badge"],[class*
         if(numeric(rain1h)){
           rainBriefCurrent.textContent=rain1h>0?"Anlık istasyon yağışı: "+fmt(rain1h,1)+" mm / son 1 saat":"Yağış yok";
         }else{
-          rainBriefCurrent.textContent="Anlık istasyon yağış ölçümü bekleniyor.";
+          const windSpeed=Number(station&&station.wind_speed_10m_kmh);
+          const windCardinal=String(station&&station.wind_direction_cardinal||"").toUpperCase().trim();
+          let windBadge="";
+          if(Number.isFinite(windSpeed)&&windSpeed>15){
+            if(windCardinal==="N") windBadge="Rüzgarlı";
+            else if(windCardinal==="NW") windBadge="Karayel hakim";
+            else if(windCardinal==="NE") windBadge="Poyraz hakim";
+            else if(windCardinal==="S"||windCardinal==="SW") windBadge="Lodos hakim";
+          }
+          rainBriefCurrent.textContent=windBadge||"Yağış yok";
         }
       }
       const rainDetail=$("rain-detail");
