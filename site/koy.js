@@ -495,11 +495,14 @@ function renderMgmObservation(o,history,f180){
  else $("rain-brief-current").textContent="Çanakçı MGM ölçümünde son 1 saatte yağış yok.";
  const pts=pointsOf(f180||{},72),future=pts.filter(p=>num(p.precipitation_6h_mm)>0.1);
  if(future.length){
+  const firstRain=pts.find(p=>num(p.precipitation_6h_mm)>0.1);
   const firstRainIndex=pts.findIndex(p=>num(p.precipitation_6h_mm)>0.1);
   const firstDry=pts.slice(firstRainIndex+1).find(p=>{const rain=num(p.precipitation_6h_mm);return rain!=null&&Number(rain.toFixed(1))===0;});
-  $("rain-brief-forecast").textContent=firstDry
-   ?"MeteoPT GFS tahminine göre ilk kuru zaman: "+tsGfsValid(firstDry.valid_time_utc)+"."
-   :"MeteoPT GFS tahminine göre yağış tahmin süresinin sonuna kadar devam ediyor.";
+  $("rain-brief-forecast").textContent=precipitationPhase==="none"
+   ?"MeteoPT GFS tahminine göre ilk yağışlı zaman: "+tsGfsValid(firstRain.valid_time_utc)+"."
+   :firstDry
+    ?"MeteoPT GFS tahminine göre ilk kuru zaman: "+tsGfsValid(firstDry.valid_time_utc)+"."
+    :"MeteoPT GFS tahminine göre yağış tahmin süresinin sonuna kadar devam ediyor.";
  }else{
   $("rain-brief-forecast").textContent="MeteoPT GFS tahmininde önümüzdeki 72 saatte anlamlı yağış görünmüyor.";
  }
