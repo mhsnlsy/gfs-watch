@@ -1038,6 +1038,52 @@ const __hideEmptyBadges=()=>{document.querySelectorAll('[class*="badge"],[class*
       return Number.isFinite(at) ? at : null;
     }
 
+    function updateStationLiveRanges(station) {
+      const rangeText=(min,max,unit)=>"min "+fmt(min,1)+unit+" · maks "+fmt(max,1)+unit;
+      const history=activeStation==="enka"?enkaStationHistorySamples:activeStation==="sisli"?sisliStationHistorySamples:eyupsultanStationHistorySamples;
+      const rows=Array.isArray(history)?history:[];
+      const now=Date.now(),cutoff=now-86400000;
+      const recent=rows.filter(s=>{
+        const t=Date.parse(s.observed_at_utc||s.logged_at_utc||"");
+        return Number.isFinite(t)&&t>=cutoff&&t<=now+300000;
+      });
+      const tempValues=recent.map(s=>Number(s.temperature_2m_c)).filter(Number.isFinite);
+      const tempEl=$("station-live-temp-range");
+      if(tempEl){
+        if(tempValues.length){tempEl.textContent=rangeText(Math.min(...tempValues),Math.max(...tempValues),"°");tempEl.hidden=false}
+        else{tempEl.textContent="";tempEl.hidden=true}
+      }
+
+      const rainHistory=activeStation==="enka"?sisliStationRainHistorySamples:activeStation==="eyupsultan"?eyupsultanStationRainHistorySamples:sisliStationRainHistorySamples;
+      const rainRows=Array.isArray(rainHistory)&&rainHistory.length?rainHistory:rows;
+      const rainValues=rainRows.filter(s=>{
+        const t=Date.parse(s.observed_at_utc||s.logged_at_utc||"");
+        const mm=Number(s.precipitation_1h_mm);
+        return Number.isFinite(t)&&t>=cutoff&&t<=now+300000&&Number.isFinite(mm)&&mm>=0;
+      }).map(s=>Number(s.precipitation_1h_mm));
+      if(station&&Number.isFinite(Number(station.precipitation_1h_mm)))rainValues.push(Number(station.precipitation_1h_mm));
+      const rainEl=$("station-live-rain-range");
+      if(rainEl){
+        if(rainValues.length){rainEl.textContent=rangeText(Math.min(...rainValues),Math.max(...rainValues)," mm");rainEl.hidden=false}
+        else{rainEl.textContent="";rainEl.hidden=true}
+      }
+
+      const feelsEl=$("feels-like-24h");
+      if(feelsEl){
+        const archivedMin=station&&numeric(station.feels_like_24h_min_c)?Number(station.feels_like_24h_min_c):null;
+        const archivedMax=station&&numeric(station.feels_like_24h_max_c)?Number(station.feels_like_24h_max_c):null;
+        const feelsValues=recent.map(s=>{
+          const stored=Number(s.feels_like_c);
+          return Number.isFinite(stored)?stored:calculateFeelsLike(Number(s.temperature_2m_c),Number(s.humidity_percent),Number(s.wind_speed_10m_kmh));
+        }).filter(Number.isFinite);
+        const minFeels=archivedMin!==null&&archivedMax!==null?archivedMin:(feelsValues.length?Math.min(...feelsValues):null);
+        const maxFeels=archivedMin!==null&&archivedMax!==null?archivedMax:(feelsValues.length?Math.max(...feelsValues):null);
+        if(minFeels!==null&&maxFeels!==null){
+          feelsEl.dataset.min=fmt(minFeels,1);feelsEl.dataset.max=fmt(maxFeels,1);feelsEl.hidden=false;feelsEl.textContent="";
+        }else{feelsEl.hidden=true;feelsEl.textContent=""}
+      }
+    }
+
     function updateStation24hDiff(station) {
       const el = $("station-24h-diff");
       
@@ -1166,6 +1212,7 @@ const __hideEmptyBadges=()=>{document.querySelectorAll('[class*="badge"],[class*
         const sourceLabel=station.observation_method==="enka-camera-overlay"?"ENKA · OCR":station.station_id==="18101"?"MGM 18101":station.station_id==="18401"?"MGM 18401":station.station_id==="ENKA-BALMUMCU-WEATHERLINK"||station.observation_method==="weatherlink-currentvalues-html"?"ENKA WeatherLink":(station.source||"İstasyon");
         const displaySourceLabel=enkaWaitingForOcr?"ENKA · OCR bekleniyor":sourceLabel;
         $("station-observation-meta").textContent=enkaWaitingForOcr?"Güncel ölçüm bekleniyor · kamera OCR devreye alınıyor":(stale?"Gecikmeli ölçüm":"Son ölçüm")+" · "+observedText+" TSİ · "+ageText+" · "+displaySourceLabel;
+        updateStationLiveRanges(isFresh&&!enkaWaitingForOcr?station:null);
         updateStation24hDiff(isFresh&&!enkaWaitingForOcr?station:null);
         $("freshness").textContent=enkaWaitingForOcr?"OCR BEKLENİYOR":stale?"ÖLÇÜM ESKİ":"CANLI ÖLÇÜM";
         $("freshness").classList.toggle("stale",stale||enkaWaitingForOcr);
@@ -1174,6 +1221,7 @@ const __hideEmptyBadges=()=>{document.querySelectorAll('[class*="badge"],[class*
         if(stale)alert.textContent=enkaWaitingForOcr?"⚠ ENKA WeatherLink güncel değil. Kamera OCR ölçümü bekleniyor.":observedValid?"⚠ "+sourceLabel+" veri kaynağı güncel ölçüm sağlamıyor.":"⚠ İstasyon ölçüm zamanı doğrulanamadı; veri zaman damgası kontrol edilemiyor.";
       }else{
         $("station-observation-meta").textContent=stationName+" istasyon verisine şu anda ulaşılamıyor.";
+        updateStationLiveRanges(null);
         updateStation24hDiff(null);
         $("freshness").textContent="İSTASYON VERİSİ YOK";
         $("freshness").classList.add("stale");
