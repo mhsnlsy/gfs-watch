@@ -123,6 +123,7 @@ const heavy = buildKoyInteractiveSvg({
   })),
 });
 const heavyPrecip = axisTicks(heavy.body, "precipitation");
+// Köy precipitation scaling is intentionally latest-cycle-only.
 assert.equal(buildPanelAxis("precipitation_6h_mm", [[22], [1], [1], [9.8]], { includeOlderSeriesForScale: false }).step, 1);
 assert.deepEqual(heavyPrecip.slice().reverse(), ["0", "1", "2", "3", "4", "5", "6", "7", "8", "9", "10", "11"]);
 assert.ok(!heavyPrecip.includes("9,8"));
