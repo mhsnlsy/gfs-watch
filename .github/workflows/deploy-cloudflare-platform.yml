@@ -208,7 +208,7 @@ jobs:
           console.log(JSON.stringify(doc));
           NODE
 
-          for path in / /koy.html /gfs-api-config.js /data/ecmwf/latest.json; do
+          for path in / /ecmwf /koy.html /gfs-api-config.js /data/ecmwf/latest.json; do
             curl --silent --show-error --fail --max-time 20 "$WEB$path" -o /dev/null
             echo "OK $path"
           done
