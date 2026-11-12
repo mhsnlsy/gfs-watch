@@ -105,7 +105,7 @@ const modestTemp = axisTicks(modest.body, "temperature");
 const modest850 = axisTicks(modest.body, "temperature_850");
 const modestWind = axisTicks(modest.body, "wind_10m");
 assert.equal(buildPanelAxis("precipitation_6h_mm", [[4], [4], [4], [9.8]], { includeOlderSeriesForScale: false }).step, 1);
-assert.deepEqual(modestPrecip.slice().reverse(), ["0", "1", "2", "3", "4", "5", "6", "7", "8", "9", "10"]);
+assert.deepEqual(modestPrecip.slice().reverse(), ["0", "1", "2", "3", "4", "5", "6", "7", "8", "9", "10", "11"]);
 assertIntegerTicks(modestPrecip, 1, { start: 0, nonnegative: true });
 assertIntegerTicks(modestTemp, 5);
 assert.ok(modestTemp.includes("5") && modestTemp.includes("15"));
