@@ -304,7 +304,7 @@
           const dp=Number(t.pressure_change_hpa);
           const trendText=t.type==="low"?(dp<=-1?"güçleniyor":dp>=1?"zayıflıyor":"belirgin değişmiyor"):(dp>=1?"güçleniyor":dp<=-1?"zayıflıyor":"belirgin değişmiyor");
           const label=t.type==="low"?"Siklon":"Yüksek basınç";
-          parts.push("<span><strong>"+label+":</strong> "+trendText+" ("+dp.toFixed(1)+" hPa / 120 saat); "+Number(t.movement_km).toFixed(0)+" km "+esc(t.movement_direction)+" hareket.</span>");
+          parts.push("<span><strong>"+label+":</strong> "+esc(t.lifecycle||trendText)+" ("+dp.toFixed(1)+" hPa / 120 saat); "+Number(t.movement_km).toFixed(0)+" km "+esc(t.movement_direction)+" hareket; tepe adımı +"+Number(t.peak_forecast_hour||0)+" saat.</span>");
         });
         trend.innerHTML="<strong>Hareket ve trend:</strong> "+(parts.length?parts.slice(0,4).join(" "):"120 saatlik merkez hareketi için yeterli iz bulunamadı.");
       }
