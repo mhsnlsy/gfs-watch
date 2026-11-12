@@ -86,7 +86,7 @@ def main() -> None:
         if geometry not in ecmwf_app:
             raise AssertionError("ECMWF renderer is missing homepage GFS parity rule: " + geometry)
     worker = (ROOT / "istanbul-gfs-worker" / "src" / "index.js").read_text(encoding="utf-8")
-    if "api.meteopt.com/ecmwf/json" not in worker:
+    if "METEOPT_ECMWF_API" not in worker:
         raise AssertionError("ECMWF runtime must remain on the MeteoPT ECMWF source path.")
 
     missing = [item for item in required if item not in website_contract]
