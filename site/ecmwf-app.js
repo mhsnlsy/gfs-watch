@@ -79,116 +79,134 @@
   }
 
   function buildSvg(runs) {
-    const timeline=commonTimeline(runs);
-    if(!timeline.length) throw new Error("ECMWF döngülerinin ortak geçerlilik saatleri bulunamadı.");
+    const ordered = (Array.isArray(runs) ? runs : []).filter(Boolean).slice().sort((a,b)=>Date.parse(a.run_id_utc)-Date.parse(b.run_id_utc)).slice(-4);
+    if (!ordered.length) throw new Error("ECMWF döngüsü bulunamadı.");
+
+    const series = ordered.map((run,index) => ({
+      run,
+      color: COLORS.slice(-ordered.length)[index],
+      points: new Map((Array.isArray(run.forecasts)?run.forecasts:[])
+        .filter(p=>p && p.valid_time_utc)
+        .map(p=>[new Date(p.valid_time_utc).toISOString().slice(0,16),p]))
+    }));
+    let common=[...series[series.length-1].points.keys()];
+    for(const item of series.slice(0,-1)) common=common.filter(k=>item.points.has(k));
+    common.sort();
+    if(common.length<2) throw new Error("ECMWF döngülerinin ortak geçerlilik saatleri bulunamadı.");
+    const firstMs=Date.parse(common[0]+":00Z");
+    const validKeys=common.filter(k=>Date.parse(k+":00Z")<=firstMs+180*3600000);
+    const pointsBySeries=series.map(s=>validKeys.map(k=>s.points.get(k)));
+    const dates=validKeys.map(k=>new Date(k+":00Z"));
+    const offsets=dates.map(d=>(d.getTime()-firstMs)/3600000);
+    const localLabels=dates.map(utc=>({
+      label:tsLabel(utc.toISOString()),
+      utcLabel:utcLabel(utc.toISOString())
+    }));
 
     const W=1152,H=838,panelWidth=505,panelHeight=250;
     const panelLeft=[55,592],panelTop=[214,493];
+    const firstOffset=offsets[0];
+    const spanHours=offsets[offsets.length-1]-firstOffset;
+    const xMin=-1,xMax=spanHours+Math.max(1,spanHours*.015);
+    const xRatio=v=>(v-xMin)/(xMax-xMin);
+    const FONT="system-ui,-apple-system,BlinkMacSystemFont,Segoe UI,sans-serif";
     const specs=[
-      {id:"temperature",title:"2 m Sıcaklık",unit:"°C",field:"temperature"},
-      {id:"temperature_850",title:"850 hPa Sıcaklık",unit:"°C",field:"temperature_850"},
-      {id:"precipitation",title:"6 Saatlik Yağış",unit:"mm",field:"precipitation"},
-      {id:"wind_10m",title:"10 m Rüzgâr",unit:"km/sa",field:"wind"}
+      {id:"temperature",field:"temperature_2m_c",title:"Sıcaklık",unit:"°C"},
+      {id:"temperature_850",field:"temperature_850hpa_c",title:"850 hPa sıcaklık",unit:"°C"},
+      {id:"precipitation",field:"precipitation_interval_mm",title:"Yağış",unit:"mm / 3 saat"},
+      {id:"wind_10m",field:"wind_speed_10m_kmh",title:"10 m rüzgâr hızı",unit:"km/sa"}
+    ];
+    const escXml=v=>String(v??"").replace(/[&<>"']/g,c=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&apos;"}[c]));
+    const numeric=v=>v===null||v===undefined||v===""?null:(Number.isFinite(Number(v))?Number(v):null);
+    const axis=(field,valuesBySeries)=>{
+      const latest=(valuesBySeries[valuesBySeries.length-1]||[]).filter(v=>v!==null);
+      const all=valuesBySeries.flat().filter(v=>v!==null);
+      const step=field==="precipitation_interval_mm"?(Math.max(...all,0)>16?2:1):(field==="wind_speed_10m_kmh"?10:5);
+      let low=0,high=step;
+      const temp=field==="temperature_2m_c"||field==="temperature_850hpa_c";
+      if(temp){
+        const source=all.length?all:latest;
+        low=Math.floor(Math.min(...source)/step)*step;
+        high=Math.ceil(Math.max(...source)/step)*step;
+      }else high=Math.ceil(Math.max(0,...all)/step)*step||step;
+      const peak=latest.length?Math.max(...latest):null;
+      if((temp||field==="precipitation_interval_mm")&&peak!==null&&high-peak<=step*.25)high+=step;
+      if(!Number.isFinite(low)||!Number.isFinite(high)||high<=low){low=0;high=step;}
+      const ticks=[];for(let v=low;v<=high+1e-9;v+=step)ticks.push(Math.round(v));
+      return {low,high,ticks,latestPeak:peak};
+    };
+
+    const parts=[
+      '<svg xmlns="http://www.w3.org/2000/svg" width="'+W+'" height="'+H+'" viewBox="0 0 '+W+' '+H+'" role="img" aria-labelledby="ecmwf-svg-title ecmwf-svg-desc">',
+      '<title id="ecmwf-svg-title">İstanbul ECMWF · dört döngü valid-time karşılaştırması</title>',
+      '<desc id="ecmwf-svg-desc">Dört İstanbul ECMWF tahmin döngüsü aynı geçerlilik saatlerinde hizalanmıştır. Sıcaklık, 850 hPa sıcaklığı, yağış ve 10 metre rüzgârı karşılaştırılır.</desc>',
+      '<g id="patch_1"><rect x="0" y="0" width="1152" height="838" style="fill: #0a1b29"/></g>',
+      '<text x="63" y="34" fill="#7DD3D7" font-size="12" font-weight="700" letter-spacing="1.5" font-family="'+FONT+'">ECMWF IFS · İSTANBUL</text>',
+      '<text x="1090" y="34" text-anchor="end" fill="#8EAEB7" font-size="8" font-weight="500" font-family="'+FONT+'">İstanbul Havası v1.5.0</text>',
+      '<text x="63" y="76" fill="#FFFFFF" font-size="27" font-weight="750" font-family="'+FONT+'">Son ECMWF raporu · '+series.length+' döngü karşılaştırması</text>',
+      '<text x="63" y="108" fill="#E7F2F6" font-size="14" font-family="'+FONT+'">Mevcut ECMWF çıktıları aynı geçerlilik saatlerinde (TSİ) üst üste karşılaştırılır.</text>',
+      '<rect x="850" y="20" width="245" height="36" rx="11" fill="#0A1B29" stroke="#416174" stroke-width="1"/>',
+      '<text x="972.5" y="43" text-anchor="middle" fill="#B8D7DF" font-size="12" font-family="'+FONT+'">'+series.length+' ECMWF döngüsü karşılaştırılıyor</text>'
     ];
 
-    const offsets=timeline.map((_,i)=>i);
-    const xRatio=i => 0.03 + (i/Math.max(1,timeline.length-1))*0.94;
-    const panels=[];
-    let body="";
-    body+='<svg xmlns="http://www.w3.org/2000/svg" width="'+W+'" height="'+H+'" viewBox="0 0 '+W+' '+H+'" role="img" aria-labelledby="ecmwf-svg-title ecmwf-svg-desc">';
-    body+='<title id="ecmwf-svg-title">İstanbul ECMWF · dört döngü valid-time karşılaştırması</title>';
-    body+='<desc id="ecmwf-svg-desc">Son dört ECMWF döngüsü aynı geçerlilik saatlerinde karşılaştırılır. 2 metre sıcaklık, 850 hPa sıcaklık, yağış ve 10 metre rüzgâr.</desc>';
-    body+='<rect id="patch_1" x="0" y="0" width="'+W+'" height="'+H+'" rx="13" fill="#0A1B29"/>';
-    body+='<text x="55" y="42" fill="#7DD3D7" font-size="12" font-weight="700" letter-spacing="1.5" font-family="DM Sans,Arial,sans-serif">ECMWF IFS · İSTANBUL</text>';
-    body+='<text x="55" y="76" fill="#FFFFFF" font-size="27" font-weight="750" font-family="Manrope,Arial,sans-serif">Son ECMWF raporu · '+runs.length+' döngü karşılaştırması</text>';
-    body+='<text x="55" y="108" fill="#E7F2F6" font-size="14" font-family="DM Sans,Arial,sans-serif">Aynı geçerlilik saatleri (TSİ) üst üste karşılaştırılır.</text>';
-    body+='<rect x="830" y="20" width="267" height="36" rx="11" fill="#0A1B29" stroke="#416174" stroke-width="1"/>';
-    body+='<text x="963.5" y="43" text-anchor="middle" fill="#B8D7DF" font-size="12" font-family="DM Sans,Arial,sans-serif">'+runs.length+' ECMWF döngüsü karşılaştırılıyor</text>';
-
-    runs.slice().reverse().forEach((run,i)=>{
-      const x=360+(i%2)*260,y=148+Math.floor(i/2)*26;
-      const latest=i===0;
-      body+='<line x1="'+x+'" y1="'+y+'" x2="'+(x+36)+'" y2="'+y+'" stroke="'+COLORS[runs.length-1-i]+'" stroke-width="'+(latest?3.2:1.8)+'"'+(latest?'':' stroke-dasharray="4 3"')+' stroke-linecap="round"/>';
-      body+='<text x="'+(x+47)+'" y="'+(y+4)+'" fill="#FFFFFF" font-size="12" font-weight="'+(latest?'700':'500')+'" font-family="DM Sans,Arial,sans-serif">ECMWF · '+new Date(run.run_id_utc).toISOString().slice(11,13)+'Z</text>';
+    series.slice().reverse().forEach((item,index)=>{
+      const column=index%2,row=Math.floor(index/2),x=335+column*290,y=148+row*26,latest=item===series[series.length-1];
+      const d=new Date(item.run.run_id_utc);
+      const label=(latest?"YENİ · ":"")+String(d.getUTCHours()).padStart(2,"0")+"Z | "+String(d.getUTCDate()).padStart(2,"0")+"."+String(d.getUTCMonth()+1).padStart(2,"0")+" "+String(d.getUTCHours()).padStart(2,"0")+":00";
+      parts.push('<line x1="'+x+'" y1="'+y+'" x2="'+(x+38)+'" y2="'+y+'" stroke="'+item.color+'" stroke-width="'+(latest?3.2:1.8)+'"'+(latest?'':' stroke-dasharray="4 3"')+' stroke-linecap="round"/>',
+        '<text x="'+(x+49)+'" y="'+(y+4)+'" fill="#FFFFFF" font-size="12" font-weight="'+(latest?"700":"500")+'" font-family="'+FONT+'">'+escXml("ECMWF · "+label)+'</text>');
     });
 
+    const metadata=[];
     specs.forEach((spec,pi)=>{
       const col=pi%2,row=Math.floor(pi/2),px=panelLeft[col],py=panelTop[row];
       const plotX=px+50,plotY=py+57,plotWidth=panelWidth-73,plotHeight=146;
-      const series=runs.map(run=>timeline.map(t=>fieldValue(t.points[runs.indexOf(run)],spec.field)));
-      const a=axis(spec.field,series);
-      const xPositions=offsets.map(i=>plotX+xRatio(i)*plotWidth);
+      const valuesBySeries=pointsBySeries.map(points=>points.map(p=>numeric(p?.[spec.field])));
+      const a=axis(spec.field,valuesBySeries);
+      const xPositions=offsets.map(v=>plotX+xRatio(v)*plotWidth);
       const yFor=v=>plotY+(a.high-v)*plotHeight/(a.high-a.low);
-      const panelMeta={
-        id:spec.id,title:spec.title,unit:spec.unit,
-        plot:{x:plotX,y:plotY,width:plotWidth,height:plotHeight},
-        x_positions:xPositions,
-        valid_times:timeline.map(t=>({localKey:t.key,label:tsLabel(t.key),utcLabel:utcLabel(t.key)})),
-        series:[]
-      };
-
-      body+='<g id="patch_'+(pi===0?6:pi===1?11:pi===2?16:21)+'"><rect x="'+px+'" y="'+py+'" width="'+panelWidth+'" height="'+panelHeight+'" rx="13" fill="#102A3A" stroke="#416174" stroke-width="1"/></g>';
-      body+='<g id="ecmwf-panel-'+spec.id+'">';
-      body+='<text x="'+(px+18)+'" y="'+(py+31)+'" fill="#FFFFFF" font-size="18" font-weight="700" font-family="DM Sans,Arial,sans-serif">'+esc(spec.title)+'</text>';
-      body+='<text x="'+(px+panelWidth-17)+'" y="'+(py+30)+'" text-anchor="end" fill="#E7F2F6" font-size="12" font-weight="650" font-family="DM Sans,Arial,sans-serif">'+esc(spec.unit)+'</text>';
-
+      const patchId=["patch_6","patch_11","patch_16","patch_21"][pi];
+      parts.push('<g id="'+patchId+'"><rect x="'+px+'" y="'+py+'" width="'+panelWidth+'" height="'+panelHeight+'" rx="13" style="fill: #102a3a" stroke="#416174" stroke-width="1"/></g>',
+        '<g id="ecmwf-panel-'+spec.id+'">',
+        '<text x="'+(px+18)+'" y="'+(py+31)+'" fill="#FFFFFF" font-size="18" font-weight="700" font-family="'+FONT+'">'+escXml(spec.title)+'</text>',
+        '<text x="'+(px+panelWidth-17)+'" y="'+(py+30)+'" text-anchor="end" fill="#E7F2F6" font-size="12" font-weight="650" font-family="'+FONT+'">'+escXml(spec.unit)+'</text>');
       a.ticks.slice().reverse().forEach(v=>{
         const y=yFor(v);
-        body+='<line x1="'+plotX+'" y1="'+y+'" x2="'+(plotX+plotWidth)+'" y2="'+y+'" stroke="#456579" stroke-width="1" stroke-dasharray="2 4" opacity=".65"/>';
-        body+='<text x="'+(plotX-10)+'" y="'+(y+4)+'" text-anchor="end" fill="#E7F2F6" font-size="11" font-weight="600" font-family="DM Sans,Arial,sans-serif">'+v+'</text>';
+        parts.push('<line x1="'+plotX+'" y1="'+y+'" x2="'+(plotX+plotWidth)+'" y2="'+y+'" stroke="#456579" stroke-width="1" stroke-dasharray="2 4" opacity=".65"/>',
+          '<text x="'+(plotX-10)+'" y="'+(y+4)+'" text-anchor="end" fill="#E7F2F6" font-size="11" font-weight="600" font-family="'+FONT+'" data-axis-tick="true">'+v+'</text>');
       });
-
-      const tickIndexes=[];
-      timeline.forEach((t,i)=>{
-        const hour=new Date(t.key).getUTCHours();
-        if(i===0 || hour===0 || hour===12)tickIndexes.push(i);
-      });
-      if(tickIndexes[tickIndexes.length-1]!==timeline.length-1)tickIndexes.push(timeline.length-1);
+      const tickIndexes=[];offsets.forEach((offset,i)=>{if(i===0||Math.abs(offset%12)<.01)tickIndexes.push(i);});
+      if(tickIndexes[tickIndexes.length-1]!==offsets.length-1)tickIndexes.push(offsets.length-1);
       tickIndexes.forEach(i=>{
-        const d=new Date(timeline[i].key);
-        const day=new Intl.DateTimeFormat("tr-TR",{timeZone:"Europe/Istanbul",day:"2-digit"}).format(d);
-        const weekday=new Intl.DateTimeFormat("tr-TR",{timeZone:"Europe/Istanbul",weekday:"short"}).format(d);
-        const anchor=i===0?"start":i===timeline.length-1?"end":"middle";
-        body+='<text x="'+xPositions[i]+'" y="'+(plotY+plotHeight+19)+'" text-anchor="'+anchor+'" fill="#E7F2F6" font-size="10" font-weight="650" font-family="DM Sans,Arial,sans-serif"><tspan x="'+xPositions[i]+'">'+day+'</tspan><tspan x="'+xPositions[i]+'" dy="13">'+weekday+'</tspan></text>';
+        const d=new Date(dates[i].getTime()+3*3600000),day=String(d.getUTCDate()).padStart(2,"0"),wd=["Paz","Pzt","Sal","Çar","Per","Cum","Cmt"][d.getUTCDay()];
+        const anchor=i===0?"start":i===offsets.length-1?"end":"middle";
+        parts.push('<text x="'+xPositions[i]+'" y="'+(plotY+plotHeight+19)+'" text-anchor="'+anchor+'" fill="#E7F2F6" font-size="10" font-weight="650" font-family="'+FONT+'"><tspan x="'+xPositions[i]+'">'+day+'</tspan><tspan x="'+xPositions[i]+'" dy="13">'+wd+'</tspan></text>');
       });
 
-      runs.forEach((run,si)=>{
-        const values=series[si];
-        const yPositions=values.map(v=>num(v)?Number(yFor(v).toFixed(3)):null);
-        const leadHours=timeline.map(t=>Number(t.points[si].forecast_hour));
-        const directions=timeline.map(t=>spec.field==="wind"?t.points[si].wind_direction_10m_deg:null);
-        const color=COLORS[si];
-        let path="",open=false;
-        values.forEach((v,i)=>{
-          if(!num(v)){open=false;return;}
-          path+=(open?" L ":" M ")+xPositions[i].toFixed(3)+" "+yPositions[i];
-          open=true;
-        });
-        const latest=si===runs.length-1;
-        body+='<path id="gfs-series-'+spec.id+'-'+si+'" data-gfs-series-run-id="'+esc(run.run_id_utc)+'" d="'+path+'" fill="none" stroke="'+color+'" stroke-width="'+(latest?3.2:1.8)+'"'+(latest?'':' stroke-dasharray="4 3"')+' stroke-linecap="round" stroke-linejoin="round" opacity="'+(latest?"1":".94")+'"/>';
-        if(latest){
-          values.forEach((v,i)=>{
-            if(num(v))body+='<circle cx="'+xPositions[i].toFixed(3)+'" cy="'+yPositions[i]+'" r="2.8" fill="'+color+'"/>';
-          });
-        }
-        panelMeta.series.push({
-          label:"ECMWF · "+new Date(run.run_id_utc).toISOString().slice(11,13)+"Z",
-          run_id_utc:run.run_id_utc,color,lead_hours:leadHours,values,y_positions:yPositions,directions_deg:directions
-        });
+      const panelSeries=[];
+      series.forEach((item,si)=>{
+        const values=valuesBySeries[si];
+        const plotValues=values.map(v=>v===null||v<a.low||v>a.high?null:v);
+        const yPositions=plotValues.map(v=>v===null?null:Number(yFor(v).toFixed(3)));
+        const leadHours=pointsBySeries[si].map(p=>numeric(p?.forecast_hour));
+        const directions=pointsBySeries[si].map(p=>spec.field==="wind_speed_10m_kmh"?numeric(p?.wind_direction_10m_deg):null);
+        let path="",open=false;plotValues.forEach((v,i)=>{if(v===null){open=false;return;}path+=(open?" L ":" M ")+xPositions[i].toFixed(3)+" "+yPositions[i];open=true;});
+        const latest=si===series.length-1;
+        parts.push('<path id="gfs-series-'+spec.id+'-'+si+'" data-gfs-series-run-id="'+escXml(item.run.run_id_utc)+'" d="'+path+'" fill="none" stroke="'+item.color+'" stroke-width="'+(latest?3.2:1.8)+'"'+(latest?'':' stroke-dasharray="4 3"')+' stroke-linecap="round" stroke-linejoin="round" opacity="'+(latest?"1":".94")+'"/>');
+        if(latest)values.forEach((v,i)=>{if(v!==null)parts.push('<circle cx="'+xPositions[i].toFixed(3)+'" cy="'+yPositions[i]+'" r="2.8" fill="'+item.color+'"/>');});
+        panelSeries.push({label:"ECMWF · "+String(new Date(item.run.run_id_utc).getUTCHours()).padStart(2,"0")+"Z",run_id_utc:item.run.run_id_utc,color:item.color,lead_hours:leadHours,values,y_positions:yPositions,directions_deg:directions});
       });
-
-      body+='<g class="gfs-panel-interaction" data-panel-id="'+spec.id+'"><line class="gfs-tooltip-crosshair" x1="'+xPositions[0]+'" x2="'+xPositions[0]+'" y1="'+plotY+'" y2="'+(plotY+plotHeight)+'" stroke="#E8FBF7" stroke-width="1" stroke-dasharray="3 4" opacity=".78" visibility="hidden"/><g class="gfs-tooltip-markers"></g></g>';
-      body+='</g>';
-      panels.push(panelMeta);
+      parts.push('<g class="gfs-panel-interaction" data-panel-id="'+spec.id+'"><rect class="gfs-hit-area" data-panel-id="'+spec.id+'" x="'+plotX+'" y="'+plotY+'" width="'+plotWidth+'" height="'+plotHeight+'" fill="transparent" pointer-events="all" tabindex="0" role="group" aria-label="'+escXml(spec.title)+' grafiği; ok tuşlarıyla geçerlilik saatleri arasında gezinin"/><line class="gfs-tooltip-crosshair" x1="'+xPositions[0]+'" x2="'+xPositions[0]+'" y1="'+plotY+'" y2="'+(plotY+plotHeight)+'" stroke="#EAF5F8" stroke-width="1.1" stroke-dasharray="4 4" opacity=".78" visibility="hidden" pointer-events="none"/><g class="gfs-tooltip-markers" pointer-events="none"></g></g>');
+      parts.push("</g>");
+      metadata.push({id:spec.id,title:spec.title,unit:spec.unit,plot:{x:plotX,y:plotY,width:plotWidth,height:plotHeight},x_positions:xPositions.map(v=>Number(v.toFixed(3))),valid_times:localLabels.map(x=>({local_key:x.label,label:x.label,utc_label:x.utcLabel})),series:panelSeries});
     });
-
-    body+='<text x="63" y="810" fill="#E7F2F6" font-size="11" font-family="DM Sans,Arial,sans-serif">Aynı geçerlilik saatleri (TSİ) · '+timeline.length+' ortak nokta · '+runs.length+' döngü</text>';
-    body+='<text x="1090" y="810" text-anchor="end" fill="#E7F2F6" font-size="10" font-family="DM Sans,Arial,sans-serif">Kaynak: MeteoPT ECMWF · İstanbul 41.0901°N 28.9436°E</text>';
-    const meta=JSON.stringify({version:1,renderer:"cloudflare-js-v9-homepage-identical-ecmwf",panels}).replace(/\]\]>/g,"]]\\u003e");
-    body+='<metadata id="gfs-interactive-data"><![CDATA['+meta+']]></metadata></svg>';
-    return body;
+    const metadataText=JSON.stringify({version:1,renderer:"cloudflare-js-v3-ecmwf-clone",panels:metadata}).replace(/\]\]>/g,"]]\\u003e");
+    parts.push('<text x="63" y="810" fill="#E7F2F6" font-size="11" font-family="'+FONT+'">Aynı geçerlilik saatleri (TSİ) · '+validKeys.length+' ortak nokta · '+series.length+' döngü</text>',
+      '<text x="1090" y="810" text-anchor="end" fill="#E7F2F6" font-size="10" font-family="'+FONT+'">Kaynak: MeteoPT ECMWF · İstanbul nokta tahmini</text>',
+      '<metadata id="gfs-renderer-version">cloudflare-js-v3-ecmwf-clone</metadata>',
+      '<metadata id="gfs-interactive-data"><![CDATA['+metadataText+']]></metadata></svg>');
+    return parts.join("");
   }
-
   function renderSvg(runs) {
     const host=$("ecmwf-gfs-comparison-container");
     if(!host)return;
