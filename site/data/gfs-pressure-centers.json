@@ -907,7 +907,9 @@
       "movement_direction": "GB",
       "pressure_change_hpa": 7.4,
       "min_pressure_hpa": 987.1,
-      "max_pressure_hpa": 1012.4
+      "max_pressure_hpa": 1012.4,
+      "lifecycle": "olgunlaşıyor",
+      "peak_forecast_hour": 30
     },
     {
       "id": "high-2",
@@ -1045,7 +1047,9 @@
       "movement_direction": "K",
       "pressure_change_hpa": -1.1,
       "min_pressure_hpa": 1023.8,
-      "max_pressure_hpa": 1031.0
+      "max_pressure_hpa": 1031.0,
+      "lifecycle": "aktif",
+      "peak_forecast_hour": 0
     },
     {
       "id": "high-3",
@@ -1127,7 +1131,9 @@
       "movement_direction": "B",
       "pressure_change_hpa": -5.8,
       "min_pressure_hpa": 1023.4,
-      "max_pressure_hpa": 1029.2
+      "max_pressure_hpa": 1029.2,
+      "lifecycle": "zayıflıyor",
+      "peak_forecast_hour": 0
     },
     {
       "id": "high-4",
@@ -1174,7 +1180,9 @@
       "movement_direction": "KKD",
       "pressure_change_hpa": 3.8,
       "min_pressure_hpa": 1026.1,
-      "max_pressure_hpa": 1031.4
+      "max_pressure_hpa": 1031.4,
+      "lifecycle": "güçleniyor",
+      "peak_forecast_hour": 96
     },
     {
       "id": "low-5",
@@ -1221,7 +1229,9 @@
       "movement_direction": "GGD",
       "pressure_change_hpa": 18.4,
       "min_pressure_hpa": 992.1,
-      "max_pressure_hpa": 1010.5
+      "max_pressure_hpa": 1010.5,
+      "lifecycle": "zayıflıyor",
+      "peak_forecast_hour": 24
     },
     {
       "id": "low-7",
@@ -1254,7 +1264,9 @@
       "movement_direction": "KKB",
       "pressure_change_hpa": -1.8,
       "min_pressure_hpa": 1005.0,
-      "max_pressure_hpa": 1006.8
+      "max_pressure_hpa": 1006.8,
+      "lifecycle": "aktif",
+      "peak_forecast_hour": 42
     },
     {
       "id": "high-8",
@@ -1301,7 +1313,9 @@
       "movement_direction": "G",
       "pressure_change_hpa": -1.5,
       "min_pressure_hpa": 1023.5,
-      "max_pressure_hpa": 1025.8
+      "max_pressure_hpa": 1025.8,
+      "lifecycle": "aktif",
+      "peak_forecast_hour": 54
     },
     {
       "id": "high-10",
@@ -1369,7 +1383,9 @@
       "movement_direction": "DGD",
       "pressure_change_hpa": -1.9,
       "min_pressure_hpa": 1023.8,
-      "max_pressure_hpa": 1030.9
+      "max_pressure_hpa": 1030.9,
+      "lifecycle": "aktif",
+      "peak_forecast_hour": 72
     },
     {
       "id": "high-11",
@@ -1423,7 +1439,9 @@
       "movement_direction": "BGB",
       "pressure_change_hpa": 3.4,
       "min_pressure_hpa": 1023.3,
-      "max_pressure_hpa": 1029.1
+      "max_pressure_hpa": 1029.1,
+      "lifecycle": "olgunlaşıyor",
+      "peak_forecast_hour": 66
     }
   ],
   "checkpoint_hours": [
