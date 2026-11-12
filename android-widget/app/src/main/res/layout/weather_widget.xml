@@ -4,7 +4,7 @@
     android:layout_width="match_parent"
     android:layout_height="match_parent"
     android:orientation="vertical"
-    android:padding="13dp"
+    android:padding="11dp"
     android:background="@drawable/widget_bg">
 
     <LinearLayout
@@ -48,7 +48,7 @@
     <LinearLayout
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
-        android:layout_marginTop="10dp"
+        android:layout_marginTop="5dp"
         android:gravity="center_vertical"
         android:orientation="horizontal">
 
@@ -58,7 +58,7 @@
             android:layout_height="wrap_content"
             android:text="—°"
             android:textColor="#FFFFFF"
-            android:textSize="39sp"
+            android:textSize="34sp"
             android:textStyle="bold" />
 
         <TextView
@@ -76,12 +76,12 @@
         android:id="@+id/stats_row"
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
-        android:layout_marginTop="9dp"
+        android:layout_marginTop="6dp"
         android:orientation="horizontal">
 
-        <LinearLayout android:layout_width="0dp" android:layout_height="wrap_content" android:layout_weight="1" android:orientation="vertical" android:padding="6dp">
+        <LinearLayout android:layout_width="0dp" android:layout_height="wrap_content" android:layout_weight="1" android:orientation="vertical" android:padding="4dp">
             <TextView android:layout_width="wrap_content" android:layout_height="wrap_content" android:text="RÜZGÂR" android:textColor="#A9C0CB" android:textSize="7sp"/>
-            <TextView android:id="@+id/wind_stat" android:layout_width="wrap_content" android:layout_height="wrap_content" android:text="— km/sa" android:textColor="#FFFFFF" android:textSize="11sp" android:textStyle="bold"/>
+            <TextView android:id="@+id/wind_stat" android:layout_width="wrap_content" android:layout_height="wrap_content" android:text="— km/sa" android:textColor="#FFFFFF" android:textSize="10sp" android:textStyle="bold"/>
         </LinearLayout>
         <LinearLayout android:layout_width="0dp" android:layout_height="wrap_content" android:layout_weight="1" android:orientation="vertical" android:padding="6dp">
             <TextView android:layout_width="wrap_content" android:layout_height="wrap_content" android:text="NEM" android:textColor="#A9C0CB" android:textSize="7sp"/>
@@ -100,8 +100,8 @@
     <TextView
         android:layout_width="match_parent"
         android:layout_height="1dp"
-        android:layout_marginTop="8dp"
-        android:layout_marginBottom="7dp"
+        android:layout_marginTop="5dp"
+        android:layout_marginBottom="5dp"
         android:background="#355867" />
 
     <TextView
@@ -152,6 +152,38 @@
         android:layout_marginTop="7dp"
         android:layout_marginBottom="6dp"
         android:background="#355867" />
+
+    <LinearLayout
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:layout_marginTop="6dp"
+        android:orientation="horizontal"
+        android:gravity="center_vertical">
+
+        <TextView
+            android:id="@+id/refresh_button"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:paddingLeft="10dp"
+            android:paddingRight="10dp"
+            android:paddingTop="5dp"
+            android:paddingBottom="5dp"
+            android:text="↻  YENİLE"
+            android:textColor="#BFE9E2"
+            android:textSize="8sp"
+            android:textStyle="bold"
+            android:background="#163E4E" />
+
+        <TextView
+            android:id="@+id/last_refresh"
+            android:layout_width="0dp"
+            android:layout_height="wrap_content"
+            android:layout_weight="1"
+            android:gravity="right"
+            android:text="Son güncelleme —"
+            android:textColor="#718B98"
+            android:textSize="7sp" />
+    </LinearLayout>
 
     <LinearLayout
         android:id="@+id/history_mini"
