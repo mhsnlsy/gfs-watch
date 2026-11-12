@@ -1784,7 +1784,7 @@ html,body{
   #meteopt-gfs-table .meteopt-data-table,
   #meteopt-gfs-table .meteopt-data-table td,
   #meteopt-gfs-table .meteopt-data-table .meteopt-value {
-    font-size: 13px !important;
+    font-size: 14px !important;
   }
   #meteopt-gfs-table .meteopt-data-table th {
     font-size: 14px !important;
@@ -1795,7 +1795,7 @@ html,body{
   #meteopt-gfs-table .meteopt-data-table th,
   #meteopt-gfs-table .meteopt-data-table td,
   #meteopt-gfs-table .meteopt-data-table .meteopt-value {
-    font-size: 10px !important;
+    font-size: 12px !important;
   }
 }
 @media (max-width: 390px) {
@@ -1803,7 +1803,7 @@ html,body{
   #meteopt-gfs-table .meteopt-data-table th,
   #meteopt-gfs-table .meteopt-data-table td,
   #meteopt-gfs-table .meteopt-data-table .meteopt-value {
-    font-size: 11px !important;
+    font-size: 12px !important;
   }
 }
 
