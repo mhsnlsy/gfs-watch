@@ -264,21 +264,44 @@
         cs.sort((a,b)=>type==="low"?Number(a.pressure_hpa)-Number(b.pressure_hpa):Number(b.pressure_hpa)-Number(a.pressure_hpa));
         return cs[0];
       };
-      const labelFor=(hour)=>{
-        if(hour===0)return "Şimdi";
-        return "+"+hour+" saat";
+      const validDayLabel=(step)=>{
+        if(!step||!step.valid_time_utc)return "—";
+        const d=new Date(step.valid_time_utc);
+        const parts=new Intl.DateTimeFormat("tr-TR",{timeZone:"Europe/Istanbul",day:"2-digit",month:"long",weekday:"long"}).formatToParts(d);
+        const day=parts.find(p=>p.type==="day")?.value||"";
+        const month=parts.find(p=>p.type==="month")?.value||"";
+        const weekday=parts.find(p=>p.type==="weekday")?.value||"";
+        return day+" "+month+" · "+weekday;
       };
       const region=(c)=>{
         if(!c)return "—";
         return pressureForecastRegion(c);
+      };
+      const lifecycleFor=(step,center)=>{
+        if(!center||!tracks.length)return "aktif";
+        let best=null,bestDistance=Infinity;
+        tracks.filter(t=>t.type===center.type&&Array.isArray(t.points)).forEach(track=>{
+          track.points.forEach(point=>{
+            if(Number(point.forecast_hour)!==Number(step.forecast_hour))return;
+            const dlat=Number(point.latitude)-Number(center.latitude);
+            const dlon=Number(point.longitude)-Number(center.longitude);
+            const distance=Math.hypot(dlat,dlon);
+            if(distance<bestDistance){bestDistance=distance;best=track;}
+          });
+        });
+        return best&&best.lifecycle?best.lifecycle:"aktif";
+      };
+      const lifecycleBadge=(step,center)=>{
+        const value=lifecycleFor(step,center);
+        return '<span class="pressure-lifecycle pressure-lifecycle-'+value+'">'+esc(value)+'</span>';
       };
       const lowRows=[],highRows=[];
       [0,12,24,48,72,96,120].forEach(hour=>{
         const step=steps.find(s=>Number(s.forecast_hour)===hour);
         if(!step)return;
         const low=bestAt(step,"low"), high=bestAt(step,"high");
-        if(low)lowRows.push("<li><strong>"+labelFor(hour)+"</strong> · "+esc(region(low))+" · ~"+Number(low.pressure_hpa).toFixed(0)+" hPa</li>");
-        if(high)highRows.push("<li><strong>"+labelFor(hour)+"</strong> · "+esc(region(high))+" · ~"+Number(high.pressure_hpa).toFixed(0)+" hPa</li>");
+        if(low)lowRows.push("<li><strong>"+validDayLabel(step)+"</strong> · "+esc(region(low))+" · ~"+Number(low.pressure_hpa).toFixed(0)+" hPa "+lifecycleBadge(step,low)+"</li>");
+        if(high)highRows.push("<li><strong>"+validDayLabel(step)+"</strong> · "+esc(region(high))+" · ~"+Number(high.pressure_hpa).toFixed(0)+" hPa "+lifecycleBadge(step,high)+"</li>");
       });
       if(lows)lows.innerHTML=lowRows.length?lowRows.join(""):"<li>Belirgin siklon merkezi bulunamadı.</li>";
       if(highs)highs.innerHTML=highRows.length?highRows.join(""):"<li>Belirgin yüksek basınç merkezi bulunamadı.</li>";
@@ -291,7 +314,7 @@
           const bits=[];
           if(low)bits.push("🔴 "+esc(region(low))+" "+Number(low.pressure_hpa).toFixed(0)+" hPa");
           if(high)bits.push("🔵 "+esc(region(high))+" "+Number(high.pressure_hpa).toFixed(0)+" hPa");
-          return "<li><strong>"+labelFor(hour)+"</strong> · "+(bits.length?bits.join(" · "):"Belirgin merkez yok")+"</li>";
+          return "<li><strong>"+validDayLabel(step)+"</strong> · "+(bits.length?bits.join(" · "):"Belirgin merkez yok")+"</li>";
         }).filter(Boolean);
         checkpointEl.innerHTML='<div class="pressure-summary-title">⏱️ GFS sinoptik gelişim</div><ul class="pressure-list">'+items.join("")+"</ul>";
       }
