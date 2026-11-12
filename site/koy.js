@@ -693,6 +693,20 @@ function renderStationHistory(doc,rainDoc){
  $("station-rain-meta").textContent=stationLabel+" · "+rainSamples.length+" kayıt · 72 saatlik arşiv · saatlik kayan 1 saat toplam";
  $("history-source-note").textContent=isHome?"Sıcaklık ve yağış: Çanakçı MGM gerçek ölçümlerinden +217 m rakım düzeltmesiyle türetilmiş Köy Ev sanal istasyonu.":"Sıcaklık: MGM Çanakçı gözlem geçmişi. Yağış: bağımsız 72 saatlik MGM yağış arşivi.";
  $("station-temperature-trend").innerHTML=svgStationHistory(samples,"temperature_2m_c",tempTitle,"°C");
+ const tempValues=samples.map(s=>num(s.temperature_2m_c)).filter(v=>v!=null);
+ const tempMinMaxBadge=$("station-temperature-minmax");
+ if(tempMinMaxBadge){
+  if(tempValues.length){
+   const min=Math.min.apply(null,tempValues),max=Math.max.apply(null,tempValues);
+   tempMinMaxBadge.hidden=false;
+   tempMinMaxBadge.textContent="24 saatte min "+fmt(min)+" °C · max "+fmt(max)+" °C";
+   tempMinMaxBadge.title="Son 24 saatteki minimum ve maksimum sıcaklık";
+  }else{
+   tempMinMaxBadge.hidden=true;
+   tempMinMaxBadge.textContent="";
+   tempMinMaxBadge.removeAttribute("title");
+  }
+ }
  $("station-rain-trend").innerHTML=svgStationHistory(rainSamples,"precipitation_1h_mm",rainTitle,"mm");
  const now=Date.now(),hour=3600000,end=Math.floor(now/hour)*hour,start=end-24*hour;
  const byHour=new Map();
