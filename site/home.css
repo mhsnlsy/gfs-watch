@@ -5045,27 +5045,41 @@ main.shell { padding-bottom:max(12px,env(safe-area-inset-bottom)); }
 }
 
 
-/* Final alignment: comparison badges sit as a coherent pill stack beside the weather icon. */
+/* FINAL: compact station comparison badges — keep the temperature/icon dominant. */
 @media (min-width:1200px) and (pointer:fine){
   .dashboard-left .station-card .station-inline-badges{
     align-self:center!important;
-    transform:translateY(5px)!important;
-    gap:6px!important;
+    transform:translateY(3px)!important;
+    gap:4px!important;
+    max-width:220px!important;
   }
-  .dashboard-left .station-card .station-inline-badges .station-temp-compare{
+  .dashboard-left .station-card .station-inline-badges .station-temp-compare,
+  .dashboard-left .station-card .station-inline-badges .delta-badge{
     display:inline-flex!important;
     align-items:center!important;
-    min-height:22px!important;
-    padding:3px 9px!important;
+    min-height:20px!important;
+    max-width:220px!important;
+    padding:2px 7px!important;
     border-radius:999px!important;
-    background:rgba(125,211,215,.12)!important;
-    border:1px solid rgba(125,211,215,.28)!important;
-    color:var(--cyan)!important;
-    font-size:11px!important;
+    font-size:10px!important;
+    line-height:1.15!important;
     font-weight:600!important;
-    line-height:1.2!important;
+    white-space:nowrap!important;
+  }
+  .dashboard-left .station-card .station-inline-badges .station-temp-compare{
+    background:rgba(125,211,215,.10)!important;
+    border:1px solid rgba(125,211,215,.24)!important;
+    color:var(--cyan)!important;
   }
   .dashboard-left .station-card .station-inline-badges .delta-badge{
-    min-height:22px!important;
+    margin:0!important;
+  }
+}
+@media (max-width:1199px){
+  .station-inline-badges .station-temp-compare,
+  .station-inline-badges .delta-badge{
+    font-size:10px!important;
+    padding:2px 7px!important;
+    min-height:20px!important;
   }
 }
