@@ -48,7 +48,8 @@ public class WeatherWidgetProvider extends AppWidgetProvider {
     private static final ZoneOffset UTC = ZoneOffset.UTC;
     private static final Locale TR = Locale.forLanguageTag("tr-TR");
     private static final DateTimeFormatter UTC_TIME = DateTimeFormatter.ofPattern("HH:mm", TR).withZone(UTC);
-    private static final DateTimeFormatter IST_TIME = DateTimeFormatter.ofPattern("HH:mm", TR).withZone(ISTANBUL);\n    private static final DateTimeFormatter ISTANBUL_DATE = DateTimeFormatter.ofPattern("yyyy-MM-dd", TR).withZone(ISTANBUL);
+    private static final DateTimeFormatter IST_TIME = DateTimeFormatter.ofPattern("HH:mm", TR).withZone(ISTANBUL);
+    private static final DateTimeFormatter ISTANBUL_DATE = DateTimeFormatter.ofPattern("yyyy-MM-dd", TR).withZone(ISTANBUL);
     private static final DateTimeFormatter UTC_DATE = DateTimeFormatter.ofPattern("yyyy-MM-dd", TR).withZone(UTC);
     private static final ExecutorService EXECUTOR = Executors.newSingleThreadExecutor();
 
@@ -62,7 +63,8 @@ public class WeatherWidgetProvider extends AppWidgetProvider {
                 JSONObject stationDoc = null;
                 JSONObject forecastDoc = null;
                 try { stationDoc = fetchJson(STATION_URL, STATION_FALLBACK_URL); } catch (Exception ignored) { }
-                try { forecastDoc = fetchJson(GFS_URL, GFS_FALLBACK_URL); } catch (Exception ignored) { }\n                try { historyDoc = fetchJson(HISTORY_URL, null); } catch (Exception ignored) { }
+                try { forecastDoc = fetchJson(GFS_URL, GFS_FALLBACK_URL); } catch (Exception ignored) { }
+                try { historyDoc = fetchJson(HISTORY_URL, null); } catch (Exception ignored) { }
 
                 RemoteViews views = buildViews(context, stationDoc, forecastDoc);
                 for (int id : ids) manager.updateAppWidget(id, views);
@@ -463,7 +465,8 @@ public class WeatherWidgetProvider extends AppWidgetProvider {
                 Instant stamp = Instant.parse(item.optString("valid_time_utc", ""));
                 int step = item.optInt("forecast_hour", -1);
                 if (step <= 0) continue;
-                String utcDate = UTC_DATE.format(stamp);\n                String istanbulDate = ISTANBUL_DATE.format(stamp);
+                String utcDate = UTC_DATE.format(stamp);
+                String istanbulDate = ISTANBUL_DATE.format(stamp);
                 points.add(new ForecastPoint(
                     stamp,
                     step,
