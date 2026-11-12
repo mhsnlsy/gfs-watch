@@ -852,14 +852,14 @@ const __hideEmptyBadges=()=>{document.querySelectorAll('[class*="badge"],[class*
       const coverage=valid.length?Math.min(24,Math.max(0,(now-valid[0].time)/3600000)):0;
       if(meta)meta.textContent=stationName+" · "+valid.length+" kayıt · "+(coverage>=23.9?"24 saat arşiv kapsamı":"arşiv kapsamı "+fmt(coverage,1)+" saat")+" · 30 dk ortalama / min–maks";
       if(!data.length){
-        ["station-temp-max","station-temp-min"].forEach(id=>{const el=$(id);if(el){el.hidden=true;el.textContent="";}});
+        ["station-temp-max","station-temp-min","station-rain-min","station-rain-max"].forEach(id=>{const el=$(id);if(el){el.hidden=true;el.textContent="";}});
         holder.innerHTML='<div class="station-trend-empty">İlk sıcaklık kaydı bekleniyor. '+esc(stationName)+' ölçümleri geldikçe grafik dolacak.</div>';return;
       }
       const maxSample=valid.reduce((best,s)=>!best||s.temperature>best.temperature?s:best,null);
       const minSample=valid.reduce((best,s)=>!best||s.temperature<best.temperature?s:best,null);
       const maxBadge=$("station-temp-max"),minBadge=$("station-temp-min");
-      if(maxBadge&&maxSample){maxBadge.hidden=false;maxBadge.textContent="Maks "+fmt(maxSample.temperature,1)+"° · "+timeTR(maxSample.time);}
-      if(minBadge&&minSample){minBadge.hidden=false;minBadge.textContent="Min "+fmt(minSample.temperature,1)+"° · "+timeTR(minSample.time);}
+      if(maxBadge&&maxSample){maxBadge.hidden=false;maxBadge.textContent="Maks "+fmt(maxSample.temperature,1)+"°";}
+      if(minBadge&&minSample){minBadge.hidden=false;minBadge.textContent="Min "+fmt(minSample.temperature,1)+"°";}
       const vals=valid.map(s=>s.temperature);let low=Math.floor(Math.min(...vals)-.5),high=Math.ceil(Math.max(...vals)+.5);if(high-low<2){low-=.5;high+=.5;}
       const width=560,height=200,left=44,right=14,top=15,bottom=29,pw=width-left-right,ph=height-top-bottom;
       const xt=t=>left+(t-start)/windowMs*pw,yv=v=>top+(high-v)/(high-low)*ph,xb=p=>xt(p.start+bucketMs/2);
@@ -944,7 +944,8 @@ const __hideEmptyBadges=()=>{document.querySelectorAll('[class*="badge"],[class*
       const points=[...hourlyPoints.values()].sort((a,b)=>a.time-b.time);
 
       if(!points.length){
-        const rainMaxBadge=$( "station-rain-max" );
+        const rainMinBadge=$( "station-rain-min" );
+      const rainMaxBadge=$( "station-rain-max" );
         if(rainMaxBadge){rainMaxBadge.hidden=true;rainMaxBadge.textContent="";}
         holder.innerHTML='<div class="station-trend-empty">MGM saatlik yağış arşivi henüz oluşuyor. İlk ölçüm geldiğinde grafik otomatik başlayacak.</div>';
         if(meta)meta.textContent=stationName+" · MGM · saatlik arşiv oluşturuluyor";
@@ -979,10 +980,11 @@ const __hideEmptyBadges=()=>{document.querySelectorAll('[class*="badge"],[class*
       const completedPoints=points.filter(point=>((Math.floor(point.time/hourMs)+1)*hourMs<=now));
       const latest=completedPoints.length?completedPoints[completedPoints.length-1]:points[points.length-1];
       const rainMaxBadge=$( "station-rain-max" );
-      if(rainMaxBadge){
+      if(rainMinBadge||rainMaxBadge){
+        const minPoint=points.reduce((best,p)=>!best||p.mm<best.mm?p:best,null);
         const peak=points.reduce((best,p)=>!best||p.mm>best.mm?p:best,null);
-        if(peak){rainMaxBadge.hidden=false;rainMaxBadge.textContent="Saatlik maks "+fmt(peak.mm,1)+" mm · "+timeTR(peak.time);}
-        else{rainMaxBadge.hidden=true;rainMaxBadge.textContent="";}
+        if(rainMinBadge&&minPoint){rainMinBadge.hidden=false;rainMinBadge.textContent="Min "+fmt(minPoint.mm,1)+" mm";}else if(rainMinBadge){rainMinBadge.hidden=true;rainMinBadge.textContent="";}
+        if(rainMaxBadge&&peak){rainMaxBadge.hidden=false;rainMaxBadge.textContent="Maks "+fmt(peak.mm,1)+" mm";}else if(rainMaxBadge){rainMaxBadge.hidden=true;rainMaxBadge.textContent="";}
       }
       const latestIsProvisional=((Math.floor(latest.time/hourMs)+1)*hourMs>now);
       const coverageHours=Math.max(0,(latest.time-points[0].time)/3600000);
