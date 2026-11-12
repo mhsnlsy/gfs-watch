@@ -80,6 +80,7 @@ public class WeatherWidgetProvider extends AppWidgetProvider {
         JSONObject station = stationObject(stationDoc);
 
         renderStation(views, station);
+        renderHistory(views, historyDoc);
         renderDailyTiles(views, forecastDoc);
         renderRainHours(views, forecastDoc);
         renderTemperatureTrend(views, forecastDoc, station);
@@ -156,6 +157,28 @@ public class WeatherWidgetProvider extends AppWidgetProvider {
             "Min " + fmt(min, 1) + "° · Maks " + fmt(max, 1) + "°");
         views.setTextViewText(R.id.history_rain_badge,
             "Maks " + fmt(rainMax, 1) + " mm");
+    }
+
+    private static void renderHistory(RemoteViews views, JSONObject historyDoc) {
+        JSONArray samples = historyDoc == null ? null : historyDoc.optJSONArray("samples");
+        if (samples == null && historyDoc != null) samples = historyDoc.optJSONArray("history");
+        double min = Double.NaN, max = Double.NaN, rainMax = Double.NaN;
+        if (samples != null) {
+            for (int i = 0; i < samples.length(); i++) {
+                JSONObject item = samples.optJSONObject(i);
+                if (item == null) continue;
+                double temp = value(item, "temperature_2m_c");
+                if (!Double.isNaN(temp)) {
+                    if (Double.isNaN(min) || temp < min) min = temp;
+                    if (Double.isNaN(max) || temp > max) max = temp;
+                }
+                double rain = value(item, "precipitation_1h_mm");
+                if (Double.isNaN(rain)) rain = value(item, "rain_1h_mm");
+                if (!Double.isNaN(rain) && (Double.isNaN(rainMax) || rain > rainMax)) rainMax = rain;
+            }
+        }
+        views.setTextViewText(R.id.history_temp_badge, "Min " + fmt(min, 1) + "° · Maks " + fmt(max, 1) + "°");
+        views.setTextViewText(R.id.history_rain_badge, "Maks " + fmt(rainMax, 1) + " mm");
     }
 
     private static void renderDailyTiles(RemoteViews views, JSONObject forecastDoc) {
