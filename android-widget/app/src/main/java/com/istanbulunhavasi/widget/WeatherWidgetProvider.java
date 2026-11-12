@@ -157,28 +157,6 @@ public class WeatherWidgetProvider extends AppWidgetProvider {
             "Maks " + fmt(rainMax, 1) + " mm");
     }
 
-    private static void renderHistory(RemoteViews views, JSONObject historyDoc) {
-        JSONArray samples = historyDoc == null ? null : historyDoc.optJSONArray("samples");
-        if (samples == null && historyDoc != null) samples = historyDoc.optJSONArray("history");
-        double min = Double.NaN, max = Double.NaN, rainMax = Double.NaN;
-        if (samples != null) {
-            for (int i = 0; i < samples.length(); i++) {
-                JSONObject item = samples.optJSONObject(i);
-                if (item == null) continue;
-                double temp = value(item, "temperature_2m_c");
-                if (!Double.isNaN(temp)) {
-                    if (Double.isNaN(min) || temp < min) min = temp;
-                    if (Double.isNaN(max) || temp > max) max = temp;
-                }
-                double rain = value(item, "precipitation_1h_mm");
-                if (Double.isNaN(rain)) rain = value(item, "rain_1h_mm");
-                if (!Double.isNaN(rain) && (Double.isNaN(rainMax) || rain > rainMax)) rainMax = rain;
-            }
-        }
-        views.setTextViewText(R.id.history_temp_badge, "Min " + fmt(min, 1) + "° · Maks " + fmt(max, 1) + "°");
-        views.setTextViewText(R.id.history_rain_badge, "Maks " + fmt(rainMax, 1) + " mm");
-    }
-
     private static void renderDailyTiles(RemoteViews views, JSONObject forecastDoc) {
         List<LocalDate> dates = forecastDays();
         JSONArray summaries = forecastDoc == null ? null : forecastDoc.optJSONArray("daily_summary");
@@ -494,7 +472,8 @@ public class WeatherWidgetProvider extends AppWidgetProvider {
                     step,
                     value(item, "temperature_2m_c"),
                     value(item, "precipitation_6h_mm"),
-                    utcDate
+                    utcDate,
+                    istanbulDate
                 ));
             } catch (Exception ignored) { }
         }
@@ -512,7 +491,7 @@ public class WeatherWidgetProvider extends AppWidgetProvider {
         for (ForecastPoint point : forecastPoints(forecastDoc)) {
             if (point.step > 0 && point.step <= 120 && point.step % 3 == 0
                 && point.stamp.toEpochMilli() >= now - 30 * 60000L
-                && wanted.contains(point.utcDate)) {
+                && wanted.contains(point.istanbulDate)) {
                 result.add(point);
             }
         }
@@ -674,12 +653,14 @@ public class WeatherWidgetProvider extends AppWidgetProvider {
         final double temperature;
         final double rain;
         final String utcDate;
-        ForecastPoint(Instant stamp, int step, double temperature, double rain, String utcDate) {
+        final String istanbulDate;
+        ForecastPoint(Instant stamp, int step, double temperature, double rain, String utcDate, String istanbulDate) {
             this.stamp = stamp;
             this.step = step;
             this.temperature = temperature;
             this.rain = rain;
             this.utcDate = utcDate;
+            this.istanbulDate = istanbulDate;
         }
     }
     private static final class RainSpell {
