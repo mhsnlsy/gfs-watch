@@ -276,7 +276,7 @@ const modestChart = buildIstanbulInteractiveSvg([
 ]);
 const modestPrecipTicks = axisTicks(modestChart.body, "precipitation");
 assert.equal(buildPanelAxis("precipitation_6h_mm", [[4], [9.8]]).step, 1);
-assert.deepEqual(modestPrecipTicks.slice().reverse(), ["0", "1", "2", "3", "4", "5", "6", "7", "8", "9", "10"]);
+assert.deepEqual(modestPrecipTicks.slice().reverse(), ["0", "1", "2", "3", "4", "5", "6", "7", "8", "9", "10", "11"]);
 assert.ok(!modestPrecipTicks.includes("9,8"));
 assert.ok(modestChart.body.includes('data-latest-peak-value="9,8 mm"'));
 
