@@ -108,7 +108,31 @@
 .pressure-current .pressure-list{margin-top:4px}
 .pressure-trend{margin-top:12px;padding:10px 12px;border-radius:10px;background:rgba(255,255,255,.035);font-size:12px;line-height:1.45}.pressure-impact{margin-top:12px;padding:10px 12px;border-radius:10px;background:rgba(255,255,255,.045);font-size:12px;line-height:1.45}
 @media(max-width:760px){.pressure-summary{grid-template-columns:1fr}.pressure-center-dashboard{padding:14px}}
-</style></head>
+@media(max-width:760px){
+  .gfs-pressure-panel{margin-top:0}
+}
+</style><script>
+(function(){
+  const panel=document.getElementById("basinc");
+  const main=document.querySelector("main.shell");
+  if(!panel || !main) return;
+  const originalParent=panel.parentElement;
+  const originalNext=panel.nextElementSibling;
+  const mq=window.matchMedia("(max-width:760px)");
+  const apply=()=>{
+    if(mq.matches){
+      if(panel.parentElement!==main) main.appendChild(panel);
+    }else{
+      if(panel.parentElement!==originalParent){
+        if(originalNext && originalNext.parentElement===originalParent) originalParent.insertBefore(panel,originalNext);
+        else originalParent.appendChild(panel);
+      }
+    }
+  };
+  apply();
+  mq.addEventListener ? mq.addEventListener("change",apply) : mq.addListener(apply);
+})();
+</script></head>
 <body>
   <header class="shell topbar">
     <a class="brand" href="/?station=eyupsultan" aria-label="İstanbul Havası · Şehir için hava tahmini"><span class="brand-mark" aria-hidden="true"><img src="/favicon-192x192.png?v=20261108-city-icon-3" alt="" width="38" height="38" style="display:block;width:100%;height:100%;object-fit:contain;border-radius:inherit"></span><span>İstanbul Havası<small>Şehir için hava tahmini</small></span></a>
