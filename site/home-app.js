@@ -1168,18 +1168,18 @@ const __hideEmptyBadges=()=>{document.querySelectorAll('[class*="badge"],[class*
       $("rain").innerHTML=numeric(rain1h)?fmt(rain1h,1)+'<span class="unit">mm</span>':'—<span class="unit">mm</span>';
       const rainBriefCurrent=$("rain-brief-current");
       if(rainBriefCurrent){
-        if(numeric(rain1h)){
-          rainBriefCurrent.textContent=rain1h>0?"Anlık istasyon yağışı: "+fmt(rain1h,1)+" mm / son 1 saat":"Yağış yok";
+        const windSpeed=Number(station&&station.wind_speed_10m_kmh);
+        const windCardinal=String(station&&station.wind_direction_cardinal||"").toUpperCase().trim();
+        let windBadge="";
+        if(Number.isFinite(windSpeed)&&windSpeed>15){
+          if(windCardinal==="N") windBadge="Rüzgarlı";
+          else if(windCardinal==="NW") windBadge="Karayel hakim";
+          else if(windCardinal==="NE") windBadge="Poyraz hakim";
+          else if(windCardinal==="S"||windCardinal==="SW") windBadge="Lodos hakim";
+        }
+        if(rain1h!==null && rain1h>0){
+          rainBriefCurrent.textContent="Anlık istasyon yağışı: "+fmt(rain1h,1)+" mm / son 1 saat";
         }else{
-          const windSpeed=Number(station&&station.wind_speed_10m_kmh);
-          const windCardinal=String(station&&station.wind_direction_cardinal||"").toUpperCase().trim();
-          let windBadge="";
-          if(Number.isFinite(windSpeed)&&windSpeed>15){
-            if(windCardinal==="N") windBadge="Rüzgarlı";
-            else if(windCardinal==="NW") windBadge="Karayel hakim";
-            else if(windCardinal==="NE") windBadge="Poyraz hakim";
-            else if(windCardinal==="S"||windCardinal==="SW") windBadge="Lodos hakim";
-          }
           rainBriefCurrent.textContent=windBadge||"Yağış yok";
         }
       }
