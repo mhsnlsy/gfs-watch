@@ -946,11 +946,11 @@ const __hideEmptyBadges=()=>{document.querySelectorAll('[class*="badge"],[class*
       });
       const points=[...hourlyPoints.values()].sort((a,b)=>a.time-b.time);
 
-      if(!points.length){
-        const rainMinBadge=$( "station-rain-min" );
+      const rainMinBadge=$( "station-rain-min" );
       const rainMaxBadge=$( "station-rain-max" );
       const rainMinTopBadge=$( "station-rain-min-top" );
       const rainMaxTopBadge=$( "station-rain-max-top" );
+      if(!points.length){
         if(rainMaxBadge){rainMaxBadge.hidden=true;rainMaxBadge.textContent="";}
         holder.innerHTML='<div class="station-trend-empty">MGM saatlik yağış arşivi henüz oluşuyor. İlk ölçüm geldiğinde grafik otomatik başlayacak.</div>';
         if(meta)meta.textContent=stationName+" · MGM · saatlik arşiv oluşturuluyor";
