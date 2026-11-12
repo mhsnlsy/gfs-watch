@@ -271,10 +271,19 @@ public class WeatherWidgetProvider extends AppWidgetProvider {
     }
 
     private static void renderTemperatureTrend(RemoteViews views, JSONObject forecastDoc, JSONObject station) {
+        boolean stationLive = station != null
+            && !station.optBoolean("is_stale", false)
+            && "live".equalsIgnoreCase(station.optString("status", "live"));
+        List<ForecastPoint> rows = briefingPoints(forecastDoc);
+        if (!stationLive) {
+            views.setTextViewText(R.id.temp_summary,
+                "Eyüpsultan istasyonunun güncel ölçümü bekleniyor; eski ölçümle sıcaklık eğilimi üretilmiyor.");
+            views.setTextViewText(R.id.temp_swing, swingLines(rows));
+            return;
+        }
+
         double current = value(station, "temperature_2m_c");
         if (Double.isNaN(current)) current = value(station, "temperature_c");
-
-        List<ForecastPoint> rows = briefingPoints(forecastDoc);
         List<Double> nearTemps = new ArrayList<>();
         Map<String, List<Double>> byDay = new HashMap<>();
         List<LocalDate> dayKeys = forecastDays();
@@ -379,9 +388,13 @@ public class WeatherWidgetProvider extends AppWidgetProvider {
 
     private static String swingLines(List<ForecastPoint> rows) {
         Map<String, List<TempSwing>> byDay = new HashMap<>();
-        for (int i = 1; i < rows.size(); i++) {
-            ForecastPoint before = rows.get(i - 1);
-            ForecastPoint after = rows.get(i);
+        List<ForecastPoint> valid = new ArrayList<>();
+        for (ForecastPoint point : rows) {
+            if (!Double.isNaN(point.temperature)) valid.add(point);
+        }
+        for (int i = 1; i < valid.size(); i++) {
+            ForecastPoint before = valid.get(i - 1);
+            ForecastPoint after = valid.get(i);
             if (Double.isNaN(before.temperature) || Double.isNaN(after.temperature)) continue;
             double hours = (after.stamp.toEpochMilli() - before.stamp.toEpochMilli()) / 3600000.0;
             if (hours < 2.5 || hours > 3.5) continue;
