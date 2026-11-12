@@ -1200,7 +1200,7 @@ const __hideEmptyBadges=()=>{document.querySelectorAll('[class*="badge"],[class*
           return "";
         })();
         let windBadge="";
-        if(Number.isFinite(windSpeed)&&windSpeed>15){
+        if(Number.isFinite(windSpeed)&&windSpeed>=12){
           if(windCardinal==="N"||windCardinal==="NNE"||windCardinal==="NNW") windBadge="Rüzgarlı";
           else if(windCardinal==="NW") windBadge="Karayel hakim";
           else if(windCardinal==="NE") windBadge="Poyraz hakim";
