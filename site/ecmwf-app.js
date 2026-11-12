@@ -46,7 +46,8 @@
     return b*gamma/(a-gamma);
   }
 
-  // ECMWF uses the same four-cycle valid-time renderer and axis rules as homepage GFS.\nfunction isTemperatureField(field) {
+  // ECMWF uses the same four-cycle valid-time renderer and axis rules as homepage GFS.
+function isTemperatureField(field) {
   return field === "temperature_2m_c" || field === "temperature_850hpa_c";
 }
 
@@ -131,7 +132,8 @@ function buildPanelAxis(field, valuesBySeries, options = {}) {
   return { low, high, ticks, step, latestPeak, latestTrough };
 }
 
-\nfunction buildSeries(runs) {
+
+function buildSeries(runs) {
   const docs = (Array.isArray(runs) ? runs : [])
     .filter(run => run && run.run_id_utc && Array.isArray(run.forecast_6_hourly))
     .slice()
@@ -425,7 +427,8 @@ function buildSvg(runs) {
   };
 }
 
-\n  function renderSvg(runs) {
+
+  function renderSvg(runs) {
     const host=$("ecmwf-gfs-comparison-container");
     if(!host)return;
     const chart=host.querySelector(".gfs-interactive-chart");
