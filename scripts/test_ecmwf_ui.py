@@ -67,7 +67,7 @@ def main() -> None:
         'id="meteopt-table-body"',
         '<th>Steps</th><th>Date/Hour (TSİ)</th><th>T.2m</th><th>Prec.</th><th>W.10m</th><th>T.850</th><th>W.850</th><th>RH.2m',
         '41.0901°N 28.9436°E',
-        'https://www.meteopt.com/modelos/ecmwf?lat=41.0901',
+        'Veri kaynağı: MeteoPT ECMWF',
     )
     missing_ecmwf = [item for item in ecmwf_required if item not in ecmwf_page]
     if missing_ecmwf:
@@ -85,7 +85,8 @@ def main() -> None:
     ):
         if geometry not in ecmwf_app:
             raise AssertionError("ECMWF renderer is missing homepage GFS parity rule: " + geometry)
-    if "api.meteopt.com/ecmwf/json" not in ecmwf_app and "api.meteopt.com/ecmwf/json" not in main:
+    worker = (ROOT / "istanbul-gfs-worker" / "src" / "index.js").read_text(encoding="utf-8")
+    if "api.meteopt.com/ecmwf/json" not in worker:
         raise AssertionError("ECMWF runtime must remain on the MeteoPT ECMWF source path.")
 
     missing = [item for item in required if item not in website_contract]
