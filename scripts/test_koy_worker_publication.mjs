@@ -123,9 +123,10 @@ const heavy = buildKoyInteractiveSvg({
   })),
 });
 const heavyPrecip = axisTicks(heavy.body, "precipitation");
-assert.equal(buildPanelAxis("precipitation_6h_mm", [[22], [1], [1], [9.8]]).step, 2);
-assert.deepEqual(heavyPrecip.slice().reverse(), ["0", "2", "4", "6", "8", "10", "12", "14", "16", "18", "20", "22"]);
+assert.equal(buildPanelAxis("precipitation_6h_mm", [[22], [1], [1], [9.8]]).step, 1);
+assert.deepEqual(heavyPrecip.slice().reverse(), ["0", "1", "2", "3", "4", "5", "6", "7", "8", "9", "10"]);
 assert.ok(!heavyPrecip.includes("9,8"));
+assert.ok(!heavyPrecip.includes("22"), "older 22 mm peak must not widen the latest-cycle precipitation axis");
 assert.ok(heavy.body.includes('data-latest-peak-value="9,8 mm"'));
 assert.ok(heavy.body.includes("15.11.2026 15:00 TSİ"));
 assertIntegerTicks(axisTicks(heavy.body, "temperature"), 5);
@@ -137,9 +138,7 @@ assert.ok(!axisTicks(heavy.body, "temperature_850").includes("-10"), "older-cycl
 const heavyWind = axisTicks(heavy.body, "wind_10m");
 assertIntegerTicks(heavyWind, 10, { start: 0, nonnegative: true });
 assert.ok(heavyWind.includes("0") && heavyWind.includes("40"));
-const heavyPrecipLatestOnly = axisTicks(heavy.body, "precipitation");
-assert.deepEqual(heavyPrecipLatestOnly.slice().reverse(), ["0", "1", "2", "3", "4", "5", "6", "7", "8", "9", "10"]);
-assert.ok(!heavyPrecipLatestOnly.includes("22"), "older 22 mm precipitation peak must be outside the latest-cycle axis");
+assert.ok(heavyPrecip.length >= 2, "latest-cycle precipitation axis must remain visible");
 
 assert.equal(buildKoyInteractiveSvg({ runs: fourCycles(() => ({})).slice(0, 3) }), null);
 assert.ok(!heavy.body.includes("gfs-latest-trough-marker"), "flat Köy latest temperatures must not repeat the peak label");
