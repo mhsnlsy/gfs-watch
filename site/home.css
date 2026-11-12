@@ -5005,10 +5005,10 @@ main.shell { padding-bottom:max(12px,env(safe-area-inset-bottom)); }
   .dashboard-left .station-card .station-current .temp-row{
     display:flex!important;
     align-items:center!important;
-    column-gap:10px!important;
+    column-gap:3px!important;
   }
   .dashboard-left .station-card .station-current .weather-symbol{
-    margin-left:-2px!important;
+    margin-left:-4px!important;
     transform:none!important;
   }
   .dashboard-left .station-card .station-current .station-inline-badges{
