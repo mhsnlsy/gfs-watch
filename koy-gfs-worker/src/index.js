@@ -554,7 +554,7 @@ function buildKoySeries(runs) {
   return { series, validKeys, pointsBySeries, localLabels, dates, offsets };
 }
 
-function buildKoyInteractiveSvg(comparison) {
+export function buildKoyInteractiveSvg(comparison) {
   const candidateRuns = Array.isArray(comparison?.runs) ? comparison.runs : [];
   if (candidateRuns.length < 4) return null;
   const chart = buildKoySeries(candidateRuns);
