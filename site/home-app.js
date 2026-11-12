@@ -284,6 +284,39 @@
       });
       if(lows)lows.innerHTML=lowRows.length?lowRows.join(""):"<li>Belirgin siklon merkezi bulunamadı.</li>";
       if(highs)highs.innerHTML=highRows.length?highRows.join(""):"<li>Belirgin yüksek basınç merkezi bulunamadı.</li>";
+      const trend=document.getElementById("pressure-trend");
+      if(trend){
+        const centerAt=(step,type)=>{
+          const cs=(step&&step.centers||[]).filter(c=>c.type===type);
+          if(!cs.length)return null;
+          cs.sort((a,b)=>type==="low"?Number(a.pressure_hpa)-Number(b.pressure_hpa):Number(b.pressure_hpa)-Number(a.pressure_hpa));
+          return cs[0];
+        };
+        const bearing=(a,b)=>{
+          const lat1=Number(a.latitude)*Math.PI/180, lat2=Number(b.latitude)*Math.PI/180;
+          const dl=(Number(b.longitude)-Number(a.longitude))*Math.PI/180;
+          const y=Math.sin(dl)*Math.cos(lat2), x=Math.cos(lat1)*Math.sin(lat2)-Math.sin(lat1)*Math.cos(lat2)*Math.cos(dl);
+          return (Math.atan2(y,x)*180/Math.PI+360)%360;
+        };
+        const dirName=(deg)=>{
+          const names=["K","KKD","KD","DKD","D","DGD","GD","GGD","G","GGB","GB","BGB","B","BKB","KB","KKB"];
+          return names[Math.round(deg/22.5)%16];
+        };
+        const first=steps[0], last=steps[steps.length-1];
+        const parts=[];
+        [["Siklon","low"],["Yüksek basınç","high"]].forEach(([label,type])=>{
+          const a=centerAt(first,type), b=centerAt(last,type);
+          if(!a||!b)return;
+          const dp=Number(b.pressure_hpa)-Number(a.pressure_hpa);
+          const trendText=type==="low"?(dp<=-1?"güçleniyor":dp>=1?"zayıflıyor":"belirgin değişmiyor"):(dp>=1?"güçleniyor":dp<=-1?"zayıflıyor":"belirgin değişmiyor");
+          const bearingDeg=bearing(a,b);
+          const distance=Number(a.distance_km_to_center||0);
+          const distance2=Number(b.distance_km_to_center||0);
+          const moved=Math.max(0,distance2-distance);
+          parts.push("<span><strong>"+label+":</strong> "+trendText+" ("+dp.toFixed(1)+" hPa / 120 saat); merkez hareketi "+dirName(bearingDeg)+" yönünde.</span>");
+        });
+        trend.innerHTML="<strong>Hareket ve trend:</strong> "+(parts.length?parts.join(" "):"120 saatlik hareket eğilimi için yeterli merkez bulunamadı.");
+      }
       const note=document.querySelector(".gfs-pressure-panel .section-note");
       if(note){
         const first=payload.cycle_utc?new Date(payload.cycle_utc):null;
