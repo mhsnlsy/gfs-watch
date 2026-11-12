@@ -4805,9 +4805,14 @@ main.shell { padding-bottom:max(12px,env(safe-area-inset-bottom)); }
     max-width:600px!important;
     min-width:0!important;
     margin:0!important;
-    padding-left:0!important;
-    padding-right:0!important;
     transform:none!important;
+  }
+  /* Preserve the station card's own inner horizontal breathing room.
+     The structural wrapper must not flatten the card's content padding. */
+  .dashboard-left > .station-card{
+    padding-left:18px!important;
+    padding-right:18px!important;
+    box-sizing:border-box!important;
   }
   .dashboard-left > .station-card{
     height:auto!important;
