@@ -2377,7 +2377,8 @@ if(typeof renderBriefing==="function")renderBriefing();
     const modelGfsButton=$("model-gfs-button");
     const modelEcmwfButton=$("model-ecmwf-button");
     if(modelGfsButton)modelGfsButton.addEventListener("click",()=>setModelView("gfs"));
-    // ECMWF artık ayrı /ecmwf sayfasında açılır; GFS ana sayfa görünümü değişmez.
+    if(modelEcmwfButton)modelEcmwfButton.addEventListener("click",()=>{window.location.href="./ecmwf/";});
+    // ECMWF ayrı /ecmwf sayfasında açılır; ana sayfadaki kontrol yalnızca butondur.
     try{if(localStorage.getItem("istanbul-hava-model-view")==="ecmwf")activeModel="ecmwf";}catch(_){}
     setModelView(activeModel,false);
 
