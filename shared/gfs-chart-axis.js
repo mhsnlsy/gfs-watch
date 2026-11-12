@@ -1,4 +1,7 @@
 // Shared Y-axis scale for the Istanbul and Köy GFS comparison charts.
+// The scale is determined ONLY from the newest (solid) GFS cycle.
+// Older comparison cycles may therefore extend beyond the visible plot;
+// their peaks are intentionally allowed to be clipped.
 // Ticks are whole numbers. Temperature and 850 hPa step by 5, wind by 10.
 // Precipitation steps by 1 (0, 1, 2, 3, …). Above 16 the labels get too dense,
 // so that panel alone widens to a step of 2.
@@ -35,26 +38,28 @@ export function formatPeakValue(value) {
 }
 
 export function buildPanelAxis(field, valuesBySeries) {
-  const allValues = valuesBySeries.flat().filter(value => value !== null);
   const latestValues = (valuesBySeries[valuesBySeries.length - 1] || []).filter(value => value !== null);
+  // Do not let an older dashed cycle change the scale of the current output.
+  // This is especially important for precipitation, where an obsolete spike
+  // can otherwise create a huge 0–24 mm axis for a current 0–4 mm forecast.
   const latestPeak = latestValues.length ? Math.max(...latestValues) : null;
   const latestMin = latestValues.length ? Math.min(...latestValues) : null;
   const temperature = isTemperatureField(field);
   const latestTrough = temperature && latestPeak !== null && latestMin !== null && Math.abs(latestPeak - latestMin) > 1e-9
     ? latestMin
     : null;
-  const maxValue = allValues.length ? Math.max(...allValues) : null;
+  const maxValue = latestValues.length ? Math.max(...latestValues) : null;
   const step = axisStep(field, maxValue);
 
   let low = 0;
   let high = step;
-  if (allValues.length) {
+  if (latestValues.length) {
     if (temperature) {
-      low = Math.floor(Math.min(...allValues) / step) * step;
-      high = Math.ceil(Math.max(...allValues) / step) * step;
+      low = Math.floor(Math.min(...latestValues) / step) * step;
+      high = Math.ceil(Math.max(...latestValues) / step) * step;
     } else {
       low = 0;
-      high = Math.ceil(Math.max(0, ...allValues) / step) * step;
+      high = Math.ceil(Math.max(0, ...latestValues) / step) * step;
     }
   }
   if (!Number.isFinite(low) || !Number.isFinite(high) || high <= low) {
