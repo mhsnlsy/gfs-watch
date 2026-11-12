@@ -13,17 +13,17 @@
 [class*="badge"][hidden]{display:none!important}
 
 /* Optimized station observation polish */
-    .station-current .temp-row{position:relative;padding-bottom:58px}
+    .station-current .temp-row{display:grid;grid-template-columns:max-content auto;align-items:center;column-gap:13px;row-gap:5px;position:relative}
     .station-live-range-badge{display:inline-flex;align-items:center;justify-content:center;white-space:nowrap;max-width:100%;box-sizing:border-box;margin-top:4px;padding:3px 8px;border-radius:999px;border:1px solid rgba(125,211,215,.22);background:rgba(125,211,215,.07);color:#9edfe0;font:600 9px/1.2 "DM Sans",sans-serif;letter-spacing:.01em;overflow:hidden;text-overflow:ellipsis}
     .station-live-range-badge[hidden]{display:none}
     .station-live-range-badge-rain{border-color:rgba(131,201,235,.25);background:rgba(131,201,235,.07);color:#a9d7ef}
-    .station-current .station-live-range-badge-temp{position:absolute;left:0;bottom:0;width:max-content;max-width:100%;margin-top:0}
-    .station-current .station-temp-compare{bottom:31px}
+    .station-current .station-live-range-badge-temp{grid-column:1 / -1;width:max-content;max-width:100%;margin-top:0}
+    .station-current .station-temp-compare{position:static;grid-column:1 / -1;width:max-content;max-width:100%;}
     .station-rain-stat .station-live-range-badge-rain{width:max-content;max-width:100%;overflow:visible;text-overflow:clip}
     .station-live-range-badge-rain{width:max-content;overflow:visible;text-overflow:clip}
     .feels-like-24h-badge{font-size:0;line-height:0}
     .feels-like-24h-badge::after{content:"min " attr(data-min) "° · maks " attr(data-max) "°";font-size:9px;line-height:1.25}
-    @media(max-width:560px){.station-live-range-badge{font-size:8px;padding:3px 6px}.station-current .station-live-range-badge-temp{max-width:100%}.station-current .station-temp-compare{bottom:29px}.feels-like-24h-badge::after{font-size:8px}}
+    @media(max-width:560px){.station-live-range-badge{font-size:8px;padding:3px 6px}.station-current .station-live-range-badge-temp{max-width:100%}.station-current .station-temp-compare{max-width:100%;padding:3px 7px;font-size:9px}.feels-like-24h-badge::after{font-size:8px}}
     .station-current .temp-meta{margin-top:6px}
     .delta-badge{display:inline-flex;align-items:center;gap:4px;margin-top:6px;padding:3px 9px;border-radius:999px;background:rgba(125,211,215,.12);border:1px solid rgba(125,211,215,.28);color:var(--cyan);font-size:11px;font-weight:600;letter-spacing:.01em;min-height:22px}
     .delta-badge:empty{display:none}
