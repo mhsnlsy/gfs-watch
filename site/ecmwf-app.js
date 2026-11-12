@@ -435,30 +435,96 @@ function buildSvg(runs) {
     }
   }
 
+  function tableFinite(value) {
+    return value !== null && value !== undefined && value !== "" && Number.isFinite(Number(value));
+  }
+  function tableNumber(value) {
+    return tableFinite(value) ? Number(value) : null;
+  }
+  function tableColour(field, value) {
+    if (value === null) return "";
+    const v = value;
+    if (field === "wind") return v < 10 ? "mt-blue" : v < 20 ? "mt-green" : v < 30 ? "mt-yellow" : v < 45 ? "mt-orange" : v < 60 ? "mt-red" : "mt-purple";
+    if (field === "precip") return Number(v.toFixed(1)) === 0 ? "mt-gray" : v < .1 ? "mt-blue" : v < 1 ? "mt-green" : v < 2.5 ? "mt-yellow" : v < 5 ? "mt-orange" : v < 10 ? "mt-red" : "mt-purple";
+    if (field === "t2m" || field === "dewpoint") return v < 0 ? "mt-blue" : v < 8 ? "mt-green" : v < 16 ? "mt-yellow" : v < 24 ? "mt-orange" : v < 32 ? "mt-red" : "mt-purple";
+    if (field === "rh2m") return v < 30 ? "rh2m-warm-1" : v < 45 ? "rh2m-warm-2" : v < 60 ? "rh2m-warm-3" : v < 75 ? "rh2m-cool-1" : v < 90 ? "rh2m-cool-2" : "rh2m-cool-3";
+    if (field === "t850") return v < -10 ? "mt-blue" : v < -2 ? "mt-green" : v < 6 ? "mt-yellow" : v < 14 ? "mt-orange" : v < 22 ? "mt-red" : "mt-purple";
+    if (field === "snowln") return v < 1000 ? "mt-blue" : v < 1500 ? "mt-green" : v < 2000 ? "mt-yellow" : v < 2500 ? "mt-orange" : v < 3000 ? "mt-red" : "mt-purple";
+    return "";
+  }
+  function tableDisplay(value, digits=1) {
+    return value === null ? "—" : Number(value).toLocaleString("en-GB",{minimumFractionDigits:digits,maximumFractionDigits:digits});
+  }
+  function tableDewpoint(temp, humidity) {
+    if (temp === null || humidity === null || humidity <= 0 || humidity > 100) return null;
+    const a=17.62,b=243.12;
+    const gamma=Math.log(humidity/100)+(a*temp)/(b+temp);
+    const result=(b*gamma)/(a-gamma);
+    return Number.isFinite(result)?result:null;
+  }
+  function tableValueCell(value, field, digits=1) {
+    if (value === null) return '<span class="meteopt-value">—</span>';
+    return '<span class="meteopt-value '+tableColour(field,value)+'">'+tableDisplay(value,digits)+'</span>';
+  }
+  function tableWindCell(speed, direction, digits=0) {
+    if (speed === null) return '<span class="meteopt-value">—</span>';
+    const arrow=direction===null?"":'<span class="meteopt-wind-arrow" style="--wind-angle:'+((Number(direction)+180)%360)+'deg" aria-label="Rüzgâr yönü '+Math.round(direction)+'°">↑</span>';
+    return '<span class="meteopt-value '+tableColour("wind",speed)+' meteopt-wind-value">'+tableDisplay(speed,digits)+arrow+'</span>';
+  }
+  function ecmwfTableDateLabel(point, runId, step) {
+    const rawDate=point&&point.valid_time_utc?new Date(point.valid_time_utc):new Date(new Date(runId).getTime()+step*3600000);
+    if(!Number.isFinite(rawDate.getTime()))return "—";
+    // Homepage GFS table convention is intentionally retained: valid timestamp
+    // is shifted back 3h before the TSİ display.
+    const date=new Date(rawDate.getTime()-3*3600000);
+    const datePart=new Intl.DateTimeFormat("en-GB",{timeZone:"Europe/Istanbul",weekday:"short",day:"numeric",month:"short"}).format(date);
+    const hour=new Intl.DateTimeFormat("en-GB",{timeZone:"Europe/Istanbul",hour:"2-digit",hourCycle:"h23"}).format(date);
+    return datePart+" "+hour+" TSİ";
+  }
   function renderTable(doc) {
     const body=$("meteopt-table-body");
     if(!body)return;
-    const rows=Array.isArray(doc.forecasts)?doc.forecasts:[];
-    if(!rows.length){
+    const points=Array.isArray(doc.forecast_6_hourly)?doc.forecast_6_hourly:[];
+    const hours=points.map(point=>({step:Number(point.forecast_hour),point}))
+      .filter(item=>Number.isFinite(item.step)&&item.step>0&&item.step<=180&&item.step%3===0)
+      .sort((a,b)=>a.step-b.step);
+    if(!hours.length){
       body.innerHTML='<tr><td colspan="10" class="meteopt-table-empty">ECMWF F180 tahmin adımları henüz yok.</td></tr>';
+      $("ecmwf-table-status").textContent="Tahmin adımı bulunamadı";
       return;
     }
-    body.innerHTML=rows.map(p=>{
+    const rows=hours.map(item=>{
+      const p=item.point||{};
       const t850=p.temperature_850hpa&&p.temperature_850hpa.mean_c;
       const w850=p.wind_850hpa&&p.wind_850hpa.mean_kmh;
-      const direction10=p.wind_direction_10m_deg;
-      const direction850=p.wind_direction_850hpa_deg;
-      return '<tr>'+
-        '<td>F'+esc(p.forecast_hour)+'</td>'+
-        '<td>'+esc(tsLabel(p.valid_time_utc))+'</td>'+
-        '<td>'+fmt(p.temperature_2m_c)+'°</td>'+
-        '<td>'+fmt(p.precipitation_interval_mm)+' mm</td>'+
-        '<td>'+fmt(p.wind_speed_10m_kmh,0)+' km/sa'+(num(direction10)?' · '+Math.round(direction10)+'°':'')+'</td>'+
-        '<td>'+fmt(t850)+'°</td>'+
-        '<td>'+fmt(w850,0)+' km/sa'+(num(direction850)?' · '+Math.round(direction850)+'°':'')+'</td>'+
-        '<td>—</td><td>—</td><td>—</td>'+
-      '</tr>';
-    }).join("");
+      const d10=tableNumber(p.wind_direction_10m_deg);
+      const d850=tableNumber(p.wind_direction_850hpa_deg ?? (p.wind_850hpa&&p.wind_850hpa.direction_deg));
+      const temp=tableNumber(p.temperature_2m_c);
+      const rh=tableNumber(p.humidity_2m_percent);
+      const snow=tableNumber(p.snowln);
+      const vals=[
+        tableValueCell(temp,"t2m"),
+        tableValueCell(tableNumber(p.precipitation_interval_mm ?? p.precipitation_6h_mm),"precip"),
+        tableWindCell(tableNumber(p.wind_speed_10m_kmh),d10,0),
+        tableValueCell(tableNumber(t850),"t850"),
+        tableWindCell(tableNumber(w850),d850,0),
+        tableValueCell(rh,"rh2m",0),
+        tableValueCell(tableDewpoint(temp,rh),"dewpoint"),
+        tableValueCell(snow,"snowln",0)
+      ];
+      return '<tr><td>'+item.step+'</td><td>'+esc(ecmwfTableDateLabel(p,doc.run_id_utc,item.step))+'</td>'+vals.map(v=>'<td>'+v+'</td>').join("")+'</tr>';
+    });
+    body.innerHTML=rows.join("");
+    const run=doc.run_id_utc?new Date(doc.run_id_utc):null;
+    $("ecmwf-table-run").textContent=run&&Number.isFinite(run.getTime())
+      ?"Run: "+new Intl.DateTimeFormat("en-GB",{timeZone:"UTC",weekday:"short",day:"numeric",month:"short",year:"numeric",hour:"2-digit",hourCycle:"h23"}).format(run)+"Z"
+      :"ECMWF döngüsü";
+    $("ecmwf-table-updated").textContent=doc.updated_at_utc
+      ?"Yayın: "+new Intl.DateTimeFormat("tr-TR",{timeZone:"Europe/Istanbul",day:"2-digit",month:"2-digit",hour:"2-digit",minute:"2-digit"}).format(new Date(doc.updated_at_utc))+" TSİ"
+      :"Yayın zamanı bilinmiyor";
+    const intervals=Array.from(new Set(hours.slice(1).map((item,index)=>item.step-hours[index].step).filter(v=>Number.isFinite(v)&&v>0))).sort((a,b)=>a-b);
+    const cadence=intervals.length?intervals.map(v=>v+" saat").join("/"):"model";
+    $("ecmwf-table-status").textContent=rows.length+" adım · "+cadence+" aralıklı · 180. saate kadar";
   }
 
   async function load() {
