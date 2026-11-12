@@ -3,7 +3,10 @@ name: GFS Pressure Centers
 on:
   workflow_dispatch:
   schedule:
-    - cron: "20 23,5,11,17 * * *"
+    # Poll frequently so each 00/06/12/18Z GFS cycle is picked up
+    # as soon as f000 becomes available. The script itself only
+    # commits when the underlying GFS cycle changes.
+    - cron: "*/10 * * * *"
 
 permissions:
   contents: write
