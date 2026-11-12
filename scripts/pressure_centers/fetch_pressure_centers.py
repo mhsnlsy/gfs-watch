@@ -186,13 +186,42 @@ def build_tracks(steps):
         move = haversine_km(a["latitude"], a["longitude"], b["latitude"], b["longitude"])
         bearing = bearing_deg(a["latitude"], a["longitude"], b["latitude"], b["longitude"])
         pressures = [float(p["pressure_hpa"]) for p in points]
+        min_index = min(range(len(points)), key=lambda i: float(points[i]["pressure_hpa"])) if track["type"] == "low" else max(range(len(points)), key=lambda i: float(points[i]["pressure_hpa"]))
+        min_point = points[min_index]
+        start_pressure = float(a["pressure_hpa"])
+        end_pressure = float(b["pressure_hpa"])
+        peak_pressure = float(min_point["pressure_hpa"])
+        if track["type"] == "low":
+            if min_index == 0:
+                lifecycle = "zayıflıyor" if end_pressure >= start_pressure + 2 else "aktif"
+            elif min_index == len(points) - 1 and peak_pressure <= start_pressure - 2:
+                lifecycle = "derinleşiyor"
+            elif min_index > 0 and min_index < len(points) - 1:
+                before = float(points[min_index - 1]["pressure_hpa"])
+                after = float(points[min_index + 1]["pressure_hpa"])
+                lifecycle = "olgunlaşıyor" if after > peak_pressure + 1 and before > peak_pressure + 1 else "aktif"
+            else:
+                lifecycle = "aktif"
+        else:
+            if min_index == 0:
+                lifecycle = "zayıflıyor" if end_pressure <= start_pressure - 2 else "aktif"
+            elif min_index == len(points) - 1 and peak_pressure >= start_pressure + 2:
+                lifecycle = "güçleniyor"
+            elif min_index > 0 and min_index < len(points) - 1:
+                before = float(points[min_index - 1]["pressure_hpa"])
+                after = float(points[min_index + 1]["pressure_hpa"])
+                lifecycle = "olgunlaşıyor" if after < peak_pressure - 1 and before < peak_pressure - 1 else "aktif"
+            else:
+                lifecycle = "aktif"
         track.update({
             "movement_km": round(move, 1),
             "movement_bearing_deg": round(bearing, 0),
             "movement_direction": direction(bearing),
-            "pressure_change_hpa": round(float(b["pressure_hpa"]) - float(a["pressure_hpa"]), 1),
+            "pressure_change_hpa": round(end_pressure - start_pressure, 1),
             "min_pressure_hpa": round(min(pressures), 1),
             "max_pressure_hpa": round(max(pressures), 1),
+            "lifecycle": lifecycle,
+            "peak_forecast_hour": int(min_point["forecast_hour"]),
         })
         enriched.append(track)
     return enriched
