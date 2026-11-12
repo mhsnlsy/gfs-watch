@@ -5110,6 +5110,28 @@ main.shell { padding-bottom:max(12px,env(safe-area-inset-bottom)); }
 }
 
 
+/* 20261112 DESKTOP HORIZONTAL-LOCK — clip internal dashboard overflow.
+   Wide charts/tables may keep their own local scroll containers, but no child
+   is allowed to enlarge the document viewport itself. */
+@media (min-width:1200px) and (pointer:fine){
+  html,
+  body{
+    width:100%!important;
+    max-width:100%!important;
+    overflow-x:clip!important;
+  }
+  main.shell,
+  .dashboard-top,
+  .dashboard-left,
+  .dashboard-right,
+  #gfs-model-view,
+  #ecmwf-model-view,
+  #bildirimler,
+  .water-gfs-layout{
+    overflow-x:clip!important;
+  }
+}
+
 /* 20261112 MOBILE HORIZONTAL-LOCK — never allow the page to slide sideways.
    Keep the document and both dashboard columns inside the physical viewport. */
 @media (max-width:1199px), (pointer:coarse){
