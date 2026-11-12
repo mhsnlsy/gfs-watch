@@ -16,8 +16,12 @@ def main() -> None:
     html = HTML.read_text(encoding="utf-8")
     main = MAIN.read_text(encoding="utf-8")
     APP = ROOT / "site" / "home-app.js"
+    ECMWF_PAGE = ROOT / "site" / "ecmwf" / "index.html"
+    ECMWF_APP = ROOT / "site" / "ecmwf-app.js"
     CSS = ROOT / "site" / "home.css"
     app = APP.read_text(encoding="utf-8")
+    ecmwf_page = ECMWF_PAGE.read_text(encoding="utf-8")
+    ecmwf_app = ECMWF_APP.read_text(encoding="utf-8")
     css = CSS.read_text(encoding="utf-8")
     website_contract = html + "\n" + app + "\n" + css
     required = (
@@ -55,6 +59,35 @@ def main() -> None:
         'renderDaily(viewData.daily_summary,"ecmwf-daily-grid")',
         'renderFindings(viewData.regional_pressure_analysis&&viewData.regional_pressure_analysis.findings,first.mslp&&first.mslp.mean_hpa,"ecmwf-pressure-findings")',
     )
+    # Standalone ECMWF page: same homepage GFS chart/table geometry, but only MeteoPT ECMWF.
+    ecmwf_required = (
+        'href="/home.css',
+        'id="ecmwf-gfs-comparison-container"',
+        'class="gfs-interactive-chart gfs-clone-svg"',
+        'id="meteopt-table-body"',
+        '<th>Steps</th><th>Date/Hour (TSİ)</th><th>T.2m</th><th>Prec.</th><th>W.10m</th><th>T.850</th><th>W.850</th><th>RH.2m',
+        '41.0901°N 28.9436°E',
+        'https://www.meteopt.com/modelos/ecmwf?lat=41.0901&lon=28.9436',
+    )
+    missing_ecmwf = [item for item in ecmwf_required if item not in ecmwf_page]
+    if missing_ecmwf:
+        raise AssertionError("Missing standalone ECMWF page contract: " + ", ".join(missing_ecmwf))
+    for geometry in (
+        "const W = 1152;",
+        "const H = 838;",
+        "const panelWidth = 505;",
+        "const panelHeight = 250;",
+        "const panelLeft = [55, 592];",
+        "const panelTop = [214, 493];",
+        "firstMs + 180 * 3600000",
+        "common = common.filter(key => item.points.has(key))",
+        "function buildPanelAxis(field, valuesBySeries, options = {})",
+    ):
+        if geometry not in ecmwf_app:
+            raise AssertionError("ECMWF renderer is missing homepage GFS parity rule: " + geometry)
+    if "api.meteopt.com/ecmwf/json" not in ecmwf_app and "api.meteopt.com/ecmwf/json" not in main:
+        raise AssertionError("ECMWF runtime must remain on the MeteoPT ECMWF source path.")
+
     missing = [item for item in required if item not in website_contract]
     if missing:
         raise AssertionError("Missing ECMWF website contract: " + ", ".join(missing))
