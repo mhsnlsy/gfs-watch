@@ -936,15 +936,35 @@ async function api(request, env) {
 
   if (path === "/api/comparison.svg") {
     try {
-      const published = await publishLatestKoySvg(env);
-      if (published?.row) return decodePublicationAsset(published.row);
+      // Publication persistence is an optimization; it must never be allowed
+      // to turn the public comparison chart into HTTP 503 during a D1 write
+      // collision. If the archive is incomplete, bootstrap collection first.
+      try {
+        const published = await publishLatestKoySvg(env);
+        if (published?.row) return decodePublicationAsset(published.row);
+      } catch (publicationError) {
+        console.warn(JSON.stringify({
+          event: "koy_svg_publication_direct_render_fallback",
+          message: String(publicationError?.message || publicationError),
+        }));
+      }
+
+      let result = await env.GFS_DB.prepare(
+        "SELECT payload_json FROM gfs_runs ORDER BY run_id_utc DESC LIMIT 4"
+      ).all();
+      let runs = (result.results || []).map(row => JSON.parse(row.payload_json));
+      if (runs.length < 4) {
+        await collect(env);
+        result = await env.GFS_DB.prepare(
+          "SELECT payload_json FROM gfs_runs ORDER BY run_id_utc DESC LIMIT 4"
+        ).all();
+        runs = (result.results || []).map(row => JSON.parse(row.payload_json));
+      }
 
       // The chart itself must remain available even if the D1 publication write
       // is temporarily contended. Build directly from the four canonical raw
       // GFS documents and return the SVG without requiring a publication write.
-      const result = await env.GFS_DB.prepare(
-        "SELECT payload_json FROM gfs_runs ORDER BY run_id_utc DESC LIMIT 4"
-      ).all();
+      result = { results: runs.map(payload_json => ({ payload_json: JSON.stringify(payload_json) })) };
       const runs = (result.results || []).map(row => JSON.parse(row.payload_json));
       if (runs.length < 4) {
         return json({ ok: false, error: "Four complete Köy GFS cycles are not available" }, 404);
