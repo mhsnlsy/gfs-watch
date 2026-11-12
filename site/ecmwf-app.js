@@ -543,7 +543,7 @@ function buildSvg(runs) {
   async function load() {
     const status=$("ecmwf-table-status");
     try{
-      const response=await fetch("/data/ecmwf/latest.json?t="+Date.now(),{cache:"no-store"});
+      const response=await fetch("/api/ecmwf/latest?t="+Date.now(),{cache:"no-store"});
       if(!response.ok)throw new Error("HTTP "+response.status);
       const doc=await response.json();
       if(!doc||doc.schema!=="gfs-watch.ecmwf-eps.v1"||doc.status!=="ready")throw new Error("ECMWF veri paketi hazır değil.");
