@@ -1078,7 +1078,7 @@ const __hideEmptyBadges=()=>{document.querySelectorAll('[class*="badge"],[class*
         const minFeels=archivedMin!==null&&archivedMax!==null?archivedMin:(feelsValues.length?Math.min(...feelsValues):null);
         const maxFeels=archivedMin!==null&&archivedMax!==null?archivedMax:(feelsValues.length?Math.max(...feelsValues):null);
         if(minFeels!==null&&maxFeels!==null){
-          feelsEl.dataset.min=fmt(minFeels,1);feelsEl.dataset.max=fmt(maxFeels,1);feelsEl.hidden=false;feelsEl.textContent="";
+          feelsEl.dataset.min=fmt(minFeels,1);feelsEl.dataset.max=fmt(maxFeels,1);feelsEl.hidden=false;feelsEl.removeAttribute("hidden");feelsEl.textContent="";
         }else{feelsEl.hidden=true;feelsEl.textContent=""}
       }
     }
