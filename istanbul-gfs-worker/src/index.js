@@ -700,6 +700,12 @@ async function fetchEcmwfDocument(runDt) {
   const wind = ecmwfSeries(raw, "wind10m");
   const windDirection = ecmwfSeries(raw, "wind10mdir");
   const wind850 = ecmwfSeries(raw, "wind850");
+  const wind850Direction =
+    ecmwfSeries(raw, "wind850mdir").length ? ecmwfSeries(raw, "wind850mdir") :
+    ecmwfSeries(raw, "wind850dir").length ? ecmwfSeries(raw, "wind850dir") :
+    ecmwfSeries(raw, "winddir850");
+  const humidity = ecmwfSeries(raw, "rh2m");
+  const snowln = ecmwfSeries(raw, "snlevel");
   const rain = ecmwfSeries(raw, "apcp");
   const pressure = ecmwfSeries(raw, "prmsl");
   const forecasts = [];
@@ -711,6 +717,9 @@ async function fetchEcmwfDocument(runDt) {
       wind: ecmwfNumber(wind[i]),
       windDirection: ecmwfNumber(windDirection[i]),
       wind850: ecmwfNumber(wind850[i]),
+      wind850Direction: ecmwfNumber(wind850Direction[i]),
+      humidity: ecmwfNumber(humidity[i]),
+      snowln: ecmwfNumber(snowln[i]),
       rain: ecmwfNumber(rain[i]),
       pressure: ecmwfNumber(pressure[i]),
     };
@@ -726,11 +735,13 @@ async function fetchEcmwfDocument(runDt) {
       wind_speed_10m_kmh: Math.round(Math.max(0, values.wind) * 100) / 100,
       wind_direction_10m_deg: Math.round(((values.windDirection % 360) + 360) % 360),
       wind_speed_10m_stddev_kmh: null,
+      humidity_2m_percent: values.humidity === null ? null : Math.max(0, Math.min(100, Math.round(values.humidity * 10) / 10)),
+      snowln: values.snowln === null ? null : Math.max(0, Math.round(values.snowln * 10) / 10),
       precipitation_interval_mm: Math.round(Math.max(0, values.rain) * 1000) / 1000,
       precipitation_interval_stddev_mm: null,
       precipitation_accumulated_mm: null,
       temperature_850hpa: { mean_c: Math.round(values.temperature850 * 100) / 100, stddev_c: null },
-      wind_850hpa: { mean_kmh: Math.round(Math.max(0, values.wind850) * 100) / 100, stddev_kmh: null },
+      wind_850hpa: { mean_kmh: Math.round(Math.max(0, values.wind850) * 100) / 100, stddev_kmh: null, direction_deg: values.wind850Direction === null ? null : Math.round(((values.wind850Direction % 360) + 360) % 360) },
       mslp: { mean_hpa: Math.round(values.pressure * 10) / 10, stddev_hpa: null },
       precipitation_interval_hours: steps[i] - previousHour,
     });
@@ -763,6 +774,9 @@ async function fetchEcmwfDocument(runDt) {
     wind_speed_10m_kmh: item.wind_speed_10m_kmh,
     wind_direction_10m_deg: item.wind_direction_10m_deg,
     wind_speed_850hpa_kmh: item.wind_850hpa.mean_kmh,
+    wind_direction_850hpa_deg: item.wind_850hpa.direction_deg ?? null,
+    humidity_2m_percent: item.humidity_2m_percent ?? null,
+    snowln: item.snowln ?? null,
     precipitation_6h_mm: item.precipitation_interval_mm,
     precipitation_interval_hours: item.precipitation_interval_hours,
   }));
