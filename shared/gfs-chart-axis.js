@@ -49,9 +49,12 @@ export function buildPanelAxis(field, valuesBySeries) {
     ? latestMin
     : null;
   const allValues = valuesBySeries.flat().filter(value => value !== null);
+  // Precipitation is deliberately scaled from every comparison cycle.
+  // Example: an older cycle peaking at 22 mm and the latest at 9.8 mm
+  // must still produce a 0–22 mm axis with 2 mm spacing.
   const scaleValues = field === "precipitation_6h_mm" ? allValues : latestValues;
-  const maxValue = scaleValues.length ? Math.max(...scaleValues) : null;
-  const step = axisStep(field, maxValue);
+  const scaleMax = scaleValues.length ? Math.max(...scaleValues) : null;
+  const step = axisStep(field, scaleMax);
 
   let low = 0;
   let high = step;
