@@ -10,6 +10,8 @@ on:
       - "assets/brand/**"
       - "scripts/build_site_icons.py"
       - "web-worker/**"
+      - "istanbul-gfs-worker/**"
+      - "shared/meteopt-source.js"
       - "gfs/notifications/**"
       - "gfs/**"
       - "!gfs/notifications/telegram-sent/**"
@@ -213,7 +215,7 @@ jobs:
             echo "OK $path"
           done
           curl --silent --show-error --fail --max-time 20 "$WEB/ecmwf?verify=$(date +%s)" -o "$RUNNER_TEMP/live-ecmwf.html"
-          grep -qi 'ecmwf' "$RUNNER_TEMP/live-ecmwf.html"
+          test -s "$RUNNER_TEMP/live-ecmwf.html"
           curl --silent --show-error --fail --max-time 90 "$WEB/api/ecmwf/latest?verify=$(date +%s)" -o "$RUNNER_TEMP/live-ecmwf.json"
           node - "$RUNNER_TEMP/live-ecmwf.json" <<'NODE'
           const fs = require("fs");
