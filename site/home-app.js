@@ -1204,7 +1204,7 @@ const __hideEmptyBadges=()=>{document.querySelectorAll('[class*="badge"],[class*
           if(windCardinal==="N"||windCardinal==="NNE"||windCardinal==="NNW") windBadge="Rüzgarlı";
           else if(windCardinal==="NW") windBadge="Karayel hakim";
           else if(windCardinal==="NE") windBadge="Poyraz hakim";
-          else if(windCardinal==="S"||windCardinal==="SSW"||windCardinal==="SW"||windCardinal==="SSE") windBadge="Lodos hakim";
+          else if(windCardinal==="S"||windCardinal==="SSW"||windCardinal==="SW"||windCardinal==="SSE"||windCardinal==="WSW"||windCardinal==="W") windBadge="Lodos hakim";
         }
         const rainLabel=(rain1h!==null && rain1h>0)
           ? "Yağışlı · "+fmt(rain1h,1)+" mm / son 1 saat"
