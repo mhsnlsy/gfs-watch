@@ -2262,5 +2262,8 @@ if(typeof renderBriefing==="function")renderBriefing();
     try{if(localStorage.getItem("istanbul-hava-model-view")==="ecmwf")activeModel="ecmwf";}catch(_){}
     setModelView(activeModel,false);
 
+    // Pressure-center panel: fetch the live GFS 0–120 h analysis on page load.
+    loadGithubPressureCenters();
+
     startPage();
   
