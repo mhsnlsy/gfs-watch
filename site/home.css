@@ -4768,3 +4768,145 @@ main.shell { padding-bottom:max(12px,env(safe-area-inset-bottom)); }
     margin-right:auto!important;
   }
 }
+
+
+/* FINAL STRUCTURAL LAYOUT FIX — all left-column panels participate in normal flow.
+   Never position the briefing or pressure analysis over the station card. */
+@media (min-width:1200px) and (pointer:fine){
+  .dashboard-top{
+    display:grid!important;
+    grid-template-columns:600px minmax(0,1fr)!important;
+    column-gap:24px!important;
+    row-gap:0!important;
+    align-items:start!important;
+  }
+  .dashboard-left{
+    display:grid!important;
+    grid-template-columns:minmax(0,1fr)!important;
+    grid-auto-rows:auto!important;
+    gap:14px!important;
+    width:600px!important;
+    max-width:600px!important;
+    min-width:0!important;
+    height:auto!important;
+    min-height:0!important;
+    position:static!important;
+    align-content:start!important;
+  }
+  .dashboard-left > .station-card,
+  .dashboard-left > .station-briefing-inline,
+  .dashboard-left > .gfs-pressure-panel{
+    position:static!important;
+    grid-column:1!important;
+    grid-row:auto!important;
+    float:none!important;
+    clear:none!important;
+    width:100%!important;
+    max-width:600px!important;
+    min-width:0!important;
+    margin:0!important;
+    padding-left:0!important;
+    padding-right:0!important;
+    transform:none!important;
+  }
+  .dashboard-left > .station-card{
+    height:auto!important;
+    min-height:0!important;
+    align-self:start!important;
+  }
+  .dashboard-left > .station-briefing-inline{
+    display:block!important;
+    order:2!important;
+    padding-top:0!important;
+  }
+  .dashboard-left > .station-briefing-inline .briefing{
+    display:grid!important;
+    grid-template-columns:repeat(2,minmax(0,1fr))!important;
+    gap:14px!important;
+    width:100%!important;
+    margin:0!important;
+  }
+  .dashboard-left > .station-briefing-inline .briefing-row{
+    position:static!important;
+    width:100%!important;
+    min-width:0!important;
+    height:auto!important;
+    min-height:100%!important;
+    box-sizing:border-box!important;
+    overflow:visible!important;
+  }
+  .dashboard-left > .gfs-pressure-panel{
+    order:3!important;
+    margin-top:0!important;
+  }
+  .dashboard-left > .gfs-pressure-panel > .section-head{
+    margin:0 0 10px!important;
+  }
+  .dashboard-left > .gfs-pressure-panel > .pressure-card{
+    position:static!important;
+    width:100%!important;
+    max-width:600px!important;
+    height:auto!important;
+    min-height:0!important;
+    box-sizing:border-box!important;
+    margin:0!important;
+  }
+}
+
+@media (max-width:1199px), (pointer:coarse){
+  .dashboard-top{
+    display:grid!important;
+    grid-template-columns:minmax(0,1fr)!important;
+    gap:14px!important;
+    align-items:start!important;
+  }
+  .dashboard-left{
+    display:grid!important;
+    grid-template-columns:minmax(0,1fr)!important;
+    grid-auto-rows:auto!important;
+    gap:14px!important;
+    width:100%!important;
+    max-width:100%!important;
+    min-width:0!important;
+    height:auto!important;
+    min-height:0!important;
+    position:static!important;
+  }
+  .dashboard-left > .station-card,
+  .dashboard-left > .station-briefing-inline,
+  .dashboard-left > .gfs-pressure-panel{
+    position:static!important;
+    grid-column:1!important;
+    grid-row:auto!important;
+    order:initial!important;
+    width:100%!important;
+    max-width:100%!important;
+    min-width:0!important;
+    margin:0!important;
+    transform:none!important;
+  }
+  .dashboard-left > .station-briefing-inline{order:2!important}
+  .dashboard-left > .gfs-pressure-panel{order:3!important}
+  .dashboard-left > .station-briefing-inline .briefing{
+    display:grid!important;
+    grid-template-columns:repeat(2,minmax(0,1fr))!important;
+    gap:10px!important;
+    width:100%!important;
+    margin:0!important;
+  }
+  .dashboard-left > .station-briefing-inline .briefing-row{
+    position:static!important;
+    width:100%!important;
+    height:auto!important;
+    min-height:100%!important;
+    box-sizing:border-box!important;
+    overflow:visible!important;
+  }
+}
+
+@media (max-width:560px){
+  .dashboard-left > .station-briefing-inline .briefing{
+    grid-template-columns:minmax(0,1fr)!important;
+    gap:9px!important;
+  }
+}
