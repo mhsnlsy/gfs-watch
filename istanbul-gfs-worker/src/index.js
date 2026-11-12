@@ -820,18 +820,63 @@ async function fetchEcmwfDocument(runDt) {
 }
 
 async function collectEcmwf(env) {
-  const runDt = ecmwfRunCandidate();
-  const runId = runDt.toISOString().replace(".000Z", "+00:00");
+  const candidateBase = ecmwfRunCandidate();
+  const candidateRuns = Array.from({ length: 6 }, (_, index) =>
+    new Date(candidateBase.getTime() - index * 12 * 60 * 60 * 1000)
+  );
   const current = await env.GFS_DB.prepare("SELECT run_id_utc, payload_json FROM ecmwf_current WHERE key = 'latest'").first();
-  if (current && current.run_id_utc === runId) {
+
+  // MeteoPT can expose a newly published cycle before its complete 180 h
+  // horizon is available. Apply the same publication principle as GFS:
+  // never publish a partial cycle; use the newest completed MeteoPT cycle.
+  let runDt = null;
+  let payload = null;
+  let lastError = null;
+
+  for (const candidate of candidateRuns) {
+    const runId = candidate.toISOString().replace(".000Z", "+00:00");
+    if (current && current.run_id_utc === runId) {
+      try {
+        const currentPayload = JSON.parse(current.payload_json || "{}");
+        const currentMaxHour = Math.max(
+          0,
+          ...(currentPayload.forecast_6_hourly || []).map(point => Number(point?.forecast_hour) || 0)
+        );
+        if (currentPayload.source_url === ECMWF_SOURCE_URL &&
+            currentPayload.forecast_source === "meteopt" &&
+            currentMaxHour >= 180) {
+          return {
+            updated: false,
+            run_id_utc: runId,
+            source: "meteopt",
+            forecast_horizon_hours: currentMaxHour,
+          };
+        }
+      } catch (_) {}
+    }
+
     try {
-      const currentPayload = JSON.parse(current.payload_json || "{}");
-      if (currentPayload.source_url === ECMWF_SOURCE_URL && currentPayload.forecast_source === "meteopt") {
-        return { updated: false, run_id_utc: runId, source: "meteopt" };
+      const candidatePayload = await fetchEcmwfDocument(candidate);
+      const maxHour = Math.max(
+        0,
+        ...(candidatePayload.forecast_6_hourly || []).map(point => Number(point?.forecast_hour) || 0)
+      );
+      if (maxHour >= 180) {
+        runDt = candidate;
+        payload = candidatePayload;
+        break;
       }
-    } catch (_) {}
+      lastError = "MeteoPT ECMWF " + runId + " is only available through +" + maxHour + "h";
+    } catch (error) {
+      lastError = String(error?.message || error);
+    }
   }
-  const payload = await fetchEcmwfDocument(runDt);
+
+  if (!runDt || !payload) {
+    throw new Error(lastError || "No completed MeteoPT ECMWF cycle with 180 h horizon is available");
+  }
+
+  const runId = runDt.toISOString().replace(".000Z", "+00:00");
   const storedAt = new Date().toISOString();
   // Keep the four newest MeteoPT ECMWF cycles in the live payload so the
   // homepage can render the comparison directly from the canonical Worker.
