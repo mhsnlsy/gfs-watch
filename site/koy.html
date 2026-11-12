@@ -1724,7 +1724,44 @@ html.ios12 .backdrop-filter{display:none}
     #meteopt-gfs-table .rh2m-cool-2{color:#82dfbe!important;background:rgba(39,166,145,.18)!important;border:1px solid rgba(130,223,190,.16)}
     #meteopt-gfs-table .rh2m-cool-3{color:#8fd7ff!important;background:rgba(42,145,218,.2)!important;border:1px solid rgba(143,215,255,.18)}
     /* Column widths are shared from meteopt-gfs-table.css. */
-  </style>
+  
+    /* HOMEPAGE CLONE: Köy comparison chart uses the same outer card and
+       centered full-width chart geometry as the homepage notification chart. */
+    #notifications-list .notification-card.notification-chart-only.koy-gfs-report-card{
+      width:100%!important;
+      max-width:100%!important;
+      box-sizing:border-box!important;
+      margin-left:0!important;
+      margin-right:0!important;
+      padding:20px!important;
+    }
+    #notifications-list .notification-card.notification-chart-only.koy-gfs-report-card .notification-images{
+      display:block!important;
+      width:100%!important;
+      margin-top:10px!important;
+    }
+    #notifications-list .notification-card.notification-chart-only.koy-gfs-report-card .notification-image-item{
+      width:100%!important;
+      min-width:0!important;
+    }
+    #notifications-list .notification-card.notification-chart-only.koy-gfs-report-card .gfs-interactive-chart,
+    #notifications-list .notification-card.notification-chart-only.koy-gfs-report-card .notification-image-link,
+    #notifications-list .notification-card.notification-chart-only.koy-gfs-report-card img,
+    #notifications-list .notification-card.notification-chart-only.koy-gfs-report-card svg{
+      display:block!important;
+      width:100%!important;
+      max-width:100%!important;
+      height:auto!important;
+      margin:0 auto!important;
+      object-fit:contain!important;
+    }
+    @media(max-width:560px){
+      #notifications-list .notification-card.notification-chart-only.koy-gfs-report-card{
+        padding:17px!important;
+        border-radius:19px!important;
+      }
+    }
+</style>
   <div id="pull-refresh-indicator" role="status" aria-live="polite"><span class="pull-refresh-icon">↓</span><span class="pull-refresh-label">Yenilemek için aşağı çek</span></div>
     <script src="./gfs-comparison-tooltip.js?v=20261109-mobile-legend-fix-2"></script>
     <script src="./gfs-cycle-theme.js?v=20261111-theme-fix-1"></script>
