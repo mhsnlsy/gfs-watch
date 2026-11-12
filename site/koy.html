@@ -1092,7 +1092,7 @@
 .meteopt-wind-arrow{display:inline-block!important;width:9px!important;height:9px!important;font-size:9px!important;line-height:9px!important;font-weight:800!important;transform:rotate(var(--wind-angle))!important;transform-origin:50% 50%!important;opacity:.9!important}
 @media (max-width:850px),(pointer:coarse){.meteopt-wind-value{gap:2px!important}.meteopt-wind-arrow{width:8px!important;height:8px!important;font-size:8px!important;line-height:8px!important}}
 
-</style>
+<style>.station-live-range-badge{display:inline-flex;align-items:center;justify-content:center;white-space:nowrap;max-width:100%;box-sizing:border-box;margin-top:4px;padding:3px 8px;border-radius:999px;border:1px solid rgba(125,211,215,.22);background:rgba(125,211,215,.07);color:#9edfe0;font:600 9px/1.2 "DM Sans",sans-serif;letter-spacing:.01em}.station-live-range-badge[hidden]{display:none}.station-live-range-badge-rain{border-color:rgba(131,201,235,.25);background:rgba(131,201,235,.07);color:#a9d7ef}.station-rain-stat .station-live-range-badge-rain{width:max-content;overflow:visible}.station-current .temp-row{display:grid;grid-template-columns:max-content auto;align-items:center;column-gap:13px;row-gap:5px}.station-live-range-badge-temp{grid-column:1/-1;width:max-content}.station-live-range-badge-feels{width:max-content}.station-live-range-badge-rain{width:max-content}</style></style>
   <link rel="stylesheet" href="./meteopt-gfs-table.css?v=20261109-frame-fit-snowln-2">
 
     <style id="next-180h-legend-styles">
@@ -1603,7 +1603,7 @@ html.ios12 .backdrop-filter{display:none}
         <div class="station-overview">
   <div class="station-current">
     <div class="temp-row">
-      <div class="temperature" id="temperature">—°</div>
+      <div class="temperature" id="temperature">—°</div><div class="station-live-range-badge station-live-range-badge-temp" id="station-live-temp-range" hidden></div>
       <div class="weather-symbol" id="weather-symbol" aria-hidden="true">☁️</div>
     </div>
     <div class="temp-meta">
@@ -1620,11 +1620,11 @@ html.ios12 .backdrop-filter{display:none}
   </div>
 </div>
         <div class="weather-stats">
-  <div class="stat feels-like-stat"><div class="name">Hissedilen</div><div class="value" id="feels-like">—<span class="unit">°</span></div><div class="feels-like-24h-badge" id="feels-like-24h" hidden aria-label="Hissedilen son 24 saat minimum ve maksimum"></div></div>
+  <div class="stat feels-like-stat"><div class="name">Hissedilen</div><div class="value" id="feels-like">—<span class="unit">°</span></div><div class="station-live-range-badge station-live-range-badge-feels" id="station-live-feels-range" hidden></div></div>
   <div class="stat"><div class="name">Rüzgâr</div><div class="value" id="wind">—<span class="unit">km/sa</span></div><div class="detail" id="wind-direction">—</div></div>
   <div class="stat"><div class="name">Nem</div><div class="value" id="humidity">—<span class="unit">%</span></div></div>
   <div class="stat"><div class="name">Çiğ Noktası</div><div class="value" id="dewpoint-value">—<span class="unit">°</span></div></div>
-  <div class="stat"><div class="name">Yağış</div><div class="value" id="rain">—<span class="unit">mm</span></div><div class="detail" id="rain-detail">Son 12 saat</div></div>
+  <div class="stat station-rain-stat"><div class="name">Yağış</div><div class="value" id="rain">—<span class="unit">mm</span></div><div class="detail" id="rain-detail">Son 12 saat</div><div class="station-live-range-badge station-live-range-badge-rain" id="station-live-rain-range" hidden></div></div>
   <div class="stat"><div class="name">Basınç</div><div class="value" id="pressure">—<span class="unit">hPa</span></div><div class="detail" id="pressure-detail"></div></div>
 </div>
         <div class="station-alert" id="station-alert" role="status" aria-live="polite" hidden></div>
