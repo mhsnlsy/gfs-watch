@@ -402,12 +402,26 @@ def main() -> None:
             cached = json.loads(latest_path.read_text(encoding="utf-8"))
             archive_dir = output_dir / "runs"
             runs = load_comparison_runs(archive_dir, limit=4) if archive_dir.is_dir() else []
-            if runs and cached.get("comparison_runs") != runs:
-                cached["comparison_runs"] = runs
+            changed = False
+
+            # Charts are derived publication assets, not forecast data. Rebuild
+            # them on a cache hit as well, so an already-published ECMWF cycle
+            # can populate the table + four comparison graphs after deployment.
+            if runs:
+                from render_ecmwf_report_charts import render_ecmwf_report_charts
+                report_images = render_ecmwf_report_charts(runs, output_dir)
+                if cached.get("comparison_runs") != runs:
+                    cached["comparison_runs"] = runs
+                    changed = True
+                if cached.get("report_images") != report_images:
+                    cached["report_images"] = report_images
+                    changed = True
+
+            if changed:
                 latest_path.write_text(json.dumps(cached, ensure_ascii=False, indent=2) + "\n", encoding="utf-8")
-                print(f"[ECMWF COMPARISON REFRESH] {len(runs)} archived cycles attached without a new download.")
+                print(f"[ECMWF COMPARISON REFRESH] {len(runs)} archived cycles + {len(cached.get('report_images', []))} graphs published.")
             else:
-                print("[ECMWF CACHE HIT] Published cycle is current.")
+                print("[ECMWF CACHE HIT] Published cycle and comparison graphs are current.")
         return
 
     run_key = datetime.fromisoformat(document["run_id_utc"]).strftime("%Y%m%dT%HZ")
