@@ -1,7 +1,7 @@
 // Shared Y-axis scale for the Istanbul and Köy GFS comparison charts.
-// The scale is determined ONLY from the newest (solid) GFS cycle.
-// Older comparison cycles may therefore extend beyond the visible plot;
-// their peaks are intentionally allowed to be clipped.
+// Temperature and wind scales use the newest (solid) GFS cycle.
+// Precipitation uses all comparison cycles so a larger dashed-cycle peak
+// can widen the precipitation axis without changing the latest-cycle marker.
 // Ticks are whole numbers. Temperature and 850 hPa step by 5, wind by 10.
 // Precipitation steps by 1 (0, 1, 2, 3, …). Above 16 the labels get too dense,
 // so that panel alone widens to a step of 2.
@@ -48,7 +48,9 @@ export function buildPanelAxis(field, valuesBySeries) {
   const latestTrough = temperature && latestPeak !== null && latestMin !== null && Math.abs(latestPeak - latestMin) > 1e-9
     ? latestMin
     : null;
-  const maxValue = latestValues.length ? Math.max(...latestValues) : null;
+  const allValues = valuesBySeries.flat().filter(value => value !== null);
+  const scaleValues = field === "precipitation_6h_mm" ? allValues : latestValues;
+  const maxValue = scaleValues.length ? Math.max(...scaleValues) : null;
   const step = axisStep(field, maxValue);
 
   let low = 0;
@@ -61,7 +63,7 @@ export function buildPanelAxis(field, valuesBySeries) {
       high = Math.ceil(Math.max(...latestValues) / step) * step;
     } else {
       low = 0;
-      high = Math.ceil(Math.max(0, ...latestValues) / step) * step;
+      high = Math.ceil(Math.max(0, ...scaleValues) / step) * step;
     }
   }
   // Reserve headroom when the newest peak is on/near the top tick.
