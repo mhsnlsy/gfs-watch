@@ -4915,3 +4915,35 @@ main.shell { padding-bottom:max(12px,env(safe-area-inset-bottom)); }
     gap:9px!important;
   }
 }
+
+
+/* Station card visual refinement */
+@media (min-width:1200px) and (pointer:fine){
+  .dashboard-left > .station-card{
+    padding-bottom:14px!important;
+  }
+  .dashboard-left > .station-card .station-main-grid{
+    row-gap:8px!important;
+  }
+  .dashboard-left > .station-card .station-compare-badges{
+    gap:6px!important;
+    margin-top:4px!important;
+  }
+  .dashboard-left > .station-card .station-history-header{
+    margin-bottom:6px!important;
+  }
+  .dashboard-left > .station-card .history-charts{
+    margin-top:0!important;
+  }
+  .dashboard-left > .station-card .station-metric-badges-section{
+    margin-top:4px!important;
+    margin-bottom:3px!important;
+  }
+  .dashboard-left > .station-card .history-chart-meta{
+    margin-top:3px!important;
+  }
+  .dashboard-left > .station-card .station-history-footer{
+    margin-top:5px!important;
+    padding-bottom:0!important;
+  }
+}
