@@ -291,7 +291,7 @@
 
 
     /* Dashboard-first layout: observation left, ENKA history trends right. */
-    .dashboard-top{display:grid;grid-template-columns:minmax(520px,1.28fr) minmax(260px,.72fr) minmax(340px,.78fr);gap:14px;align-items:start;padding:22px 0 18px}
+    .dashboard-top{display:grid;grid-template-columns:minmax(0,1.28fr) minmax(0,.72fr) minmax(0,.78fr);gap:14px;align-items:start;padding:22px 0 18px}
     .dashboard-top .station-card{width:100%;max-width:none;justify-self:stretch;align-self:stretch;min-height:0;padding:19px 20px}
     .dashboard-top .station-overview{display:block;margin-top:22px}
     .dashboard-top .station-current{width:100%}
