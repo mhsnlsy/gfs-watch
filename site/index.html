@@ -146,7 +146,6 @@
     <div class="temperature" id="temperature">—°</div>
     <div class="weather-symbol" id="weather-symbol" aria-hidden="true">☁️</div>
     <div class="station-temp-compare" id="station-temp-compare" hidden aria-live="polite"></div>
-    <div class="station-live-range-badge station-live-range-badge-temp" id="station-live-temp-range" hidden></div>
     </div>
     <div class="temp-meta">
     <div class="temp-caption" id="station-observation-meta">Son istasyon ölçümü bekleniyor</div>
@@ -166,16 +165,15 @@
   <div class="stat"><div class="name">Rüzgâr</div><div class="value" id="wind">—<span class="unit">km/sa</span></div><div class="detail" id="wind-direction">—</div></div>
   <div class="stat"><div class="name">Nem</div><div class="value" id="humidity">—<span class="unit">%</span></div></div>
   <div class="stat"><div class="name">Çiğ Noktası</div><div class="value" id="dewpoint-value">—<span class="unit">°</span></div></div>
-  <div class="stat station-rain-stat"><div class="name">Yağış</div><div class="value" id="rain">—<span class="unit">mm</span></div><div class="detail" id="rain-detail">Son 1 saat</div><div class="station-live-range-badge station-live-range-badge-rain" id="station-live-rain-range" hidden></div></div>
+  <div class="stat station-rain-stat"><div class="name">Yağış</div><div class="value" id="rain">—<span class="unit">mm</span></div><div class="detail" id="rain-detail">Son 1 saat</div></div>
   <div class="stat"><div class="name">Basınç</div><div class="value" id="pressure">—<span class="unit">hPa</span></div><div class="detail" id="pressure-detail"></div></div>
 </div>
       <div class="station-alert" id="station-alert" role="status" aria-live="polite" hidden></div>
     <section class="station-history-inline history-panel" id="station-history-panel" aria-label="Seçili istasyonun son 24 saat geçmişi">
       <div class="history-panel-head"><div><div class="section-kicker" id="history-station-source">ENKA BALMUMCU · GERÇEK ÖLÇÜMLER</div><h2>Son 24 saat</h2></div></div>
-      <div class="station-metric-badges station-metric-badges-section" aria-label="24 saatlik min maks özetleri"><span class="station-metric-badge station-metric-badge-temp" id="station-temp-min-top" hidden></span><span class="station-metric-badge station-metric-badge-temp" id="station-temp-max-top" hidden></span><span class="station-metric-badge station-metric-badge-rain" id="station-rain-min-top" hidden></span><span class="station-metric-badge station-metric-badge-rain" id="station-rain-max-top" hidden></span></div>
       <div class="history-charts">
-        <article class="history-chart-card"><div class="history-chart-head"><div><h3>Sıcaklık</h3><p>°C · 30 dk ortalama, min–maks</p></div><span class="history-chart-icon">℃</span></div><div class="history-chart" id="station-temperature-trend"><div class="station-trend-empty">Sıcaklık kayıtları bekleniyor…</div></div><div class="station-metric-badges" aria-label="24 saat sıcaklık özeti"><span class="station-metric-badge station-metric-badge-temp" id="station-temp-min" hidden></span><span class="station-metric-badge station-metric-badge-temp" id="station-temp-max" hidden></span></div><div class="history-chart-meta" id="station-trend-meta">Seçili istasyonun ölçüm geçmişi</div></article>
-        <article class="history-chart-card"><div class="history-chart-head"><div><h3 id="station-rain-title">Yağış</h3><p id="station-rain-caption">mm · kayan 1 saatlik toplam</p></div><span class="history-chart-icon">☂</span></div><div class="history-chart" id="station-rain-trend"><div class="station-trend-empty">Yağış geçmişi oluşturuluyor…</div></div><div class="station-metric-badges" aria-label="24 saat yağış özeti"><span class="station-metric-badge station-metric-badge-rain" id="station-rain-min" hidden></span><span class="station-metric-badge station-metric-badge-rain" id="station-rain-max" hidden></span></div><div class="history-chart-meta" id="station-rain-meta">MGM · yarım saat</div></article>
+        <article class="history-chart-card"><div class="history-chart-head"><div><h3>Sıcaklık</h3><p>°C · 30 dk ortalama, min–maks</p></div><span class="history-chart-icon">℃</span></div><div class="history-chart" id="station-temperature-trend"><div class="station-trend-empty">Sıcaklık kayıtları bekleniyor…</div></div><div class="station-metric-badges" aria-label="24 saat sıcaklık özeti"><span class="station-metric-badge station-metric-badge-temp" id="station-temp-range-badge" hidden></span></div><div class="history-chart-meta" id="station-trend-meta">Seçili istasyonun ölçüm geçmişi</div></article>
+        <article class="history-chart-card"><div class="history-chart-head"><div><h3 id="station-rain-title">Yağış</h3><p id="station-rain-caption">mm · kayan 1 saatlik toplam</p></div><span class="history-chart-icon">☂</span></div><div class="history-chart" id="station-rain-trend"><div class="station-trend-empty">Yağış geçmişi oluşturuluyor…</div></div><div class="station-metric-badges" aria-label="24 saat yağış özeti"><span class="station-metric-badge station-metric-badge-rain" id="station-rain-range-badge" hidden></span></div><div class="history-chart-meta" id="station-rain-meta">MGM · yarım saat</div></article>
       </div>
       <div class="history-source-note" id="history-source-note">Sıcaklık seçili istasyonun. Yağış iki istasyonda da MGM Eyüpsultan.</div>
     </section>
