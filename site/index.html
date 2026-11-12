@@ -149,7 +149,7 @@ document.addEventListener("DOMContentLoaded", () => {
   <header class="shell topbar">
     <a class="brand" href="/?station=eyupsultan" aria-label="İstanbul Havası · Şehir için hava tahmini"><span class="brand-mark" aria-hidden="true"><img src="/favicon-192x192.png?v=20261108-city-icon-3" alt="" width="38" height="38" style="display:block;width:100%;height:100%;object-fit:contain;border-radius:inherit"></span><span>İstanbul Havası<small>Şehir için hava tahmini</small></span></a>
     <nav aria-label="Ana gezinme"><a href="./index.html" aria-current="page">Anasayfa</a><a href="#bildirimler">Raporlar</a><a href="./ecmwf/" class="ecmwf-nav-link">ECMWF</a><a href="./koy.html">Köy</a></nav>
-    <div class="top-right"><div class="model-picker" role="group" aria-label="Tahmin modeli"><button type="button" id="model-gfs-button" class="active" aria-pressed="true">GFS</button><button type="button" id="model-ecmwf-button" aria-pressed="false">ECMWF IFS</button></div><span class="version" data-app-identity-source="./version.json"><span data-app-name>İstanbul Havası</span> <span data-app-version>1.5.0</span></span></div>
+    <div class="top-right"><div class="model-picker" role="group" aria-label="Tahmin modeli"><button type="button" id="model-gfs-button" class="active" aria-pressed="true">GFS</button><a href="./ecmwf/" id="model-ecmwf-button" class="model-picker-link" aria-label="ECMWF IFS modeline geç">ECMWF IFS</a></div><span class="version" data-app-identity-source="./version.json"><span data-app-name>İstanbul Havası</span> <span data-app-version>1.5.0</span></span></div>
   </header>
   <main class="shell" data-ui-build="responsive-2026-11-08-station-same-origin-v1">
     <section class="dashboard-top" aria-label="İstanbul canlı gözlem ve GFS tahmini">
