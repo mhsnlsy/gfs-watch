@@ -304,7 +304,7 @@ jobs:
             -o "$RUNNER_TEMP/live-koy-latest.svg"
           KOY_LIVE_SVG_STAMP="$(curl --silent --show-error --fail --max-time 30 \
             "https://gfs-watch-koy-gfs.muhsin-ulusoy.workers.dev/api/latest?verify=$(date +%s)" | \
-            node -e 'let s="";process.stdin.on("data",d=>s+=d).on("end",()=>{const d=JSON.parse(s);const r=d.run_id_utc||d.latest_run_id_utc;if(!r)throw new Error("Köy latest payload has no run_id_utc");process.stdout.write(new Date(r).toISOString().replace(/[-:]/g,"").replace(/\\.\\d{3}Z$/,"Z").slice(0,11)+"Z")})')"
+            node -e 'let s="";process.stdin.on("data",d=>s+=d).on("end",()=>{const d=JSON.parse(s);const r=d.f72?.run_id_utc||d.run_id_utc||d.latest_run_id_utc;if(!r)throw new Error("Köy latest payload has no f72.run_id_utc");process.stdout.write(new Date(r).toISOString().replace(/[-:]/g,"").replace(/\\.\\d{3}Z$/,"Z").slice(0,11)+"Z")})')"
           test -n "$KOY_LIVE_SVG_STAMP" || { echo "::error::Could not determine latest Köy SVG stamp."; exit 1; }
           echo "Latest Köy SVG stamp: $KOY_LIVE_SVG_STAMP"
           curl --silent --show-error --fail --max-time 45 \
