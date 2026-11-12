@@ -37,7 +37,8 @@ export function formatPeakValue(value) {
   }).format(n);
 }
 
-export function buildPanelAxis(field, valuesBySeries) {
+export function buildPanelAxis(field, valuesBySeries, options = {}) {
+  const includeOlderSeriesForScale = options.includeOlderSeriesForScale !== false;
   const latestValues = (valuesBySeries[valuesBySeries.length - 1] || []).filter(value => value !== null);
   // Do not let an older dashed cycle change the scale of the current output.
   // This is especially important for precipitation, where an obsolete spike
@@ -52,7 +53,7 @@ export function buildPanelAxis(field, valuesBySeries) {
   // Precipitation is deliberately scaled from every comparison cycle.
   // Example: an older cycle peaking at 22 mm and the latest at 9.8 mm
   // must still produce a 0–22 mm axis with 2 mm spacing.
-  const scaleValues = field === "precipitation_6h_mm" ? allValues : latestValues;
+  const scaleValues = field === "precipitation_6h_mm" && includeOlderSeriesForScale ? allValues : latestValues;
   const scaleMax = scaleValues.length ? Math.max(...scaleValues) : null;
   const step = axisStep(field, scaleMax);
 
