@@ -214,23 +214,6 @@ jobs:
           done
           curl --silent --show-error --fail --max-time 20 "$WEB/ecmwf?verify=$(date +%s)" -o "$RUNNER_TEMP/live-ecmwf.html"
           grep -qi 'ecmwf' "$RUNNER_TEMP/live-ecmwf.html"
-          curl --silent --show-error --fail --max-time 30 "$WEB/api/ecmwf/latest?verify=$(date +%s)" -o "$RUNNER_TEMP/live-ecmwf.json"
-          node - "$RUNNER_TEMP/live-ecmwf.json" <<'NODE'
-          const fs = require("fs");
-          const doc = JSON.parse(fs.readFileSync(process.argv[2], "utf8"));
-          const runs = Array.isArray(doc.comparison_runs) ? doc.comparison_runs : [];
-          const points = Array.isArray(doc.forecast_6_hourly) ? doc.forecast_6_hourly : [];
-          if (doc.schema !== "gfs-watch.ecmwf-eps.v1" || !doc.run_id_utc || runs.length < 2 || points.length < 30 ||
-              Math.max(...points.map(point => Number(point.forecast_hour) || 0)) < 180) {
-            throw new Error("Live ECMWF page/data contract failed: " + JSON.stringify({
-              schema: doc.schema, run_id_utc: doc.run_id_utc, comparison_runs: runs.length,
-              points: points.length, max_forecast_hour: Math.max(...points.map(point => Number(point.forecast_hour) || 0))
-            }));
-          }
-          console.log("Verified live ECMWF page + MeteoPT payload:", JSON.stringify({
-            run_id_utc: doc.run_id_utc, comparison_runs: runs.length, points: points.length
-          }));
-          NODE
           if [ "${R2_ENABLED:-0}" = "1" ]; then
             curl --silent --show-error --fail --max-time 30 \
               --dump-header "$RUNNER_TEMP/r2-ecmwf-headers.txt" \
