@@ -238,6 +238,61 @@
         return '<li class="pressure-center-item"><span class="pressure-icon '+(isLow?"low":"high")+'">'+icon+'</span><span><strong>'+label+' · '+esc(region)+'</strong><br><span class="pressure-center-value">'+Number(center.pressure_hpa).toFixed(1)+' hPa</span> · İstanbul\'a '+Number(center.distance_km).toFixed(0)+' km '+esc(String(center.direction||""))+' yönünde</span></li>';
       }).join("");
     }
+    function pressureForecastDateLabel(value){
+      const d=new Date(value);
+      const day=new Intl.DateTimeFormat("tr-TR",{timeZone:"Europe/Istanbul",day:"2-digit",month:"2-digit"}).format(d);
+      const weekday=new Intl.DateTimeFormat("tr-TR",{timeZone:"Europe/Istanbul",weekday:"short"}).format(d);
+      const hour=new Intl.DateTimeFormat("tr-TR",{timeZone:"Europe/Istanbul",hour:"2-digit",minute:"2-digit",hourCycle:"h23"}).format(d);
+      return day+" "+weekday+" · "+hour;
+    }
+    function pressureForecastRegion(center){
+      return pressureRegionName(center.latitude,center.longitude);
+    }
+    function renderPressureForecast(payload){
+      const lows=$("pressure-cyclone-forecast"), highs=$("pressure-high-forecast");
+      const steps=payload&&Array.isArray(payload.forecast_steps)?payload.forecast_steps:[];
+      if(!steps.length){
+        if(lows)lows.innerHTML='<li>120 saatlik GFS merkez tahmini bekleniyor.</li>';
+        if(highs)highs.innerHTML='<li>120 saatlik GFS merkez tahmini bekleniyor.</li>';
+        return;
+      }
+      const dayMap={};
+      steps.forEach(step=>{
+        const key=String(step.valid_time_utc||"").slice(0,10);
+        if(!key)return;
+        (dayMap[key]||(dayMap[key]=[])).push(step);
+      });
+      const days=Object.keys(dayMap).sort().slice(0,6);
+      const best=(items,type)=>{
+        const candidates=items.flatMap(s=>(Array.isArray(s.centers)?s.centers:[]).filter(c=>c.type===type).map(c=>({c,s})));
+        if(!candidates.length)return null;
+        candidates.sort((a,b)=>type==="low"?Number(a.c.pressure_hpa)-Number(b.c.pressure_hpa):Number(b.c.pressure_hpa)-Number(a.c.pressure_hpa));
+        return candidates[0];
+      };
+      const lowRows=[],highRows=[];
+      days.forEach((day,index)=>{
+        const low=best(dayMap[day],"low"), high=best(dayMap[day],"high");
+        const label=day===days[0]?"Bugün":new Intl.DateTimeFormat("tr-TR",{timeZone:"Europe/Istanbul",weekday:"short",day:"2-digit",month:"2-digit"}).format(new Date(day+"T12:00:00Z"));
+        if(low){
+          const c=low.c;
+          lowRows.push("<li><strong>"+esc(label)+"</strong> · "+esc(pressureForecastRegion(c))+" · ~"+Number(c.pressure_hpa).toFixed(0)+" hPa · <em>"+esc(index===0?"mevcut":"tahmin")+"</em></li>");
+        }
+        if(high){
+          const c=high.c;
+          highRows.push("<li><strong>"+esc(label)+"</strong> · "+esc(pressureForecastRegion(c))+" · ~"+Number(c.pressure_hpa).toFixed(0)+" hPa · <em>"+esc(index===0?"mevcut":"tahmin")+"</em></li>");
+        }
+      });
+      if(lows)lows.innerHTML=lowRows.length?lowRows.join(""):"<li>Belirgin siklon merkezi bulunamadı.</li>";
+      if(highs)highs.innerHTML=highRows.length?highRows.join(""):"<li>Belirgin yüksek basınç merkezi bulunamadı.</li>";
+      const note=document.querySelector(".gfs-pressure-panel .section-note");
+      if(note){
+        const first=payload.cycle_utc?new Date(payload.cycle_utc):null;
+        const last=steps.length?new Date(steps[steps.length-1].valid_time_utc):null;
+        const a=first?new Intl.DateTimeFormat("tr-TR",{timeZone:"Europe/Istanbul",day:"2-digit",month:"2-digit"}).format(first):"—";
+        const b=last?new Intl.DateTimeFormat("tr-TR",{timeZone:"Europe/Istanbul",day:"2-digit",month:"2-digit"}).format(last):"—";
+        note.innerHTML="Anlık analiz + model tahmini<br>"+a+"–"+b;
+      }
+    }
     async function loadGithubPressureCenters(){
       const list=$("pressure-findings");
       if(!list)return;
@@ -245,19 +300,20 @@
         const response=await fetch("./data/gfs-pressure-centers.json?v="+Date.now(),{cache:"no-store",credentials:"same-origin"});
         if(!response.ok)throw new Error("HTTP "+response.status);
         const payload=await response.json();
+        renderPressureForecast(payload);
         const analysis=payload&&payload.analysis;
         const centers=analysis&&Array.isArray(analysis.centers)?analysis.centers:[];
         renderPressureText(centers);
         if(centers.length){
           const cycle=payload.cycle_utc?new Intl.DateTimeFormat("tr-TR",{timeZone:"Europe/Istanbul",day:"2-digit",month:"2-digit",hour:"2-digit",minute:"2-digit",hourCycle:"h23"}).format(new Date(payload.cycle_utc)):"—";
-          list.innerHTML += '<li class="pressure-source-note">GitHub Actions · GFS 0.25° GRIB2 · f000 · '+esc(cycle)+' TSİ</li>';
+          list.innerHTML += '<li class="pressure-source-note">GitHub Actions · GFS 0.25° GRIB2 · f000 · '+esc(cycle)+' TSİ · 120 saat tahmini aktif</li>';
         }
       }catch(error){
         console.warn("GitHub GFS pressure centers unavailable:",error);
         list.innerHTML='<li class="pressure-empty">GitHub Actions basınç analizi henüz hazır değil.</li>';
       }
     }
-    loadGithubPressureCenters();
+
     let activeTouchChartTooltip=null;
     let activeTouchChartTooltipTimer=null;
     function clearScheduledTouchChartTooltip(hideFn){
