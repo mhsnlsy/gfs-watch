@@ -984,7 +984,6 @@ const __hideEmptyBadges=()=>{document.querySelectorAll('[class*="badge"],[class*
 
       const completedPoints=points.filter(point=>((Math.floor(point.time/hourMs)+1)*hourMs<=now));
       const latest=completedPoints.length?completedPoints[completedPoints.length-1]:points[points.length-1];
-      const rainMaxBadge=$( "station-rain-max" );
       if(rainMinBadge||rainMaxBadge){
         const minPoint=points.reduce((best,p)=>!best||p.mm<best.mm?p:best,null);
         const peak=points.reduce((best,p)=>!best||p.mm>best.mm?p:best,null);
