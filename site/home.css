@@ -4947,3 +4947,54 @@ main.shell { padding-bottom:max(12px,env(safe-area-inset-bottom)); }
     padding-bottom:0!important;
   }
 }
+
+
+/* FINAL STATION CARD MICRO-SPACING — targets the actual homepage DOM */
+@media (min-width:1200px) and (pointer:fine){
+  .dashboard-left .station-card{
+    padding-bottom:8px!important;
+  }
+
+  /* Bring the weather icon closer to the temperature and keep comparison badges compact. */
+  .dashboard-left .station-card .station-current .temp-row{
+    column-gap:3px!important;
+  }
+  .dashboard-left .station-card .station-current .weather-symbol{
+    margin-left:0!important;
+    transform:translateX(-2px)!important;
+  }
+  .dashboard-left .station-card .station-inline-badges{
+    gap:4px!important;
+    padding-left:0!important;
+    margin-left:1px!important;
+  }
+  .dashboard-left .station-card .station-inline-badges .delta-badge,
+  .dashboard-left .station-card .station-inline-badges .station-temp-compare{
+    margin-top:0!important;
+  }
+
+  /* Tighten the 24-hour section vertically without changing its two-column graph layout. */
+  .dashboard-left .station-card .station-history-inline{
+    margin-top:9px!important;
+    padding-top:7px!important;
+  }
+  .dashboard-left .station-card .station-history-inline .history-panel-head{
+    margin-bottom:5px!important;
+  }
+  .dashboard-left .station-card .station-history-inline .history-charts{
+    gap:7px!important;
+  }
+  .dashboard-left .station-card .station-history-inline .history-chart{
+    margin-top:1px!important;
+  }
+  .dashboard-left .station-card .station-history-inline .station-metric-badges{
+    margin-top:1px!important;
+    min-height:16px!important;
+  }
+  .dashboard-left .station-card .station-history-inline .history-chart-meta{
+    margin-top:1px!important;
+  }
+  .dashboard-left .station-card .station-history-inline .history-source-note{
+    margin-top:5px!important;
+  }
+}
