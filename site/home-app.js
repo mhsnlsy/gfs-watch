@@ -2010,7 +2010,9 @@ if(typeof renderBriefing==="function")renderBriefing();
 
 
         if(activeStation!==stationKey)return;
-        renderStationCard(activeStation==="enka"?enkaStationObservation:activeStation==="eyupsultan"?eyupsultanStationObservation:sisliStationObservation);
+        const currentStation=activeStation==="enka"?enkaStationObservation:activeStation==="eyupsultan"?eyupsultanStationObservation:sisliStationObservation;
+        renderStationCard(currentStation);
+        updateStationLiveRanges(currentStation);
         renderStationHistory();
 if(typeof renderBriefing==="function")renderBriefing();
       }catch(error){
