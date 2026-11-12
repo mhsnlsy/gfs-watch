@@ -251,79 +251,70 @@
     function renderPressureForecast(payload){
       const lows=$("pressure-cyclone-forecast"), highs=$("pressure-high-forecast");
       const steps=payload&&Array.isArray(payload.forecast_steps)?payload.forecast_steps:[];
+      const tracks=payload&&Array.isArray(payload.tracks)?payload.tracks:[];
+      const checkpointEl=$("pressure-milestones");
       if(!steps.length){
         if(lows)lows.innerHTML='<li>120 saatlik GFS merkez tahmini bekleniyor.</li>';
-        if(highs)highs.innerHTML='<li>120 saatlik GFS merkez tahmini bekleniyor.</li>';
+        if(highs)highs.innerHTML='<li>120 saatlik GFS yüksek basınç tahmini bekleniyor.</li>';
         return;
       }
-      const dayMap={};
-      steps.forEach(step=>{
-        const key=String(step.valid_time_utc||"").slice(0,10);
-        if(!key)return;
-        (dayMap[key]||(dayMap[key]=[])).push(step);
-      });
-      const days=Object.keys(dayMap).sort().slice(0,6);
-      const best=(items,type)=>{
-        const candidates=items.flatMap(s=>(Array.isArray(s.centers)?s.centers:[]).filter(c=>c.type===type).map(c=>({c,s})));
-        if(!candidates.length)return null;
-        candidates.sort((a,b)=>type==="low"?Number(a.c.pressure_hpa)-Number(b.c.pressure_hpa):Number(b.c.pressure_hpa)-Number(a.c.pressure_hpa));
-        return candidates[0];
+      const bestAt=(step,type)=>{
+        const cs=(step&&step.centers||[]).filter(c=>c.type===type);
+        if(!cs.length)return null;
+        cs.sort((a,b)=>type==="low"?Number(a.pressure_hpa)-Number(b.pressure_hpa):Number(b.pressure_hpa)-Number(a.pressure_hpa));
+        return cs[0];
+      };
+      const labelFor=(hour)=>{
+        if(hour===0)return "Şimdi";
+        return "+"+hour+" saat";
+      };
+      const region=(c)=>{
+        if(!c)return "—";
+        return pressureForecastRegion(c);
       };
       const lowRows=[],highRows=[];
-      days.forEach((day,index)=>{
-        const low=best(dayMap[day],"low"), high=best(dayMap[day],"high");
-        const label=day===days[0]?"Bugün":new Intl.DateTimeFormat("tr-TR",{timeZone:"Europe/Istanbul",weekday:"short",day:"2-digit",month:"2-digit"}).format(new Date(day+"T12:00:00Z"));
-        if(low){
-          const c=low.c;
-          lowRows.push("<li><strong>"+esc(label)+"</strong> · "+esc(pressureForecastRegion(c))+" · ~"+Number(c.pressure_hpa).toFixed(0)+" hPa · <em>"+esc(index===0?"mevcut":"tahmin")+"</em></li>");
-        }
-        if(high){
-          const c=high.c;
-          highRows.push("<li><strong>"+esc(label)+"</strong> · "+esc(pressureForecastRegion(c))+" · ~"+Number(c.pressure_hpa).toFixed(0)+" hPa · <em>"+esc(index===0?"mevcut":"tahmin")+"</em></li>");
-        }
+      [0,12,24,48,72,96,120].forEach(hour=>{
+        const step=steps.find(s=>Number(s.forecast_hour)===hour);
+        if(!step)return;
+        const low=bestAt(step,"low"), high=bestAt(step,"high");
+        if(low)lowRows.push("<li><strong>"+labelFor(hour)+"</strong> · "+esc(region(low))+" · ~"+Number(low.pressure_hpa).toFixed(0)+" hPa</li>");
+        if(high)highRows.push("<li><strong>"+labelFor(hour)+"</strong> · "+esc(region(high))+" · ~"+Number(high.pressure_hpa).toFixed(0)+" hPa</li>");
       });
       if(lows)lows.innerHTML=lowRows.length?lowRows.join(""):"<li>Belirgin siklon merkezi bulunamadı.</li>";
       if(highs)highs.innerHTML=highRows.length?highRows.join(""):"<li>Belirgin yüksek basınç merkezi bulunamadı.</li>";
+
+      if(checkpointEl){
+        const items=[0,12,24,48,72,96,120].map(hour=>{
+          const step=steps.find(s=>Number(s.forecast_hour)===hour);
+          if(!step)return "";
+          const low=bestAt(step,"low"), high=bestAt(step,"high");
+          const bits=[];
+          if(low)bits.push("🔴 "+esc(region(low))+" "+Number(low.pressure_hpa).toFixed(0)+" hPa");
+          if(high)bits.push("🔵 "+esc(region(high))+" "+Number(high.pressure_hpa).toFixed(0)+" hPa");
+          return "<li><strong>"+labelFor(hour)+"</strong> · "+(bits.length?bits.join(" · "):"Belirgin merkez yok")+"</li>";
+        }).filter(Boolean);
+        checkpointEl.innerHTML='<div class="pressure-summary-title">⏱️ GFS sinoptik gelişim</div><ul class="pressure-list">'+items.join("")+"</ul>";
+      }
+
       const trend=document.getElementById("pressure-trend");
       if(trend){
-        const centerAt=(step,type)=>{
-          const cs=(step&&step.centers||[]).filter(c=>c.type===type);
-          if(!cs.length)return null;
-          cs.sort((a,b)=>type==="low"?Number(a.pressure_hpa)-Number(b.pressure_hpa):Number(b.pressure_hpa)-Number(a.pressure_hpa));
-          return cs[0];
-        };
-        const bearing=(a,b)=>{
-          const lat1=Number(a.latitude)*Math.PI/180, lat2=Number(b.latitude)*Math.PI/180;
-          const dl=(Number(b.longitude)-Number(a.longitude))*Math.PI/180;
-          const y=Math.sin(dl)*Math.cos(lat2), x=Math.cos(lat1)*Math.sin(lat2)-Math.sin(lat1)*Math.cos(lat2)*Math.cos(dl);
-          return (Math.atan2(y,x)*180/Math.PI+360)%360;
-        };
-        const dirName=(deg)=>{
-          const names=["K","KKD","KD","DKD","D","DGD","GD","GGD","G","GGB","GB","BGB","B","BKB","KB","KKB"];
-          return names[Math.round(deg/22.5)%16];
-        };
-        const first=steps[0], last=steps[steps.length-1];
         const parts=[];
-        [["Siklon","low"],["Yüksek basınç","high"]].forEach(([label,type])=>{
-          const a=centerAt(first,type), b=centerAt(last,type);
-          if(!a||!b)return;
-          const dp=Number(b.pressure_hpa)-Number(a.pressure_hpa);
-          const trendText=type==="low"?(dp<=-1?"güçleniyor":dp>=1?"zayıflıyor":"belirgin değişmiyor"):(dp>=1?"güçleniyor":dp<=-1?"zayıflıyor":"belirgin değişmiyor");
-          const bearingDeg=bearing(a,b);
-          const distance=Number(a.distance_km_to_center||0);
-          const distance2=Number(b.distance_km_to_center||0);
-          const moved=Math.max(0,distance2-distance);
-          parts.push("<span><strong>"+label+":</strong> "+trendText+" ("+dp.toFixed(1)+" hPa / 120 saat); merkez hareketi "+dirName(bearingDeg)+" yönünde.</span>");
+        tracks.filter(t=>t.points&&t.points.length>=2).forEach(t=>{
+          const a=t.points[0], b=t.points[t.points.length-1];
+          const dp=Number(t.pressure_change_hpa);
+          const trendText=t.type==="low"?(dp<=-1?"güçleniyor":dp>=1?"zayıflıyor":"belirgin değişmiyor"):(dp>=1?"güçleniyor":dp<=-1?"zayıflıyor":"belirgin değişmiyor");
+          const label=t.type==="low"?"Siklon":"Yüksek basınç";
+          parts.push("<span><strong>"+label+":</strong> "+trendText+" ("+dp.toFixed(1)+" hPa / 120 saat); "+Number(t.movement_km).toFixed(0)+" km "+esc(t.movement_direction)+" hareket.</span>");
         });
-        trend.innerHTML="<strong>Hareket ve trend:</strong> "+(parts.length?parts.join(" "):"120 saatlik hareket eğilimi için yeterli merkez bulunamadı.");
+        trend.innerHTML="<strong>Hareket ve trend:</strong> "+(parts.length?parts.slice(0,4).join(" "):"120 saatlik merkez hareketi için yeterli iz bulunamadı.");
       }
+
       const note=document.querySelector(".gfs-pressure-panel .section-note");
       if(note){
         const first=payload.cycle_utc?new Date(payload.cycle_utc):null;
         const last=steps.length?new Date(steps[steps.length-1].valid_time_utc):null;
-        const a=first?new Intl.DateTimeFormat("tr-TR",{timeZone:"Europe/Istanbul",day:"2-digit",month:"2-digit"}).format(first):"—";
-        const b=last?new Intl.DateTimeFormat("tr-TR",{timeZone:"Europe/Istanbul",day:"2-digit",month:"2-digit"}).format(last):"—";
-        note.innerHTML="Anlık analiz + model tahmini<br>"+a+"–"+b;
+        const fmtDate=d=>d?new Intl.DateTimeFormat("tr-TR",{timeZone:"Europe/Istanbul",day:"2-digit",month:"2-digit"}).format(d):"—";
+        note.innerHTML="Anlık analiz + model tahmini<br>"+fmtDate(first)+"–"+fmtDate(last);
       }
     }
     async function loadGithubPressureCenters(){
