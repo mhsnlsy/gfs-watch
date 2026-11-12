@@ -47,6 +47,7 @@ const sandbox = {
   setInterval() { return 1; },
   clearInterval() {},
   attachStationHistoryTooltip() {},
+  safeRenderStationCard() {},
   document: {
     querySelector() { return null; },
     createElement(tagName) {
