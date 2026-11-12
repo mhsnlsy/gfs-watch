@@ -251,6 +251,12 @@ export default {
       return isStaticAssetFallback;
     }
 
+    // Dedicated ECMWF page. GFS routing and GFS behavior remain unchanged.
+    if (path === "/ecmwf" || path === "/ecmwf/") {
+      const assetUrl = new URL("/ecmwf/index.html", url);
+      return env.ASSETS.fetch(new Request(assetUrl, request));
+    }
+
     // Direct, canonical D1 publication-asset routes used by the live homepage charts.
     // These must be Worker-first on the custom domain; otherwise Static Assets returns 404.
     if (path.startsWith("/gfs/publication-asset/")) {
