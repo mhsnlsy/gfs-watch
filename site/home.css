@@ -313,6 +313,7 @@
     .history-chart svg{width:100%;height:100%;display:block;overflow:visible}
     .history-chart-meta{font-size:9px;color:#91aab5;line-height:1.4;margin-top:2px;min-height:0}
     .station-metric-badges{display:flex;flex-wrap:wrap;gap:4px;margin-top:2px;min-height:16px}
+    .station-metric-badges-section{margin:6px 0 8px;min-height:0}
     .station-metric-badge{display:inline-flex;align-items:center;min-height:16px;padding:2px 6px;border-radius:999px;border:1px solid rgba(204,225,239,.13);background:rgba(255,255,255,.035);font:600 8px/1.1 "DM Sans",sans-serif;letter-spacing:.01em;white-space:nowrap;color:#b9cbd4}
     .station-metric-badge-temp{border-color:rgba(125,211,215,.24);color:#9edfe0;background:rgba(125,211,215,.07)}
     .station-metric-badge-rain{border-color:rgba(131,201,235,.25);color:#a9d7ef;background:rgba(131,201,235,.07)}
