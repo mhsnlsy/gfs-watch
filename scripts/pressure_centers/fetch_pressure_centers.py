@@ -222,7 +222,7 @@ def build_tracks(steps):
                 elif next_delta is not None and next_delta <= -tendency_threshold_hpa:
                     lifecycle = "zayıflıyor"
                 else:
-                    lifecycle = "aktif"
+                    lifecycle = "sabit"
 
             point["lifecycle"] = lifecycle
         a, b = points[0], points[-1]
@@ -244,7 +244,7 @@ def build_tracks(steps):
                 after = float(points[min_index + 1]["pressure_hpa"])
                 lifecycle = "olgunlaşıyor" if after > peak_pressure + 1 and before > peak_pressure + 1 else "aktif"
             else:
-                lifecycle = "aktif"
+                lifecycle = "sabit"
         else:
             if min_index == 0:
                 lifecycle = "zayıflıyor" if end_pressure <= start_pressure - 2 else "aktif"
@@ -255,7 +255,7 @@ def build_tracks(steps):
                 after = float(points[min_index + 1]["pressure_hpa"])
                 lifecycle = "olgunlaşıyor" if after < peak_pressure - 1 and before < peak_pressure - 1 else "aktif"
             else:
-                lifecycle = "aktif"
+                lifecycle = "sabit"
         track.update({
             "movement_km": round(move, 1),
             "movement_bearing_deg": round(bearing, 0),
