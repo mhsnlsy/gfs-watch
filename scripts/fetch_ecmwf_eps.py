@@ -151,6 +151,9 @@ def fetch_meteopt_ecmwf_document(run_dt: datetime) -> dict:
     wind = series("wind10m")
     wind_direction = series("wind10mdir")
     wind_850 = series("wind850")
+    wind_850_direction = series("wind850mdir") or series("wind850dir") or series("winddir850")
+    humidity = series("rh2m")
+    snowln = series("snlevel")
     rain = series("apcp")
     pressure = series("prmsl")
     forecasts = []
@@ -162,6 +165,9 @@ def fetch_meteopt_ecmwf_document(run_dt: datetime) -> dict:
             "wind": _meteopt_number(wind[index]) if index < len(wind) else None,
             "wind_dir": _meteopt_number(wind_direction[index]) if index < len(wind_direction) else None,
             "wind850": _meteopt_number(wind_850[index]) if index < len(wind_850) else None,
+            "wind850_direction": _meteopt_number(wind_850_direction[index]) if index < len(wind_850_direction) else None,
+            "humidity": _meteopt_number(humidity[index]) if index < len(humidity) else None,
+            "snowln": _meteopt_number(snowln[index]) if index < len(snowln) else None,
             "rain": _meteopt_number(rain[index]) if index < len(rain) else None,
             "pressure": _meteopt_number(pressure[index]) if index < len(pressure) else None,
         }
@@ -178,11 +184,13 @@ def fetch_meteopt_ecmwf_document(run_dt: datetime) -> dict:
             "wind_speed_10m_kmh": round(max(0.0, values["wind"]), 2),
             "wind_direction_10m_deg": None if values["wind_dir"] is None else round(values["wind_dir"] % 360.0, 0),
             "wind_speed_10m_stddev_kmh": None,
+            "humidity_2m_percent": None if values["humidity"] is None else max(0.0, min(100.0, round(values["humidity"], 1))),
+            "snowln": None if values["snowln"] is None else max(0.0, round(values["snowln"], 1)),
             "precipitation_interval_mm": round(max(0.0, values["rain"]), 3),
             "precipitation_interval_stddev_mm": None,
             "precipitation_accumulated_mm": None,
             "temperature_850hpa": {"mean_c": round(values["temp850"], 2), "stddev_c": None},
-            "wind_850hpa": {"mean_kmh": round(max(0.0, values["wind850"]), 2), "stddev_kmh": None},
+            "wind_850hpa": {"mean_kmh": round(max(0.0, values["wind850"]), 2), "stddev_kmh": None, "direction_deg": None if values["wind850_direction"] is None else round(values["wind850_direction"] % 360.0, 0)},
             "mslp": {"mean_hpa": round(values["pressure"], 1), "stddev_hpa": None},
             "_interval_hours": hour - previous,
         })
@@ -215,6 +223,9 @@ def fetch_meteopt_ecmwf_document(run_dt: datetime) -> dict:
             "wind_speed_10m_kmh": item["wind_speed_10m_kmh"],
             "wind_direction_10m_deg": item.get("wind_direction_10m_deg"),
             "wind_speed_850hpa_kmh": item["wind_850hpa"]["mean_kmh"],
+            "wind_direction_850hpa_deg": item["wind_850hpa"].get("direction_deg"),
+            "humidity_2m_percent": item.get("humidity_2m_percent"),
+            "snowln": item.get("snowln"),
             "precipitation_6h_mm": item["precipitation_interval_mm"],
             "precipitation_interval_hours": item.pop("_interval_hours"),
         })
