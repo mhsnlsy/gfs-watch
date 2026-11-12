@@ -1143,8 +1143,10 @@ const __hideEmptyBadges=()=>{document.querySelectorAll('[class*="badge"],[class*
         const minFeels = numeric(station.feels_like_24h_min_c) ? Number(station.feels_like_24h_min_c) : null;
         const maxFeels = numeric(station.feels_like_24h_max_c) ? Number(station.feels_like_24h_max_c) : null;
         if (isFresh && minFeels !== null && maxFeels !== null) {
+          feelsRangeEl.dataset.min = fmt(minFeels, 1);
+          feelsRangeEl.dataset.max = fmt(maxFeels, 1);
           feelsRangeEl.hidden = false;
-          feelsRangeEl.textContent = "24 sa · min " + fmt(minFeels, 1) + "° · maks " + fmt(maxFeels, 1) + "°";
+          feelsRangeEl.textContent = "";
         } else {
           feelsRangeEl.hidden = true;
           feelsRangeEl.textContent = "";
