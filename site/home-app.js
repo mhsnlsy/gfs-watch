@@ -286,9 +286,12 @@
             const dlat=Number(point.latitude)-Number(center.latitude);
             const dlon=Number(point.longitude)-Number(center.longitude);
             const distance=Math.hypot(dlat,dlon);
-            if(distance<bestDistance){bestDistance=distance;best=track;}
+            if(distance<bestDistance){bestDistance=distance;best=point;}
           });
         });
+        // Lifecycle belongs to this exact valid time. Do not fall back to the
+        // track-level lifecycle, because that would label every forecast time
+        // with the same overall track state.
         return best&&best.lifecycle?best.lifecycle:"aktif";
       };
       const lifecycleBadge=(step,center)=>{
