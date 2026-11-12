@@ -171,16 +171,30 @@ jobs:
               ' _
           }
 
-          upload_tree_parallel "$GITHUB_WORKSPACE/forecast-data/public/ecmwf" "data/ecmwf"
+          # Never replace a complete live ECMWF payload with a partial
+          # cache-branch snapshot. The Istanbul service is the canonical live
+          # MeteoPT collector; R2 is only an archive/fallback layer.
+          if node - "$GITHUB_WORKSPACE/forecast-data/public/ecmwf/latest.json" <<'NODE'
+          const fs = require("fs");
+          const doc = JSON.parse(fs.readFileSync(process.argv[2], "utf8"));
+          const points = Array.isArray(doc.forecast_6_hourly) ? doc.forecast_6_hourly : [];
+          const maxHour = Math.max(0, ...points.map(point => Number(point?.forecast_hour) || 0));
+          process.exit(doc.schema === "gfs-watch.ecmwf-eps.v1" &&
+            doc.forecast_source === "meteopt" && maxHour >= 180 ? 0 : 1);
+          NODE
+          then
+            upload_tree_parallel "$GITHUB_WORKSPACE/forecast-data/public/ecmwf" "data/ecmwf"
+            echo "Uploaded complete ECMWF archive cache."
+          else
+            echo "Skipping ECMWF cache upload: checked-out latest.json is not a complete 180h MeteoPT payload."
+          fi
+
           upload_tree_parallel "$GITHUB_WORKSPACE/istanbul-gfs-data/gfs/notifications" "data/notifications"
 
-          uploaded="$(find "$GITHUB_WORKSPACE/forecast-data/public/ecmwf" "$GITHUB_WORKSPACE/istanbul-gfs-data/gfs/notifications" -type f 2>/dev/null | wc -l | tr -d ' ')"
-          test "$uploaded" -gt 0 || { echo "::error::No archive objects were uploaded to R2"; exit 1; }
+          uploaded="$(find "$GITHUB_WORKSPACE/istanbul-gfs-data/gfs/notifications" -type f 2>/dev/null | wc -l | tr -d ' ')"
+          test "$uploaded" -gt 0 || { echo "::error::No notification archive objects were uploaded to R2"; exit 1; }
 
-          wrangler r2 object get "$R2_BUCKET/data/ecmwf/latest.json" \
-            --file "$RUNNER_TEMP/r2-ecmwf-latest.json" --remote
-          cmp -s "$GITHUB_WORKSPACE/forecast-data/public/ecmwf/latest.json" "$RUNNER_TEMP/r2-ecmwf-latest.json"
-          echo "Verified ECMWF latest.json byte-for-byte in R2; uploaded $uploaded archive objects in parallel."
+          echo "Uploaded $uploaded notification archive objects in parallel; ECMWF live data remains Worker/D1 authoritative."
           echo "R2_ENABLED=1" >> "$GITHUB_ENV"
 
       - name: Deploy Cloudflare Worker + Static Assets
