@@ -41,6 +41,7 @@ import java.util.concurrent.Executors;
 public class WeatherWidgetProvider extends AppWidgetProvider {
     private static final String STATION_URL = "https://gfs-watch-stations.muhsin-ulusoy.workers.dev/api/stations/eyupsultan";
     private static final String STATION_FALLBACK_URL = "https://istanbulunhavasi.com/api/stations/eyupsultan";
+    private static final String HISTORY_URL = "https://gfs-watch-stations.muhsin-ulusoy.workers.dev/api/history/eyupsultan?hours=24";
     private static final String GFS_URL = "https://gfs-watch-web.muhsin-ulusoy.workers.dev/gfs/latest";
     private static final String GFS_FALLBACK_URL = "https://gfs-watch-istanbul-gfs.muhsin-ulusoy.workers.dev/gfs/latest";
     private static final ZoneId ISTANBUL = ZoneId.of("Europe/Istanbul");
@@ -61,7 +62,7 @@ public class WeatherWidgetProvider extends AppWidgetProvider {
                 JSONObject stationDoc = null;
                 JSONObject forecastDoc = null;
                 try { stationDoc = fetchJson(STATION_URL, STATION_FALLBACK_URL); } catch (Exception ignored) { }
-                try { forecastDoc = fetchJson(GFS_URL, GFS_FALLBACK_URL); } catch (Exception ignored) { }
+                try { forecastDoc = fetchJson(GFS_URL, GFS_FALLBACK_URL); } catch (Exception ignored) { }\n                try { historyDoc = fetchJson(HISTORY_URL, null); } catch (Exception ignored) { }
 
                 RemoteViews views = buildViews(context, stationDoc, forecastDoc);
                 for (int id : ids) manager.updateAppWidget(id, views);
@@ -128,6 +129,30 @@ public class WeatherWidgetProvider extends AppWidgetProvider {
             || !"live".equalsIgnoreCase(station.optString("status", "live"));
         views.setTextViewText(R.id.updated,
             (stale ? "Son ölçüm · eski veri · " : "Son ölçüm · ") + displayStationTime(observed));
+    }
+
+    private static void renderHistory(RemoteViews views, JSONObject historyDoc) {
+        JSONArray samples = historyDoc == null ? null : historyDoc.optJSONArray("samples");
+        if (samples == null && historyDoc != null) samples = historyDoc.optJSONArray("history");
+        double min = Double.NaN, max = Double.NaN, rainMax = Double.NaN;
+        if (samples != null) {
+            for (int i = 0; i < samples.length(); i++) {
+                JSONObject item = samples.optJSONObject(i);
+                if (item == null) continue;
+                double temp = value(item, "temperature_2m_c");
+                if (!Double.isNaN(temp)) {
+                    if (Double.isNaN(min) || temp < min) min = temp;
+                    if (Double.isNaN(max) || temp > max) max = temp;
+                }
+                double rain = value(item, "precipitation_1h_mm");
+                if (Double.isNaN(rain)) rain = value(item, "rain_1h_mm");
+                if (!Double.isNaN(rain) && (Double.isNaN(rainMax) || rain > rainMax)) rainMax = rain;
+            }
+        }
+        views.setTextViewText(R.id.history_temp_badge,
+            "Min " + fmt(min, 1) + "° · Maks " + fmt(max, 1) + "°");
+        views.setTextViewText(R.id.history_rain_badge,
+            "Maks " + fmt(rainMax, 1) + " mm");
     }
 
     private static void renderDailyTiles(RemoteViews views, JSONObject forecastDoc) {
@@ -595,6 +620,13 @@ public class WeatherWidgetProvider extends AppWidgetProvider {
         } catch (Exception ignored) {
             return "—";
         }
+    }
+
+    private static double dewPoint(double temp, double humidity) {
+        if (humidity <= 0 || humidity > 100) return Double.NaN;
+        double a = 17.27, b = 237.7;
+        double alpha = Math.log(humidity / 100.0) + (a * temp) / (b + temp);
+        return (b * alpha) / (a - alpha);
     }
 
     private static double apparentTemperature(double temp, double humidity, double windKmh) {
