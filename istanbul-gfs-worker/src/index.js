@@ -824,7 +824,12 @@ async function collectEcmwf(env) {
   const runId = runDt.toISOString().replace(".000Z", "+00:00");
   const current = await env.GFS_DB.prepare("SELECT run_id_utc, payload_json FROM ecmwf_current WHERE key = 'latest'").first();
   if (current && current.run_id_utc === runId) {
-    return { updated: false, run_id_utc: runId, source: "meteopt" };
+    try {
+      const currentPayload = JSON.parse(current.payload_json || "{}");
+      if (currentPayload.source_url === ECMWF_SOURCE_URL && currentPayload.forecast_source === "meteopt") {
+        return { updated: false, run_id_utc: runId, source: "meteopt" };
+      }
+    } catch (_) {}
   }
   const payload = await fetchEcmwfDocument(runDt);
   const storedAt = new Date().toISOString();
