@@ -5033,3 +5033,29 @@ main.shell { padding-bottom:max(12px,env(safe-area-inset-bottom)); }
     margin-bottom:0!important;
   }
 }
+
+
+/* Final alignment: comparison badges sit as a coherent pill stack beside the weather icon. */
+@media (min-width:1200px) and (pointer:fine){
+  .dashboard-left .station-card .station-inline-badges{
+    align-self:center!important;
+    transform:translateY(5px)!important;
+    gap:6px!important;
+  }
+  .dashboard-left .station-card .station-inline-badges .station-temp-compare{
+    display:inline-flex!important;
+    align-items:center!important;
+    min-height:22px!important;
+    padding:3px 9px!important;
+    border-radius:999px!important;
+    background:rgba(125,211,215,.12)!important;
+    border:1px solid rgba(125,211,215,.28)!important;
+    color:var(--cyan)!important;
+    font-size:11px!important;
+    font-weight:600!important;
+    line-height:1.2!important;
+  }
+  .dashboard-left .station-card .station-inline-badges .delta-badge{
+    min-height:22px!important;
+  }
+}
