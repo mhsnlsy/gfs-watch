@@ -278,7 +278,7 @@
         return pressureForecastRegion(c);
       };
       const lifecycleFor=(step,center)=>{
-        if(!center||!tracks.length)return "aktif";
+        if(!center||!tracks.length)return null;
         let best=null,bestDistance=Infinity;
         tracks.filter(t=>t.type===center.type&&Array.isArray(t.points)).forEach(track=>{
           track.points.forEach(point=>{
@@ -292,10 +292,11 @@
         // Lifecycle belongs to this exact valid time. Do not fall back to the
         // track-level lifecycle, because that would label every forecast time
         // with the same overall track state.
-        return best&&best.lifecycle?best.lifecycle:"aktif";
+        return best&&best.lifecycle?best.lifecycle:null;
       };
       const lifecycleBadge=(step,center)=>{
         const value=lifecycleFor(step,center);
+        if(!value)return "";
         return '<span class="pressure-lifecycle pressure-lifecycle-'+value+'">'+esc(value)+'</span>';
       };
       const lowRows=[],highRows=[];
