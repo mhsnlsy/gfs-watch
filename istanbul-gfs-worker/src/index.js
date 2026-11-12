@@ -1431,12 +1431,15 @@ async function handleApi(request, env) {
   if (path === "/ecmwf/latest" || path === "/api/ecmwf/latest") {
     try {
       let row = await env.GFS_DB.prepare("SELECT payload_json FROM ecmwf_current WHERE key = 'latest'").first();
-      if (!row) {
+      let payload = row ? JSON.parse(row.payload_json) : null;
+      // The ECMWF page has one canonical MeteoPT point. If an older D1 row
+      // was published for a different point, refresh it before serving.
+      if (!payload || payload.source_url !== ECMWF_SOURCE_URL || payload.forecast_source !== "meteopt") {
         await collectEcmwf(env);
         row = await env.GFS_DB.prepare("SELECT payload_json FROM ecmwf_current WHERE key = 'latest'").first();
+        payload = row ? JSON.parse(row.payload_json) : null;
       }
-      if (!row) return json({ ok: false, error: "No MeteoPT ECMWF run is available yet" }, 503);
-      const payload = JSON.parse(row.payload_json);
+      if (!payload) return json({ ok: false, error: "No MeteoPT ECMWF run is available yet" }, 503);
       // Enrich legacy/current payloads with the newest four MeteoPT cycles on read.
       // This makes the comparison available immediately after deployment, without
       // waiting for the next 00Z/12Z collection.
