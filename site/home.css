@@ -357,6 +357,7 @@
   
     /* GFS / ECMWF IFS model switch */
     .model-picker{display:flex;align-items:center;gap:5px;padding:4px;border:1px solid var(--line);border-radius:999px;background:rgba(3,15,24,.42)}
+    .model-picker-link{border:1px solid transparent;border-radius:999px;padding:8px 12px;background:transparent;color:#a9bdc9;font:700 11px "DM Sans",sans-serif;cursor:pointer;white-space:nowrap;transition:background .18s,border-color .18s,color .18s;text-decoration:none}.model-picker-link:hover{color:#fff;background:rgba(255,255,255,.06)}.model-picker-link.active{background:rgba(125,211,215,.16);border-color:rgba(125,211,215,.34);color:#d8fbf3}.model-picker-link:focus-visible{outline:2px solid var(--cyan);outline-offset:2px}
     .model-picker button{border:1px solid transparent;border-radius:999px;padding:8px 12px;background:transparent;color:#a9bdc9;font:700 11px "DM Sans",sans-serif;cursor:pointer;white-space:nowrap;transition:background .18s,border-color .18s,color .18s}
     .model-picker button:hover{color:#fff;background:rgba(255,255,255,.06)}
     .model-picker button.active{background:rgba(125,211,215,.16);border-color:rgba(125,211,215,.34);color:#d8fbf3}
