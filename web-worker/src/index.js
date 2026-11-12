@@ -224,7 +224,7 @@ export default {
       // from the canonical MeteoPT ECMWF source and rejects partial cycles.
       // R2 remains the fallback for outage resilience.
       if (isLiveEcmwfLatest) {
-        const published = await fetchD1PublicationAsset(request, env, "data/ecmwf/latest.json");
+        const published = await callService(env.ISTANBUL_GFS, request, "/ecmwf/latest");
         if (published) return published;
       }
 
