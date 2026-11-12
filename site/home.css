@@ -5089,3 +5089,21 @@ main.shell { padding-bottom:max(12px,env(safe-area-inset-bottom)); }
     min-height:20px!important;
   }
 }
+
+
+/* FINAL FIX: mobile Hissedilen 24h badge must render the JS text exactly once.
+   The old ::after mirror duplicated the same min/max values on touch/mobile layouts. */
+.feels-like-24h-badge{
+  font-size:9px!important;
+  line-height:1.25!important;
+}
+.feels-like-24h-badge::after{
+  content:none!important;
+  display:none!important;
+}
+@media(max-width:560px){
+  .feels-like-24h-badge{
+    font-size:8px!important;
+    line-height:1.25!important;
+  }
+}
