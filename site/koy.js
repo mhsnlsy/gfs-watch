@@ -1,3 +1,5 @@
+(function(){const hideEmptyBadges=function(){document.querySelectorAll('[class*="badge"],[class*="Badge"]').forEach(function(el){const text=(el.textContent||"").replace(/\u00a0/g," ").trim();if(!text)el.hidden=true;else if(el.hidden&&el.dataset.emptyBadgeHidden==="1"){el.hidden=false;delete el.dataset.emptyBadgeHidden;}})};function start(){hideEmptyBadges();if(window.MutationObserver){new MutationObserver(hideEmptyBadges).observe(document.body,{subtree:true,childList:true,characterData:true});}}if(document.body)start();else document.addEventListener('DOMContentLoaded',start);})();
+
 (function(){
   if(!Promise.allSettled){
     Promise.allSettled=function(items){
