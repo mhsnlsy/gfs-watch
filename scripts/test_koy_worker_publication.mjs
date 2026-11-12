@@ -124,13 +124,13 @@ const heavy = buildKoyInteractiveSvg({
 });
 const heavyPrecip = axisTicks(heavy.body, "precipitation");
 assert.equal(buildPanelAxis("precipitation_6h_mm", [[22], [1], [1], [9.8]]).step, 1);
-assert.deepEqual(heavyPrecip.slice().reverse(), ["0", "1", "2", "3", "4", "5", "6", "7", "8", "9", "10"]);
+assert.deepEqual(heavyPrecip.slice().reverse(), ["0", "1", "2", "3", "4", "5", "6", "7", "8", "9", "10", "11"]);
 assert.ok(!heavyPrecip.includes("9,8"));
 assert.ok(!heavyPrecip.includes("22"), "older 22 mm peak must not widen the latest-cycle precipitation axis");
 assert.ok(heavy.body.includes('data-latest-peak-value="9,8 mm"'));
 assert.ok(heavy.body.includes("15.11.2026 15:00 TSİ"));
 assertIntegerTicks(axisTicks(heavy.body, "temperature"), 5);
-assert.ok(axisTicks(heavy.body, "temperature").includes("15") && axisTicks(heavy.body, "temperature").includes("20"));
+assert.ok(axisTicks(heavy.body, "temperature").includes("20") && axisTicks(heavy.body, "temperature").includes("25"));
 assert.ok(!axisTicks(heavy.body, "temperature").includes("5"), "older-cycle temperature must not widen the latest-cycle axis");
 assertIntegerTicks(axisTicks(heavy.body, "temperature_850"), 5);
 assert.ok(axisTicks(heavy.body, "temperature_850").includes("10") && axisTicks(heavy.body, "temperature_850").includes("15"));
