@@ -292,7 +292,7 @@
         // Lifecycle belongs to this exact valid time. Do not fall back to the
         // track-level lifecycle, because that would label every forecast time
         // with the same overall track state.
-        return best&&best.lifecycle?best.lifecycle:null;
+        return best&&best.lifecycle ? (best.lifecycle === "aktif" ? "sabit" : best.lifecycle) : null;
       };
       const lifecycleBadge=(step,center)=>{
         const value=lifecycleFor(step,center);
