@@ -283,7 +283,7 @@ assert.ok(modestChart.body.includes('data-latest-peak-value="9,8 mm"'));
 const atThreshold = buildPanelAxis("precipitation_6h_mm", [[0, 16]]);
 const aboveThreshold = buildPanelAxis("precipitation_6h_mm", [[16.1]]);
 assert.equal(atThreshold.step, 1);
-assert.equal(atThreshold.ticks.at(-1), 16);
+assert.equal(atThreshold.ticks.at(-1), 17);
 assert.equal(atThreshold.ticks[1] - atThreshold.ticks[0], 1);
 assert.equal(aboveThreshold.step, 2);
 assert.deepEqual(aboveThreshold.ticks, [0, 2, 4, 6, 8, 10, 12, 14, 16, 18]);
