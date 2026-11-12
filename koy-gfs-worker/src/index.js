@@ -964,8 +964,6 @@ async function api(request, env) {
       // The chart itself must remain available even if the D1 publication write
       // is temporarily contended. Build directly from the four canonical raw
       // GFS documents and return the SVG without requiring a publication write.
-      result = { results: runs.map(payload_json => ({ payload_json: JSON.stringify(payload_json) })) };
-      const runs = (result.results || []).map(row => JSON.parse(row.payload_json));
       if (runs.length < 4) {
         return json({ ok: false, error: "Four complete Köy GFS cycles are not available" }, 404);
       }
