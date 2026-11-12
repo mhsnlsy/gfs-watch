@@ -182,6 +182,49 @@ def build_tracks(steps):
         points = track["points"]
         if len(points) < 2:
             continue
+
+        # Lifecycle is a property of each valid time, not of the whole track.
+        # For a low: falling pressure = strengthening, rising pressure = weakening.
+        # For a high: rising pressure = strengthening, falling pressure = weakening.
+        # "olgunlaşıyor" marks the local pressure minimum/maximum where the
+        # tendency changes sign. A 1 hPa / 6 h threshold avoids reacting to
+        # insignificant model noise.
+        tendency_threshold_hpa = 1.0
+        for i, point in enumerate(points):
+            current = float(point["pressure_hpa"])
+            previous = float(points[i - 1]["pressure_hpa"]) if i > 0 else None
+            following = float(points[i + 1]["pressure_hpa"]) if i + 1 < len(points) else None
+            prev_delta = current - previous if previous is not None else None
+            next_delta = following - current if following is not None else None
+
+            if track["type"] == "low":
+                if prev_delta is not None and next_delta is not None and prev_delta <= -tendency_threshold_hpa and next_delta >= tendency_threshold_hpa:
+                    lifecycle = "olgunlaşıyor"
+                elif next_delta is not None and next_delta <= -tendency_threshold_hpa:
+                    lifecycle = "güçleniyor"
+                elif prev_delta is not None and prev_delta >= tendency_threshold_hpa and (next_delta is None or next_delta >= 0):
+                    lifecycle = "zayıflıyor"
+                elif prev_delta is not None and prev_delta <= -tendency_threshold_hpa and (next_delta is None or next_delta <= 0):
+                    lifecycle = "güçleniyor"
+                elif next_delta is not None and next_delta >= tendency_threshold_hpa:
+                    lifecycle = "zayıflıyor"
+                else:
+                    lifecycle = "aktif"
+            else:
+                if prev_delta is not None and next_delta is not None and prev_delta >= tendency_threshold_hpa and next_delta <= -tendency_threshold_hpa:
+                    lifecycle = "olgunlaşıyor"
+                elif next_delta is not None and next_delta >= tendency_threshold_hpa:
+                    lifecycle = "güçleniyor"
+                elif prev_delta is not None and prev_delta <= -tendency_threshold_hpa and (next_delta is None or next_delta <= 0):
+                    lifecycle = "zayıflıyor"
+                elif prev_delta is not None and prev_delta >= tendency_threshold_hpa and (next_delta is None or next_delta >= 0):
+                    lifecycle = "güçleniyor"
+                elif next_delta is not None and next_delta <= -tendency_threshold_hpa:
+                    lifecycle = "zayıflıyor"
+                else:
+                    lifecycle = "aktif"
+
+            point["lifecycle"] = lifecycle
         a, b = points[0], points[-1]
         move = haversine_km(a["latitude"], a["longitude"], b["latitude"], b["longitude"])
         bearing = bearing_deg(a["latitude"], a["longitude"], b["latitude"], b["longitude"])
