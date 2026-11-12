@@ -216,7 +216,14 @@ export function buildIstanbulInteractiveSvg(runs) {
     const panelSeries = [];
     series.forEach((item, seriesIndex) => {
       const values = valuesBySeries[seriesIndex];
-      const yPositions = values.map(value => value === null ? null : Number(yFor(value).toFixed(3)));
+      // Older cycles may contain peaks outside the current/latest axis.
+      // Do not connect those out-of-range points back into the plot: a huge
+      // obsolete spike can otherwise create a diagonal/vertical line through
+      // the current chart. Raw values remain in metadata for tooltips.
+      const plotValues = values.map(value =>
+        value === null || value < low || value > high ? null : value
+      );
+      const yPositions = plotValues.map(value => value === null ? null : Number(yFor(value).toFixed(3)));
       const leadHours = pointsBySeries[seriesIndex].map(point => {
         const n = Number(point?.forecast_hour);
         return Number.isFinite(n) ? Math.round(n) : null;
@@ -226,7 +233,7 @@ export function buildIstanbulInteractiveSvg(runs) {
       );
       let pathData = "";
       let open = false;
-      values.forEach((value, index) => {
+      plotValues.forEach((value, index) => {
         if (value === null) { open = false; return; }
         pathData += (open ? " L " : " M ") + xPositions[index].toFixed(3) + " " + yPositions[index];
         open = true;
