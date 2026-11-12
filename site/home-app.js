@@ -1169,7 +1169,31 @@ const __hideEmptyBadges=()=>{document.querySelectorAll('[class*="badge"],[class*
       const rainBriefCurrent=$("rain-brief-current");
       if(rainBriefCurrent){
         const windSpeed=Number(station&&station.wind_speed_10m_kmh);
-        const windCardinal=String(station&&station.wind_direction_cardinal||"").toUpperCase().trim();
+        const rawWindDirection=String(station&&(
+          station.wind_direction_cardinal||
+          station.wind_direction_tr||
+          station.wind_direction||
+          ""
+        )).trim();
+        const windCardinal=(()=>{
+          const v=rawWindDirection.toUpperCase().replace(/[İI]/g,"I");
+          const map={
+            "N":"N","NORTH":"N","KUZEY":"N",
+            "NW":"NW","NORTHWEST":"NW","KUZEYBATI":"NW","KUZEY BATI":"NW",
+            "NE":"NE","NORTHEAST":"NE","KUZEYDOĞU":"NE","KUZEY DOĞU":"NE","KUZEYDOGU":"NE","KUZEY DOGU":"NE",
+            "S":"S","SOUTH":"S","GÜNEY":"S","GUNEY":"S",
+            "SW":"SW","SOUTHWEST":"SW","GÜNEYBATI":"SW","GÜNEY BATI":"SW","GUNEYBATI":"SW","GUNEY BATI":"SW"
+          };
+          if(map[v]) return map[v];
+          const d=Number(station&&(
+            station.wind_direction_degrees||
+            station.wind_direction
+          ));
+          if(Number.isFinite(d)){
+            return ["N","NE","E","SE","S","SW","W","NW"][Math.round((((d%360)+360)%360)/45)%8];
+          }
+          return "";
+        })();
         let windBadge="";
         if(Number.isFinite(windSpeed)&&windSpeed>15){
           if(windCardinal==="N") windBadge="Rüzgarlı";
