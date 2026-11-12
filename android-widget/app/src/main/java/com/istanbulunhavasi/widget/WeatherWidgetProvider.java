@@ -41,8 +41,8 @@ import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 
 public class WeatherWidgetProvider extends AppWidgetProvider {
-    private static final String STATION_URL = "https://gfs-watch-stations.muhsin-ulusoy.workers.dev/api/stations/eyupsultan";
-    private static final String STATION_FALLBACK_URL = "https://istanbulunhavasi.com/api/stations/eyupsultan";
+    private static final String STATION_URL = "https://gfs-watch-web.muhsin-ulusoy.workers.dev/api/stations/eyupsultan";
+    private static final String STATION_FALLBACK_URL = "https://gfs-watch-stations.muhsin-ulusoy.workers.dev/api/stations/eyupsultan";
     private static final String HISTORY_URL = "https://gfs-watch-stations.muhsin-ulusoy.workers.dev/api/history/eyupsultan?hours=24";
     private static final String GFS_URL = "https://gfs-watch-web.muhsin-ulusoy.workers.dev/gfs/latest";
     private static final String GFS_FALLBACK_URL = "https://gfs-watch-istanbul-gfs.muhsin-ulusoy.workers.dev/gfs/latest";
@@ -80,6 +80,13 @@ public class WeatherWidgetProvider extends AppWidgetProvider {
                 try { historyDoc = fetchJson(HISTORY_URL, null); } catch (Exception ignored) { }
 
                 RemoteViews views = buildViews(context, stationDoc, forecastDoc, historyDoc);
+                if (stationDoc == null || forecastDoc == null) {
+                    views.setTextViewText(R.id.widget_status,
+                        "Veri bağlantısı kurulamadı · YENİLE ile tekrar dene");
+                } else {
+                    views.setTextViewText(R.id.widget_status,
+                        "Canlı ölçüm · GFS tahmini · Son güncelleme " + IST_TIME.format(Instant.now()));
+                }
                 for (int id : ids) manager.updateAppWidget(id, views);
             } finally {
                 pending.finish();
