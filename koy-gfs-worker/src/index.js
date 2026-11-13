@@ -165,6 +165,74 @@ async function fetchCycle(requestedHour) {
   throw lastError || new Error("MeteoPT request failed");
 }
 
+function findMeteoptModelDocument(value) {
+  if (!value || typeof value !== "object") return null;
+  const queue = [value];
+  const seen = new Set();
+  while (queue.length) {
+    const current = queue.shift();
+    if (!current || typeof current !== "object" || seen.has(current)) continue;
+    seen.add(current);
+    if (Array.isArray(current?.steps?.values) && current.steps.values.length && current?.data && typeof current.data === "object") return current;
+    for (const child of Object.values(current)) if (child && typeof child === "object") queue.push(child);
+  }
+  return null;
+}
+
+function extractJsonObjectsFromHtml(html) {
+  const candidates = [];
+  const push = value => {
+    const text = String(value || "").trim();
+    if (!text) return;
+    try { candidates.push(JSON.parse(text)); return; } catch (_) {}
+    const first = text.search(/[{[]/);
+    if (first < 0) return;
+    const open = text[first], close = open === "{" ? "}" : "]";
+    let depth = 0, quote = false, escaped = false;
+    for (let i = first; i < text.length; i += 1) {
+      const ch = text[i];
+      if (quote) {
+        if (escaped) escaped = false;
+        else if (ch === "\\") escaped = true;
+        else if (ch === '"') quote = false;
+        continue;
+      }
+      if (ch === '"') { quote = true; continue; }
+      if (ch === open) depth += 1;
+      else if (ch === close && --depth === 0) {
+        try { candidates.push(JSON.parse(text.slice(first, i + 1))); } catch (_) {}
+        break;
+      }
+    }
+  };
+  const scripts = /<script[^>]*>([\s\S]*?)<\\/script>/gi;
+  let match;
+  while ((match = scripts.exec(html))) push(match[1]);
+  return candidates;
+}
+
+async function fetchMeteoptWebDocument() {
+  const url = new URL(METEOPT_GFS_WEB);
+  url.searchParams.set("lat", String(LOCATION.latitude));
+  url.searchParams.set("lon", String(LOCATION.longitude));
+  url.searchParams.set("lang", "en");
+  const response = await fetch(url.toString(), {
+    headers: {
+      "User-Agent": "Mozilla/5.0 (compatible; IstanbulHavasi/1.0; +https://istanbulunhavasi.com/)",
+      "Accept": "text/html,application/xhtml+xml",
+      "Cache-Control": "no-cache",
+    },
+    signal: AbortSignal.timeout(12000),
+  });
+  if (!response.ok) throw new Error("MeteoPT web HTTP " + response.status);
+  const html = await response.text();
+  for (const candidate of extractJsonObjectsFromHtml(html)) {
+    const document = findMeteoptModelDocument(candidate);
+    if (document) return { apiRun: String(document.run || document.run_id || "").trim(), document, url: url.toString() };
+  }
+  throw new Error("MeteoPT GFS page contained no embedded model dataset");
+}
+
 async function fetchAvailableCycles() {
   const candidates = [];
   // Fetch all four available MeteoPT cycle selectors on every Cloudflare poll.
@@ -207,6 +275,18 @@ async function fetchAvailableCycles() {
 
 async function fetchNewestCycle() {
   return (await fetchAvailableCycles())[0];
+}
+
+async function fetchNewestCycleWithWebFallback() {
+  try {
+    return await fetchNewestCycle();
+  } catch (apiError) {
+    console.warn(JSON.stringify({
+      event: "koy_meteopt_api_unavailable",
+      message: String(apiError?.message || apiError),
+    }));
+    return await fetchMeteoptWebDocument();
+  }
 }
 
 function normalizeDocument(candidate, now) {
@@ -1177,7 +1257,7 @@ async function api(request, env) {
       // Use the same run-selection path as the collector. The MeteoPT API
       // expects an explicit GFS cycle selector; an unqualified request can
       // return an error even though the model page itself is available.
-      const candidate = await fetchNewestCycle();
+      const candidate = await fetchNewestCycleWithWebFallback();
       const normalized = normalizeDocument(candidate, new Date());
       const payload = normalized.full;
       if (!payload) throw new Error("MeteoPT current run is not F180-ready");
