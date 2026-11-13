@@ -490,27 +490,34 @@ jobs:
 
           echo "Checking Istanbul GFS through internal Service Binding..."
           curl --silent --show-error --fail --max-time 45 "$WEB/gfs/latest?check=$(date +%s)" -o "$RUNNER_TEMP/web-gfs.json"
-          echo "Checking Köy GFS through internal Service Binding..."
-          curl --silent --show-error --fail --max-time 45 "$WEB/api/koy-gfs/f72?check=$(date +%s)" -o "$RUNNER_TEMP/web-koy.json"
-          curl --silent --show-error --fail --max-time 45 "$WEB/api/koy-gfs/comparison?check=$(date +%s)" -o "$RUNNER_TEMP/web-koy-comparison.json"
+          echo "Checking Köy GFS through its canonical dedicated Worker..."
+          KOY_WORKER="https://gfs-watch-koy-gfs.muhsin-ulusoy.workers.dev"
+          curl --silent --show-error --fail --max-time 45 "$KOY_WORKER/api/f72?check=$(date +%s)" -o "$RUNNER_TEMP/web-koy.json"
+          curl --silent --show-error --fail --max-time 45 "$KOY_WORKER/api/comparison?check=$(date +%s)" -o "$RUNNER_TEMP/web-koy-comparison.json"
+
+          echo "Checking Köy GFS through the public web gateway..."
+          curl --silent --show-error --fail --max-time 45 "$WEB/api/koy-gfs/f72?check=$(date +%s)" -o "$RUNNER_TEMP/web-koy-gateway.json"
+          curl --silent --show-error --fail --max-time 45 "$WEB/api/koy-gfs/comparison?check=$(date +%s)" -o "$RUNNER_TEMP/web-koy-comparison-gateway.json"
           echo "Checking station D1 health through internal Service Binding..."
           curl --silent --show-error --fail --max-time 20 "$WEB/api/stations/health?check=$(date +%s)" -o "$RUNNER_TEMP/web-stations-health.json"
           curl --silent --show-error --fail --max-time 20 "$WEB/api/stations?check=$(date +%s)" -o "$RUNNER_TEMP/web-stations.json"
           curl --silent --show-error --fail --max-time 20 "$WEB/api/history/canakci?hours=72&check=$(date +%s)" -o "$RUNNER_TEMP/web-station-history.json"
-          node - "$RUNNER_TEMP/web-gfs.json" "$RUNNER_TEMP/web-koy.json" "$RUNNER_TEMP/web-koy-comparison.json" "$RUNNER_TEMP/web-stations-health.json" "$RUNNER_TEMP/web-stations.json" "$RUNNER_TEMP/web-station-history.json" <<'NODE'
+          node - "$RUNNER_TEMP/web-gfs.json" "$RUNNER_TEMP/web-koy.json" "$RUNNER_TEMP/web-koy-comparison.json" "$RUNNER_TEMP/web-koy-gateway.json" "$RUNNER_TEMP/web-koy-comparison-gateway.json" "$RUNNER_TEMP/web-stations-health.json" "$RUNNER_TEMP/web-stations.json" "$RUNNER_TEMP/web-station-history.json" <<'NODE'
           const fs = require("fs");
-          const [gfs, koy, koyComparison, health, stations, history] = process.argv.slice(2).map(file => JSON.parse(fs.readFileSync(file, "utf8")));
+          const [gfs, koy, koyComparison, koyGateway, koyComparisonGateway, health, stations, history] = process.argv.slice(2).map(file => JSON.parse(fs.readFileSync(file, "utf8")));
           if (!["gfs-watch.forecast.v1", "gfs-watch.forecast.v2"].includes(gfs.schema) || !Array.isArray(gfs.comparison_runs) ||
               !Array.isArray(gfs.forecast_6_hourly) || gfs.forecast_6_hourly.length < 24 || Number(gfs.forecast_horizon_hours || 0) < 72) {
             throw new Error("Istanbul GFS gateway failed");
           }
-          if (!Array.isArray(koy.forecast_6_hourly) || koy.forecast_6_hourly.length < 12) throw new Error("Köy legacy F72 gateway failed");
+          if (!Array.isArray(koy.forecast_6_hourly) || koy.forecast_6_hourly.length < 12) throw new Error("Köy canonical Worker F72 failed");
+          if (!Array.isArray(koyGateway.forecast_6_hourly) || koyGateway.forecast_6_hourly.length < 12) throw new Error("Köy public gateway F72 failed");
           const koyFullRuns = (koyComparison.runs || []).filter(run => {
             const points = Array.isArray(run.forecast_6_hourly) ? run.forecast_6_hourly : [];
             const maxHour = Math.max(0, ...points.map(point => Number(point.forecast_hour)).filter(Number.isFinite));
             return run.forecast_source === "meteopt" && points.filter(point => Number(point.forecast_hour) > 0 && Number(point.forecast_hour) <= 180 && Number(point.forecast_hour) % 3 === 0).length >= 30 && maxHour >= 180;
           });
-          if (!Array.isArray(koyComparison.runs) || !koyFullRuns.length) throw new Error("Köy F180 comparison archive gateway failed");
+          if (!Array.isArray(koyComparison.runs) || !koyFullRuns.length) throw new Error("Köy canonical Worker F180 comparison failed");
+          if (!Array.isArray(koyComparisonGateway.runs) || !koyComparisonGateway.runs.length) throw new Error("Köy public gateway comparison failed");
           if (health.ok !== true || health.storage !== "D1" || health.cron !== "*/2 * * * *") throw new Error("Station D1 health gateway failed");
           if (stations.ok !== true || !Array.isArray(stations.stations) || stations.stations.length < 4) throw new Error("Station current values gateway failed");
           if (history.ok !== true || !Array.isArray(history.samples)) throw new Error("Station history gateway failed");
@@ -519,6 +526,8 @@ jobs:
             istanbul_comparison_runs: gfs.comparison_runs.length,
             koy_run: koy.run_id_utc,
             koy_f72_points: koy.forecast_6_hourly.length,
+            koy_gateway_run: koyGateway.run_id_utc || null,
+            koy_gateway_f72_points: koyGateway.forecast_6_hourly.length,
             koy_f180_runs: koyFullRuns.length,
             koy_latest_f180_run: koyFullRuns.sort((a,b) => Date.parse(b.run_id_utc) - Date.parse(a.run_id_utc))[0]?.run_id_utc || null,
             station_count: stations.stations.length,
