@@ -1250,63 +1250,72 @@ async function api(request, env) {
 
   if (path === "/api/meteopt-f180-live") {
     try {
-      // The Köy 180-hour table is sourced from the exact MeteoPT location page.
-      // Fetch the current MeteoPT GFS dataset live instead of serving a stale D1
-      // archive snapshot. The API endpoint is MeteoPT's data backend for this
-      // exact web-page coordinate.
-      // Use the same run-selection path as the collector. The MeteoPT API
-      // expects an explicit GFS cycle selector; an unqualified request can
-      // return an error even though the model page itself is available.
+      const sourceUrl = METEOPT_GFS_WEB + "?lat=" + LOCATION.latitude + "&lon=" + LOCATION.longitude;
+      const isCompletedF180 = payload => {
+        const points = Array.isArray(payload?.forecast_6_hourly) ? payload.forecast_6_hourly : [];
+        return payload?.forecast_source === "meteopt" &&
+          points.some(point => Number(point?.forecast_hour) >= 180);
+      };
+
+      // The ten-minute Cron is the collector. Visitor requests read its latest
+      // completed MeteoPT run from D1 first, so a temporary upstream outage or
+      // a slow model page cannot blank the public Köy table.
+      const current = await currentRun(env, "f72");
+      if (isCompletedF180(current?.payload)) {
+        return json({
+          ...current.payload,
+          source_url: sourceUrl,
+          source_page: sourceUrl,
+          source_backend: API_BASE,
+          source_mode: "meteopt-cached",
+          source_cached_at_utc: current.updated_at_utc || current.payload.published_at_utc || null,
+        });
+      }
+
+      // Older completed cycles remain available in the archive if the current
+      // record has not reached F180 yet. Search forecast hours, not a fixed
+      // array index: MeteoPT may use different forecast-step intervals.
+      const archiveResult = await env.GFS_DB.prepare(
+        "SELECT run_id_utc, payload_json, published_at_utc FROM gfs_runs " +
+        "ORDER BY run_id_utc DESC LIMIT 30"
+      ).all();
+      const cachedRow = (archiveResult.results || []).find(row => {
+        try {
+          return isCompletedF180(JSON.parse(row.payload_json || "{}"));
+        } catch (_) {
+          return false;
+        }
+      }) || null;
+      if (cachedRow?.payload_json) {
+        return json({
+          ...JSON.parse(cachedRow.payload_json),
+          source_url: sourceUrl,
+          source_page: sourceUrl,
+          source_backend: API_BASE,
+          source_mode: "meteopt-cached",
+          source_cached_at_utc: cachedRow.published_at_utc || null,
+        });
+      }
+
+      // Cold-start only: fetch the exact MeteoPT location through its data
+      // backend, with the exact public model page retained as source metadata.
       const candidate = await fetchNewestCycleWithWebFallback();
       const normalized = normalizeDocument(candidate, new Date());
-      const payload = normalized.full;
-      if (!payload) throw new Error("MeteoPT current run is not F180-ready");
-
+      if (!isCompletedF180(normalized.full)) {
+        throw new Error("MeteoPT current run is not F180-ready and no completed archive exists");
+      }
       return json({
-        ...payload,
-        source_url: METEOPT_GFS_WEB + "?lat=" + LOCATION.latitude + "&lon=" + LOCATION.longitude,
-        source_page: METEOPT_GFS_WEB + "?lat=" + LOCATION.latitude + "&lon=" + LOCATION.longitude,
+        ...normalized.full,
+        source_url: sourceUrl,
+        source_page: sourceUrl,
         source_backend: candidate.url,
         source_mode: "live-meteopt",
       });
     } catch (error) {
-      // Keep the table populated from the last canonical MeteoPT snapshot
-      // when the upstream API has a transient failure. This is still MeteoPT
-      // data; it is explicitly marked cached so the UI can show its age.
-      try {
-        // F72 and the archived F180 runs are stored separately. Do not look
-        // for an F180 horizon inside gfs_current/f72: use the latest canonical
-        // completed MeteoPT run from gfs_runs instead.
-        const archiveResult = await env.GFS_DB.prepare(
-          "SELECT run_id_utc, payload_json, published_at_utc FROM gfs_runs " +
-          "ORDER BY run_id_utc DESC LIMIT 30"
-        ).all();
-        const cachedRow = (archiveResult.results || []).find(row => {
-          try {
-            const candidate = JSON.parse(row.payload_json || "{}");
-            const points = Array.isArray(candidate.forecast_6_hourly) ? candidate.forecast_6_hourly : [];
-            return candidate.forecast_source === "meteopt" &&
-              points.some(point => Number(point?.forecast_hour) >= 180);
-          } catch (_) {
-            return false;
-          }
-        }) || null;
-        if (cachedRow?.payload_json) {
-          const cachedPayload = JSON.parse(cachedRow.payload_json);
-          if (Array.isArray(cachedPayload.forecast_6_hourly) &&
-              cachedPayload.forecast_6_hourly.some(point => Number(point?.forecast_hour) >= 180)) {
-            return json({
-              ...cachedPayload,
-              source_url: METEOPT_GFS_WEB + "?lat=" + LOCATION.latitude + "&lon=" + LOCATION.longitude,
-              source_page: METEOPT_GFS_WEB + "?lat=" + LOCATION.latitude + "&lon=" + LOCATION.longitude,
-              source_backend: API_BASE,
-              source_mode: "meteopt-cached",
-              source_cached_at_utc: cachedRow.published_at_utc || null,
-              source_error: String(error?.message || error),
-            });
-          }
-        }
-      } catch (_) {}
+      console.error(JSON.stringify({
+        event: "koy_f180_endpoint_error",
+        message: String(error?.message || error),
+      }));
       return json({ ok: false, error: String(error?.message || error) }, 503);
     }
   }
