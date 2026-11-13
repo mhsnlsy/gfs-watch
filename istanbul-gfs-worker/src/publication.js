@@ -323,14 +323,14 @@ export function buildIstanbulInteractiveSvg(runs) {
     parts.push("</g>");
   });
 
-  const metadataText = JSON.stringify({ version: 1, renderer: "cloudflare-js-v3", panels: metadata })
+  const metadataText = JSON.stringify({ version: 1, renderer: "cloudflare-js-v4", panels: metadata })
     .replace(/\]\]>/g, "]]\\u003e");
   parts.push(
     '<text x="63" y="810" fill="#E7F2F6" font-size="11" font-family="' + FONT + '">Aynı geçerlilik saatleri (TSİ) · ' +
     validKeys.length + ' ortak nokta · ' + series.length + ' döngü</text>',
     '<text x="1090" y="810" text-anchor="end" fill="#E7F2F6" font-size="10" font-family="' + FONT +
     '">Kaynak: MeteoPT GFS · İstanbul nokta tahmini</text>',
-    '<metadata id="gfs-renderer-version">cloudflare-js-v2</metadata>',
+    '<metadata id="gfs-renderer-version">cloudflare-js-v4</metadata>',
     '<metadata id="gfs-interactive-data"><![CDATA[' + metadataText + ']]></metadata>',
     '<g id="gfs-interaction-layer">'
   );
