@@ -1194,19 +1194,28 @@ async function api(request, env) {
       // when the upstream API has a transient failure. This is still MeteoPT
       // data; it is explicitly marked cached so the UI can show its age.
       try {
-        const cached = await currentRun(env, "f72");
-        const cachedPayload = cached?.payload;
-        if (cachedPayload && Array.isArray(cachedPayload.forecast_6_hourly) &&
-            cachedPayload.forecast_6_hourly.some(point => Number(point?.forecast_hour) >= 180)) {
-          return json({
-            ...cachedPayload,
-            source_url: METEOPT_GFS_WEB + "?lat=" + LOCATION.latitude + "&lon=" + LOCATION.longitude,
-            source_page: METEOPT_GFS_WEB + "?lat=" + LOCATION.latitude + "&lon=" + LOCATION.longitude,
-            source_backend: API_BASE,
-            source_mode: "meteopt-cached",
-            source_cached_at_utc: cached.updated_at_utc || null,
-            source_error: String(error?.message || error),
-          });
+        // F72 and the archived F180 runs are stored separately. Do not look
+        // for an F180 horizon inside gfs_current/f72: use the latest canonical
+        // completed MeteoPT run from gfs_runs instead.
+        const cachedRow = await env.GFS_DB.prepare(
+          "SELECT run_id_utc, payload_json, published_at_utc FROM gfs_runs " +
+          "WHERE json_extract(payload_json, '$.forecast_6_hourly[29].forecast_hour') >= 180 " +
+          "ORDER BY run_id_utc DESC LIMIT 1"
+        ).first();
+        if (cachedRow?.payload_json) {
+          const cachedPayload = JSON.parse(cachedRow.payload_json);
+          if (Array.isArray(cachedPayload.forecast_6_hourly) &&
+              cachedPayload.forecast_6_hourly.some(point => Number(point?.forecast_hour) >= 180)) {
+            return json({
+              ...cachedPayload,
+              source_url: METEOPT_GFS_WEB + "?lat=" + LOCATION.latitude + "&lon=" + LOCATION.longitude,
+              source_page: METEOPT_GFS_WEB + "?lat=" + LOCATION.latitude + "&lon=" + LOCATION.longitude,
+              source_backend: API_BASE,
+              source_mode: "meteopt-cached",
+              source_cached_at_utc: cachedRow.published_at_utc || null,
+              source_error: String(error?.message || error),
+            });
+          }
         }
       } catch (_) {}
       return json({ ok: false, error: String(error?.message || error) }, 503);
