@@ -145,7 +145,7 @@ async function fetchCycle(requestedHour) {
           "Cache-Control": "no-cache",
           "Pragma": "no-cache",
         },
-        signal: AbortSignal.timeout(20000),
+        signal: AbortSignal.timeout(45000),
       });
       if (!response.ok) {
         const body = await response.text().catch(() => "");
@@ -171,14 +171,19 @@ async function fetchAvailableCycles() {
   // This deliberately keeps the previous three cycles available for the four-run
   // comparison instead of only persisting the newest cycle.
   const preferred = [6, ...CYCLES.filter(h => h !== 6)];
-  for (const requestedHour of preferred) {
-    try {
-      candidates.push(await fetchCycle(requestedHour));
-    } catch (error) {
+  const results = await Promise.allSettled(
+    preferred.map(requestedHour => fetchCycle(requestedHour))
+  );
+  for (let i = 0; i < results.length; i += 1) {
+    const result = results[i];
+    const requestedHour = preferred[i];
+    if (result.status === "fulfilled") {
+      candidates.push(result.value);
+    } else {
       console.log(JSON.stringify({
         event: "meteopt_cycle_unavailable",
         requested_hour: requestedHour,
-        message: String(error?.message || error),
+        message: String(result.reason?.message || result.reason),
       }));
     }
   }
