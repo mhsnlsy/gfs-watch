@@ -852,11 +852,21 @@ async function refresh(){if(busy)return;busy=true;
  ]);
  if(results[0].status==="fulfilled")comparison=results[0].value;
  if(results[1].status==="fulfilled")f180=results[1].value;
- // The Köy GFS table has exactly one source: the live MeteoPT point
- // https://www.meteopt.com/modelos/gfs?lat=40.9557&lon=39.0065
- // Never substitute archived D1/comparison data into this table.
- if(!f180){
-  f180=null;
+ // Canonical Köy source: the exact MeteoPT GFS point at 40.9557, 39.0065.
+ // Prefer the live F180 endpoint. If it is temporarily unavailable, use the
+ // newest completed MeteoPT run from the same comparison payload so the table
+ // does not go blank. This fallback never switches to another source.
+ if(!f180 && comparison && Array.isArray(comparison.runs)){
+  const completed=comparison.runs
+   .filter(run=>run && run.forecast_source==="meteopt" &&
+    Array.isArray(run.forecast_6_hourly) &&
+    run.forecast_6_hourly.some(point=>Number(point?.forecast_hour)>=180))
+   .sort((a,b)=>Date.parse(b.run_id_utc)-Date.parse(a.run_id_utc));
+  if(completed.length)f180={
+   ...completed[0],
+   source_mode:"meteopt-archived-fallback",
+   source_url:"https://www.meteopt.com/modelos/gfs?lat=40.9557&lon=39.0065"
+  };
  }
  if(f180){
   renderF180(stationMode==="home"?homeGfsDocument(f180):f180);
