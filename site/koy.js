@@ -53,7 +53,25 @@ const dayLabel=k=>{const p=k.split("-");return p[2]+"."+p[1]};
 let busy=false, f180=null, comparison=null, stationHistory=null, rainHistory=null, evObservation=null, evHistory=null, stationMode="home";
 // Köy Ev is the only initial state. Do not derive the initial station from DOM, cache, or prior UI state.
 window.__KOY_DEFAULT_STATION="home";
-async function get(path){const url=BASE+path;const r=await fetch(url+"?v="+Date.now(),{cache:"no-store"});if(!r.ok)throw Error("HTTP "+r.status+" · "+url);return r.json()}
+async function get(path){
+ const bases=[BASE];
+ // Apex service-binding path can return 503 while the dedicated Köy Worker
+ // itself is healthy. Try the canonical dedicated Worker before declaring
+ // the Köy GFS unavailable.
+ if(!KoyUsesDedicatedWorker && !window.location.hostname.endsWith(".github.io")){
+  bases.push(KoyDirectWorker+"/api/");
+ }
+ let lastError=null;
+ for(const base of bases){
+  const url=base+path;
+  try{
+   const r=await fetch(url+"?v="+Date.now(),{cache:"no-store"});
+   if(!r.ok)throw Error("HTTP "+r.status+" · "+url);
+   return await r.json();
+  }catch(error){lastError=error;}
+ }
+ throw lastError||Error("Köy GFS API unavailable");
+}
 async function getStation(path){
  const bases=[STATIONS_API,"https://gfs-watch-stations.muhsin-ulusoy.workers.dev/api"];
  let lastError=null,doc=null;
