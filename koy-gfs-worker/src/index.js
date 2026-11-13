@@ -1148,6 +1148,46 @@ async function api(request, env) {
     }
   }
 
+  if (path === "/api/meteopt-f180-live") {
+    try {
+      // The Köy 180-hour table is sourced from the exact MeteoPT location page.
+      // Fetch the current MeteoPT GFS dataset live instead of serving a stale D1
+      // archive snapshot. The API endpoint is MeteoPT's data backend for this
+      // exact web-page coordinate.
+      const url = new URL(API_BASE);
+      url.searchParams.set("lat", String(LOCATION.latitude));
+      url.searchParams.set("lon", String(LOCATION.longitude));
+      url.searchParams.set("lang", "en");
+      const response = await fetch(url.toString(), {
+        headers: {
+          "User-Agent": "GFS-Watch-Koy-MeteoPT-Table/1.0",
+          "Cache-Control": "no-cache",
+        },
+      });
+      if (!response.ok) throw new Error("MeteoPT HTTP " + response.status);
+      const document = await response.json();
+      const apiRun = String(document?.run || "").trim();
+      if (!apiRun) throw new Error("MeteoPT returned no current run id");
+
+      const normalized = normalizeDocument(
+        { apiRun, document, url: url.toString() },
+        new Date()
+      );
+      const payload = normalized.full;
+      if (!payload) throw new Error("MeteoPT current run is not F180-ready");
+
+      return json({
+        ...payload,
+        source_url: METEOPT_GFS_WEB + "?lat=" + LOCATION.latitude + "&lon=" + LOCATION.longitude,
+        source_page: METEOPT_GFS_WEB + "?lat=" + LOCATION.latitude + "&lon=" + LOCATION.longitude,
+        source_backend: url.toString(),
+        source_mode: "live-meteopt",
+      });
+    } catch (error) {
+      return json({ ok: false, error: String(error?.message || error) }, 503);
+    }
+  }
+
   if (path === "/api/f72") {
     try {
       let current = await currentRun(env, "f72");
