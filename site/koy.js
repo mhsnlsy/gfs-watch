@@ -1054,7 +1054,9 @@ function renderKoyBriefing(){
  const current=evObservation&&num(evObservation.temperature_2m_c);
  if(!points.length){rain.textContent="Köy GFS tahmini bekleniyor.";temp.textContent="Köy Ev ölçümü ve tahmin verisi bekleniyor.";return;}
  rain.replaceChildren(...briefingRainLines(points,Date.now()).map(t=>{const el=document.createElement("div");el.className="brief-spell";el.textContent=t;return el;}));
- temp.innerHTML=briefingTempSummary(points,Date.now(),current==null?0:current);
+ const tempSummary=briefingTempSummary(points,Date.now(),current==null?0:current)
+  .replace(/\\b(Pazartesi|Salı|Çarşamba|Perşembe|Cuma|Cumartesi|Pazar) günleri\\b/g,"$1 günü");
+ temp.innerHTML=tempSummary;
 }
 function pressureRegionNameKoy(latitude,longitude){
   const lat=Number(latitude),lon=Number(longitude);
