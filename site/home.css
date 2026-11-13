@@ -5432,13 +5432,15 @@ main.shell { padding-bottom:max(12px,env(safe-area-inset-bottom)); }
 
 
 /* 20261113 FINAL OVERFLOW SOURCE FIX
-   The station-card decorative pseudo-element is intentionally positioned
-   105px outside the card (right:-105px). That becomes document scrollWidth
-   when the card itself does not clip overflow. Keep the decoration visual,
-   but clip it to the card boundary. */
+   The decorative station-card pseudo-element must never extend outside the
+   card on desktop. The previous right:-105px position directly created the
+   105px document overflow detected by the visual monitor. Keep the
+   decoration inside the card instead of relying on ancestor clipping. */
 .station-card{
   overflow:hidden!important;
+  contain:paint!important;
 }
 .station-card:before{
-  right:-105px;
+  right:0!important;
+  max-width:100%!important;
 }
