@@ -5308,3 +5308,55 @@ main.shell { padding-bottom:max(12px,env(safe-area-inset-bottom)); }
     max-width:100%;
   }
 }
+
+
+/* 20261113 MOBILE TRUE-VIEWPORT LOCK
+   Remove every possible shell gutter on the homepage. */
+@media (max-width:1199px), (pointer:coarse){
+  html{
+    width:100vw!important;
+    max-width:100vw!important;
+    min-width:100vw!important;
+    margin:0!important;
+    padding:0!important;
+    overflow-x:hidden!important;
+    overflow-y:auto!important;
+  }
+  body{
+    width:100vw!important;
+    max-width:100vw!important;
+    min-width:100vw!important;
+    margin:0!important;
+    padding:0!important;
+    overflow-x:hidden!important;
+    overflow-y:auto!important;
+    box-sizing:border-box!important;
+  }
+  body > header.shell.topbar,
+  body > main.shell,
+  body > footer.footer{
+    width:100vw!important;
+    max-width:100vw!important;
+    min-width:100vw!important;
+    margin-left:0!important;
+    margin-right:0!important;
+    padding-left:0!important;
+    padding-right:0!important;
+    box-sizing:border-box!important;
+  }
+  body > main.shell{
+    position:relative!important;
+    left:0!important;
+    right:auto!important;
+  }
+  body > main.shell > .dashboard-top{
+    width:100%!important;
+    max-width:none!important;
+    min-width:0!important;
+    margin-left:0!important;
+    margin-right:0!important;
+    padding-left:0!important;
+    padding-right:0!important;
+    box-sizing:border-box!important;
+  }
+}
