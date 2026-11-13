@@ -1263,7 +1263,24 @@ async function api(request, env) {
         }
       }
 
-      if (!current) return json({ ok: false, error: "F72 data not collected yet" }, 404);
+      if (!current) {
+        // Cold-start fallback: the canonical completed MeteoPT F180 runs are
+        // already stored in gfs_runs. Serve the newest one instead of returning
+        // 404 merely because the f72 current pointer has not been populated.
+        const archived = await env.GFS_DB.prepare(
+          "SELECT run_id_utc, payload_json, published_at_utc FROM gfs_runs " +
+          "ORDER BY run_id_utc DESC LIMIT 1"
+        ).first();
+        if (archived?.payload_json) {
+          const payload = JSON.parse(archived.payload_json);
+          return json({
+            ...payload,
+            source_mode: "meteopt-archived",
+            source_cached_at_utc: archived.published_at_utc || null,
+          });
+        }
+        return json({ ok: false, error: "F72 data not collected yet" }, 404);
+      }
       return json(current.payload);
     } catch (error) {
       return json({ ok: false, error: String(error?.message || error) }, 503);
@@ -1281,12 +1298,22 @@ async function api(request, env) {
       // MeteoPT cycles before replying.
       let current = await currentRun(env, "f72");
       if (runs.length < 4 || !current) {
-        await collect(env);
-        result = await env.GFS_DB.prepare(
-          "SELECT payload_json FROM gfs_runs ORDER BY run_id_utc DESC LIMIT 4"
-        ).all();
-        runs = (result.results || []).map(row => JSON.parse(row));
-        current = await currentRun(env, "f72");
+        try {
+          await collect(env);
+          result = await env.GFS_DB.prepare(
+            "SELECT payload_json FROM gfs_runs ORDER BY run_id_utc DESC LIMIT 4"
+          ).all();
+          runs = (result.results || []).map(row => JSON.parse(row));
+          current = await currentRun(env, "f72");
+        } catch (collectError) {
+          // Do not turn an existing canonical archive into a 503 when MeteoPT
+          // is temporarily unavailable. The archive is still MeteoPT-derived.
+          console.warn(JSON.stringify({
+            event: "koy_comparison_collect_fallback",
+            message: String(collectError?.message || collectError),
+            archived_runs: runs.length,
+          }));
+        }
       }
 
       // Canonical source-of-truth rule:
