@@ -62,34 +62,10 @@ function isArchivePath(path) {
     path.startsWith("/koy-data/gfs/");
 }
 
-async function callKoyService(binding, request, path) {
-  // Service bindings can transiently return 503 even while the dedicated
-  // Köy Worker is healthy. Keep the custom-domain API authoritative by
-  // falling back to the same deployed Worker directly.
-  if (binding && typeof binding.fetch === "function") {
-    try {
-      const response = await binding.fetch(internalRequest(request, path));
-      if (response.ok) {
-        const headers = new Headers(response.headers);
-        headers.set("Cache-Control", "no-store, max-age=0");
-        headers.set("Access-Control-Allow-Origin", "*");
-        headers.set("X-GFS-Watch-Gateway", "service-binding");
-        return new Response(response.body, {
-          status: response.status,
-          statusText: response.statusText,
-          headers,
-        });
-      }
-      // The Köy binding has intermittently returned 404 even while the
-      // dedicated Worker is healthy. Treat 404 like the existing transient
-      // binding failures and use the canonical dedicated Worker fallback.
-      if (response.status !== 404 && response.status !== 503 &&
-          response.status !== 502 && response.status !== 504) {
-        return response;
-      }
-    } catch (_) {}
-  }
-
+async function callKoyService(_binding, request, path) {
+  // The Köy Service Binding is returning 404 in production. Do not route
+  // visitor traffic through that binding until it is healthy. The dedicated
+  // Köy Worker is the canonical deployed service for these endpoints.
   const incoming = new URL(request.url);
   const direct = new URL("https://gfs-watch-koy-gfs.muhsin-ulusoy.workers.dev" + path);
   direct.search = incoming.search;
