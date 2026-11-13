@@ -1384,6 +1384,28 @@ async function api(request, env) {
           }
         }
 
+        // The exact MeteoPT GFS model page is the canonical source. If its
+        // JSON backend is unreachable from the Worker, use the page itself
+        // rather than returning a false "no data" response.
+        try {
+          const webCandidate = await fetchMeteoptWebDocument();
+          const normalized = normalizeDocument(webCandidate, new Date());
+          if (normalized.f72) {
+            return json({
+              ...normalized.f72,
+              source_mode: "live-meteopt-web",
+              source_url: webCandidate.url,
+              source_page: webCandidate.url,
+              source_backend: webCandidate.url,
+            });
+          }
+        } catch (webError) {
+          console.warn(JSON.stringify({
+            event: "koy_f72_web_meteopt_fallback_failed",
+            message: String(webError?.message || webError),
+          }));
+        }
+
         return json({ ok: false, error: "MeteoPT F72 data is not available yet" }, 404);
       }
       return json(current.payload);
