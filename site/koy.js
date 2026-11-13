@@ -915,10 +915,10 @@ async function refresh(){if(busy)return;busy=true;
   // results[2] is the GFS F72 payload, not a station payload.
   // Never read .station from it: that exception aborts the remaining
   // station rendering and incorrectly produces the "Veri yenileme hatası" badge.
-  window.__koyCurrentTemp=num(
-   o.temperature_c == null ? o.temperature_2m_c : o.temperature_c
-  );
   const o=window.__koyMgmObservation;
+  window.__koyCurrentTemp=num(
+   o.temperature_c == null ? o.temperature_2m_c : o.temperature_2m_c
+  );
   const mgmStatusDate=$("mgm-status-date");
   if(mgmStatusDate)mgmStatusDate.textContent=ts(o.last_attempt_utc||o.fetched_at_utc||o.observed_at_utc);
   const mgmSourceTemp=$("mgm-source-temp");
@@ -927,6 +927,24 @@ async function refresh(){if(busy)return;busy=true;
   if(mgmSourceStatus)mgmSourceStatus.textContent="Canlı MGM ölçümü · son 1 saat yağış "+fmt(o.precipitation_1h_mm)+" mm";
   const mgmSourceFill=$("mgm-source-fill");
   if(mgmSourceFill)mgmSourceFill.style.width=Math.min(100,Math.max(0,(num(o.precipitation_1h_mm)||0)*8))+"%";
+ }
+ // If the live /stations endpoint is temporarily unavailable, the history
+ // endpoint still contains the latest real MGM sample. Use that sample to
+ // keep the current observation card alive instead of showing blanks.
+ if(!window.__koyMgmObservation && stationHistory && Array.isArray(stationHistory.samples) && stationHistory.samples.length){
+  const latest=stationHistory.samples
+   .slice()
+   .sort((a,b)=>Date.parse(b.observed_at_utc||b.logged_at_utc||0)-Date.parse(a.observed_at_utc||a.logged_at_utc||0))[0];
+  if(latest){
+   window.__koyMgmObservation={
+    ...latest,
+    station_id:stationHistory.station_id||"CANKIRI-MGM",
+    station_name:stationHistory.station_name||"Çanakçı MGM",
+    elevation_m:stationHistory.elevation_m,
+    fetch_status:"history_fallback"
+   };
+   evObservation=buildVirtualHomeObservation(window.__koyMgmObservation);
+  }
  }
  // Render the selected station independently from the MGM fetch result.
  // This is important for Köy Ev: its derived payload is a separate artifact.
