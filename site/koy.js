@@ -826,15 +826,12 @@ async function refresh(){if(busy)return;busy=true;
  ]);
  if(results[0].status==="fulfilled")comparison=results[0].value;
  if(results[1].status==="fulfilled")f180=results[1].value;
- const archivedF180=(comparison&&Array.isArray(comparison.runs)?comparison.runs:[])
-  .filter(run=>{
-   if(!run||run.forecast_source!=="meteopt"||!Array.isArray(run.forecast_6_hourly))return false;
-   const pts=pointsOf(run,180);
-   const maximumHour=Math.max(0,...run.forecast_6_hourly.map(point=>Number(point&&point.forecast_hour)).filter(Number.isFinite));
-   return pts.length>=30&&maximumHour>=180;
-  })
-  .sort((a,b)=>Date.parse(b.run_id_utc||"")-Date.parse(a.run_id_utc||""));
- if(!f180) f180=archivedF180[0]||null;
+ // The Köy GFS table has exactly one source: the live MeteoPT point
+ // https://www.meteopt.com/modelos/gfs?lat=40.9557&lon=39.0065
+ // Never substitute archived D1/comparison data into this table.
+ if(!f180){
+  f180=null;
+ }
  if(f180){
   renderF180(stationMode==="home"?homeGfsDocument(f180):f180);
  }else{
