@@ -1072,6 +1072,60 @@ async function api(request, env) {
     }
   }
 
+  if (path === "/api/source-audit") {
+    try {
+      const current = await currentRun(env, "f72");
+      if (!current?.payload?.run_id_utc) {
+        return json({ ok: false, error: "No canonical Köy GFS payload is stored yet" }, 404);
+      }
+
+      const requestedHour = new Date(current.run_id_utc).getUTCHours();
+      const fresh = await fetchCycle(requestedHour);
+      const normalized = normalizeDocument(fresh, new Date());
+      const freshPayload = normalized.full || normalized.f72;
+      const targetHour = Math.max(3, Number(new URL(request.url).searchParams.get("forecast_hour") || 42));
+      const findPoint = document =>
+        document?.forecast_6_hourly?.find(point => Number(point?.forecast_hour) === targetHour) || null;
+
+      const fields = [
+        "temperature_2m_c",
+        "precipitation_6h_mm",
+        "wind_speed_10m_kmh",
+        "temperature_850hpa_c",
+        "wind_speed_850hpa_kmh",
+        "humidity_2m_percent",
+        "snowln",
+      ];
+      const freshPoint = findPoint(freshPayload);
+      const storedPoint = findPoint(current.payload);
+      const comparison = Object.fromEntries(fields.map(field => [
+        field,
+        {
+          fresh_api: freshPoint?.[field] ?? null,
+          stored_current: storedPoint?.[field] ?? null,
+          equal: Object.is(freshPoint?.[field] ?? null, storedPoint?.[field] ?? null),
+        },
+      ]));
+
+      return json({
+        ok: true,
+        source: {
+          provider: "MeteoPT",
+          web_url: METEOPT_GFS_WEB + "?lat=" + LOCATION.latitude + "&lon=" + LOCATION.longitude,
+          api_url: fresh.url,
+          coordinate: LOCATION,
+          requested_cycle_utc: requestedHour,
+          fresh_api_run_id_utc: fresh.apiRun,
+          stored_run_id_utc: current.run_id_utc,
+        },
+        forecast_hour: targetHour,
+        comparison,
+      });
+    } catch (error) {
+      return json({ ok: false, error: String(error?.message || error) }, 503);
+    }
+  }
+
   if (path === "/api/health") {
     try {
       const current = await currentRun(env, "f72");
