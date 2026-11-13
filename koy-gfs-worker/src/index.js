@@ -965,7 +965,8 @@ async function api(request, env) {
         "SELECT payload_json FROM gfs_runs ORDER BY run_id_utc DESC LIMIT 4"
       ).all();
       let runs = (result.results || []).map(row => JSON.parse(row.payload_json));
-      if (runs.length < 4) {
+      const current = await currentRun(env, "f72");
+      if (runs.length < 4 || !current) {
         await collect(env);
         result = await env.GFS_DB.prepare(
           "SELECT payload_json FROM gfs_runs ORDER BY run_id_utc DESC LIMIT 4"
@@ -973,9 +974,20 @@ async function api(request, env) {
         runs = (result.results || []).map(row => JSON.parse(row.payload_json));
       }
 
+      // The live table uses gfs_current/f72. Use that exact canonical payload
+      // as the newest chart cycle; only the previous three cycles come from
+      // gfs_runs. This prevents a late MeteoPT correction from producing
+      // different F42 values in the table and chart.
+      const latestCurrent = await currentRun(env, "f72");
+      if (latestCurrent?.payload?.run_id_utc) {
+        runs = runs.filter(run => run.run_id_utc !== latestCurrent.payload.run_id_utc);
+        runs = [...runs.slice(-3), latestCurrent.payload]
+          .sort((a, b) => Date.parse(a.run_id_utc) - Date.parse(b.run_id_utc));
+      }
+
       // The chart itself must remain available even if the D1 publication write
-      // is temporarily contended. Build directly from the four canonical raw
-      // GFS documents and return the SVG without requiring a publication write.
+      // is temporarily contended. Build directly from the same canonical GFS
+      // payloads and return the SVG without requiring a publication write.
       if (runs.length < 4) {
         return json({ ok: false, error: "Four complete Köy GFS cycles are not available" }, 404);
       }
@@ -1115,22 +1127,36 @@ async function api(request, env) {
       let result = await env.GFS_DB.prepare(
         "SELECT payload_json FROM gfs_runs ORDER BY run_id_utc DESC LIMIT 4"
       ).all();
-      let runs = (result.results || []).map(row => JSON.parse(row.payload_json));
+      let runs = (result.results || []).map(row => JSON.parse(row));
 
-      // If the comparison archive is incomplete (for example immediately after
-      // migration), fetch all currently available MeteoPT cycles before replying.
-      if (runs.length < 4) {
+      // If the comparison archive is incomplete, fetch all currently available
+      // MeteoPT cycles before replying.
+      let current = await currentRun(env, "f72");
+      if (runs.length < 4 || !current) {
         await collect(env);
         result = await env.GFS_DB.prepare(
           "SELECT payload_json FROM gfs_runs ORDER BY run_id_utc DESC LIMIT 4"
         ).all();
-        runs = (result.results || []).map(row => JSON.parse(row.payload_json));
+        runs = (result.results || []).map(row => JSON.parse(row));
+        current = await currentRun(env, "f72");
+      }
+
+      // Canonical source-of-truth rule:
+      //   table      -> current f72/f180 payload
+      //   chart      -> same current payload + previous 3 archived cycles
+      //   briefing   -> same current payload
+      // The latest comparison run must therefore never come from an older
+      // gfs_runs snapshot when gfs_current has a corrected MeteoPT payload.
+      if (current?.payload?.run_id_utc) {
+        runs = runs.filter(run => run.run_id_utc !== current.payload.run_id_utc);
+        runs = [...runs.slice(-3), current.payload]
+          .sort((a, b) => Date.parse(a.run_id_utc) - Date.parse(b.run_id_utc));
       }
 
       return json({
         schema: "koy-gfs.comparison.v1",
         location: LOCATION,
-        updated_at_utc: runs[0]?.published_at_utc || null,
+        updated_at_utc: current?.updated_at_utc || runs[runs.length - 1]?.published_at_utc || null,
         runs,
       });
     } catch (error) {
@@ -1149,6 +1175,12 @@ async function api(request, env) {
       const comparison = await env.GFS_DB.prepare(
         "SELECT payload_json FROM gfs_runs ORDER BY run_id_utc DESC LIMIT 4"
       ).all();
+      let runs = (comparison.results || []).map(row => JSON.parse(row.payload_json));
+      if (current?.payload?.run_id_utc) {
+        runs = runs.filter(run => run.run_id_utc !== current.payload.run_id_utc);
+        runs = [...runs.slice(-3), current.payload]
+          .sort((a, b) => Date.parse(a.run_id_utc) - Date.parse(b.run_id_utc));
+      }
       return json({
         ok: true,
         f72: current?.payload || null,
@@ -1156,7 +1188,7 @@ async function api(request, env) {
           schema: "koy-gfs.comparison.v1",
           location: LOCATION,
           updated_at_utc: current?.updated_at_utc || null,
-          runs: (comparison.results || []).map(row => JSON.parse(row.payload_json)),
+          runs,
         },
       });
     } catch (error) {
