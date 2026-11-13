@@ -1,4 +1,4 @@
-import { METEOPT_GFS_API, METEOPT_SOURCE_POLICY, meteoptSourceMetadata } from "../../shared/meteopt-source.js";
+import { METEOPT_GFS_API, METEOPT_GFS_WEB, METEOPT_SOURCE_POLICY, meteoptSourceMetadata } from "../../shared/meteopt-source.js";
 import { buildPanelAxis, formatAxisTick, formatPeakValue, peakUnit, seriesCalloutPlacement } from "../../shared/gfs-chart-axis.js";
 
 const API_BASE = METEOPT_GFS_API;
@@ -239,8 +239,11 @@ function normalizeDocument(candidate, now) {
     location: LOCATION,
     source: "MeteoPT GFS",
     source_policy: METEOPT_SOURCE_POLICY,
-    sources: meteoptSourceMetadata({ gfs_source_url: candidate.url }),
-    source_url: candidate.url,
+    sources: meteoptSourceMetadata({
+      gfs_source_url: `${METEOPT_GFS_WEB}?lat=${LOCATION.latitude}&lon=${LOCATION.longitude}`,
+      gfs_data_endpoint: candidate.url,
+    }),
+    source_url: `${METEOPT_GFS_WEB}?lat=${LOCATION.latitude}&lon=${LOCATION.longitude}`,
     run_id_utc: cycle.toISOString(),
     published_at_utc: new Date(now).toISOString(),
     forecast_source: "meteopt",
