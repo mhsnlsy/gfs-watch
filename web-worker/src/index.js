@@ -62,6 +62,47 @@ function isArchivePath(path) {
     path.startsWith("/koy-data/gfs/");
 }
 
+async function callKoyService(binding, request, path) {
+  // Service bindings can transiently return 503 even while the dedicated
+  // Köy Worker is healthy. Keep the custom-domain API authoritative by
+  // falling back to the same deployed Worker directly.
+  if (binding && typeof binding.fetch === "function") {
+    try {
+      const response = await binding.fetch(internalRequest(request, path));
+      if (response.ok) {
+        const headers = new Headers(response.headers);
+        headers.set("Cache-Control", "no-store, max-age=0");
+        headers.set("Access-Control-Allow-Origin", "*");
+        headers.set("X-GFS-Watch-Gateway", "service-binding");
+        return new Response(response.body, {
+          status: response.status,
+          statusText: response.statusText,
+          headers,
+        });
+      }
+      if (response.status !== 503 && response.status !== 502 && response.status !== 504) {
+        return response;
+      }
+    } catch (_) {}
+  }
+
+  const incoming = new URL(request.url);
+  const direct = new URL("https://gfs-watch-koy-gfs.muhsin-ulusoy.workers.dev" + path);
+  direct.search = incoming.search;
+  const response = await fetch(new Request(direct, request), {
+    cf: { cacheTtl: 0, cacheEverything: false },
+  });
+  const headers = new Headers(response.headers);
+  headers.set("Cache-Control", "no-store, max-age=0");
+  headers.set("Access-Control-Allow-Origin", "*");
+  headers.set("X-GFS-Watch-Gateway", "direct-koy-worker");
+  return new Response(response.body, {
+    status: response.status,
+    statusText: response.statusText,
+    headers,
+  });
+}
+
 async function callService(binding, request, path) {
   if (!binding || typeof binding.fetch !== "function") {
     return responseJson({ ok: false, error: "Cloudflare service binding is not configured" }, 503);
@@ -277,7 +318,7 @@ export default {
     }
 
     if (path.startsWith("/api/publication-asset/")) {
-      return callService(env.KOY_GFS, request, path);
+      return callKoyService(env.KOY_GFS, request, path);
     }
 
     if (path === "/gfs/latest" || path === "/api/latest" ||
@@ -290,11 +331,11 @@ export default {
 
     if (path.startsWith("/api/koy-gfs/")) {
       const suffix = path.slice("/api/koy-gfs".length);
-      return callService(env.KOY_GFS, request, "/api" + suffix);
+      return callKoyService(env.KOY_GFS, request, "/api" + suffix);
     }
 
     if (path === "/api/koy-gfs") {
-      return callService(env.KOY_GFS, request, "/api/health");
+      return callKoyService(env.KOY_GFS, request, "/api/health");
     }
 
     if (path === "/api/stations/health") {
