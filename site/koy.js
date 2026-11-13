@@ -821,10 +821,11 @@ function renderRuns(d,f180){
 async function refresh(){if(busy)return;busy=true;
  try {
  const results=await Promise.allSettled([
-  get("comparison"),getStation("/history/canakci?hours=72"),
+  get("comparison"),get("meteopt-f180-live"),getStation("/history/canakci?hours=72"),
   getStation("/stations/canakci")
  ]);
  if(results[0].status==="fulfilled")comparison=results[0].value;
+ if(results[1].status==="fulfilled")f180=results[1].value;
  const archivedF180=(comparison&&Array.isArray(comparison.runs)?comparison.runs:[])
   .filter(run=>{
    if(!run||run.forecast_source!=="meteopt"||!Array.isArray(run.forecast_6_hourly))return false;
@@ -833,7 +834,7 @@ async function refresh(){if(busy)return;busy=true;
    return pts.length>=30&&maximumHour>=180;
   })
   .sort((a,b)=>Date.parse(b.run_id_utc||"")-Date.parse(a.run_id_utc||""));
- f180=archivedF180[0]||null;
+ if(!f180) f180=archivedF180[0]||null;
  if(f180){
   renderF180(stationMode==="home"?homeGfsDocument(f180):f180);
  }else{
