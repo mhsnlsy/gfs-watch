@@ -135,19 +135,34 @@ async function fetchCycle(requestedHour) {
   url.searchParams.set("run", String(requestedHour).padStart(2, "0"));
   url.searchParams.set("lang", "en");
 
-  const response = await fetch(url.toString(), {
-    headers: {
-      "User-Agent": "GFS-Watch-Koy-Cloudflare/1.0",
-      "Cache-Control": "no-cache",
-    },
-  });
-  if (!response.ok) throw new Error("MeteoPT HTTP " + response.status);
+  let lastError = null;
+  for (let attempt = 1; attempt <= 2; attempt += 1) {
+    try {
+      const response = await fetch(url.toString(), {
+        headers: {
+          "User-Agent": "Mozilla/5.0 (compatible; IstanbulHavasi/1.0; +https://istanbulunhavasi.com/)",
+          "Accept": "application/json,text/plain,*/*",
+          "Cache-Control": "no-cache",
+          "Pragma": "no-cache",
+        },
+        signal: AbortSignal.timeout(20000),
+      });
+      if (!response.ok) {
+        const body = await response.text().catch(() => "");
+        throw new Error("MeteoPT HTTP " + response.status + (body ? " · " + body.slice(0, 180) : ""));
+      }
 
-  const document = await response.json();
-  const apiRun = String(document?.run || "").trim();
-  if (!apiRun) throw new Error("MeteoPT returned no run id");
+      const document = await response.json();
+      const apiRun = String(document?.run || "").trim();
+      if (!apiRun) throw new Error("MeteoPT returned no run id");
 
-  return { apiRun, document, url: url.toString() };
+      return { apiRun, document, url: url.toString() };
+    } catch (error) {
+      lastError = error;
+      if (attempt < 2) await new Promise(resolve => setTimeout(resolve, 500));
+    }
+  }
+  throw lastError || new Error("MeteoPT request failed");
 }
 
 async function fetchAvailableCycles() {
@@ -1154,25 +1169,11 @@ async function api(request, env) {
       // Fetch the current MeteoPT GFS dataset live instead of serving a stale D1
       // archive snapshot. The API endpoint is MeteoPT's data backend for this
       // exact web-page coordinate.
-      const url = new URL(API_BASE);
-      url.searchParams.set("lat", String(LOCATION.latitude));
-      url.searchParams.set("lon", String(LOCATION.longitude));
-      url.searchParams.set("lang", "en");
-      const response = await fetch(url.toString(), {
-        headers: {
-          "User-Agent": "GFS-Watch-Koy-MeteoPT-Table/1.0",
-          "Cache-Control": "no-cache",
-        },
-      });
-      if (!response.ok) throw new Error("MeteoPT HTTP " + response.status);
-      const document = await response.json();
-      const apiRun = String(document?.run || "").trim();
-      if (!apiRun) throw new Error("MeteoPT returned no current run id");
-
-      const normalized = normalizeDocument(
-        { apiRun, document, url: url.toString() },
-        new Date()
-      );
+      // Use the same run-selection path as the collector. The MeteoPT API
+      // expects an explicit GFS cycle selector; an unqualified request can
+      // return an error even though the model page itself is available.
+      const candidate = await fetchNewestCycle();
+      const normalized = normalizeDocument(candidate, new Date());
       const payload = normalized.full;
       if (!payload) throw new Error("MeteoPT current run is not F180-ready");
 
@@ -1180,10 +1181,29 @@ async function api(request, env) {
         ...payload,
         source_url: METEOPT_GFS_WEB + "?lat=" + LOCATION.latitude + "&lon=" + LOCATION.longitude,
         source_page: METEOPT_GFS_WEB + "?lat=" + LOCATION.latitude + "&lon=" + LOCATION.longitude,
-        source_backend: url.toString(),
+        source_backend: candidate.url,
         source_mode: "live-meteopt",
       });
     } catch (error) {
+      // Keep the table populated from the last canonical MeteoPT snapshot
+      // when the upstream API has a transient failure. This is still MeteoPT
+      // data; it is explicitly marked cached so the UI can show its age.
+      try {
+        const cached = await currentRun(env, "f72");
+        const cachedPayload = cached?.payload;
+        if (cachedPayload && Array.isArray(cachedPayload.forecast_6_hourly) &&
+            cachedPayload.forecast_6_hourly.some(point => Number(point?.forecast_hour) >= 180)) {
+          return json({
+            ...cachedPayload,
+            source_url: METEOPT_GFS_WEB + "?lat=" + LOCATION.latitude + "&lon=" + LOCATION.longitude,
+            source_page: METEOPT_GFS_WEB + "?lat=" + LOCATION.latitude + "&lon=" + LOCATION.longitude,
+            source_backend: API_BASE,
+            source_mode: "meteopt-cached",
+            source_cached_at_utc: cached.updated_at_utc || null,
+            source_error: String(error?.message || error),
+          });
+        }
+      } catch (_) {}
       return json({ ok: false, error: String(error?.message || error) }, 503);
     }
   }
