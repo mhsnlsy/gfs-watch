@@ -5235,3 +5235,76 @@ main.shell { padding-bottom:max(12px,env(safe-area-inset-bottom)); }
     max-width:100%!important;
   }
 }
+
+
+/* 20261113 MOBILE EDGE-TO-EDGE FINAL
+   The page itself must terminate exactly at the physical viewport.
+   No side gutter, no horizontal page scroll, and no safe-area padding
+   may create a visible blank strip on phone layouts. */
+@media (max-width:1199px), (pointer:coarse){
+  html,
+  body{
+    width:100%!important;
+    max-width:100%!important;
+    min-width:0!important;
+    margin:0!important;
+    padding-left:0!important;
+    padding-right:0!important;
+    overflow-x:hidden!important;
+    overscroll-behavior-x:none!important;
+  }
+
+  header.shell,
+  main.shell,
+  .footer{
+    width:100%!important;
+    max-width:100%!important;
+    min-width:0!important;
+    margin-left:0!important;
+    margin-right:0!important;
+    padding-left:0!important;
+    padding-right:0!important;
+    box-sizing:border-box!important;
+  }
+
+  .dashboard-top,
+  .dashboard-left,
+  .dashboard-right{
+    width:100%!important;
+    max-width:100%!important;
+    min-width:0!important;
+    margin-left:0!important;
+    margin-right:0!important;
+    box-sizing:border-box!important;
+  }
+
+  .dashboard-left > .station-card,
+  .dashboard-left > .station-briefing-inline,
+  .dashboard-left > .gfs-pressure-panel{
+    width:100%!important;
+    max-width:100%!important;
+    min-width:0!important;
+    margin-left:0!important;
+    margin-right:0!important;
+    box-sizing:border-box!important;
+  }
+
+  /* Panels fill the viewport; their own internal padding remains intact. */
+  .station-card,
+  .station-briefing-inline,
+  .gfs-pressure-panel,
+  .briefing-row,
+  .chart-card,
+  .pressure-card,
+  .info-card,
+  .notification-card{
+    max-width:100%!important;
+    min-width:0!important;
+    box-sizing:border-box!important;
+  }
+
+  /* Absolutely no document-level horizontal scrolling. */
+  *{
+    max-width:100%;
+  }
+}
