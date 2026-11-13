@@ -877,7 +877,8 @@ async function refresh(){if(busy)return;busy=true;
   $("meteopt-table-run").textContent="F180 döngüsü bekleniyor";
   $("meteopt-table-updated").textContent="180. saat tamamlanınca yayınlanacak";
  }
- if(results[1].status==="fulfilled")stationHistory=results[1].value;else stationHistory=null;
+ // The third request is the canonical MGM history payload.
+ if(results[2].status==="fulfilled")stationHistory=results[2].value;else stationHistory=null;
  // The MGM history is the canonical source for both temperature and rainfall.
  // Keep a single request so the page cannot render two different history snapshots.
  rainHistory=stationHistory;
@@ -893,8 +894,8 @@ async function refresh(){if(busy)return;busy=true;
   $("station-temperature-trend").innerHTML='<div class="station-trend-empty">'+(stationMode==="home"?"Köy Ev sanal istasyon geçmişi bekleniyor…":"MGM istasyon geçmişi bekleniyor…")+'</div>';
   $("station-rain-trend").innerHTML='<div class="station-trend-empty">'+(stationMode==="home"?"Köy Ev sanal yağış arşivi bekleniyor…":"MGM yağış arşivi bekleniyor…")+'</div>';
  }
- if(results[2].status==="fulfilled"&&results[2].value && results[2].value.station){
-  window.__koyMgmObservation=results[2].value.station;
+ if(results[3].status==="fulfilled"&&results[3].value && results[3].value.station){
+  window.__koyMgmObservation=results[3].value.station;
   if(!evObservation)evObservation=buildVirtualHomeObservation(window.__koyMgmObservation);
   window.__koyCurrentTemp=num(results[2].value.station.temperature_c == null ? results[2].value.station.temperature_2m_c : results[2].value.station.temperature_c);
   const o=window.__koyMgmObservation;
