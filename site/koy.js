@@ -41,7 +41,7 @@ const KoyUsesDedicatedWorker=window.location.hostname==="gfs-watch-koy-gfs.muhsi
 // so the page never depends on the apex Service Binding/gateway path.
 const BASE=(KoyUsesDedicatedWorker||window.location.hostname.endsWith(".github.io"))
  ? (KoyUsesDedicatedWorker?KoyDirectWorker:KoyApiOrigin)+"/api/"
- : KoyDirectWorker+"/api/";
+ : KoyApiOrigin+"/api/koy-gfs/";
 const COLORS=GFS_CYCLE_THEME.colors;
 const STATIONS_API=(window.GFS_WATCH_API_BASE||window.location.origin)+"/api";
 const $=id=>document.getElementById(id);
