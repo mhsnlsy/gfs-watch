@@ -267,10 +267,38 @@ async function fetchAvailableCycles() {
   );
 
   if (!sorted.length) {
-    throw new Error("MeteoPT returned no usable GFS cycle");
+    // MeteoPT's JSON backend can temporarily return HTTP 400/5xx while the
+    // public GFS model page remains available. Do not let that outage stop
+    // the ten-minute collector from updating D1. The public model page is
+    // already the canonical source fallback used by the visitor endpoints.
+    try {
+      const webCandidate = await fetchMeteoptWebDocument();
+      if (webCandidate?.document) {
+        candidates.push(webCandidate);
+      }
+    } catch (webError) {
+      console.warn(JSON.stringify({
+        event: "meteopt_all_cycles_unavailable",
+        message: String(webError?.message || webError),
+      }));
+    }
   }
 
-  return sorted;
+  const finalUnique = new Map();
+  for (const candidate of candidates) {
+    const key = runKey(candidate.apiRun);
+    if (key) finalUnique.set(key, candidate);
+  }
+
+  const finalSorted = [...finalUnique.values()].sort((a, b) =>
+    runKey(b.apiRun).localeCompare(runKey(a.apiRun))
+  );
+
+  if (!finalSorted.length) {
+    throw new Error("MeteoPT returned no usable GFS cycle and web fallback contained no model dataset");
+  }
+
+  return finalSorted;
 }
 
 async function fetchNewestCycle() {
