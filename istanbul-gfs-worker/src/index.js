@@ -349,6 +349,52 @@ async function fetchActiveEnkaStationObservation(env) {
   return payload.station;
 }
 
+async function refreshLatestPublishedChart(env, runIdUtc) {
+  try {
+    const archive = await env.GFS_DB.prepare(
+      "SELECT payload_json FROM gfs_runs WHERE run_id_utc <= ? ORDER BY run_id_utc DESC LIMIT 4"
+    ).bind(runIdUtc).all();
+    const runs = (archive.results || [])
+      .map(row => JSON.parse(row.payload_json))
+      .filter(run => run && run.run_id_utc)
+      .sort((a, b) => Date.parse(a.run_id_utc) - Date.parse(b.run_id_utc));
+    if (!runs.length) return { refreshed: false, reason: "no_archived_runs" };
+
+    const chart = buildIstanbulInteractiveSvg(runs);
+    await putPublicationAsset(env, {
+      key: chart.key,
+      run_id_utc: chart.run_id_utc,
+      content_type: "image/svg+xml; charset=utf-8",
+      encoding: "utf8",
+      body: chart.body,
+    });
+
+    // The report manifest keeps the same SVG key for a given run. Updating
+    // that D1 asset in-place makes the homepage chart reflect late-arriving
+    // corrections to the canonical forecast_6_hourly payload without sending
+    // a duplicate Telegram report.
+    await env.GFS_DB.prepare(
+      "UPDATE gfs_report_publications SET svg_asset_key = ?, updated_at_utc = ? WHERE run_id_utc = ?"
+    ).bind(chart.key, new Date().toISOString(), runIdUtc).run();
+
+    return {
+      refreshed: true,
+      key: chart.key,
+      common_valid_time_count: chart.common_valid_time_count,
+    };
+  } catch (error) {
+    console.error(JSON.stringify({
+      event: "istanbul_publication_chart_refresh_error",
+      run_id_utc: runIdUtc,
+      message: String(error?.message || error),
+    }));
+    return {
+      refreshed: false,
+      reason: String(error?.message || error).slice(0, 300),
+    };
+  }
+}
+
 async function processQueuedReports(env) {
   const staleBefore = new Date(Date.now() - 10 * 60 * 1000).toISOString();
   const result = await env.GFS_DB.prepare(
@@ -977,9 +1023,19 @@ async function collectData(env) {
         f72Updated = true;
       }
     }
-    if (entry.result.hasF180 && await archiveRun(env, payload)) {
-      archived += 1;
-      await enqueueReportDispatch(env, payload.run_id_utc, started.toISOString());
+    if (entry.result.hasF180) {
+      const archiveChanged = await archiveRun(env, payload);
+      if (archiveChanged) {
+        archived += 1;
+
+        // A completed F180 cycle can still be corrected on a later poll.
+        // Keep the published SVG synchronized with the canonical D1 payload;
+        // otherwise the live table may show newer values while the chart keeps
+        // the values captured when the report was first generated.
+        await refreshLatestPublishedChart(env, payload.run_id_utc);
+
+        await enqueueReportDispatch(env, payload.run_id_utc, started.toISOString());
+      }
     }
   }
 
