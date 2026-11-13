@@ -39,9 +39,12 @@ const KoyDirectWorker="https://gfs-watch-koy-gfs.muhsin-ulusoy.workers.dev";
 const KoyUsesDedicatedWorker=window.location.hostname==="gfs-watch-koy-gfs.muhsin-ulusoy.workers.dev";
 // Köy GFS has a dedicated Worker. Use it directly for the public Köy page
 // so the page never depends on the apex Service Binding/gateway path.
+// The dedicated Köy Worker is the canonical GFS runtime. Use it first on
+// production so the page does not inherit a stale/broken apex Service Binding.
+// The apex gateway remains a fallback inside get().
 const BASE=(KoyUsesDedicatedWorker||window.location.hostname.endsWith(".github.io"))
  ? (KoyUsesDedicatedWorker?KoyDirectWorker:KoyApiOrigin)+"/api/"
- : KoyApiOrigin+"/api/koy-gfs/";
+ : KoyDirectWorker+"/api/";
 const COLORS=GFS_CYCLE_THEME.colors;
 const STATIONS_API=(window.GFS_WATCH_API_BASE||window.location.origin)+"/api";
 const $=id=>document.getElementById(id);
@@ -909,7 +912,12 @@ async function refresh(){if(busy)return;busy=true;
  if(results[4].status==="fulfilled"&&results[4].value && results[4].value.station){
   window.__koyMgmObservation=results[4].value.station;
   if(!evObservation)evObservation=buildVirtualHomeObservation(window.__koyMgmObservation);
-  window.__koyCurrentTemp=num(results[2].value.station.temperature_c == null ? results[2].value.station.temperature_2m_c : results[2].value.station.temperature_c);
+  // results[2] is the GFS F72 payload, not a station payload.
+  // Never read .station from it: that exception aborts the remaining
+  // station rendering and incorrectly produces the "Veri yenileme hatası" badge.
+  window.__koyCurrentTemp=num(
+   o.temperature_c == null ? o.temperature_2m_c : o.temperature_c
+  );
   const o=window.__koyMgmObservation;
   const mgmStatusDate=$("mgm-status-date");
   if(mgmStatusDate)mgmStatusDate.textContent=ts(o.last_attempt_utc||o.fetched_at_utc||o.observed_at_utc);
