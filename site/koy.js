@@ -34,7 +34,13 @@
 (() => {
 "use strict";
 const GFS_CYCLE_THEME=window.GFS_CYCLE_THEME||{colors:["#b38be8","#f1c98b","#8abce8","#7dd3d7"],latestStrokeWidth:6,previousStrokeWidth:1.8,previousStrokeDasharray:"5 4"};
-const BASE=(window.GFS_WATCH_API_BASE||"https://gfs-watch-koy-gfs.muhsin-ulusoy.workers.dev")+"/api/", COLORS=GFS_CYCLE_THEME.colors;
+const KoyApiOrigin=window.GFS_WATCH_API_BASE||window.location.origin;
+const KoyDirectWorker="https://gfs-watch-koy-gfs.muhsin-ulusoy.workers.dev";
+const KoyUsesDedicatedWorker=window.location.hostname==="gfs-watch-koy-gfs.muhsin-ulusoy.workers.dev";
+const BASE=(KoyUsesDedicatedWorker||window.location.hostname.endsWith(".github.io"))
+ ? (KoyUsesDedicatedWorker?KoyDirectWorker:KoyApiOrigin)+"/api/"
+ : KoyApiOrigin+"/api/koy-gfs/";
+const COLORS=GFS_CYCLE_THEME.colors;
 const STATIONS_API=(window.GFS_WATCH_API_BASE||window.location.origin)+"/api";
 const $=id=>document.getElementById(id);
 const num=v=>v==null||v===""||!Number.isFinite(Number(v))?null:Number(v);
