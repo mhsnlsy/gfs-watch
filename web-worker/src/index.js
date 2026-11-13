@@ -80,7 +80,11 @@ async function callKoyService(binding, request, path) {
           headers,
         });
       }
-      if (response.status !== 503 && response.status !== 502 && response.status !== 504) {
+      // The Köy binding has intermittently returned 404 even while the
+      // dedicated Worker is healthy. Treat 404 like the existing transient
+      // binding failures and use the canonical dedicated Worker fallback.
+      if (response.status !== 404 && response.status !== 503 &&
+          response.status !== 502 && response.status !== 504) {
         return response;
       }
     } catch (_) {}
