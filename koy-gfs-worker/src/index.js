@@ -1264,9 +1264,9 @@ async function api(request, env) {
       }
 
       if (!current) {
-        // Cold-start fallback: the canonical completed MeteoPT F180 runs are
-        // already stored in gfs_runs. Serve the newest one instead of returning
-        // 404 merely because the f72 current pointer has not been populated.
+        // Cold-start fallback: first try the canonical completed archive, then
+        // serve a freshly normalized MeteoPT cycle directly. The public F72
+        // endpoint must not depend on a successful D1 write to expose MeteoPT.
         const archived = await env.GFS_DB.prepare(
           "SELECT run_id_utc, payload_json, published_at_utc FROM gfs_runs " +
           "ORDER BY run_id_utc DESC LIMIT 1"
@@ -1279,7 +1279,32 @@ async function api(request, env) {
             source_cached_at_utc: archived.published_at_utc || null,
           });
         }
-        return json({ ok: false, error: "F72 data not collected yet" }, 404);
+
+        // At 17:55 UTC the 12Z cycle is the expected completed/current cycle.
+        // Keep this direct path independent of the collector's D1 publication.
+        for (const cycle of [12, 6, 18, 0]) {
+          try {
+            const candidate = await fetchCycle(cycle);
+            const normalized = normalizeDocument(candidate, new Date());
+            if (normalized.f72) {
+              return json({
+                ...normalized.f72,
+                source_mode: "live-meteopt",
+                source_url: METEOPT_GFS_WEB + "?lat=" + LOCATION.latitude + "&lon=" + LOCATION.longitude,
+                source_page: METEOPT_GFS_WEB + "?lat=" + LOCATION.latitude + "&lon=" + LOCATION.longitude,
+                source_backend: candidate.url,
+              });
+            }
+          } catch (directError) {
+            console.warn(JSON.stringify({
+              event: "koy_f72_direct_meteopt_fallback_failed",
+              requested_cycle: cycle,
+              message: String(directError?.message || directError),
+            }));
+          }
+        }
+
+        return json({ ok: false, error: "MeteoPT F72 data is not available yet" }, 404);
       }
       return json(current.payload);
     } catch (error) {
