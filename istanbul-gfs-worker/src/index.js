@@ -1434,12 +1434,22 @@ async function handleApi(request, env) {
 
       // Eski D1 SVG'si canlıda kalmışsa, istek anında güncel renderer ile yenile.
       // Böylece Worker deploy'u ile yayınlanan grafik arasında sürüm farkı kalmaz.
-      if (/\.svg$/i.test(key) && !String(row.body || "").includes('id="gfs-renderer-version">cloudflare-js-v3</metadata>')) {
+      if (/\.svg$/i.test(key) && !String(row.body || "").includes('id="gfs-renderer-version">cloudflare-js-v4</metadata>')) {
         const archive = await env.GFS_DB.prepare(
           "SELECT payload_json FROM gfs_runs ORDER BY run_id_utc DESC LIMIT 4"
         ).all();
-        const runs = (archive.results || []).map(item => JSON.parse(item.payload_json))
+        let runs = (archive.results || []).map(item => JSON.parse(item.payload_json))
           .sort((x, y) => Date.parse(x.run_id_utc) - Date.parse(y.run_id_utc));
+
+        // The live table is served from gfs_current/latest. Rebuild the chart
+        // with that exact payload as the newest cycle, keeping only the prior
+        // three archived cycles for comparison.
+        const current = await getCurrent(env, "latest");
+        if (current?.payload?.run_id_utc) {
+          runs = runs.filter(item => item.run_id_utc !== current.payload.run_id_utc);
+          runs = [...runs.slice(-3), current.payload]
+            .sort((x, y) => Date.parse(x.run_id_utc) - Date.parse(y.run_id_utc));
+        }
         if (runs.length) {
           const chart = buildIstanbulInteractiveSvg(runs);
           await putPublicationAsset(env, {
