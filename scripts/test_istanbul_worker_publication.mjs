@@ -102,7 +102,7 @@ const troughPlace = seriesCalloutPlacement({
 });
 assert.equal(peakPlace.below, false);
 assert.equal(troughPlace.below, true);
-assert.ok(chart.body.includes("cloudflare-js-v3"));
+assert.ok(chart.body.includes("cloudflare-js-v4"));
 assert.ok(chart.body.includes("fill: #0a1b29"));
 assert.ok(chart.body.includes("fill: #102a3a"));
 assert.ok(!chart.body.includes('data-latest-peak="true"'), "Y-axis ticks must not be bound to the latest-cycle peak");
