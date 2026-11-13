@@ -354,11 +354,22 @@ async function refreshLatestPublishedChart(env, runIdUtc) {
     const archive = await env.GFS_DB.prepare(
       "SELECT payload_json FROM gfs_runs WHERE run_id_utc <= ? ORDER BY run_id_utc DESC LIMIT 4"
     ).bind(runIdUtc).all();
-    const runs = (archive.results || [])
+    let runs = (archive.results || [])
       .map(row => JSON.parse(row.payload_json))
       .filter(run => run && run.run_id_utc)
       .sort((a, b) => Date.parse(a.run_id_utc) - Date.parse(b.run_id_utc));
-    if (!runs.length) return { refreshed: false, reason: "no_archived_runs" };
+
+    // The homepage table is served from gfs_current/latest, while historical
+    // comparison cycles live in gfs_runs. Always replace the newest archived
+    // cycle with the canonical current payload so the chart cannot lag behind
+    // the table when MeteoPT corrects a forecast after publication.
+    const current = await getCurrent(env, "latest");
+    if (current?.payload?.run_id_utc) {
+      runs = runs.filter(run => run.run_id_utc !== current.payload.run_id_utc);
+      runs = [...runs.slice(-3), current.payload]
+        .sort((a, b) => Date.parse(a.run_id_utc) - Date.parse(b.run_id_utc));
+    }
+    if (!runs.length) return { refreshed: false, reason: "no_gfs_runs" };
 
     const chart = buildIstanbulInteractiveSvg(runs);
     await putPublicationAsset(env, {
@@ -1368,9 +1379,19 @@ async function handleApi(request, env) {
       const archive = await env.GFS_DB.prepare(
         "SELECT payload_json FROM gfs_runs ORDER BY run_id_utc DESC LIMIT 4"
       ).all();
-      const runs = (archive.results || []).map(row => JSON.parse(row.payload_json))
+      let runs = (archive.results || []).map(row => JSON.parse(row.payload_json))
         .sort((a, b) => Date.parse(a.run_id_utc) - Date.parse(b.run_id_utc));
-      if (!runs.length) return json({ ok: false, error: "No archived GFS runs" }, 404);
+
+      // The table's source of truth is gfs_current/latest. Use that payload
+      // for the newest comparison cycle and keep only the previous three
+      // archived cycles. This removes the table-vs-chart snapshot split.
+      const current = await getCurrent(env, "latest");
+      if (current?.payload?.run_id_utc) {
+        runs = runs.filter(run => run.run_id_utc !== current.payload.run_id_utc);
+        runs = [...runs.slice(-3), current.payload]
+          .sort((a, b) => Date.parse(a.run_id_utc) - Date.parse(b.run_id_utc));
+      }
+      if (!runs.length) return json({ ok: false, error: "No GFS runs available" }, 404);
 
       const chart = buildIstanbulInteractiveSvg(runs);
       await putPublicationAsset(env, {
