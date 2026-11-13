@@ -300,7 +300,7 @@ jobs:
           const fs = require("fs");
           const svg = fs.readFileSync(process.argv[2], "utf8");
           const arrows = (svg.match(/gfs-wind-direction-marker/g) || []).length;
-          if (!svg.includes("<svg") || !svg.includes("cloudflare-js-v3") || !svg.includes("directions_deg")) {
+          if (!svg.includes("<svg") || !svg.includes("cloudflare-js-v4") || !svg.includes("directions_deg")) {
             throw new Error("Live Istanbul D1 SVG publication route failed or has no wind-direction metadata: " + JSON.stringify({bytes: Buffer.byteLength(svg), directions: svg.includes("directions_deg")}));
           }
           console.log("Verified direct Istanbul D1 SVG route and wind direction arrows:", arrows);
