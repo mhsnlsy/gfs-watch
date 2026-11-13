@@ -62,10 +62,30 @@ function isArchivePath(path) {
     path.startsWith("/koy-data/gfs/");
 }
 
-async function callKoyService(_binding, request, path) {
-  // The Köy Service Binding is returning 404 in production. Do not route
-  // visitor traffic through that binding until it is healthy. The dedicated
-  // Köy Worker is the canonical deployed service for these endpoints.
+async function callKoyService(binding, request, path) {
+  // The public Köy API must remain same-origin. Prefer the Cloudflare Service
+  // Binding, but keep a direct Worker fallback so a transient binding 404/5xx
+  // cannot blank the entire Köy page.
+  if (binding && typeof binding.fetch === "function") {
+    try {
+      const response = await binding.fetch(internalRequest(request, path));
+      if (response.ok || (response.status >= 400 && response.status < 500 && response.status !== 404)) {
+        const headers = new Headers(response.headers);
+        headers.set("Cache-Control", "no-store, max-age=0");
+        headers.set("Access-Control-Allow-Origin", "*");
+        headers.set("X-GFS-Watch-Gateway", "service-binding");
+        return new Response(response.body, {
+          status: response.status,
+          statusText: response.statusText,
+          headers,
+        });
+      }
+      console.warn("Köy Service Binding fallback:", response.status, path);
+    } catch (error) {
+      console.warn("Köy Service Binding error:", String(error?.message || error), path);
+    }
+  }
+
   const incoming = new URL(request.url);
   const direct = new URL("https://gfs-watch-koy-gfs.muhsin-ulusoy.workers.dev" + path);
   direct.search = incoming.search;
@@ -75,7 +95,7 @@ async function callKoyService(_binding, request, path) {
   const headers = new Headers(response.headers);
   headers.set("Cache-Control", "no-store, max-age=0");
   headers.set("Access-Control-Allow-Origin", "*");
-  headers.set("X-GFS-Watch-Gateway", "direct-koy-worker");
+  headers.set("X-GFS-Watch-Gateway", "direct-koy-worker-fallback");
   return new Response(response.body, {
     status: response.status,
     statusText: response.statusText,
