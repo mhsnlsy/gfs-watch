@@ -1189,8 +1189,9 @@ async function api(request, env) {
   }
 
   if (path === "/api/f72") {
+    let current = null;
     try {
-      let current = await currentRun(env, "f72");
+      current = await currentRun(env, "f72");
       // Bootstrap missing data and enrich older D1 records after a schema expansion.
       // Only check the first 72 hours: a stored F180 payload keeps its longer horizon.
       const needsSnowlineEnrichment = Boolean(current &&
@@ -1206,10 +1207,28 @@ async function api(request, env) {
       // was included in the canonical Köy forecast payload.
       const needsWindDirectionEnrichment = Boolean(current &&
         current.payload?.wind_direction_enrichment_checked !== true);
+
       if (!current || needsSnowlineEnrichment || needsWindDirectionEnrichment) {
-        await collect(env);
-        current = await currentRun(env, "f72");
+        try {
+          await collect(env);
+          current = await currentRun(env, "f72");
+        } catch (collectError) {
+          // A live MeteoPT/D1 refresh failure must not turn an already valid
+          // canonical F72 payload into an HTTP 503. The live F180 table has
+          // its own endpoint; this legacy F72 gateway is allowed to serve the
+          // last complete canonical MeteoPT snapshot during a transient outage.
+          if (current?.payload) {
+            console.warn(JSON.stringify({
+              event: "koy_f72_refresh_fallback",
+              message: String(collectError?.message || collectError),
+              run_id_utc: current.run_id_utc || null,
+            }));
+          } else {
+            throw collectError;
+          }
+        }
       }
+
       if (!current) return json({ ok: false, error: "F72 data not collected yet" }, 404);
       return json(current.payload);
     } catch (error) {
