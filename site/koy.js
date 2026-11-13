@@ -776,10 +776,13 @@ function renderRuns(d,f180){
  const source=tableRun
   ? [tableRun,...historyRuns.filter(run=>run.run_id_utc!==tableRun.run_id_utc)].slice(0,4)
   : historyRuns;
- const runs=historyRuns;
+ // The chart and table must share the exact same newest F180 payload.
+ // Older comparison cycles may come from the archive, but the newest cycle
+ // is always the canonical live payload returned by /api/comparison.
+ const runs=source;
  const svgContainer=$("koy-gfs-comparison-container");
  if(svgContainer){
-  const svgRuns=historyRuns.slice(0,4);
+  const svgRuns=runs.slice(0,4);
   if(svgRuns.length<4){
    svgContainer.dataset.svgSrc="";
    svgContainer.innerHTML='<div class="gfs-chart-loading">Dört tam Köy GFS döngüsü karşılaştırma için bekleniyor ('+svgRuns.length+'/4).</div>';
