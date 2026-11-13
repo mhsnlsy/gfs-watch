@@ -205,7 +205,7 @@ function extractJsonObjectsFromHtml(html) {
       }
     }
   };
-  const scripts = /<script[^>]*>([\s\S]*?)<\\/script>/gi;
+  const scripts = /<script[^>]*>([\s\S]*?)<\/script>/gi;
   let match;
   while ((match = scripts.exec(html))) push(match[1]);
   return candidates;
