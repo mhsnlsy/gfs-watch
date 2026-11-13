@@ -1277,11 +1277,20 @@ async function api(request, env) {
         // F72 and the archived F180 runs are stored separately. Do not look
         // for an F180 horizon inside gfs_current/f72: use the latest canonical
         // completed MeteoPT run from gfs_runs instead.
-        const cachedRow = await env.GFS_DB.prepare(
+        const archiveResult = await env.GFS_DB.prepare(
           "SELECT run_id_utc, payload_json, published_at_utc FROM gfs_runs " +
-          "WHERE json_extract(payload_json, '$.forecast_6_hourly[29].forecast_hour') >= 180 " +
-          "ORDER BY run_id_utc DESC LIMIT 1"
-        ).first();
+          "ORDER BY run_id_utc DESC LIMIT 30"
+        ).all();
+        const cachedRow = (archiveResult.results || []).find(row => {
+          try {
+            const candidate = JSON.parse(row.payload_json || "{}");
+            const points = Array.isArray(candidate.forecast_6_hourly) ? candidate.forecast_6_hourly : [];
+            return candidate.forecast_source === "meteopt" &&
+              points.some(point => Number(point?.forecast_hour) >= 180);
+          } catch (_) {
+            return false;
+          }
+        }) || null;
         if (cachedRow?.payload_json) {
           const cachedPayload = JSON.parse(cachedRow.payload_json);
           if (Array.isArray(cachedPayload.forecast_6_hourly) &&
@@ -1419,7 +1428,7 @@ async function api(request, env) {
       let result = await env.GFS_DB.prepare(
         "SELECT payload_json FROM gfs_runs ORDER BY run_id_utc DESC LIMIT 4"
       ).all();
-      let runs = (result.results || []).map(row => JSON.parse(row));
+      let runs = (result.results || []).map(row => JSON.parse(row.payload_json));
 
       // If the comparison archive is incomplete, fetch all currently available
       // MeteoPT cycles before replying.
@@ -1430,7 +1439,7 @@ async function api(request, env) {
           result = await env.GFS_DB.prepare(
             "SELECT payload_json FROM gfs_runs ORDER BY run_id_utc DESC LIMIT 4"
           ).all();
-          runs = (result.results || []).map(row => JSON.parse(row));
+          runs = (result.results || []).map(row => JSON.parse(row.payload_json));
           current = await currentRun(env, "f72");
         } catch (collectError) {
           // Do not turn an existing canonical archive into a 503 when MeteoPT
@@ -1456,6 +1465,7 @@ async function api(request, env) {
       }
 
       return json({
+        ok: true,
         schema: "koy-gfs.comparison.v1",
         location: LOCATION,
         updated_at_utc: current?.updated_at_utc || runs[runs.length - 1]?.published_at_utc || null,
