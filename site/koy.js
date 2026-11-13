@@ -37,9 +37,11 @@ const GFS_CYCLE_THEME=window.GFS_CYCLE_THEME||{colors:["#b38be8","#f1c98b","#8ab
 const KoyApiOrigin=window.GFS_WATCH_API_BASE||window.location.origin;
 const KoyDirectWorker="https://gfs-watch-koy-gfs.muhsin-ulusoy.workers.dev";
 const KoyUsesDedicatedWorker=window.location.hostname==="gfs-watch-koy-gfs.muhsin-ulusoy.workers.dev";
+// Köy GFS has a dedicated Worker. Use it directly for the public Köy page
+// so the page never depends on the apex Service Binding/gateway path.
 const BASE=(KoyUsesDedicatedWorker||window.location.hostname.endsWith(".github.io"))
  ? (KoyUsesDedicatedWorker?KoyDirectWorker:KoyApiOrigin)+"/api/"
- : KoyApiOrigin+"/api/koy-gfs/";
+ : KoyDirectWorker+"/api/";
 const COLORS=GFS_CYCLE_THEME.colors;
 const STATIONS_API=(window.GFS_WATCH_API_BASE||window.location.origin)+"/api";
 const $=id=>document.getElementById(id);
