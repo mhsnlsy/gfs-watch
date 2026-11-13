@@ -168,6 +168,50 @@ jobs:
           echo "Testing live F72 collection..."
           curl --silent --show-error --fail --max-time 60 "$KOY_GFS_API/f72?check=$(date +%s)" -o "$RUNNER_TEMP/koy-f72.json"
 
+          echo "Testing the exact F180 endpoint used by the public Köy page..."
+          curl --silent --show-error --fail --max-time 120 "$KOY_GFS_API/meteopt-f180-live?deploy_check=$(date +%s)" -o "$RUNNER_TEMP/koy-f180.json"
+          curl --silent --show-error --fail --max-time 45 "$KOY_GFS_API/comparison?deploy_check=$(date +%s)" -o "$RUNNER_TEMP/koy-comparison.json"
+          node - "$RUNNER_TEMP/koy-f180.json" "$RUNNER_TEMP/koy-comparison.json" <<'NODE'
+          const fs = require("fs");
+          const [f180, comparison] = process.argv.slice(2).map(file =>
+            JSON.parse(fs.readFileSync(file, "utf8"))
+          );
+          const points = Array.isArray(f180.forecast_6_hourly) ? f180.forecast_6_hourly : [];
+          const maxHour = Math.max(0, ...points.map(point => Number(point?.forecast_hour)).filter(Number.isFinite));
+          const expectedPage = "https://www.meteopt.com/modelos/gfs?lat=40.9557&lon=39.0065";
+          if (f180.forecast_source !== "meteopt" || points.length < 30 || maxHour < 180) {
+            throw new Error("Public Köy page F180 payload is incomplete: " + JSON.stringify({
+              forecast_source: f180.forecast_source, points: points.length, max_hour: maxHour,
+              error: f180.error || null
+            }));
+          }
+          if (Number(f180.location?.latitude) !== 40.9557 ||
+              Number(f180.location?.longitude) !== 39.0065 ||
+              !String(f180.source_url || "").startsWith(expectedPage)) {
+            throw new Error("Köy F180 payload does not match the canonical MeteoPT coordinates/page: " +
+              JSON.stringify({ location: f180.location, source_url: f180.source_url }));
+          }
+          const runs = Array.isArray(comparison.runs) ? comparison.runs : [];
+          const completeRuns = runs.filter(run => {
+            const series = Array.isArray(run.forecast_6_hourly) ? run.forecast_6_hourly : [];
+            return run.forecast_source === "meteopt" &&
+              series.some(point => Number(point?.forecast_hour) >= 180);
+          });
+          if (!comparison.ok || completeRuns.length < 1) {
+            throw new Error("Köy comparison endpoint did not return a completed MeteoPT F180 run");
+          }
+          console.log(JSON.stringify({
+            page_endpoint: "/api/meteopt-f180-live",
+            run_id_utc: f180.run_id_utc,
+            source_mode: f180.source_mode,
+            source_url: f180.source_url,
+            forecast_points: points.length,
+            horizon_hours: maxHour,
+            comparison_runs: runs.length,
+            completed_meteopt_f180_runs: completeRuns.length
+          }));
+          NODE
+
       - name: Verify live F72 MeteoPT snow-line contract
         env:
           KOY_GFS_API: https://gfs-watch-koy-gfs.muhsin-ulusoy.workers.dev/api
