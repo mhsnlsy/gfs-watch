@@ -5360,3 +5360,72 @@ main.shell { padding-bottom:max(12px,env(safe-area-inset-bottom)); }
     box-sizing:border-box!important;
   }
 }
+
+
+/* 20261113 DESKTOP OVERFLOW HARDENING
+   The visual check measures document.scrollWidth, so intrinsic-width children
+   must not escape the desktop dashboard grid. */
+@media (min-width:1200px) and (pointer:fine){
+  main.shell,
+  .dashboard-top,
+  .dashboard-left,
+  .dashboard-right,
+  #gfs-model-view,
+  #ecmwf-model-view,
+  #bildirimler,
+  .water-gfs-layout{
+    min-width:0!important;
+    max-width:100%!important;
+    box-sizing:border-box!important;
+  }
+
+  .dashboard-top{
+    grid-template-columns:minmax(0,600px) minmax(0,1fr)!important;
+    overflow:hidden!important;
+  }
+
+  .dashboard-left,
+  .dashboard-left>.station-card{
+    width:100%!important;
+    min-width:0!important;
+    max-width:600px!important;
+  }
+
+  .dashboard-left>.station-card{
+    overflow:hidden!important;
+  }
+
+  .dashboard-right{
+    width:100%!important;
+    min-width:0!important;
+    max-width:100%!important;
+    overflow:hidden!important;
+  }
+
+  #bildirimler .notification-card,
+  #bildirimler .notification-images,
+  #bildirimler .notification-image-item,
+  #bildirimler .gfs-interactive-chart,
+  #bildirimler .gfs-mobile-panel-host,
+  #meteopt-gfs-table,
+  #meteopt-gfs-table .meteopt-table-card,
+  #meteopt-gfs-table .meteopt-table-scroll{
+    min-width:0!important;
+    max-width:100%!important;
+    box-sizing:border-box!important;
+  }
+
+  #bildirimler .gfs-interactive-chart,
+  #bildirimler .gfs-mobile-panel-host,
+  #meteopt-gfs-table .meteopt-table-scroll{
+    overflow-x:hidden!important;
+  }
+
+  #bildirimler .gfs-interactive-svg,
+  #bildirimler .gfs-mobile-panel-svg{
+    width:100%!important;
+    max-width:100%!important;
+    min-width:0!important;
+    display:block!important;
+  }
+}
