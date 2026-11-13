@@ -13,37 +13,46 @@
     "centers": [
       {
         "type": "low",
-        "pressure_hpa": 992.2,
-        "latitude": 47.75,
-        "longitude": 25.25,
-        "distance_km": 804.4,
-        "bearing_deg": 340,
+        "pressure_hpa": 1001.2,
+        "latitude": 46.75,
+        "longitude": 26.0,
+        "distance_km": 680.1,
+        "bearing_deg": 341,
         "direction": "K"
       },
       {
         "type": "low",
-        "pressure_hpa": 1000.8,
-        "latitude": 43.75,
-        "longitude": 18.25,
-        "distance_km": 929.2,
-        "bearing_deg": 293,
+        "pressure_hpa": 1006.1,
+        "latitude": 43.25,
+        "longitude": 19.0,
+        "distance_km": 856.7,
+        "bearing_deg": 290,
         "direction": "KB"
       },
       {
         "type": "high",
-        "pressure_hpa": 1025.7,
+        "pressure_hpa": 1028.3,
         "latitude": 39.75,
-        "longitude": 43.25,
-        "distance_km": 1218.0,
-        "bearing_deg": 92,
+        "longitude": 42.5,
+        "distance_km": 1155.1,
+        "bearing_deg": 93,
         "direction": "D"
       },
       {
         "type": "high",
-        "pressure_hpa": 1023.4,
+        "pressure_hpa": 1025.9,
+        "latitude": 37.0,
+        "longitude": 32.0,
+        "distance_km": 518.2,
+        "bearing_deg": 148,
+        "direction": "GGB"
+      },
+      {
+        "type": "high",
+        "pressure_hpa": 1023.9,
         "latitude": 43.0,
-        "longitude": 42.25,
-        "distance_km": 1119.6,
+        "longitude": 42.0,
+        "distance_km": 1099.4,
         "bearing_deg": 74,
         "direction": "DKD"
       }
@@ -52,54 +61,11 @@
   "forecast_steps": [
     {
       "forecast_hour": 0,
-      "valid_time_utc": "2026-11-13T12:00:00Z",
-      "centers": [
-        {
-          "type": "low",
-          "pressure_hpa": 992.2,
-          "latitude": 47.75,
-          "longitude": 25.25,
-          "distance_km": 804.4,
-          "bearing_deg": 340,
-          "direction": "K"
-        },
-        {
-          "type": "low",
-          "pressure_hpa": 1000.8,
-          "latitude": 43.75,
-          "longitude": 18.25,
-          "distance_km": 929.2,
-          "bearing_deg": 293,
-          "direction": "KB"
-        },
-        {
-          "type": "high",
-          "pressure_hpa": 1025.7,
-          "latitude": 39.75,
-          "longitude": 43.25,
-          "distance_km": 1218.0,
-          "bearing_deg": 92,
-          "direction": "D"
-        },
-        {
-          "type": "high",
-          "pressure_hpa": 1023.4,
-          "latitude": 43.0,
-          "longitude": 42.25,
-          "distance_km": 1119.6,
-          "bearing_deg": 74,
-          "direction": "DKD"
-        }
-      ],
-      "download_bytes": 26551
-    },
-    {
-      "forecast_hour": 6,
       "valid_time_utc": "2026-11-13T18:00:00Z",
       "centers": [
         {
           "type": "low",
-          "pressure_hpa": 1001.5,
+          "pressure_hpa": 1001.2,
           "latitude": 46.75,
           "longitude": 26.0,
           "distance_km": 680.1,
@@ -110,23 +76,14 @@
           "type": "low",
           "pressure_hpa": 1006.1,
           "latitude": 43.25,
-          "longitude": 19.25,
-          "distance_km": 837.1,
+          "longitude": 19.0,
+          "distance_km": 856.7,
           "bearing_deg": 290,
           "direction": "KB"
         },
         {
-          "type": "low",
-          "pressure_hpa": 1006.7,
-          "latitude": 42.25,
-          "longitude": 24.5,
-          "distance_km": 394.5,
-          "bearing_deg": 292,
-          "direction": "KB"
-        },
-        {
           "type": "high",
-          "pressure_hpa": 1028.4,
+          "pressure_hpa": 1028.3,
           "latitude": 39.75,
           "longitude": 42.5,
           "distance_km": 1155.1,
@@ -144,7 +101,7 @@
         },
         {
           "type": "high",
-          "pressure_hpa": 1024.0,
+          "pressure_hpa": 1023.9,
           "latitude": 43.0,
           "longitude": 42.0,
           "distance_km": 1099.4,
@@ -155,59 +112,59 @@
       "download_bytes": 26551
     },
     {
-      "forecast_hour": 12,
+      "forecast_hour": 6,
       "valid_time_utc": "2026-11-14T00:00:00Z",
       "centers": [
         {
           "type": "low",
-          "pressure_hpa": 1008.5,
+          "pressure_hpa": 1008.8,
           "latitude": 45.25,
-          "longitude": 24.75,
-          "distance_km": 581.2,
-          "bearing_deg": 326,
+          "longitude": 23.75,
+          "distance_km": 632.1,
+          "bearing_deg": 320,
           "direction": "KKB"
         },
         {
           "type": "low",
-          "pressure_hpa": 1009.9,
-          "latitude": 42.25,
-          "longitude": 27.75,
-          "distance_km": 169.8,
-          "bearing_deg": 324,
-          "direction": "KKB"
+          "pressure_hpa": 1009.5,
+          "latitude": 43.0,
+          "longitude": 18.75,
+          "distance_km": 870.6,
+          "bearing_deg": 288,
+          "direction": "KB"
         },
         {
           "type": "high",
           "pressure_hpa": 1028.7,
-          "latitude": 41.0,
-          "longitude": 42.75,
-          "distance_km": 1156.8,
-          "bearing_deg": 86,
+          "latitude": 39.75,
+          "longitude": 43.25,
+          "distance_km": 1218.0,
+          "bearing_deg": 92,
           "direction": "D"
         },
         {
           "type": "high",
-          "pressure_hpa": 1027.2,
-          "latitude": 38.25,
-          "longitude": 42.75,
-          "distance_km": 1219.6,
-          "bearing_deg": 100,
-          "direction": "D"
-        },
-        {
-          "type": "high",
-          "pressure_hpa": 1025.8,
+          "pressure_hpa": 1025.9,
           "latitude": 34.25,
           "longitude": 36.0,
           "distance_km": 974.5,
           "bearing_deg": 138,
           "direction": "GD"
+        },
+        {
+          "type": "high",
+          "pressure_hpa": 1024.8,
+          "latitude": 43.0,
+          "longitude": 42.25,
+          "distance_km": 1119.6,
+          "bearing_deg": 74,
+          "direction": "DKD"
         }
       ],
       "download_bytes": 24793
     },
     {
-      "forecast_hour": 18,
+      "forecast_hour": 12,
       "valid_time_utc": "2026-11-14T06:00:00Z",
       "centers": [
         {
@@ -221,50 +178,50 @@
         },
         {
           "type": "high",
-          "pressure_hpa": 1026.1,
-          "latitude": 34.25,
-          "longitude": 36.0,
-          "distance_km": 974.5,
-          "bearing_deg": 138,
-          "direction": "GD"
-        },
-        {
-          "type": "high",
-          "pressure_hpa": 1023.8,
-          "latitude": 45.0,
-          "longitude": 15.25,
-          "distance_km": 1197.0,
-          "bearing_deg": 296,
-          "direction": "KB"
-        },
-        {
-          "type": "high",
-          "pressure_hpa": 1023.5,
+          "pressure_hpa": 1023.7,
           "latitude": 43.0,
           "longitude": 42.0,
           "distance_km": 1099.4,
           "bearing_deg": 74,
           "direction": "DKD"
+        },
+        {
+          "type": "high",
+          "pressure_hpa": 1023.0,
+          "latitude": 49.25,
+          "longitude": 19.75,
+          "distance_km": 1164.2,
+          "bearing_deg": 325,
+          "direction": "KKB"
         }
       ],
       "download_bytes": 24793
     },
     {
-      "forecast_hour": 24,
+      "forecast_hour": 18,
       "valid_time_utc": "2026-11-14T12:00:00Z",
       "centers": [
         {
+          "type": "low",
+          "pressure_hpa": 1012.7,
+          "latitude": 44.75,
+          "longitude": 34.5,
+          "distance_km": 613.8,
+          "bearing_deg": 46,
+          "direction": "KD"
+        },
+        {
           "type": "high",
-          "pressure_hpa": 1024.2,
+          "pressure_hpa": 1024.3,
           "latitude": 43.0,
-          "longitude": 24.5,
-          "distance_km": 428.8,
-          "bearing_deg": 302,
+          "longitude": 24.25,
+          "distance_km": 446.6,
+          "bearing_deg": 301,
           "direction": "KB"
         },
         {
           "type": "high",
-          "pressure_hpa": 1023.7,
+          "pressure_hpa": 1024.0,
           "latitude": 34.25,
           "longitude": 36.0,
           "distance_km": 974.5,
@@ -273,7 +230,7 @@
         },
         {
           "type": "high",
-          "pressure_hpa": 1023.2,
+          "pressure_hpa": 1023.3,
           "latitude": 40.5,
           "longitude": 40.0,
           "distance_km": 931.9,
@@ -284,12 +241,12 @@
       "download_bytes": 24793
     },
     {
-      "forecast_hour": 30,
+      "forecast_hour": 24,
       "valid_time_utc": "2026-11-14T18:00:00Z",
       "centers": [
         {
           "type": "high",
-          "pressure_hpa": 1031.0,
+          "pressure_hpa": 1030.6,
           "latitude": 45.5,
           "longitude": 25.25,
           "distance_km": 581.7,
@@ -298,16 +255,7 @@
         },
         {
           "type": "high",
-          "pressure_hpa": 1027.9,
-          "latitude": 44.0,
-          "longitude": 17.0,
-          "distance_km": 1033.2,
-          "bearing_deg": 293,
-          "direction": "KB"
-        },
-        {
-          "type": "high",
-          "pressure_hpa": 1025.1,
+          "pressure_hpa": 1025.0,
           "latitude": 34.25,
           "longitude": 36.0,
           "distance_km": 974.5,
@@ -316,7 +264,7 @@
         },
         {
           "type": "high",
-          "pressure_hpa": 1024.6,
+          "pressure_hpa": 1024.3,
           "latitude": 37.25,
           "longitude": 34.25,
           "distance_km": 619.6,
@@ -326,6 +274,15 @@
         {
           "type": "high",
           "pressure_hpa": 1024.1,
+          "latitude": 40.5,
+          "longitude": 40.0,
+          "distance_km": 931.9,
+          "bearing_deg": 90,
+          "direction": "D"
+        },
+        {
+          "type": "high",
+          "pressure_hpa": 1023.4,
           "latitude": 41.25,
           "longitude": 43.75,
           "distance_km": 1238.3,
@@ -336,7 +293,7 @@
       "download_bytes": 24793
     },
     {
-      "forecast_hour": 36,
+      "forecast_hour": 30,
       "valid_time_utc": "2026-11-15T00:00:00Z",
       "centers": [
         {
@@ -350,21 +307,12 @@
         },
         {
           "type": "high",
-          "pressure_hpa": 1026.3,
+          "pressure_hpa": 1026.6,
           "latitude": 40.0,
           "longitude": 22.5,
           "distance_km": 556.7,
           "bearing_deg": 260,
           "direction": "BKB"
-        },
-        {
-          "type": "high",
-          "pressure_hpa": 1024.5,
-          "latitude": 37.25,
-          "longitude": 34.25,
-          "distance_km": 619.6,
-          "bearing_deg": 131,
-          "direction": "GD"
         },
         {
           "type": "high",
@@ -378,17 +326,26 @@
         {
           "type": "high",
           "pressure_hpa": 1024.1,
-          "latitude": 40.5,
-          "longitude": 40.0,
-          "distance_km": 931.9,
-          "bearing_deg": 90,
+          "latitude": 37.25,
+          "longitude": 34.25,
+          "distance_km": 619.6,
+          "bearing_deg": 131,
+          "direction": "GD"
+        },
+        {
+          "type": "high",
+          "pressure_hpa": 1024.0,
+          "latitude": 41.0,
+          "longitude": 42.75,
+          "distance_km": 1156.8,
+          "bearing_deg": 86,
           "direction": "D"
         }
       ],
       "download_bytes": 24793
     },
     {
-      "forecast_hour": 42,
+      "forecast_hour": 36,
       "valid_time_utc": "2026-11-15T06:00:00Z",
       "centers": [
         {
@@ -411,21 +368,12 @@
         },
         {
           "type": "high",
-          "pressure_hpa": 1026.2,
+          "pressure_hpa": 1026.8,
           "latitude": 43.75,
-          "longitude": 19.0,
-          "distance_km": 871.4,
+          "longitude": 19.25,
+          "distance_km": 852.2,
           "bearing_deg": 294,
           "direction": "KB"
-        },
-        {
-          "type": "high",
-          "pressure_hpa": 1025.1,
-          "latitude": 37.25,
-          "longitude": 34.25,
-          "distance_km": 619.6,
-          "bearing_deg": 131,
-          "direction": "GD"
         },
         {
           "type": "high",
@@ -435,26 +383,17 @@
           "distance_km": 974.5,
           "bearing_deg": 138,
           "direction": "GD"
-        },
-        {
-          "type": "high",
-          "pressure_hpa": 1023.3,
-          "latitude": 43.0,
-          "longitude": 42.0,
-          "distance_km": 1099.4,
-          "bearing_deg": 74,
-          "direction": "DKD"
         }
       ],
       "download_bytes": 24793
     },
     {
-      "forecast_hour": 48,
+      "forecast_hour": 42,
       "valid_time_utc": "2026-11-15T12:00:00Z",
       "centers": [
         {
           "type": "high",
-          "pressure_hpa": 1030.2,
+          "pressure_hpa": 1029.7,
           "latitude": 41.25,
           "longitude": 41.25,
           "distance_km": 1029.6,
@@ -463,50 +402,41 @@
         },
         {
           "type": "high",
-          "pressure_hpa": 1030.0,
-          "latitude": 44.25,
-          "longitude": 40.0,
-          "distance_km": 972.0,
-          "bearing_deg": 65,
-          "direction": "DKD"
+          "pressure_hpa": 1029.0,
+          "latitude": 45.25,
+          "longitude": 24.25,
+          "distance_km": 605.8,
+          "bearing_deg": 323,
+          "direction": "KKB"
         },
         {
           "type": "high",
-          "pressure_hpa": 1028.9,
+          "pressure_hpa": 1029.0,
           "latitude": 42.25,
           "longitude": 24.0,
           "distance_km": 433.7,
           "bearing_deg": 290,
           "direction": "KB"
-        },
-        {
-          "type": "high",
-          "pressure_hpa": 1028.6,
-          "latitude": 45.0,
-          "longitude": 22.75,
-          "distance_km": 670.9,
-          "bearing_deg": 313,
-          "direction": "KKB"
         }
       ],
       "download_bytes": 24793
     },
     {
-      "forecast_hour": 54,
+      "forecast_hour": 48,
       "valid_time_utc": "2026-11-15T18:00:00Z",
       "centers": [
         {
           "type": "high",
-          "pressure_hpa": 1033.2,
-          "latitude": 43.0,
-          "longitude": 43.75,
-          "distance_km": 1240.9,
-          "bearing_deg": 75,
-          "direction": "DKD"
+          "pressure_hpa": 1030.7,
+          "latitude": 41.25,
+          "longitude": 41.25,
+          "distance_km": 1029.6,
+          "bearing_deg": 84,
+          "direction": "D"
         },
         {
           "type": "high",
-          "pressure_hpa": 1030.1,
+          "pressure_hpa": 1029.2,
           "latitude": 45.5,
           "longitude": 24.75,
           "distance_km": 603.5,
@@ -515,7 +445,7 @@
         },
         {
           "type": "high",
-          "pressure_hpa": 1027.6,
+          "pressure_hpa": 1027.7,
           "latitude": 42.25,
           "longitude": 24.0,
           "distance_km": 433.7,
@@ -524,169 +454,104 @@
         },
         {
           "type": "high",
-          "pressure_hpa": 1023.6,
+          "pressure_hpa": 1023.5,
           "latitude": 37.25,
           "longitude": 34.25,
           "distance_km": 619.6,
           "bearing_deg": 131,
           "direction": "GD"
+        }
+      ],
+      "download_bytes": 24793
+    },
+    {
+      "forecast_hour": 54,
+      "valid_time_utc": "2026-11-16T00:00:00Z",
+      "centers": [
+        {
+          "type": "high",
+          "pressure_hpa": 1033.4,
+          "latitude": 43.25,
+          "longitude": 41.5,
+          "distance_km": 1063.2,
+          "bearing_deg": 72,
+          "direction": "DKD"
         },
         {
           "type": "high",
-          "pressure_hpa": 1023.1,
-          "latitude": 34.25,
-          "longitude": 36.0,
-          "distance_km": 974.5,
-          "bearing_deg": 138,
-          "direction": "GD"
+          "pressure_hpa": 1024.9,
+          "latitude": 45.25,
+          "longitude": 23.25,
+          "distance_km": 659.8,
+          "bearing_deg": 317,
+          "direction": "KKB"
         }
       ],
       "download_bytes": 24793
     },
     {
       "forecast_hour": 60,
-      "valid_time_utc": "2026-11-16T00:00:00Z",
-      "centers": [
-        {
-          "type": "high",
-          "pressure_hpa": 1033.7,
-          "latitude": 43.25,
-          "longitude": 42.5,
-          "distance_km": 1143.3,
-          "bearing_deg": 73,
-          "direction": "DKD"
-        },
-        {
-          "type": "high",
-          "pressure_hpa": 1028.6,
-          "latitude": 40.5,
-          "longitude": 39.0,
-          "distance_km": 848.0,
-          "bearing_deg": 91,
-          "direction": "D"
-        }
-      ],
-      "download_bytes": 24793
+      "valid_time_utc": "2026-11-16T06:00:00Z",
+      "centers": [],
+      "download_bytes": 26551
     },
     {
       "forecast_hour": 66,
-      "valid_time_utc": "2026-11-16T06:00:00Z",
+      "valid_time_utc": "2026-11-16T12:00:00Z",
+      "centers": [],
+      "download_bytes": 26551
+    },
+    {
+      "forecast_hour": 72,
+      "valid_time_utc": "2026-11-16T18:00:00Z",
       "centers": [
         {
+          "type": "low",
+          "pressure_hpa": 1011.8,
+          "latitude": 45.75,
+          "longitude": 23.75,
+          "distance_km": 673.4,
+          "bearing_deg": 323,
+          "direction": "KKB"
+        },
+        {
           "type": "high",
-          "pressure_hpa": 1028.9,
+          "pressure_hpa": 1029.6,
           "latitude": 43.25,
           "longitude": 42.0,
           "distance_km": 1103.2,
           "bearing_deg": 73,
           "direction": "DKD"
-        },
-        {
-          "type": "high",
-          "pressure_hpa": 1026.5,
-          "latitude": 40.5,
-          "longitude": 40.0,
-          "distance_km": 931.9,
-          "bearing_deg": 90,
-          "direction": "D"
         }
       ],
-      "download_bytes": 26551
-    },
-    {
-      "forecast_hour": 72,
-      "valid_time_utc": "2026-11-16T12:00:00Z",
-      "centers": [
-        {
-          "type": "high",
-          "pressure_hpa": 1023.4,
-          "latitude": 41.25,
-          "longitude": 41.25,
-          "distance_km": 1029.6,
-          "bearing_deg": 84,
-          "direction": "D"
-        }
-      ],
-      "download_bytes": 24793
+      "download_bytes": 23035
     },
     {
       "forecast_hour": 78,
-      "valid_time_utc": "2026-11-16T18:00:00Z",
+      "valid_time_utc": "2026-11-17T00:00:00Z",
       "centers": [
         {
-          "type": "low",
-          "pressure_hpa": 1012.7,
-          "latitude": 45.75,
-          "longitude": 24.75,
-          "distance_km": 626.3,
-          "bearing_deg": 329,
-          "direction": "K"
-        },
-        {
           "type": "high",
-          "pressure_hpa": 1030.4,
+          "pressure_hpa": 1029.5,
           "latitude": 43.0,
           "longitude": 42.75,
           "distance_km": 1160.0,
           "bearing_deg": 74,
           "direction": "DKD"
-        },
-        {
-          "type": "high",
-          "pressure_hpa": 1024.9,
-          "latitude": 40.75,
-          "longitude": 40.75,
-          "distance_km": 991.7,
-          "bearing_deg": 88,
-          "direction": "D"
         }
       ],
       "download_bytes": 23035
     },
     {
       "forecast_hour": 84,
-      "valid_time_utc": "2026-11-17T00:00:00Z",
-      "centers": [
-        {
-          "type": "low",
-          "pressure_hpa": 1010.5,
-          "latitude": 45.75,
-          "longitude": 26.75,
-          "distance_km": 555.8,
-          "bearing_deg": 342,
-          "direction": "K"
-        },
-        {
-          "type": "high",
-          "pressure_hpa": 1030.0,
-          "latitude": 43.0,
-          "longitude": 42.75,
-          "distance_km": 1160.0,
-          "bearing_deg": 74,
-          "direction": "DKD"
-        },
-        {
-          "type": "high",
-          "pressure_hpa": 1024.3,
-          "latitude": 40.5,
-          "longitude": 40.0,
-          "distance_km": 931.9,
-          "bearing_deg": 90,
-          "direction": "D"
-        }
-      ],
-      "download_bytes": 23035
-    },
-    {
-      "forecast_hour": 90,
       "valid_time_utc": "2026-11-17T06:00:00Z",
       "centers": [
         {
           "type": "high",
-          "pressure_hpa": 1023.3,
+          "pressure_hpa": 1023.1,
           "latitude": 43.0,
-          "longitude": 42.75,
-          "distance_km": 1160.0,
+          "longitude": 42.5,
+          "distance_km": 1139.8,
           "bearing_deg": 74,
           "direction": "DKD"
         }
@@ -694,59 +559,21 @@
       "download_bytes": 24793
     },
     {
-      "forecast_hour": 96,
+      "forecast_hour": 90,
       "valid_time_utc": "2026-11-17T12:00:00Z",
       "centers": [
         {
           "type": "low",
-          "pressure_hpa": 1012.9,
-          "latitude": 43.75,
-          "longitude": 42.5,
-          "distance_km": 1152.3,
-          "bearing_deg": 70,
-          "direction": "DKD"
-        }
-      ],
-      "download_bytes": 26551
-    },
-    {
-      "forecast_hour": 102,
-      "valid_time_utc": "2026-11-17T18:00:00Z",
-      "centers": [],
-      "download_bytes": 26551
-    },
-    {
-      "forecast_hour": 108,
-      "valid_time_utc": "2026-11-18T00:00:00Z",
-      "centers": [
-        {
-          "type": "low",
-          "pressure_hpa": 1012.0,
-          "latitude": 43.75,
-          "longitude": 42.75,
-          "distance_km": 1172.0,
-          "bearing_deg": 70,
-          "direction": "DKD"
-        }
-      ],
-      "download_bytes": 24793
-    },
-    {
-      "forecast_hour": 114,
-      "valid_time_utc": "2026-11-18T06:00:00Z",
-      "centers": [
-        {
-          "type": "low",
-          "pressure_hpa": 1000.7,
-          "latitude": 44.75,
-          "longitude": 17.5,
-          "distance_km": 1020.0,
-          "bearing_deg": 298,
+          "pressure_hpa": 1007.4,
+          "latitude": 45.25,
+          "longitude": 15.0,
+          "distance_km": 1224.0,
+          "bearing_deg": 297,
           "direction": "KB"
         },
         {
           "type": "low",
-          "pressure_hpa": 1012.8,
+          "pressure_hpa": 1012.3,
           "latitude": 43.25,
           "longitude": 43.25,
           "distance_km": 1203.5,
@@ -757,23 +584,123 @@
       "download_bytes": 26551
     },
     {
-      "forecast_hour": 120,
-      "valid_time_utc": "2026-11-18T12:00:00Z",
+      "forecast_hour": 96,
+      "valid_time_utc": "2026-11-17T18:00:00Z",
       "centers": [
         {
           "type": "low",
-          "pressure_hpa": 1010.8,
-          "latitude": 43.75,
-          "longitude": 42.0,
-          "distance_km": 1112.9,
-          "bearing_deg": 70,
+          "pressure_hpa": 1010.2,
+          "latitude": 45.75,
+          "longitude": 24.75,
+          "distance_km": 626.3,
+          "bearing_deg": 329,
+          "direction": "K"
+        },
+        {
+          "type": "high",
+          "pressure_hpa": 1023.5,
+          "latitude": 43.0,
+          "longitude": 42.75,
+          "distance_km": 1160.0,
+          "bearing_deg": 74,
           "direction": "DKD"
         }
       ],
       "download_bytes": 26551
+    },
+    {
+      "forecast_hour": 102,
+      "valid_time_utc": "2026-11-18T00:00:00Z",
+      "centers": [
+        {
+          "type": "low",
+          "pressure_hpa": 1006.1,
+          "latitude": 45.75,
+          "longitude": 23.5,
+          "distance_km": 686.2,
+          "bearing_deg": 322,
+          "direction": "KKB"
+        }
+      ],
+      "download_bytes": 24793
+    },
+    {
+      "forecast_hour": 108,
+      "valid_time_utc": "2026-11-18T06:00:00Z",
+      "centers": [
+        {
+          "type": "low",
+          "pressure_hpa": 1013.0,
+          "latitude": 43.25,
+          "longitude": 43.25,
+          "distance_km": 1203.5,
+          "bearing_deg": 73,
+          "direction": "DKD"
+        }
+      ],
+      "download_bytes": 26551
+    },
+    {
+      "forecast_hour": 114,
+      "valid_time_utc": "2026-11-18T12:00:00Z",
+      "centers": [
+        {
+          "type": "low",
+          "pressure_hpa": 1000.5,
+          "latitude": 45.75,
+          "longitude": 24.75,
+          "distance_km": 626.3,
+          "bearing_deg": 329,
+          "direction": "K"
+        },
+        {
+          "type": "low",
+          "pressure_hpa": 1005.5,
+          "latitude": 42.0,
+          "longitude": 24.75,
+          "distance_km": 366.5,
+          "bearing_deg": 289,
+          "direction": "KB"
+        },
+        {
+          "type": "low",
+          "pressure_hpa": 1011.9,
+          "latitude": 43.5,
+          "longitude": 42.25,
+          "distance_km": 1127.6,
+          "bearing_deg": 71,
+          "direction": "DKD"
+        }
+      ],
+      "download_bytes": 26551
+    },
+    {
+      "forecast_hour": 120,
+      "valid_time_utc": "2026-11-18T18:00:00Z",
+      "centers": [
+        {
+          "type": "low",
+          "pressure_hpa": 998.8,
+          "latitude": 45.75,
+          "longitude": 23.75,
+          "distance_km": 673.4,
+          "bearing_deg": 323,
+          "direction": "KKB"
+        },
+        {
+          "type": "low",
+          "pressure_hpa": 1013.0,
+          "latitude": 43.25,
+          "longitude": 43.25,
+          "distance_km": 1203.5,
+          "bearing_deg": 73,
+          "direction": "DKD"
+        }
+      ],
+      "download_bytes": 24793
     }
   ],
-  "cycle_utc": "2026-11-13T12:00:00Z",
+  "cycle_utc": "2026-11-13T18:00:00Z",
   "forecast_hour": 0,
   "forecast_max_hour": 120,
   "forecast_interval_hours": 6,
@@ -784,53 +711,69 @@
       "points": [
         {
           "forecast_hour": 0,
-          "valid_time_utc": "2026-11-13T12:00:00Z",
-          "pressure_hpa": 992.2,
-          "latitude": 47.75,
-          "longitude": 25.25,
-          "lifecycle": "zayıflıyor"
-        },
-        {
-          "forecast_hour": 6,
           "valid_time_utc": "2026-11-13T18:00:00Z",
-          "pressure_hpa": 1001.5,
+          "pressure_hpa": 1001.2,
           "latitude": 46.75,
           "longitude": 26.0,
           "lifecycle": "zayıflıyor"
         },
         {
-          "forecast_hour": 12,
+          "forecast_hour": 6,
           "valid_time_utc": "2026-11-14T00:00:00Z",
-          "pressure_hpa": 1008.5,
+          "pressure_hpa": 1008.8,
           "latitude": 45.25,
-          "longitude": 24.75,
+          "longitude": 23.75,
           "lifecycle": "zayıflıyor"
         },
         {
-          "forecast_hour": 78,
+          "forecast_hour": 72,
           "valid_time_utc": "2026-11-16T18:00:00Z",
-          "pressure_hpa": 1012.7,
+          "pressure_hpa": 1011.8,
+          "latitude": 45.75,
+          "longitude": 23.75,
+          "lifecycle": "güçleniyor"
+        },
+        {
+          "forecast_hour": 90,
+          "valid_time_utc": "2026-11-17T12:00:00Z",
+          "pressure_hpa": 1007.4,
+          "latitude": 45.25,
+          "longitude": 15.0,
+          "lifecycle": "güçleniyor"
+        },
+        {
+          "forecast_hour": 102,
+          "valid_time_utc": "2026-11-18T00:00:00Z",
+          "pressure_hpa": 1006.1,
+          "latitude": 45.75,
+          "longitude": 23.5,
+          "lifecycle": "güçleniyor"
+        },
+        {
+          "forecast_hour": 114,
+          "valid_time_utc": "2026-11-18T12:00:00Z",
+          "pressure_hpa": 1000.5,
           "latitude": 45.75,
           "longitude": 24.75,
           "lifecycle": "güçleniyor"
         },
         {
-          "forecast_hour": 84,
-          "valid_time_utc": "2026-11-17T00:00:00Z",
-          "pressure_hpa": 1010.5,
+          "forecast_hour": 120,
+          "valid_time_utc": "2026-11-18T18:00:00Z",
+          "pressure_hpa": 998.8,
           "latitude": 45.75,
-          "longitude": 26.75,
+          "longitude": 23.75,
           "lifecycle": "güçleniyor"
         }
       ],
-      "movement_km": 250.0,
-      "movement_bearing_deg": 152.0,
-      "movement_direction": "GGD",
-      "pressure_change_hpa": 18.3,
-      "min_pressure_hpa": 992.2,
-      "max_pressure_hpa": 1012.7,
-      "lifecycle": "zayıflıyor",
-      "peak_forecast_hour": 0
+      "movement_km": 205.6,
+      "movement_bearing_deg": 238.0,
+      "movement_direction": "BGB",
+      "pressure_change_hpa": -2.4,
+      "min_pressure_hpa": 998.8,
+      "max_pressure_hpa": 1011.8,
+      "lifecycle": "derinleşiyor",
+      "peak_forecast_hour": 120
     },
     {
       "id": "low-2",
@@ -838,35 +781,43 @@
       "points": [
         {
           "forecast_hour": 0,
-          "valid_time_utc": "2026-11-13T12:00:00Z",
-          "pressure_hpa": 1000.8,
-          "latitude": 43.75,
-          "longitude": 18.25,
+          "valid_time_utc": "2026-11-13T18:00:00Z",
+          "pressure_hpa": 1006.1,
+          "latitude": 43.25,
+          "longitude": 19.0,
           "lifecycle": "zayıflıyor"
         },
         {
           "forecast_hour": 6,
-          "valid_time_utc": "2026-11-13T18:00:00Z",
-          "pressure_hpa": 1006.1,
-          "latitude": 43.25,
-          "longitude": 19.25,
+          "valid_time_utc": "2026-11-14T00:00:00Z",
+          "pressure_hpa": 1009.5,
+          "latitude": 43.0,
+          "longitude": 18.75,
+          "lifecycle": "zayıflıyor"
+        },
+        {
+          "forecast_hour": 96,
+          "valid_time_utc": "2026-11-17T18:00:00Z",
+          "pressure_hpa": 1010.2,
+          "latitude": 45.75,
+          "longitude": 24.75,
           "lifecycle": "güçleniyor"
         },
         {
           "forecast_hour": 114,
-          "valid_time_utc": "2026-11-18T06:00:00Z",
-          "pressure_hpa": 1000.7,
-          "latitude": 44.75,
-          "longitude": 17.5,
+          "valid_time_utc": "2026-11-18T12:00:00Z",
+          "pressure_hpa": 1005.5,
+          "latitude": 42.0,
+          "longitude": 24.75,
           "lifecycle": "güçleniyor"
         }
       ],
-      "movement_km": 126.2,
-      "movement_bearing_deg": 332.0,
-      "movement_direction": "KKB",
-      "pressure_change_hpa": -0.1,
-      "min_pressure_hpa": 1000.7,
-      "max_pressure_hpa": 1006.1,
+      "movement_km": 490.4,
+      "movement_bearing_deg": 104.0,
+      "movement_direction": "DGD",
+      "pressure_change_hpa": -0.6,
+      "min_pressure_hpa": 1005.5,
+      "max_pressure_hpa": 1010.2,
       "lifecycle": "sabit",
       "peak_forecast_hour": 114
     },
@@ -876,30 +827,22 @@
       "points": [
         {
           "forecast_hour": 0,
-          "valid_time_utc": "2026-11-13T12:00:00Z",
-          "pressure_hpa": 1025.7,
-          "latitude": 39.75,
-          "longitude": 43.25,
-          "lifecycle": "güçleniyor"
-        },
-        {
-          "forecast_hour": 6,
           "valid_time_utc": "2026-11-13T18:00:00Z",
-          "pressure_hpa": 1028.4,
+          "pressure_hpa": 1028.3,
           "latitude": 39.75,
           "longitude": 42.5,
-          "lifecycle": "güçleniyor"
-        },
-        {
-          "forecast_hour": 12,
-          "valid_time_utc": "2026-11-14T00:00:00Z",
-          "pressure_hpa": 1028.7,
-          "latitude": 41.0,
-          "longitude": 42.75,
           "lifecycle": "sabit"
         },
         {
-          "forecast_hour": 18,
+          "forecast_hour": 6,
+          "valid_time_utc": "2026-11-14T00:00:00Z",
+          "pressure_hpa": 1028.7,
+          "latitude": 39.75,
+          "longitude": 43.25,
+          "lifecycle": "sabit"
+        },
+        {
+          "forecast_hour": 12,
           "valid_time_utc": "2026-11-14T06:00:00Z",
           "pressure_hpa": 1028.2,
           "latitude": 39.75,
@@ -907,110 +850,94 @@
           "lifecycle": "zayıflıyor"
         },
         {
-          "forecast_hour": 24,
+          "forecast_hour": 18,
           "valid_time_utc": "2026-11-14T12:00:00Z",
-          "pressure_hpa": 1023.2,
+          "pressure_hpa": 1023.3,
+          "latitude": 40.5,
+          "longitude": 40.0,
+          "lifecycle": "sabit"
+        },
+        {
+          "forecast_hour": 24,
+          "valid_time_utc": "2026-11-14T18:00:00Z",
+          "pressure_hpa": 1024.1,
           "latitude": 40.5,
           "longitude": 40.0,
           "lifecycle": "sabit"
         },
         {
           "forecast_hour": 30,
-          "valid_time_utc": "2026-11-14T18:00:00Z",
-          "pressure_hpa": 1024.1,
-          "latitude": 41.25,
-          "longitude": 43.75,
-          "lifecycle": "sabit"
-        },
-        {
-          "forecast_hour": 36,
           "valid_time_utc": "2026-11-15T00:00:00Z",
-          "pressure_hpa": 1024.1,
-          "latitude": 40.5,
-          "longitude": 40.0,
-          "lifecycle": "sabit"
+          "pressure_hpa": 1024.0,
+          "latitude": 41.0,
+          "longitude": 42.75,
+          "lifecycle": "güçleniyor"
         },
         {
           "forecast_hour": 42,
-          "valid_time_utc": "2026-11-15T06:00:00Z",
-          "pressure_hpa": 1023.3,
-          "latitude": 43.0,
-          "longitude": 42.0,
+          "valid_time_utc": "2026-11-15T12:00:00Z",
+          "pressure_hpa": 1029.7,
+          "latitude": 41.25,
+          "longitude": 41.25,
           "lifecycle": "güçleniyor"
         },
         {
           "forecast_hour": 48,
-          "valid_time_utc": "2026-11-15T12:00:00Z",
-          "pressure_hpa": 1030.2,
+          "valid_time_utc": "2026-11-15T18:00:00Z",
+          "pressure_hpa": 1030.7,
           "latitude": 41.25,
           "longitude": 41.25,
           "lifecycle": "güçleniyor"
         },
         {
           "forecast_hour": 54,
-          "valid_time_utc": "2026-11-15T18:00:00Z",
-          "pressure_hpa": 1033.2,
-          "latitude": 43.0,
-          "longitude": 43.75,
-          "lifecycle": "güçleniyor"
-        },
-        {
-          "forecast_hour": 60,
           "valid_time_utc": "2026-11-16T00:00:00Z",
-          "pressure_hpa": 1033.7,
+          "pressure_hpa": 1033.4,
           "latitude": 43.25,
-          "longitude": 42.5,
-          "lifecycle": "zayıflıyor"
+          "longitude": 41.5,
+          "lifecycle": "olgunlaşıyor"
         },
         {
-          "forecast_hour": 66,
-          "valid_time_utc": "2026-11-16T06:00:00Z",
-          "pressure_hpa": 1028.9,
+          "forecast_hour": 72,
+          "valid_time_utc": "2026-11-16T18:00:00Z",
+          "pressure_hpa": 1029.6,
           "latitude": 43.25,
           "longitude": 42.0,
           "lifecycle": "zayıflıyor"
         },
         {
-          "forecast_hour": 72,
-          "valid_time_utc": "2026-11-16T12:00:00Z",
-          "pressure_hpa": 1023.4,
-          "latitude": 41.25,
-          "longitude": 41.25,
-          "lifecycle": "güçleniyor"
-        },
-        {
           "forecast_hour": 78,
-          "valid_time_utc": "2026-11-16T18:00:00Z",
-          "pressure_hpa": 1024.9,
-          "latitude": 40.75,
-          "longitude": 40.75,
-          "lifecycle": "sabit"
-        },
-        {
-          "forecast_hour": 84,
           "valid_time_utc": "2026-11-17T00:00:00Z",
-          "pressure_hpa": 1024.3,
-          "latitude": 40.5,
-          "longitude": 40.0,
-          "lifecycle": "zayıflıyor"
-        },
-        {
-          "forecast_hour": 90,
-          "valid_time_utc": "2026-11-17T06:00:00Z",
-          "pressure_hpa": 1023.3,
+          "pressure_hpa": 1029.5,
           "latitude": 43.0,
           "longitude": 42.75,
           "lifecycle": "zayıflıyor"
+        },
+        {
+          "forecast_hour": 84,
+          "valid_time_utc": "2026-11-17T06:00:00Z",
+          "pressure_hpa": 1023.1,
+          "latitude": 43.0,
+          "longitude": 42.5,
+          "lifecycle": "sabit"
+        },
+        {
+          "forecast_hour": 96,
+          "valid_time_utc": "2026-11-17T18:00:00Z",
+          "pressure_hpa": 1023.5,
+          "latitude": 43.0,
+          "longitude": 42.75,
+          "lifecycle": "sabit"
         }
       ],
-      "movement_km": 363.8,
-      "movement_bearing_deg": 354.0,
+      "movement_km": 362.0,
+      "movement_bearing_deg": 3.0,
       "movement_direction": "K",
-      "pressure_change_hpa": -2.4,
-      "min_pressure_hpa": 1023.2,
-      "max_pressure_hpa": 1033.7,
-      "lifecycle": "aktif",
-      "peak_forecast_hour": 60
+      "pressure_change_hpa": -4.8,
+      "min_pressure_hpa": 1023.1,
+      "max_pressure_hpa": 1033.4,
+      "lifecycle": "olgunlaşıyor",
+      "peak_forecast_hour": 54
     },
     {
       "id": "high-4",
@@ -1018,122 +945,6 @@
       "points": [
         {
           "forecast_hour": 0,
-          "valid_time_utc": "2026-11-13T12:00:00Z",
-          "pressure_hpa": 1023.4,
-          "latitude": 43.0,
-          "longitude": 42.25,
-          "lifecycle": "sabit"
-        },
-        {
-          "forecast_hour": 6,
-          "valid_time_utc": "2026-11-13T18:00:00Z",
-          "pressure_hpa": 1024.0,
-          "latitude": 43.0,
-          "longitude": 42.0,
-          "lifecycle": "güçleniyor"
-        },
-        {
-          "forecast_hour": 12,
-          "valid_time_utc": "2026-11-14T00:00:00Z",
-          "pressure_hpa": 1027.2,
-          "latitude": 38.25,
-          "longitude": 42.75,
-          "lifecycle": "olgunlaşıyor"
-        },
-        {
-          "forecast_hour": 18,
-          "valid_time_utc": "2026-11-14T06:00:00Z",
-          "pressure_hpa": 1023.5,
-          "latitude": 43.0,
-          "longitude": 42.0,
-          "lifecycle": "güçleniyor"
-        },
-        {
-          "forecast_hour": 48,
-          "valid_time_utc": "2026-11-15T12:00:00Z",
-          "pressure_hpa": 1030.0,
-          "latitude": 44.25,
-          "longitude": 40.0,
-          "lifecycle": "olgunlaşıyor"
-        },
-        {
-          "forecast_hour": 60,
-          "valid_time_utc": "2026-11-16T00:00:00Z",
-          "pressure_hpa": 1028.6,
-          "latitude": 40.5,
-          "longitude": 39.0,
-          "lifecycle": "zayıflıyor"
-        },
-        {
-          "forecast_hour": 66,
-          "valid_time_utc": "2026-11-16T06:00:00Z",
-          "pressure_hpa": 1026.5,
-          "latitude": 40.5,
-          "longitude": 40.0,
-          "lifecycle": "güçleniyor"
-        },
-        {
-          "forecast_hour": 78,
-          "valid_time_utc": "2026-11-16T18:00:00Z",
-          "pressure_hpa": 1030.4,
-          "latitude": 43.0,
-          "longitude": 42.75,
-          "lifecycle": "sabit"
-        },
-        {
-          "forecast_hour": 84,
-          "valid_time_utc": "2026-11-17T00:00:00Z",
-          "pressure_hpa": 1030.0,
-          "latitude": 43.0,
-          "longitude": 42.75,
-          "lifecycle": "sabit"
-        }
-      ],
-      "movement_km": 40.7,
-      "movement_bearing_deg": 90.0,
-      "movement_direction": "D",
-      "pressure_change_hpa": 6.6,
-      "min_pressure_hpa": 1023.4,
-      "max_pressure_hpa": 1030.4,
-      "lifecycle": "aktif",
-      "peak_forecast_hour": 78
-    },
-    {
-      "id": "low-5",
-      "type": "low",
-      "points": [
-        {
-          "forecast_hour": 6,
-          "valid_time_utc": "2026-11-13T18:00:00Z",
-          "pressure_hpa": 1006.7,
-          "latitude": 42.25,
-          "longitude": 24.5,
-          "lifecycle": "zayıflıyor"
-        },
-        {
-          "forecast_hour": 12,
-          "valid_time_utc": "2026-11-14T00:00:00Z",
-          "pressure_hpa": 1009.9,
-          "latitude": 42.25,
-          "longitude": 27.75,
-          "lifecycle": "zayıflıyor"
-        }
-      ],
-      "movement_km": 267.5,
-      "movement_bearing_deg": 89.0,
-      "movement_direction": "D",
-      "pressure_change_hpa": 3.2,
-      "min_pressure_hpa": 1006.7,
-      "max_pressure_hpa": 1009.9,
-      "lifecycle": "zayıflıyor",
-      "peak_forecast_hour": 6
-    },
-    {
-      "id": "high-6",
-      "type": "high",
-      "points": [
-        {
-          "forecast_hour": 6,
           "valid_time_utc": "2026-11-13T18:00:00Z",
           "pressure_hpa": 1025.9,
           "latitude": 37.0,
@@ -1141,39 +952,31 @@
           "lifecycle": "sabit"
         },
         {
-          "forecast_hour": 12,
+          "forecast_hour": 6,
           "valid_time_utc": "2026-11-14T00:00:00Z",
-          "pressure_hpa": 1025.8,
-          "latitude": 34.25,
-          "longitude": 36.0,
-          "lifecycle": "sabit"
-        },
-        {
-          "forecast_hour": 18,
-          "valid_time_utc": "2026-11-14T06:00:00Z",
-          "pressure_hpa": 1026.1,
+          "pressure_hpa": 1025.9,
           "latitude": 34.25,
           "longitude": 36.0,
           "lifecycle": "zayıflıyor"
         },
         {
-          "forecast_hour": 24,
+          "forecast_hour": 18,
           "valid_time_utc": "2026-11-14T12:00:00Z",
-          "pressure_hpa": 1023.7,
+          "pressure_hpa": 1024.0,
           "latitude": 34.25,
           "longitude": 36.0,
           "lifecycle": "güçleniyor"
         },
         {
-          "forecast_hour": 30,
+          "forecast_hour": 24,
           "valid_time_utc": "2026-11-14T18:00:00Z",
-          "pressure_hpa": 1025.1,
+          "pressure_hpa": 1025.0,
           "latitude": 34.25,
           "longitude": 36.0,
           "lifecycle": "sabit"
         },
         {
-          "forecast_hour": 36,
+          "forecast_hour": 30,
           "valid_time_utc": "2026-11-15T00:00:00Z",
           "pressure_hpa": 1024.5,
           "latitude": 34.25,
@@ -1181,7 +984,7 @@
           "lifecycle": "sabit"
         },
         {
-          "forecast_hour": 42,
+          "forecast_hour": 36,
           "valid_time_utc": "2026-11-15T06:00:00Z",
           "pressure_hpa": 1024.6,
           "latitude": 34.25,
@@ -1189,45 +992,91 @@
           "lifecycle": "zayıflıyor"
         },
         {
-          "forecast_hour": 54,
+          "forecast_hour": 48,
           "valid_time_utc": "2026-11-15T18:00:00Z",
-          "pressure_hpa": 1023.1,
-          "latitude": 34.25,
-          "longitude": 36.0,
+          "pressure_hpa": 1023.5,
+          "latitude": 37.25,
+          "longitude": 34.25,
           "lifecycle": "zayıflıyor"
         }
       ],
-      "movement_km": 473.4,
-      "movement_bearing_deg": 129.0,
-      "movement_direction": "GD",
-      "pressure_change_hpa": -2.8,
-      "min_pressure_hpa": 1023.1,
-      "max_pressure_hpa": 1026.1,
-      "lifecycle": "aktif",
-      "peak_forecast_hour": 18
+      "movement_km": 201.4,
+      "movement_bearing_deg": 81.0,
+      "movement_direction": "D",
+      "pressure_change_hpa": -2.4,
+      "min_pressure_hpa": 1023.5,
+      "max_pressure_hpa": 1025.9,
+      "lifecycle": "zayıflıyor",
+      "peak_forecast_hour": 0
     },
     {
-      "id": "high-7",
+      "id": "high-5",
       "type": "high",
       "points": [
         {
-          "forecast_hour": 18,
+          "forecast_hour": 0,
+          "valid_time_utc": "2026-11-13T18:00:00Z",
+          "pressure_hpa": 1023.9,
+          "latitude": 43.0,
+          "longitude": 42.0,
+          "lifecycle": "sabit"
+        },
+        {
+          "forecast_hour": 6,
+          "valid_time_utc": "2026-11-14T00:00:00Z",
+          "pressure_hpa": 1024.8,
+          "latitude": 43.0,
+          "longitude": 42.25,
+          "lifecycle": "zayıflıyor"
+        },
+        {
+          "forecast_hour": 12,
           "valid_time_utc": "2026-11-14T06:00:00Z",
-          "pressure_hpa": 1023.8,
-          "latitude": 45.0,
-          "longitude": 15.25,
+          "pressure_hpa": 1023.7,
+          "latitude": 43.0,
+          "longitude": 42.0,
+          "lifecycle": "zayıflıyor"
+        },
+        {
+          "forecast_hour": 24,
+          "valid_time_utc": "2026-11-14T18:00:00Z",
+          "pressure_hpa": 1023.4,
+          "latitude": 41.25,
+          "longitude": 43.75,
+          "lifecycle": "sabit"
+        }
+      ],
+      "movement_km": 242.3,
+      "movement_bearing_deg": 143.0,
+      "movement_direction": "GD",
+      "pressure_change_hpa": -0.5,
+      "min_pressure_hpa": 1023.4,
+      "max_pressure_hpa": 1024.8,
+      "lifecycle": "aktif",
+      "peak_forecast_hour": 6
+    },
+    {
+      "id": "high-6",
+      "type": "high",
+      "points": [
+        {
+          "forecast_hour": 12,
+          "valid_time_utc": "2026-11-14T06:00:00Z",
+          "pressure_hpa": 1023.0,
+          "latitude": 49.25,
+          "longitude": 19.75,
+          "lifecycle": "güçleniyor"
+        },
+        {
+          "forecast_hour": 24,
+          "valid_time_utc": "2026-11-14T18:00:00Z",
+          "pressure_hpa": 1030.6,
+          "latitude": 45.5,
+          "longitude": 25.25,
           "lifecycle": "güçleniyor"
         },
         {
           "forecast_hour": 30,
-          "valid_time_utc": "2026-11-14T18:00:00Z",
-          "pressure_hpa": 1027.9,
-          "latitude": 44.0,
-          "longitude": 17.0,
-          "lifecycle": "güçleniyor"
-        },
-        {
-          "forecast_hour": 36,
           "valid_time_utc": "2026-11-15T00:00:00Z",
           "pressure_hpa": 1033.3,
           "latitude": 45.5,
@@ -1235,7 +1084,7 @@
           "lifecycle": "güçleniyor"
         },
         {
-          "forecast_hour": 42,
+          "forecast_hour": 36,
           "valid_time_utc": "2026-11-15T06:00:00Z",
           "pressure_hpa": 1033.4,
           "latitude": 45.5,
@@ -1243,61 +1092,99 @@
           "lifecycle": "zayıflıyor"
         },
         {
-          "forecast_hour": 48,
+          "forecast_hour": 42,
           "valid_time_utc": "2026-11-15T12:00:00Z",
-          "pressure_hpa": 1028.6,
-          "latitude": 45.0,
-          "longitude": 22.75,
-          "lifecycle": "güçleniyor"
+          "pressure_hpa": 1029.0,
+          "latitude": 45.25,
+          "longitude": 24.25,
+          "lifecycle": "sabit"
+        },
+        {
+          "forecast_hour": 48,
+          "valid_time_utc": "2026-11-15T18:00:00Z",
+          "pressure_hpa": 1029.2,
+          "latitude": 45.5,
+          "longitude": 24.75,
+          "lifecycle": "zayıflıyor"
         },
         {
           "forecast_hour": 54,
-          "valid_time_utc": "2026-11-15T18:00:00Z",
-          "pressure_hpa": 1030.1,
-          "latitude": 45.5,
-          "longitude": 24.75,
-          "lifecycle": "güçleniyor"
+          "valid_time_utc": "2026-11-16T00:00:00Z",
+          "pressure_hpa": 1024.9,
+          "latitude": 45.25,
+          "longitude": 23.25,
+          "lifecycle": "zayıflıyor"
         }
       ],
-      "movement_km": 745.3,
-      "movement_bearing_deg": 82.0,
-      "movement_direction": "D",
-      "pressure_change_hpa": 6.3,
-      "min_pressure_hpa": 1023.8,
+      "movement_km": 517.2,
+      "movement_bearing_deg": 148.0,
+      "movement_direction": "GGD",
+      "pressure_change_hpa": 1.9,
+      "min_pressure_hpa": 1023.0,
       "max_pressure_hpa": 1033.4,
       "lifecycle": "aktif",
-      "peak_forecast_hour": 42
+      "peak_forecast_hour": 36
+    },
+    {
+      "id": "low-7",
+      "type": "low",
+      "points": [
+        {
+          "forecast_hour": 18,
+          "valid_time_utc": "2026-11-14T12:00:00Z",
+          "pressure_hpa": 1012.7,
+          "latitude": 44.75,
+          "longitude": 34.5,
+          "lifecycle": null
+        },
+        {
+          "forecast_hour": 114,
+          "valid_time_utc": "2026-11-18T12:00:00Z",
+          "pressure_hpa": 1011.9,
+          "latitude": 43.5,
+          "longitude": 42.25,
+          "lifecycle": "zayıflıyor"
+        },
+        {
+          "forecast_hour": 120,
+          "valid_time_utc": "2026-11-18T18:00:00Z",
+          "pressure_hpa": 1013.0,
+          "latitude": 43.25,
+          "longitude": 43.25,
+          "lifecycle": "zayıflıyor"
+        }
+      ],
+      "movement_km": 719.1,
+      "movement_bearing_deg": 100.0,
+      "movement_direction": "D",
+      "pressure_change_hpa": 0.3,
+      "min_pressure_hpa": 1011.9,
+      "max_pressure_hpa": 1013.0,
+      "lifecycle": "aktif",
+      "peak_forecast_hour": 114
     },
     {
       "id": "high-8",
       "type": "high",
       "points": [
         {
-          "forecast_hour": 24,
+          "forecast_hour": 18,
           "valid_time_utc": "2026-11-14T12:00:00Z",
-          "pressure_hpa": 1024.2,
+          "pressure_hpa": 1024.3,
           "latitude": 43.0,
-          "longitude": 24.5,
+          "longitude": 24.25,
           "lifecycle": "güçleniyor"
         },
         {
           "forecast_hour": 30,
-          "valid_time_utc": "2026-11-14T18:00:00Z",
-          "pressure_hpa": 1031.0,
-          "latitude": 45.5,
-          "longitude": 25.25,
-          "lifecycle": "olgunlaşıyor"
-        },
-        {
-          "forecast_hour": 36,
           "valid_time_utc": "2026-11-15T00:00:00Z",
-          "pressure_hpa": 1026.3,
+          "pressure_hpa": 1026.6,
           "latitude": 40.0,
           "longitude": 22.5,
           "lifecycle": "güçleniyor"
         },
         {
-          "forecast_hour": 42,
+          "forecast_hour": 36,
           "valid_time_utc": "2026-11-15T06:00:00Z",
           "pressure_hpa": 1031.4,
           "latitude": 42.25,
@@ -1305,122 +1192,90 @@
           "lifecycle": "olgunlaşıyor"
         },
         {
-          "forecast_hour": 48,
+          "forecast_hour": 42,
           "valid_time_utc": "2026-11-15T12:00:00Z",
-          "pressure_hpa": 1028.9,
+          "pressure_hpa": 1029.0,
           "latitude": 42.25,
           "longitude": 24.0,
           "lifecycle": "zayıflıyor"
         },
         {
-          "forecast_hour": 54,
+          "forecast_hour": 48,
           "valid_time_utc": "2026-11-15T18:00:00Z",
-          "pressure_hpa": 1027.6,
+          "pressure_hpa": 1027.7,
           "latitude": 42.25,
           "longitude": 24.0,
           "lifecycle": "zayıflıyor"
         }
       ],
-      "movement_km": 92.9,
-      "movement_bearing_deg": 206.0,
+      "movement_km": 85.9,
+      "movement_bearing_deg": 194.0,
       "movement_direction": "GGB",
       "pressure_change_hpa": 3.4,
-      "min_pressure_hpa": 1024.2,
+      "min_pressure_hpa": 1024.3,
       "max_pressure_hpa": 1031.4,
       "lifecycle": "olgunlaşıyor",
-      "peak_forecast_hour": 42
+      "peak_forecast_hour": 36
     },
     {
       "id": "high-9",
       "type": "high",
       "points": [
         {
-          "forecast_hour": 30,
+          "forecast_hour": 24,
           "valid_time_utc": "2026-11-14T18:00:00Z",
-          "pressure_hpa": 1024.6,
+          "pressure_hpa": 1024.3,
           "latitude": 37.25,
           "longitude": 34.25,
           "lifecycle": "sabit"
         },
         {
-          "forecast_hour": 36,
+          "forecast_hour": 30,
           "valid_time_utc": "2026-11-15T00:00:00Z",
-          "pressure_hpa": 1024.5,
+          "pressure_hpa": 1024.1,
           "latitude": 37.25,
           "longitude": 34.25,
           "lifecycle": "sabit"
-        },
-        {
-          "forecast_hour": 42,
-          "valid_time_utc": "2026-11-15T06:00:00Z",
-          "pressure_hpa": 1025.1,
-          "latitude": 37.25,
-          "longitude": 34.25,
-          "lifecycle": "zayıflıyor"
-        },
-        {
-          "forecast_hour": 54,
-          "valid_time_utc": "2026-11-15T18:00:00Z",
-          "pressure_hpa": 1023.6,
-          "latitude": 37.25,
-          "longitude": 34.25,
-          "lifecycle": "zayıflıyor"
         }
       ],
       "movement_km": 0.0,
       "movement_bearing_deg": 0.0,
       "movement_direction": "K",
-      "pressure_change_hpa": -1.0,
-      "min_pressure_hpa": 1023.6,
-      "max_pressure_hpa": 1025.1,
+      "pressure_change_hpa": -0.2,
+      "min_pressure_hpa": 1024.1,
+      "max_pressure_hpa": 1024.3,
       "lifecycle": "aktif",
-      "peak_forecast_hour": 42
+      "peak_forecast_hour": 24
     },
     {
       "id": "low-11",
       "type": "low",
       "points": [
         {
-          "forecast_hour": 96,
+          "forecast_hour": 90,
           "valid_time_utc": "2026-11-17T12:00:00Z",
-          "pressure_hpa": 1012.9,
-          "latitude": 43.75,
-          "longitude": 42.5,
+          "pressure_hpa": 1012.3,
+          "latitude": 43.25,
+          "longitude": 43.25,
           "lifecycle": null
         },
         {
           "forecast_hour": 108,
-          "valid_time_utc": "2026-11-18T00:00:00Z",
-          "pressure_hpa": 1012.0,
-          "latitude": 43.75,
-          "longitude": 42.75,
-          "lifecycle": null
-        },
-        {
-          "forecast_hour": 114,
           "valid_time_utc": "2026-11-18T06:00:00Z",
-          "pressure_hpa": 1012.8,
+          "pressure_hpa": 1013.0,
           "latitude": 43.25,
           "longitude": 43.25,
-          "lifecycle": "güçleniyor"
-        },
-        {
-          "forecast_hour": 120,
-          "valid_time_utc": "2026-11-18T12:00:00Z",
-          "pressure_hpa": 1010.8,
-          "latitude": 43.75,
-          "longitude": 42.0,
-          "lifecycle": "güçleniyor"
+          "lifecycle": null
         }
       ],
-      "movement_km": 40.2,
-      "movement_bearing_deg": 270.0,
-      "movement_direction": "B",
-      "pressure_change_hpa": -2.1,
-      "min_pressure_hpa": 1010.8,
-      "max_pressure_hpa": 1012.9,
-      "lifecycle": "derinleşiyor",
-      "peak_forecast_hour": 120
+      "movement_km": 0.0,
+      "movement_bearing_deg": 0.0,
+      "movement_direction": "K",
+      "pressure_change_hpa": 0.7,
+      "min_pressure_hpa": 1012.3,
+      "max_pressure_hpa": 1013.0,
+      "lifecycle": "aktif",
+      "peak_forecast_hour": 90
     }
   ],
   "checkpoint_hours": [
@@ -1433,5 +1288,5 @@
     120
   ],
   "download_bytes": 529443,
-  "download_url": "https://nomads.ncep.noaa.gov/cgi-bin/filter_gfs_0p25.pl?file=gfs.t12z.pgrb2.0p25.f000&var_PRMSL=on&lev_mean_sea_level=on&subregion=&leftlon=12&rightlon=48&toplat=53&bottomlat=29&dir=%2Fgfs.20261113%2F12%2Fatmos"
+  "download_url": "https://nomads.ncep.noaa.gov/cgi-bin/filter_gfs_0p25.pl?file=gfs.t18z.pgrb2.0p25.f000&var_PRMSL=on&lev_mean_sea_level=on&subregion=&leftlon=12&rightlon=48&toplat=53&bottomlat=29&dir=%2Fgfs.20261113%2F18%2Fatmos"
 }
