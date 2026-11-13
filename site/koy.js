@@ -847,11 +847,23 @@ function renderRuns(d,f180){
 async function refresh(){if(busy)return;busy=true;
  try {
  const results=await Promise.allSettled([
-  get("comparison"),get("meteopt-f180-live"),getStation("/history/canakci?hours=72"),
+  get("comparison"),get("meteopt-f180-live"),get("f72"),
+  getStation("/history/canakci?hours=72"),
   getStation("/stations/canakci")
  ]);
  if(results[0].status==="fulfilled")comparison=results[0].value;
  if(results[1].status==="fulfilled")f180=results[1].value;
+ // F180 is preferred for the 180-hour table. If the completed F180 path is
+ // temporarily unavailable, the canonical F72 endpoint still contains the
+ // same MeteoPT cycle and must keep the page populated instead of showing a
+ // blank forecast. The table naturally renders the available 72 hours.
+ if(!f180 && results[2].status==="fulfilled" && results[2].value?.forecast_6_hourly?.length){
+  f180={
+   ...results[2].value,
+   source_mode:"meteopt-f72-fallback",
+   source_url:"https://www.meteopt.com/modelos/gfs?lat=40.9557&lon=39.0065"
+  };
+ }
  // Canonical Köy source: the exact MeteoPT GFS point at 40.9557, 39.0065.
  // Prefer the live F180 endpoint. If it is temporarily unavailable, use the
  // newest completed MeteoPT run from the same comparison payload so the table
@@ -877,8 +889,8 @@ async function refresh(){if(busy)return;busy=true;
   $("meteopt-table-run").textContent="F180 döngüsü bekleniyor";
   $("meteopt-table-updated").textContent="180. saat tamamlanınca yayınlanacak";
  }
- // The third request is the canonical MGM history payload.
- if(results[2].status==="fulfilled")stationHistory=results[2].value;else stationHistory=null;
+ // The fourth request is the canonical MGM history payload.
+ if(results[3].status==="fulfilled")stationHistory=results[3].value;else stationHistory=null;
  // The MGM history is the canonical source for both temperature and rainfall.
  // Keep a single request so the page cannot render two different history snapshots.
  rainHistory=stationHistory;
@@ -894,8 +906,8 @@ async function refresh(){if(busy)return;busy=true;
   $("station-temperature-trend").innerHTML='<div class="station-trend-empty">'+(stationMode==="home"?"Köy Ev sanal istasyon geçmişi bekleniyor…":"MGM istasyon geçmişi bekleniyor…")+'</div>';
   $("station-rain-trend").innerHTML='<div class="station-trend-empty">'+(stationMode==="home"?"Köy Ev sanal yağış arşivi bekleniyor…":"MGM yağış arşivi bekleniyor…")+'</div>';
  }
- if(results[3].status==="fulfilled"&&results[3].value && results[3].value.station){
-  window.__koyMgmObservation=results[3].value.station;
+ if(results[4].status==="fulfilled"&&results[4].value && results[4].value.station){
+  window.__koyMgmObservation=results[4].value.station;
   if(!evObservation)evObservation=buildVirtualHomeObservation(window.__koyMgmObservation);
   window.__koyCurrentTemp=num(results[2].value.station.temperature_c == null ? results[2].value.station.temperature_2m_c : results[2].value.station.temperature_c);
   const o=window.__koyMgmObservation;
