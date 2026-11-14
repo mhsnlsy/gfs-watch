@@ -1128,7 +1128,7 @@
     .gfs-chart-tooltip-hint{margin-top:7px;padding-top:6px;border-top:1px solid rgba(125,211,215,.14);font-size:9px;color:#8fa8b7}
     .gfs-chart-share-global{
       position:absolute!important;
-      top:10px!important;
+      top:0px!important;
       right:10px!important;
       z-index:1200!important;
       pointer-events:auto!important;
