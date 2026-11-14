@@ -7,7 +7,7 @@ const LON = 28.950;
 // Only precipitation inside this circle is analysed and can trigger an alert.
 const ANALYSIS_RADIUS_KM = 25;
 // Minimum gap between two Telegram radar alerts (persisted in D1 radar_state.last_alert_ts).
-const ALERT_COOLDOWN_SEC = 45 * 60;
+const ALERT_COOLDOWN_SEC = 60 * 60;
 const THRESHOLD_DBZ_STRONG = 30;
 const ENTRY_ALERT_RADIUS_KM = 25;
 const RADAR_BUILD = "paid-cron-2026-11-10-dbz-classes-9";
