@@ -87,9 +87,10 @@ async function shareGfsComparisonLink(validKey,title,host,svg){
   }
 }
 function ensureGfsComparisonShareControl(host,svg){
-  const shareHost=host.closest(".gfs-mobile-panel-stack")||host;
+  const shareHost=host.closest(".notification-chart-only")||host.closest(".gfs-mobile-panel-stack")||host;
   if(shareHost.__gfsShareControl)return shareHost.__gfsShareControl;
   shareHost.style.position="relative";
+  shareHost.style.overflow="visible";
   shareHost.__gfsFullSvg=shareHost.__gfsFullSvg||svg;
   const button=document.createElement("button");
   button.type="button";
@@ -651,7 +652,7 @@ async function loadInteractiveGfsCharts(root){
       svg.setAttribute("aria-label",host.dataset.chartLabel||"İstanbul GFS dört panelli etkileşimli valid-time karşılaştırması");
       svg.setAttribute("focusable","true");
       (host.querySelector(".gfs-chart-loading") && host.querySelector(".gfs-chart-loading").remove());
-      const fullShareHost=host.closest(".gfs-mobile-panel-stack")||host;
+      const fullShareHost=host.closest(".notification-chart-only")||host.closest(".gfs-mobile-panel-stack")||host;
       fullShareHost.__gfsFullSvg=svg;
       fullShareHost.__gfsSharePanels=metadata.panels||[];
       ensureGfsComparisonShareControl(host,svg);
