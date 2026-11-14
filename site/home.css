@@ -1126,11 +1126,21 @@
     .gfs-chart-tooltip-share:hover{background:rgba(125,211,215,.18);border-color:rgba(125,211,215,.55)}
     .gfs-chart-tooltip-share:active{transform:translateY(1px)}
     .gfs-chart-tooltip-hint{margin-top:7px;padding-top:6px;border-top:1px solid rgba(125,211,215,.14);font-size:9px;color:#8fa8b7}
+    .gfs-chart-share-toolbar{
+      display:flex;
+      justify-content:flex-end;
+      align-items:center;
+      min-height:34px;
+      padding:0 10px 6px;
+      background:#0A1B29;
+      position:relative;
+      z-index:2;
+    }
     .gfs-chart-share-global{
-      position:absolute!important;
-      top:-2px!important;
-      right:10px!important;
-      z-index:1200!important;
+      position:relative!important;
+      top:auto!important;
+      right:auto!important;
+      z-index:2!important;
       pointer-events:auto!important;
       appearance:none;
       border:1px solid rgba(125,211,215,.42);
@@ -1181,7 +1191,7 @@
       .gfs-chart-tooltip-share{font-size:8px;padding:5px 8px}
       .gfs-chart-tooltip-hint{margin-top:4px;padding-top:4px;font-size:7.5px}
       .gfs-chart-share-global{
-        top:-2px!important;
+        top:auto!important;
         right:8px!important;
         font-size:9px;
         padding:7px 10px;
