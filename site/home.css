@@ -397,7 +397,7 @@
     .station-switch button[aria-pressed="true"]{background:rgba(125,211,215,.15);border-color:rgba(125,211,215,.32);color:#d8fbf3}
     .station-switch button[aria-pressed="false"]{background:transparent;border-color:transparent;color:#9fb5c1}
     .station-switch button:focus-visible{outline:2px solid var(--cyan);outline-offset:2px}
-    @media(max-width:560px){.station-switch{margin-top:9px}.station-switch button{padding:6px 9px;font-size:9px}}
+    @media(max-width:560px){.station-switch{margin-top:9px}.station-switch button{padding:4px 7px;font-size:9px}}
 .dashboard-top{display:grid;grid-template-columns:minmax(320px,.78fr) minmax(0,1.22fr);gap:14px;align-items:start;padding:20px 0 18px}
 .dashboard-left{display:grid;gap:10px;min-width:0;align-content:start}
 .dashboard-left .station-card{width:100%;max-width:none;justify-self:stretch;min-height:0}
@@ -1131,7 +1131,7 @@
       justify-content:flex-end;
       align-items:center;
       min-height:34px;
-      padding:0 10px 5px;
+      padding:1px 10px 5px;
       background:#0A1B29;
       position:relative;
       z-index:2;
@@ -1147,7 +1147,7 @@
       border-radius:999px;
       background:rgba(4,18,29,.92);
       color:#b9e6e8;
-      font:700 10px/1 "DM Sans",system-ui,sans-serif;
+      font:700 9px/1 "DM Sans",system-ui,sans-serif;
       padding:6px 9px;
       cursor:pointer;
       box-shadow:0 5px 18px rgba(0,0,0,.28);
@@ -1193,8 +1193,8 @@
       .gfs-chart-share-global{
         top:auto!important;
         right:8px!important;
-        font-size:9px;
-        padding:7px 10px;
+        font-size:8px;
+        padding:5px 8px;
       }
       /* Mobilde yalnızca en güncel GFS döngüsünü göster. */
       .gfs-chart-tooltip-row:nth-child(n+3){display:none}
