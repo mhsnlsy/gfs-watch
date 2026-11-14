@@ -282,8 +282,16 @@ function attachGfsSvgInteractions(host,svg,metadata,syncGroup,latestOnly){
     // Keep the synchronized selection visible after a cancelled touch sequence.
     if(event.pointerType==="touch")host.setAttribute("data-pinned","true");
   });
-  svg.addEventListener("pointerleave",()=>{
+  svg.addEventListener("pointerleave",event=>{
+    // Allow the pointer to move from the SVG into the tooltip so its
+    // share button remains clickable.
+    if(event.relatedTarget && host.contains(event.relatedTarget))return;
     if(!host.hasAttribute("data-pinned"))hide();
+  });
+  panelList.forEach(panel=>{
+    const tip=tooltips.get(panel.id);
+    if(!tip)return;
+    tip.addEventListener("pointerenter",()=>host.setAttribute("data-pinned","true"));
   });
   window.addEventListener("scroll",hide,{passive:true,capture:true});
   window.addEventListener("resize",hide,{passive:true});
