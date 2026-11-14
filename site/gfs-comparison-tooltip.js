@@ -1,3 +1,37 @@
+function normalizeGfsShareKey(validTime){
+  return String(validTime&&validTime.utcLabel||validTime&&validTime.utc_label||validTime&&validTime.label||"").replace(/\s+/g," ").trim();
+}
+function readGfsComparisonShareKey(){
+  try{
+    return normalizeGfsShareKey({utcLabel:new URL(window.location.href).searchParams.get("gfs-valid")||""});
+  }catch(_){return "";}
+}
+async function shareGfsComparisonLink(validKey,title){
+  if(!validKey)return;
+  const url=new URL(window.location.href);
+  url.searchParams.set("gfs-valid",validKey);
+  url.hash="gfs-comparison";
+  const shareUrl=url.toString();
+  try{
+    if(navigator.share){
+      await navigator.share({title:"İstanbul Havası · GFS dört döngü karşılaştırması",text:(title||"GFS karşılaştırması")+" · "+formatGfsTooltipTs({utcLabel:validKey}),url:shareUrl});
+      return;
+    }
+  }catch(error){
+    if(error&&error.name==="AbortError")return;
+  }
+  try{
+    await navigator.clipboard.writeText(shareUrl);
+    const button=document.querySelector(".gfs-chart-tooltip:not([hidden]) [data-gfs-share-key]");
+    if(button){
+      const oldText=button.textContent;
+      button.textContent="✓ Link kopyalandı";
+      setTimeout(()=>{button.textContent=oldText;},1800);
+    }
+  }catch(_){
+    window.prompt("Paylaşım linki",shareUrl);
+  }
+}
 function clearGfsSvgGroup(group){
   if(!group)return;
   while(group.firstChild)group.removeChild(group.firstChild);
@@ -46,9 +80,13 @@ function buildGfsTooltipMarkup(panel,index,validTime,latestOnly){
   const hint=latestOnly
     ? "En yeni döngü · aynı geçerlilik anı · TSİ"
     : "Dört döngü · aynı geçerlilik anı · TSİ";
+  const shareKey=String(validTime&&validTime.utcLabel||validTime&&validTime.utc_label||validTime&&validTime.label||"").trim();
   return '<div class="gfs-chart-tooltip-head"><div><div class="gfs-chart-tooltip-title">'+escapeGfsTooltip(panel.title)+'</div>'+
     '<div class="gfs-chart-tooltip-time">'+escapeGfsTooltip(formatGfsTooltipTs(validTime))+'</div></div></div>'+
-    rows+'<div class="gfs-chart-tooltip-hint">'+hint+'</div>';
+    rows+'<div class="gfs-chart-tooltip-actions">'+
+    '<button type="button" class="gfs-chart-tooltip-share" data-gfs-share-key="'+escapeGfsTooltip(shareKey)+'" aria-label="Bu dört döngü karşılaştırmasını paylaş">↗ Paylaş</button>'+
+    '</div>'+
+    '<div class="gfs-chart-tooltip-hint">'+hint+'</div>';
 }
 function positionGfsTooltip(host,tooltip,clientX,clientY){
   if(!Number.isFinite(clientX)||!Number.isFinite(clientY))return;
@@ -86,7 +124,10 @@ function attachGfsSvgInteractions(host,svg,metadata,syncGroup,latestOnly){
   });
   const activeIndexes=new Map();
   function hide(){
-    tooltips.forEach(tip=>tip.hidden=true);
+    tooltips.forEach(tip=>{
+      tip.hidden=true;
+      tip.style.pointerEvents="none";
+    });
     host.removeAttribute("data-pinned");
     host.style.removeProperty("z-index");
     svg.querySelectorAll(".gfs-tooltip-crosshair").forEach(line=>line.setAttribute("visibility","hidden"));
@@ -148,6 +189,15 @@ function attachGfsSvgInteractions(host,svg,metadata,syncGroup,latestOnly){
     const panelTooltip=tooltips.get(panel.id);
     if(!panelTooltip)return;
     panelTooltip.innerHTML=buildGfsTooltipMarkup(panel,index,validTime,latestOnly===true);
+    panelTooltip.style.pointerEvents="auto";
+    const shareButton=panelTooltip.querySelector("[data-gfs-share-key]");
+    if(shareButton){
+      shareButton.addEventListener("click",event=>{
+        event.preventDefault();
+        event.stopPropagation();
+        shareGfsComparisonLink(shareButton.getAttribute("data-gfs-share-key"),panel.title);
+      });
+    }
     const anchor=event&&Number.isFinite(event.clientX)&&Number.isFinite(event.clientY)
       ? event : (anchorForIndex(panel,index)||event);
     positionGfsTooltip(host,panelTooltip,anchor && anchor.clientX,anchor && anchor.clientY);
@@ -251,6 +301,21 @@ function attachGfsSvgInteractions(host,svg,metadata,syncGroup,latestOnly){
     syncGroup.members.push(api);
   }
   host.gfsHideTooltip=hide;
+
+  // Shared four-cycle comparison links reopen the same valid time directly.
+  const sharedKey=readGfsComparisonShareKey();
+  if(sharedKey && !window.__gfsShareApplied){
+    const sourcePanel=panelList[0];
+    const sharedIndex=sourcePanel && Array.isArray(sourcePanel.valid_times)
+      ? sourcePanel.valid_times.findIndex(item=>normalizeGfsShareKey(item)===sharedKey)
+      : -1;
+    if(sharedIndex>=0){
+      window.__gfsShareApplied=true;
+      host.setAttribute("data-pinned","true");
+      const rect=svg.getBoundingClientRect();
+      showSynchronized(sharedIndex,{clientX:rect.left+rect.width/2,clientY:rect.top+40});
+    }
+  }
 }
 function isMobileGfsLayout(){
   const viewportWidth=Math.min(
