@@ -42,9 +42,11 @@ const __hideEmptyBadges=()=>{document.querySelectorAll('[class*="badge"],[class*
     // No forecast-verification.json is published yet; avoid repeated 404s until the calibration archive is generated.
     const VERIFY_URL=null;
     let enkaStationObservation=null,eyupsultanStationObservation=null,sisliStationObservation=null,activeStation="eyupsultan";
-    // HARD DEFAULT: homepage always starts on Eyüpsultan on every device.
-    // Do not restore a previously stored ENKA/Şişli choice during initial page load.
-    try{ localStorage.removeItem("istanbul-hava-station"); }catch(_){}
+    // Persist the last selected live station across page refreshes.
+    try{
+      const savedStation=localStorage.getItem("istanbul-hava-station");
+      if(["enka","eyupsultan","sisli"].includes(savedStation)) activeStation=savedStation;
+    }catch(_){}
     let enkaStationHistorySamples=[],eyupsultanStationHistorySamples=[],sisliStationHistorySamples=[];
     let eyupsultanStationRainHistorySamples=[],sisliStationRainHistorySamples=[];
     let verificationDoc=null;
@@ -1856,13 +1858,11 @@ const __hideEmptyBadges=()=>{document.querySelectorAll('[class*="badge"],[class*
     function forceHomepageDefaultStation(){
       const pagePath=typeof location!=="undefined"&&location?location.pathname:"";
       if(pagePath==="/" || pagePath.endsWith("/index.html")){
-        activeStation="eyupsultan";
-        try{localStorage.setItem("istanbul-hava-station","eyupsultan");}catch(_){}
         const e=$("station-enka-button"), y=$("station-eyupsultan-button"), s=$("station-sisli-button");
-        if(e)e.classList.toggle("active",false),e.setAttribute("aria-pressed","false");
-        if(y)y.classList.toggle("active",true),y.setAttribute("aria-pressed","true");
-        if(s)s.classList.toggle("active",false),s.setAttribute("aria-pressed","false");
-        safeRenderStationCard(eyupsultanStationObservation);
+        if(e)e.classList.toggle("active",activeStation==="enka"),e.setAttribute("aria-pressed",String(activeStation==="enka"));
+        if(y)y.classList.toggle("active",activeStation==="eyupsultan"),y.setAttribute("aria-pressed",String(activeStation==="eyupsultan"));
+        if(s)s.classList.toggle("active",activeStation==="sisli"),s.setAttribute("aria-pressed",String(activeStation==="sisli"));
+        safeRenderStationCard(activeStation==="enka"?enkaStationObservation:activeStation==="eyupsultan"?eyupsultanStationObservation:sisliStationObservation);
       }
     }
     function selectStation(stationKey){
