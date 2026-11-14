@@ -86,6 +86,34 @@ async function shareGfsComparisonLink(validKey,title,host,svg){
     window.prompt("Paylaşım linki",shareUrl);
   }
 }
+function ensureGfsComparisonShareControl(host,svg){
+  const shareHost=host.closest(".gfs-mobile-panel-stack")||host;
+  if(shareHost.__gfsShareControl)return shareHost.__gfsShareControl;
+  shareHost.style.position="relative";
+  shareHost.__gfsFullSvg=shareHost.__gfsFullSvg||svg;
+  const button=document.createElement("button");
+  button.type="button";
+  button.className="gfs-chart-share-global";
+  button.setAttribute("aria-label","Dört GFS döngüsünü birlikte paylaş");
+  button.title="Dört döngü karşılaştırmasını paylaş";
+  button.textContent="↗ Paylaş";
+  button.addEventListener("pointerdown",event=>{
+    event.stopPropagation();
+  });
+  button.addEventListener("click",async event=>{
+    event.preventDefault();
+    event.stopPropagation();
+    const panels=shareHost.__gfsSharePanels||[];
+    const first=panels[0];
+    const fallbackTime=first&&Array.isArray(first.valid_times)?first.valid_times[first.valid_times.length-1]:null;
+    const validKey=shareHost.__gfsActiveShareKey||normalizeGfsShareKey(fallbackTime);
+    const fullSvg=shareHost.__gfsFullSvg||svg;
+    await shareGfsComparisonLink(validKey,"GFS dört döngü karşılaştırması",shareHost,fullSvg);
+  });
+  shareHost.appendChild(button);
+  shareHost.__gfsShareControl=button;
+  return button;
+}
 function clearGfsSvgGroup(group){
   if(!group)return;
   while(group.firstChild)group.removeChild(group.firstChild);
@@ -137,9 +165,7 @@ function buildGfsTooltipMarkup(panel,index,validTime,latestOnly){
   const shareKey=String(validTime&&validTime.utcLabel||validTime&&validTime.utc_label||validTime&&validTime.label||"").trim();
   return '<div class="gfs-chart-tooltip-head"><div><div class="gfs-chart-tooltip-title">'+escapeGfsTooltip(panel.title)+'</div>'+
     '<div class="gfs-chart-tooltip-time">'+escapeGfsTooltip(formatGfsTooltipTs(validTime))+'</div></div></div>'+
-    rows+'<div class="gfs-chart-tooltip-actions">'+
-    '<button type="button" class="gfs-chart-tooltip-share" data-gfs-share-key="'+escapeGfsTooltip(shareKey)+'" aria-label="Bu dört döngü karşılaştırmasını paylaş">↗ Paylaş</button>'+
-    '</div>'+
+    rows+
     '<div class="gfs-chart-tooltip-hint">'+hint+'</div>';
 }
 function positionGfsTooltip(host,tooltip,clientX,clientY){
@@ -240,18 +266,14 @@ function attachGfsSvgInteractions(host,svg,metadata,syncGroup,latestOnly){
       marker.setAttribute("class","gfs-tooltip-marker");
       markerGroup.appendChild(marker);
     });
+    const shareHost=host.closest(".gfs-mobile-panel-stack")||host;
+    shareHost.__gfsActiveShareKey=normalizeGfsShareKey(validTime);
+    shareHost.__gfsSharePanels=shareHost.__gfsSharePanels||panelList;
+    ensureGfsComparisonShareControl(host,svg);
     const panelTooltip=tooltips.get(panel.id);
     if(!panelTooltip)return;
     panelTooltip.innerHTML=buildGfsTooltipMarkup(panel,index,validTime,latestOnly===true);
     panelTooltip.style.pointerEvents="auto";
-    const shareButton=panelTooltip.querySelector("[data-gfs-share-key]");
-    if(shareButton){
-      shareButton.addEventListener("click",event=>{
-        event.preventDefault();
-        event.stopPropagation();
-        shareGfsComparisonLink(shareButton.getAttribute("data-gfs-share-key"),panel.title,host,svg);
-      });
-    }
     const anchor=event&&Number.isFinite(event.clientX)&&Number.isFinite(event.clientY)
       ? event : (anchorForIndex(panel,index)||event);
     positionGfsTooltip(host,panelTooltip,anchor && anchor.clientX,anchor && anchor.clientY);
@@ -629,6 +651,10 @@ async function loadInteractiveGfsCharts(root){
       svg.setAttribute("aria-label",host.dataset.chartLabel||"İstanbul GFS dört panelli etkileşimli valid-time karşılaştırması");
       svg.setAttribute("focusable","true");
       (host.querySelector(".gfs-chart-loading") && host.querySelector(".gfs-chart-loading").remove());
+      const fullShareHost=host.closest(".gfs-mobile-panel-stack")||host;
+      fullShareHost.__gfsFullSvg=svg;
+      fullShareHost.__gfsSharePanels=metadata.panels||[];
+      ensureGfsComparisonShareControl(host,svg);
       if(isMobileGfsLayout()){
         const mobileViews=buildMobileGfsPanelViews(svg,metadata);
         if(mobileViews){
