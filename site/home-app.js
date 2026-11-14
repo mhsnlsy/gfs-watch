@@ -42,10 +42,18 @@ const __hideEmptyBadges=()=>{document.querySelectorAll('[class*="badge"],[class*
     // No forecast-verification.json is published yet; avoid repeated 404s until the calibration archive is generated.
     const VERIFY_URL=null;
     let enkaStationObservation=null,eyupsultanStationObservation=null,sisliStationObservation=null,activeStation="eyupsultan";
-    // Persist the last selected live station across page refreshes.
+    // First opening of a browser session starts on Eyüpsultan.
+    // A selected station is restored only on subsequent reloads in the same session.
     try{
+      const sessionKey="istanbul-hava-station-session";
       const savedStation=localStorage.getItem("istanbul-hava-station");
-      if(["enka","eyupsultan","sisli"].includes(savedStation)) activeStation=savedStation;
+      const isFirstOpen=!sessionStorage.getItem(sessionKey);
+      if(isFirstOpen){
+        activeStation="eyupsultan";
+        sessionStorage.setItem(sessionKey,"1");
+      }else if(["enka","eyupsultan","sisli"].includes(savedStation)){
+        activeStation=savedStation;
+      }
     }catch(_){}
     let enkaStationHistorySamples=[],eyupsultanStationHistorySamples=[],sisliStationHistorySamples=[];
     let eyupsultanStationRainHistorySamples=[],sisliStationRainHistorySamples=[];
