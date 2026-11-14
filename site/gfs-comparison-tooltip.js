@@ -6,15 +6,69 @@ function readGfsComparisonShareKey(){
     return normalizeGfsShareKey({utcLabel:new URL(window.location.href).searchParams.get("gfs-valid")||""});
   }catch(_){return "";}
 }
-async function shareGfsComparisonLink(validKey,title){
+function scrollToGfsComparison(host){
+  try{
+    const target=host.closest(".notification-chart-only,.notification-image-item,.notification-images")||host;
+    requestAnimationFrame(()=>target.scrollIntoView({behavior:"smooth",block:"center"}));
+  }catch(_){}
+}
+async function buildGfsShareImage(svg){
+  if(!svg)return null;
+  try{
+    const clone=svg.cloneNode(true);
+    clone.querySelectorAll("script,foreignObject").forEach(node=>node.remove());
+    clone.setAttribute("xmlns","http://www.w3.org/2000/svg");
+    const vb=svg.viewBox&&svg.viewBox.baseVal;
+    const width=Math.max(1,Math.round(Number(vb&&vb.width||svg.clientWidth||1200)));
+    const height=Math.max(1,Math.round(Number(vb&&vb.height||svg.clientHeight||700)));
+    clone.setAttribute("width",String(width));
+    clone.setAttribute("height",String(height));
+    const svgBlob=new Blob([new XMLSerializer().serializeToString(clone)],{type:"image/svg+xml;charset=utf-8"});
+    const svgUrl=URL.createObjectURL(svgBlob);
+    try{
+      const image=new Image();
+      image.decoding="async";
+      image.src=svgUrl;
+      await new Promise((resolve,reject)=>{
+        image.onload=resolve;
+        image.onerror=reject;
+      });
+      const scale=Math.min(2,Math.max(1,window.devicePixelRatio||1));
+      const canvas=document.createElement("canvas");
+      canvas.width=width*scale;
+      canvas.height=height*scale;
+      const ctx=canvas.getContext("2d");
+      if(!ctx)return null;
+      ctx.fillStyle="#0A1B29";
+      ctx.fillRect(0,0,canvas.width,canvas.height);
+      ctx.drawImage(image,0,0,canvas.width,canvas.height);
+      const blob=await new Promise(resolve=>canvas.toBlob(resolve,"image/png",0.95));
+      if(!blob)return null;
+      return new File([blob],"istanbul-havasi-gfs-4lu-karsilastirma.png",{type:"image/png"});
+    }finally{
+      URL.revokeObjectURL(svgUrl);
+    }
+  }catch(error){
+    console.warn("[GFS SHARE IMAGE]",error);
+    return null;
+  }
+}
+async function shareGfsComparisonLink(validKey,title,host,svg){
   if(!validKey)return;
   const url=new URL(window.location.href);
   url.searchParams.set("gfs-valid",validKey);
   url.hash="gfs-comparison";
   const shareUrl=url.toString();
+  const shareTitle="İstanbul Havası · GFS dört döngü karşılaştırması";
+  const shareText=(title||"GFS karşılaştırması")+" · "+formatGfsTooltipTs({utcLabel:validKey})+"\n"+shareUrl;
   try{
     if(navigator.share){
-      await navigator.share({title:"İstanbul Havası · GFS dört döngü karşılaştırması",text:(title||"GFS karşılaştırması")+" · "+formatGfsTooltipTs({utcLabel:validKey}),url:shareUrl});
+      const imageFile=await buildGfsShareImage(svg);
+      if(imageFile && navigator.canShare && navigator.canShare({files:[imageFile]})){
+        await navigator.share({title:shareTitle,text:shareText,files:[imageFile]});
+      }else{
+        await navigator.share({title:shareTitle,text:shareText,url:shareUrl});
+      }
       return;
     }
   }catch(error){
@@ -195,7 +249,7 @@ function attachGfsSvgInteractions(host,svg,metadata,syncGroup,latestOnly){
       shareButton.addEventListener("click",event=>{
         event.preventDefault();
         event.stopPropagation();
-        shareGfsComparisonLink(shareButton.getAttribute("data-gfs-share-key"),panel.title);
+        shareGfsComparisonLink(shareButton.getAttribute("data-gfs-share-key"),panel.title,host,svg);
       });
     }
     const anchor=event&&Number.isFinite(event.clientX)&&Number.isFinite(event.clientY)
@@ -322,6 +376,7 @@ function attachGfsSvgInteractions(host,svg,metadata,syncGroup,latestOnly){
       host.setAttribute("data-pinned","true");
       const rect=svg.getBoundingClientRect();
       showSynchronized(sharedIndex,{clientX:rect.left+rect.width/2,clientY:rect.top+40});
+      scrollToGfsComparison(host);
     }
   }
 }
