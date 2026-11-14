@@ -133,6 +133,8 @@ const __hideEmptyBadges=()=>{document.querySelectorAll('[class*="badge"],[class*
       }else start();
     })();
     const numeric=value=>typeof value==="number"&&Number.isFinite(value);
+    // Canonical lower limit for wind-direction badges on all station views.
+    const WIND_BADGE_MIN_KMH=10.5;
     const windDirectionTr={
       N:"Kuzey",NNE:"Kuzey-kuzeydoğu",NE:"Kuzeydoğu",ENE:"Doğu-kuzeydoğu",
       E:"Doğu",ESE:"Doğu-güneydoğu",SE:"Güneydoğu",SSE:"Güney-güneydoğu",
@@ -1200,7 +1202,7 @@ const __hideEmptyBadges=()=>{document.querySelectorAll('[class*="badge"],[class*
           return "";
         })();
         let windBadge="";
-        if(Number.isFinite(windSpeed)&&windSpeed>=12){
+        if(Number.isFinite(windSpeed)&&windSpeed>=WIND_BADGE_MIN_KMH){
           if(windCardinal==="NNW"||windCardinal==="NW") windBadge="Karayel hakim";
           else if(windCardinal==="NNE"||windCardinal==="NE") windBadge="Poyraz hakim";
           else if(windCardinal==="N") windBadge="Rüzgarlı";
