@@ -89,9 +89,8 @@ async function shareGfsComparisonLink(validKey,title,host,svg){
 function ensureGfsComparisonShareControl(host,svg){
   const shareHost=host.closest(".notification-chart-only")||host.closest(".gfs-mobile-panel-stack")||host;
   if(shareHost.__gfsShareControl)return shareHost.__gfsShareControl;
-  shareHost.style.position="relative";
-  shareHost.style.overflow="visible";
   shareHost.__gfsFullSvg=shareHost.__gfsFullSvg||svg;
+
   const button=document.createElement("button");
   button.type="button";
   button.className="gfs-chart-share-global";
@@ -111,7 +110,17 @@ function ensureGfsComparisonShareControl(host,svg){
     const fullSvg=shareHost.__gfsFullSvg||svg;
     await shareGfsComparisonLink(validKey,"GFS dört döngü karşılaştırması",shareHost,fullSvg);
   });
-  shareHost.appendChild(button);
+
+  // The share control belongs ABOVE the chart/media itself, not over the SVG.
+  // Keep it outside the interactive chart host so it never covers °C, legends,
+  // plotted data, or the iframe/SVG surface.
+  const media=shareHost.querySelector(".notification-images,.gfs-mobile-panel-stack");
+  const toolbar=document.createElement("div");
+  toolbar.className="gfs-chart-share-toolbar";
+  toolbar.appendChild(button);
+  if(media) shareHost.insertBefore(toolbar,media);
+  else shareHost.insertBefore(toolbar,host);
+
   shareHost.__gfsShareControl=button;
   return button;
 }
