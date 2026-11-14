@@ -1201,10 +1201,9 @@ const __hideEmptyBadges=()=>{document.querySelectorAll('[class*="badge"],[class*
         })();
         let windBadge="";
         if(Number.isFinite(windSpeed)&&windSpeed>=12){
-          if(windCardinal==="NNW") windBadge="Poyraz hakim";
-          else if(windCardinal==="N"||windCardinal==="NNE") windBadge="Rüzgarlı";
-          else if(windCardinal==="NW") windBadge="Karayel hakim";
-          else if(windCardinal==="NE") windBadge="Poyraz hakim";
+          if(windCardinal==="NNW"||windCardinal==="NW") windBadge="Karayel hakim";
+          else if(windCardinal==="NNE"||windCardinal==="NE") windBadge="Poyraz hakim";
+          else if(windCardinal==="N") windBadge="Rüzgarlı";
           else if(windCardinal==="S"||windCardinal==="SSW"||windCardinal==="SW"||windCardinal==="SSE"||windCardinal==="WSW"||windCardinal==="W") windBadge="Lodos hakim";
         }
         const rainLabel=(rain1h!==null && rain1h>0)
