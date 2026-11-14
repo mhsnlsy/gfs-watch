@@ -1213,8 +1213,8 @@ const __hideEmptyBadges=()=>{document.querySelectorAll('[class*="badge"],[class*
         })();
         let windBadge="";
         if(Number.isFinite(windSpeed)&&windSpeed>=WIND_BADGE_MIN_KMH){
-          if(windCardinal==="NNW"||windCardinal==="NW") windBadge="Karayel hakim";
-          else if(windCardinal==="NNE"||windCardinal==="NE") windBadge="Poyraz hakim";
+          if(windCardinal==="NNW"||windCardinal==="NW"||windCardinal==="WNW") windBadge="Karayel hakim";
+          else if(windCardinal==="NNE"||windCardinal==="NE"||windCardinal==="ENE") windBadge="Poyraz hakim";
           else if(windCardinal==="N") windBadge="Rüzgarlı";
           else if(windCardinal==="S"||windCardinal==="SSW"||windCardinal==="SW"||windCardinal==="SSE"||windCardinal==="WSW"||windCardinal==="W") windBadge="Lodos hakim";
         }
