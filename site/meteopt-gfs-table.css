@@ -2056,3 +2056,31 @@ html,body{
     font-size: 9px !important;
   }
 }
+
+
+/* 20261115: restore Steps; tighten only horizontal cell spacing on mobile. */
+@media (max-width: 560px) {
+  #meteopt-gfs-table .meteopt-data-table th:first-child,
+  #meteopt-gfs-table .meteopt-data-table td:first-child {
+    display: table-cell !important;
+    width: 7% !important;
+    padding-left: 4px !important;
+    padding-right: 4px !important;
+  }
+  #meteopt-gfs-table .meteopt-data-table th:nth-child(2),
+  #meteopt-gfs-table .meteopt-data-table td:nth-child(2) {
+    width: 23% !important;
+    padding-left: 4px !important;
+    padding-right: 4px !important;
+  }
+  #meteopt-gfs-table .meteopt-data-table th:nth-child(n+3),
+  #meteopt-gfs-table .meteopt-data-table td:nth-child(n+3) {
+    width: 10% !important;
+    padding-left: 3px !important;
+    padding-right: 3px !important;
+  }
+  #meteopt-gfs-table .meteopt-data-table th,
+  #meteopt-gfs-table .meteopt-data-table td {
+    white-space: nowrap !important;
+  }
+}
