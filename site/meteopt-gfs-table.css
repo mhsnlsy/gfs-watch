@@ -2027,3 +2027,32 @@ html,body{
     line-height:8px!important;
   }
 }
+
+
+/* 20261115: mobile readability — reclaim the Steps column space without changing forecast data. */
+@media (max-width: 560px) {
+  #meteopt-gfs-table .meteopt-data-table th:first-child,
+  #meteopt-gfs-table .meteopt-data-table td:first-child {
+    display: none !important;
+  }
+  #meteopt-gfs-table .meteopt-data-table th:nth-child(2),
+  #meteopt-gfs-table .meteopt-data-table td:nth-child(2) {
+    width: 26% !important;
+  }
+  #meteopt-gfs-table .meteopt-data-table th:nth-child(n+3),
+  #meteopt-gfs-table .meteopt-data-table td:nth-child(n+3) {
+    width: 10.5714% !important;
+  }
+  #meteopt-gfs-table .meteopt-data-table th {
+    font-size: 9px !important;
+    line-height: 1.05 !important;
+  }
+  #meteopt-gfs-table .meteopt-data-table td,
+  #meteopt-gfs-table .meteopt-data-table .meteopt-value {
+    font-size: 11px !important;
+    line-height: 1.05 !important;
+  }
+  #meteopt-gfs-table .meteopt-data-table td:nth-child(2) {
+    font-size: 9px !important;
+  }
+}
