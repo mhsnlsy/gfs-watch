@@ -313,9 +313,29 @@ const __hideEmptyBadges=()=>{document.querySelectorAll('[class*="badge"],[class*
         if(!value)return "";
         return '<span class="pressure-lifecycle pressure-lifecycle-'+value+'">'+esc(value)+'</span>';
       };
+      // The pressure forecast is based on the latest GFS cycle's full 120-hour
+      // window, but the UI must never show a calendar date that is already past
+      // in Istanbul. This is intentionally date-based rather than forecast-hour
+      // based, because a cycle can begin on the previous local calendar day.
+      const todayIstanbulKey=()=>{
+        const parts=new Intl.DateTimeFormat("en-CA",{timeZone:"Europe/Istanbul",year:"numeric",month:"2-digit",day:"2-digit"}).formatToParts(new Date());
+        const y=parts.find(p=>p.type==="year")?.value||"";
+        const m=parts.find(p=>p.type==="month")?.value||"";
+        const d=parts.find(p=>p.type==="day")?.value||"";
+        return y+"-"+m+"-"+d;
+      };
+      const istanbulDateKey=value=>{
+        const parts=new Intl.DateTimeFormat("en-CA",{timeZone:"Europe/Istanbul",year:"numeric",month:"2-digit",day:"2-digit"}).formatToParts(new Date(value));
+        const y=parts.find(p=>p.type==="year")?.value||"";
+        const m=parts.find(p=>p.type==="month")?.value||"";
+        const d=parts.find(p=>p.type==="day")?.value||"";
+        return y+"-"+m+"-"+d;
+      };
+      const todayKey=todayIstanbulKey();
+      const futureSteps=steps.filter(step=>step&&step.valid_time_utc&&istanbulDateKey(step.valid_time_utc)>=todayKey);
       const lowRows=[],highRows=[];
       [0,12,24,48,72,96,120].forEach(hour=>{
-        const step=steps.find(s=>Number(s.forecast_hour)===hour);
+        const step=futureSteps.find(s=>Number(s.forecast_hour)===hour);
         if(!step)return;
         const low=bestAt(step,"low"), high=bestAt(step,"high");
         if(low)lowRows.push("<li><strong>"+validDayLabel(step)+"</strong> · "+esc(region(low))+" · ~"+Number(low.pressure_hpa).toFixed(0)+" hPa "+lifecycleBadge(step,low)+"</li>");
