@@ -5490,3 +5490,76 @@ main.shell { padding-bottom:max(12px,env(safe-area-inset-bottom)); }
   right:0!important;
   max-width:100%!important;
 }
+
+/* 20261115: subtle UI polish — visual-only, no layout/data changes. */
+:root{
+  --ui-glow:rgba(125,211,215,.16);
+  --ui-soft:rgba(255,255,255,.035);
+}
+.topbar{
+  background:linear-gradient(180deg,rgba(7,21,33,.72),rgba(7,21,33,.28));
+  backdrop-filter:blur(10px);
+  -webkit-backdrop-filter:blur(10px);
+}
+.brand{transition:opacity .18s ease,transform .18s ease}
+.brand:hover{opacity:.96;transform:translateY(-1px)}
+.top-right .version{
+  background:rgba(255,255,255,.025);
+  transition:border-color .18s ease,background .18s ease;
+}
+.top-right .version:hover{
+  border-color:rgba(125,211,215,.28);
+  background:rgba(125,211,215,.05);
+}
+nav a{
+  position:relative;
+  transition:color .18s ease;
+}
+nav a::after{
+  content:"";
+  position:absolute;
+  left:0;right:0;bottom:-7px;
+  height:2px;
+  border-radius:2px;
+  background:var(--cyan);
+  transform:scaleX(0);
+  transform-origin:center;
+  transition:transform .18s ease;
+  opacity:.75;
+}
+nav a:hover::after,nav a[aria-current="page"]::after{transform:scaleX(1)}
+.weather-card,.chart-card,.pressure-card,.info-card,.notification-card,.meteopt-table-card{
+  transition:border-color .2s ease,box-shadow .2s ease,transform .2s ease;
+}
+.weather-card:hover,.chart-card:hover,.pressure-card:hover,.info-card:hover,.notification-card:hover,.meteopt-table-card:hover{
+  border-color:rgba(125,211,215,.16);
+}
+.station-card:hover{
+  border-color:rgba(125,211,215,.42);
+  box-shadow:0 24px 76px rgba(0,0,0,.25),inset 3px 0 0 rgba(125,211,215,.62);
+}
+.station-switch button,.model-picker button{
+  transition:background .16s ease,border-color .16s ease,color .16s ease,transform .16s ease;
+}
+.station-switch button:hover,.model-picker button:hover{
+  transform:translateY(-1px);
+}
+.section-head{position:relative}
+.section-head::after{
+  content:"";
+  display:block;
+  width:42px;
+  height:2px;
+  margin-top:12px;
+  border-radius:2px;
+  background:linear-gradient(90deg,var(--cyan),transparent);
+  opacity:.65;
+}
+.section-head .section-note{opacity:.92}
+@media(max-width:560px){
+  .section-head::after{margin-top:9px;width:34px}
+  .topbar{background:rgba(7,21,33,.86)}
+}
+@media(prefers-reduced-motion:reduce){
+  .brand,.station-switch button,.model-picker button,.weather-card,.chart-card,.pressure-card,.info-card,.notification-card,.meteopt-table-card{transition:none}
+}
