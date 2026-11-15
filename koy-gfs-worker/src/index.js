@@ -934,10 +934,46 @@ export function buildKoyInteractiveSvg(comparison) {
 }
 
 async function publishLatestKoySvg(env, expectedKey = null) {
-  // The live table is sourced from gfs_current/f72. The published SVG must
-  // use that exact payload as its newest cycle; gfs_runs is only the source
-  // for the three older comparison cycles.
-  const current = await currentRun(env, "f72");
+  // The chart must use an F180-complete newest cycle. The f72 current record
+  // is retained for backward compatibility, but during the short collection
+  // window it can temporarily contain only the first 72 hours. In that case
+  // use the newest F180-complete archived payload instead of publishing a
+  // permanently truncated 72-hour comparison.
+  let current = await currentRun(env, "f72");
+  const currentMaxHour = Math.max(
+    0,
+    ...(Array.isArray(current?.payload?.forecast_6_hourly)
+      ? current.payload.forecast_6_hourly.map(point => Number(point?.forecast_hour)).filter(Number.isFinite)
+      : [])
+  );
+
+  if (!current?.payload?.run_id_utc || currentMaxHour < 180) {
+    const latestFull = await env.GFS_DB.prepare(
+      "SELECT run_id_utc, payload_json, published_at_utc FROM gfs_runs ORDER BY run_id_utc DESC LIMIT 12"
+    ).all();
+    const fullRow = (latestFull.results || []).find(row => {
+      try {
+        const payload = JSON.parse(row.payload_json || "{}");
+        const maxHour = Math.max(
+          0,
+          ...(Array.isArray(payload.forecast_6_hourly)
+            ? payload.forecast_6_hourly.map(point => Number(point?.forecast_hour)).filter(Number.isFinite)
+            : [])
+        );
+        return maxHour >= 180;
+      } catch (_) {
+        return false;
+      }
+    });
+    if (fullRow?.payload_json) {
+      current = {
+        run_id_utc: fullRow.run_id_utc,
+        payload: JSON.parse(fullRow.payload_json),
+        updated_at_utc: fullRow.published_at_utc || null,
+      };
+    }
+  }
+
   if (!current?.payload?.run_id_utc) return null;
 
   const latestKey = "media/koy-gfs-" + svgRunStamp(current.payload.run_id_utc) + "-comparison.svg";
@@ -1019,9 +1055,17 @@ async function collect(env) {
     }
   }
 
+  // Once an F180 payload exists, make it the canonical current payload BEFORE
+  // rendering the comparison SVG. Previously the SVG was published while
+  // gfs_current still contained the temporary F72 payload, which truncated
+  // the newest chart series to 72 hours and left that stale SVG published.
+  if (normalized.full) {
+    f72Changed = await persistF72(env, normalized.full) || f72Changed;
+  }
+
   // Render the four-cycle interactive SVG in this Worker and keep the canonical copy in D1.
   // A rendering problem must not interrupt the successful GFS data collection.
-  if (archivedRunsChanged > 0 || f72Changed) {
+  if (archivedRunsChanged > 0 || f72Changed || f180Changed) {
     try {
       comparisonSvgPublished = Boolean(await publishLatestKoySvg(env));
     } catch (error) {
@@ -1030,11 +1074,6 @@ async function collect(env) {
         message: String(error?.message || error),
       }));
     }
-  }
-
-  // Keep the F72 endpoint on the same canonical F180-ready cycle once it exists.
-  if (normalized.full && f180Changed) {
-    f72Changed = await persistF72(env, normalized.full) || f72Changed;
   }
 
   console.log(JSON.stringify({
