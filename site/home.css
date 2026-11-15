@@ -5563,3 +5563,39 @@ nav a:hover::after,nav a[aria-current="page"]::after{transform:scaleX(1)}
 @media(prefers-reduced-motion:reduce){
   .brand,.station-switch button,.model-picker button,.weather-card,.chart-card,.pressure-card,.info-card,.notification-card,.meteopt-table-card{transition:none}
 }
+
+/* 20261115: second subtle UI polish — premium depth, calmer nav, station focus. */
+.weather-card,.chart-card,.pressure-card,.info-card,.notification-card,.meteopt-table-card{
+  box-shadow:0 18px 55px rgba(0,0,0,.16);
+}
+.weather-card:hover,.chart-card:hover,.pressure-card:hover,.info-card:hover,.notification-card:hover,.meteopt-table-card:hover{
+  box-shadow:0 21px 62px rgba(0,0,0,.20);
+}
+.topbar{
+  border-bottom-color:rgba(204,225,239,.08);
+}
+nav{gap:23px}
+nav a{color:#aebfc8}
+nav a:hover{color:#eef7f8}
+.station-card{
+  box-shadow:0 20px 62px rgba(0,0,0,.20),inset 3px 0 0 rgba(125,211,215,.62);
+}
+.station-card .temperature{
+  text-shadow:0 6px 26px rgba(125,211,215,.10);
+}
+.station-card .weather-symbol{
+  filter:drop-shadow(0 7px 16px rgba(125,211,215,.12));
+}
+.station-card .stat{
+  background:rgba(5,20,31,.20);
+  border-color:rgba(213,237,240,.075);
+}
+@media(max-width:560px){
+  .weather-card,.chart-card,.pressure-card,.info-card,.notification-card,.meteopt-table-card{
+    box-shadow:0 13px 38px rgba(0,0,0,.15);
+  }
+  .weather-card:hover,.chart-card:hover,.pressure-card:hover,.info-card:hover,.notification-card:hover,.meteopt-table-card:hover{
+    box-shadow:0 15px 42px rgba(0,0,0,.17);
+  }
+  nav{gap:18px}
+}
