@@ -346,7 +346,7 @@ const __hideEmptyBadges=()=>{document.querySelectorAll('[class*="badge"],[class*
 
       if(checkpointEl){
         const items=[0,12,24,48,72,96,120].map(hour=>{
-          const step=steps.find(s=>Number(s.forecast_hour)===hour);
+          const step=futureSteps.find(s=>Number(s.forecast_hour)===hour);
           if(!step)return "";
           const low=bestAt(step,"low"), high=bestAt(step,"high");
           const bits=[];
@@ -360,20 +360,22 @@ const __hideEmptyBadges=()=>{document.querySelectorAll('[class*="badge"],[class*
       const trend=document.getElementById("pressure-trend");
       if(trend){
         const parts=[];
-        tracks.filter(t=>t.points&&t.points.length>=2).forEach(t=>{
-          const a=t.points[0], b=t.points[t.points.length-1];
-          const dp=Number(t.pressure_change_hpa);
+        tracks.map(t=>{
+          const points=(t.points||[]).filter(point=>point&&point.valid_time_utc&&istanbulDateKey(point.valid_time_utc)>=todayKey);
+          if(points.length<2)return null;
+          const firstPoint=points[0], lastPoint=points[points.length-1];
+          const dp=Number(lastPoint.pressure_hpa)-Number(firstPoint.pressure_hpa);
           const trendText=t.type==="low"?(dp<=-1?"güçleniyor":dp>=1?"zayıflıyor":"belirgin değişmiyor"):(dp>=1?"güçleniyor":dp<=-1?"zayıflıyor":"belirgin değişmiyor");
           const label=t.type==="low"?"Siklon":"Yüksek basınç";
-          parts.push("<span><strong>"+label+":</strong> "+esc(t.lifecycle||trendText)+" ("+dp.toFixed(1)+" hPa / 120 saat); "+Number(t.movement_km).toFixed(0)+" km "+esc(t.movement_direction)+" hareket; tepe adımı +"+Number(t.peak_forecast_hour||0)+" saat.</span>");
-        });
-        trend.innerHTML="<strong>Hareket ve trend:</strong> "+(parts.length?parts.slice(0,4).join(" "):"120 saatlik merkez hareketi için yeterli iz bulunamadı.");
+          return "<span><strong>"+label+":</strong> "+esc(lastPoint.lifecycle||t.lifecycle||trendText)+" ("+dp.toFixed(1)+" hPa / "+Math.max(1,Math.round((new Date(lastPoint.valid_time_utc)-new Date(firstPoint.valid_time_utc))/3600000))+" saat); "+Number(t.movement_km||0).toFixed(0)+" km "+esc(t.movement_direction||"")+" hareket; tepe adımı +"+Number(t.peak_forecast_hour||0)+" saat.</span>";
+        }).filter(Boolean);
+        trend.innerHTML="<strong>Hareket ve trend:</strong> "+(parts.length?parts.slice(0,4).join(" "):"Bugün ve sonrası için yeterli merkez hareketi bulunamadı.");
       }
 
       const note=document.querySelector(".gfs-pressure-panel .section-note");
       if(note){
-        const first=payload.cycle_utc?new Date(payload.cycle_utc):null;
-        const last=steps.length?new Date(steps[steps.length-1].valid_time_utc):null;
+        const first=futureSteps.length?new Date(futureSteps[0].valid_time_utc):null;
+        const last=futureSteps.length?new Date(futureSteps[futureSteps.length-1].valid_time_utc):null;
         const fmtDate=d=>d?new Intl.DateTimeFormat("tr-TR",{timeZone:"Europe/Istanbul",day:"2-digit",month:"2-digit"}).format(d):"—";
         note.innerHTML="Anlık analiz + model tahmini<br>"+fmtDate(first)+"–"+fmtDate(last);
       }
