@@ -1624,9 +1624,11 @@ const __hideEmptyBadges=()=>{document.querySelectorAll('[class*="badge"],[class*
           const deg=((item.windDir%360)+360)%360;
           if(deg<157.5||deg>247.5)continue;
           const key=istanbulCivilDayKeys(now,BRIEFING_DAY_COUNT).find(dayKey=>tableForecastDayKey(item.stamp)===dayKey);
-          if(key)days.set(key,item.stamp);
+          if(!key)continue;
+          const previous=days.get(key);
+          if(!previous||item.wind>previous.wind)days.set(key,{stamp:item.stamp,wind:item.wind});
         }
-        return Array.from(days.entries()).map(([key,stamp])=>({key,stamp})).sort((a,b)=>a.stamp-b.stamp);
+        return Array.from(days.entries()).map(([key,value])=>({key,stamp:value.stamp,wind:value.wind})).sort((a,b)=>a.stamp-b.stamp);
       };
       const groups=[];
       for(const item of series){
@@ -1671,7 +1673,29 @@ const __hideEmptyBadges=()=>{document.querySelectorAll('[class*="badge"],[class*
       }
       const lodos=lodosDays(briefingWindowPoints(briefingForecastPoints(),now));
       if(lodos.length){
-        summary+=" "+lodos.map(item=>dayLabel(item.stamp)+" günü Lodos geliyor.").join(" ");
+        const periods=[];
+        for(const item of lodos){
+          const previous=periods[periods.length-1];
+          if(previous&&item.key===previous.lastKey){
+            previous.lastKey=item.key;
+            previous.days.push(item);
+          }else{
+            periods.push({first:item,lastKey:item.key,days:[item]});
+          }
+        }
+        const lodosText=periods.map(period=>{
+          const duration=period.days.length;
+          let sentence=dayLabel(period.first.stamp)+" günü Lodos geliyor";
+          if(duration>1)sentence+=" ve "+duration+" gün sürecek";
+          sentence+=".";
+          const strongDays=period.days.filter(item=>item.wind>20);
+          if(strongDays.length){
+            const details=strongDays.map(item=>dayLabel(item.stamp)+" günü rüzgâr "+Math.round(item.wind)+" km/sa hıza çıkacak").join(", ");
+            sentence+=" "+details+".";
+          }
+          return sentence;
+        }).join(" ");
+        summary+=" "+lodosText;
       }
       summary+=" "+currentText;
       holder.replaceChildren();
