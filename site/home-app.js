@@ -2209,7 +2209,8 @@ renderBriefing();
         const response=await fetchStationsApi("/stations?t="+cacheKey);
         if(!response.ok)throw new Error("Worker stations HTTP "+response.status);
         const document=await response.json();
-        const rows=Array.isArray(document.stations)?document.stations:[];
+        const raw=document.stations;
+        const rows=Array.isArray(raw)?raw:(raw&&typeof raw==="object"?Object.values(raw).filter(Boolean):[]);
         if(document.ok!==true||rows.length<3)throw new Error("Station gateway returned an incomplete station list");
         for(const row of rows){
           const station=workerStationToPageStation(row);
