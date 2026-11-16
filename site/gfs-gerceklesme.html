@@ -7,7 +7,7 @@
 <meta name="description" content="GFS tahmininin istasyon ölçümüyle gerçekleşmesi. Yazılı yüzde başarı ve ortalama sapma.">
 <title>GFS Gerçekleşme · İstanbul Havası</title>
 <link rel="icon" href="/favicon.svg" type="image/svg+xml">
-<link rel="stylesheet" href="/home.css?v=20261116-gerceklesme-9">
+<link rel="stylesheet" href="/home.css?v=20261116-gerceklesme-10">
 <link rel="stylesheet" href="/header-common.css?v=20261110-shared-header-1">
 <style>
   .shell.verif { width: min(1200px, calc(100% - 16px)); }
@@ -241,7 +241,7 @@ async function load() {
 
   try {
     const [hist, gfs] = await Promise.all([
-      fetchJSON(location.origin + "/api/history/" + station + "?hours=72"),
+      fetchJSON(location.origin + "/api/history/" + station + "?hours=180"),
       fetchJSON(GFS_BASE + "/gfs/latest")
     ]);
     const samples = hist.samples || [];
