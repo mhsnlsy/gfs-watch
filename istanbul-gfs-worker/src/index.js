@@ -173,6 +173,13 @@ function normalize(candidate, now) {
     const rain = values("precipitation_6h_mm");
     const wind = values("wind_speed_10m_kmh");
     const wind850 = values("wind_speed_850hpa_kmh");
+    const lodosComing = dayPoints.some(point => {
+      const speed = number(point.wind_speed_10m_kmh);
+      const direction = number(point.wind_direction_10m_deg);
+      if (speed === null || direction === null || speed <= 10) return false;
+      const deg = ((direction % 360) + 360) % 360;
+      return deg >= 157.5 && deg <= 247.5;
+    });
     const windPeak = dayPoints
       .filter(point => number(point.wind_speed_10m_kmh) !== null)
       .sort((a, b) => Number(b.wind_speed_10m_kmh) - Number(a.wind_speed_10m_kmh))[0] || null;
@@ -189,6 +196,7 @@ function normalize(candidate, now) {
         : null,
       wind_speed_max_10m_kmh: wind.length ? Math.max(...wind) : null,
       wind_direction_max_10m_deg: windPeak ? windPeak.wind_direction_10m_deg ?? null : null,
+      lodos_coming: lodosComing,
       wind_speed_max_850hpa_kmh: wind850.length ? Math.max(...wind850) : null,
       wind_direction_max_850hpa_deg: (() => {
         const peak = dayPoints
