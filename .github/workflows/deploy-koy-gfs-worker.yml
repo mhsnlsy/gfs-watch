@@ -8,6 +8,7 @@ on:
       - "shared/**"
       - ".github/workflows/deploy-koy-gfs-worker.yml"
       - "scripts/test_koy_worker_publication.mjs"
+      - "scripts/test_notification_pipeline.py"
   workflow_dispatch:
 
 permissions:
