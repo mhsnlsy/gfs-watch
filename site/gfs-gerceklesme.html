@@ -4,46 +4,31 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
 <meta name="theme-color" content="#081827">
-<meta name="description" content="GFS tahmininin istasyon ölçümüyle gerçekleşmesi. Sıcaklıkta 1 derece ve altı başarı sayılır. Yağış kuralı sayfada açıkça yazılır.">
-<title>GFS Gerçekleşme Verisi · İstanbul Havası</title>
+<meta name="description" content="GFS tahmininin Eyüpsultan istasyonuyla gerçekleşmesi. Ortalama sapma, başarı olasılığı ve korelasyon.">
+<title>GFS Gerçekleşme · İstanbul Havası</title>
 <link rel="icon" href="/favicon.svg" type="image/svg+xml">
-<link rel="stylesheet" href="/home.css?v=20261116-gerceklesme-3">
+<link rel="stylesheet" href="/home.css?v=20261116-gerceklesme-4">
 <link rel="stylesheet" href="/header-common.css?v=20261110-shared-header-1">
 <style>
-  .verif { padding: 22px 0 48px; }
-  .verif h1 { font: 800 28px/1.1 Manrope, sans-serif; letter-spacing: -.04em; margin: 0 0 8px; }
-  .verif .lead { color: #9bb1bf; font-size: 14px; line-height: 1.5; max-width: 760px; margin: 0 0 16px; }
-  .controls { display: flex; gap: 12px; align-items: center; margin-bottom: 16px; flex-wrap: wrap; }
-  .controls select, .controls button {
-    background: #102535; color: #e7f2f6; border: 1px solid rgba(213,237,240,.16);
-    padding: 8px 14px; border-radius: 8px; font: 600 13px "DM Sans", sans-serif;
-  }
+  .verif { padding: 20px 0 40px; }
+  .verif h1 { font: 800 26px/1.15 Manrope, sans-serif; margin: 0 0 6px; }
+  .verif .lead { color: #9bb1bf; font-size: 14px; line-height: 1.5; max-width: 780px; margin: 0 0 16px; }
+  .controls { display: flex; gap: 10px; align-items: center; margin-bottom: 16px; flex-wrap: wrap; }
+  .controls select, .controls button { background: #102535; color: #e7f2f6; border: 1px solid rgba(213,237,240,.16); padding: 8px 12px; border-radius: 8px; font-size: 13px; }
   .controls button { cursor: pointer; background: rgba(125,211,215,.15); border-color: rgba(125,211,215,.35); color: #c6f0ec; }
-  .pair { display: grid; grid-template-columns: 1fr 1fr; gap: 14px; }
-  .panel {
-    background: linear-gradient(160deg, rgba(18,44,62,.72), rgba(13,33,48,.8));
-    border: 1px solid rgba(204,225,239,.12);
-    border-radius: 16px;
-    padding: 16px;
-    min-width: 0;
-  }
-  .panel h2 { font: 700 18px/1.2 Manrope, sans-serif; margin: 4px 0 8px; }
-  .rule { color: #b7cbd3; font-size: 13px; line-height: 1.45; margin: 0 0 12px; }
-  .stats { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 8px; margin: 0 0 12px; }
-  .stat { background: rgba(5,20,31,.28); border-radius: 12px; padding: 10px 8px; text-align: center; }
-  .stat b { display: block; font: 700 22px/1.1 Manrope, sans-serif; color: #d8f4f2; margin-top: 4px; }
-  .stat span { display: block; font-size: 11px; line-height: 1.3; color: #9bb1bf; }
+  .summary-row { display: grid; grid-template-columns: repeat(auto-fit, minmax(160px, 1fr)); gap: 10px; margin-bottom: 18px; }
+  .card { background: linear-gradient(160deg, rgba(18,44,62,.72), rgba(13,33,48,.8)); border: 1px solid rgba(204,225,239,.12); border-radius: 14px; padding: 14px; text-align: center; }
+  .card b { display: block; font: 700 22px/1.1 Manrope, sans-serif; color: #d8f4f2; margin-top: 4px; }
+  .card span { font-size: 11px; color: #9bb1bf; line-height: 1.3; }
+  .panel { background: linear-gradient(160deg, rgba(18,44,62,.72), rgba(13,33,48,.8)); border: 1px solid rgba(204,225,239,.12); border-radius: 16px; padding: 16px; margin-bottom: 16px; }
+  .panel h2 { font: 700 17px/1.2 Manrope, sans-serif; margin: 0 0 6px; }
+  .rule { color: #b7cbd3; font-size: 13px; margin: 0 0 12px; }
+  .chart-wrap { margin: 8px 0; }
   .chart-wrap svg { display: block; width: 100%; height: auto; }
-  .empty { color: #9bb1bf; font-size: 14px; margin: 8px 0; }
-  .note { font-size: 12px; color: #8fa7b5; line-height: 1.45; margin: 14px 0 0; }
-  #status { padding: 14px 16px; background: rgba(255,255,255,.04); border-radius: 12px; color: #d5e4ea; }
-  @media (max-width: 700px) {
-    .pair { grid-template-columns: 1fr; }
-    .verif h1 { font-size: 24px; }
-    .stats { grid-template-columns: 1fr; }
-    .stat { display: flex; justify-content: space-between; align-items: center; text-align: left; gap: 10px; }
-    .stat b { margin-top: 0; font-size: 18px; white-space: nowrap; }
-  }
+  .stable { background: rgba(125,211,215,.12); border-radius: 10px; padding: 10px 12px; margin-top: 10px; font-size: 13px; }
+  .note { font-size: 12px; color: #8fa7b5; margin-top: 10px; line-height: 1.4; }
+  #status { padding: 14px; background: rgba(255,255,255,.04); border-radius: 12px; }
+  @media (max-width: 700px) { .summary-row { grid-template-columns: 1fr 1fr; } }
 </style>
 </head>
 <body>
@@ -60,8 +45,8 @@
 </header>
 
 <main class="shell verif">
-  <h1>GFS gerçekleşme</h1>
-  <p class="lead">Son 72 saatteki istasyon ölçümü, aynı andaki GFS tahminiyle yan yana konur. Eşleşme 45 dakika içinde aranır. Saatler Türkiye saati (TSİ) ile gösterilir. Boş kayıtlar hesaba katılmaz.</p>
+  <h1>GFS gerçekleşme analizi</h1>
+  <p class="lead">GFS tahminleri Eyüpsultan (veya seçilen) istasyon ölçümleriyle karşılaştırılır. Ortalama sapma, başarı olasılığı ve korelasyon hesaplanır. Hangi tahmin saatlerinde modelin daha tutarlı olduğu gösterilir.</p>
 
   <div class="controls">
     <label>İstasyon
@@ -75,201 +60,236 @@
 
   <div id="status">Veriler yükleniyor…</div>
 
-  <div class="pair" id="panels" hidden>
-    <article class="panel">
-      <div class="section-kicker">SICAKLIK</div>
-      <h2>2 metre sıcaklık</h2>
-      <p class="rule">Başarı: tahmin ile ölçüm arasındaki fark 1 °C veya daha azsa o eşleşme tutmuş sayılır.</p>
-      <div class="stats" id="temp-stats"></div>
-      <div class="chart-wrap" id="temp-chart"></div>
-    </article>
-    <article class="panel">
-      <div class="section-kicker">YAĞIŞ</div>
-      <h2>6 saatlik yağış</h2>
-      <p class="rule">0,2 milimetrenin altı yağışsız sayılır. İkisi de yağışsızsa tutmuş sayılır. İkisinde de yağış varsa ve miktar farkı 1 milimetre veya daha azsa tutmuş sayılır.</p>
-      <div class="stats" id="rain-stats"></div>
-      <div class="chart-wrap" id="rain-chart"></div>
-    </article>
+  <div id="content" hidden>
+    <div class="summary-row" id="overall"></div>
+
+    <div class="panel">
+      <h2>Sıcaklık – ortalama sapma ve başarı</h2>
+      <p class="rule">1 °C ve altı fark başarı sayılır. Ortalama sapma = tahmin − ölçüm (pozitif değer modelin daha sıcak tahmin ettiğini gösterir).</p>
+      <div class="chart-wrap" id="temp-bias-chart"></div>
+      <div class="chart-wrap" id="temp-success-chart"></div>
+      <div id="temp-stable" class="stable"></div>
+    </div>
+
+    <div class="panel">
+      <h2>Yağış – ortalama sapma ve başarı</h2>
+      <p class="rule">0,2 mm altı yağışsız sayılır. İkisi de yağışsızsa veya miktar farkı 1 mm ve altındaysa başarı sayılır.</p>
+      <div class="chart-wrap" id="rain-bias-chart"></div>
+      <div class="chart-wrap" id="rain-success-chart"></div>
+      <div id="rain-stable" class="stable"></div>
+    </div>
+
+    <p class="note">Korelasyon, tüm eşleşen kayıtlar üzerinden Pearson katsayısıdır. 1’e yakın değer tahmin ile ölçümün birlikte hareket ettiğini gösterir. Veri azsa sonuç güvenilir olmayabilir.</p>
   </div>
-  <p class="note" id="window-note" hidden>Model yağışı, GFS adımındaki yağış miktarıdır. İstasyon yağışı, ölçüm anındaki son 6 saatin yağışıdır. İki pencere birebir aynı değildir; kural yine de her eşleşmeye aynı şekilde uygulanır.</p>
 </main>
 
 <script>
 const GFS_BASE = "https://gfs-watch-istanbul-gfs.muhsin-ulusoy.workers.dev";
-const DRY_MM = 0.2;
-const RAIN_TOLERANCE_MM = 1;
-const TEMP_HIT_C = 1;
-const MATCH_WINDOW_MS = 45 * 60 * 1000;
+const TEMP_HIT = 1;
+const DRY = 0.2;
+const RAIN_TOL = 1;
+const MATCH_MS = 45 * 60 * 1000;
 
-function formatNumber(value, digits) {
-  return Number(value).toLocaleString("tr-TR", { minimumFractionDigits: digits, maximumFractionDigits: digits });
+function fmt(n, d = 1) {
+  return Number(n).toLocaleString("tr-TR", { minimumFractionDigits: d, maximumFractionDigits: d });
 }
 
 async function fetchJSON(url) {
-  const response = await fetch(url, { cache: "no-store" });
-  if (!response.ok) throw new Error("Veri alınamadı (" + response.status + ")");
-  return response.json();
+  const r = await fetch(url, { cache: "no-store" });
+  if (!r.ok) throw new Error("Veri alınamadı");
+  return r.json();
 }
 
-function nearestObservation(samples, targetTime) {
-  const target = Date.parse(targetTime);
-  if (!Number.isFinite(target)) return null;
-  let best = null;
-  let bestGap = MATCH_WINDOW_MS;
-  for (const sample of samples) {
-    const stamp = Date.parse(sample.observed_at_utc || sample.source_observed_at_utc || "");
-    if (!Number.isFinite(stamp)) continue;
-    const gap = Math.abs(stamp - target);
-    if (gap < bestGap) {
-      bestGap = gap;
-      best = sample;
-    }
+function nearest(samples, time) {
+  const t = Date.parse(time);
+  if (!Number.isFinite(t)) return null;
+  let best = null, bestGap = MATCH_MS;
+  for (const s of samples) {
+    const st = Date.parse(s.observed_at_utc || s.source_observed_at_utc || "");
+    if (!Number.isFinite(st)) continue;
+    const g = Math.abs(st - t);
+    if (g < bestGap) { bestGap = g; best = s; }
   }
   return best;
 }
 
-function uniqueRuns(document) {
-  const runs = [document].concat(Array.isArray(document.comparison_runs) ? document.comparison_runs : []);
-  const seen = new Set();
-  const unique = [];
-  for (const run of runs) {
-    if (!run || !run.run_id_utc || seen.has(run.run_id_utc)) continue;
-    seen.add(run.run_id_utc);
-    unique.push(run);
+function uniqueRuns(doc) {
+  const runs = [doc].concat(doc.comparison_runs || []);
+  const seen = new Set(), out = [];
+  for (const r of runs) {
+    if (r && r.run_id_utc && !seen.has(r.run_id_utc)) {
+      seen.add(r.run_id_utc);
+      out.push(r);
+    }
   }
-  return unique;
+  return out;
 }
 
-function collectPairs(samples, runs) {
-  const temperature = [];
-  const rain = [];
+function pearson(xs, ys) {
+  const n = xs.length;
+  if (n < 3) return null;
+  const mx = xs.reduce((a, b) => a + b, 0) / n;
+  const my = ys.reduce((a, b) => a + b, 0) / n;
+  let num = 0, dx = 0, dy = 0;
+  for (let i = 0; i < n; i++) {
+    const a = xs[i] - mx, b = ys[i] - my;
+    num += a * b;
+    dx += a * a;
+    dy += b * b;
+  }
+  const den = Math.sqrt(dx * dy);
+  return den === 0 ? null : num / den;
+}
+
+function collect(samples, runs) {
+  const temp = [], rain = [];
   const now = Date.now() + 30 * 60 * 1000;
   for (const run of runs) {
     for (const step of run.forecast_6_hourly || []) {
       const valid = Date.parse(step.valid_time_utc || "");
       if (!Number.isFinite(valid) || valid > now) continue;
-      const observation = nearestObservation(samples, step.valid_time_utc);
-      if (!observation) continue;
+      const obs = nearest(samples, step.valid_time_utc);
+      if (!obs) continue;
       const lead = Number(step.forecast_hour);
       if (!Number.isFinite(lead) || lead <= 0) continue;
-      const modelTemp = Number(step.temperature_2m_c);
-      const observedTemp = Number(observation.temperature_c);
-      if (Number.isFinite(modelTemp) && Number.isFinite(observedTemp)) {
-        const difference = modelTemp - observedTemp;
-        temperature.push({ lead, difference, hit: Math.abs(difference) <= TEMP_HIT_C });
+
+      const mt = Number(step.temperature_2m_c);
+      const ot = Number(obs.temperature_c);
+      if (Number.isFinite(mt) && Number.isFinite(ot)) {
+        const diff = mt - ot;
+        temp.push({ lead, model: mt, obs: ot, diff, hit: Math.abs(diff) <= TEMP_HIT });
       }
-      const modelRain = Number(step.precipitation_6h_mm);
-      const observedRain = Number(observation.rain_6h_mm);
-      if (Number.isFinite(modelRain) && Number.isFinite(observedRain)) {
-        const modelWet = modelRain >= DRY_MM;
-        const observedWet = observedRain >= DRY_MM;
-        const amountClose = Math.abs(modelRain - observedRain) <= RAIN_TOLERANCE_MM;
-        rain.push({
-          lead,
-          difference: modelRain - observedRain,
-          hit: (!modelWet && !observedWet) || (modelWet && observedWet && amountClose)
-        });
+
+      const mr = Number(step.precipitation_6h_mm);
+      const or = Number(obs.rain_6h_mm);
+      if (Number.isFinite(mr) && Number.isFinite(or)) {
+        const mw = mr >= DRY, ow = or >= DRY;
+        const close = Math.abs(mr - or) <= RAIN_TOL;
+        const hit = (!mw && !ow) || (mw && ow && close);
+        rain.push({ lead, model: mr, obs: or, diff: mr - or, hit });
       }
     }
   }
-  return { temperature, rain };
+  return { temp, rain };
 }
 
-function summarize(pairs) {
-  if (!pairs.length) return null;
-  const hits = pairs.filter(pair => pair.hit).length;
-  const meanAbsolute = pairs.reduce((sum, pair) => sum + Math.abs(pair.difference), 0) / pairs.length;
-  const byLead = new Map();
-  for (const pair of pairs) {
-    if (!byLead.has(pair.lead)) byLead.set(pair.lead, []);
-    byLead.get(pair.lead).push(pair);
+function byLead(pairs) {
+  const map = new Map();
+  for (const p of pairs) {
+    if (!map.has(p.lead)) map.set(p.lead, []);
+    map.get(p.lead).push(p);
   }
-  const hours = [...byLead.keys()].sort((a, b) => a - b).map(lead => {
-    const group = byLead.get(lead);
+  return [...map.entries()].sort((a, b) => a[0] - b[0]).map(([lead, group]) => {
     if (group.length < 2) return null;
-    const groupHits = group.filter(pair => pair.hit).length;
-    return { lead, count: group.length, success: groupHits / group.length * 100 };
+    const bias = group.reduce((s, p) => s + p.diff, 0) / group.length;
+    const success = group.filter(p => p.hit).length / group.length * 100;
+    return { lead, n: group.length, bias, success };
   }).filter(Boolean);
-  return { count: pairs.length, success: hits / pairs.length * 100, meanAbsolute, hours };
 }
 
-function statsMarkup(summary, unit) {
-  if (!summary) return '<p class="empty">Veri yok</p>';
-  return [
-    '<div class="stat"><span>Başarı</span><b>' + formatNumber(summary.success, 0) + '%</b></div>',
-    '<div class="stat"><span>Tahmin ile ölçüm arasındaki ortalama fark</span><b>' + formatNumber(summary.meanAbsolute, 1) + " " + unit + "</b></div>",
-    '<div class="stat"><span>Eşleşen kayıt</span><b>' + summary.count + "</b></div>"
-  ].join("");
+function overall(pairs) {
+  if (!pairs.length) return null;
+  const n = pairs.length;
+  const bias = pairs.reduce((s, p) => s + p.diff, 0) / n;
+  const mae = pairs.reduce((s, p) => s + Math.abs(p.diff), 0) / n;
+  const success = pairs.filter(p => p.hit).length / n * 100;
+  const corr = pearson(pairs.map(p => p.model), pairs.map(p => p.obs));
+  return { n, bias, mae, success, corr };
 }
 
-function chartMarkup(summary, color) {
-  if (!summary || !summary.hours.length) return '<p class="empty">Grafik için yeterli veri yok</p>';
-  const width = 640;
-  const height = 180;
-  const padLeft = 36;
-  const padRight = 8;
-  const padTop = 12;
-  const padBottom = 28;
-  const inner = width - padLeft - padRight;
-  const plot = height - padTop - padBottom;
-  const step = inner / summary.hours.length;
-  const bars = summary.hours.map((hour, index) => {
-    const barHeight = Math.max(2, hour.success / 100 * plot);
-    const x = padLeft + index * step + step * 0.18;
-    const y = padTop + plot - barHeight;
-    const label = index % 2 === 0 ? String(hour.lead) : "";
-    return '<rect x="' + x.toFixed(1) + '" y="' + y.toFixed(1) + '" width="' + (step * 0.64).toFixed(1) + '" height="' + barHeight.toFixed(1) + '" rx="3" fill="' + color + '"><title>' + hour.lead + " saat · " + formatNumber(hour.success, 0) + "% · " + hour.count + " kayıt</title></rect>" +
-      (label ? '<text x="' + (x + step * 0.32).toFixed(1) + '" y="' + (height - 8) + '" text-anchor="middle" fill="#8fa7b5" font-size="10">' + label + "</text>" : "");
+function barChart(hours, key, color, unit, label) {
+  if (!hours.length) return '<p class="note">Yeterli veri yok</p>';
+  const w = 680, h = 200, pl = 42, pr = 10, pt = 14, pb = 28;
+  const inner = w - pl - pr, plot = h - pt - pb;
+  const step = inner / hours.length;
+  const values = hours.map(h => h[key]);
+  const maxAbs = Math.max(0.5, ...values.map(Math.abs));
+  const bars = hours.map((hour, i) => {
+    const v = hour[key];
+    const bh = Math.abs(v) / maxAbs * (plot / 2);
+    const y = v >= 0 ? pt + plot / 2 - bh : pt + plot / 2;
+    const x = pl + i * step + step * 0.15;
+    const title = hour.lead + " saat · " + fmt(v, 1) + " " + unit + " · " + hour.n + " kayıt";
+    return `<rect x="${x.toFixed(1)}" y="${y.toFixed(1)}" width="${(step * 0.7).toFixed(1)}" height="${Math.max(2, bh).toFixed(1)}" rx="2" fill="${color}"><title>${title}</title></rect>`;
   }).join("");
-  const guides = [0, 50, 100].map(value => {
-    const y = padTop + plot - value / 100 * plot;
-    return '<line x1="' + padLeft + '" y1="' + y + '" x2="' + (width - padRight) + '" y2="' + y + '" stroke="rgba(213,237,240,.12)"/>' +
-      '<text x="4" y="' + (y + 3) + '" fill="#8fa7b5" font-size="10">' + value + "</text>";
+  const zero = pt + plot / 2;
+  const guides = `<line x1="${pl}" y1="${zero}" x2="${w - pr}" y2="${zero}" stroke="rgba(213,237,240,.25)"/>`;
+  const labels = hours.map((hour, i) => i % 2 === 0 ? `<text x="${(pl + i * step + step * 0.5).toFixed(1)}" y="${h - 6}" text-anchor="middle" fill="#8fa7b5" font-size="10">${hour.lead}</text>` : "").join("");
+  return `<svg viewBox="0 0 ${w} ${h}" role="img" aria-label="${label}"><line x1="${pl}" y1="${pt}" x2="${pl}" y2="${pt + plot}" stroke="rgba(213,237,240,.15)"/>${guides}${bars}${labels}</svg><p class="note">${label}. Alttaki sayılar tahmin saatini gösterir.</p>`;
+}
+
+function successChart(hours, color) {
+  if (!hours.length) return '<p class="note">Yeterli veri yok</p>';
+  const w = 680, h = 180, pl = 36, pr = 8, pt = 12, pb = 26;
+  const inner = w - pl - pr, plot = h - pt - pb;
+  const step = inner / hours.length;
+  const bars = hours.map((hour, i) => {
+    const bh = Math.max(2, hour.success / 100 * plot);
+    const x = pl + i * step + step * 0.15;
+    const y = pt + plot - bh;
+    return `<rect x="${x.toFixed(1)}" y="${y.toFixed(1)}" width="${(step * 0.7).toFixed(1)}" height="${bh.toFixed(1)}" rx="2" fill="${color}"><title>${hour.lead} saat · ${fmt(hour.success, 0)}% · ${hour.n} kayıt</title></rect>`;
   }).join("");
-  return '<svg viewBox="0 0 ' + width + " " + height + '" role="img" aria-label="Tahmin saatine göre başarı yüzdesi">' + guides + bars + "</svg>" +
-    '<p class="note">Alttaki sayılar tahmin saatini gösterir. Çubuk, o saatte tutan kayıtların yüzdesidir.</p>';
+  const guides = [0, 50, 100].map(v => {
+    const y = pt + plot - v / 100 * plot;
+    return `<line x1="${pl}" y1="${y}" x2="${w - pr}" y2="${y}" stroke="rgba(213,237,240,.12)"/><text x="4" y="${y + 3}" fill="#8fa7b5" font-size="10">${v}</text>`;
+  }).join("");
+  const labels = hours.map((hour, i) => i % 2 === 0 ? `<text x="${(pl + i * step + step * 0.5).toFixed(1)}" y="${h - 6}" text-anchor="middle" fill="#8fa7b5" font-size="10">${hour.lead}</text>` : "").join("");
+  return `<svg viewBox="0 0 ${w} ${h}" role="img" aria-label="Başarı olasılığı">${guides}${bars}${labels}</svg><p class="note">Başarı olasılığı (%). 1 °C ve altı (sıcaklık) veya yağış kuralına göre.</p>`;
+}
+
+function mostStable(hours) {
+  if (!hours.length) return "";
+  const sorted = [...hours].sort((a, b) => Math.abs(a.bias) - Math.abs(b.bias) || b.success - a.success);
+  const top = sorted.slice(0, 3);
+  return "En tutarlı tahmin saatleri (düşük sapma): " + top.map(h => h.lead + " saat (sapma " + fmt(h.bias, 1) + ", başarı " + fmt(h.success, 0) + "%)").join(" · ");
 }
 
 async function load() {
   const station = document.getElementById("station").value;
   const status = document.getElementById("status");
-  const panels = document.getElementById("panels");
-  const windowNote = document.getElementById("window-note");
+  const content = document.getElementById("content");
   status.hidden = false;
-  status.textContent = "İstasyon geçmişi ve GFS çıktıları yükleniyor…";
-  panels.hidden = true;
-  windowNote.hidden = true;
+  status.textContent = "Yükleniyor…";
+  content.hidden = true;
+
   try {
-    const [history, gfs] = await Promise.all([
+    const [hist, gfs] = await Promise.all([
       fetchJSON(location.origin + "/api/history/" + station + "?hours=72"),
       fetchJSON(GFS_BASE + "/gfs/latest")
     ]);
-    const samples = Array.isArray(history.samples) ? history.samples : [];
-    const pairs = collectPairs(samples, uniqueRuns(gfs));
-    const temperature = summarize(pairs.temperature);
-    const rain = summarize(pairs.rain);
-    document.getElementById("temp-stats").innerHTML = statsMarkup(temperature, "°C");
-    document.getElementById("rain-stats").innerHTML = statsMarkup(rain, "milimetre");
-    document.getElementById("temp-chart").innerHTML = chartMarkup(temperature, "#7dd3d7");
-    document.getElementById("rain-chart").innerHTML = chartMarkup(rain, "#8fc9e9");
-    if (!temperature && !rain) {
-      status.hidden = false;
-      status.textContent = "Veri yok";
-      panels.hidden = true;
-      return;
-    }
+    const samples = hist.samples || [];
+    const pairs = collect(samples, uniqueRuns(gfs));
+    const tOverall = overall(pairs.temp);
+    const rOverall = overall(pairs.rain);
+    const tHours = byLead(pairs.temp);
+    const rHours = byLead(pairs.rain);
+
+    document.getElementById("overall").innerHTML = [
+      tOverall ? `<div class="card"><span>Sıcaklık başarı</span><b>${fmt(tOverall.success, 0)}%</b></div>` : "",
+      tOverall ? `<div class="card"><span>Sıcaklık ortalama sapma</span><b>${fmt(tOverall.bias, 1)} °C</b></div>` : "",
+      tOverall && tOverall.corr != null ? `<div class="card"><span>Sıcaklık korelasyon</span><b>${fmt(tOverall.corr, 2)}</b></div>` : "",
+      rOverall ? `<div class="card"><span>Yağış başarı</span><b>${fmt(rOverall.success, 0)}%</b></div>` : "",
+      rOverall ? `<div class="card"><span>Yağış ortalama sapma</span><b>${fmt(rOverall.bias, 1)} mm</b></div>` : "",
+      rOverall && rOverall.corr != null ? `<div class="card"><span>Yağış korelasyon</span><b>${fmt(rOverall.corr, 2)}</b></div>` : ""
+    ].filter(Boolean).join("");
+
+    document.getElementById("temp-bias-chart").innerHTML = barChart(tHours, "bias", "#7dd3d7", "°C", "Sıcaklık ortalama sapma (°C)");
+    document.getElementById("temp-success-chart").innerHTML = successChart(tHours, "#7dd3d7");
+    document.getElementById("temp-stable").textContent = mostStable(tHours);
+
+    document.getElementById("rain-bias-chart").innerHTML = barChart(rHours, "bias", "#8fc9e9", "mm", "Yağış ortalama sapma (mm)");
+    document.getElementById("rain-success-chart").innerHTML = successChart(rHours, "#8fc9e9");
+    document.getElementById("rain-stable").textContent = mostStable(rHours);
+
     status.hidden = true;
-    panels.hidden = false;
-    windowNote.hidden = false;
-  } catch (error) {
-    status.hidden = false;
-    status.textContent = "Veri yok. " + (error && error.message ? error.message : "Kayıtlar şu anda okunamadı.");
-    panels.hidden = true;
+    content.hidden = false;
+  } catch (e) {
+    status.textContent = "Hata: " + (e.message || "veri alınamadı");
   }
 }
 
-document.getElementById("station").addEventListener("change", load);
-document.getElementById("refresh").addEventListener("click", load);
+document.getElementById("station").onchange = load;
+document.getElementById("refresh").onclick = load;
 load();
 </script>
 </body>
