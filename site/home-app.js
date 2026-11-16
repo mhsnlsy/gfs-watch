@@ -1864,7 +1864,7 @@ const __hideEmptyBadges=()=>{document.querySelectorAll('[class*="badge"],[class*
       return lines;
     }
     function briefingSvgTextLines(text,maxChars){
-      const words=String(text||"").split(/\\s+/).filter(Boolean);
+      const words=String(text||"").split(/\s+/).filter(Boolean);
       const lines=[];
       let line="";
       for(const word of words){
@@ -1881,7 +1881,7 @@ const __hideEmptyBadges=()=>{document.querySelectorAll('[class*="badge"],[class*
       const rain=$("brief-rain-lines"),temp=$("brief-temperature-trend");
       if(!rain||!temp)return null;
       const rainLines=briefingShareTextLines(rain);
-      const tempText=(temp.textContent||"").replace(/\\s+/g," ").trim();
+      const tempText=(temp.textContent||"").replace(/\s+/g," ").trim();
       const tempLines=briefingSvgTextLines(tempText,68);
       const width=1200,cardX=48,cardW=1104,pad=28;
       const lineH=32;
