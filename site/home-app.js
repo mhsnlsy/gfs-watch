@@ -1974,7 +1974,10 @@ const __hideEmptyBadges=()=>{document.querySelectorAll('[class*="badge"],[class*
       renderTemperatureTrend();
       renderStationGap();
     }
-    const briefingShareButton=$("briefing-share-button");\n    if(briefingShareButton)briefingShareButton.addEventListener("click",()=>{void shareBriefingSummary();});\n\n    window.addEventListener("meteopt-gfs-f72-updated",()=>{
+    const briefingShareButton=$("briefing-share-button");
+    if(briefingShareButton)briefingShareButton.addEventListener("click",()=>{void shareBriefingSummary();});
+
+    window.addEventListener("meteopt-gfs-f72-updated",()=>{
       // The F180 table is the canonical rain timing source; refresh the
       // briefing immediately when that payload arrives or is refreshed.
       try{renderRainDays();}catch(error){console.warn("Rain briefing refresh skipped:",error);}
