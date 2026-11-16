@@ -391,7 +391,11 @@ export default {
     // serving it through the existing istanbulunhavasi.com custom-domain Worker.
     // The Bakiye Worker stays on workers.dev, so this gateway does not require
     // a separate zone-route permission.
-    if (path === "/bakiye" || path.startsWith("/bakiye/")) {
+    if (path === "/bakiye") {
+      return Response.redirect(new URL("/bakiye/", url), 301);
+    }
+
+    if (path.startsWith("/bakiye/")) {
       const upstreamPath = path.slice("/bakiye".length) || "/";
       const upstream = new URL("https://bakiye.muhsin-ulusoy.workers.dev" + upstreamPath);
       upstream.search = url.search;
