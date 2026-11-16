@@ -1881,40 +1881,54 @@ const __hideEmptyBadges=()=>{document.querySelectorAll('[class*="badge"],[class*
       const rain=$("brief-rain-lines"),temp=$("brief-temperature-trend");
       if(!rain||!temp)return null;
 
-      // Mirror the live briefing component rather than creating a separate
-      // report-card design: same two rows, typography hierarchy and spacing.
+      // The share image intentionally mirrors the live homepage briefing:
+      // same hierarchy, two horizontal briefing rows, labels on the left,
+      // DM Sans body text, Manrope headings, generous card spacing and the
+      // same dark palette. Do not compress the content into a mobile-style
+      // stacked layout.
       const rainLines=briefingShareTextLines(rain);
       const tempText=(temp.textContent||"").replace(/\s+/g," ").trim();
-      const tempLines=briefingSvgTextLines(tempText,86);
+      const tempLines=briefingSvgTextLines(tempText,92);
 
       const width=1200;
-      const outerX=48,outerW=1104,cardY=42;
-      const cardPad=22,rowGap=10,labelW=150,labelGap=18;
-      const rowPadY=18,rowPadX=18;
-      const bodyFont=22,bodyLineH=31,labelFont=13,labelLetterSpacing=1.6;
-      const rowH=textHeight=>Math.max(76,rowPadY*2+textHeight);
-      const rainRowH=rowH(Math.max(1,rainLines.length)*bodyLineH);
-      const tempRowH=rowH(Math.max(1,tempLines.length)*bodyLineH);
-      const cardH=cardPad*2+rainRowH+rowGap+tempRowH;
-      const height=cardY+cardH+42;
+      const outerX=48, outerW=1104;
+      const headerY=46;
+      const titleFont=28, subtitleFont=13;
+      const cardPadX=30, cardPadY=25;
+      const labelW=150, labelGap=28;
+      const bodyFont=22, bodyLineH=34;
+      const labelFont=13, labelLetterSpacing=1.8;
+      const rowGap=22;
+      const rowH=lines=>Math.max(112,cardPadY*2+Math.max(1,lines.length)*bodyLineH);
+      const rainH=rowH(rainLines);
+      const tempH=rowH(tempLines);
+      const firstCardY=126;
+      const secondCardY=firstCardY+rainH+rowGap;
+      const footerY=secondCardY+tempH+44;
+      const height=footerY+24;
 
       const escSvg=value=>String(value==null?"":value).replace(/[&<>"']/g,char=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[char]));
+
       const drawRow=(y,label,lines,rowHeight)=>{
-        const labelX=outerX+cardPad+rowPadX;
+        const labelX=outerX+cardPadX;
         const bodyX=labelX+labelW+labelGap;
+        const labelY=y+cardPadY+17;
+        const bodyY=y+cardPadY+25;
         const body=lines.map((line,index)=>
-          '<text x="'+bodyX+'" y="'+(y+rowPadY+22+index*bodyLineH)+'" fill="#E7F2F6" font-family="DM Sans, Arial, sans-serif" font-size="'+bodyFont+'" font-weight="500">'+escSvg(line)+'</text>'
+          '<text x="'+bodyX+'" y="'+(bodyY+index*bodyLineH)+'" fill="#E7F2F6" font-family="DM Sans, Arial, sans-serif" font-size="'+bodyFont+'" font-weight="500">'+escSvg(line)+'</text>'
         ).join("");
-        return '<rect x="'+outerX+'" y="'+y+'" width="'+outerW+'" height="'+rowHeight+'" rx="14" fill="#0D2433" stroke="#294654"/>'+
-          '<text x="'+labelX+'" y="'+(y+rowPadY+15)+'" fill="#8FD0C8" font-family="DM Sans, Arial, sans-serif" font-size="'+labelFont+'" font-weight="700" letter-spacing="'+labelLetterSpacing+'">'+escSvg(label.toUpperCase())+'</text>'+
+        return '<rect x="'+outerX+'" y="'+y+'" width="'+outerW+'" height="'+rowHeight+'" rx="22" fill="#0D2433" stroke="#294654" stroke-width="1.5"/>'+
+          '<text x="'+labelX+'" y="'+labelY+'" fill="#8FD0C8" font-family="DM Sans, Arial, sans-serif" font-size="'+labelFont+'" font-weight="700" letter-spacing="'+labelLetterSpacing+'">'+escSvg(label.toUpperCase())+'</text>'+
           body;
       };
 
       const svg='<svg xmlns="http://www.w3.org/2000/svg" width="'+width+'" height="'+height+'" viewBox="0 0 '+width+' '+height+'">'+
         '<rect width="'+width+'" height="'+height+'" fill="#081827"/>'+
-        drawRow(cardY,"Yağış saatleri",rainLines.length?rainLines:["Önümüzdeki günler için çıktı yok."],rainRowH)+
-        drawRow(cardY+rainRowH+rowGap,"5 günlük sıcaklık",tempLines.length?tempLines:["Sıcaklık analizi bekleniyor."],tempRowH)+
-        '<text x="'+outerX+'" y="'+(height-14)+'" fill="#6F8997" font-family="DM Sans, Arial, sans-serif" font-size="12">istanbulunhavasi.com</text>'+
+        '<text x="'+outerX+'" y="'+headerY+'" fill="#EDF5F8" font-family="Manrope, Arial, sans-serif" font-size="'+titleFont+'" font-weight="800" letter-spacing="-0.8">İstanbul Havası · 5 günlük özet</text>'+
+        '<text x="'+outerX+'" y="'+(headerY+28)+'" fill="#9BB1BF" font-family="DM Sans, Arial, sans-serif" font-size="'+subtitleFont+'" font-weight="500">Yağış saatleri ve sıcaklık eğilimi · Eyüpsultan</text>'+
+        drawRow(firstCardY,"Yağış saatleri",rainLines.length?rainLines:["Önümüzdeki günler için çıktı yok."],rainH)+
+        drawRow(secondCardY,"5 günlük sıcaklık",tempLines.length?tempLines:["Sıcaklık analizi bekleniyor."],tempH)+
+        '<text x="'+outerX+'" y="'+footerY+'" fill="#6F8997" font-family="DM Sans, Arial, sans-serif" font-size="12">istanbulunhavasi.com</text>'+
         '</svg>';
 
       try{
