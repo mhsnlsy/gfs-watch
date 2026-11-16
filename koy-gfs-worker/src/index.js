@@ -657,17 +657,21 @@ function buildKoySeries(runs) {
     };
   });
 
-  let common = [...series[series.length - 1].points.keys()];
-  for (const item of series.slice(0, -1)) common = common.filter(key => item.points.has(key));
-  common.sort();
-  if (common.length < 2) throw new Error("The available GFS cycles have fewer than two common valid times");
+  // The newest cycle is the canonical forecast horizon. Do not intersect
+  // the timeline with older cycles: an older archived cycle may legitimately
+  // contain only F72 while the newest completed cycle contains F180. An
+  // intersection would silently truncate the entire comparison chart to 72h.
+  // Older cycles are still plotted wherever they have matching valid times;
+  // beyond their stored horizon their series simply becomes null.
+  const latestKeys = [...series[series.length - 1].points.keys()].sort();
+  if (latestKeys.length < 2) throw new Error("The newest GFS cycle has fewer than two valid times");
 
-  const firstMs = Date.parse(common[0] + ":00Z");
-  const validKeys = common.filter(key => {
+  const firstMs = Date.parse(latestKeys[0] + ":00Z");
+  const validKeys = latestKeys.filter(key => {
     const timestamp = Date.parse(key + ":00Z");
     return timestamp >= firstMs && timestamp <= firstMs + 180 * 3600000;
   });
-  if (validKeys.length < 2) throw new Error("The common valid-time window is too short");
+  if (validKeys.length < 2) throw new Error("The newest GFS valid-time window is too short");
 
   const pointsBySeries = series.map(item => validKeys.map(key => item.points.get(key)));
   const localLabels = validKeys.map(key => {
