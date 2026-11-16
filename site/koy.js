@@ -1036,7 +1036,8 @@ function briefingTempSummary(points,nowMs,current){
   if(!rise)summary+=" Beş günlük tahmin aralığında yeniden ısınma görünmüyor.";
  }else{
   const rise=means.find((m,i)=>m.mean-(i?means[i-1].mean:baseline)>=1);
-  summary=rise?"Hava "+(rise.i===1?"yarın":rise.i+" gün sonra")+" ("+briefingDayTitle(rise.key)+") ısınmaya başlıyor.":"Önümüzdeki beş gün boyunca sıcaklık belirgin değişim göstermeden stabil seyrediyor.";
+  const riseWhen=rise?(rise.i===0?"bugün":rise.i===1?"yarın":rise.i+" gün sonra"):"";
+  summary=rise?"Hava "+riseWhen+" ("+briefingDayTitle(rise.key)+") ısınmaya başlıyor.":"Önümüzdeki beş gün boyunca sıcaklık belirgin değişim göstermeden stabil seyrediyor.";
  }
  summary+=" Köy Ev şu an "+fmt(current,1)+"°C.";
  const swings=[];
