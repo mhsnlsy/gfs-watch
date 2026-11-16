@@ -94,6 +94,22 @@ assert.equal(koySvgKeyMatches(
 ), false);
 assert.ok(modest.body.includes('id="gfs-interactive-data"'));
 assert.ok(modest.body.includes('"directions_deg"'), "Köy chart metadata must retain wind directions for the shared tooltip");
+
+// Regression: older comparison cycles may be F72 while the newest cycle is F180.
+// The chart horizon must still follow the newest cycle all the way to F180.
+const mixedHorizonRuns = fourCycles(() => ({}));
+mixedHorizonRuns.slice(0, 3).forEach(run => {
+  run.forecast_6_hourly = run.forecast_6_hourly.filter(point => Number(point.forecast_hour) <= 72);
+});
+const mixedHorizon = buildKoyInteractiveSvg({ runs: mixedHorizonRuns });
+assert.ok(mixedHorizon, "mixed F72/F180 cycles should still render");
+const mixedMetadataMatch = mixedHorizon.body.match(/<metadata id="gfs-interactive-data"><!\\[CDATA\\[([\\s\\S]*?)\\]\\]><\\/metadata>/);
+assert.ok(mixedMetadataMatch, "mixed-horizon interactive metadata must be present");
+const mixedMetadata = JSON.parse(mixedMetadataMatch[1]);
+assert.equal(mixedMetadata.panels[0].valid_times.length, 30, "newest F180 cycle must define the 180-hour timeline");
+assert.equal(mixedMetadata.panels[0].series[3].values.length, 30, "latest series must retain all F180 points");
+assert.equal(mixedMetadata.panels[0].series[0].values.filter(value => value === null).length, 18, "older F72 series must be null beyond F72");
+
 assert.ok(!modest.body.includes('data-latest-peak="true"'), "Y-axis ticks must not be bound to the latest-cycle peak");
 assert.ok(modest.body.includes('class="gfs-latest-peak-marker"'));
 assert.ok(!modest.body.includes("gfs-latest-trough-marker"), "flat Köy temperature series must not repeat the peak label");
