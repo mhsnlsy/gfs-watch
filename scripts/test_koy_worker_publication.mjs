@@ -114,7 +114,7 @@ const mixedMetadata = JSON.parse(
 );
 assert.equal(mixedMetadata.panels[0].valid_times.length, 30, "newest F180 cycle must define the 180-hour timeline");
 assert.equal(mixedMetadata.panels[0].series[3].values.length, 30, "latest series must retain all F180 points");
-assert.equal(mixedMetadata.panels[0].series[0].values.filter(value => value === null).length, 18, "older F72 series must be null beyond F72");
+assert.equal(mixedMetadata.panels[0].series[0].values.filter(value => value === null).length, 21, "older F72 series must be null beyond its stored horizon");
 
 assert.ok(!modest.body.includes('data-latest-peak="true"'), "Y-axis ticks must not be bound to the latest-cycle peak");
 assert.ok(modest.body.includes('class="gfs-latest-peak-marker"'));
