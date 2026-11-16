@@ -1,35 +1,61 @@
-/* Mobile: right-align share buttons and tighten section gaps.
+/* Mobile: small share buttons sitting on their boxes, tighter vertical gaps.
    One Paylaş covers yağış saatleri + 5 günlük sıcaklık.
-   Chart Paylaş stays separate and right-aligned. */
-.briefing-share-head{
-  justify-content:flex-end!important;
-  margin:0 2px 4px!important;
-  min-height:0!important;
-}
+   Chart Paylaş stays on the chart. */
 .briefing-share-button,
 .gfs-chart-share-global{
-  font:700 8px/1 "DM Sans",system-ui,sans-serif!important;
-  padding:5px 9px!important;
+  min-height:0!important;
+  height:auto!important;
+  min-width:0!important;
+  font:600 8px/1 "DM Sans",system-ui,sans-serif!important;
+  padding:3px 7px!important;
   border-radius:999px!important;
+  box-shadow:0 2px 8px rgba(0,0,0,.28)!important;
+}
+.dashboard-left > .station-briefing-inline .briefing{
+  position:relative!important;
+}
+.briefing-share-head{
+  position:absolute!important;
+  top:6px!important;
+  right:6px!important;
+  margin:0!important;
+  padding:0!important;
+  min-height:0!important;
+  height:auto!important;
+  z-index:4!important;
+  justify-content:flex-end!important;
+}
+.dashboard-left > .station-briefing-inline .briefing-row#brief-rain{
+  padding-right:72px!important;
+}
+.gfs-chart-share-toolbar{
+  position:absolute!important;
+  top:8px!important;
+  right:8px!important;
+  margin:0!important;
+  padding:0!important;
+  min-height:0!important;
+  height:auto!important;
+  background:transparent!important;
+  z-index:4!important;
+  justify-content:flex-end!important;
+}
+.notification-chart-only,
+.gfs-mobile-panel-stack,
+.notification-card.koy-gfs-report-card{
+  position:relative!important;
 }
 @media (max-width:760px){
-  .dashboard-left{gap:8px!important}
-  .dashboard-top{
-    gap:8px!important;
-    padding-top:8px!important;
-    padding-bottom:6px!important;
-  }
+  .dashboard-left{gap:6px!important}
+  .dashboard-top{gap:6px!important;padding-top:6px!important;padding-bottom:4px!important}
   .dashboard-left > .station-briefing-inline{
     margin-top:0!important;
     padding-top:0!important;
   }
-  .dashboard-left > .station-briefing-inline .briefing{gap:6px!important}
+  .dashboard-left > .station-briefing-inline .briefing{gap:5px!important}
   .dashboard-left > .station-briefing-inline .briefing-row{padding:6px 8px!important}
-  .gfs-chart-share-toolbar{
-    justify-content:flex-end!important;
-    min-height:28px!important;
-    padding:2px 8px 4px!important;
-  }
-  .history-panel,
-  .station-history-inline{margin-bottom:0!important}
+  .dashboard-left > .station-briefing-inline .briefing-row#brief-rain{padding-right:72px!important}
+  .section{padding-top:8px!important;padding-bottom:8px!important}
+  #bildirimler{padding-top:4px!important;padding-bottom:4px!important}
+  .history-panel,.station-history-inline{margin-bottom:0!important}
 }
