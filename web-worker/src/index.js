@@ -247,11 +247,44 @@ export default {
         }
       }
 
+      async function probeWithFallback(binding, targetPath, fallbackBase) {
+        const primary = await probe(binding, targetPath);
+        if (primary.ok) return primary;
+        const started = Date.now();
+        try {
+          const incoming = new URL(request.url);
+          const direct = new URL(fallbackBase.replace(/\\\/$/, "") + targetPath);
+          direct.search = incoming.search;
+          const response = await fetch(new Request(direct, request), {
+            cf: { cacheTtl: 0, cacheEverything: false },
+          });
+          const body = await response.clone().json().catch(() => null);
+          return {
+            ok: response.ok,
+            status: response.status,
+            latency_ms: Date.now() - started,
+            payload_ok: body?.ok === true,
+            error: body?.error || null,
+            latest_run_id_utc: body?.latest_run_id_utc || body?.station?.last_success_utc || null,
+            source: "direct-worker-fallback",
+          };
+        } catch (error) {
+          return {
+            ok: false,
+            status: 503,
+            latency_ms: Date.now() - started,
+            payload_ok: false,
+            error: String(error?.message || error),
+            source: "direct-worker-fallback",
+          };
+        }
+      }
+
       const [istanbul, stations] = await Promise.all([
-        probe(env.ISTANBUL_GFS, "/api/health"),
-        probe(env.STATIONS, "/api/health"),
+        probeWithFallback(env.ISTANBUL_GFS, "/api/health", "https://gfs-watch-istanbul-gfs.muhsin-ulusoy.workers.dev"),
+        probeWithFallback(env.STATIONS, "/api/health", "https://gfs-watch-stations.muhsin-ulusoy.workers.dev"),
       ]);
-      const ok = Object.values(bindings).every(Boolean) && istanbul.ok && stations.ok;
+      const ok = istanbul.ok && stations.ok;
 
       return responseJson({
         ok,
@@ -382,7 +415,12 @@ export default {
         path === "/ecmwf/latest" || path === "/api/ecmwf/latest" ||
         path === "/api/health" || path === "/gfs/comparison" || path === "/api/comparison") {
       const targetPath = path.startsWith("/gfs/") ? path : path;
-      return callService(env.ISTANBUL_GFS, request, targetPath);
+      return callService(
+        env.ISTANBUL_GFS,
+        request,
+        targetPath,
+        "https://gfs-watch-istanbul-gfs.muhsin-ulusoy.workers.dev"
+      );
     }
 
     if (path.startsWith("/api/koy-gfs/")) {
