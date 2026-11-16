@@ -7,6 +7,7 @@ on:
       - "koy-gfs-worker/**"
       - "shared/**"
       - ".github/workflows/deploy-koy-gfs-worker.yml"
+      - "scripts/test_koy_worker_publication.mjs"
   workflow_dispatch:
 
 permissions:
