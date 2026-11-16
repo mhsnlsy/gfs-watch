@@ -7,7 +7,7 @@
 <meta name="description" content="GFS tahmininin istasyon ölçümüyle gerçekleşmesi. Yazılı yüzde başarı ve ortalama sapma.">
 <title>GFS Gerçekleşme · İstanbul Havası</title>
 <link rel="icon" href="/favicon.svg" type="image/svg+xml">
-<link rel="stylesheet" href="/home.css?v=20261116-gerceklesme-10">
+<link rel="stylesheet" href="/home.css?v=20261116-gerceklesme-11">
 <link rel="stylesheet" href="/header-common.css?v=20261110-shared-header-1">
 <style>
   .shell.verif { width: min(1200px, calc(100% - 16px)); }
@@ -70,9 +70,9 @@
     <div class="panels">
       <div class="panel">
         <h2>Sıcaklık</h2>
-        <p class="rule">1 °C ve altı fark başarı sayılır. Ortalama sapma = tahmin − ölçüm.</p>
+        <p class="rule">1 °C ve altı fark başarı sayılır. Sapma yönü: tahmin ölçümden ne kadar yüksek/düşük.</p>
         <table class="f-table" id="temp-table">
-          <thead><tr><th>Tahmin saati</th><th class="num">Başarı</th><th class="num">Ortalama sapma</th><th class="num">Kayıt</th></tr></thead>
+          <thead><tr><th>Tahmin saati</th><th class="num">Başarı</th><th class="num">Sapma yönü</th><th class="num">Kayıt</th></tr></thead>
           <tbody></tbody>
         </table>
         <div id="temp-stable" class="stable"></div>
@@ -80,9 +80,9 @@
 
       <div class="panel">
         <h2>Yağış (6 saat)</h2>
-        <p class="rule">0,2 mm altı yağışsız. İkisi de yağışsızsa veya fark 1 mm ve altındaysa başarı.</p>
+        <p class="rule">0,2 mm altı yağışsız. İkisi de yağışsızsa veya fark 1 mm ve altındaysa başarı. Sapma yönü: tahmin ölçümden ne kadar fazla/az.</p>
         <table class="f-table" id="rain-table">
-          <thead><tr><th>Tahmin saati</th><th class="num">Başarı</th><th class="num">Ortalama sapma</th><th class="num">Kayıt</th></tr></thead>
+          <thead><tr><th>Tahmin saati</th><th class="num">Başarı</th><th class="num">Sapma yönü</th><th class="num">Kayıt</th></tr></thead>
           <tbody></tbody>
         </table>
         <div id="rain-stable" class="stable"></div>
@@ -204,7 +204,16 @@ function overall(pairs) {
   return { n, bias, success, corr };
 }
 
-function fillTable(tbody, hours, unit) {
+function biasText(bias, kind) {
+  const abs = Math.abs(bias);
+  if (abs < 0.05) return "hemen hemen doğru";
+  if (kind === "temp") {
+    return bias > 0 ? `tahmin ${fmt(abs, 1)} °C daha sıcak` : `tahmin ${fmt(abs, 1)} °C daha soğuk`;
+  }
+  return bias > 0 ? `tahmin ${fmt(abs, 1)} mm daha fazla` : `tahmin ${fmt(abs, 1)} mm daha az`;
+}
+
+function fillTable(tbody, hours, kind) {
   tbody.innerHTML = "";
   if (!hours.length) {
     tbody.innerHTML = '<tr><td colspan="4">Yeterli veri yok</td></tr>';
@@ -215,7 +224,7 @@ function fillTable(tbody, hours, unit) {
     tr.innerHTML = `
       <td>${h.lead} saat</td>
       <td class="num">${fmt(h.success, 0)}%</td>
-      <td class="num">${fmt(h.bias, 1)} ${unit}</td>
+      <td class="num">${biasText(h.bias, kind)}</td>
       <td class="num">${h.n}</td>
     `;
     tbody.appendChild(tr);
@@ -227,8 +236,7 @@ function stableText(hours, kind) {
   const sorted = [...hours].sort((a, b) => Math.abs(a.bias) - Math.abs(b.bias) || b.success - a.success);
   const best = sorted[0];
   const top3 = sorted.slice(0, 3);
-  const unit = kind === "temp" ? "°C" : "mm";
-  return `En tutarlı tahmin saati: ${best.lead} saat (ortalama sapma ${fmt(best.bias, 1)} ${unit}, başarı ${fmt(best.success, 0)}%). Diğer güçlü saatler: ${top3.slice(1).map(h => h.lead + " saat").join(", ") || "—"}.`;
+  return `En tutarlı tahmin saati: ${best.lead} saat (${biasText(best.bias, kind)}, başarı ${fmt(best.success, 0)}%). Diğer güçlü saatler: ${top3.slice(1).map(h => h.lead + " saat").join(", ") || "—"}.`;
 }
 
 async function load() {
@@ -253,15 +261,15 @@ async function load() {
 
     document.getElementById("overall").innerHTML = [
       tOverall ? `<div class="card"><span>Sıcaklık başarı</span><b>${fmt(tOverall.success, 0)}%</b></div>` : "",
-      tOverall ? `<div class="card"><span>Sıcaklık sapma</span><b>${fmt(tOverall.bias, 1)} °C</b></div>` : "",
+      tOverall ? `<div class="card"><span>Sıcaklık sapma</span><b>${biasText(tOverall.bias, "temp")}</b></div>` : "",
       tOverall && tOverall.corr != null ? `<div class="card"><span>Sıcaklık korelasyon</span><b>${fmt(tOverall.corr, 2)}</b></div>` : "",
       rOverall ? `<div class="card"><span>Yağış başarı</span><b>${fmt(rOverall.success, 0)}%</b></div>` : "",
-      rOverall ? `<div class="card"><span>Yağış sapma</span><b>${fmt(rOverall.bias, 1)} mm</b></div>` : "",
+      rOverall ? `<div class="card"><span>Yağış sapma</span><b>${biasText(rOverall.bias, "rain")}</b></div>` : "",
       rOverall && rOverall.corr != null ? `<div class="card"><span>Yağış korelasyon</span><b>${fmt(rOverall.corr, 2)}</b></div>` : ""
     ].filter(Boolean).join("");
 
-    fillTable(document.querySelector("#temp-table tbody"), tHours, "°C");
-    fillTable(document.querySelector("#rain-table tbody"), rHours, "mm");
+    fillTable(document.querySelector("#temp-table tbody"), tHours, "temp");
+    fillTable(document.querySelector("#rain-table tbody"), rHours, "rain");
     document.getElementById("temp-stable").textContent = stableText(tHours, "temp");
     document.getElementById("rain-stable").textContent = stableText(rHours, "rain");
 
