@@ -195,7 +195,7 @@ def main() -> None:
     ]:
         assert geometry in koy_worker
         assert geometry in gfs_publication
-    assert "common = common.filter(key => item.points.has(key))" in koy_worker
+    assert "const latestKeys = [...series[series.length - 1].points.keys()].sort()" in koy_worker
     assert "common = common.filter(key => item.points.has(key))" in gfs_publication
     assert "firstMs + 180 * 3600000" in koy_worker
     assert "firstMs + 180 * 3600000" in gfs_publication
