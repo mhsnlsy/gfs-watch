@@ -415,8 +415,8 @@
 .briefing{display:grid;gap:4px;margin-top:8px}
 .dashboard-briefing{min-width:0;align-self:start;padding-top:70px}.dashboard-briefing .briefing{margin-top:0;width:100%}
     .dashboard-briefing .briefing-row{width:100%}
-    @media(max-width:900px){.dashboard-top{grid-template-columns:minmax(0,1fr);}.dashboard-briefing{padding-top:0}.dashboard-briefing .briefing{margin-top:10px}}
-    @media(max-width:560px){.dashboard-top{padding:20px 0 15px;gap:11px}.dashboard-briefing{padding-top:0}}
+    @media(max-width:900px){.dashboard-top{grid-template-columns:minmax(0,1fr);}.dashboard-briefing{padding-top:0}.dashboard-briefing .briefing{margin-top:4px}}
+    @media(max-width:560px){.dashboard-top{padding:20px 0 15px;gap:7px}.dashboard-briefing{padding-top:0}}
 .enka-camera-panel{width:100%;margin:0;align-self:start;justify-self:stretch;border:1px solid rgba(125,211,215,.22);border-radius:18px;background:rgba(2,15,24,.42);overflow:hidden}
 .enka-camera-head{display:flex;align-items:center;justify-content:space-between;gap:12px;padding:11px 14px;border-bottom:1px solid rgba(125,211,215,.14)}
 .enka-camera-title{font-size:8px;font-weight:800;letter-spacing:.06em;text-transform:uppercase;color:#d9f7f5;line-height:1.15}
