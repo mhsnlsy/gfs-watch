@@ -4,15 +4,15 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
 <meta name="theme-color" content="#081827">
-<meta name="description" content="GFS tahmininin istasyon ölçümüyle gerçekleşmesi. Ortalama sapma, başarı olasılığı ve hangi f saatinin daha tutarlı olduğu.">
+<meta name="description" content="GFS tahmininin istasyon ölçümüyle gerçekleşmesi. Yazılı yüzde başarı ve ortalama sapma.">
 <title>GFS Gerçekleşme · İstanbul Havası</title>
 <link rel="icon" href="/favicon.svg" type="image/svg+xml">
-<link rel="stylesheet" href="/home.css?v=20261116-gerceklesme-5">
+<link rel="stylesheet" href="/home.css?v=20261116-gerceklesme-6">
 <link rel="stylesheet" href="/header-common.css?v=20261110-shared-header-1">
 <style>
-  .verif { padding: 16px 0 32px; max-width: 1100px; margin: 0 auto; }
+  .verif { padding: 16px 0 32px; max-width: 1000px; margin: 0 auto; }
   .verif h1 { font: 800 24px/1.15 Manrope, sans-serif; margin: 0 0 4px; }
-  .verif .lead { color: #9bb1bf; font-size: 13px; line-height: 1.45; max-width: 820px; margin: 0 0 12px; }
+  .verif .lead { color: #9bb1bf; font-size: 13px; line-height: 1.45; margin: 0 0 12px; }
   .controls { display: flex; gap: 8px; align-items: center; margin-bottom: 12px; flex-wrap: wrap; }
   .controls select, .controls button { background: #102535; color: #e7f2f6; border: 1px solid rgba(213,237,240,.16); padding: 6px 10px; border-radius: 8px; font-size: 13px; }
   .controls button { cursor: pointer; background: rgba(125,211,215,.15); border-color: rgba(125,211,215,.35); color: #c6f0ec; }
@@ -23,16 +23,15 @@
   .panels { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; }
   .panel { background: linear-gradient(160deg, rgba(18,44,62,.72), rgba(13,33,48,.8)); border: 1px solid rgba(204,225,239,.12); border-radius: 14px; padding: 12px; }
   .panel h2 { font: 700 15px/1.2 Manrope, sans-serif; margin: 0 0 4px; }
-  .rule { color: #b7cbd3; font-size: 12px; margin: 0 0 8px; line-height: 1.35; }
-  .charts-row { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; }
-  .chart-wrap svg { display: block; width: 100%; height: auto; max-height: 140px; }
-  .stable { background: rgba(125,211,215,.14); border-radius: 8px; padding: 8px 10px; margin-top: 8px; font-size: 13px; line-height: 1.4; }
-  .note { font-size: 11px; color: #8fa7b5; margin-top: 6px; line-height: 1.35; }
+  .rule { color: #b7cbd3; font-size: 12px; margin: 0 0 10px; line-height: 1.35; }
+  table.f-table { width: 100%; border-collapse: collapse; font-size: 13px; }
+  table.f-table th, table.f-table td { padding: 6px 8px; text-align: left; border-bottom: 1px solid rgba(255,255,255,.08); }
+  table.f-table th { font-size: 11px; color: #9bb1bf; font-weight: 600; }
+  table.f-table .num { text-align: right; font-variant-numeric: tabular-nums; }
+  .stable { background: rgba(125,211,215,.14); border-radius: 8px; padding: 8px 10px; margin-top: 10px; font-size: 13px; line-height: 1.4; }
+  .note { font-size: 11px; color: #8fa7b5; margin-top: 12px; line-height: 1.35; }
   #status { padding: 12px; background: rgba(255,255,255,.04); border-radius: 10px; }
-  @media (max-width: 900px) {
-    .panels, .charts-row { grid-template-columns: 1fr; }
-    .summary-row { grid-template-columns: 1fr 1fr; }
-  }
+  @media (max-width: 800px) { .panels { grid-template-columns: 1fr; } .summary-row { grid-template-columns: 1fr 1fr; } }
 </style>
 </head>
 <body>
@@ -50,7 +49,7 @@
 
 <main class="shell verif">
   <h1>GFS gerçekleşme analizi</h1>
-  <p class="lead">GFS tahminleri istasyon ölçümleriyle karşılaştırılır. Ortalama sapma, başarı olasılığı ve korelasyon hesaplanır. Hangi tahmin saatlerinin daha tutarlı olduğu metin olarak gösterilir.</p>
+  <p class="lead">GFS tahminleri istasyon ölçümleriyle karşılaştırılır. Her tahmin saati için başarı yüzdesi ve ortalama sapma yazılı olarak gösterilir.</p>
 
   <div class="controls">
     <label>İstasyon
@@ -71,25 +70,25 @@
       <div class="panel">
         <h2>Sıcaklık</h2>
         <p class="rule">1 °C ve altı fark başarı sayılır. Ortalama sapma = tahmin − ölçüm.</p>
-        <div class="charts-row">
-          <div class="chart-wrap" id="temp-bias-chart"></div>
-          <div class="chart-wrap" id="temp-success-chart"></div>
-        </div>
+        <table class="f-table" id="temp-table">
+          <thead><tr><th>Tahmin saati</th><th class="num">Başarı</th><th class="num">Ortalama sapma</th><th class="num">Kayıt</th></tr></thead>
+          <tbody></tbody>
+        </table>
         <div id="temp-stable" class="stable"></div>
       </div>
 
       <div class="panel">
         <h2>Yağış (6 saat)</h2>
         <p class="rule">0,2 mm altı yağışsız. İkisi de yağışsızsa veya fark 1 mm ve altındaysa başarı.</p>
-        <div class="charts-row">
-          <div class="chart-wrap" id="rain-bias-chart"></div>
-          <div class="chart-wrap" id="rain-success-chart"></div>
-        </div>
+        <table class="f-table" id="rain-table">
+          <thead><tr><th>Tahmin saati</th><th class="num">Başarı</th><th class="num">Ortalama sapma</th><th class="num">Kayıt</th></tr></thead>
+          <tbody></tbody>
+        </table>
         <div id="rain-stable" class="stable"></div>
       </div>
     </div>
 
-    <p class="note" style="margin-top:14px;">Korelasyon Pearson katsayısıdır (1’e yakın = birlikte hareket). Veri azsa güvenilirlik düşer. Grafikler masaüstünde yan yana, kaydırma gerektirmeyecek şekilde küçültülmüştür.</p>
+    <p class="note">Korelasyon Pearson katsayısıdır (1’e yakın = birlikte hareket). Veri azsa güvenilirlik düşer.</p>
   </div>
 </main>
 
@@ -204,44 +203,22 @@ function overall(pairs) {
   return { n, bias, success, corr };
 }
 
-function smallBarChart(hours, key, color, unit) {
-  if (!hours.length) return '<p class="note">Yeterli veri yok</p>';
-  const w = 320, h = 120, pl = 28, pr = 6, pt = 8, pb = 18;
-  const inner = w - pl - pr, plot = h - pt - pb;
-  const step = inner / hours.length;
-  const values = hours.map(h => h[key]);
-  const maxAbs = Math.max(0.4, ...values.map(Math.abs));
-  const bars = hours.map((hour, i) => {
-    const v = hour[key];
-    const bh = Math.abs(v) / maxAbs * (plot / 2);
-    const y = v >= 0 ? pt + plot / 2 - bh : pt + plot / 2;
-    const x = pl + i * step + step * 0.18;
-    return `<rect x="${x.toFixed(1)}" y="${y.toFixed(1)}" width="${(step * 0.64).toFixed(1)}" height="${Math.max(1.5, bh).toFixed(1)}" rx="1" fill="${color}"><title>${hour.lead}s · ${fmt(v,1)} ${unit}</title></rect>`;
-  }).join("");
-  const zero = pt + plot / 2;
-  const labels = hours.filter((_, i) => i % 3 === 0).map(hour => {
-    const i = hours.indexOf(hour);
-    return `<text x="${(pl + i * step + step * 0.5).toFixed(1)}" y="${h - 4}" text-anchor="middle" fill="#8fa7b5" font-size="9">${hour.lead}</text>`;
-  }).join("");
-  return `<svg viewBox="0 0 ${w} ${h}" role="img"><line x1="${pl}" y1="${zero}" x2="${w - pr}" y2="${zero}" stroke="rgba(213,237,240,.2)"/>${bars}${labels}</svg>`;
-}
-
-function smallSuccessChart(hours, color) {
-  if (!hours.length) return '<p class="note">Yeterli veri yok</p>';
-  const w = 320, h = 120, pl = 24, pr = 6, pt = 6, pb = 18;
-  const inner = w - pl - pr, plot = h - pt - pb;
-  const step = inner / hours.length;
-  const bars = hours.map((hour, i) => {
-    const bh = Math.max(1.5, hour.success / 100 * plot);
-    const x = pl + i * step + step * 0.18;
-    const y = pt + plot - bh;
-    return `<rect x="${x.toFixed(1)}" y="${y.toFixed(1)}" width="${(step * 0.64).toFixed(1)}" height="${bh.toFixed(1)}" rx="1" fill="${color}"><title>${hour.lead}s · ${fmt(hour.success,0)}%</title></rect>`;
-  }).join("");
-  const labels = hours.filter((_, i) => i % 3 === 0).map(hour => {
-    const i = hours.indexOf(hour);
-    return `<text x="${(pl + i * step + step * 0.5).toFixed(1)}" y="${h - 4}" text-anchor="middle" fill="#8fa7b5" font-size="9">${hour.lead}</text>`;
-  }).join("");
-  return `<svg viewBox="0 0 ${w} ${h}" role="img">${bars}${labels}</svg>`;
+function fillTable(tbody, hours, unit) {
+  tbody.innerHTML = "";
+  if (!hours.length) {
+    tbody.innerHTML = '<tr><td colspan="4">Yeterli veri yok</td></tr>';
+    return;
+  }
+  for (const h of hours) {
+    const tr = document.createElement("tr");
+    tr.innerHTML = `
+      <td>${h.lead} saat</td>
+      <td class="num">${fmt(h.success, 0)}%</td>
+      <td class="num">${fmt(h.bias, 1)} ${unit}</td>
+      <td class="num">${h.n}</td>
+    `;
+    tbody.appendChild(tr);
+  }
 }
 
 function stableText(hours, kind) {
@@ -282,12 +259,9 @@ async function load() {
       rOverall && rOverall.corr != null ? `<div class="card"><span>Yağış korelasyon</span><b>${fmt(rOverall.corr, 2)}</b></div>` : ""
     ].filter(Boolean).join("");
 
-    document.getElementById("temp-bias-chart").innerHTML = smallBarChart(tHours, "bias", "#7dd3d7", "°C") + '<p class="note">Ortalama sapma (°C)</p>';
-    document.getElementById("temp-success-chart").innerHTML = smallSuccessChart(tHours, "#7dd3d7") + '<p class="note">Başarı (%)</p>';
+    fillTable(document.querySelector("#temp-table tbody"), tHours, "°C");
+    fillTable(document.querySelector("#rain-table tbody"), rHours, "mm");
     document.getElementById("temp-stable").textContent = stableText(tHours, "temp");
-
-    document.getElementById("rain-bias-chart").innerHTML = smallBarChart(rHours, "bias", "#8fc9e9", "mm") + '<p class="note">Ortalama sapma (mm)</p>';
-    document.getElementById("rain-success-chart").innerHTML = smallSuccessChart(rHours, "#8fc9e9") + '<p class="note">Başarı (%)</p>';
     document.getElementById("rain-stable").textContent = stableText(rHours, "rain");
 
     status.hidden = true;
