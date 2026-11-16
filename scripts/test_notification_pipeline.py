@@ -181,7 +181,7 @@ def main() -> None:
     assert 'koy-homepage-report-parity' in koy_html
     assert koy_html.index('home.css?v=20261111-koy-home-parity-1') < koy_html.index('koy-homepage-report-parity') < koy_html.index('</head>')
     assert 'width:90%!important' in koy_html
-    assert 'koy-homepage-identical-v10-f180-180h' in koy_client
+    assert "cloudflare-js-v10-f180-180h" in koy_client
     assert 'buildMobileGfsPanelViews' in comparison_tooltip
     assert 'isMobileGfsLayout()' in comparison_tooltip
     assert 'attachGfsSvgInteractions' in comparison_tooltip
