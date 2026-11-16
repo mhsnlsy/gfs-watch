@@ -251,7 +251,7 @@ def main() -> None:
     istanbul = json.loads(read("istanbul-gfs-worker/wrangler.jsonc"))
     koy = json.loads(read("koy-gfs-worker/wrangler.jsonc"))
     stations = json.loads(read("station-worker/wrangler.jsonc"))
-    assert istanbul["triggers"]["crons"] == ["*/10 * * * *"]
+    assert istanbul["triggers"]["crons"] == ["*/5 * * * *"]
     assert {"binding": "STATIONS", "service": "gfs-watch-stations"} in istanbul.get("services", [])
     assert "fetchActiveEnkaStationObservation(env)" in gfs_worker
     assert "env.STATIONS.fetch" in gfs_worker
