@@ -1676,7 +1676,10 @@ const __hideEmptyBadges=()=>{document.querySelectorAll('[class*="badge"],[class*
         const periods=[];
         for(const item of lodos){
           const previous=periods[periods.length-1];
-          if(previous&&item.key===previous.lastKey){
+          const consecutive=previous&&(
+            Date.parse(item.key+"T00:00:00Z")-Date.parse(previous.lastKey+"T00:00:00Z")===86400000
+          );
+          if(consecutive){
             previous.lastKey=item.key;
             previous.days.push(item);
           }else{
