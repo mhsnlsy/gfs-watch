@@ -2277,8 +2277,26 @@ if(typeof renderBriefing==="function")renderBriefing();
     async function loadForecast(){
       try{
         const cacheKey=Date.now();
-        const response=await fetchForecastData("/gfs/latest?t="+cacheKey);
-        if(!response.ok)throw new Error("Tahmin verisi şu anda alınamıyor.");
+        // The homepage must not depend on the completed F180 milestone.
+        // F72 is the continuously refreshed public forecast and is enough
+        // for the live homepage. F180 remains the source for long-range
+        // comparison/report publication.
+        const candidates=["/gfs/f72?t="+cacheKey,"/gfs/latest?t="+cacheKey];
+        let response=null;
+        let lastError=null;
+        for(const path of candidates){
+          try{
+            const candidate=await fetchForecastData(path);
+            if(candidate.ok){
+              response=candidate;
+              break;
+            }
+            lastError=new Error("Tahmin endpointi HTTP "+candidate.status);
+          }catch(error){
+            lastError=error;
+          }
+        }
+        if(!response)throw (lastError||new Error("Tahmin verisi şu anda alınamıyor."));
         const data=await response.json();
         if(!data||!["gfs-watch.forecast.v1","gfs-watch.forecast.v2"].includes(data.schema)){
           throw new Error("Tahmin verisinin biçimi beklenenden farklı.");
