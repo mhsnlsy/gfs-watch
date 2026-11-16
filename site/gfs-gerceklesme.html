@@ -7,7 +7,7 @@
 <meta name="description" content="GFS tahmininin istasyon ölçümüyle gerçekleşmesi. Yazılı yüzde başarı ve ortalama sapma.">
 <title>GFS Gerçekleşme · İstanbul Havası</title>
 <link rel="icon" href="/favicon.svg" type="image/svg+xml">
-<link rel="stylesheet" href="/home.css?v=20261116-gerceklesme-11">
+<link rel="stylesheet" href="/home.css?v=20261116-gerceklesme-12">
 <link rel="stylesheet" href="/header-common.css?v=20261110-shared-header-1">
 <style>
   .shell.verif { width: min(1200px, calc(100% - 16px)); }
@@ -70,7 +70,7 @@
     <div class="panels">
       <div class="panel">
         <h2>Sıcaklık</h2>
-        <p class="rule">1 °C ve altı fark başarı sayılır. Sapma yönü: tahmin ölçümden ne kadar yüksek/düşük.</p>
+        <p class="rule">Başarı kademeli: 0 °C fark %100, 0,3 °C fark %97, 1 °C fark %90. Sapma yönü: tahmin ölçümden ne kadar yüksek/düşük.</p>
         <table class="f-table" id="temp-table">
           <thead><tr><th>Tahmin saati</th><th class="num">Başarı</th><th class="num">Sapma yönü</th><th class="num">Kayıt</th></tr></thead>
           <tbody></tbody>
@@ -165,7 +165,7 @@ function collect(samples, runs) {
       const ot = Number(obs.temperature_c);
       if (Number.isFinite(mt) && Number.isFinite(ot)) {
         const diff = mt - ot;
-        temp.push({ lead, model: mt, obs: ot, diff, hit: Math.abs(diff) <= TEMP_HIT });
+        temp.push({ lead, model: mt, obs: ot, diff, score: Math.max(0, 100 - 10 * Math.abs(diff)) });
       }
 
       const mr = Number(step.precipitation_6h_mm);
@@ -181,7 +181,7 @@ function collect(samples, runs) {
   return { temp, rain };
 }
 
-function byLead(pairs) {
+function byLead(pairs, isTemp = false) {
   const map = new Map();
   for (const p of pairs) {
     if (!map.has(p.lead)) map.set(p.lead, []);
@@ -190,16 +190,20 @@ function byLead(pairs) {
   return [...map.entries()].sort((a, b) => a[0] - b[0]).map(([lead, group]) => {
     if (group.length < 2) return null;
     const bias = group.reduce((s, p) => s + p.diff, 0) / group.length;
-    const success = group.filter(p => p.hit).length / group.length * 100;
+    const success = isTemp
+      ? group.reduce((s, p) => s + p.score, 0) / group.length
+      : group.filter(p => p.hit).length / group.length * 100;
     return { lead, n: group.length, bias, success };
   }).filter(Boolean);
 }
 
-function overall(pairs) {
+function overall(pairs, isTemp = false) {
   if (!pairs.length) return null;
   const n = pairs.length;
   const bias = pairs.reduce((s, p) => s + p.diff, 0) / n;
-  const success = pairs.filter(p => p.hit).length / n * 100;
+  const success = isTemp
+    ? pairs.reduce((s, p) => s + p.score, 0) / n
+    : pairs.filter(p => p.hit).length / n * 100;
   const corr = pearson(pairs.map(p => p.model), pairs.map(p => p.obs));
   return { n, bias, success, corr };
 }
@@ -254,9 +258,9 @@ async function load() {
     ]);
     const samples = hist.samples || [];
     const pairs = collect(samples, uniqueRuns(gfs));
-    const tOverall = overall(pairs.temp);
+    const tOverall = overall(pairs.temp, true);
     const rOverall = overall(pairs.rain);
-    const tHours = byLead(pairs.temp);
+    const tHours = byLead(pairs.temp, true);
     const rHours = byLead(pairs.rain);
 
     document.getElementById("overall").innerHTML = [
