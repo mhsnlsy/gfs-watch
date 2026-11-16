@@ -1880,28 +1880,43 @@ const __hideEmptyBadges=()=>{document.querySelectorAll('[class*="badge"],[class*
     async function buildBriefingShareImage(){
       const rain=$("brief-rain-lines"),temp=$("brief-temperature-trend");
       if(!rain||!temp)return null;
+
+      // Mirror the live briefing component rather than creating a separate
+      // report-card design: same two rows, typography hierarchy and spacing.
       const rainLines=briefingShareTextLines(rain);
       const tempText=(temp.textContent||"").replace(/\s+/g," ").trim();
-      const tempLines=briefingSvgTextLines(tempText,68);
-      const width=1200,cardX=48,cardW=1104,pad=28;
-      const lineH=32;
-      const rainH=Math.max(126,pad+42+Math.max(1,rainLines.length)*lineH+pad);
-      const tempH=Math.max(150,pad+42+Math.max(1,tempLines.length)*lineH+pad);
-      const height=108+rainH+18+tempH+48;
+      const tempLines=briefingSvgTextLines(tempText,86);
+
+      const width=1200;
+      const outerX=48,outerW=1104,cardY=42;
+      const cardPad=22,rowGap=10,labelW=150,labelGap=18;
+      const rowPadY=18,rowPadX=18;
+      const bodyFont=22,bodyLineH=31,labelFont=13,labelLetterSpacing=1.6;
+      const rowH=textHeight=>Math.max(76,rowPadY*2+textHeight);
+      const rainRowH=rowH(Math.max(1,rainLines.length)*bodyLineH);
+      const tempRowH=rowH(Math.max(1,tempLines.length)*bodyLineH);
+      const cardH=cardPad*2+rainRowH+rowGap+tempRowH;
+      const height=cardY+cardH+42;
+
       const escSvg=value=>String(value==null?"":value).replace(/[&<>"']/g,char=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[char]));
-      const drawCard=(y,title,lines)=>{
-        const text=lines.map((line,index)=>'<text x="'+(cardX+pad)+'" y="'+(y+pad+42+index*lineH)+'" fill="#E7F2F6" font-family="Arial, sans-serif" font-size="27" font-weight="500">'+escSvg(line)+'</text>').join("");
-        return '<rect x="'+cardX+'" y="'+y+'" width="'+cardW+'" height="'+(lines.length?Math.max(126,pad+42+lines.length*lineH+pad):126)+'" rx="20" fill="#0D2433" stroke="#294654"/>'+
-          '<text x="'+(cardX+pad)+'" y="'+(y+pad+22)+'" fill="#8FD0C8" font-family="Arial, sans-serif" font-size="15" font-weight="800" letter-spacing="2">'+escSvg(title.toUpperCase())+'</text>'+text;
+      const drawRow=(y,label,lines,rowHeight)=>{
+        const labelX=outerX+cardPad+rowPadX;
+        const bodyX=labelX+labelW+labelGap;
+        const body=lines.map((line,index)=>
+          '<text x="'+bodyX+'" y="'+(y+rowPadY+22+index*bodyLineH)+'" fill="#E7F2F6" font-family="DM Sans, Arial, sans-serif" font-size="'+bodyFont+'" font-weight="500">'+escSvg(line)+'</text>'
+        ).join("");
+        return '<rect x="'+outerX+'" y="'+y+'" width="'+outerW+'" height="'+rowHeight+'" rx="14" fill="#0D2433" stroke="#294654"/>'+
+          '<text x="'+labelX+'" y="'+(y+rowPadY+15)+'" fill="#8FD0C8" font-family="DM Sans, Arial, sans-serif" font-size="'+labelFont+'" font-weight="700" letter-spacing="'+labelLetterSpacing+'">'+escSvg(label.toUpperCase())+'</text>'+
+          body;
       };
+
       const svg='<svg xmlns="http://www.w3.org/2000/svg" width="'+width+'" height="'+height+'" viewBox="0 0 '+width+' '+height+'">'+
         '<rect width="'+width+'" height="'+height+'" fill="#081827"/>'+
-        '<text x="'+cardX+'" y="54" fill="#F2F8FA" font-family="Arial, sans-serif" font-size="30" font-weight="800">İstanbul Havası · 5 günlük özet</text>'+
-        '<text x="'+cardX+'" y="82" fill="#8FA7B5" font-family="Arial, sans-serif" font-size="16">Yağış saatleri ve sıcaklık eğilimi · Eyüpsultan</text>'+
-        drawCard(108,"Yağış saatleri",rainLines.length?rainLines:["Önümüzdeki günler için çıktı yok."])+
-        drawCard(108+rainH+18,"5 günlük sıcaklık",tempLines.length?tempLines:["Sıcaklık analizi bekleniyor."])+
-        '<text x="'+cardX+'" y="'+(height-18)+'" fill="#6F8997" font-family="Arial, sans-serif" font-size="14">istanbulunhavasi.com</text>'+
+        drawRow(cardY,"Yağış saatleri",rainLines.length?rainLines:["Önümüzdeki günler için çıktı yok."],rainRowH)+
+        drawRow(cardY+rainRowH+rowGap,"5 günlük sıcaklık",tempLines.length?tempLines:["Sıcaklık analizi bekleniyor."],tempRowH)+
+        '<text x="'+outerX+'" y="'+(height-14)+'" fill="#6F8997" font-family="DM Sans, Arial, sans-serif" font-size="12">istanbulunhavasi.com</text>'+
         '</svg>';
+
       try{
         const blob=new Blob([svg],{type:"image/svg+xml;charset=utf-8"});
         const url=URL.createObjectURL(blob);
