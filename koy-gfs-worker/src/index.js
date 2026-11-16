@@ -553,7 +553,7 @@ function decodePublicationAsset(row) {
   return new Response(row.body, { status: 200, headers });
 }
 
-const KOY_SVG_RENDERER_VERSION = "cloudflare-js-v9-homepage-identical";
+const KOY_SVG_RENDERER_VERSION = "cloudflare-js-v10-f180-180h";
 const FONT = "system-ui,-apple-system,BlinkMacSystemFont,Segoe UI,sans-serif";
 const KOY_SVG_ASSET_NAME = /^koy-gfs-\d{8}T\d{2}Z-comparison\.svg$/;
 
