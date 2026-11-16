@@ -978,21 +978,67 @@ async function collectEcmwf(env) {
   return { updated: true, run_id_utc: runId, source: "meteopt", forecast_horizon_hours: payload.forecast_horizon_hours };
 }
 
-async function collectData(env) {
+function payloadHorizon(payload) {
+  const steps = (payload?.forecast_6_hourly || [])
+    .map(point => Number(point?.forecast_hour))
+    .filter(value => Number.isFinite(value));
+  const maxStep = steps.length ? Math.max(...steps) : 0;
+  return Math.max(Number(payload?.forecast_horizon_hours) || 0, maxStep);
+}
+
+async function fetchCyclesForCollect(fullSweep) {
+  const warnings = [];
+  const candidates = [];
+  if (fullSweep) {
+    const settled = await Promise.allSettled(CYCLES.map(hour => fetchCycle(hour)));
+    for (let index = 0; index < settled.length; index += 1) {
+      const outcome = settled[index];
+      if (outcome.status === "fulfilled") candidates.push(outcome.value);
+      else warnings.push({
+        requested_hour: CYCLES[index],
+        message: String(outcome.reason?.message || outcome.reason),
+      });
+    }
+    return { candidates, warnings };
+  }
+
+  let head = null;
+  for (const hour of CYCLES) {
+    try {
+      head = await fetchCycle(hour);
+      break;
+    } catch (error) {
+      warnings.push({
+        requested_hour: hour,
+        message: String(error?.message || error),
+      });
+    }
+  }
+  if (!head) return { candidates, warnings };
+  candidates.push(head);
+  const previous = CYCLES[CYCLES.indexOf(head.requestedHour) + 1];
+  if (previous !== undefined) {
+    try {
+      candidates.push(await fetchCycle(previous));
+    } catch (error) {
+      warnings.push({
+        requested_hour: previous,
+        message: String(error?.message || error),
+      });
+    }
+  }
+  return { candidates, warnings };
+}
+
+async function collectData(env, options = {}) {
   const started = new Date();
   let ecmwf = null;
-  try { ecmwf = await collectEcmwf(env); } catch (error) { ecmwf = { updated: false, error: String(error?.message || error), source: "meteopt" }; console.error(JSON.stringify({ event: "ecmwf_collect_error", ...ecmwf })); }
-  const settled = await Promise.allSettled(CYCLES.map(hour => fetchCycle(hour)));
-  const candidates = [];
-  const warnings = [];
-  for (let index = 0; index < settled.length; index += 1) {
-    const outcome = settled[index];
-    if (outcome.status === "fulfilled") candidates.push(outcome.value);
-    else warnings.push({
-      requested_hour: CYCLES[index],
-      message: String(outcome.reason?.message || outcome.reason),
-    });
+  if (options.collectEcmwf !== false) {
+    try { ecmwf = await collectEcmwf(env); } catch (error) { ecmwf = { updated: false, error: String(error?.message || error), source: "meteopt" }; console.error(JSON.stringify({ event: "ecmwf_collect_error", ...ecmwf })); }
   }
+  const fetched = await fetchCyclesForCollect(options.fullSweep === true);
+  const candidates = fetched.candidates;
+  const warnings = fetched.warnings;
 
   candidates.sort((a, b) => b.cycle.getTime() - a.cycle.getTime());
   const normalized = [];
@@ -1067,7 +1113,11 @@ async function collectData(env) {
     .sort((a, b) => Date.parse(b.run_id_utc) - Date.parse(a.run_id_utc))[0] || null;
   if (newestNormalized) {
     const current = await getCurrent(env, "latest");
-    if (!current || Date.parse(newestNormalized.run_id_utc) >= Date.parse(current.run_id_utc)) {
+    const nextRun = Date.parse(newestNormalized.run_id_utc);
+    const storedRun = current ? Date.parse(current.run_id_utc) : NaN;
+    const sameRun = Number.isFinite(nextRun) && nextRun === storedRun;
+    const longer = payloadHorizon(newestNormalized) >= payloadHorizon(current?.payload);
+    if (!current || nextRun > storedRun || (sameRun && longer)) {
       await writeCurrent(env, "latest", newestNormalized);
     }
   }
@@ -1105,14 +1155,14 @@ async function collectData(env) {
   return result;
 }
 
-async function collect(env, trigger = "unknown") {
+async function collect(env, trigger = "unknown", options = {}) {
   const startedAt = new Date().toISOString();
   await env.GFS_DB.prepare(
     "INSERT INTO gfs_worker_heartbeat (singleton, last_started_at_utc, updated_at_utc) VALUES (1, ?, ?) " +
     "ON CONFLICT(singleton) DO UPDATE SET last_started_at_utc=excluded.last_started_at_utc, updated_at_utc=excluded.updated_at_utc"
   ).bind(startedAt, startedAt).run();
   try {
-    const result = await collectData(env);
+    const result = await collectData(env, options);
     const successAt = new Date().toISOString();
     await env.GFS_DB.prepare(
       "UPDATE gfs_worker_heartbeat SET last_success_at_utc=?, last_error_at_utc=NULL, last_error=NULL, " +
@@ -1139,7 +1189,7 @@ async function latestPayload(env, bootstrap = true) {
     : Number.POSITIVE_INFINITY;
   if (bootstrap && (!current || !Number.isFinite(currentAgeMs) || currentAgeMs > staleAfterMs)) {
     try {
-      await collect(env, "live-read-refresh");
+      await collect(env, "live-read-refresh", { fullSweep: false, collectEcmwf: false });
       current = await getCurrent(env, "latest");
     } catch (error) {
       // Keep a known-good current payload available if the upstream source is
@@ -1540,7 +1590,7 @@ async function handleApi(request, env) {
         ok: true,
         service: "gfs-watch-istanbul-gfs",
         storage: "D1",
-        cron: "*/10 * * * *",
+        cron: "*/5 * * * *",
         latest_run_id_utc: current?.run_id_utc || null,
         latest_updated_at_utc: current?.updated_at_utc || null,
         archived_runs: Number(count?.count || 0),
@@ -1631,7 +1681,7 @@ async function handleApi(request, env) {
   if (path === "/gfs/latest" || path === "/api/latest") {
     try {
       const latest = await latestPayload(env);
-      if (!latest) return json({ ok: false, error: "No F180-ready Istanbul GFS run is available yet" }, 503);
+      if (!latest) return json({ ok: false, error: "No Istanbul GFS run is available yet" }, 503);
       return json(latest);
     } catch (error) {
       return json({ ok: false, error: String(error?.message || error) }, 503);
@@ -1665,8 +1715,13 @@ export default {
   },
 
   async scheduled(controller, env, ctx) {
+    const minute = new Date(controller.scheduledTime || Date.now()).getUTCMinutes();
+    const fullSweep = minute % 30 === 0;
     ctx.waitUntil(
-      collect(env).catch(error => {
+      collect(env, fullSweep ? "cron-full" : "cron-head", {
+        fullSweep,
+        collectEcmwf: fullSweep || minute % 10 === 0,
+      }).catch(error => {
         console.error(JSON.stringify({
           event: "istanbul_gfs_cron_error",
           message: String(error?.message || error),

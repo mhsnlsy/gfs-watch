@@ -1591,7 +1591,10 @@ const __hideEmptyBadges=()=>{document.querySelectorAll('[class*="badge"],[class*
         .sort((a,b)=>a.stamp-b.stamp);
       const current=Number(station.temperature_2m_c);
       if(windows.length<3){
-        holder.textContent="Önümüzdeki 5 gün için yeterli sıcaklık tahmini henüz yayımlanmadı. Eyüpsultan şu an "+fmt(current,1)+"°C.";
+        const horizon=forecastSeriesHorizon(window.__METEOPT_F180_DOCUMENT);
+        holder.textContent=horizon>0&&horizon<120
+          ? "Yeni çıktı yükleniyor, şu an "+horizon+". saate kadar. Eyüpsultan şu an "+fmt(current,1)+"°C."
+          : "Önümüzdeki 5 gün için yeterli sıcaklık tahmini henüz yayımlanmadı. Eyüpsultan şu an "+fmt(current,1)+"°C.";
         appendTemperatureSwings(holder);
         return;
       }
@@ -1726,10 +1729,22 @@ const __hideEmptyBadges=()=>{document.querySelectorAll('[class*="badge"],[class*
       }
       return keys;
     }
+    function forecastSeriesHorizon(doc){
+      const points=doc&&Array.isArray(doc.forecast_6_hourly)?doc.forecast_6_hourly:[];
+      const max=points.reduce((best,point)=>{
+        const step=Number(point&&point.forecast_hour);
+        return Number.isFinite(step)?Math.max(best,step):best;
+      },0);
+      return doc&&doc.f180&&doc.f180.available===true?Math.max(max,180):max;
+    }
     function briefingForecastPoints(){
-      const canonical=window.__METEOPT_F180_DOCUMENT;
-      if(canonical&&Array.isArray(canonical.forecast_6_hourly))return canonical.forecast_6_hourly;
-      return forecastData&&Array.isArray(forecastData.forecast_6_hourly)?forecastData.forecast_6_hourly:[];
+      const latest=window.__METEOPT_F180_DOCUMENT;
+      if(latest&&forecastSeriesHorizon(latest)>=120&&Array.isArray(latest.forecast_6_hourly))return latest.forecast_6_hourly;
+      const archived=[]
+        .concat(forecastData&&forecastData.comparison_runs||[])
+        .concat(latest&&latest.comparison_runs||[]);
+      const ready=archived.find(run=>run&&Array.isArray(run.forecast_6_hourly)&&forecastSeriesHorizon(run)>=120);
+      return ready?ready.forecast_6_hourly:[];
     }
     const BRIEFING_WINDOW_HOURS=120;
     const BRIEFING_DAY_COUNT=5;
@@ -1902,7 +1917,7 @@ const __hideEmptyBadges=()=>{document.querySelectorAll('[class*="badge"],[class*
       const secondCardY=firstCardY+rainH+rowGap;
       const footerY=secondCardY+tempH+64;
 
-      const escSvg=value=>String(value==null?"":value).replace(/[&<>"']/g,char=>({"&":"&","<":"<",">":">",'"':""","'":"&#39;"}[char]));
+      const escSvg=value=>String(value==null?"":value).replace(/[&<>"']/g,char=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[char]));
 
       const drawRow=(y,label,lines,rowHeight)=>{
         const textX=outerX+cardPadX;
@@ -2019,7 +2034,11 @@ const __hideEmptyBadges=()=>{document.querySelectorAll('[class*="badge"],[class*
       const lines=rainDayLines(briefingForecastPoints(),Date.now());
       holder.replaceChildren();
       if(!lines.length){
-        holder.textContent="Önümüzdeki günler için çıktı yok.";
+        const latest=window.__METEOPT_F180_DOCUMENT;
+        const horizon=forecastSeriesHorizon(latest);
+        holder.textContent=latest&&horizon>0&&horizon<120
+          ? "Yeni çıktı yükleniyor, şu an "+horizon+". saate kadar."
+          : "Önümüzdeki günler için çıktı yok.";
         return;
       }
       for(const text of lines){

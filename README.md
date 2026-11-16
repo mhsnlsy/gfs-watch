@@ -48,15 +48,15 @@ Canlı web arayüzü, API geçidi ve veri toplama Cloudflare üzerinde çalış�
 ### İstanbul GFS
 
 - Worker: `gfs-watch-istanbul-gfs` (`istanbul-gfs-worker/`)
-- Cron: `*/10 * * * *`.
+- Cron: `*/5 * * * *`. Dolum sürerken her turda en yeni döngü ve bir önceki slot istenir; dört döngünün tamamı 30 dakikada bir taranır.
 - D1 binding `GFS_DB`, veritabanı `gfs-watch-istanbul-gfs`.
 - R2 binding `ECMWF_ARCHIVE`, bucket `gfs-watch-live-archive`.
 - İstasyon binding'i: `STATIONS` → `gfs-watch-stations`.
 - Kaynak: MeteoPT GFS, 41.014°N / 28.950°E.
 - Worker 00Z, 06Z, 12Z ve 18Z seçicilerini kontrol eder; kullanılabilir döngüleri D1'e arşivler.
 - F72 güncel paketi ve F180 tamamlanmış döngü arşivi D1'de tutulur.
-- API: `/gfs/f72` en yeni kullanılabilir 72 saatlik döngü; `/gfs/latest` en yeni F180 döngüsü; `/gfs/comparison` dört F180 arşivi; `/api/health` sağlık.
-- Ana sayfadaki 72 saat tablosu `/gfs/f72` kullanır. F180 raporu, dört panelli SVG ve Telegram, F180 tamamlanınca aynı Cron içinde üretilir.
+- API: `/gfs/f72` en yeni kullanılabilir 72 saatlik döngü; `/gfs/latest` en yeni döngü, F180 dolmadan da; `/gfs/comparison` dört F180 arşivi; `/api/health` sağlık.
+- Ana sayfa tablosu `/gfs/latest` ile dolar. Ufuk uzadıkça satırlar eklenir. F180 raporu, dört panelli SVG ve Telegram, F180 tamamlanınca aynı Cron içinde üretilir.
 - SVG D1 `gfs_publication_assets` içine yazılır. Aynı SVG Worker içinde PNG'ye çevrilir, R2'ye konur ve Telegram'a metin + fotoğraf (`sendPhoto`) olarak gider. Outbox `gfs_report_publications`; yarım kalan gönderi kaldığı adımdan sürer, en fazla 288 deneme.
 - Grafik ekseni `shared/gfs-chart-axis.js` ile ortaktır. Sıcaklık ve 850 hPa adımı 5, rüzgâr 10, yağış 1'dir. Yağışın döngüler arasındaki en yüksek değeri 16'yı aşarsa o panelin adımı 2 olur. Son döngünün tepe değeri kalın çizgide tr-TR etiketidir; eksen çizgisi yapılmaz.
 - `POST /internal/regenerate-latest-chart` son dört arşiv döngüsünden SVG'yi yeniden yazar. `Authorization: Bearer` ve Worker secret `GFS_DISPATCH_TOKEN` gerekir. İstanbul deploy işi bu ucu dağıtımdan sonra çağırır.

@@ -192,8 +192,11 @@
     const cadenceLabel = stepIntervals.length
       ? stepIntervals.map(interval => interval + " saat").join("/")
       : "model";
-    $("meteopt-table-status").textContent = rows.length + " adım · " + cadenceLabel +
-      " aralıklı · 180. saate kadar";
+    const horizon = hours.reduce((max, item) => Math.max(max, item.step), 0);
+    const complete = document.f180?.available === true || horizon >= 180;
+    $("meteopt-table-status").textContent = complete
+      ? rows.length + " adım · " + cadenceLabel + " aralıklı · 180. saate kadar"
+      : "Yeni çıktı yükleniyor, şu an " + horizon + ". saate kadar";
   }
 
   async function refresh() {
