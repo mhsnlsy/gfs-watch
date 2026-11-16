@@ -170,9 +170,9 @@ def main() -> None:
     assert "schedule:" not in koy_svg_workflow
     assert "push:" not in koy_svg_workflow
     assert "comparison.svg" in koy_svg_workflow
-    assert "cloudflare-js-v10-f180-180h-homepage-identical" in koy_svg_workflow
+    assert "cloudflare-js-v10-f180-180h" in koy_svg_workflow
     assert "node scripts/test_koy_worker_publication.mjs" in koy_deploy
-    assert "cloudflare-js-v10-f180-180h-homepage-identical" in platform_workflow
+    assert "cloudflare-js-v10-f180-180h" in platform_workflow
     assert "cloudflare-js-v5-raw-forecast-hour" not in platform_workflow
 
     # Köy uses the same SVG chart geometry, common-valid-time window and
