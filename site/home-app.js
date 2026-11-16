@@ -1173,14 +1173,13 @@ const __hideEmptyBadges=()=>{document.querySelectorAll('[class*="badge"],[class*
       }
     }
     function stationObservationIsFresh(station){
-      if(!station||!numeric(station.temperature_2m_c)||!station.observed_at_utc||station.is_stale)return false;
+      if(!station||!numeric(station.temperature_2m_c)||!station.observed_at_utc)return false;
       const observedAt=Date.parse(station.observed_at_utc);
       if(!Number.isFinite(observedAt))return false;
       const ageMinutes=Math.max(0,(Date.now()-observedAt)/60000);
-      const isMgmEyupsultan=String(station.station_id||"")==="18101"||String(station.source||"").includes("MGM 18101");
-      const defaultLimit=isMgmEyupsultan?30:15;
-      const staleAfter=Number.isFinite(station.stale_after_minutes)?station.stale_after_minutes:defaultLimit;
-      return ageMinutes<=Math.min(staleAfter,defaultLimit);
+      // Keep showing the last known reading for up to 90 minutes so a short
+      // collection outage does not blank the homepage.
+      return ageMinutes<=90;
     }
     function renderStationCard(station){
       const hasStation=!!station;
@@ -1191,7 +1190,7 @@ const __hideEmptyBadges=()=>{document.querySelectorAll('[class*="badge"],[class*
       const observed=hasStation&&station.observed_at_utc?new Date(station.observed_at_utc):null;
       const observedValid=observed&&!Number.isNaN(observed.getTime());
       const ageMinutes=observedValid?Math.max(0,(Date.now()-observed.getTime())/60000):null;
-      const staleAfter=hasStation&&Number.isFinite(station.stale_after_minutes)?station.stale_after_minutes:(station&&station.station_id==="18101"?20:20);
+      const staleAfter=hasStation&&Number.isFinite(station.stale_after_minutes)?station.stale_after_minutes:45;
       const isFresh=stationObservationIsFresh(station);
       $("temperature").textContent=isFresh&&numeric(station.temperature_2m_c)?fmt(station.temperature_2m_c,1)+"°":"—°";
       $("wind").innerHTML=isFresh&&numeric(station.wind_speed_10m_kmh)?fmt(station.wind_speed_10m_kmh,1)+'<span class="unit">km/sa</span>':'—<span class="unit">km/sa</span>';
