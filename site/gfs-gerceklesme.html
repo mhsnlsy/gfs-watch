@@ -1,0 +1,247 @@
+<!DOCTYPE html>
+<html lang="tr">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<meta name="theme-color" content="#081827">
+<meta name="description" content="GFS model çıktılarının gerçek istasyon gözlemleriyle karşılaştırılması. f saat bazında başarı, ortalama sapma ve son çıktı için olasılık.">
+<title>GFS Gerçekleşme Verisi · İstanbul Havası</title>
+<link rel="icon" href="/favicon.svg" type="image/svg+xml">
+<link rel="stylesheet" href="/home.css?v=20261116-gerceklesme-1">
+<link rel="stylesheet" href="/header-common.css?v=20261110-shared-header-1">
+<style>
+  .verif-page { padding: 24px 0 48px; }
+  .verif-page h1 { font: 800 28px/1.1 Manrope, sans-serif; letter-spacing: -.04em; margin: 0 0 8px; }
+  .verif-page .lead { color: #9bb1bf; font-size: 14px; max-width: 720px; margin: 0 0 20px; }
+  .verif-controls { display: flex; gap: 12px; align-items: center; margin-bottom: 18px; flex-wrap: wrap; }
+  .verif-controls select, .verif-controls button {
+    background: #1e293b; color: #e2e8f0; border: 1px solid rgba(255,255,255,.12);
+    padding: 8px 14px; border-radius: 8px; font: 600 13px "DM Sans", sans-serif;
+  }
+  .verif-controls button { cursor: pointer; background: rgba(125,211,215,.15); border-color: rgba(125,211,215,.35); color: #c6f0ec; }
+  .stats-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(160px, 1fr)); gap: 12px; margin: 16px 0; }
+  .stat-card { background: rgba(255,255,255,.03); border: 1px solid rgba(255,255,255,.08); border-radius: 12px; padding: 14px; text-align: center; }
+  .stat-card b { display: block; font: 700 22px Manrope, sans-serif; color: #7dd3d7; margin-top: 4px; }
+  .stat-card span { font-size: 11px; color: #9bb1bf; text-transform: uppercase; letter-spacing: .06em; }
+  table.verif-table { width: 100%; border-collapse: collapse; font-size: 13px; margin-top: 8px; }
+  table.verif-table th, table.verif-table td { padding: 10px 8px; text-align: left; border-bottom: 1px solid rgba(255,255,255,.08); }
+  table.verif-table th { background: rgba(255,255,255,.04); font-weight: 600; font-size: 11px; text-transform: uppercase; letter-spacing: .04em; color: #9bb1bf; }
+  table.verif-table .num { text-align: right; font-variant-numeric: tabular-nums; }
+  .good { color: #8fd7ba; } .warn { color: #f1c98b; } .bad { color: #f0a08a; }
+  .note { font-size: 11px; color: #8fa7b5; margin-top: 10px; }
+  #status { padding: 16px; background: rgba(255,255,255,.03); border-radius: 12px; }
+</style>
+</head>
+<body>
+<header class="shell topbar">
+  <a class="brand" href="/" aria-label="İstanbul Havası">
+    <span class="brand-mark"><img src="/favicon-192x192.png" alt="" width="38" height="38" style="display:block;width:100%;height:100%;object-fit:contain;border-radius:inherit"></span>
+    <span>İstanbul Havası<small>Şehir için hava tahmini</small></span>
+  </a>
+  <nav aria-label="Ana gezinme">
+    <a href="/">Anasayfa</a>
+    <a href="/#bildirimler">Raporlar</a>
+    <a href="/ecmwf/">ECMWF</a>
+    <a href="/koy.html">Köy</a>
+    <a href="/gfs-gerceklesme.html" aria-current="page">GFS Gerçekleşme</a>
+  </nav>
+  <div class="top-right">
+    <span class="version"><span data-app-name>İstanbul Havası</span> <span data-app-version>1.5.0</span></span>
+  </div>
+</header>
+
+<main class="shell verif-page">
+  <h1>GFS Gerçekleşme Verisi</h1>
+  <p class="lead">Gerçek istasyon gözlemleri ile geçmiş GFS çıktıları karşılaştırılır. Hangi f saatinde (lead time) modelin ne kadar başarılı olduğu hesaplanır; son çıktıya göre ortalama sapma ve ±2°C içinde kalma olasılığı gösterilir.</p>
+
+  <div class="verif-controls">
+    <label>İstasyon:
+      <select id="station">
+        <option value="eyupsultan">Eyüpsultan (MGM 18101)</option>
+        <option value="enka">ENKA Balmumcu</option>
+      </select>
+    </label>
+    <button id="refresh" type="button">Yenile</button>
+  </div>
+
+  <div id="status">Veriler yükleniyor…</div>
+
+  <div id="summary" style="display:none;">
+    <div class="stats-grid" id="summary-stats"></div>
+  </div>
+
+  <section id="by-f" style="display:none; margin-top:28px;">
+    <div class="section-kicker">f SAAT BAZINDA</div>
+    <h2 style="margin:6px 0 10px;">Sıcaklık 2 m başarı</h2>
+    <p class="note">Bias = model − gözlem. Pozitif bias modelin daha sıcak tahmin ettiği anlamına gelir. “±2°C” o f saatinde geçmişte kaç tahminin 2°C içinde kaldığını gösterir.</p>
+    <table class="verif-table" id="f-table">
+      <thead><tr><th>f saat</th><th class="num">Örnek</th><th class="num">Bias °C</th><th class="num">MAE °C</th><th class="num">RMSE</th><th class="num">±1°C</th><th class="num">±2°C</th></tr></thead>
+      <tbody></tbody>
+    </table>
+  </section>
+
+  <section id="latest" style="display:none; margin-top:36px;">
+    <div class="section-kicker">SON ÇIKTI</div>
+    <h2 style="margin:6px 0 10px;">Son GFS + tarihsel düzeltme</h2>
+    <p id="latest-meta" class="note"></p>
+    <table class="verif-table" id="latest-table">
+      <thead><tr><th>Geçerli saat (TSİ)</th><th class="num">f</th><th class="num">Ham tahmin °C</th><th class="num">Hist. bias</th><th class="num">Düzeltilmiş</th><th class="num">±2°C olasılık*</th></tr></thead>
+      <tbody></tbody>
+    </table>
+    <p class="note">* Geçmiş eşleşmelerde o f saati için |hata| ≤ 2°C olan oran. Örnek sayısı azsa güvenilirlik düşer. Veri biriktikçe (yeni çevrimler + istasyon geçmişi) istatistikler güçlenir.</p>
+  </section>
+</main>
+
+<script>
+const API_BASE = window.location.origin;
+const GFS_BASE = "https://gfs-watch-istanbul-gfs.muhsin-ulusoy.workers.dev";
+
+async function fetchJSON(url) {
+  const r = await fetch(url, { cache: "no-store" });
+  if (!r.ok) throw new Error(url.split("?")[0] + " " + r.status);
+  return r.json();
+}
+
+function nearestObs(obsList, targetTime) {
+  let best = null, bestDiff = Infinity;
+  const target = new Date(targetTime).getTime();
+  for (const o of obsList) {
+    const t = new Date(o.observed_at_utc || o.source_observed_at_utc).getTime();
+    const diff = Math.abs(t - target);
+    if (diff < bestDiff && diff < 45 * 60 * 1000) {
+      bestDiff = diff;
+      best = o;
+    }
+  }
+  return best;
+}
+
+function computeStats(errors) {
+  if (!errors.length) return null;
+  const n = errors.length;
+  const mean = errors.reduce((a, b) => a + b, 0) / n;
+  const mae = errors.reduce((a, b) => a + Math.abs(b), 0) / n;
+  const rmse = Math.sqrt(errors.reduce((a, b) => a + b * b, 0) / n);
+  const within1 = errors.filter(e => Math.abs(e) <= 1).length / n;
+  const within2 = errors.filter(e => Math.abs(e) <= 2).length / n;
+  return { n, bias: mean, mae, rmse, within1, within2 };
+}
+
+async function load() {
+  const station = document.getElementById("station").value;
+  const statusEl = document.getElementById("status");
+  statusEl.style.display = "block";
+  statusEl.textContent = "İstasyon geçmişi ve GFS çıktıları yükleniyor…";
+  document.getElementById("summary").style.display = "none";
+  document.getElementById("by-f").style.display = "none";
+  document.getElementById("latest").style.display = "none";
+
+  try {
+    const [hist, gfs] = await Promise.all([
+      fetchJSON(`${API_BASE}/api/history/${station}?hours=72`),
+      fetchJSON(`${GFS_BASE}/gfs/latest`)
+    ]);
+
+    const samples = hist.samples || [];
+    const runs = [gfs, ...(gfs.comparison_runs || [])].filter(Boolean);
+    const uniqueRuns = [];
+    const seen = new Set();
+    for (const r of runs) {
+      if (r.run_id_utc && !seen.has(r.run_id_utc)) {
+        seen.add(r.run_id_utc);
+        uniqueRuns.push(r);
+      }
+    }
+
+    const byF = {};
+    const matches = [];
+
+    for (const run of uniqueRuns) {
+      const steps = run.forecast_6_hourly || [];
+      for (const step of steps) {
+        const valid = step.valid_time_utc;
+        if (!valid) continue;
+        const obs = nearestObs(samples, valid);
+        if (!obs || obs.temperature_c == null) continue;
+        const err = step.temperature_2m_c - obs.temperature_c;
+        const f = step.forecast_hour;
+        if (!byF[f]) byF[f] = [];
+        byF[f].push(err);
+        matches.push({ f, err });
+      }
+    }
+
+    const allErr = matches.map(m => m.err);
+    const overall = computeStats(allErr);
+    const summaryEl = document.getElementById("summary-stats");
+    summaryEl.innerHTML = "";
+    if (overall && overall.n > 0) {
+      summaryEl.innerHTML = `
+        <div class="stat-card"><span>Eşleşme</span><b>${overall.n}</b></div>
+        <div class="stat-card"><span>Ortalama bias</span><b>${overall.bias >= 0 ? "+" : ""}${overall.bias.toFixed(2)} °C</b></div>
+        <div class="stat-card"><span>MAE</span><b>${overall.mae.toFixed(2)} °C</b></div>
+        <div class="stat-card"><span>±2°C içinde</span><b>${(overall.within2 * 100).toFixed(0)}%</b></div>
+      `;
+      document.getElementById("summary").style.display = "block";
+    }
+
+    const tbody = document.querySelector("#f-table tbody");
+    tbody.innerHTML = "";
+    const fs = Object.keys(byF).map(Number).sort((a, b) => a - b);
+    for (const f of fs) {
+      const st = computeStats(byF[f]);
+      if (!st || st.n < 2) continue;
+      const biasClass = Math.abs(st.bias) < 0.5 ? "good" : Math.abs(st.bias) < 1.5 ? "warn" : "bad";
+      const tr = document.createElement("tr");
+      tr.innerHTML = `
+        <td>f${f}</td>
+        <td class="num">${st.n}</td>
+        <td class="num ${biasClass}">${st.bias >= 0 ? "+" : ""}${st.bias.toFixed(2)}</td>
+        <td class="num">${st.mae.toFixed(2)}</td>
+        <td class="num">${st.rmse.toFixed(2)}</td>
+        <td class="num">${(st.within1 * 100).toFixed(0)}%</td>
+        <td class="num">${(st.within2 * 100).toFixed(0)}%</td>
+      `;
+      tbody.appendChild(tr);
+    }
+    if (tbody.children.length) document.getElementById("by-f").style.display = "block";
+
+    const latest = uniqueRuns[0];
+    if (latest) {
+      document.getElementById("latest-meta").textContent = `Son çıktı: ${latest.run_id_utc} · İstasyon: ${station}`;
+      const ltbody = document.querySelector("#latest-table tbody");
+      ltbody.innerHTML = "";
+      const steps = (latest.forecast_6_hourly || []).slice(0, 20);
+      for (const step of steps) {
+        const f = step.forecast_hour;
+        const st = byF[f] ? computeStats(byF[f]) : null;
+        const bias = st ? st.bias : 0;
+        const adjusted = step.temperature_2m_c - bias;
+        const prob = st ? (st.within2 * 100).toFixed(0) + "%" : "—";
+        const tr = document.createElement("tr");
+        tr.innerHTML = `
+          <td>${step.valid_time_istanbul || step.valid_time_utc}</td>
+          <td class="num">f${f}</td>
+          <td class="num">${step.temperature_2m_c.toFixed(1)}</td>
+          <td class="num">${st ? (bias >= 0 ? "+" : "") + bias.toFixed(2) : "—"}</td>
+          <td class="num">${adjusted.toFixed(1)}</td>
+          <td class="num">${prob}</td>
+        `;
+        ltbody.appendChild(tr);
+      }
+      document.getElementById("latest").style.display = "block";
+    }
+
+    statusEl.style.display = "none";
+  } catch (err) {
+    statusEl.textContent = "Hata: " + err.message;
+    console.error(err);
+  }
+}
+
+document.getElementById("refresh").onclick = load;
+document.getElementById("station").onchange = load;
+load();
+</script>
+</body>
+</html>
