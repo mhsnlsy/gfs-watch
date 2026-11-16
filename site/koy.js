@@ -1030,14 +1030,14 @@ function briefingTempSummary(points,nowMs,current){
  for(let i=0;i<means.length;i++){const d=means[i].mean-(i?means[i-1].mean:baseline);if(d<=-1){firstFall={i,d};break;}}
  let summary="";
  if(firstFall){
-  const m=means[firstFall.i],when=firstFall.i===0?"bugün":firstFall.i===1?"yarın":firstFall.i+" gün sonra";
+  const m=means[firstFall.i],when=briefingDayTitle(m.key);
   summary="Hava "+when+" ("+briefingDayTitle(m.key)+") soğumaya başlıyor; günlük ortalama yaklaşık "+Math.abs(firstFall.d).toLocaleString("tr-TR",{minimumFractionDigits:1,maximumFractionDigits:1})+"°C düşüyor.";
   const rise=means.slice(firstFall.i+1).some((m,i)=>m.mean-(means[firstFall.i+i].mean)>=1);
   if(!rise)summary+=" Beş günlük tahmin aralığında yeniden ısınma görünmüyor.";
  }else{
   const rise=means.find((m,i)=>m.mean-(i?means[i-1].mean:baseline)>=1);
-  const riseWhen=rise?(rise.i===0?"bugün":rise.i===1?"yarın":rise.i+" gün sonra"):"";
-  summary=rise?"Hava "+riseWhen+" ("+briefingDayTitle(rise.key)+") ısınmaya başlıyor.":"Önümüzdeki beş gün boyunca sıcaklık belirgin değişim göstermeden stabil seyrediyor.";
+  const riseWhen=rise?briefingDayTitle(rise.key):"";
+  summary=rise?"Hava "+riseWhen+" ısınmaya başlıyor.":"Önümüzdeki beş gün boyunca sıcaklık belirgin değişim göstermeden stabil seyrediyor.";
  }
  summary+=" Köy Ev şu an "+fmt(current,1)+"°C.";
  const swings=[];
