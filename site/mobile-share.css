@@ -1,0 +1,35 @@
+/* Mobile: right-align share buttons and tighten section gaps.
+   One Paylaş covers yağış saatleri + 5 günlük sıcaklık.
+   Chart Paylaş stays separate and right-aligned. */
+.briefing-share-head{
+  justify-content:flex-end!important;
+  margin:0 2px 4px!important;
+  min-height:0!important;
+}
+.briefing-share-button,
+.gfs-chart-share-global{
+  font:700 8px/1 "DM Sans",system-ui,sans-serif!important;
+  padding:5px 9px!important;
+  border-radius:999px!important;
+}
+@media (max-width:760px){
+  .dashboard-left{gap:8px!important}
+  .dashboard-top{
+    gap:8px!important;
+    padding-top:8px!important;
+    padding-bottom:6px!important;
+  }
+  .dashboard-left > .station-briefing-inline{
+    margin-top:0!important;
+    padding-top:0!important;
+  }
+  .dashboard-left > .station-briefing-inline .briefing{gap:6px!important}
+  .dashboard-left > .station-briefing-inline .briefing-row{padding:6px 8px!important}
+  .gfs-chart-share-toolbar{
+    justify-content:flex-end!important;
+    min-height:28px!important;
+    padding:2px 8px 4px!important;
+  }
+  .history-panel,
+  .station-history-inline{margin-bottom:0!important}
+}
