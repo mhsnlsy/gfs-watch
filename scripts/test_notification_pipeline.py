@@ -154,7 +154,7 @@ def main() -> None:
     assert "gfs_publication_assets" in koy_worker
     assert 'wind_direction_enrichment_checked: true' in koy_worker
     assert 'needsWindDirectionEnrichment' in koy_worker
-    assert 'KOY_SVG_RENDERER_VERSION = "cloudflare-js-v10-f180-180h-homepage-identical"' in koy_worker
+    assert 'KOY_SVG_RENDERER_VERSION = "cloudflare-js-v10-f180-180h"' in koy_worker
     assert "function buildKoyInteractiveSvg" in koy_worker
     assert "function publishLatestKoySvg" in koy_worker
     assert 'const KOY_SVG_RENDERER_VERSION = "cloudflare-js-v10-f180-180h-homepage-identical"' in koy_worker
