@@ -7,7 +7,7 @@ const clock = app.slice(app.indexOf("const meteoptCanonicalDateLabel"), app.inde
 const start = app.indexOf("function tableForecastDayKey");
 const end = app.indexOf('window.addEventListener("meteopt-gfs-f72-updated"', start);
 assert.ok(start > 0 && end > start, "briefing helpers must be present");
-const sandbox = { window: {} };
+const sandbox = { window: {}, $: () => null, setTimeout: () => 0 };
 vm.createContext(sandbox);
 vm.runInContext(clock + "\n" + app.slice(start, end), sandbox);
 
