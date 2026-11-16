@@ -1615,7 +1615,7 @@ const __hideEmptyBadges=()=>{document.querySelectorAll('[class*="badge"],[class*
       });
       const dayPhrase=items=>{
         const names=items.map(item=>dayLabel(item.stamp));
-        return names.length===1?names[0]:names[0]+"–"+names[names.length-1];
+        return names.length===1?names[0]+" günü":names[0]+"–"+names[names.length-1]+" günleri";
       };
       const lodosDays=series=>{
         const days=new Map();
@@ -1646,9 +1646,9 @@ const __hideEmptyBadges=()=>{document.querySelectorAll('[class*="badge"],[class*
         const later=groups.slice(firstFall+1);
         for(const group of later){
           if(group.trend==="fall"){
-            summary+=" "+dayPhrase(group.items)+" günleri düşüş devam ediyor.";
+            summary+=" "+dayPhrase(group.items)+" düşüş devam ediyor.";
           }else if(group.trend==="stable"){
-            summary+=" "+dayPhrase(group.items)+" günleri sıcaklık stabil seyrediyor.";
+            summary+=" "+dayPhrase(group.items)+" sıcaklık stabil seyrediyor.";
           }else{
             summary+=" Yeniden ısınma "+dayLabel(group.items[0].stamp)+" günü başlıyor.";
           }
@@ -1663,9 +1663,9 @@ const __hideEmptyBadges=()=>{document.querySelectorAll('[class*="badge"],[class*
           const when=first.day===0?"bugün":first.day===1?"yarın":first.day+" gün sonra";
           summary="Belirgin ısınma "+when+" ("+dayLabel(first.stamp)+") başlıyor; günlük ortalama yaklaşık "+magnitude(first.delta)+" yükseliyor.";
           for(const group of groups.slice(groups.indexOf(firstRise)+1)){
-            if(group.trend==="rise")summary+=" "+dayPhrase(group.items)+" günleri ısınma sürüyor.";
+            if(group.trend==="rise")summary+=" "+dayPhrase(group.items)+" ısınma sürüyor.";
             else if(group.trend==="stable")summary+=" "+dayPhrase(group.items)+" günleri sıcaklık stabil seyrediyor.";
-            else summary+=" "+dayPhrase(group.items)+" günleri sıcaklık yeniden düşüyor.";
+            else summary+=" "+dayPhrase(group.items)+" sıcaklık yeniden düşüyor.";
           }
         }else{
           summary="Önümüzdeki beş gün boyunca sıcaklık belirgin değişim göstermeden stabil seyrediyor.";
