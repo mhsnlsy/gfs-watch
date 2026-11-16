@@ -154,10 +154,10 @@ def main() -> None:
     assert "gfs_publication_assets" in koy_worker
     assert 'wind_direction_enrichment_checked: true' in koy_worker
     assert 'needsWindDirectionEnrichment' in koy_worker
-    assert 'KOY_SVG_RENDERER_VERSION = "cloudflare-js-v9-homepage-identical"' in koy_worker
+    assert 'KOY_SVG_RENDERER_VERSION = "cloudflare-js-v10-f180-180h-homepage-identical"' in koy_worker
     assert "function buildKoyInteractiveSvg" in koy_worker
     assert "function publishLatestKoySvg" in koy_worker
-    assert 'const KOY_SVG_RENDERER_VERSION = "cloudflare-js-v9-homepage-identical"' in koy_worker
+    assert 'const KOY_SVG_RENDERER_VERSION = "cloudflare-js-v10-f180-180h-homepage-identical"' in koy_worker
     assert 'path === "/api/comparison.svg"' in koy_worker
     assert "comparison_svg_published" in koy_worker
     assert "svg_renderer: KOY_SVG_RENDERER_VERSION" in koy_worker
@@ -171,9 +171,9 @@ def main() -> None:
     assert "schedule:" not in koy_svg_workflow
     assert "push:" not in koy_svg_workflow
     assert "comparison.svg" in koy_svg_workflow
-    assert "cloudflare-js-v9-homepage-identical" in koy_svg_workflow
+    assert "cloudflare-js-v10-f180-180h-homepage-identical" in koy_svg_workflow
     assert "node scripts/test_koy_worker_publication.mjs" in koy_deploy
-    assert "cloudflare-js-v9-homepage-identical" in platform_workflow
+    assert "cloudflare-js-v10-f180-180h-homepage-identical" in platform_workflow
     assert "cloudflare-js-v5-raw-forecast-hour" not in platform_workflow
 
     # Köy uses the same SVG chart geometry, common-valid-time window and
@@ -182,7 +182,7 @@ def main() -> None:
     assert 'koy-homepage-report-parity' in koy_html
     assert koy_html.index('home.css?v=20261111-koy-home-parity-1') < koy_html.index('koy-homepage-report-parity') < koy_html.index('</head>')
     assert 'width:90%!important' in koy_html
-    assert 'koy-homepage-identical-v9' in koy_client
+    assert 'koy-homepage-identical-v10-f180-180h' in koy_client
     assert 'buildMobileGfsPanelViews' in comparison_tooltip
     assert 'isMobileGfsLayout()' in comparison_tooltip
     assert 'attachGfsSvgInteractions' in comparison_tooltip
