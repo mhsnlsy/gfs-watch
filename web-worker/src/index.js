@@ -103,20 +103,65 @@ async function callKoyService(binding, request, path) {
   });
 }
 
-async function callService(binding, request, path) {
-  if (!binding || typeof binding.fetch !== "function") {
-    return responseJson({ ok: false, error: "Cloudflare service binding is not configured" }, 503);
+async function callService(binding, request, path, fallbackBase = null) {
+  // The custom-domain gateway must not go dark just because a Service
+  // Binding is stale, temporarily unavailable, or returns a 5xx. The
+  // dedicated Workers are also public canonical endpoints, so use them as
+  // a last-resort data-path fallback.
+  let response = null;
+  let bindingError = null;
+
+  if (binding && typeof binding.fetch === "function") {
+    try {
+      response = await binding.fetch(internalRequest(request, path));
+      if (response.ok || (response.status >= 400 && response.status < 500 && response.status !== 404)) {
+        const headers = new Headers(response.headers);
+        headers.set("Cache-Control", "no-store, max-age=0");
+        headers.set("Access-Control-Allow-Origin", "*");
+        headers.set("X-GFS-Watch-Gateway", "service-binding");
+        return new Response(response.body, {
+          status: response.status,
+          statusText: response.statusText,
+          headers,
+        });
+      }
+      bindingError = "Service Binding HTTP " + response.status;
+    } catch (error) {
+      bindingError = String(error?.message || error);
+    }
+  } else {
+    bindingError = "Cloudflare service binding is not configured";
   }
-  const response = await binding.fetch(internalRequest(request, path));
-  const headers = new Headers(response.headers);
-  headers.set("Cache-Control", "no-store, max-age=0");
-  headers.set("Access-Control-Allow-Origin", "*");
-  headers.set("X-GFS-Watch-Gateway", "service-binding");
-  return new Response(response.body, {
-    status: response.status,
-    statusText: response.statusText,
-    headers,
-  });
+
+  if (fallbackBase) {
+    try {
+      const incoming = new URL(request.url);
+      const direct = new URL(fallbackBase.replace(/\/$/, "") + path);
+      direct.search = incoming.search;
+      const fallbackResponse = await fetch(new Request(direct, request), {
+        cf: { cacheTtl: 0, cacheEverything: false },
+      });
+      const headers = new Headers(fallbackResponse.headers);
+      headers.set("Cache-Control", "no-store, max-age=0");
+      headers.set("Access-Control-Allow-Origin", "*");
+      headers.set("X-GFS-Watch-Gateway", "direct-worker-fallback");
+      if (bindingError) headers.set("X-GFS-Watch-Binding-Error", bindingError.slice(0, 180));
+      return new Response(fallbackResponse.body, {
+        status: fallbackResponse.status,
+        statusText: fallbackResponse.statusText,
+        headers,
+      });
+    } catch (error) {
+      return responseJson({
+        ok: false,
+        error: "Service Binding and direct Worker fallback failed",
+        binding_error: bindingError,
+        fallback_error: String(error?.message || error),
+      }, 503);
+    }
+  }
+
+  return responseJson({ ok: false, error: bindingError || "Service unavailable" }, 503);
 }
 
 async function fetchD1PublicationAsset(request, env, key) {
@@ -228,7 +273,8 @@ export default {
       const nativeManifest = await callService(
         env.ISTANBUL_GFS,
         request,
-        "/gfs/notification-latest"
+        "/gfs/notification-latest",
+        "https://gfs-watch-istanbul-gfs.muhsin-ulusoy.workers.dev"
       );
       if (nativeManifest.ok) return nativeManifest;
 
@@ -265,7 +311,12 @@ export default {
       // from the canonical MeteoPT ECMWF source and rejects partial cycles.
       // R2 remains the fallback for outage resilience.
       if (isLiveEcmwfLatest) {
-        const published = await callService(env.ISTANBUL_GFS, request, "/ecmwf/latest");
+        const published = await callService(
+          env.ISTANBUL_GFS,
+          request,
+          "/ecmwf/latest",
+          "https://gfs-watch-istanbul-gfs.muhsin-ulusoy.workers.dev"
+        );
         if (published) return published;
       }
 
@@ -314,7 +365,12 @@ export default {
     // Direct, canonical D1 publication-asset routes used by the live homepage charts.
     // These must be Worker-first on the custom domain; otherwise Static Assets returns 404.
     if (path.startsWith("/gfs/publication-asset/")) {
-      return callService(env.ISTANBUL_GFS, request, path);
+      return callService(
+        env.ISTANBUL_GFS,
+        request,
+        path,
+        "https://gfs-watch-istanbul-gfs.muhsin-ulusoy.workers.dev"
+      );
     }
 
     if (path.startsWith("/api/publication-asset/")) {
@@ -339,15 +395,30 @@ export default {
     }
 
     if (path === "/api/stations/health") {
-      return callService(env.STATIONS, request, "/api/health");
+      return callService(
+        env.STATIONS,
+        request,
+        "/api/health",
+        "https://gfs-watch-stations.muhsin-ulusoy.workers.dev"
+      );
     }
 
     if (path === "/api/stations" || path.startsWith("/api/stations/")) {
-      return callService(env.STATIONS, request, path);
+      return callService(
+        env.STATIONS,
+        request,
+        path,
+        "https://gfs-watch-stations.muhsin-ulusoy.workers.dev"
+      );
     }
 
     if (path.startsWith("/api/history/")) {
-      return callService(env.STATIONS, request, path);
+      return callService(
+        env.STATIONS,
+        request,
+        path,
+        "https://gfs-watch-stations.muhsin-ulusoy.workers.dev"
+      );
     }
 
     if (path.startsWith("/api/")) {
