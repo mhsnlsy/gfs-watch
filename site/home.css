@@ -5605,49 +5605,31 @@ nav a:hover{color:#eef7f8}
   display:flex;
   align-items:center;
   justify-content:space-between;
-  gap:8px;
-  min-height:22px;
-  padding:0 2px 2px;
+  gap:6px;
+  min-height:18px;
+  padding:0;
+  margin-bottom:2px;
 }
-.briefing-share-head>span{
-  font-size:8px;
-  font-weight:800;
-  letter-spacing:.08em;
-  text-transform:uppercase;
-  color:#8fa7b5;
-}
+.briefing-share-head>span{display:none}
 .briefing-share-button{
   appearance:none;
   border:1px solid rgba(125,211,215,.42);
   background:rgba(4,18,29,.92);
   color:#b9e6e8;
   border-radius:999px;
-  font:700 8px/1 "DM Sans",system-ui,sans-serif;
-  padding:3px 7px;
+  font:700 7px/1 "DM Sans",system-ui,sans-serif;
+  padding:2px 6px;
   cursor:pointer;
-  box-shadow:0 5px 18px rgba(0,0,0,.28);
+  box-shadow:0 3px 10px rgba(0,0,0,.22);
   touch-action:manipulation;
   -webkit-tap-highlight-color:transparent;
   display:inline-flex;
   align-items:center;
   justify-content:center;
   white-space:nowrap;
-  transform:translateY(1px);
-  transition:background .16s ease,border-color .16s ease,transform .16s ease;
+  transform:none;
 }
-.briefing-share-button:hover{
-  background:rgba(125,211,215,.18);
-  border-color:rgba(125,211,215,.62);
-}
+.briefing-share-button:hover{background:rgba(125,211,215,.18);border-color:rgba(125,211,215,.62)}
 .briefing-share-button:active{transform:translateY(1px)}
-.briefing-share-button:focus-visible{
-  outline:2px solid rgba(125,211,215,.55);
-  outline-offset:2px;
-}
-@media(max-width:560px){
-  .briefing-share-head{min-height:20px}
-  .briefing-share-button{font-size:7px;padding:2px 6px}
-}
-@media(prefers-reduced-motion:reduce){
-  .briefing-share-button{transition:none}
-}
+.briefing-share-button:focus-visible{outline:2px solid rgba(125,211,215,.55);outline-offset:2px}
+@media(prefers-reduced-motion:reduce){.briefing-share-button{transition:none}}
