@@ -173,7 +173,8 @@ const __hideEmptyBadges=()=>{document.querySelectorAll('[class*="badge"],[class*
         const date=new Date(item.date_istanbul+"T12:00:00+03:00");
         const day=new Intl.DateTimeFormat("tr-TR",{timeZone:"Europe/Istanbul",weekday:"short"}).format(date);
         const rain=numeric(item.precipitation_total_mm)?item.precipitation_total_mm:0;
-        return '<article class="day"><div class="day-name">'+esc(day)+'</div><div class="day-icon">'+symbolFor(rain)+'</div><div class="day-range">'+fmt(item.temperature_max_c,0)+'° <span>'+fmt(item.temperature_min_c,0)+'°</span></div><div class="day-rain">☂ '+fmt(rain,1)+' mm</div><div class="day-wind">↗ '+fmt(item.wind_speed_max_10m_kmh,0)+' km/sa</div></article>';
+        const lodos= item.lodos_coming===true ? '<div class="day-wind lodos-badge">🌬️ Lodos geliyor</div>' : '';
+        return '<article class="day"><div class="day-name">'+esc(day)+'</div><div class="day-icon">'+symbolFor(rain)+'</div><div class="day-range">'+fmt(item.temperature_max_c,0)+'° <span>'+fmt(item.temperature_min_c,0)+'</span></div><div class="day-rain">☂ '+fmt(rain,1)+' mm</div><div class="day-wind">↗ '+fmt(item.wind_speed_max_10m_kmh,0)+' km/sa</div>'+lodos+'</article>';
       }).join("");
     }
     function pressureRegionName(latitude,longitude){
