@@ -103,9 +103,15 @@ mixedHorizonRuns.slice(0, 3).forEach(run => {
 });
 const mixedHorizon = buildKoyInteractiveSvg({ runs: mixedHorizonRuns });
 assert.ok(mixedHorizon, "mixed F72/F180 cycles should still render");
-const mixedMetadataMatch = mixedHorizon.body.match(/<metadata id="gfs-interactive-data"><!\\[CDATA\\[([\\s\\S]*?)\\]\\]><\\/metadata>/);
-assert.ok(mixedMetadataMatch, "mixed-horizon interactive metadata must be present");
-const mixedMetadata = JSON.parse(mixedMetadataMatch[1]);
+const mixedMetadataStart = mixedHorizon.body.indexOf('<metadata id="gfs-interactive-data"><![CDATA[');
+const mixedMetadataEnd = mixedHorizon.body.indexOf(']]></metadata>', mixedMetadataStart);
+assert.ok(mixedMetadataStart >= 0 && mixedMetadataEnd > mixedMetadataStart, "mixed-horizon interactive metadata must be present");
+const mixedMetadata = JSON.parse(
+  mixedHorizon.body.slice(
+    mixedMetadataStart + '<metadata id="gfs-interactive-data"><![CDATA['.length,
+    mixedMetadataEnd
+  )
+);
 assert.equal(mixedMetadata.panels[0].valid_times.length, 30, "newest F180 cycle must define the 180-hour timeline");
 assert.equal(mixedMetadata.panels[0].series[3].values.length, 30, "latest series must retain all F180 points");
 assert.equal(mixedMetadata.panels[0].series[0].values.filter(value => value === null).length, 18, "older F72 series must be null beyond F72");
