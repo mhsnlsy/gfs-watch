@@ -1617,6 +1617,17 @@ const __hideEmptyBadges=()=>{document.querySelectorAll('[class*="badge"],[class*
         const names=items.map(item=>dayLabel(item.stamp));
         return names.length===1?names[0]:names[0]+"–"+names[names.length-1];
       };
+      const lodosDays=series=>{
+        const days=new Map();
+        for(const item of series){
+          if(!Number.isFinite(item.wind)||!Number.isFinite(item.windDir)||item.wind<=10)continue;
+          const deg=((item.windDir%360)+360)%360;
+          if(deg<157.5||deg>247.5)continue;
+          const key=istanbulCivilDayKeys(now,BRIEFING_DAY_COUNT).find(dayKey=>tableForecastDayKey(item.stamp)===dayKey);
+          if(key)days.set(key,item.stamp);
+        }
+        return Array.from(days.entries()).map(([key,stamp])=>({key,stamp})).sort((a,b)=>a.stamp-b.stamp);
+      };
       const groups=[];
       for(const item of series){
         const last=groups[groups.length-1];
@@ -1658,6 +1669,10 @@ const __hideEmptyBadges=()=>{document.querySelectorAll('[class*="badge"],[class*
           summary="Önümüzdeki beş gün boyunca sıcaklık belirgin değişim göstermeden stabil seyrediyor.";
         }
       }
+      const lodos=lodosDays(briefingWindowPoints(briefingForecastPoints(),now));
+      if(lodos.length){
+        summary+=" "+lodos.map(item=>dayLabel(item.stamp)+" günü Lodos geliyor.").join(" ");
+      }
       summary+=" "+currentText;
       holder.replaceChildren();
       const textNode=document.createElement("span");
@@ -1698,7 +1713,9 @@ const __hideEmptyBadges=()=>{document.querySelectorAll('[class*="badge"],[class*
         const step=Number(point&&point.forecast_hour);
         const temp=Number(point&&point.temperature_2m_c);
         const mm=Number(point&&point.precipitation_6h_mm);
-        return {stamp,step,temp,mm:Number.isFinite(mm)?mm:0};
+        const wind=Number(point&&point.wind_speed_10m_kmh);
+        const windDir=Number(point&&point.wind_direction_10m_deg);
+        return {stamp,step,temp,mm:Number.isFinite(mm)?mm:0,wind,windDir};
       }).filter(point=>Number.isFinite(point.stamp)&&point.step>0&&point.step<=BRIEFING_WINDOW_HOURS&&point.step%3===0&&point.stamp>=nowMs-30*60000&&wanted.has(tableForecastDayKey(point.stamp)))
         .sort((a,b)=>a.stamp-b.stamp);
     }
