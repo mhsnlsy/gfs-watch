@@ -903,7 +903,7 @@ export function buildKoyInteractiveSvg(comparison) {
     validKeys.length + ' ortak nokta · ' + series.length + ' döngü</text>',
     '<text x="1090" y="810" text-anchor="end" fill="#E7F2F6" font-size="10" font-family="' + FONT +
     '">Kaynak: MeteoPT GFS · Giresun / Çanakçı nokta tahmini</text>',
-    '<metadata id="gfs-renderer-version">cloudflare-js-v9-homepage-identical</metadata>',
+    '<metadata id="gfs-renderer-version">' + KOY_SVG_RENDERER_VERSION + '</metadata>',
     '<metadata id="gfs-interactive-data"><![CDATA[' + metadataText + ']]></metadata>',
     '<g id="gfs-interaction-layer">'
   );
