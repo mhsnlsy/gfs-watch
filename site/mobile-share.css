@@ -1,6 +1,6 @@
 /* Mobile: small share buttons sitting on their boxes, tighter vertical gaps.
    One Paylaş covers yağış saatleri + 5 günlük sıcaklık.
-   Chart Paylaş stays on the chart. */
+   Chart Paylaş stays on the chart, left of the °C unit. */
 .briefing-share-button,
 .gfs-chart-share-global{
   min-height:0!important;
@@ -30,8 +30,8 @@
 }
 .gfs-chart-share-toolbar{
   position:absolute!important;
-  top:8px!important;
-  right:8px!important;
+  top:6px!important;
+  right:36px!important;
   margin:0!important;
   padding:0!important;
   min-height:0!important;
