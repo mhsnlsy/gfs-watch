@@ -123,7 +123,7 @@ jobs:
           baseline="$(date -u +%s)"
           verified=0
           echo "Waiting for the autonomous two-minute Cron to collect all four stations..."
-          for attempt in $(seq 1 17); do
+          for attempt in $(seq 1 6); do
             if curl --silent --show-error --fail --max-time 12 "$STATIONS_API/health?check=$(date +%s)" -o "$RUNNER_TEMP/station-health.json"; then
               if node - "$RUNNER_TEMP/station-health.json" "$baseline" <<'NODE'
           const fs = require("fs");
@@ -147,9 +147,9 @@ jobs:
                 break
               fi
             fi
-            echo "Cron confirmation attempt $attempt/17..."
+            echo "Cron confirmation attempt $attempt/6..."
             [ -s "$RUNNER_TEMP/station-health.json" ] && cat "$RUNNER_TEMP/station-health.json" || true
-            sleep 60
+            sleep 30
           done
 
           if [ "$verified" -ne 1 ]; then
