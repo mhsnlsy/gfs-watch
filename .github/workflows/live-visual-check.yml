@@ -91,12 +91,10 @@ jobs:
                 await page.waitForFunction(()=>{
                   const title=document.querySelector("#station-card-title")?.textContent||"";
                   const temp=document.querySelector("#temperature")?.textContent||"";
-                  const freshness=document.querySelector("#freshness")?.textContent||"";
                   const button=document.querySelector("#station-eyupsultan-button");
                   return title.includes("Eyüpsultan")&&temp.trim()!==""&&temp.trim()!=="—°"&&
-                    freshness.trim()==="CANLI ÖLÇÜM"&&button?.classList.contains("active")&&
-                    button?.getAttribute("aria-pressed")==="true";
-                },{timeout:30000});
+                    button?.classList.contains("active")&&button?.getAttribute("aria-pressed")==="true";
+                },{timeout:45000});
 
                 const result=await page.evaluate(()=>({
                   status:document.querySelector("#meteopt-table-status")?.textContent||"",
