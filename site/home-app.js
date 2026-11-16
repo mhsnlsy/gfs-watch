@@ -1693,8 +1693,8 @@ const __hideEmptyBadges=()=>{document.querySelectorAll('[class*="badge"],[class*
           sentence+=".";
           const strongDays=period.days.filter(item=>item.wind>20);
           if(strongDays.length){
-            const details=strongDays.map(item=>dayLabel(item.stamp)+" günü rüzgâr "+Math.round(item.wind)+" km/sa hıza çıkacak").join(", ");
-            sentence+=" "+details+".";
+            const details=strongDays.map(item=>dayLabel(item.stamp)+" günü "+Math.round(item.wind)+" km/sa hıza çıkacak").join(", ");
+            sentence+=" Rüzgâr "+details+" hıza çıkacak.";
           }
           return sentence;
         }).join(" ");
