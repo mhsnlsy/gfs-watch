@@ -1620,7 +1620,7 @@ const __hideEmptyBadges=()=>{document.querySelectorAll('[class*="badge"],[class*
       const lodosDays=series=>{
         const days=new Map();
         for(const item of series){
-          if(!Number.isFinite(item.wind)||!Number.isFinite(item.windDir)||item.wind<=10)continue;
+          if(!Number.isFinite(item.wind)||!Number.isFinite(item.windDir)||item.wind<10)continue;
           const deg=((item.windDir%360)+360)%360;
           if(deg<157.5||deg>247.5)continue;
           const key=istanbulCivilDayKeys(now,BRIEFING_DAY_COUNT).find(dayKey=>tableForecastDayKey(item.stamp)===dayKey);
