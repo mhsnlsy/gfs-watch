@@ -469,34 +469,29 @@ function observationFromMgm(stationKey, row, sourceUrl) {
 async function storeObservation(env, stationKey, observation) {
   if (!env.STATIONS_DB) return;
   const payload = JSON.stringify(observation);
+  const nowIso = new Date().toISOString();
   const current = env.STATIONS_DB.prepare(
-    "INSERT OR REPLACE INTO station_current (station_key, station_id, observed_at_utc, fetched_at_utc, temperature_c, humidity_percent, pressure_hpa, wind_speed_kmh, wind_direction, rain_1h_mm, rain_10m_mm, rain_6h_mm, rain_12h_mm, rain_24h_mm, rain_00_now_mm, feels_like_c, payload_json) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)"
+    "INSERT OR REPLACE INTO station_current (station_key, station_id, station_name, observed_at_utc, fetched_at_utc, status, payload_json, last_error, last_success_utc, last_attempt_utc) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)"
   ).bind(
     stationKey,
-    observation.station_id,
-    observation.observed_at_utc,
-    observation.fetched_at_utc,
-    observation.temperature_2m_c,
-    observation.humidity_percent,
-    observation.station_pressure_hpa,
-    observation.wind_speed_10m_kmh,
-    observation.wind_direction_degrees,
-    observation.precipitation_1h_mm,
-    observation.precipitation_10m_mm,
-    observation.precipitation_6h_mm,
-    observation.precipitation_12h_mm,
-    observation.precipitation_24h_mm,
-    observation.precipitation_daily_mm,
-    observation.feels_like_c,
-    payload
+    observation.station_id || "",
+    observation.station_name || stationKey,
+    observation.observed_at_utc || null,
+    observation.fetched_at_utc || nowIso,
+    observation.status || "live",
+    payload,
+    null,
+    nowIso,
+    nowIso
   );
   const history = env.STATIONS_DB.prepare(
-    "INSERT OR REPLACE INTO station_history (station_key, station_id, observed_at_utc, fetched_at_utc, temperature_c, humidity_percent, pressure_hpa, wind_speed_kmh, wind_direction, rain_1h_mm, rain_10m_mm, rain_6h_mm, rain_12h_mm, rain_24h_mm, rain_00_now_mm, feels_like_c, payload_json) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)"
+    "INSERT INTO station_history (station_key, station_id, station_name, observed_at_utc, fetched_at_utc, temperature_c, humidity_percent, pressure_hpa, wind_speed_kmh, wind_direction, rain_1h_mm, rain_10m_mm, rain_6h_mm, rain_12h_mm, rain_24h_mm, rain_00_now_mm, feels_like_c, payload_json) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)"
   ).bind(
     stationKey,
-    observation.station_id,
-    observation.observed_at_utc,
-    observation.fetched_at_utc,
+    observation.station_id || "",
+    observation.station_name || stationKey,
+    observation.observed_at_utc || null,
+    observation.fetched_at_utc || nowIso,
     observation.temperature_2m_c,
     observation.humidity_percent,
     observation.station_pressure_hpa,
@@ -599,6 +594,24 @@ export default {
         samples,
         updated_at_utc: new Date().toISOString()
       });
+    }
+
+    if (path === "/api/health" || path === "/health") {
+      const rows = [];
+      for (const key of Object.keys(STATION_DEFS)) {
+        const row = await env.STATIONS_DB.prepare(
+          "SELECT station_key, status, last_success_utc, last_attempt_utc, last_error, observed_at_utc FROM station_current WHERE station_key = ?"
+        ).bind(key).first();
+        rows.push({
+          key,
+          status: row && row.status || "unknown",
+          last_success_utc: row && row.last_success_utc || null,
+          last_attempt_utc: row && row.last_attempt_utc || null,
+          last_error: row && row.last_error || null,
+          observed_at_utc: row && row.observed_at_utc || null
+        });
+      }
+      return json({ ok: true, storage: "D1", stations: rows, updated_at_utc: new Date().toISOString() });
     }
 
     if (path === "/collect" || path === "/api/collect") {
