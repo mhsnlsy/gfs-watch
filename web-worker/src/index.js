@@ -387,6 +387,27 @@ export default {
       return isStaticAssetFallback;
     }
 
+    // Private Bakiye mount: keep the portfolio out of the main navigation while
+    // serving it through the existing istanbulunhavasi.com custom-domain Worker.
+    // The Bakiye Worker stays on workers.dev, so this gateway does not require
+    // a separate zone-route permission.
+    if (path === "/bakiye" || path.startsWith("/bakiye/")) {
+      const upstreamPath = path.slice("/bakiye".length) || "/";
+      const upstream = new URL("https://bakiye.muhsin-ulusoy.workers.dev" + upstreamPath);
+      upstream.search = url.search;
+      const response = await fetch(new Request(upstream, request), {
+        cf: { cacheTtl: 0, cacheEverything: false },
+      });
+      const headers = new Headers(response.headers);
+      headers.set("Cache-Control", "no-store, max-age=0");
+      headers.set("X-Istanbul-Havasi-Gateway", "bakiye");
+      return new Response(response.body, {
+        status: response.status,
+        statusText: response.statusText,
+        headers,
+      });
+    }
+
     // Dedicated ECMWF page. GFS routing and GFS behavior remain unchanged.
     // ECMWF live-data verification: service binding now refreshes stale MeteoPT point data.
     // Keep this route explicit so /ecmwf is served as a first-class page on the custom domain.
