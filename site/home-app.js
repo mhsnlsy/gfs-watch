@@ -1610,8 +1610,8 @@ const __hideEmptyBadges=()=>{document.querySelectorAll('[class*="badge"],[class*
         trend:"stable"
       }));
       series.forEach(item=>{
-        if(item.delta<=-1.0)item.trend="fall";
-        else if(item.delta>=1.0)item.trend="rise";
+        if(item.delta<=-0.5)item.trend="fall";
+        else if(item.delta>=0.5)item.trend="rise";
       });
       const dayPhrase=items=>{
         const names=items.map(item=>dayLabel(item.stamp));
@@ -1664,7 +1664,7 @@ const __hideEmptyBadges=()=>{document.querySelectorAll('[class*="badge"],[class*
           summary="Belirgin ısınma "+when+" ("+dayLabel(first.stamp)+") başlıyor; günlük ortalama yaklaşık "+magnitude(first.delta)+" yükseliyor.";
           for(const group of groups.slice(groups.indexOf(firstRise)+1)){
             if(group.trend==="rise")summary+=" "+dayPhrase(group.items)+" ısınma sürüyor.";
-            else if(group.trend==="stable")summary+=" "+dayPhrase(group.items)+" günleri sıcaklık stabil seyrediyor.";
+            else if(group.trend==="stable")summary+=" "+dayPhrase(group.items)+" sıcaklık stabil seyrediyor.";
             else summary+=" "+dayPhrase(group.items)+" sıcaklık yeniden düşüyor.";
           }
         }else{
