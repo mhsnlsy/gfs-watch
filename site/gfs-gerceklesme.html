@@ -2,34 +2,48 @@
 <html lang="tr">
 <head>
 <meta charset="UTF-8">
-<meta name="viewport" content="width=device-width,initial-scale=1">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
 <meta name="theme-color" content="#081827">
+<meta name="description" content="GFS tahmininin istasyon ölçümüyle gerçekleşmesi. Sıcaklıkta 1 derece ve altı başarı sayılır. Yağış kuralı sayfada açıkça yazılır.">
 <title>GFS Gerçekleşme Verisi · İstanbul Havası</title>
 <link rel="icon" href="/favicon.svg" type="image/svg+xml">
-<link rel="stylesheet" href="/home.css">
-<link rel="stylesheet" href="/header-common.css">
-<script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.1/dist/chart.umd.min.js"></script>
+<link rel="stylesheet" href="/home.css?v=20261116-gerceklesme-3">
+<link rel="stylesheet" href="/header-common.css?v=20261110-shared-header-1">
 <style>
-  .verif { padding: 20px 0 40px; max-width: 960px; margin: 0 auto; }
-  .verif h1 { font: 800 26px/1.15 Manrope, sans-serif; margin: 0 0 6px; }
-  .verif .lead { color: #9bb1bf; font-size: 14px; margin: 0 0 16px; }
-  .controls { display: flex; gap: 10px; align-items: center; margin-bottom: 16px; flex-wrap: wrap; }
-  .controls select, .controls button { background: #1e293b; color: #e2e8f0; border: 1px solid rgba(255,255,255,.12); padding: 8px 12px; border-radius: 8px; font-size: 13px; }
-  .controls button { cursor: pointer; background: rgba(125,211,215,.18); }
-  .summary-box { background: rgba(255,255,255,.04); border: 1px solid rgba(255,255,255,.08); border-radius: 12px; padding: 16px; margin-bottom: 20px; }
-  .summary-box h2 { font-size: 16px; margin: 0 0 10px; color: #7dd3d7; }
-  .big-stats { display: grid; grid-template-columns: repeat(auto-fit, minmax(140px, 1fr)); gap: 10px; }
-  .big-stat { text-align: center; }
-  .big-stat b { display: block; font-size: 22px; color: #e2e8f0; }
-  .big-stat span { font-size: 11px; color: #9bb1bf; }
-  .chart-wrap { background: rgba(255,255,255,.03); border-radius: 12px; padding: 12px; margin: 16px 0; }
-  .chart-wrap canvas { max-height: 220px; }
-  table { width: 100%; border-collapse: collapse; font-size: 13px; }
-  th, td { padding: 8px 6px; border-bottom: 1px solid rgba(255,255,255,.08); text-align: left; }
-  th { font-size: 11px; color: #9bb1bf; font-weight: 600; }
-  .num { text-align: right; }
-  .note { font-size: 12px; color: #8fa7b5; margin-top: 8px; }
-  #status { padding: 12px; background: rgba(255,255,255,.03); border-radius: 8px; }
+  .verif { padding: 22px 0 48px; }
+  .verif h1 { font: 800 28px/1.1 Manrope, sans-serif; letter-spacing: -.04em; margin: 0 0 8px; }
+  .verif .lead { color: #9bb1bf; font-size: 14px; line-height: 1.5; max-width: 760px; margin: 0 0 16px; }
+  .controls { display: flex; gap: 12px; align-items: center; margin-bottom: 16px; flex-wrap: wrap; }
+  .controls select, .controls button {
+    background: #102535; color: #e7f2f6; border: 1px solid rgba(213,237,240,.16);
+    padding: 8px 14px; border-radius: 8px; font: 600 13px "DM Sans", sans-serif;
+  }
+  .controls button { cursor: pointer; background: rgba(125,211,215,.15); border-color: rgba(125,211,215,.35); color: #c6f0ec; }
+  .pair { display: grid; grid-template-columns: 1fr 1fr; gap: 14px; }
+  .panel {
+    background: linear-gradient(160deg, rgba(18,44,62,.72), rgba(13,33,48,.8));
+    border: 1px solid rgba(204,225,239,.12);
+    border-radius: 16px;
+    padding: 16px;
+    min-width: 0;
+  }
+  .panel h2 { font: 700 18px/1.2 Manrope, sans-serif; margin: 4px 0 8px; }
+  .rule { color: #b7cbd3; font-size: 13px; line-height: 1.45; margin: 0 0 12px; }
+  .stats { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 8px; margin: 0 0 12px; }
+  .stat { background: rgba(5,20,31,.28); border-radius: 12px; padding: 10px 8px; text-align: center; }
+  .stat b { display: block; font: 700 22px/1.1 Manrope, sans-serif; color: #d8f4f2; margin-top: 4px; }
+  .stat span { display: block; font-size: 11px; line-height: 1.3; color: #9bb1bf; }
+  .chart-wrap svg { display: block; width: 100%; height: auto; }
+  .empty { color: #9bb1bf; font-size: 14px; margin: 8px 0; }
+  .note { font-size: 12px; color: #8fa7b5; line-height: 1.45; margin: 14px 0 0; }
+  #status { padding: 14px 16px; background: rgba(255,255,255,.04); border-radius: 12px; color: #d5e4ea; }
+  @media (max-width: 700px) {
+    .pair { grid-template-columns: 1fr; }
+    .verif h1 { font-size: 24px; }
+    .stats { grid-template-columns: 1fr; }
+    .stat { display: flex; justify-content: space-between; align-items: center; text-align: left; gap: 10px; }
+    .stat b { margin-top: 0; font-size: 18px; white-space: nowrap; }
+  }
 </style>
 </head>
 <body>
@@ -46,177 +60,216 @@
 </header>
 
 <main class="shell verif">
-  <h1>GFS Gerçekleşme Verisi</h1>
-  <p class="lead">Geçmiş GFS tahminleri gerçek istasyon ölçümleriyle karşılaştırılır. 1 derece ve altı fark yüzde 100 başarı sayılır.</p>
+  <h1>GFS gerçekleşme</h1>
+  <p class="lead">Son 72 saatteki istasyon ölçümü, aynı andaki GFS tahminiyle yan yana konur. Eşleşme 45 dakika içinde aranır. Saatler Türkiye saati (TSİ) ile gösterilir. Boş kayıtlar hesaba katılmaz.</p>
 
   <div class="controls">
-    <label>İstasyon: <select id="station"><option value="eyupsultan">Eyüpsultan</option><option value="enka">ENKA Balmumcu</option></select></label>
-    <button id="refresh">Yenile</button>
+    <label>İstasyon
+      <select id="station">
+        <option value="eyupsultan">Eyüpsultan</option>
+        <option value="enka">ENKA Balmumcu</option>
+      </select>
+    </label>
+    <button id="refresh" type="button">Yenile</button>
   </div>
 
-  <div id="status">Yükleniyor…</div>
+  <div id="status">Veriler yükleniyor…</div>
 
-  <div id="content" style="display:none;">
-    <div class="summary-box">
-      <h2>Genel özet</h2>
-      <div class="big-stats" id="summary-stats"></div>
-    </div>
-
-    <div class="chart-wrap">
-      <h2 style="font-size:15px;margin:0 0 8px;">Tahmin saati başına sıcaklık başarısı</h2>
-      <canvas id="tempChart"></canvas>
-    </div>
-
-    <div class="chart-wrap">
-      <h2 style="font-size:15px;margin:0 0 8px;">Tahmin saati başına yağış başarısı</h2>
-      <canvas id="rainChart"></canvas>
-    </div>
-
-    <h2 style="font-size:16px;margin:24px 0 8px;">Son GFS çıktısı</h2>
-    <p id="latest-meta" class="note"></p>
-    <table id="latest-table">
-      <thead><tr><th>Geçerli saat</th><th class="num">Tahmin saati</th><th class="num">Sıcaklık tahmini</th><th class="num">Düzeltilmiş sıcaklık</th><th class="num">Yağış tahmini (6 saat)</th></tr></thead>
-      <tbody></tbody>
-    </table>
-    <p class="note">Düzeltilmiş sıcaklık, o tahmin saatindeki geçmiş ortalama fark çıkarılmıştır. 1 derece ve altı fark başarı olarak kabul edilir. Yağışta hem model hem istasyon 0,5 milimetre altındaysa veya fark 1 milimetre ve altındaysa başarı sayılır.</p>
+  <div class="pair" id="panels" hidden>
+    <article class="panel">
+      <div class="section-kicker">SICAKLIK</div>
+      <h2>2 metre sıcaklık</h2>
+      <p class="rule">Başarı: tahmin ile ölçüm arasındaki fark 1 °C veya daha azsa o eşleşme tutmuş sayılır.</p>
+      <div class="stats" id="temp-stats"></div>
+      <div class="chart-wrap" id="temp-chart"></div>
+    </article>
+    <article class="panel">
+      <div class="section-kicker">YAĞIŞ</div>
+      <h2>6 saatlik yağış</h2>
+      <p class="rule">0,2 milimetrenin altı yağışsız sayılır. İkisi de yağışsızsa tutmuş sayılır. İkisinde de yağış varsa ve miktar farkı 1 milimetre veya daha azsa tutmuş sayılır.</p>
+      <div class="stats" id="rain-stats"></div>
+      <div class="chart-wrap" id="rain-chart"></div>
+    </article>
   </div>
+  <p class="note" id="window-note" hidden>Model yağışı, GFS adımındaki yağış miktarıdır. İstasyon yağışı, ölçüm anındaki son 6 saatin yağışıdır. İki pencere birebir aynı değildir; kural yine de her eşleşmeye aynı şekilde uygulanır.</p>
 </main>
 
 <script>
 const GFS_BASE = "https://gfs-watch-istanbul-gfs.muhsin-ulusoy.workers.dev";
+const DRY_MM = 0.2;
+const RAIN_TOLERANCE_MM = 1;
+const TEMP_HIT_C = 1;
+const MATCH_WINDOW_MS = 45 * 60 * 1000;
 
-async function fetchJSON(url) {
-  const r = await fetch(url, { cache: "no-store" });
-  if (!r.ok) throw new Error("Veri alınamadı");
-  return r.json();
+function formatNumber(value, digits) {
+  return Number(value).toLocaleString("tr-TR", { minimumFractionDigits: digits, maximumFractionDigits: digits });
 }
 
-function nearest(samples, time) {
-  let best = null, bestDiff = Infinity;
-  const t = new Date(time).getTime();
-  for (const s of samples) {
-    const diff = Math.abs(new Date(s.observed_at_utc || s.source_observed_at_utc).getTime() - t);
-    if (diff < bestDiff && diff < 50 * 60 * 1000) {
-      bestDiff = diff;
-      best = s;
+async function fetchJSON(url) {
+  const response = await fetch(url, { cache: "no-store" });
+  if (!response.ok) throw new Error("Veri alınamadı (" + response.status + ")");
+  return response.json();
+}
+
+function nearestObservation(samples, targetTime) {
+  const target = Date.parse(targetTime);
+  if (!Number.isFinite(target)) return null;
+  let best = null;
+  let bestGap = MATCH_WINDOW_MS;
+  for (const sample of samples) {
+    const stamp = Date.parse(sample.observed_at_utc || sample.source_observed_at_utc || "");
+    if (!Number.isFinite(stamp)) continue;
+    const gap = Math.abs(stamp - target);
+    if (gap < bestGap) {
+      bestGap = gap;
+      best = sample;
     }
   }
   return best;
 }
 
-function rainSuccess(pred, obs) {
-  if (pred < 0.5 && obs < 0.5) return 1;
-  if (Math.abs(pred - obs) <= 1) return 1;
-  return 0;
+function uniqueRuns(document) {
+  const runs = [document].concat(Array.isArray(document.comparison_runs) ? document.comparison_runs : []);
+  const seen = new Set();
+  const unique = [];
+  for (const run of runs) {
+    if (!run || !run.run_id_utc || seen.has(run.run_id_utc)) continue;
+    seen.add(run.run_id_utc);
+    unique.push(run);
+  }
+  return unique;
+}
+
+function collectPairs(samples, runs) {
+  const temperature = [];
+  const rain = [];
+  const now = Date.now() + 30 * 60 * 1000;
+  for (const run of runs) {
+    for (const step of run.forecast_6_hourly || []) {
+      const valid = Date.parse(step.valid_time_utc || "");
+      if (!Number.isFinite(valid) || valid > now) continue;
+      const observation = nearestObservation(samples, step.valid_time_utc);
+      if (!observation) continue;
+      const lead = Number(step.forecast_hour);
+      if (!Number.isFinite(lead) || lead <= 0) continue;
+      const modelTemp = Number(step.temperature_2m_c);
+      const observedTemp = Number(observation.temperature_c);
+      if (Number.isFinite(modelTemp) && Number.isFinite(observedTemp)) {
+        const difference = modelTemp - observedTemp;
+        temperature.push({ lead, difference, hit: Math.abs(difference) <= TEMP_HIT_C });
+      }
+      const modelRain = Number(step.precipitation_6h_mm);
+      const observedRain = Number(observation.rain_6h_mm);
+      if (Number.isFinite(modelRain) && Number.isFinite(observedRain)) {
+        const modelWet = modelRain >= DRY_MM;
+        const observedWet = observedRain >= DRY_MM;
+        const amountClose = Math.abs(modelRain - observedRain) <= RAIN_TOLERANCE_MM;
+        rain.push({
+          lead,
+          difference: modelRain - observedRain,
+          hit: (!modelWet && !observedWet) || (modelWet && observedWet && amountClose)
+        });
+      }
+    }
+  }
+  return { temperature, rain };
+}
+
+function summarize(pairs) {
+  if (!pairs.length) return null;
+  const hits = pairs.filter(pair => pair.hit).length;
+  const meanAbsolute = pairs.reduce((sum, pair) => sum + Math.abs(pair.difference), 0) / pairs.length;
+  const byLead = new Map();
+  for (const pair of pairs) {
+    if (!byLead.has(pair.lead)) byLead.set(pair.lead, []);
+    byLead.get(pair.lead).push(pair);
+  }
+  const hours = [...byLead.keys()].sort((a, b) => a - b).map(lead => {
+    const group = byLead.get(lead);
+    if (group.length < 2) return null;
+    const groupHits = group.filter(pair => pair.hit).length;
+    return { lead, count: group.length, success: groupHits / group.length * 100 };
+  }).filter(Boolean);
+  return { count: pairs.length, success: hits / pairs.length * 100, meanAbsolute, hours };
+}
+
+function statsMarkup(summary, unit) {
+  if (!summary) return '<p class="empty">Veri yok</p>';
+  return [
+    '<div class="stat"><span>Başarı</span><b>' + formatNumber(summary.success, 0) + '%</b></div>',
+    '<div class="stat"><span>Tahmin ile ölçüm arasındaki ortalama fark</span><b>' + formatNumber(summary.meanAbsolute, 1) + " " + unit + "</b></div>",
+    '<div class="stat"><span>Eşleşen kayıt</span><b>' + summary.count + "</b></div>"
+  ].join("");
+}
+
+function chartMarkup(summary, color) {
+  if (!summary || !summary.hours.length) return '<p class="empty">Grafik için yeterli veri yok</p>';
+  const width = 640;
+  const height = 180;
+  const padLeft = 36;
+  const padRight = 8;
+  const padTop = 12;
+  const padBottom = 28;
+  const inner = width - padLeft - padRight;
+  const plot = height - padTop - padBottom;
+  const step = inner / summary.hours.length;
+  const bars = summary.hours.map((hour, index) => {
+    const barHeight = Math.max(2, hour.success / 100 * plot);
+    const x = padLeft + index * step + step * 0.18;
+    const y = padTop + plot - barHeight;
+    const label = index % 2 === 0 ? String(hour.lead) : "";
+    return '<rect x="' + x.toFixed(1) + '" y="' + y.toFixed(1) + '" width="' + (step * 0.64).toFixed(1) + '" height="' + barHeight.toFixed(1) + '" rx="3" fill="' + color + '"><title>' + hour.lead + " saat · " + formatNumber(hour.success, 0) + "% · " + hour.count + " kayıt</title></rect>" +
+      (label ? '<text x="' + (x + step * 0.32).toFixed(1) + '" y="' + (height - 8) + '" text-anchor="middle" fill="#8fa7b5" font-size="10">' + label + "</text>" : "");
+  }).join("");
+  const guides = [0, 50, 100].map(value => {
+    const y = padTop + plot - value / 100 * plot;
+    return '<line x1="' + padLeft + '" y1="' + y + '" x2="' + (width - padRight) + '" y2="' + y + '" stroke="rgba(213,237,240,.12)"/>' +
+      '<text x="4" y="' + (y + 3) + '" fill="#8fa7b5" font-size="10">' + value + "</text>";
+  }).join("");
+  return '<svg viewBox="0 0 ' + width + " " + height + '" role="img" aria-label="Tahmin saatine göre başarı yüzdesi">' + guides + bars + "</svg>" +
+    '<p class="note">Alttaki sayılar tahmin saatini gösterir. Çubuk, o saatte tutan kayıtların yüzdesidir.</p>';
 }
 
 async function load() {
   const station = document.getElementById("station").value;
-  document.getElementById("status").style.display = "block";
-  document.getElementById("status").textContent = "Yükleniyor…";
-  document.getElementById("content").style.display = "none";
-
+  const status = document.getElementById("status");
+  const panels = document.getElementById("panels");
+  const windowNote = document.getElementById("window-note");
+  status.hidden = false;
+  status.textContent = "İstasyon geçmişi ve GFS çıktıları yükleniyor…";
+  panels.hidden = true;
+  windowNote.hidden = true;
   try {
-    const [hist, gfs] = await Promise.all([
+    const [history, gfs] = await Promise.all([
       fetchJSON(location.origin + "/api/history/" + station + "?hours=72"),
       fetchJSON(GFS_BASE + "/gfs/latest")
     ]);
-
-    const samples = hist.samples || [];
-    const runs = [gfs, ...(gfs.comparison_runs || [])].filter(r => r && r.run_id_utc);
-    const unique = [];
-    const seen = new Set();
-    for (const r of runs) {
-      if (!seen.has(r.run_id_utc)) { seen.add(r.run_id_utc); unique.push(r); }
+    const samples = Array.isArray(history.samples) ? history.samples : [];
+    const pairs = collectPairs(samples, uniqueRuns(gfs));
+    const temperature = summarize(pairs.temperature);
+    const rain = summarize(pairs.rain);
+    document.getElementById("temp-stats").innerHTML = statsMarkup(temperature, "°C");
+    document.getElementById("rain-stats").innerHTML = statsMarkup(rain, "milimetre");
+    document.getElementById("temp-chart").innerHTML = chartMarkup(temperature, "#7dd3d7");
+    document.getElementById("rain-chart").innerHTML = chartMarkup(rain, "#8fc9e9");
+    if (!temperature && !rain) {
+      status.hidden = false;
+      status.textContent = "Veri yok";
+      panels.hidden = true;
+      return;
     }
-
-    const tempByF = {};
-    const rainByF = {};
-    let totalTempSuccess = 0, totalTempN = 0;
-    let totalRainSuccess = 0, totalRainN = 0;
-
-    for (const run of unique) {
-      for (const step of (run.forecast_6_hourly || [])) {
-        const obs = nearest(samples, step.valid_time_utc);
-        if (!obs) continue;
-        const f = step.forecast_hour;
-
-        if (obs.temperature_c != null && step.temperature_2m_c != null) {
-          const err = step.temperature_2m_c - obs.temperature_c;
-          if (!tempByF[f]) tempByF[f] = [];
-          tempByF[f].push(err);
-          totalTempN++;
-          if (Math.abs(err) <= 1) totalTempSuccess++;
-        }
-
-        if (step.precipitation_6h_mm != null && obs.rain_6h_mm != null) {
-          const ok = rainSuccess(step.precipitation_6h_mm, obs.rain_6h_mm);
-          if (!rainByF[f]) rainByF[f] = [];
-          rainByF[f].push(ok);
-          totalRainN++;
-          totalRainSuccess += ok;
-        }
-      }
-    }
-
-    const tempRate = totalTempN ? Math.round(totalTempSuccess / totalTempN * 100) : 0;
-    const rainRate = totalRainN ? Math.round(totalRainSuccess / totalRainN * 100) : 0;
-    document.getElementById("summary-stats").innerHTML = `
-      <div class="big-stat"><b>${tempRate}%</b><span>Sıcaklık başarısı<br>(1 derece ve altı)</span></div>
-      <div class="big-stat"><b>${rainRate}%</b><span>Yağış başarısı<br>(6 saat)</span></div>
-      <div class="big-stat"><b>${totalTempN}</b><span>Sıcaklık karşılaştırması</span></div>
-      <div class="big-stat"><b>${totalRainN}</b><span>Yağış karşılaştırması</span></div>
-    `;
-
-    const fs = Object.keys(tempByF).map(Number).sort((a,b)=>a-b).filter(f => tempByF[f].length >= 2);
-    const tempSuccessRates = fs.map(f => Math.round(tempByF[f].filter(e => Math.abs(e) <= 1).length / tempByF[f].length * 100));
-
-    const rainFs = Object.keys(rainByF).map(Number).sort((a,b)=>a-b).filter(f => rainByF[f].length >= 2);
-    const rainSuccessRates = rainFs.map(f => Math.round(rainByF[f].reduce((a,b)=>a+b,0) / rainByF[f].length * 100));
-
-    if (window.tempChart) window.tempChart.destroy();
-    window.tempChart = new Chart(document.getElementById("tempChart"), {
-      type: "bar",
-      data: { labels: fs.map(f => f + " saat"), datasets: [{ label: "Başarı oranı", data: tempSuccessRates, backgroundColor: "rgba(125,211,215,0.7)" }] },
-      options: { responsive: true, plugins: { legend: { display: false } }, scales: { y: { beginAtZero: true, max: 100 } } }
-    });
-
-    if (window.rainChart) window.rainChart.destroy();
-    window.rainChart = new Chart(document.getElementById("rainChart"), {
-      type: "bar",
-      data: { labels: rainFs.map(f => f + " saat"), datasets: [{ label: "Başarı oranı", data: rainSuccessRates, backgroundColor: "rgba(143,215,186,0.7)" }] },
-      options: { responsive: true, plugins: { legend: { display: false } }, scales: { y: { beginAtZero: true, max: 100 } } }
-    });
-
-    const latest = unique[0];
-    document.getElementById("latest-meta").textContent = "Son çıktı: " + latest.run_id_utc;
-    const tbody = document.querySelector("#latest-table tbody");
-    tbody.innerHTML = "";
-    for (const step of (latest.forecast_6_hourly || []).slice(0, 16)) {
-      const f = step.forecast_hour;
-      const errs = tempByF[f] || [];
-      const bias = errs.length ? errs.reduce((a,b)=>a+b,0)/errs.length : 0;
-      const adjusted = (step.temperature_2m_c - bias).toFixed(1);
-      const tr = document.createElement("tr");
-      tr.innerHTML = `
-        <td>${step.valid_time_istanbul || ""}</td>
-        <td class="num">${f} saat</td>
-        <td class="num">${step.temperature_2m_c.toFixed(1)} °C</td>
-        <td class="num">${adjusted} °C</td>
-        <td class="num">${step.precipitation_6h_mm != null ? step.precipitation_6h_mm.toFixed(1) + " mm" : "—"}</td>
-      `;
-      tbody.appendChild(tr);
-    }
-
-    document.getElementById("status").style.display = "none";
-    document.getElementById("content").style.display = "block";
-  } catch (e) {
-    document.getElementById("status").textContent = "Hata: " + e.message;
+    status.hidden = true;
+    panels.hidden = false;
+    windowNote.hidden = false;
+  } catch (error) {
+    status.hidden = false;
+    status.textContent = "Veri yok. " + (error && error.message ? error.message : "Kayıtlar şu anda okunamadı.");
+    panels.hidden = true;
   }
 }
 
-document.getElementById("refresh").onclick = load;
-document.getElementById("station").onchange = load;
+document.getElementById("station").addEventListener("change", load);
+document.getElementById("refresh").addEventListener("click", load);
 load();
 </script>
 </body>
