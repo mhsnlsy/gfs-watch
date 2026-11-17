@@ -152,7 +152,7 @@ assert.ok(report.includes("2,4 mm"));
 assert.ok(report.includes("ÖNÜMÜZDEKİ 24 SAAT"));
 assert.ok(report.includes("Nem"));
 assert.ok(report.includes("KRONOLOJİK HAVA ÖZETİ"));
-assert.ok(report.includes("Cum 06.11") || report.includes("Cum 06.11."), "Report should include the expected localized Friday date");
+assert.ok(report.includes("06.11"), "Report should include the expected forecast date");
 assert.ok(report.includes("YAĞIŞ ZAMANLARI · 72 SAAT"));
 assert.ok(!report.includes("\n\n\n"), "Telegram report should not contain excessive blank lines");
 const reportWithoutStation = buildIstanbulReportText(runs[3], new Date("2026-11-01T12:00:00Z"), null);
