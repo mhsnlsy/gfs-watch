@@ -512,9 +512,13 @@ export function buildIstanbulReportText(document, now = new Date(), stationObser
     dayRecords.push({ day, local, avgTemp });
   }
 
+  // The source may arrive in any order. The report itself must always read
+  // from the earliest forecast day to the latest forecast day.
+  dayRecords.sort((a, b) => a.local.getTime() - b.local.getTime());
+
   for (let index = 0; index < dayRecords.length; index += 1) {
     const { day, local, avgTemp } = dayRecords[index];
-    const label = dayNames[local.getUTCDay()] + " " + pad2(local.getUTCDate()) + "." + pad2(local.getUTCMonth() + 1);
+    const label = fullDayNames[local.getUTCDay()] + " " + pad2(local.getUTCDate()) + "." + pad2(local.getUTCMonth() + 1);
     dailyLines.push("• " + label);
 
     const tempRange = formatRange([
