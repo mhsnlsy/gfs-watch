@@ -245,6 +245,27 @@ NODE
           CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
         run: wrangler deploy --config wrangler.jsonc
 
+      - name: Verify protected admin panel
+        env:
+          WEB: https://gfs-watch-web.muhsin-ulusoy.workers.dev
+          ADMIN_PASSWORD: ${{ secrets.ADMIN_PASSWORD }}
+        run: |
+          set -euo pipefail
+          test -n "$ADMIN_PASSWORD" || { echo "::error::ADMIN_PASSWORD is not configured"; exit 1; }
+          status="$(curl --silent --output /dev/null --write-out '%{http_code}' --max-time 20 "$WEB/admin")"
+          test "$status" = "401" || { echo "::error::Expected /admin to require authentication, got HTTP $status"; exit 1; }
+          curl --silent --show-error --fail --max-time 20 -u "admin:$ADMIN_PASSWORD" "$WEB/admin" -o "$RUNNER_TEMP/admin.html"
+          grep -q 'İSTANBUL HAVASI — ADMIN' "$RUNNER_TEMP/admin.html" || { echo "::error::Admin HTML was not served"; exit 1; }
+          curl --silent --show-error --fail --max-time 20 -u "admin:$ADMIN_PASSWORD" "$WEB/api/admin/analytics?verify=$(date +%s)" -o "$RUNNER_TEMP/admin-analytics.json"
+          node - "$RUNNER_TEMP/admin-analytics.json" <<'NODE'
+          const fs = require("fs");
+          const doc = JSON.parse(fs.readFileSync(process.argv[2], "utf8"));
+          if (!doc.today || !doc.live || !Array.isArray(doc.days) || !Array.isArray(doc.month)) {
+            throw new Error("Admin analytics response contract failed");
+          }
+          console.log("Verified protected admin panel and analytics API.");
+NODE
+
       - name: Verify Cloudflare website and proxied APIs
         env:
           WEB: https://gfs-watch-web.muhsin-ulusoy.workers.dev
