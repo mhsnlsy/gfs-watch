@@ -4,7 +4,7 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
 <meta name="theme-color" content="#081827">
-<meta name="description" content="GFS tahmininin istasyon ölçümüyle gerçekleşmesi. Yazılı yüzde başarı ve ortalama sapma.">
+<meta name="description" content="GFS tahminlerinin gerçekleşen istasyon ölçümleriyle 16 günlük arşiv üzerinden doğrulanması.">
 <title>GFS Gerçekleşme · İstanbul Havası</title>
 <link rel="icon" href="/favicon.svg" type="image/svg+xml">
 <link rel="stylesheet" href="/home.css?v=20261116-gerceklesme-12">
@@ -17,11 +17,19 @@
   .controls { display: flex; gap: 4px; align-items: center; margin-bottom: 6px; flex-wrap: wrap; }
   .controls select, .controls button { background: #102535; color: #e7f2f6; border: 1px solid rgba(213,237,240,.16); padding: 4px 8px; border-radius: 6px; font-size: 16px; }
   .controls button { cursor: pointer; background: rgba(125,211,215,.15); border-color: rgba(125,211,215,.35); color: #c6f0ec; }
-  .summary-row { display: grid; grid-template-columns: repeat(5, 1fr); gap: 2px; margin-bottom: 6px; }
+  .summary-row { display: grid; grid-template-columns: repeat(6, 1fr); gap: 2px; margin-bottom: 6px; }
   .card { background: linear-gradient(160deg, rgba(18,44,62,.72), rgba(13,33,48,.8)); border: 1px solid rgba(204,225,239,.12); border-radius: 8px; padding: 5px 3px; text-align: center; }
   .card b { display: block; font: 700 20px/1.05 Manrope, sans-serif; color: #d8f4f2; margin-top: 1px; }
   .card span { font-size: 12px; color: #9bb1bf; line-height: 1.15; }
   .panels { display: grid; grid-template-columns: 1fr 1fr; gap: 2px; }
+  .wide { grid-column: 1 / -1; }
+  .chart-wrap { height: 260px; margin-top: 6px; position: relative; }
+  .chart-wrap svg { width: 100%; height: 100%; display: block; }
+  .legend { display:flex; gap:12px; flex-wrap:wrap; font-size:12px; color:#9bb1bf; margin-top:2px; }
+  .legend span::before { content:""; display:inline-block; width:10px; height:3px; vertical-align:middle; margin-right:4px; background:currentColor; }
+  .method { display:grid; grid-template-columns:repeat(3,1fr); gap:4px; margin-top:6px; }
+  .method div { background:rgba(255,255,255,.035); border-radius:6px; padding:5px; color:#b7cbd3; font-size:12px; }
+  .method b { color:#e7f2f6; display:block; margin-bottom:1px; }
   .panel { background: linear-gradient(160deg, rgba(18,44,62,.72), rgba(13,33,48,.8)); border: 1px solid rgba(204,225,239,.12); border-radius: 10px; padding: 6px 5px; }
   .panel h2 { font: 700 17px/1.15 Manrope, sans-serif; margin: 0 0 2px; }
   .rule { color: #b7cbd3; font-size: 14px; margin: 0 0 4px; line-height: 1.25; }
@@ -32,7 +40,7 @@
   .stable { background: rgba(125,211,215,.14); border-radius: 6px; padding: 5px 6px; margin-top: 4px; font-size: 15px; line-height: 1.3; }
   .note { font-size: 13px; color: #8fa7b5; margin-top: 6px; line-height: 1.25; }
   #status { padding: 6px; background: rgba(255,255,255,.04); border-radius: 6px; font-size: 15px; }
-  @media (max-width: 800px) { .panels { grid-template-columns: 1fr; } .summary-row { grid-template-columns: 1fr 1fr; } }
+  @media (max-width: 800px) { .panels { grid-template-columns: 1fr; } .summary-row { grid-template-columns: 1fr 1fr; } .method { grid-template-columns:1fr; } .chart-wrap { height:220px; } }
 </style>
 </head>
 <body>
@@ -50,7 +58,7 @@
 
 <main class="shell verif">
   <h1>GFS gerçekleşme analizi</h1>
-  <p class="lead">GFS tahminleri istasyon ölçümleriyle karşılaştırılır. Her tahmin saati için başarı yüzdesi ve ortalama sapma yazılı olarak gösterilir.</p>
+  <p class="lead">Son 16 günde arşivlenen 64 GFS döngüsü, gerçekleşen istasyon ölçümleriyle aynı geçerlilik saatinde eşleştirilir. Böylece modelin <b>kaç saat sonrasını ne kadar iyi tahmin ettiği</b> görülür.</p>
 
   <div class="controls">
     <label>İstasyon
@@ -66,6 +74,13 @@
 
   <div id="content" hidden>
     <div class="summary-row" id="overall"></div>
+
+    <div class="panel wide">
+      <h2>Kurşun süresine göre doğruluk</h2>
+      <p class="rule">Her nokta, geçmişteki farklı GFS döngülerinin aynı tahmin ufkundaki hatalarının ortalamasıdır. Örneğin +48 saat, 48 saat sonrasını tahmin eden tüm arşivli döngüleri temsil eder.</p>
+      <div class="chart-wrap"><svg id="lead-chart" viewBox="0 0 900 260" role="img" aria-label="Kurşun süresine göre sıcaklık tahmin hatası"></svg></div>
+      <div class="legend"><span style="color:#7dd3d7">Sıcaklık MAE (°C)</span><span style="color:#f2b56b">Sıcaklık bias (°C)</span><span style="color:#a9c7ff">Yağış başarı (%)</span></div>
+    </div>
 
     <div class="panels">
       <div class="panel">
@@ -89,7 +104,8 @@
       </div>
     </div>
 
-    <p class="note">Korelasyon Pearson katsayısıdır (1’e yakın = birlikte hareket). Veri azsa güvenilirlik düşer.</p>
+    <div class="method"><div><b>Arşiv</b><span id="archive-meta">—</span></div><div><b>Eşleşme</b><span>Geçerlilik saati ±45 dk</span></div><div><b>Ölçüm</b><span>İstasyon gözlemi; gelecek saatler hesaplanmaz</span></div></div>
+    <p class="note">Korelasyon Pearson katsayısıdır (1’e yakın = birlikte hareket). Az örnekli uzun ufuklar doğal olarak daha belirsizdir.</p>
   </div>
 </main>
 
@@ -182,6 +198,7 @@ function collect(samples, runs) {
 }
 
 function byLead(pairs, isTemp = false) {
+
   const map = new Map();
   for (const p of pairs) {
     if (!map.has(p.lead)) map.set(p.lead, []);
@@ -195,6 +212,48 @@ function byLead(pairs, isTemp = false) {
       : group.filter(p => p.hit).length / group.length * 100;
     return { lead, n: group.length, bias, success };
   }).filter(Boolean);
+}
+
+function drawLeadChart(tempHours, rainHours) {
+  const svg = document.getElementById("lead-chart");
+  const W = 900, H = 260, L = 46, R = 16, T = 18, B = 34;
+  const allLeads = [...new Set([...tempHours.map(x=>x.lead), ...rainHours.map(x=>x.lead)])].sort((a,b)=>a-b);
+  svg.innerHTML = "";
+  if (!allLeads.length) {
+    svg.innerHTML = '<text x="450" y="130" text-anchor="middle" fill="#9bb1bf" font-size="14">Yeterli doğrulama verisi yok</text>';
+    return;
+  }
+  const tempMap = new Map(tempHours.map(x=>[x.lead,x]));
+  const rainMap = new Map(rainHours.map(x=>[x.lead,x]));
+  const maxLead = Math.max(...allLeads, 6);
+  const maxMae = Math.max(1, ...tempHours.map(x=>Math.abs(x.bias)+0.1), ...tempHours.map(x=>Math.abs(x.success-100)/10+0.1));
+  const x = lead => L + (lead/maxLead)*(W-L-R);
+  const yTemp = v => T + (Math.max(0,Math.min(maxMae,v))/maxMae)*(H-T-B);
+  const yRain = v => H-B - (Math.max(0,Math.min(100,v))/100)*(H-T-B);
+  const NS="http://www.w3.org/2000/svg";
+  const line=(pts,color,dash="")=>{
+    if(!pts.length)return;
+    const el=document.createElementNS(NS,"polyline");
+    el.setAttribute("points",pts.map(p=>p.join(",")).join(" "));
+    el.setAttribute("fill","none"); el.setAttribute("stroke",color); el.setAttribute("stroke-width","2");
+    if(dash) el.setAttribute("stroke-dasharray",dash);
+    svg.appendChild(el);
+  };
+  for(let i=0;i<=5;i++){
+    const yy=T+(H-T-B)*i/5;
+    const g=document.createElementNS(NS,"line"); g.setAttribute("x1",L);g.setAttribute("x2",W-R);g.setAttribute("y1",yy);g.setAttribute("y2",yy);g.setAttribute("stroke","rgba(255,255,255,.08)");svg.appendChild(g);
+  }
+  const tempMae = tempHours.map(v=>[x(v.lead),yTemp(Math.abs(v.bias))]);
+  const tempBias = tempHours.map(v=>[x(v.lead),yTemp(Math.abs(v.bias))]);
+  const rain = rainHours.map(v=>[x(v.lead),yRain(v.success)]);
+  line(tempMae,"#7dd3d7");
+  line(tempBias,"#f2b56b","5 4");
+  line(rain,"#a9c7ff");
+  for(const lead of allLeads.filter(v=>v%24===0 || v===6 || v===12 || v===18)){
+    const xx=x(lead); const tx=document.createElementNS(NS,"text"); tx.setAttribute("x",xx);tx.setAttribute("y",H-10);tx.setAttribute("text-anchor","middle");tx.setAttribute("fill","#9bb1bf");tx.setAttribute("font-size","11");tx.textContent="+"+lead+"s";svg.appendChild(tx);
+  }
+  const lab=document.createElementNS(NS,"text");lab.setAttribute("x",L);lab.setAttribute("y",12);lab.setAttribute("fill","#7dd3d7");lab.setAttribute("font-size","11");lab.textContent="°C";svg.appendChild(lab);
+  const lab2=document.createElementNS(NS,"text");lab2.setAttribute("x",W-R);lab2.setAttribute("y",12);lab2.setAttribute("text-anchor","end");lab2.setAttribute("fill","#a9c7ff");lab2.setAttribute("font-size","11");lab2.textContent="%";svg.appendChild(lab2);
 }
 
 function overall(pairs, isTemp = false) {
@@ -253,7 +312,7 @@ async function load() {
 
   try {
     const [hist, gfs] = await Promise.all([
-      fetchJSON(location.origin + "/api/history/" + station + "?hours=180"),
+      fetchJSON(location.origin + "/api/history/" + station + "?hours=384"),
       fetchJSON(GFS_BASE + "/gfs/verification")
     ]);
     const samples = hist.samples || [];
@@ -275,6 +334,9 @@ async function load() {
     fillTable(document.querySelector("#temp-table tbody"), tHours, "temp");
     fillTable(document.querySelector("#rain-table tbody"), rHours, "rain");
     document.getElementById("temp-stable").textContent = stableText(tHours, "temp");
+    drawLeadChart(tHours, rHours);
+    const verifiedLeads = new Set([...tHours.map(x=>x.lead), ...rHours.map(x=>x.lead)]);
+    document.getElementById("archive-meta").textContent = `${uniqueRuns(gfs).length}/64 döngü · ${verifiedLeads.size} farklı tahmin ufku doğrulandı`;
     document.getElementById("rain-stable").textContent = stableText(rHours, "rain");
 
     status.hidden = true;
