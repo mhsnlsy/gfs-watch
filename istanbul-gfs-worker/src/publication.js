@@ -434,8 +434,12 @@ function briefingTemperatureSummary(points, stationObservation) {
   }
   const lodosDays=[];
   for(const key of keys){
-    const wind=points.filter(p=>briefingDayKey(p._ts)===key).map(p=>numeric(p.wind_speed_10m_kmh)).filter(v=>v!==null);
-    if(wind.length && wind.some(v=>v>=15)) lodosDays.push({key,wind:Math.max(...wind)});
+    const lodos=points.filter(p=>briefingDayKey(p._ts)===key).map(p=>{
+      const speed=numeric(p.wind_speed_10m_kmh), dir=numeric(p.wind_direction_10m_deg);
+      const isLodos=dir!==null && (dir>=157.5 && dir<=247.5);
+      return isLodos && speed!==null ? speed : null;
+    }).filter(v=>v!==null);
+    if(lodos.length && lodos.some(v=>v>=15)) lodosDays.push({key,wind:Math.max(...lodos)});
   }
   if(lodosDays.length){
     const start=lodosDays[0];
