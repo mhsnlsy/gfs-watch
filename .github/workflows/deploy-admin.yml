@@ -125,11 +125,11 @@ jobs:
           test "$status" = "401"
 
           curl -sS --fail --max-time 20 \
-            -u "admin:$ADMIN_PASSWORD" "$WEB/admin" |
-            grep -Fq "İSTANBUL HAVASI — ADMIN"
+            -u "admin:$ADMIN_PASSWORD" "$WEB/admin" > /tmp/admin.html
+          grep -Fq "İSTANBUL HAVASI — ADMIN" /tmp/admin.html
 
           curl -sS --fail --max-time 20 \
-            -u "admin:$ADMIN_PASSWORD" "$WEB/api/admin/analytics" |
-            node -e 'let s="";process.stdin.on("data",d=>s+=d).on("end",()=>{const d=JSON.parse(s);if(d.ok!==true)process.exit(1);console.log("Admin analytics API OK")})'
+            -u "admin:$ADMIN_PASSWORD" "$WEB/api/admin/analytics" > /tmp/analytics.json
+          node -e 'const fs=require("fs");const d=JSON.parse(fs.readFileSync("/tmp/analytics.json","utf8"));if(d.ok!==true)process.exit(1);console.log("Admin analytics API OK")'
 
           echo "Admin deployment verified."
