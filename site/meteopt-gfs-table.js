@@ -193,10 +193,24 @@
       ? stepIntervals.map(interval => interval + " saat").join("/")
       : "model";
     const horizon = hours.reduce((max, item) => Math.max(max, item.step), 0);
+    const invalidSteps = hours
+      .filter(item => {
+        const p = item.point || {};
+        return ![
+          p.temperature_2m_c,
+          p.precipitation_6h_mm,
+          p.wind_speed_10m_kmh,
+          p.temperature_850hpa_c
+        ].some(finite);
+      })
+      .map(item => item.step);
+    const qualityNote = invalidSteps.length
+      ? " · " + invalidSteps.length + " geçersiz adım: F" + invalidSteps.join(", F")
+      : "";
     const complete = document.f180?.available === true || horizon >= 180;
     $("meteopt-table-status").textContent = complete
-      ? rows.length + " adım · " + cadenceLabel + " aralıklı · 180. saate kadar"
-      : "Yeni çıktı yükleniyor, şu an " + horizon + ". saate kadar";
+      ? rows.length + " adım · " + cadenceLabel + " aralıklı · 180. saate kadar" + qualityNote
+      : "Yeni çıktı yükleniyor, şu an " + horizon + ". saate kadar" + qualityNote;
   }
 
   async function refresh() {
