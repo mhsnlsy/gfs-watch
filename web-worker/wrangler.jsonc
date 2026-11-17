@@ -12,6 +12,8 @@
     "binding": "ASSETS",
     "run_worker_first": [
       "/__health",
+      "/admin",
+      "/admin/*",
       "/gfs/*",
       "/api/*",
       "/data/notifications/*",
