@@ -130,7 +130,7 @@ jobs:
           test "$status" = "401"
 
           admin_status="$(curl -sS -o /tmp/admin.html -w "%{http_code}" --max-time 20 \
-            -u "admin:$ADMIN_PASSWORD" "$WEB/admin/index.html")"
+            -u "admin:$ADMIN_PASSWORD" "$WEB/admin")"
           echo "Authenticated /admin HTTP status: $admin_status"
           test "$admin_status" = "200"
           grep -Fq 'admin-build' /tmp/admin.html || {
