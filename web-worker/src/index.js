@@ -411,7 +411,97 @@ async function analyticsStats(env) {
   };
 }
 
+async function snapshotAnalyticsDay(env, day) {
+  const db = env.ANALYTICS_DB;
+  if (!db) return;
+
+  const start = day + "T00:00:00+00:00";
+  const end = day + "T23:59:59.999+00:00";
+
+  const q = async (sql, ...args) => (await db.prepare(sql).bind(...args).all()).results || [];
+  const one = async (sql, ...args) => (await db.prepare(sql).bind(...args).first()) || {};
+
+  const unique = Number((await one(
+    "SELECT COUNT(DISTINCT session_id) AS n FROM analytics_events WHERE ts_utc BETWEEN ? AND ?",
+    start, end
+  )).n || 0);
+  const pageviews = Number((await one(
+    "SELECT COUNT(*) AS n FROM analytics_events WHERE ts_utc BETWEEN ? AND ?",
+    start, end
+  )).n || 0);
+  const newVisitors = Number((await one(
+    "SELECT COUNT(*) AS n FROM analytics_events e JOIN analytics_sessions s ON s.session_id=e.session_id WHERE e.ts_utc BETWEEN ? AND ? AND s.first_seen_utc BETWEEN ? AND ?",
+    start, end, start, end
+  )).n || 0);
+
+  const group = async (field) => q(
+    `SELECT COALESCE(${field}, 'Bilinmiyor') AS label, COUNT(*) AS count
+     FROM analytics_events WHERE ts_utc BETWEEN ? AND ?
+     GROUP BY ${field} ORDER BY count DESC LIMIT 10`,
+    start, end
+  );
+
+  const pages = await q(
+    "SELECT path AS label, COUNT(*) AS count FROM analytics_events WHERE ts_utc BETWEEN ? AND ? GROUP BY path ORDER BY count DESC LIMIT 10",
+    start, end
+  );
+  const sourceRows = await q(
+    "SELECT referrer, COUNT(*) AS count FROM analytics_events WHERE ts_utc BETWEEN ? AND ? GROUP BY referrer ORDER BY count DESC LIMIT 30",
+    start, end
+  );
+  const sourceMap = {};
+  sourceRows.forEach(row => {
+    const label = classifySource(row.referrer);
+    sourceMap[label] = (sourceMap[label] || 0) + Number(row.count || 0);
+  });
+
+  const jsonGroups = async (field) => (await group(field)).map(r => [r.label, Number(r.count || 0)]);
+
+  await db.prepare(
+    `INSERT INTO analytics_daily
+      (day, unique_visitors, pageviews, new_visitors, returning_visitors,
+       devices_json, os_json, browsers_json, cities_json, sources_json, pages_json, created_at_utc)
+     VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+     ON CONFLICT(day) DO UPDATE SET
+       unique_visitors=excluded.unique_visitors,
+       pageviews=excluded.pageviews,
+       new_visitors=excluded.new_visitors,
+       returning_visitors=excluded.returning_visitors,
+       devices_json=excluded.devices_json,
+       os_json=excluded.os_json,
+       browsers_json=excluded.browsers_json,
+       cities_json=excluded.cities_json,
+       sources_json=excluded.sources_json,
+       pages_json=excluded.pages_json,
+       created_at_utc=excluded.created_at_utc`
+  ).bind(
+    day, unique, pageviews, newVisitors, Math.max(0, unique - newVisitors),
+    JSON.stringify(await jsonGroups("device")),
+    JSON.stringify(await jsonGroups("os")),
+    JSON.stringify(await jsonGroups("browser")),
+    JSON.stringify(await jsonGroups("city")),
+    JSON.stringify(Object.entries(sourceMap).sort((a,b) => b[1] - a[1])),
+    JSON.stringify(pages.map(r => [r.label, Number(r.count || 0)])),
+    new Date().toISOString()
+  ).run();
+
+  await db.prepare("DELETE FROM analytics_daily WHERE day < date(?, '-29 days')").bind(day).run();
+  await db.prepare("DELETE FROM analytics_events WHERE ts_utc < ?").bind(start).run();
+  await db.prepare("DELETE FROM analytics_sessions WHERE last_seen_utc < ?").bind(start).run();
+}
+
 export default {
+  async scheduled(controller, env, ctx) {
+    const now = new Date(controller.scheduledTime || Date.now());
+    const day = new Intl.DateTimeFormat("en-CA", {
+      timeZone: "Europe/Istanbul",
+      year: "numeric",
+      month: "2-digit",
+      day: "2-digit"
+    }).format(new Date(now.getTime() - 24 * 60 * 60 * 1000));
+    ctx.waitUntil(snapshotAnalyticsDay(env, day));
+  },
+
   async fetch(request, env) {
     const url = new URL(request.url);
     const path = url.pathname.replace(/\/+$/, "") || "/";
