@@ -153,7 +153,7 @@ def main() -> None:
     assert "METEOPT_ECMWF_API" in gfs_worker
     # Wind direction normalization is handled by the GFS payload contract; this collector imports the canonical MeteoPT source.
     assert "METEOPT_GFS_API" in gfs_worker
-    assert 'UPDATE gfs_runs SET payload_json = ?' in gfs_worker
+    assert 'INSERT OR IGNORE INTO gfs_runs' in gfs_worker
     assert "ECMWF_ARCHIVE" in gfs_worker
     assert "data/ecmwf/latest.json" in platform_workflow
     assert "Verified live ECMWF payload served from R2" in platform_workflow
