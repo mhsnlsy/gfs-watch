@@ -17,7 +17,17 @@
   .controls { display: flex; gap: 4px; align-items: center; margin-bottom: 6px; flex-wrap: wrap; }
   .controls select, .controls button { background: #102535; color: #e7f2f6; border: 1px solid rgba(213,237,240,.16); padding: 4px 8px; border-radius: 6px; font-size: 16px; }
   .controls button { cursor: pointer; background: rgba(125,211,215,.15); border-color: rgba(125,211,215,.35); color: #c6f0ec; }
-  .summary-row { display: grid; grid-template-columns: repeat(6, 1fr); gap: 2px; margin-bottom: 6px; }
+  .summary-row { display:grid; grid-template-columns:repeat(3,1fr); gap:6px; margin:8px 0; }
+  .metric-group { background:linear-gradient(160deg,rgba(18,44,62,.82),rgba(13,33,48,.92)); border:1px solid rgba(204,225,239,.12); border-radius:10px; padding:10px; }
+  .metric-group h2 { font:800 18px/1.1 Manrope,sans-serif; margin:0 0 7px; }
+  .metric-grid { display:grid; grid-template-columns:repeat(2,1fr); gap:5px; }
+  .metric { background:rgba(255,255,255,.045); border-radius:7px; padding:7px; min-height:54px; }
+  .metric span { display:block; color:#9bb1bf; font-size:11px; }
+  .metric b { display:block; color:#e7f2f6; font:800 18px/1.15 Manrope,sans-serif; margin-top:2px; }
+  .metric small { color:#9bb1bf; font-size:10px; }
+  .metric.accent b { color:#7dd3d7; }
+  .metric.warn b { color:#f2b56b; }
+  .metric.good b { color:#a9c7ff; }
   .card { background: linear-gradient(160deg, rgba(18,44,62,.72), rgba(13,33,48,.8)); border: 1px solid rgba(204,225,239,.12); border-radius: 8px; padding: 5px 3px; text-align: center; }
   .card b { display: block; font: 700 20px/1.05 Manrope, sans-serif; color: #d8f4f2; margin-top: 1px; }
   .card span { font-size: 12px; color: #9bb1bf; line-height: 1.15; }
@@ -25,7 +35,8 @@
   .wide { grid-column: 1 / -1; }
   .chart-wrap { height: 260px; margin-top: 6px; position: relative; }
   .chart-wrap svg { width: 100%; height: 100%; display: block; }
-  .legend { display:flex; gap:12px; flex-wrap:wrap; font-size:12px; color:#9bb1bf; margin-top:2px; }
+  .legend { display:flex; gap:14px; flex-wrap:wrap; font-size:12px; color:#9bb1bf; margin-top:2px; }
+  .chart-caption { display:flex; justify-content:space-between; gap:8px; color:#8fa7b5; font-size:11px; margin-top:2px; }
   .legend span::before { content:""; display:inline-block; width:10px; height:3px; vertical-align:middle; margin-right:4px; background:currentColor; }
   .method { display:grid; grid-template-columns:repeat(3,1fr); gap:4px; margin-top:6px; }
   .method div { background:rgba(255,255,255,.035); border-radius:6px; padding:5px; color:#b7cbd3; font-size:12px; }
@@ -40,7 +51,7 @@
   .stable { background: rgba(125,211,215,.14); border-radius: 6px; padding: 5px 6px; margin-top: 4px; font-size: 15px; line-height: 1.3; }
   .note { font-size: 13px; color: #8fa7b5; margin-top: 6px; line-height: 1.25; }
   #status { padding: 6px; background: rgba(255,255,255,.04); border-radius: 6px; font-size: 15px; }
-  @media (max-width: 800px) { .panels { grid-template-columns: 1fr; } .summary-row { grid-template-columns: 1fr 1fr; } .method { grid-template-columns:1fr; } .chart-wrap { height:220px; } }
+  @media (max-width: 800px) { .panels { grid-template-columns: 1fr; } .summary-row { grid-template-columns: 1fr; } .method { grid-template-columns:1fr; } .chart-wrap { height:240px; } .metric-grid { grid-template-columns:1fr 1fr; } }
 </style>
 </head>
 <body>
@@ -57,8 +68,8 @@
 </header>
 
 <main class="shell verif">
-  <h1>GFS gerçekleşme analizi</h1>
-  <p class="lead">Son 16 günde arşivlenen 64 GFS döngüsü, gerçekleşen istasyon ölçümleriyle aynı geçerlilik saatinde eşleştirilir. Böylece modelin <b>kaç saat sonrasını ne kadar iyi tahmin ettiği</b> görülür.</p>
+  <h1>GFS GERÇEKLEŞME ANALİZİ</h1>
+  <p class="lead">Son 16 gün · 64 GFS döngüsü · Gerçekleşen istasyon ölçümleriyle karşılaştırma</p>
 
   <div class="controls">
     <label>İstasyon
@@ -76,10 +87,11 @@
     <div class="summary-row" id="overall"></div>
 
     <div class="panel wide">
-      <h2>Kurşun süresine göre doğruluk</h2>
-      <p class="rule">Her nokta, geçmişteki farklı GFS döngülerinin aynı tahmin ufkundaki hatalarının ortalamasıdır. Örneğin +48 saat, 48 saat sonrasını tahmin eden tüm arşivli döngüleri temsil eder.</p>
-      <div class="chart-wrap"><svg id="lead-chart" viewBox="0 0 900 260" role="img" aria-label="Kurşun süresine göre sıcaklık tahmin hatası"></svg></div>
-      <div class="legend"><span style="color:#7dd3d7">Sıcaklık MAE (°C)</span><span style="color:#f2b56b">Sıcaklık bias (°C)</span><span style="color:#a9c7ff">Yağış başarı (%)</span></div>
+      <h2>Tahmin süresi → hata</h2>
+      <p class="rule">Her nokta, o tahmin ufkunda doğrulanmış tüm GFS döngülerinin ortalama hatasını gösterir. <b>Ne kadar aşağıdaysa o kadar iyi.</b></p>
+      <div class="chart-wrap"><svg id="lead-chart" viewBox="0 0 900 260" role="img" aria-label="Tahmin süresine göre GFS hata grafiği"></svg></div>
+      <div class="legend"><span style="color:#7dd3d7">Sıcaklık MAE (°C)</span><span style="color:#f2b56b">Rüzgâr hız MAE (km/sa)</span><span style="color:#a9c7ff">Yağış miktarı MAE (mm)</span></div>
+      <div class="chart-caption"><span>+6 → +12 → +18 → … → +180 saat</span><span id="chart-sample">—</span></div>
     </div>
 
     <div class="panels">
@@ -165,8 +177,13 @@ function pearson(xs, ys) {
   return den === 0 ? null : num / den;
 }
 
+function circularDiff(a, b) {
+  let d = Math.abs(a - b) % 360;
+  return d > 180 ? 360 - d : d;
+}
+
 function collect(samples, runs) {
-  const temp = [], rain = [];
+  const temp = [], rain = [], wind = [];
   const now = Date.now();
   for (const run of runs) {
     for (const step of run.forecast_6_hourly || []) {
@@ -177,128 +194,426 @@ function collect(samples, runs) {
       const lead = Number(step.forecast_hour);
       if (!Number.isFinite(lead) || lead <= 0) continue;
 
-      const mt = Number(step.temperature_2m_c);
-      const ot = Number(obs.temperature_c);
+      const mt = Number(step.temperature_2m_c), ot = Number(obs.temperature_c);
       if (Number.isFinite(mt) && Number.isFinite(ot)) {
         const diff = mt - ot;
         temp.push({ lead, model: mt, obs: ot, diff, score: Math.max(0, 100 - 10 * Math.abs(diff)) });
       }
 
-      const mr = Number(step.precipitation_6h_mm);
-      const or = Number(obs.rain_6h_mm);
+      const mr = Number(step.precipitation_6h_mm), or = Number(obs.rain_6h_mm);
       if (Number.isFinite(mr) && Number.isFinite(or)) {
         const mw = mr >= DRY, ow = or >= DRY;
         const close = Math.abs(mr - or) <= RAIN_TOL;
         const hit = (!mw && !ow) || (mw && ow && close);
         rain.push({ lead, model: mr, obs: or, diff: mr - or, hit });
       }
+
+      const mw = Number(step.wind_speed_10m_kmh), ow = Number(obs.wind_speed_kmh);
+      const md = Number(step.wind_direction_10m_deg), od = Number(obs.wind_direction);
+      if (Number.isFinite(mw) && Number.isFinite(ow)) {
+        wind.push({
+          lead, speedDiff: mw - ow,
+          directionDiff: Number.isFinite(md) && Number.isFinite(od) ? circularDiff(md, od) : null
+        });
+      }
     }
   }
-  return { temp, rain };
+  return { temp, rain, wind };
 }
 
-function byLead(pairs, isTemp = false) {
-
+function byLead(pairs, type) {
   const map = new Map();
   for (const p of pairs) {
     if (!map.has(p.lead)) map.set(p.lead, []);
     map.get(p.lead).push(p);
   }
-  return [...map.entries()].sort((a, b) => a[0] - b[0]).map(([lead, group]) => {
-    if (!group.length) return null;
-    const bias = group.reduce((s, p) => s + p.diff, 0) / group.length;
-    const mae = group.reduce((s, p) => s + Math.abs(p.diff), 0) / group.length;
-    const success = isTemp
-      ? group.reduce((s, p) => s + p.score, 0) / group.length
-      : group.filter(p => p.hit).length / group.length * 100;
-    return { lead, n: group.length, bias, mae, success };
+  return [...map.entries()].sort((a,b)=>a[0]-b[0]).map(([lead,g]) => {
+    if (!g.length) return null;
+    if (type === "wind") {
+      const speedMae = g.reduce((s,p)=>s+Math.abs(p.speedDiff),0)/g.length;
+      const direction = g.filter(p=>p.directionDiff != null);
+      const directionMae = direction.length ? direction.reduce((s,p)=>s+p.directionDiff,0)/direction.length : null;
+      return {lead,n:g.length,speedMae,directionMae};
+    }
+    const bias = g.reduce((s,p)=>s+p.diff,0)/g.length;
+    const mae = g.reduce((s,p)=>s+Math.abs(p.diff),0)/g.length;
+    const success = type === "temp" ? g.reduce((s,p)=>s+p.score,0)/g.length : g.filter(p=>p.hit).length/g.length*100;
+    return {lead,n:g.length,bias,mae,success};
   }).filter(Boolean);
 }
 
-function drawLeadChart(tempHours, rainHours) {
-  const svg = document.getElementById("lead-chart");
-  const W = 900, H = 260, L = 46, R = 16, T = 18, B = 34;
-  const allLeads = [...new Set([...tempHours.map(x=>x.lead), ...rainHours.map(x=>x.lead)])].sort((a,b)=>a-b);
-  svg.innerHTML = "";
-  if (!allLeads.length) {
-    svg.innerHTML = '<text x="450" y="130" text-anchor="middle" fill="#9bb1bf" font-size="14">Yeterli doğrulama verisi yok</text>';
-    return;
-  }
-  const maxLead = Math.max(...allLeads, 6);
-  const maxMae = Math.max(1, ...tempHours.map(x=>x.mae + 0.1));
-  const x = lead => L + (lead/maxLead)*(W-L-R);
-  const yTemp = v => T + (Math.max(0,Math.min(maxMae,v))/maxMae)*(H-T-B);
-  const yRain = v => H-B - (Math.max(0,Math.min(100,v))/100)*(H-T-B);
-  const NS="http://www.w3.org/2000/svg";
-  const line=(pts,color,dash="")=>{
-    if(!pts.length)return;
-    const el=document.createElementNS(NS,"polyline");
-    el.setAttribute("points",pts.map(p=>p.join(",")).join(" "));
-    el.setAttribute("fill","none"); el.setAttribute("stroke",color); el.setAttribute("stroke-width","2");
-    if(dash) el.setAttribute("stroke-dasharray",dash);
-    svg.appendChild(el);
-  };
-  for(let i=0;i<=5;i++){
-    const yy=T+(H-T-B)*i/5;
-    const g=document.createElementNS(NS,"line"); g.setAttribute("x1",L);g.setAttribute("x2",W-R);g.setAttribute("y1",yy);g.setAttribute("y2",yy);g.setAttribute("stroke","rgba(255,255,255,.08)");svg.appendChild(g);
-  }
-  const tempMae = tempHours.map(v=>[x(v.lead),yTemp(v.mae)]);
-  const tempBias = tempHours.map(v=>[x(v.lead),yTemp(Math.abs(v.bias))]);
-  const rain = rainHours.map(v=>[x(v.lead),yRain(v.success)]);
-  line(tempMae,"#7dd3d7");
-  line(tempBias,"#f2b56b","5 4");
-  line(rain,"#a9c7ff");
-  for(const lead of allLeads.filter(v=>v%24===0 || v===6 || v===12 || v===18)){
-    const xx=x(lead); const tx=document.createElementNS(NS,"text"); tx.setAttribute("x",xx);tx.setAttribute("y",H-10);tx.setAttribute("text-anchor","middle");tx.setAttribute("fill","#9bb1bf");tx.setAttribute("font-size","11");tx.textContent="+"+lead+"s";svg.appendChild(tx);
-  }
-  const lab=document.createElementNS(NS,"text");lab.setAttribute("x",L);lab.setAttribute("y",12);lab.setAttribute("fill","#7dd3d7");lab.setAttribute("font-size","11");lab.textContent="°C";svg.appendChild(lab);
-  const lab2=document.createElementNS(NS,"text");lab2.setAttribute("x",W-R);lab2.setAttribute("y",12);lab2.setAttribute("text-anchor","end");lab2.setAttribute("fill","#a9c7ff");lab2.setAttribute("font-size","11");lab2.textContent="%";svg.appendChild(lab2);
-}
-
-function overall(pairs, isTemp = false) {
+function overallTemp(pairs) {
   if (!pairs.length) return null;
-  const n = pairs.length;
-  const bias = pairs.reduce((s, p) => s + p.diff, 0) / n;
-  const success = isTemp
-    ? pairs.reduce((s, p) => s + p.score, 0) / n
-    : pairs.filter(p => p.hit).length / n * 100;
-  const corr = pearson(pairs.map(p => p.model), pairs.map(p => p.obs));
-  return { n, bias, success, corr };
+  const bias=pairs.reduce((s,p)=>s+p.diff,0)/pairs.length;
+  const mae=pairs.reduce((s,p)=>s+Math.abs(p.diff),0)/pairs.length;
+  return {n:pairs.length,bias,mae};
+}
+function overallRain(pairs) {
+  if (!pairs.length) return null;
+  const mae=pairs.reduce((s,p)=>s+Math.abs(p.diff),0)/pairs.length;
+  const success=pairs.filter(p=>p.hit).length/pairs.length*100;
+  return {n:pairs.length,mae,success};
+}
+function overallWind(pairs) {
+  if (!pairs.length) return null;
+  const speedMae=pairs.reduce((s,p)=>s+Math.abs(p.speedDiff),0)/pairs.length;
+  const dirs=pairs.filter(p=>p.directionDiff!=null);
+  const directionMae=dirs.length?dirs.reduce((s,p)=>s+p.directionDiff,0)/dirs.length:null;
+  return {n:pairs.length,speedMae,directionMae};
 }
 
-function biasText(bias, kind) {
-  const abs = Math.abs(bias);
-  if (abs < 0.05) return "hemen hemen doğru";
-  if (kind === "temp") {
-    return bias > 0 ? `tahmin ${fmt(abs, 1)} °C daha sıcak` : `tahmin ${fmt(abs, 1)} °C daha soğuk`;
-  }
-  return bias > 0 ? `tahmin ${fmt(abs, 1)} mm daha fazla` : `tahmin ${fmt(abs, 1)} mm daha az`;
+function drawLeadChart(tempHours, rainHours, windHours) {
+  const svg=document.getElementById("lead-chart"), W=900,H=260,L=46,R=16,T=18,B=34;
+  const leads=[...new Set([...tempHours,...rainHours,...windHours].map(x=>x.lead))].sort((a,b)=>a-b);
+  svg.innerHTML="";
+  if(!leads.length){svg.innerHTML='<text x="450" y="130" text-anchor="middle" fill="#9bb1bf" font-size="14">Yeterli doğrulama verisi yok</text>';return;}
+  const maxLead=Math.max(180,...leads), maxVal=Math.max(1,...tempHours.map(x=>x.mae),...windHours.map(x=>x.speedMae),...rainHours.map(x=>x.mae));
+  const x=v=>L+(v/maxLead)*(W-L-R), y=v=>T+(Math.max(0,Math.min(maxVal,v))/maxVal)*(H-T-B), NS="http://www.w3.org/2000/svg";
+  const line=(pts,color)=>{if(!pts.length)return;const e=document.createElementNS(NS,"polyline");e.setAttribute("points",pts.map(p=>p.join(",")).join(" "));e.setAttribute("fill","none");e.setAttribute("stroke",color);e.setAttribute("stroke-width","2.5");svg.appendChild(e);};
+  for(let i=0;i<=5;i++){const yy=T+(H-T-B)*i/5,e=document.createElementNS(NS,"line");e.setAttribute("x1",L);e.setAttribute("x2",W-R);e.setAttribute("y1",yy);e.setAttribute("y2",yy);e.setAttribute("stroke","rgba(255,255,255,.08)");svg.appendChild(e);}
+  line(tempHours.map(v=>[x(v.lead),y(v.mae)]),"#7dd3d7");
+  line(windHours.map(v=>[x(v.lead),y(v.speedMae)]),"#f2b56b");
+  line(rainHours.map(v=>[x(v.lead),y(v.mae)]),"#a9c7ff");
+  for(let lead=6;lead<=180;lead+=6){const xx=x(lead),e=document.createElementNS(NS,"text");e.setAttribute("x",xx);e.setAttribute("y",H-10);e.setAttribute("text-anchor","middle");e.setAttribute("fill","#9bb1bf");e.setAttribute("font-size",lead%24===0?"10":"8");e.textContent="+"+lead;svg.appendChild(e);}
+  const unit=document.createElementNS(NS,"text");unit.setAttribute("x",L);unit.setAttribute("y",12);unit.setAttribute("fill","#9bb1bf");unit.setAttribute("font-size","10");unit.textContent="Hata";svg.appendChild(unit);
 }
 
-function fillTable(tbody, hours, kind) {
-  tbody.innerHTML = "";
-  if (!hours.length) {
-    tbody.innerHTML = '<tr><td colspan="4">Yeterli veri yok</td></tr>';
-    return;
-  }
-  for (const h of hours) {
-    const tr = document.createElement("tr");
-    tr.innerHTML = `
-      <td>${h.lead} saat</td>
-      <td class="num">${fmt(h.success, 0)}%</td>
-      <td class="num">${biasText(h.bias, kind)}</td>
-      <td class="num">${h.n}</td>
-    `;
-    tbody.appendChild(tr);
-  }
+function bestWorst(hours, metric) {
+  if(!hours.length)return {best:null,worst:null};
+  const s=[...hours].sort((a,b)=>a[metric]-b[metric]);
+  return {best:s[0],worst:s[s.length-1]};
 }
 
-function stableText(hours, kind) {
-  if (!hours.length) return "Yeterli veri yok.";
-  const sorted = [...hours].sort((a, b) => Math.abs(a.bias) - Math.abs(b.bias) || b.success - a.success);
-  const best = sorted[0];
-  const top3 = sorted.slice(0, 3);
-  return `En tutarlı tahmin saati: ${best.lead} saat (${biasText(best.bias, kind)}, başarı ${fmt(best.success, 0)}%). Diğer güçlü saatler: ${top3.slice(1).map(h => h.lead + " saat").join(", ") || "—"}.`;
+async function load() {
+  const station=document.getElementById("station").value, status=document.getElementById("status"), content=document.getElementById("content");
+  status.hidden=false; status.textContent="Yükleniyor…"; content.hidden=true;
+  try {
+    const [hist,gfs]=await Promise.all([
+      fetchJSON(location.origin+"/api/history/"+station+"?hours=384"),
+      fetchJSON(GFS_BASE+"/gfs/verification")
+    ]);
+    const runs=uniqueRuns(gfs), samples=hist.samples||[], pairs=collect(samples,runs);
+    const th=byLead(pairs.temp,"temp"), rh=byLead(pairs.rain,"rain"), wh=byLead(pairs.wind,"wind");
+    const t=overallTemp(pairs.temp), r=overallRain(pairs.rain), w=overallWind(pairs.wind);
+    const tb=bestWorst(th,"mae"), wb=bestWorst(wh,"speedMae");
+
+    document.getElementById("overall").innerHTML=[
+      `<section class="metric-group"><h2>Sıcaklık</h2><div class="metric-grid">
+        <div class="metric accent"><span>Ortalama hata</span><b>${t?fmt(t.bias,1):"—"} °C</b><small>bias</small></div>
+        <div class="metric"><span>MAE</span><b>${t?fmt(t.mae,1):"—"} °C</b><small>ortalama mutlak hata</small></div>
+        <div class="metric good"><span>En başarılı</span><b>${tb.best?"+${tb.best.lead} saat":"—"}</b><small>${tb.best?fmt(tb.best.mae,1)+" °C MAE":"—"}</small></div>
+        <div class="metric warn"><span>En yüksek hata</span><b>${tb.worst?"+${tb.worst.lead} saat":"—"}</b><small>${tb.worst?fmt(tb.worst.mae,1)+" °C MAE":"—"}</small></div>
+      </div></section>`,
+      `<section class="metric-group"><h2>Yağış</h2><div class="metric-grid">
+        <div class="metric good"><span>Tespit başarısı</span><b>${r?fmt(r.success,0):"—"}%</b><small>yağış / yağışsız</small></div>
+        <div class="metric"><span>Ortalama miktar hatası</span><b>${r?fmt(r.mae,1):"—"} mm</b><small>6 saatlik toplam</small></div>
+        <div class="metric accent"><span>Doğrulanan</span><b>${r?r.n:"—"}</b><small>eşleşen tahmin</small></div>
+        <div class="metric"><span>Arşiv</span><b>${runs.length}/64</b><small>GFS döngüsü</small></div>
+      </div></section>`,
+      `<section class="metric-group"><h2>Rüzgâr</h2><div class="metric-grid">
+        <div class="metric accent"><span>Ortalama hız hatası</span><b>${w?fmt(w.speedMae,1):"—"} km/sa</b><small>MAE</small></div>
+        <div class="metric"><span>Yön hatası</span><b>${w&&w.directionMae!=null?fmt(w.directionMae,0):"—"}°</b><small>ortalama dairesel fark</small></div>
+        <div class="metric good"><span>En başarılı</span><b>${wb.best?"+${wb.best.lead} saat":"—"}</b><small>${wb.best?fmt(wb.best.speedMae,1)+" km/sa MAE":"—"}</small></div>
+        <div class="metric warn"><span>En yüksek hata</span><b>${wb.worst?"+${wb.worst.lead} saat":"—"}</b><small>${wb.worst?fmt(wb.worst.speedMae,1)+" km/sa MAE":"—"}</small></div>
+      </div></section>`
+    ].join("");
+
+    drawLeadChart(th,rh,wh);
+    document.getElementById("chart-sample").textContent=`Sıcaklık ${pairs.temp.length} · Yağış ${pairs.rain.length} · Rüzgâr ${pairs.wind.length} doğrulanmış nokta`;
+
+    document.querySelector("#temp-table tbody").innerHTML="";
+    for(const x of th){const tr=document.createElement("tr");tr.innerHTML=`<td>+${x.lead} saat</td><td class="num">${fmt(x.success,0)}%</td><td class="num">${biasText(x.bias,"temp")}</td><td class="num">${x.n}</td>`;document.querySelector("#temp-table tbody").appendChild(tr);}
+    document.querySelector("#rain-table tbody").innerHTML="";
+    for(const x of rh){const tr=document.createElement("tr");tr.innerHTML=`<td>+${x.lead} saat</td><td class="num">${fmt(x.success,0)}%</td><td class="num">${biasText(x.bias,"rain")}</td><td class="num">${x.n}</td>`;document.querySelector("#rain-table tbody").appendChild(tr);}
+    document.getElementById("temp-stable").textContent=tb.best?`En başarılı sıcaklık tahmini +${tb.best.lead} saatte: MAE ${fmt(tb.best.mae,1)} °C. En yüksek hata +${tb.worst.lead} saatte: ${fmt(tb.worst.mae,1)} °C.`:"Yeterli veri yok.";
+    document.getElementById("rain-stable").textContent=r?`Yağış tespit başarısı ${fmt(r.success,0)}%; ortalama miktar hatası ${fmt(r.mae,1)} mm.`:"Yeterli veri yok.";
+    document.getElementById("archive-meta").textContent=`${runs.length}/64 döngü · ${samples.length} istasyon gözlemi · +6 → +180 saat doğrulama`;
+    status.hidden=true; content.hidden=false;
+  } catch(e) { status.textContent="Hata: "+(e.message||"veri alınamadı"); }
+}!DOCTYPE html>
+<html lang="tr">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<meta name="theme-color" content="#081827">
+<meta name="description" content="GFS tahminlerinin gerçekleşen istasyon ölçümleriyle 16 günlük arşiv üzerinden doğrulanması.">
+<title>GFS Gerçekleşme · İstanbul Havası</title>
+<link rel="icon" href="/favicon.svg" type="image/svg+xml">
+<link rel="stylesheet" href="/home.css?v=20261116-gerceklesme-12">
+<link rel="stylesheet" href="/header-common.css?v=20261110-shared-header-1">
+<style>
+  .shell.verif { width: min(1200px, calc(100% - 16px)); }
+  .verif { padding: 6px 0 12px; max-width: none; margin: 0; }
+  .verif h1 { font: 800 26px/1.1 Manrope, sans-serif; margin: 0 0 2px; }
+  .verif .lead { color: #9bb1bf; font-size: 15px; line-height: 1.35; margin: 0 0 6px; }
+  .controls { display: flex; gap: 4px; align-items: center; margin-bottom: 6px; flex-wrap: wrap; }
+  .controls select, .controls button { background: #102535; color: #e7f2f6; border: 1px solid rgba(213,237,240,.16); padding: 4px 8px; border-radius: 6px; font-size: 16px; }
+  .controls button { cursor: pointer; background: rgba(125,211,215,.15); border-color: rgba(125,211,215,.35); color: #c6f0ec; }
+  .summary-row { display:grid; grid-template-columns:repeat(3,1fr); gap:6px; margin:8px 0; }
+  .metric-group { background:linear-gradient(160deg,rgba(18,44,62,.82),rgba(13,33,48,.92)); border:1px solid rgba(204,225,239,.12); border-radius:10px; padding:10px; }
+  .metric-group h2 { font:800 18px/1.1 Manrope,sans-serif; margin:0 0 7px; }
+  .metric-grid { display:grid; grid-template-columns:repeat(2,1fr); gap:5px; }
+  .metric { background:rgba(255,255,255,.045); border-radius:7px; padding:7px; min-height:54px; }
+  .metric span { display:block; color:#9bb1bf; font-size:11px; }
+  .metric b { display:block; color:#e7f2f6; font:800 18px/1.15 Manrope,sans-serif; margin-top:2px; }
+  .metric small { color:#9bb1bf; font-size:10px; }
+  .metric.accent b { color:#7dd3d7; }
+  .metric.warn b { color:#f2b56b; }
+  .metric.good b { color:#a9c7ff; }
+  .card { background: linear-gradient(160deg, rgba(18,44,62,.72), rgba(13,33,48,.8)); border: 1px solid rgba(204,225,239,.12); border-radius: 8px; padding: 5px 3px; text-align: center; }
+  .card b { display: block; font: 700 20px/1.05 Manrope, sans-serif; color: #d8f4f2; margin-top: 1px; }
+  .card span { font-size: 12px; color: #9bb1bf; line-height: 1.15; }
+  .panels { display: grid; grid-template-columns: 1fr 1fr; gap: 2px; }
+  .wide { grid-column: 1 / -1; }
+  .chart-wrap { height: 260px; margin-top: 6px; position: relative; }
+  .chart-wrap svg { width: 100%; height: 100%; display: block; }
+  .legend { display:flex; gap:14px; flex-wrap:wrap; font-size:12px; color:#9bb1bf; margin-top:2px; }
+  .chart-caption { display:flex; justify-content:space-between; gap:8px; color:#8fa7b5; font-size:11px; margin-top:2px; }
+  .legend span::before { content:""; display:inline-block; width:10px; height:3px; vertical-align:middle; margin-right:4px; background:currentColor; }
+  .method { display:grid; grid-template-columns:repeat(3,1fr); gap:4px; margin-top:6px; }
+  .method div { background:rgba(255,255,255,.035); border-radius:6px; padding:5px; color:#b7cbd3; font-size:12px; }
+  .method b { color:#e7f2f6; display:block; margin-bottom:1px; }
+  .panel { background: linear-gradient(160deg, rgba(18,44,62,.72), rgba(13,33,48,.8)); border: 1px solid rgba(204,225,239,.12); border-radius: 10px; padding: 6px 5px; }
+  .panel h2 { font: 700 17px/1.15 Manrope, sans-serif; margin: 0 0 2px; }
+  .rule { color: #b7cbd3; font-size: 14px; margin: 0 0 4px; line-height: 1.25; }
+  table.f-table { width: 100%; border-collapse: collapse; font-size: 15px; }
+  table.f-table th, table.f-table td { padding: 2px 3px; text-align: left; border-bottom: 1px solid rgba(255,255,255,.08); }
+  table.f-table th { font-size: 13px; color: #9bb1bf; font-weight: 600; }
+  table.f-table .num { text-align: right; font-variant-numeric: tabular-nums; }
+  .stable { background: rgba(125,211,215,.14); border-radius: 6px; padding: 5px 6px; margin-top: 4px; font-size: 15px; line-height: 1.3; }
+  .note { font-size: 13px; color: #8fa7b5; margin-top: 6px; line-height: 1.25; }
+  #status { padding: 6px; background: rgba(255,255,255,.04); border-radius: 6px; font-size: 15px; }
+  @media (max-width: 800px) { .panels { grid-template-columns: 1fr; } .summary-row { grid-template-columns: 1fr; } .method { grid-template-columns:1fr; } .chart-wrap { height:240px; } .metric-grid { grid-template-columns:1fr 1fr; } }
+</style>
+</head>
+<body>
+<header class="shell topbar">
+  <a class="brand" href="/"><span class="brand-mark"><img src="/favicon-192x192.png" alt="" width="38" height="38" style="width:100%;height:100%;object-fit:contain;border-radius:inherit"></span><span>İstanbul Havası<small>Şehir için hava tahmini</small></span></a>
+  <nav aria-label="Ana gezinme">
+    <a href="/">Anasayfa</a>
+    <a href="/#bildirimler">Raporlar</a>
+    <a href="/ecmwf/">ECMWF</a>
+    <a href="/koy.html">Köy</a>
+    <a href="/gfs-gerceklesme.html" aria-current="page">GFS Gerçekleşme</a>
+  </nav>
+  <div class="top-right"><span class="version">İstanbul Havası 1.5.0</span></div>
+</header>
+
+<main class="shell verif">
+  <h1>GFS GERÇEKLEŞME ANALİZİ</h1>
+  <p class="lead">Son 16 gün · 64 GFS döngüsü · Gerçekleşen istasyon ölçümleriyle karşılaştırma</p>
+
+  <div class="controls">
+    <label>İstasyon
+      <select id="station">
+        <option value="eyupsultan">Eyüpsultan</option>
+        <option value="enka">ENKA Balmumcu</option>
+      </select>
+    </label>
+    <button id="refresh" type="button">Yenile</button>
+  </div>
+
+  <div id="status">Veriler yükleniyor…</div>
+
+  <div id="content" hidden>
+    <div class="summary-row" id="overall"></div>
+
+    <div class="panel wide">
+      <h2>Tahmin süresi → hata</h2>
+      <p class="rule">Her nokta, o tahmin ufkunda doğrulanmış tüm GFS döngülerinin ortalama hatasını gösterir. <b>Ne kadar aşağıdaysa o kadar iyi.</b></p>
+      <div class="chart-wrap"><svg id="lead-chart" viewBox="0 0 900 260" role="img" aria-label="Tahmin süresine göre GFS hata grafiği"></svg></div>
+      <div class="legend"><span style="color:#7dd3d7">Sıcaklık MAE (°C)</span><span style="color:#f2b56b">Rüzgâr hız MAE (km/sa)</span><span style="color:#a9c7ff">Yağış miktarı MAE (mm)</span></div>
+      <div class="chart-caption"><span>+6 → +12 → +18 → … → +180 saat</span><span id="chart-sample">—</span></div>
+    </div>
+
+    <div class="panels">
+      <div class="panel">
+        <h2>Sıcaklık</h2>
+        <p class="rule">Başarı kademeli: 0 °C fark %100, 0,3 °C fark %97, 1 °C fark %90. Sapma yönü: tahmin ölçümden ne kadar yüksek/düşük.</p>
+        <table class="f-table" id="temp-table">
+          <thead><tr><th>Tahmin saati</th><th class="num">Başarı</th><th class="num">Sapma yönü</th><th class="num">Kayıt</th></tr></thead>
+          <tbody></tbody>
+        </table>
+        <div id="temp-stable" class="stable"></div>
+      </div>
+
+      <div class="panel">
+        <h2>Yağış (6 saat)</h2>
+        <p class="rule">0,2 mm altı yağışsız. İkisi de yağışsızsa veya fark 1 mm ve altındaysa başarı. Sapma yönü: tahmin ölçümden ne kadar fazla/az.</p>
+        <table class="f-table" id="rain-table">
+          <thead><tr><th>Tahmin saati</th><th class="num">Başarı</th><th class="num">Sapma yönü</th><th class="num">Kayıt</th></tr></thead>
+          <tbody></tbody>
+        </table>
+        <div id="rain-stable" class="stable"></div>
+      </div>
+    </div>
+
+    <div class="method"><div><b>Arşiv</b><span id="archive-meta">—</span></div><div><b>Eşleşme</b><span>Geçerlilik saati ±45 dk</span></div><div><b>Ölçüm</b><span>İstasyon gözlemi; gelecek saatler hesaplanmaz</span></div></div>
+    <p class="note">Korelasyon Pearson katsayısıdır (1’e yakın = birlikte hareket). Az örnekli uzun ufuklar doğal olarak daha belirsizdir.</p>
+  </div>
+</main>
+
+<script>
+const GFS_BASE = "https://gfs-watch-istanbul-gfs.muhsin-ulusoy.workers.dev";
+const TEMP_HIT = 1;
+const DRY = 0.2;
+const RAIN_TOL = 1;
+const MATCH_MS = 45 * 60 * 1000;
+
+function fmt(n, d = 1) {
+  return Number(n).toLocaleString("tr-TR", { minimumFractionDigits: d, maximumFractionDigits: d });
+}
+
+async function fetchJSON(url) {
+  const r = await fetch(url, { cache: "no-store" });
+  if (!r.ok) throw new Error("Veri alınamadı");
+  return r.json();
+}
+
+function nearest(samples, time) {
+  const t = Date.parse(time);
+  if (!Number.isFinite(t)) return null;
+  let best = null, bestGap = MATCH_MS;
+  for (const s of samples) {
+    const st = Date.parse(s.observed_at_utc || s.source_observed_at_utc || "");
+    if (!Number.isFinite(st)) continue;
+    const g = Math.abs(st - t);
+    if (g < bestGap) { bestGap = g; best = s; }
+  }
+  return best;
+}
+
+function uniqueRuns(doc) {
+  const runs = (Array.isArray(doc.comparison_runs) ? doc.comparison_runs : [doc]).slice(0, 64);
+  const seen = new Set(), out = [];
+  for (const r of runs) {
+    if (r && r.run_id_utc && !seen.has(r.run_id_utc)) {
+      seen.add(r.run_id_utc);
+      out.push(r);
+    }
+  }
+  return out;
+}
+
+function pearson(xs, ys) {
+  const n = xs.length;
+  if (n < 3) return null;
+  const mx = xs.reduce((a, b) => a + b, 0) / n;
+  const my = ys.reduce((a, b) => a + b, 0) / n;
+  let num = 0, dx = 0, dy = 0;
+  for (let i = 0; i < n; i++) {
+    const a = xs[i] - mx, b = ys[i] - my;
+    num += a * b; dx += a * a; dy += b * b;
+  }
+  const den = Math.sqrt(dx * dy);
+  return den === 0 ? null : num / den;
+}
+
+function circularDiff(a, b) {
+  let d = Math.abs(a - b) % 360;
+  return d > 180 ? 360 - d : d;
+}
+
+function collect(samples, runs) {
+  const temp = [], rain = [], wind = [];
+  const now = Date.now();
+  for (const run of runs) {
+    for (const step of run.forecast_6_hourly || []) {
+      const valid = Date.parse(step.valid_time_utc || "");
+      if (!Number.isFinite(valid) || valid > now) continue;
+      const obs = nearest(samples, step.valid_time_utc);
+      if (!obs) continue;
+      const lead = Number(step.forecast_hour);
+      if (!Number.isFinite(lead) || lead <= 0) continue;
+
+      const mt = Number(step.temperature_2m_c), ot = Number(obs.temperature_c);
+      if (Number.isFinite(mt) && Number.isFinite(ot)) {
+        const diff = mt - ot;
+        temp.push({ lead, model: mt, obs: ot, diff, score: Math.max(0, 100 - 10 * Math.abs(diff)) });
+      }
+
+      const mr = Number(step.precipitation_6h_mm), or = Number(obs.rain_6h_mm);
+      if (Number.isFinite(mr) && Number.isFinite(or)) {
+        const mw = mr >= DRY, ow = or >= DRY;
+        const close = Math.abs(mr - or) <= RAIN_TOL;
+        const hit = (!mw && !ow) || (mw && ow && close);
+        rain.push({ lead, model: mr, obs: or, diff: mr - or, hit });
+      }
+
+      const mw = Number(step.wind_speed_10m_kmh), ow = Number(obs.wind_speed_kmh);
+      const md = Number(step.wind_direction_10m_deg), od = Number(obs.wind_direction);
+      if (Number.isFinite(mw) && Number.isFinite(ow)) {
+        wind.push({
+          lead, speedDiff: mw - ow,
+          directionDiff: Number.isFinite(md) && Number.isFinite(od) ? circularDiff(md, od) : null
+        });
+      }
+    }
+  }
+  return { temp, rain, wind };
+}
+
+function byLead(pairs, type) {
+  const map = new Map();
+  for (const p of pairs) {
+    if (!map.has(p.lead)) map.set(p.lead, []);
+    map.get(p.lead).push(p);
+  }
+  return [...map.entries()].sort((a,b)=>a[0]-b[0]).map(([lead,g]) => {
+    if (!g.length) return null;
+    if (type === "wind") {
+      const speedMae = g.reduce((s,p)=>s+Math.abs(p.speedDiff),0)/g.length;
+      const direction = g.filter(p=>p.directionDiff != null);
+      const directionMae = direction.length ? direction.reduce((s,p)=>s+p.directionDiff,0)/direction.length : null;
+      return {lead,n:g.length,speedMae,directionMae};
+    }
+    const bias = g.reduce((s,p)=>s+p.diff,0)/g.length;
+    const mae = g.reduce((s,p)=>s+Math.abs(p.diff),0)/g.length;
+    const success = type === "temp" ? g.reduce((s,p)=>s+p.score,0)/g.length : g.filter(p=>p.hit).length/g.length*100;
+    return {lead,n:g.length,bias,mae,success};
+  }).filter(Boolean);
+}
+
+function overallTemp(pairs) {
+  if (!pairs.length) return null;
+  const bias=pairs.reduce((s,p)=>s+p.diff,0)/pairs.length;
+  const mae=pairs.reduce((s,p)=>s+Math.abs(p.diff),0)/pairs.length;
+  return {n:pairs.length,bias,mae};
+}
+function overallRain(pairs) {
+  if (!pairs.length) return null;
+  const mae=pairs.reduce((s,p)=>s+Math.abs(p.diff),0)/pairs.length;
+  const success=pairs.filter(p=>p.hit).length/pairs.length*100;
+  return {n:pairs.length,mae,success};
+}
+function overallWind(pairs) {
+  if (!pairs.length) return null;
+  const speedMae=pairs.reduce((s,p)=>s+Math.abs(p.speedDiff),0)/pairs.length;
+  const dirs=pairs.filter(p=>p.directionDiff!=null);
+  const directionMae=dirs.length?dirs.reduce((s,p)=>s+p.directionDiff,0)/dirs.length:null;
+  return {n:pairs.length,speedMae,directionMae};
+}
+
+function drawLeadChart(tempHours, rainHours, windHours) {
+  const svg=document.getElementById("lead-chart"), W=900,H=260,L=46,R=16,T=18,B=34;
+  const leads=[...new Set([...tempHours,...rainHours,...windHours].map(x=>x.lead))].sort((a,b)=>a-b);
+  svg.innerHTML="";
+  if(!leads.length){svg.innerHTML='<text x="450" y="130" text-anchor="middle" fill="#9bb1bf" font-size="14">Yeterli doğrulama verisi yok</text>';return;}
+  const maxLead=Math.max(180,...leads), maxVal=Math.max(1,...tempHours.map(x=>x.mae),...windHours.map(x=>x.speedMae),...rainHours.map(x=>x.mae));
+  const x=v=>L+(v/maxLead)*(W-L-R), y=v=>T+(Math.max(0,Math.min(maxVal,v))/maxVal)*(H-T-B), NS="http://www.w3.org/2000/svg";
+  const line=(pts,color)=>{if(!pts.length)return;const e=document.createElementNS(NS,"polyline");e.setAttribute("points",pts.map(p=>p.join(",")).join(" "));e.setAttribute("fill","none");e.setAttribute("stroke",color);e.setAttribute("stroke-width","2.5");svg.appendChild(e);};
+  for(let i=0;i<=5;i++){const yy=T+(H-T-B)*i/5,e=document.createElementNS(NS,"line");e.setAttribute("x1",L);e.setAttribute("x2",W-R);e.setAttribute("y1",yy);e.setAttribute("y2",yy);e.setAttribute("stroke","rgba(255,255,255,.08)");svg.appendChild(e);}
+  line(tempHours.map(v=>[x(v.lead),y(v.mae)]),"#7dd3d7");
+  line(windHours.map(v=>[x(v.lead),y(v.speedMae)]),"#f2b56b");
+  line(rainHours.map(v=>[x(v.lead),y(v.mae)]),"#a9c7ff");
+  for(let lead=6;lead<=180;lead+=6){const xx=x(lead),e=document.createElementNS(NS,"text");e.setAttribute("x",xx);e.setAttribute("y",H-10);e.setAttribute("text-anchor","middle");e.setAttribute("fill","#9bb1bf");e.setAttribute("font-size",lead%24===0?"10":"8");e.textContent="+"+lead;svg.appendChild(e);}
+  const unit=document.createElementNS(NS,"text");unit.setAttribute("x",L);unit.setAttribute("y",12);unit.setAttribute("fill","#9bb1bf");unit.setAttribute("font-size","10");unit.textContent="Hata";svg.appendChild(unit);
+}
+
+function bestWorst(hours, metric) {
+  if(!hours.length)return {best:null,worst:null};
+  const s=[...hours].sort((a,b)=>a[metric]-b[metric]);
+  return {best:s[0],worst:s[s.length-1]};
 }
 
 async function load() {
