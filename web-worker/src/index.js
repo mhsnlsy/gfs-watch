@@ -439,21 +439,28 @@ export default {
       const assetPath = path === "/admin" || path === "/admin/" || path === "/admin/index.html"
         ? "/admin-panel.html"
         : path;
-      const assetUrl = new URL(assetPath, url.origin);
-      const assetRequest = new Request(assetUrl.toString(), {
-        method: request.method,
-        headers: request.headers,
-        redirect: "manual"
-      });
-      const response = await env.ASSETS.fetch(assetRequest);
+      // The Cloudflare static asset binding applies its own canonical redirects
+      // to paths beneath /admin. The HTML is bundled as /admin-panel.html, so
+      // read the asset through a synthetic root-level request and return the
+      // response under /admin without forwarding redirect metadata.
+      if (path === "/admin" || path === "/admin/" || path === "/admin/index.html") {
+        const response = await env.ASSETS.fetch(new Request("https://assets.internal/admin-panel.html", {
+          method: "GET",
+          headers: { "Accept": "text/html" }
+        }));
+        if (!response.ok) return new Response("Admin document unavailable", { status: 500 });
+        const headers = new Headers(response.headers);
+        headers.set("Content-Type", "text/html; charset=utf-8");
+        headers.set("Cache-Control", "no-store, max-age=0");
+        headers.delete("Location");
+        return new Response(response.body, { status: 200, headers });
+      }
+
+      const response = await env.ASSETS.fetch(new Request(new URL(assetPath, url.origin), request));
       const headers = new Headers(response.headers);
       headers.set("Cache-Control", "no-store, max-age=0");
       headers.delete("Location");
-      return new Response(response.body, {
-        status: response.status,
-        statusText: response.statusText,
-        headers
-      });
+      return new Response(response.body, { status: response.status, statusText: response.statusText, headers });
     }
 
     if (path === "/api/analytics/event" && request.method === "POST") {
