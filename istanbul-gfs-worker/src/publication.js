@@ -495,33 +495,66 @@ export function buildIstanbulReportText(document, now = new Date(), stationObser
   }
   sections.push(outlook.join("\n"));
 
-  // Five full forecast days are available in the F180 payload.
+  // Chronological daily narrative: each forecast day gets its own block so
+  // the site report reads like a timeline rather than a compressed data row.
   const days = (Array.isArray(document.daily_summary) ? document.daily_summary : [])
-    .filter(day => String(day.date_istanbul || "") > todayKey)
+    .filter(day => String(day.date_istanbul || "") >= todayKey)
     .slice(0, 5);
-  const dailyLines = ["📅 5 GÜNLÜK TAHMİN"];
+  const dailyLines = ["📅 KRONOLOJİK HAVA ÖZETİ"];
+  const dayRecords = [];
   for (const day of days) {
     const [year, month, date] = String(day.date_istanbul).split("-").map(Number);
     if (!year || !month || !date) continue;
     const local = new Date(Date.UTC(year, month - 1, date));
-    const label = dayNames[local.getUTCDay()] + " " + pad2(date) + "." + pad2(month);
-    const values = [];
+    const avg = [numeric(day.temperature_min_c), numeric(day.temperature_max_c)]
+      .filter(value => value !== null);
+    const avgTemp = avg.length ? avg.reduce((sum, value) => sum + value, 0) / avg.length : null;
+    dayRecords.push({ day, local, avgTemp });
+  }
+
+  for (let index = 0; index < dayRecords.length; index += 1) {
+    const { day, local, avgTemp } = dayRecords[index];
+    const label = dayNames[local.getUTCDay()] + " " + pad2(local.getUTCDate()) + "." + pad2(local.getUTCMonth() + 1);
+    dailyLines.push("• " + label);
+
     const tempRange = formatRange([
       numeric(day.temperature_min_c), numeric(day.temperature_max_c)
     ], "°C");
-    if (tempRange) values.push(tempRange);
-    const humidityRange = formatRange([
-      numeric(day.humidity_min_percent), numeric(day.humidity_max_percent)
-    ], "%");
-    if (humidityRange) values.push("Nem " + humidityRange);
+    if (tempRange) {
+      let trend = "";
+      const previous = index > 0 ? dayRecords[index - 1].avgTemp : null;
+      if (previous !== null && avgTemp !== null) {
+        const delta = avgTemp - previous;
+        if (Math.abs(delta) >= 0.5) {
+          trend = delta < 0
+            ? " · günlük ortalama yaklaşık " + formatNumber(Math.abs(delta)) + "°C düşüyor"
+            : " · günlük ortalama yaklaşık " + formatNumber(delta) + "°C yükseliyor";
+        } else {
+          trend = " · sıcaklık stabil";
+        }
+      }
+      dailyLines.push("  Sıcaklık: " + tempRange + trend);
+    }
+
     const rain = numeric(day.precipitation_total_mm);
-    if (rain !== null) values.push(rain < 0.1 ? "Yağış yok" : "Yağış " + formatNumber(rain) + " mm");
+    if (rain !== null) {
+      dailyLines.push(rain < 0.1
+        ? "  Yağış: beklenmiyor"
+        : "  Yağış: yaklaşık " + formatNumber(rain) + " mm");
+    }
+
     const windSpeed = numeric(day.wind_speed_max_10m_kmh);
     if (windSpeed !== null) {
       const direction = windDirection(day.wind_direction_max_10m_deg);
-      values.push("Rüzgâr " + formatNumber(windSpeed) + " km/sa" + (direction ? " " + direction : ""));
+      dailyLines.push("  Rüzgâr: " + formatNumber(windSpeed) + " km/sa" + (direction ? " " + direction : ""));
     }
-    if (values.length) dailyLines.push("• " + label + " · " + values.join(" · "));
+  }
+
+  if (station) {
+    const stationTemperature = numeric(station.temperature_2m_c);
+    if (stationTemperature !== null && dailyLines.length > 1) {
+      dailyLines.splice(1, 0, "  Eyüpsultan şu an " + formatNumber(stationTemperature) + "°C");
+    }
   }
   if (dailyLines.length === 1) dailyLines.push("Günlük özet verisi bulunmuyor.");
   sections.push(dailyLines.join("\n"));
