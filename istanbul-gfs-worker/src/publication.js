@@ -360,6 +360,128 @@ export function buildIstanbulInteractiveSvg(runs) {
   };
 }
 
+
+function briefingDayKey(date) {
+  const d = localDate(date);
+  return d.getUTCFullYear()+"-"+pad2(d.getUTCMonth()+1)+"-"+pad2(d.getUTCDate());
+}
+function briefingDayKeys(now) {
+  const base = localDate(now);
+  base.setUTCHours(0,0,0,0);
+  return Array.from({length:5}, (_,i) => briefingDayKey(new Date(base.getTime()+i*86400000)));
+}
+function briefingDayTitle(key) {
+  const d = new Date(key+"T12:00:00Z");
+  const names=["Pazar","Pazartesi","Salı","Çarşamba","Perşembe","Cuma","Cumartesi"];
+  return names[d.getUTCDay()];
+}
+function briefingClock(date) {
+  const d=localDate(date);
+  return pad2(d.getUTCHours())+":"+pad2(d.getUTCMinutes());
+}
+function briefingForecastPoints(document, now) {
+  const keys=new Set(briefingDayKeys(now));
+  return (Array.isArray(document?.forecast_6_hourly)?document.forecast_6_hourly:[])
+    .map(p=>({...p, _ts:Date.parse(p?.valid_time_utc||"")}))
+    .filter(p=>Number.isFinite(p._ts) && Number(p.forecast_hour)>0 && Number(p.forecast_hour)<=120 && Number(p.forecast_hour)%3===0 &&
+      keys.has(briefingDayKey(p._ts)) && p._ts>=now.getTime()-30*60000)
+    .sort((a,b)=>a._ts-b._ts);
+}
+function briefingRainLines(points) {
+  const lines=[];
+  const keys=briefingDayKeys(new Date());
+  for (const key of keys) {
+    const dayPoints=points.filter(p=>briefingDayKey(p._ts)===key);
+    const wet=dayPoints.filter(p=>numeric(p.precipitation_6h_mm)>=0.2);
+    if(!wet.length){ lines.push(briefingDayTitle(key)+" · yağış yok"); continue; }
+    let current=null;
+    const spells=[];
+    for(const p of wet){
+      if(!current || p._ts-current.end>4*3600000){
+        current={start:p._ts,end:p._ts,sum:0}; spells.push(current);
+      }
+      current.end=p._ts;
+      current.sum+=Math.max(0,numeric(p.precipitation_6h_mm)||0);
+    }
+    for(const s of spells.slice(0,2)){
+      const end=s.end+3*3600000;
+      lines.push(briefingDayTitle(key)+" · "+briefingClock(s.start)+"–"+briefingClock(end)+" · "+formatNumber(s.sum)+" mm");
+    }
+  }
+  return lines;
+}
+function briefingTemperatureSummary(points, stationObservation) {
+  const keys=briefingDayKeys(new Date());
+  const means=keys.map(key=>{
+    const vals=points.filter(p=>briefingDayKey(p._ts)===key).map(p=>numeric(p.temperature_2m_c)).filter(v=>v!==null);
+    return vals.length ? vals.reduce((a,b)=>a+b,0)/vals.length : null;
+  });
+  let firstDrop=-1, dropAmount=null;
+  for(let i=1;i<means.length;i++){
+    if(means[i]!==null&&means[i-1]!==null){
+      const delta=means[i]-means[i-1];
+      if(delta<=-0.5){ firstDrop=i; dropAmount=Math.abs(delta); break; }
+    }
+  }
+  let text;
+  if(firstDrop>0){
+    text="Hava "+firstDrop+" gün sonra ("+briefingDayTitle(keys[firstDrop])+") soğumaya başlıyor; günlük ortalama yaklaşık "+formatNumber(dropAmount)+"°C düşüyor.";
+    if(means.slice(firstDrop+1).every((v,i)=>v===null || means[firstDrop+i+1]===null || v<=means[firstDrop+i]+0.49)){
+      text+=" Beş günlük tahmin aralığında yeniden ısınma görünmüyor.";
+    }
+  } else {
+    text="Önümüzdeki beş gün boyunca sıcaklık belirgin değişim göstermeden stabil seyrediyor.";
+  }
+  const lodosDays=[];
+  for(const key of keys){
+    const wind=points.filter(p=>briefingDayKey(p._ts)===key).map(p=>numeric(p.wind_speed_10m_kmh)).filter(v=>v!==null);
+    if(wind.length && wind.some(v=>v>=15)) lodosDays.push({key,wind:Math.max(...wind)});
+  }
+  if(lodosDays.length){
+    const start=lodosDays[0];
+    let count=1;
+    for(let i=1;i<lodosDays.length;i++){
+      if(Date.parse(lodosDays[i].key+"T00:00:00Z")-Date.parse(lodosDays[i-1].key+"T00:00:00Z")===86400000) count++; else break;
+    }
+    text+=" "+briefingDayTitle(start.key)+" günü Lodos geliyor";
+    if(count>1) text+=" ve "+count+" gün sürecek";
+    text+=".";
+    const peak=lodosDays.reduce((a,b)=>b.wind>a.wind?b:a,lodosDays[0]);
+    if(peak.wind>=20) text+=" Rüzgâr "+briefingDayTitle(peak.key)+" günü "+Math.round(peak.wind)+" km/sa hıza çıkacak.";
+  }
+  const current=numeric(stationObservation?.temperature_2m_c);
+  if(current!==null) text+=" Eyüpsultan şu an "+formatNumber(current)+"°C.";
+  return text;
+}
+function briefingWrap(text,maxChars=38) {
+  const words=String(text||"").split(/\s+/).filter(Boolean), lines=[]; let line="";
+  for(const word of words){ const next=line?line+" "+word:word; if(next.length>maxChars&&line){lines.push(line);line=word;}else line=next; }
+  if(line)lines.push(line); return lines;
+}
+export function buildIstanbulBriefingSvg(document, now=new Date(), stationObservation=null) {
+  const points=briefingForecastPoints(document,now);
+  const rainLines=briefingRainLines(points);
+  const tempLines=briefingWrap(briefingTemperatureSummary(points,stationObservation),38);
+  const W=1080,H=1920, outerX=56, outerW=968, firstY=300, gap=28;
+  const rowH=lines=>72+Math.max(1,lines.length)*58+72;
+  const rainH=rowH(rainLines), tempH=rowH(tempLines);
+  const secondY=firstY+rainH+gap, footerY=secondY+tempH+64;
+  const esc=escapeXml;
+  const draw=(y,label,lines,h)=>'<rect x="'+outerX+'" y="'+y+'" width="'+outerW+'" height="'+h+'" rx="28" fill="#0D2433" stroke="#294654" stroke-width="2"/>'+
+    '<text x="'+(outerX+40)+'" y="'+(y+64)+'" fill="#8FD0C8" font-family="Inter, sans-serif" font-size="26" font-weight="700" letter-spacing="2.2">'+esc(label.toUpperCase())+'</text>'+
+    lines.map((line,i)=>'<text x="'+(outerX+40)+'" y="'+(y+116+i*58)+'" fill="#E7F2F6" font-family="Inter, sans-serif" font-size="40" font-weight="500">'+esc(line)+'</text>').join("");
+  const body='<svg xmlns="http://www.w3.org/2000/svg" width="'+W+'" height="'+H+'" viewBox="0 0 '+W+' '+H+'">'+
+    '<rect width="'+W+'" height="'+H+'" fill="#081827"/>'+
+    '<text x="'+outerX+'" y="180" fill="#EDF5F8" font-family="Inter, sans-serif" font-size="64" font-weight="800">İstanbul Havası</text>'+
+    '<text x="'+outerX+'" y="252" fill="#EDF5F8" font-family="Inter, sans-serif" font-size="64" font-weight="800">5 günlük özet</text>'+
+    '<text x="'+outerX+'" y="298" fill="#9BB1BF" font-family="Inter, sans-serif" font-size="28" font-weight="500">Yağış saatleri ve sıcaklık eğilimi · Eyüpsultan</text>'+
+    draw(firstY,"Yağış saatleri",rainLines.length?rainLines:["Önümüzdeki günler için çıktı yok."],rainH)+
+    draw(secondY,"5 günlük sıcaklık",tempLines,tempH)+
+    '<text x="'+outerX+'" y="'+footerY+'" fill="#6F8997" font-family="Inter, sans-serif" font-size="26">istanbulunhavasi.com</text>'+
+    '</svg>';
+  return { key:"notifications/istanbul-gfs-"+runStamp(document.run_id_utc)+"-5day-briefing.svg", run_id_utc:document.run_id_utc, body, width:W, height:H };
+}
+
 export function buildIstanbulReportText(document, now = new Date(), stationObservation = null) {
   const run = new Date(document.run_id_utc);
   if (!Number.isFinite(run.getTime())) throw new Error("Invalid Istanbul GFS report run");
