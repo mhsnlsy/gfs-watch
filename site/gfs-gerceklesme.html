@@ -207,10 +207,11 @@ function byLead(pairs, isTemp = false) {
   return [...map.entries()].sort((a, b) => a[0] - b[0]).map(([lead, group]) => {
     if (!group.length) return null;
     const bias = group.reduce((s, p) => s + p.diff, 0) / group.length;
+    const mae = group.reduce((s, p) => s + Math.abs(p.diff), 0) / group.length;
     const success = isTemp
       ? group.reduce((s, p) => s + p.score, 0) / group.length
       : group.filter(p => p.hit).length / group.length * 100;
-    return { lead, n: group.length, bias, success };
+    return { lead, n: group.length, bias, mae, success };
   }).filter(Boolean);
 }
 
@@ -223,10 +224,8 @@ function drawLeadChart(tempHours, rainHours) {
     svg.innerHTML = '<text x="450" y="130" text-anchor="middle" fill="#9bb1bf" font-size="14">Yeterli doğrulama verisi yok</text>';
     return;
   }
-  const tempMap = new Map(tempHours.map(x=>[x.lead,x]));
-  const rainMap = new Map(rainHours.map(x=>[x.lead,x]));
   const maxLead = Math.max(...allLeads, 6);
-  const maxMae = Math.max(1, ...tempHours.map(x=>Math.abs(x.bias)+0.1), ...tempHours.map(x=>Math.abs(x.success-100)/10+0.1));
+  const maxMae = Math.max(1, ...tempHours.map(x=>x.mae + 0.1));
   const x = lead => L + (lead/maxLead)*(W-L-R);
   const yTemp = v => T + (Math.max(0,Math.min(maxMae,v))/maxMae)*(H-T-B);
   const yRain = v => H-B - (Math.max(0,Math.min(100,v))/100)*(H-T-B);
@@ -243,7 +242,7 @@ function drawLeadChart(tempHours, rainHours) {
     const yy=T+(H-T-B)*i/5;
     const g=document.createElementNS(NS,"line"); g.setAttribute("x1",L);g.setAttribute("x2",W-R);g.setAttribute("y1",yy);g.setAttribute("y2",yy);g.setAttribute("stroke","rgba(255,255,255,.08)");svg.appendChild(g);
   }
-  const tempMae = tempHours.map(v=>[x(v.lead),yTemp(Math.abs(v.bias))]);
+  const tempMae = tempHours.map(v=>[x(v.lead),yTemp(v.mae)]);
   const tempBias = tempHours.map(v=>[x(v.lead),yTemp(Math.abs(v.bias))]);
   const rain = rainHours.map(v=>[x(v.lead),yRain(v.success)]);
   line(tempMae,"#7dd3d7");
