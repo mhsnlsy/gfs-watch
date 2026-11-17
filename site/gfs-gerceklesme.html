@@ -254,7 +254,7 @@ async function load() {
   try {
     const [hist, gfs] = await Promise.all([
       fetchJSON(location.origin + "/api/history/" + station + "?hours=180"),
-      fetchJSON(GFS_BASE + "/gfs/latest")
+      fetchJSON(GFS_BASE + "/gfs/verification")
     ]);
     const samples = hist.samples || [];
     const pairs = collect(samples, uniqueRuns(gfs));
