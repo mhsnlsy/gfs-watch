@@ -95,6 +95,9 @@ jobs:
           rm -rf web-worker/public
           mkdir -p web-worker/public
           cp -a site/. web-worker/public/
+          # Keep the admin HTML at a root-level asset. A directory-style
+          # /admin/index.html can be canonicalized by Cloudflare Assets to /admin/.
+          cp web-worker/admin-assets/index.html web-worker/public/admin-panel.html
           mkdir -p web-worker/public/admin
           cp web-worker/admin-assets/index.html web-worker/public/admin/index.html
           cp web-worker/admin-assets/analytics.js web-worker/public/analytics.js
@@ -102,6 +105,7 @@ jobs:
           touch web-worker/public/.nojekyll
 
           test -s web-worker/public/index.html
+          test -s web-worker/public/admin-panel.html
           test -s web-worker/public/admin/index.html
           test -s web-worker/public/analytics.js
 
