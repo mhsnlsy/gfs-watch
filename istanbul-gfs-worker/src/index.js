@@ -308,7 +308,23 @@ async function processQueuedReports(env) {
     "(status = 'pending' OR (status = 'processing' AND dispatched_at_utc < ?)) " +
     "ORDER BY run_id_utc DESC LIMIT 1"
   ).bind(expectedRun, staleBefore).all();
-  const job = (result.results || [])[0];
+  let job = (result.results || [])[0];
+  // A cycle can already be archived while its dispatch row was missed by a
+  // transient reconcile race. In that case create the pending job on demand
+  // instead of leaving the current cycle unpublished (and its SVG at 404).
+  if (!job) {
+    const archivedExpected = await env.GFS_DB.prepare(
+      "SELECT run_id_utc FROM gfs_runs WHERE run_id_utc = ? LIMIT 1"
+    ).bind(expectedRun).first();
+    if (archivedExpected?.run_id_utc) {
+      await enqueueReportDispatch(env, expectedRun, new Date().toISOString());
+      const retry = await env.GFS_DB.prepare(
+        "SELECT run_id_utc, attempts FROM gfs_report_dispatch_queue " +
+        "WHERE run_id_utc = ? AND attempts < 288 AND status = 'pending' LIMIT 1"
+      ).bind(expectedRun).first();
+      job = retry || null;
+    }
+  }
   if (!job) return {
     queued: 0,
     published: 0,
