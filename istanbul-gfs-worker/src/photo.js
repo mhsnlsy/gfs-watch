@@ -66,6 +66,14 @@ export async function loadIstanbulTelegramFont(archive) {
  * Only the raster output resolution and font source differ.
  */
 export async function renderIstanbulPhotoPng(svg, fontBytes) {
+  return renderSvgPhotoPng(svg, fontBytes, TELEGRAM_IMAGE_WIDTH, TELEGRAM_IMAGE_HEIGHT, ["Son GFS raporu","Sıcaklık","850 hPa sıcaklık","Yağış","10 m rüzgâr hızı","MeteoPT GFS"]);
+}
+
+export async function renderIstanbulBriefingPhotoPng(svg, fontBytes) {
+  return renderSvgPhotoPng(svg, fontBytes, 2160, 3840, ["İstanbul Havası","5 günlük özet","YAĞIŞ SAATLERİ","5 GÜNLÜK SICAKLIK"]);
+}
+
+async function renderSvgPhotoPng(svg, fontBytes, targetWidth, targetHeight, required) {
   if (typeof svg !== "string" || !svg.includes("<svg")) {
     throw new Error("Cannot rasterize an invalid Istanbul GFS SVG report");
   }
@@ -86,7 +94,7 @@ export async function renderIstanbulPhotoPng(svg, fontBytes) {
     "MeteoPT GFS",
   ]) {
     if (!svg.includes(required)) {
-      throw new Error("Telegram report SVG is missing homepage content: " + required);
+      throw new Error("Telegram report SVG is missing required content: " + requiredText);
     }
   }
 
@@ -98,7 +106,7 @@ export async function renderIstanbulPhotoPng(svg, fontBytes) {
   let rendered;
   try {
     renderer = await Resvg.async(photoSvg, {
-      fitTo: { mode: "width", value: TELEGRAM_IMAGE_WIDTH },
+      fitTo: { mode: "width", value: targetWidth },
       background: "#0a1b29",
       textRendering: 1,
       languages: ["tr", "en"],
@@ -111,17 +119,17 @@ export async function renderIstanbulPhotoPng(svg, fontBytes) {
     });
     rendered = renderer.render();
 
-    if (rendered.width !== TELEGRAM_IMAGE_WIDTH || rendered.height !== TELEGRAM_IMAGE_HEIGHT) {
+    if (rendered.width !== targetWidth || rendered.height !== targetHeight) {
       throw new Error("Telegram image dimensions differ from the homepage 2x2 layout: " +
         rendered.width + "x" + rendered.height);
     }
 
     const pixels = rendered.pixels;
     let brightHeaderPixels = 0;
-    const left = Math.floor(rendered.width * 0.08);
-    const right = Math.floor(rendered.width * 0.94);
-    const top = Math.floor(rendered.height * 0.035);
-    const bottom = Math.floor(rendered.height * 0.245);
+    const left = Math.floor(rendered.width * 0.04);
+    const right = Math.floor(rendered.width * 0.96);
+    const top = Math.floor(rendered.height * 0.03);
+    const bottom = Math.floor(rendered.height * 0.30);
     for (let y = top; y < bottom; y += 1) {
       for (let x = left; x < right; x += 1) {
         const offset = (y * rendered.width + x) * 4;
