@@ -405,7 +405,7 @@ jobs:
           test -n "$KOY_LIVE_SVG_STAMP" || { echo "::error::Could not determine latest Köy SVG stamp."; exit 1; }
           echo "Latest Köy SVG stamp: $KOY_LIVE_SVG_STAMP"
           curl --silent --show-error --fail --max-time 45 \
-            "https://gfs-watch-koy-gfs.muhsin-ulusoy.workers.dev/api/publication-asset/media/koy-gfs-$KOY_LIVE_SVG_STAMP-comparison.svg?verify=$(date +%s)" \
+            "https://gfs-watch-koy-gfs.muhsin-ulusoy.workers.dev/api/publication-asset/notifications/koy-gfs-$KOY_LIVE_SVG_STAMP-comparison.svg?verify=$(date +%s)" \
             -o "$RUNNER_TEMP/live-koy-d1-publication.svg"
           node - "$RUNNER_TEMP/live-koy-d1-publication.svg" <<'NODE'
             const fs = require("fs");
