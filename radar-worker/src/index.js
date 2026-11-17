@@ -355,6 +355,7 @@ async function check(env){
   const h=history.slice(-HISTORY_LEN);
 
   // RainViewer detects precipitation approaching Istanbul -> send Telegram.
+  // Quiet hours (01:00–06:59 Europe/Istanbul) suppress Telegram sends only.
   // Intensity, pixel count, radius and cooldown are deliberately not filters.
   // No cooldown, episode gate, dBZ threshold, pixel-count threshold or distance gate.
   // Every six-minute scan that detects precipitation approaching Istanbul may alert.
@@ -365,7 +366,16 @@ async function check(env){
   const cooldownRemainingSec=lastAlert>0?Math.max(0,ALERT_COOLDOWN_SEC-(nowSec-lastAlert)):0;
   const withinRadius = rainDetected && curr.min_dist_km<=ANALYSIS_RADIUS_KM;
   const wouldAlert = withinRadius && motionInfo.approaching;
-  const alert = wouldAlert && cooldownRemainingSec===0;
+
+  // Quiet hours: do not send RainViewer Telegram alerts from 01:00 through 06:59
+  // Europe/Istanbul local time. Radar analysis/history continues normally.
+  const localHour = Number(new Intl.DateTimeFormat("en-GB", {
+    timeZone: "Europe/Istanbul",
+    hour: "2-digit",
+    hourCycle: "h23"
+  }).format(new Date()));
+  const quietHours = localHour >= 1 && localHour < 7;
+  const alert = wouldAlert && cooldownRemainingSec===0 && !quietHours;
 
   const intensityClass = classifyDbz(curr.max_dbz);
   const intensity = intensityClass.label;
@@ -418,7 +428,7 @@ async function check(env){
   } }
   state.history=h;state.last_frame_ts=ts;
   await saveState(env.RADAR_DB,state);
-  return {status:"ok",build:RADAR_BUILD,frame_ts:ts,alert,would_alert:wouldAlert,cooldown_remaining_sec:cooldownRemainingSec,rain_detected:rainDetected,approaching:motionInfo.approaching,motion_direction:motionInfo.motion_dir,speed_kmh:motionInfo.speed_kmh,eta_min:motionInfo.eta_min,pixel_count:curr.count,max_dbz:curr.max_dbz,intensity,intensity_line:intensityLine,area_km2:curr.area_km2,width_km:curr.width_km,height_km:curr.height_km,min_dist_km:curr.min_dist_km,previous_min_dist_km:previous?.min_dist_km??null,centroid_dist:curr.centroid_dist,telegram_sent:sent,telegram_status:telegramStatus,telegram_error:telegramError};
+  return {status:"ok",build:RADAR_BUILD,frame_ts:ts,alert,would_alert:wouldAlert,quiet_hours:quietHours,local_hour:localHour,cooldown_remaining_sec:cooldownRemainingSec,rain_detected:rainDetected,approaching:motionInfo.approaching,motion_direction:motionInfo.motion_dir,speed_kmh:motionInfo.speed_kmh,eta_min:motionInfo.eta_min,pixel_count:curr.count,max_dbz:curr.max_dbz,intensity,intensity_line:intensityLine,area_km2:curr.area_km2,width_km:curr.width_km,height_km:curr.height_km,min_dist_km:curr.min_dist_km,previous_min_dist_km:previous?.min_dist_km??null,centroid_dist:curr.centroid_dist,telegram_sent:sent,telegram_status:telegramStatus,telegram_error:telegramError};
 }
 
 
