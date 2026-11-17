@@ -79,7 +79,7 @@ function load(){
      "","SOURCES",""+rows(t.sources),
      "","PAGES",""+rows(t.pages)
    ].join("\n");
-   document.getElementById("active").textContent="active now : "+text(d.active_visitors);
+   document.getElementById("active").textContent="active now : "+text(d.live && d.live.active_visitors);
    document.getElementById("days").textContent=fmtDays(d.days);
    document.getElementById("month").textContent=fmtDays(d.month);
    document.getElementById("recent").textContent=fmtRecent(t.recent);
