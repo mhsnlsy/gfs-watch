@@ -260,10 +260,23 @@ async function listRuns(env, limit = GFS_RUN_RETENTION) {
 }
 
 async function enqueueReportDispatch(env, runId, createdAt) {
+  // Re-open an unfinished publication even when a stale/previous queue row
+  // already exists. INSERT OR IGNORE alone cannot recover a row left in a
+  // terminal state before the report assets were created.
   await env.GFS_DB.prepare(
-    "INSERT OR IGNORE INTO gfs_report_dispatch_queue (run_id_utc, status, attempts, created_at_utc) " +
-    "VALUES (?, 'pending', 0, ?)"
-  ).bind(runId, createdAt).run();
+    "INSERT INTO gfs_report_dispatch_queue (run_id_utc, status, attempts, created_at_utc, last_error) " +
+    "VALUES (?, 'pending', 0, ?, NULL) " +
+    "ON CONFLICT(run_id_utc) DO UPDATE SET " +
+    "status = CASE WHEN EXISTS (" +
+    "SELECT 1 FROM gfs_report_publications p WHERE p.run_id_utc = ? AND p.status = 'sent'" +
+    ") THEN gfs_report_dispatch_queue.status ELSE 'pending' END, " +
+    "attempts = CASE WHEN EXISTS (" +
+    "SELECT 1 FROM gfs_report_publications p WHERE p.run_id_utc = ? AND p.status = 'sent'" +
+    ") THEN gfs_report_dispatch_queue.attempts ELSE 0 END, " +
+    "last_error = CASE WHEN EXISTS (" +
+    "SELECT 1 FROM gfs_report_publications p WHERE p.run_id_utc = ? AND p.status = 'sent'" +
+    ") THEN gfs_report_dispatch_queue.last_error ELSE NULL END"
+  ).bind(runId, createdAt, runId, runId, runId).run();
 }
 
 async function fetchActiveEnkaStationObservation(env) {
