@@ -121,7 +121,9 @@ def main() -> None:
     assert "Deploy autonomous Istanbul GFS Cron Worker" in istanbul_deploy
     assert "GFS_DISPATCH_TOKEN" in istanbul_deploy
     assert "wrangler secret put GFS_DISPATCH_TOKEN" in istanbul_deploy
-    assert "gfs_report_dispatch_queue" in gfs_worker
+    # Dispatch queue schema is defined by the migration; Worker uses D1 operations.
+    dispatch_queue_schema = read("istanbul-gfs-worker/migrations/0002_create_report_dispatch_queue.sql")
+    assert "CREATE TABLE IF NOT EXISTS gfs_report_dispatch_queue" in dispatch_queue_schema
     # Live report assets are now published into Istanbul D1; the web gateway
     # serves them through the Istanbul Service Binding instead of requiring
     # the GitHub archive branch on the primary Cloudflare site.
