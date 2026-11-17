@@ -187,8 +187,8 @@ jobs:
           ISTANBUL_GFS_API: https://gfs-watch-istanbul-gfs.muhsin-ulusoy.workers.dev
         run: |
           set -euo pipefail
-          curl --silent --show-error --fail --max-time 100 \\
-            "$ISTANBUL_GFS_API/gfs/latest?verify=$(date +%s)" \\
+          curl --silent --show-error --fail --max-time 100 \
+            "$ISTANBUL_GFS_API/gfs/latest?verify=$(date +%s)" \
             -o "$RUNNER_TEMP/istanbul-latest-after-collection.json"
           node - "$RUNNER_TEMP/istanbul-latest-after-collection.json" <<'NODE'
           const fs = require("fs");
