@@ -124,7 +124,7 @@ function nearest(samples, time) {
 }
 
 function uniqueRuns(doc) {
-  const runs = [doc].concat(doc.comparison_runs || []);
+  const runs = (Array.isArray(doc.comparison_runs) ? doc.comparison_runs : [doc]).slice(0, 64);
   const seen = new Set(), out = [];
   for (const r of runs) {
     if (r && r.run_id_utc && !seen.has(r.run_id_utc)) {
@@ -151,7 +151,7 @@ function pearson(xs, ys) {
 
 function collect(samples, runs) {
   const temp = [], rain = [];
-  const now = Date.now() + 30 * 60 * 1000;
+  const now = Date.now();
   for (const run of runs) {
     for (const step of run.forecast_6_hourly || []) {
       const valid = Date.parse(step.valid_time_utc || "");
@@ -188,7 +188,7 @@ function byLead(pairs, isTemp = false) {
     map.get(p.lead).push(p);
   }
   return [...map.entries()].sort((a, b) => a[0] - b[0]).map(([lead, group]) => {
-    if (group.length < 2) return null;
+    if (!group.length) return null;
     const bias = group.reduce((s, p) => s + p.diff, 0) / group.length;
     const success = isTemp
       ? group.reduce((s, p) => s + p.score, 0) / group.length
