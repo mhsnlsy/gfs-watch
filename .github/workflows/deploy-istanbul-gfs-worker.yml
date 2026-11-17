@@ -182,6 +182,34 @@ jobs:
             warnings: result.warnings
           }));
           NODE
+      - name: Verify current 12Z publication and Telegram delivery
+        env:
+          ISTANBUL_GFS_API: https://gfs-watch-istanbul-gfs.muhsin-ulusoy.workers.dev
+        run: |
+          set -euo pipefail
+          curl --silent --show-error --fail --max-time 30             "$ISTANBUL_GFS_API/api/health?verify=$(date +%s)"             -o "$RUNNER_TEMP/istanbul-health-after-reconcile.json"
+          node - "$RUNNER_TEMP/istanbul-health-after-reconcile.json" <<'NODE'
+          const fs = require("fs");
+          const doc = JSON.parse(fs.readFileSync(process.argv[2], "utf8"));
+          const latestRun = String(doc.latest_run_id_utc || "");
+          const latestPublication = doc.latest_publication || {};
+          const local = new Date(Date.now() + 3 * 60 * 60 * 1000);
+          const expectedCycle = local.getUTCHours() >= 19 || local.getUTCHours() < 1 ? "12:00:00+00:00" :
+            local.getUTCHours() >= 13 ? "06:00:00+00:00" :
+            local.getUTCHours() >= 7 ? "00:00:00+00:00" : "18:00:00+00:00";
+          if (!doc.ok || !latestRun.endsWith(expectedCycle) ||
+              latestPublication.run_id_utc !== latestRun ||
+              latestPublication.status !== "sent") {
+            throw new Error("Current GFS publication/Telegram delivery is not complete: " + JSON.stringify({
+              latestRun, expectedCycle, latestPublication
+            }));
+          }
+          console.log(JSON.stringify({
+            latest_run_id_utc: latestRun,
+            publication_status: latestPublication.status,
+            telegram_delivery: "sent"
+          }));
+          NODE
       - name: Verify latest GFS data after collection
         env:
           ISTANBUL_GFS_API: https://gfs-watch-istanbul-gfs.muhsin-ulusoy.workers.dev
