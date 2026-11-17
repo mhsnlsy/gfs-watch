@@ -26,7 +26,8 @@ def main() -> None:
     assert "METEOPT_ECMWF_API" in gfs_worker
     assert "api.meteopt.com/ecmwf/json" in meteopt_source
     assert "api.meteopt.com/gfs/json" in meteopt_source
-    assert '41.0901' in gfs_worker and '28.9436' in gfs_worker
+    # ECMWF coordinates are owned by shared/meteopt-source.js; the worker imports the source metadata.
+    assert 'METEOPT_ECMWF_WEB' in gfs_worker
     assert 'ECMWF_ARCHIVE' in gfs_worker
     assert '/ecmwf/latest' in gfs_worker
     assert '/ecmwf/comparison' in gfs_worker
