@@ -138,7 +138,7 @@ jobs:
             const config = JSON.parse(fs.readFileSync(file, "utf8"));
             delete config.r2_buckets;
             fs.writeFileSync(file, JSON.stringify(config, null, 2) + "\n");
-            NODE
+          NODE
             echo "R2 token not configured; deploying with the existing D1/Static Assets fallback."
             echo "R2_ENABLED=0" >> "$GITHUB_ENV"
             exit 0
@@ -186,7 +186,7 @@ jobs:
             const maxHour = Math.max(0, ...points.map(point => Number(point?.forecast_hour) || 0));
             process.exit(doc.schema === "gfs-watch.ecmwf-eps.v1" &&
               doc.forecast_source === "meteopt" && maxHour >= 180 ? 0 : 1);
-            NODE
+          NODE
           then
             upload_tree_parallel "$GITHUB_WORKSPACE/forecast-data/public/ecmwf" "data/ecmwf"
             echo "Uploaded complete ECMWF archive cache."
@@ -218,7 +218,7 @@ jobs:
             const rows = JSON.parse(fs.readFileSync(process.argv[2], "utf8"));
             const row = (Array.isArray(rows) ? rows : []).find(item => item.name === "gfs-watch-web-analytics");
             process.stdout.write(row?.uuid || row?.database_id || "");
-  NODE
+          NODE
           )"
 
           if [ -z "$D1_ID" ]; then
@@ -229,7 +229,7 @@ jobs:
             const rows = JSON.parse(fs.readFileSync(process.argv[2], "utf8"));
             const row = (Array.isArray(rows) ? rows : []).find(item => item.name === "gfs-watch-web-analytics");
             process.stdout.write(row?.uuid || row?.database_id || "");
-  NODE
+          NODE
             )"
           fi
 
@@ -264,7 +264,7 @@ jobs:
               throw new Error("Admin analytics response contract failed");
             }
             console.log("Verified protected admin panel and analytics API.");
-  NODE
+          NODE
 
       - name: Verify Cloudflare website and proxied APIs
         env:
@@ -284,7 +284,7 @@ jobs:
               throw new Error("Cloudflare web Worker/static assets/service bindings health contract failed");
             }
             console.log(JSON.stringify(doc));
-            NODE
+          NODE
 
           for path in / /ecmwf /koy.html /gfs-api-config.js /data/ecmwf/latest.json; do
             curl --silent --show-error --fail --max-time 20 "$WEB$path" -o /dev/null
@@ -309,7 +309,7 @@ jobs:
             console.log("Verified live ECMWF from MeteoPT:", JSON.stringify({
               run_id_utc: doc.run_id_utc, comparison_runs: runs.length, points: points.length
             }));
-            NODE
+          NODE
           if [ "${R2_ENABLED:-0}" = "1" ]; then
             curl --silent --show-error --fail --max-time 30 \
               --dump-header "$RUNNER_TEMP/r2-ecmwf-headers.txt" \
@@ -321,7 +321,7 @@ jobs:
               throw new Error("R2 ECMWF latest payload contract failed");
             }
             console.log("Verified live ECMWF payload served from R2:", doc.run_id_utc);
-            NODE
+          NODE
           else
             echo "R2 is not enabled; ECMWF is verified by the existing D1/Static Assets path."
           fi
@@ -349,7 +349,7 @@ jobs:
             const path = (item?.images || []).find(image => typeof image.path === "string" && image.path.toLowerCase().endsWith(".svg"))?.path;
             if (!path) throw new Error("Live GFS notification manifest does not reference an SVG.");
             process.stdout.write(path.startsWith("/") ? path.slice(1) : path);
-            NODE
+          NODE
           )"
           curl --silent --show-error --fail --max-time 30 \
             --dump-header "$RUNNER_TEMP/live-gfs-svg-headers.txt" \
@@ -366,7 +366,7 @@ jobs:
               throw new Error("Live Istanbul D1 SVG publication route failed or has no wind-direction metadata: " + JSON.stringify({bytes: Buffer.byteLength(svg), directions: svg.includes("directions_deg")}));
             }
             console.log("Verified direct Istanbul D1 SVG route and wind direction arrows:", arrows);
-            NODE
+          NODE
           if grep -qi '^x-gfs-publication-source: D1' "$RUNNER_TEMP/live-gfs-svg-headers.txt"; then
             echo "Verified live GFS SVG publication source: D1"
           elif grep -qi '^x-gfs-archive-source: R2' "$RUNNER_TEMP/live-gfs-svg-headers.txt"; then
@@ -394,7 +394,7 @@ jobs:
             const missing = checks.filter(([name, id, fill]) => !svgGroup(id).includes(fill)).map(([name]) => name);
             if (missing.length) throw new Error("Live D1 SVG has non-dark surfaces: " + missing.join(", "));
             console.log("Verified live Cloudflare route: D1 source + dark canvas + all four chart panels.");
-            NODE
+          NODE
           curl --silent --show-error --fail --max-time 45 \
             "https://gfs-watch-koy-gfs.muhsin-ulusoy.workers.dev/api/comparison.svg?verify=$(date +%s)" \
             --dump-header "$RUNNER_TEMP/live-koy-svg-headers.txt" \
@@ -415,7 +415,7 @@ jobs:
               throw new Error("Live Köy D1 SVG publication route failed or has no wind-direction metadata: " + JSON.stringify({bytes: Buffer.byteLength(svg), directions: svg.includes("directions_deg")}));
             }
             console.log("Verified direct Köy D1 SVG route and wind direction arrows:", arrows);
-            NODE
+          NODE
           if grep -qi '^x-gfs-publication-source: D1' "$RUNNER_TEMP/live-koy-svg-headers.txt"; then
             echo "Verified live Köy SVG publication source: D1"
           else
@@ -428,7 +428,7 @@ jobs:
               throw new Error("Latest live Köy SVG is missing or malformed: " + process.argv[3]);
             }
             console.log("Latest live Köy SVG verified: " + process.argv[3] + " (" + Buffer.byteLength(svg, "utf8") + " bytes).");
-            NODE
+          NODE
 
           curl --silent --show-error --fail --max-time 20 "$WEB/koy.html?verify=$(date +%s)" -o "$RUNNER_TEMP/koy-page.html"
           node - "$RUNNER_TEMP/koy-page.html" <<'NODE'
@@ -445,7 +445,7 @@ jobs:
             const found = forbidden.filter(text => html.includes(text));
             if (found.length) throw new Error("Legacy Köy GFS report text is still published: " + found.join(" | "));
             console.log("Köy page verified: report text removed; chart shell remains.");
-            NODE
+          NODE
 
           echo "Checking latest F72 through the public web gateway..."
           f72_ok=0
@@ -470,7 +470,7 @@ jobs:
               }));
             }
             console.log(JSON.stringify({ gateway: "/gfs/f72", run_id_utc: doc.run_id_utc, points: points.length }));
-            NODE
+          NODE
               then f72_ok=1; break; fi
             fi
             sleep 8
@@ -514,7 +514,7 @@ jobs:
               forecast_points: points.length,
               horizon_hours: doc.forecast_horizon_hours
             }));
-            NODE
+          NODE
           curl --silent --show-error --fail --max-time 20 "$PUBLIC_SITE/meteopt-gfs-table.js?verify=$(date +%s)" -o "$RUNNER_TEMP/public-meteopt-gfs-table.js"
           grep -Fq '"/gfs/latest"' "$RUNNER_TEMP/public-meteopt-gfs-table.js" || { echo "::error::Public domain serves an old MeteoPT table script."; exit 1; }
           grep -Fq 'rh2m-warm-1' "$RUNNER_TEMP/public-meteopt-gfs-table.js" || { echo "::error::Public domain table script is missing the RH.2m colour scale."; exit 1; }
@@ -548,7 +548,7 @@ jobs:
               throw new Error("Apex station API contract failed: " + JSON.stringify({health, summary}));
             }
             console.log("Apex station API diagnostics:", JSON.stringify(summary));
-            NODE
+          NODE
 
           echo "Checking Istanbul GFS through internal Service Binding..."
           curl --silent --show-error --fail --max-time 45 "$WEB/gfs/latest?check=$(date +%s)" -o "$RUNNER_TEMP/web-gfs.json"
@@ -595,5 +595,5 @@ jobs:
               station_count: stations.stations.length,
               canakci_history_samples: history.samples.length
             }));
-            NODE
+          NODE
 
