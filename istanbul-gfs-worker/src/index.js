@@ -398,6 +398,7 @@ async function processQueuedReports(env) {
       "VALUES (?, ?, ?, ?, ?, ?, 'pending', 0, ?, ?) " +
       "ON CONFLICT(run_id_utc) DO UPDATE SET report_text=excluded.report_text, " +
       "svg_asset_key=excluded.svg_asset_key, png_asset_key=excluded.png_asset_key, " +
+      "briefing_svg_asset_key=excluded.briefing_svg_asset_key, briefing_png_asset_key=excluded.briefing_png_asset_key, " +
       "updated_at_utc=excluded.updated_at_utc WHERE gfs_report_publications.status <> 'sent'"
     ).bind(target.run_id_utc, reportText, chart.key, pngAssetKey, briefing.key, briefingPngAssetKey, now, now).run();
 
