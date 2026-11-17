@@ -430,11 +430,27 @@ export default {
 
     if (path.startsWith("/admin")) {
       if (!basicAuthOk(request, env)) return adminUnauthorized();
-      const adminAsset = path === "/admin" || path === "/admin/" ? "/admin/index.html" : path;
-      const response = await env.ASSETS.fetch(new Request(new URL(adminAsset, url), request));
+
+      // Serve the admin document directly from the asset binding. Do not let
+      // the static-assets router issue directory/index redirects (307).
+      const assetPath = path === "/admin" || path === "/admin/" || path === "/admin/index.html"
+        ? "/admin/index.html"
+        : path;
+      const assetUrl = new URL(assetPath, url.origin);
+      const assetRequest = new Request(assetUrl.toString(), {
+        method: request.method,
+        headers: request.headers,
+        redirect: "manual"
+      });
+      const response = await env.ASSETS.fetch(assetRequest);
       const headers = new Headers(response.headers);
       headers.set("Cache-Control", "no-store, max-age=0");
-      return new Response(response.body, { status: response.status, statusText: response.statusText, headers });
+      headers.delete("Location");
+      return new Response(response.body, {
+        status: response.status,
+        statusText: response.statusText,
+        headers
+      });
     }
 
     if (path === "/api/analytics/event" && request.method === "POST") {
