@@ -44,23 +44,80 @@ jobs:
           CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
         run: |
           set -euo pipefail
-          wrangler d1 list --json > "$RUNNER_TEMP/d1.json"
-          D1_ID="$(node - "$RUNNER_TEMP/d1.json" <<'NODE'
-          const fs = require("fs");
-          const rows = JSON.parse(fs.readFileSync(process.argv[2], "utf8"));
-          const row = (Array.isArray(rows) ? rows : []).find(x => x.name === "gfs-watch-web-analytics");
-          process.stdout.write(row?.uuid || row?.database_id || "");
-          NODE
-          )"
-          if [ -z "$D1_ID" ]; then
+          D1_LIST="$(wrangler d1 list 2>&1)"
+          printf '%s
+' "$D1_LIST"
+          D1_ID="$(printf '%s
+' "$D1_LIST" | awk '$1 == "gfs-watch-web-analytics" {print $2; exit}')"
+          if ! printf '%s' "$D1_ID" | grep -Eq '^[0-9a-fA-F-]{36}
+          test -n "$D1_ID"
+          sed -i "s/__D1_DATABASE_ID__/$D1_ID/g" wrangler.jsonc
+          echo "D1_ID=$D1_ID"
+
+      - name: Apply analytics migration
+        working-directory: web-worker
+        env:
+          CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+          CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
+        run: |
+          set -euo pipefail
+          wrangler d1 migrations apply gfs-watch-web-analytics --remote --config wrangler.jsonc
+
+      - name: Set admin password
+        working-directory: web-worker
+        env:
+          CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+          CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
+          ADMIN_PASSWORD: ${{ secrets.ADMIN_PASSWORD }}
+        run: |
+          set -euo pipefail
+          test -n "$ADMIN_PASSWORD"
+          printf '%s' "$ADMIN_PASSWORD" | wrangler secret put ADMIN_PASSWORD --config wrangler.jsonc
+
+      - name: Build static assets
+        env:
+          PUSH_API_URL: ${{ vars.PUSH_API_URL }}
+        run: |
+          set -euo pipefail
+          rm -rf web-worker/public
+          mkdir -p web-worker/public
+          cp -a site/. web-worker/public/
+          mkdir -p web-worker/public/admin
+          cp web-worker/admin-assets/index.html web-worker/public/admin/index.html
+          cp web-worker/admin-assets/analytics.js web-worker/public/analytics.js
+          printf '{"apiBaseUrl":"%s"}' "$PUSH_API_URL" > web-worker/public/push-config.json
+          touch web-worker/public/.nojekyll
+          test -s web-worker/public/admin/index.html
+          test -s web-worker/public/analytics.js
+          test -s web-worker/public/index.html
+
+      - name: Deploy admin-capable Worker
+        working-directory: web-worker
+        env:
+          CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+          CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
+        run: |
+          set -euo pipefail
+          wrangler deploy --config wrangler.jsonc
+
+      - name: Verify admin protection and endpoint
+        env:
+          ADMIN_PASSWORD: ${{ secrets.ADMIN_PASSWORD }}
+        run: |
+          set -euo pipefail
+          WEB="https://gfs-watch-web.muhsin-ulusoy.workers.dev"
+          status="$(curl -sS -o /dev/null -w "%{http_code}" --max-time 20 "$WEB/admin")"
+          test "$status" = "401"
+          curl -sS --fail --max-time 20 -u "admin:$ADMIN_PASSWORD" "$WEB/admin" | grep -Fq "İSTANBUL HAVASI — ADMIN"
+          curl -sS --fail --max-time 20 -u "admin:$ADMIN_PASSWORD" "$WEB/api/admin/analytics" | node -e 'let s="";process.stdin.on("data",d=>s+=d).on("end",()=>{const d=JSON.parse(s);if(d.ok!==true)process.exit(1);console.log("Admin analytics API OK")})'
+          echo "Admin deployment verified."
+; then
             echo "Creating gfs-watch-web-analytics..."
-            wrangler d1 create gfs-watch-web-analytics --json > "$RUNNER_TEMP/d1-create.json"
-            D1_ID="$(node - "$RUNNER_TEMP/d1-create.json" <<'NODE'
-          const fs = require("fs");
-          const d = JSON.parse(fs.readFileSync(process.argv[2], "utf8"));
-          process.stdout.write(d.uuid || d.database_id || d.result?.uuid || "");
-          NODE
-          )"
+            D1_CREATE="$(wrangler d1 create gfs-watch-web-analytics 2>&1)"
+            printf '%s
+' "$D1_CREATE"
+            D1_ID="$(printf '%s
+' "$D1_CREATE" | grep -Eo '[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12}' | head -n1)"
           fi
           test -n "$D1_ID"
           sed -i "s/__D1_DATABASE_ID__/$D1_ID/g" wrangler.jsonc
