@@ -193,7 +193,10 @@ export function buildIstanbulInteractiveSvg(runs) {
     const plotY = py + 57;
     const plotWidth = panelWidth - 73;
     const plotHeight = 146;
-    const valuesBySeries = pointsBySeries.map(points => points.map(point => numeric(point?.[spec.field])));
+    const valuesBySeries = pointsBySeries.map(points => points.map(point => {
+      if (point?.__invalid_chart_point === true) return null;
+      return numeric(point?.[spec.field]);
+    }));
     const allValues = valuesBySeries.flat().filter(value => value !== null);
     const axis = buildPanelAxis(spec.field, valuesBySeries);
     const { low, high, ticks, latestPeak, latestTrough } = axis;
