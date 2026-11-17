@@ -85,15 +85,8 @@ async function renderSvgPhotoPng(svg, fontBytes, targetWidth, targetHeight, requ
   if (!opening || !new RegExp('viewBox="' + expectedViewBox.replace(/ /g, "\\s+") + '"', "i").test(opening[0])) {
     throw new Error("Telegram SVG has an unexpected viewBox; expected " + expectedViewBox);
   }
-  for (const required of [
-    "Son GFS raporu",
-    "Sıcaklık",
-    "850 hPa sıcaklık",
-    "Yağış",
-    "10 m rüzgâr hızı",
-    "MeteoPT GFS",
-  ]) {
-    if (!svg.includes(required)) {
+  for (const requiredText of required) {
+    if (!svg.includes(requiredText)) {
       throw new Error("Telegram report SVG is missing required content: " + requiredText);
     }
   }
