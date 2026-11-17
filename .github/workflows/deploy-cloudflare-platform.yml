@@ -486,9 +486,9 @@ jobs:
 
           echo "Checking the real public domain: https://www.istanbulunhavasi.com ..."
           PUBLIC_SITE="https://istanbulunhavasi.com"
-          curl --silent --show-error --fail --max-time 30 "$PUBLIC_SITE/?live-check=$(date +%s)" -o "$RUNNER_TEMP/public-homepage.html"
+          curl --silent --show-error --fail --retry 5 --retry-all-errors --retry-delay 2 --max-time 30 "$PUBLIC_SITE/?live-check=$(date +%s)" -o "$RUNNER_TEMP/public-homepage.html"
           grep -Fq 'meteopt-gfs-table.js' "$RUNNER_TEMP/public-homepage.html" || { echo "::error::Public homepage does not load the MeteoPT table script."; exit 1; }
-          curl --silent --show-error --fail --max-time 45 "$PUBLIC_SITE/gfs/f72?check=$(date +%s)" -o "$RUNNER_TEMP/public-gfs-f72.json"
+          curl --silent --show-error --fail --retry 5 --retry-all-errors --retry-delay 2 --max-time 45 "$PUBLIC_SITE/gfs/f72?check=$(date +%s)" -o "$RUNNER_TEMP/public-gfs-f72.json"
           node - "$RUNNER_TEMP/public-gfs-f72.json" <<'NODE'
             const fs = require("fs");
             const doc = JSON.parse(fs.readFileSync(process.argv[2], "utf8"));
@@ -515,7 +515,7 @@ jobs:
               horizon_hours: doc.forecast_horizon_hours
             }));
           NODE
-          curl --silent --show-error --fail --max-time 20 "$PUBLIC_SITE/meteopt-gfs-table.js?verify=$(date +%s)" -o "$RUNNER_TEMP/public-meteopt-gfs-table.js"
+          curl --silent --show-error --fail --retry 5 --retry-all-errors --retry-delay 2 --max-time 20 "$PUBLIC_SITE/meteopt-gfs-table.js?verify=$(date +%s)" -o "$RUNNER_TEMP/public-meteopt-gfs-table.js"
           grep -Fq '"/gfs/latest"' "$RUNNER_TEMP/public-meteopt-gfs-table.js" || { echo "::error::Public domain serves an old MeteoPT table script."; exit 1; }
           grep -Fq 'rh2m-warm-1' "$RUNNER_TEMP/public-meteopt-gfs-table.js" || { echo "::error::Public domain table script is missing the RH.2m colour scale."; exit 1; }
           grep -Fq 'function dewpoint(' "$RUNNER_TEMP/public-meteopt-gfs-table.js" || { echo "::error::Public domain table script is missing Magnus dew point calculation."; exit 1; }
@@ -524,10 +524,10 @@ jobs:
 
           echo "Checking the apex domain used by visitors and its same-origin station API..."
           APEX_SITE="https://istanbulunhavasi.com"
-          curl --silent --show-error --fail --max-time 30 "$APEX_SITE/?station-check=$(date +%s)" -o "$RUNNER_TEMP/apex-homepage.html"
+          curl --silent --show-error --fail --retry 5 --retry-all-errors --retry-delay 2 --max-time 30 "$APEX_SITE/?station-check=$(date +%s)" -o "$RUNNER_TEMP/apex-homepage.html"
           grep -Fq 'responsive-2026-11-08-station-same-origin-v1' "$RUNNER_TEMP/apex-homepage.html" || { echo "::error::Apex domain is not serving the current station-enabled homepage."; exit 1; }
-          curl --silent --show-error --fail --max-time 20 "$APEX_SITE/api/stations/health?check=$(date +%s)" -o "$RUNNER_TEMP/apex-station-health.json"
-          curl --silent --show-error --fail --max-time 20 "$APEX_SITE/api/stations?check=$(date +%s)" -o "$RUNNER_TEMP/apex-stations.json"
+          curl --silent --show-error --fail --retry 5 --retry-all-errors --retry-delay 2 --max-time 20 "$APEX_SITE/api/stations/health?check=$(date +%s)" -o "$RUNNER_TEMP/apex-station-health.json"
+          curl --silent --show-error --fail --retry 5 --retry-all-errors --retry-delay 2 --max-time 20 "$APEX_SITE/api/stations?check=$(date +%s)" -o "$RUNNER_TEMP/apex-stations.json"
           node - "$RUNNER_TEMP/apex-station-health.json" "$RUNNER_TEMP/apex-stations.json" <<'NODE'
             const fs = require("fs");
             const [health, stations] = process.argv.slice(2).map(file => JSON.parse(fs.readFileSync(file, "utf8")));
