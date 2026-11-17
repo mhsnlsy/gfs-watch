@@ -197,7 +197,8 @@ def main() -> None:
         "const panelHeight = 250;",
         "const panelLeft = [55, 592];",
         "const panelTop = [214, 493];",
-    ]:        assert geometry in koy_worker
+    ]:
+        assert geometry in koy_worker
         assert geometry in gfs_publication
     assert "const latestKeys = [...series[series.length - 1].points.keys()].sort()" in koy_worker
     assert "common = common.filter(key => item.points.has(key))" in gfs_publication
