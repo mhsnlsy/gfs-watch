@@ -11,7 +11,8 @@ const LOCATION = {
   nearest_gfs_grid_longitude: 29.0,
 };
 const CYCLES = [18, 12, 6, 0];
-const RETENTION_DAYS = 14;
+const RETENTION_DAYS = 16;
+const GFS_RUN_RETENTION = 64;
 const UTC_OFFSET_MS = 3 * 60 * 60 * 1000;
 const ECMWF_API_BASE = METEOPT_ECMWF_API;
 const ECMWF_SOURCE_URL = METEOPT_ECMWF_WEB + "?lat=41.0901&lon=28.9436";
@@ -249,7 +250,7 @@ async function archiveRun(env, payload) {
   return Number(result.meta?.changes || 0) > 0;
 }
 
-async function listRuns(env, limit = 4) {
+async function listRuns(env, limit = GFS_RUN_RETENTION) {
   const result = await env.GFS_DB.prepare(
     "SELECT payload_json FROM gfs_runs ORDER BY run_id_utc DESC LIMIT ?"
   ).bind(limit).all();
@@ -831,9 +832,13 @@ async function collectData(env) {
     }
   }
 
+  // Keep both constraints: at most 64 forecast cycles and no older than
+  // 16 days. Four daily GFS cycles produce exactly 64 cycles per 16-day window.
   await env.GFS_DB.prepare(
-    "DELETE FROM gfs_runs WHERE run_id_utc < ?"
-  ).bind(new Date(started.getTime() - RETENTION_DAYS * 86400000).toISOString()).run();
+    "DELETE FROM gfs_runs WHERE run_id_utc NOT IN (" +
+    "SELECT run_id_utc FROM gfs_runs ORDER BY run_id_utc DESC LIMIT ?" +
+    ") OR run_id_utc < ?"
+  ).bind(GFS_RUN_RETENTION, new Date(started.getTime() - RETENTION_DAYS * 86400000).toISOString()).run();
 
   await env.GFS_DB.prepare(
     "DELETE FROM gfs_report_dispatch_queue WHERE status IN ('dispatched', 'completed') AND dispatched_at_utc < ?"
@@ -911,7 +916,7 @@ async function latestPayload(env, bootstrap = true) {
     }
   }
   if (!current) return null;
-  const runs = await listRuns(env, 4);
+  const runs = await listRuns(env, GFS_RUN_RETENTION);
   return {
     ...current.payload,
     comparison_runs: runs,
@@ -976,7 +981,7 @@ async function latestF72Payload(env, bootstrap = true) {
   }
 
   if (!current) return null;
-  const runs = await listRuns(env, 4);
+  const runs = await listRuns(env, GFS_RUN_RETENTION);
   return {
     ...current.payload,
     comparison_runs: runs,
@@ -1212,13 +1217,14 @@ async function handleApi(request, env) {
       // range. Four cycles only cover ~18 hours of model age, so long leads
       // can never mature into observations. Keep the latest 56 cycles
       // (~14 days) available; the page itself filters to observed valid times.
-      const runs = await listRuns(env, 56);
+      const runs = await listRuns(env, GFS_RUN_RETENTION);
       const latest = runs[0] || null;
       if (!latest) return json({ ok: false, error: "No archived Istanbul GFS runs are available yet" }, 503);
       return json({
         ...latest,
         comparison_runs: runs,
         verification_run_count: runs.length,
+        verification_retention_days: RETENTION_DAYS,
         verification_max_lead_hours: 180,
       });
     } catch (error) {
