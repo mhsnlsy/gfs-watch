@@ -30,8 +30,11 @@ def main() -> None:
     assert 'METEOPT_ECMWF_WEB' in gfs_worker
     istanbul_wrangler = json.loads(read("istanbul-gfs-worker/wrangler.jsonc"))
     assert any(item.get("binding") == "ECMWF_ARCHIVE" for item in istanbul_wrangler.get("r2_buckets", []))
-    assert '/ecmwf/latest' in gfs_worker
-    assert '/ecmwf/comparison' in gfs_worker
+    # ECMWF HTTP routes are exposed by the web gateway/service binding, not the collector source.
+    assert '"/ecmwf/latest"' in web_worker
+    assert '"/api/ecmwf/latest"' in web_worker
+    assert '"/ecmwf/comparison"' in web_worker
+    assert '"/api/ecmwf/comparison"' in web_worker
     gfs_publication = read("istanbul-gfs-worker/src/publication.js")
     web_worker = read("web-worker/src/index.js")
     web_config = json.loads(read("web-worker/wrangler.jsonc"))
