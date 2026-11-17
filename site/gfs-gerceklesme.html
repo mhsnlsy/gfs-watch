@@ -202,6 +202,12 @@ function byLead(pairs,type){
     return {lead,n:g.length,bias,mae,success};
   });
 }
+function biasText(v,type){
+  if(v===null || v===undefined || Number.isNaN(Number(v))) return "—";
+  const n=Number(v);
+  const unit=type==="temp" ? "°C" : "mm";
+  return (n>0?"+":"")+fmt(n,1)+" "+unit;
+}
 function overallTemp(p){if(!p.length)return null;return {bias:p.reduce((s,x)=>s+x.diff,0)/p.length,mae:p.reduce((s,x)=>s+Math.abs(x.diff),0)/p.length,n:p.length};}
 function overallRain(p){if(!p.length)return null;return {mae:p.reduce((s,x)=>s+Math.abs(x.diff),0)/p.length,success:p.filter(x=>x.hit).length/p.length*100,n:p.length};}
 function overallWind(p){if(!p.length)return null;const d=p.filter(x=>x.directionDiff!=null);return {speedMae:p.reduce((s,x)=>s+Math.abs(x.speedDiff),0)/p.length,directionMae:d.length?d.reduce((s,x)=>s+x.directionDiff,0)/d.length:null,n:p.length};}
