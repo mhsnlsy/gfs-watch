@@ -34,6 +34,7 @@ const STATION_DEFS = {
 };
 const RETENTION_HOURS = null;
 const MAX_SOURCE_AGE_MINUTES = 20;
+const MAX_HISTORY_HOURS = 384; // 16 günlük GFS doğrulama penceresi
 
 function json(data, status = 200) {
   return new Response(JSON.stringify(data), {
@@ -581,7 +582,7 @@ export default {
     const historyMatch = path.match(/^\/api\/history\/(enka|eyupsultan|sisli|canakci)$/);
     if (historyMatch) {
       const requested = Number(url.searchParams.get("hours") || 180);
-      const hours = Math.max(1, Math.min(180, Number.isFinite(requested) ? requested : 180));
+      const hours = Math.max(1, Math.min(MAX_HISTORY_HOURS, Number.isFinite(requested) ? requested : 180));
       const samples = await getHistory(env, historyMatch[1], hours);
       const feels = hours === 24 ? feelsRange(samples) : { min: null, max: null };
       return json({
