@@ -1,7 +1,7 @@
 // Manual GFS reconciliation trigger marker: 2026-11-17 19:xx TSİ
-import { buildIstanbulInteractiveSvg, buildIstanbulReportText } from "./publication.js";
+import { buildIstanbulInteractiveSvg, buildIstanbulBriefingSvg, buildIstanbulReportText } from "./publication.js";
 import { METEOPT_ECMWF_API, METEOPT_ECMWF_WEB, METEOPT_GFS_API, METEOPT_SOURCE_POLICY, meteoptSourceMetadata } from "../../shared/meteopt-source.js";
-import { loadIstanbulTelegramFont, renderIstanbulPhotoPng } from "./photo.js";
+import { loadIstanbulTelegramFont, renderIstanbulPhotoPng, renderIstanbulBriefingPhotoPng } from "./photo.js";
 // Istanbul GFS Worker: canonical MeteoPT collector + D1 event dispatcher
 const API_BASE = METEOPT_GFS_API;
 const LOCATION = {
@@ -332,17 +332,24 @@ async function processQueuedReports(env) {
     const reportText = buildIstanbulReportText(target, new Date(), stationObservation);
     if (!env.ECMWF_ARCHIVE) throw new Error("R2 image archive binding is unavailable");
     const pngAssetKey = "data/" + chart.key.replace(/^notifications\//, "notifications/").replace(/\.svg$/i, "-telegram-home-4panel-v3.png");
+    const briefing = buildIstanbulBriefingSvg(target, new Date(), stationObservation);
+    const briefingPngAssetKey = "data/" + briefing.key.replace(/^notifications\//, "notifications/").replace(/\.svg$/i, "-telegram-5day.png");
     const telegramFont = await loadIstanbulTelegramFont(env.ECMWF_ARCHIVE);
     const pngBytes = await renderIstanbulPhotoPng(chart.body, telegramFont);
+    const briefingPngBytes = await renderIstanbulBriefingPhotoPng(briefing.body, telegramFont);
     await env.ECMWF_ARCHIVE.put(pngAssetKey, pngBytes, {
+      httpMetadata: { contentType: "image/png", cacheControl: "public, max-age=3600" },
+    });
+    await env.ECMWF_ARCHIVE.put(briefingPngAssetKey, briefingPngBytes, {
       httpMetadata: { contentType: "image/png", cacheControl: "public, max-age=3600" },
     });
     const now = new Date().toISOString();
     const imagePath = chart.key.slice("notifications/".length);
-    const images = [{
-      label: runs.length + " GFS döngüsü · aynı geçerlilik saatleri (TSİ)",
-      path: imagePath,
-    }];
+    const briefingImagePath = briefing.key.slice("notifications/".length);
+    const images = [
+      { label: "5 günlük özet · yağış saatleri ve sıcaklık eğilimi", path: briefingImagePath },
+      { label: runs.length + " GFS döngüsü · aynı geçerlilik saatleri (TSİ)", path: imagePath },
+    ];
 
     await putPublicationAsset(env, {
       key: chart.key,
@@ -350,6 +357,13 @@ async function processQueuedReports(env) {
       content_type: "image/svg+xml; charset=utf-8",
       encoding: "utf8",
       body: chart.body,
+    });
+    await putPublicationAsset(env, {
+      key: briefing.key,
+      run_id_utc: briefing.run_id_utc,
+      content_type: "image/svg+xml; charset=utf-8",
+      encoding: "utf8",
+      body: briefing.body,
     });
 
     const existingLatest = await getPublicationAsset(env, "notifications/latest.json");
@@ -380,12 +394,12 @@ async function processQueuedReports(env) {
 
     await env.GFS_DB.prepare(
       "INSERT OR IGNORE INTO gfs_report_publications " +
-      "(run_id_utc, report_text, svg_asset_key, png_asset_key, status, attempts, created_at_utc, updated_at_utc) " +
-      "VALUES (?, ?, ?, ?, 'pending', 0, ?, ?) " +
+      "(run_id_utc, report_text, svg_asset_key, png_asset_key, briefing_svg_asset_key, briefing_png_asset_key, status, attempts, created_at_utc, updated_at_utc) " +
+      "VALUES (?, ?, ?, ?, ?, ?, 'pending', 0, ?, ?) " +
       "ON CONFLICT(run_id_utc) DO UPDATE SET report_text=excluded.report_text, " +
       "svg_asset_key=excluded.svg_asset_key, png_asset_key=excluded.png_asset_key, " +
       "updated_at_utc=excluded.updated_at_utc WHERE gfs_report_publications.status <> 'sent'"
-    ).bind(target.run_id_utc, reportText, chart.key, pngAssetKey, now, now).run();
+    ).bind(target.run_id_utc, reportText, chart.key, pngAssetKey, briefing.key, briefingPngAssetKey, now, now).run();
 
     const currentItem = {
       id: target.run_id_utc,
@@ -486,8 +500,8 @@ async function deliverPendingTelegram(env) {
   const now = nowDate.toISOString();
   const leaseUntil = new Date(nowDate.getTime() + 5 * 60 * 1000).toISOString();
   const result = await env.GFS_DB.prepare(
-    "SELECT run_id_utc, report_text, svg_asset_key, png_asset_key, status, attempts, " +
-    "text_message_id, photo_message_id FROM gfs_report_publications " +
+    "SELECT run_id_utc, report_text, svg_asset_key, png_asset_key, briefing_svg_asset_key, briefing_png_asset_key, status, attempts, " +
+    "text_message_id, photo_message_id, briefing_photo_message_id FROM gfs_report_publications " +
     "WHERE attempts < 288 AND (status IN ('pending', 'partial') OR " +
     "(status = 'sending' AND lease_until_utc < ?)) " +
     "ORDER BY created_at_utc ASC LIMIT 1"
@@ -518,6 +532,36 @@ async function deliverPendingTelegram(env) {
       ).bind(publication.text_message_id, new Date().toISOString(), publication.run_id_utc).run();
     }
 
+    if (!publication.briefing_photo_message_id) {
+      const briefingSvgKey = String(publication.briefing_svg_asset_key || "");
+      const briefingPngKey = briefingSvgKey
+        ? "data/" + briefingSvgKey.replace(/^notifications\//, "notifications/").replace(/\.svg$/i, "-telegram-5day.png")
+        : publication.briefing_png_asset_key;
+      let briefingObject = briefingPngKey ? await env.ECMWF_ARCHIVE.get(briefingPngKey) : null;
+      let briefingBytes;
+      if (briefingObject) {
+        briefingBytes = new Uint8Array(await briefingObject.arrayBuffer());
+      } else {
+        const asset = await getPublicationAsset(env, publication.briefing_svg_asset_key);
+        if (!asset || typeof asset.body !== "string") throw new Error("Published five-day briefing SVG is missing: " + publication.briefing_svg_asset_key);
+        const telegramFont = await loadIstanbulTelegramFont(env.ECMWF_ARCHIVE);
+        briefingBytes = await renderIstanbulBriefingPhotoPng(asset.body, telegramFont);
+        await env.ECMWF_ARCHIVE.put(briefingPngKey, briefingBytes, { httpMetadata: { contentType: "image/png", cacheControl: "public, max-age=3600" } });
+        await env.GFS_DB.prepare(
+          "UPDATE gfs_report_publications SET briefing_png_asset_key = ?, updated_at_utc = ? WHERE run_id_utc = ? AND status = 'sending'"
+        ).bind(briefingPngKey, new Date().toISOString(), publication.run_id_utc).run();
+      }
+      const form = new FormData();
+      form.set("chat_id", env.TELEGRAM_CHAT_ID);
+      form.set("caption", "🌦 İstanbul Havası · 5 günlük özet");
+      form.set("photo", new Blob([briefingBytes], { type: "image/png" }), "istanbul-havasi-5-gunluk-ozet.png");
+      const message = await telegramApi(env, "sendPhoto", form, true);
+      publication.briefing_photo_message_id = String(message.message_id);
+      await env.GFS_DB.prepare(
+        "UPDATE gfs_report_publications SET briefing_photo_message_id = ?, updated_at_utc = ? WHERE run_id_utc = ? AND status = 'sending'"
+      ).bind(publication.briefing_photo_message_id, new Date().toISOString(), publication.run_id_utc).run();
+    }
+
     if (!publication.photo_message_id) {
       const svgKey = String(publication.svg_asset_key || "");
       const pngKey = svgKey
@@ -529,29 +573,23 @@ async function deliverPendingTelegram(env) {
         pngBytes = new Uint8Array(await object.arrayBuffer());
       } else {
         const asset = await getPublicationAsset(env, publication.svg_asset_key);
-        if (!asset || typeof asset.body !== "string") {
-          throw new Error("Published SVG asset is missing from D1: " + publication.svg_asset_key);
-        }
+        if (!asset || typeof asset.body !== "string") throw new Error("Published SVG asset is missing from D1: " + publication.svg_asset_key);
         const telegramFont = await loadIstanbulTelegramFont(env.ECMWF_ARCHIVE);
         pngBytes = await renderIstanbulPhotoPng(asset.body, telegramFont);
-        await env.ECMWF_ARCHIVE.put(pngKey, pngBytes, {
-          httpMetadata: { contentType: "image/png", cacheControl: "public, max-age=3600" },
-        });
+        await env.ECMWF_ARCHIVE.put(pngKey, pngBytes, { httpMetadata: { contentType: "image/png", cacheControl: "public, max-age=3600" } });
         await env.GFS_DB.prepare(
-          "UPDATE gfs_report_publications SET png_asset_key = ?, updated_at_utc = ? " +
-          "WHERE run_id_utc = ? AND status = 'sending'"
+          "UPDATE gfs_report_publications SET png_asset_key = ?, updated_at_utc = ? WHERE run_id_utc = ? AND status = 'sending'"
         ).bind(pngKey, new Date().toISOString(), publication.run_id_utc).run();
       }
       const filename = (pngKey.split("/").pop() || "istanbul-gfs-comparison-telegram-home-4panel-v3.png").replace(/\.svg$/i, ".png");
       const form = new FormData();
       form.set("chat_id", env.TELEGRAM_CHAT_ID);
-      form.set("caption", "📊 İstanbul GFS · dört döngülü geçerlilik saati karşılaştırması");
+      form.set("caption", "📊 İstanbul GFS · 4'lü döngü karşılaştırması");
       form.set("photo", new Blob([pngBytes], { type: "image/png" }), filename);
       const message = await telegramApi(env, "sendPhoto", form, true);
       publication.photo_message_id = String(message.message_id);
       await env.GFS_DB.prepare(
-        "UPDATE gfs_report_publications SET photo_message_id = ?, updated_at_utc = ? " +
-        "WHERE run_id_utc = ? AND status = 'sending'"
+        "UPDATE gfs_report_publications SET photo_message_id = ?, updated_at_utc = ? WHERE run_id_utc = ? AND status = 'sending'"
       ).bind(publication.photo_message_id, new Date().toISOString(), publication.run_id_utc).run();
     }
 
