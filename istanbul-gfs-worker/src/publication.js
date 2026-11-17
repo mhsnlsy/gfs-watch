@@ -78,7 +78,32 @@ function buildSeries(runs) {
     const points = new Map();
     for (const point of document.forecast_6_hourly) {
       const key = isoMinute(point?.valid_time_utc);
-      if (key) points.set(key, point);
+      if (!key) continue;
+
+      // Scraper/model rows can occasionally exist with a valid F-hour but
+      // every chart field set to "-". Such a row is not a forecast point.
+      // Keep its timestamp for alignment, but make every plotted value null
+      // so no panel can invent a value or connect through the invalid row.
+      const chartFields = [
+        "temperature_2m_c",
+        "temperature_850hpa_c",
+        "precipitation_6h_mm",
+        "wind_speed_10m_kmh",
+      ];
+      const hasChartValue = chartFields.some(field => numeric(point?.[field]) !== null);
+      if (!hasChartValue) {
+        points.set(key, {
+          ...point,
+          temperature_2m_c: null,
+          temperature_850hpa_c: null,
+          precipitation_6h_mm: null,
+          wind_speed_10m_kmh: null,
+          wind_direction_10m_deg: null,
+          __invalid_chart_point: true,
+        });
+        continue;
+      }
+      points.set(key, point);
     }
     if (!points.size) throw new Error("No valid forecast points for " + document.run_id_utc);
     return {
