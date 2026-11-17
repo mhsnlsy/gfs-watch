@@ -206,18 +206,40 @@ function overallTemp(p){if(!p.length)return null;return {bias:p.reduce((s,x)=>s+
 function overallRain(p){if(!p.length)return null;return {mae:p.reduce((s,x)=>s+Math.abs(x.diff),0)/p.length,success:p.filter(x=>x.hit).length/p.length*100,n:p.length};}
 function overallWind(p){if(!p.length)return null;const d=p.filter(x=>x.directionDiff!=null);return {speedMae:p.reduce((s,x)=>s+Math.abs(x.speedDiff),0)/p.length,directionMae:d.length?d.reduce((s,x)=>s+x.directionDiff,0)/d.length:null,n:p.length};}
 function bestWorst(a,key){if(!a.length)return {best:null,worst:null};const s=[...a].sort((x,y)=>x[key]-y[key]);return {best:s[0],worst:s[s.length-1]};}
-function drawLeadChart(th,rh,wh){
-  const svg=document.getElementById("lead-chart"),W=900,H=260,L=46,R=16,T=18,B=34,maxLead=180;
-  const maxVal=Math.max(1,...th.map(x=>x.mae),...rh.map(x=>x.mae),...wh.map(x=>x.speedMae));
-  const x=v=>L+(v/maxLead)*(W-L-R),y=v=>T+(Math.max(0,Math.min(maxVal,v))/maxVal)*(H-T-B),NS="http://www.w3.org/2000/svg";
+function drawLeadChart(tempHours,rainHours,windHours){
+  const svg=document.getElementById("lead-chart"),W=900,H=300,L=54,R=16,T=14,B=30,NS="http://www.w3.org/2000/svg";
+  const bands=[
+    {key:"temp",label:"Sıcaklık MAE",unit:"°C",data:tempHours,color:"#7dd3d7"},
+    {key:"wind",label:"Rüzgâr hız MAE",unit:"km/sa",data:windHours,color:"#f2b56b"},
+    {key:"rain",label:"Yağış miktarı MAE",unit:"mm",data:rainHours,color:"#a9c7ff"}
+  ];
   svg.innerHTML="";
-  const line=(pts,c)=>{if(!pts.length)return;const e=document.createElementNS(NS,"polyline");e.setAttribute("points",pts.map(p=>p.join(",")).join(" "));e.setAttribute("fill","none");e.setAttribute("stroke",c);e.setAttribute("stroke-width","2.5");svg.appendChild(e);};
-  for(let i=0;i<=5;i++){const yy=T+(H-T-B)*i/5,e=document.createElementNS(NS,"line");e.setAttribute("x1",L);e.setAttribute("x2",W-R);e.setAttribute("y1",yy);e.setAttribute("y2",yy);e.setAttribute("stroke","rgba(255,255,255,.08)");svg.appendChild(e);}
-  line(th.map(v=>[x(v.lead),y(v.mae)]),"#7dd3d7");line(wh.map(v=>[x(v.lead),y(v.speedMae)]),"#f2b56b");line(rh.map(v=>[x(v.lead),y(v.mae)]),"#a9c7ff");
-  for(let lead=6;lead<=180;lead+=6){const e=document.createElementNS(NS,"text");e.setAttribute("x",x(lead));e.setAttribute("y",H-10);e.setAttribute("text-anchor","middle");e.setAttribute("fill","#9bb1bf");e.setAttribute("font-size",lead%24===0?"10":"8");e.textContent="+"+lead;svg.appendChild(e);}
-  const lab=document.createElementNS(NS,"text");lab.setAttribute("x",L);lab.setAttribute("y",12);lab.setAttribute("fill","#9bb1bf");lab.setAttribute("font-size","10");lab.textContent="Hata";svg.appendChild(lab);
-}
-async function load(){
+  const x=v=>L+(v/180)*(W-L-R);
+  bands.forEach((band,idx)=>{
+    const top=T+idx*88, bottom=top+64;
+    const max=Math.max(1,...band.data.map(x=>Number(x[band.key==="wind"?"speedMae":"mae"])||0));
+    const y=v=>bottom-(Math.max(0,Math.min(max,v))/max)*(bottom-top);
+    for(let i=0;i<=2;i++){
+      const yy=top+(bottom-top)*i/2,e=document.createElementNS(NS,"line");
+      e.setAttribute("x1",L);e.setAttribute("x2",W-R);e.setAttribute("y1",yy);e.setAttribute("y2",yy);
+      e.setAttribute("stroke","rgba(255,255,255,.08)");svg.appendChild(e);
+    }
+    const pts=band.data.map(v=>[x(v.lead),y(Number(v[band.key==="wind"?"speedMae":"mae"])||0)]);
+    if(pts.length){
+      const line=document.createElementNS(NS,"polyline");
+      line.setAttribute("points",pts.map(p=>p.join(",")).join(" "));
+      line.setAttribute("fill","none");line.setAttribute("stroke",band.color);line.setAttribute("stroke-width","2.5");
+      svg.appendChild(line);
+    }
+    const title=document.createElementNS(NS,"text");
+    title.setAttribute("x",L);title.setAttribute("y",top+11);title.setAttribute("fill",band.color);title.setAttribute("font-size","11");title.setAttribute("font-weight","700");
+    title.textContent=band.label+" ("+band.unit+") · 0–"+fmt(max,1);svg.appendChild(title);
+  });
+  for(let lead=6;lead<=180;lead+=6){
+    const e=document.createElementNS(NS,"text");e.setAttribute("x",x(lead));e.setAttribute("y",H-8);e.setAttribute("text-anchor","middle");
+    e.setAttribute("fill","#9bb1bf");e.setAttribute("font-size",lead%24===0?"10":"8");e.textContent="+"+lead;svg.appendChild(e);
+  }
+}async function load(){
   const station=document.getElementById("station").value,status=document.getElementById("status"),content=document.getElementById("content");
   status.hidden=false;status.textContent="Yükleniyor…";content.hidden=true;
   try{
