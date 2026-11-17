@@ -85,8 +85,10 @@ async function renderSvgPhotoPng(svg, fontBytes, targetWidth, targetHeight, requ
   if (!opening || !new RegExp('viewBox="' + expectedViewBox.replace(/ /g, "\\s+") + '"', "i").test(opening[0])) {
     throw new Error("Telegram SVG has an unexpected viewBox; expected " + expectedViewBox);
   }
+  const svgTextForValidation = svg.replace(/<[^>]+>/g, " ").replace(/&[a-z]+;/gi, " ").toLocaleUpperCase("tr-TR");
   for (const requiredText of required) {
-    if (!svg.includes(requiredText)) {
+    const normalizedRequired = String(requiredText).toLocaleUpperCase("tr-TR");
+    if (!svgTextForValidation.includes(normalizedRequired)) {
       throw new Error("Telegram report SVG is missing required content: " + requiredText);
     }
   }
