@@ -10,48 +10,19 @@
 <link rel="stylesheet" href="/home.css?v=20261116-gerceklesme-12">
 <link rel="stylesheet" href="/header-common.css?v=20261110-shared-header-1">
 <style>
-  .shell.verif { width: min(1200px, calc(100% - 16px)); }
-  .verif { padding: 6px 0 12px; max-width: none; margin: 0; }
-  .verif h1 { font: 800 26px/1.1 Manrope, sans-serif; margin: 0 0 2px; }
-  .verif .lead { color: #9bb1bf; font-size: 15px; line-height: 1.35; margin: 0 0 6px; }
-  .controls { display: flex; gap: 4px; align-items: center; margin-bottom: 6px; flex-wrap: wrap; }
-  .controls select, .controls button { background: #102535; color: #e7f2f6; border: 1px solid rgba(213,237,240,.16); padding: 4px 8px; border-radius: 6px; font-size: 16px; }
-  .controls button { cursor: pointer; background: rgba(125,211,215,.15); border-color: rgba(125,211,215,.35); color: #c6f0ec; }
-  .summary-row { display:grid; grid-template-columns:repeat(3,1fr); gap:6px; margin:8px 0; }
-  .metric-group { background:linear-gradient(160deg,rgba(18,44,62,.82),rgba(13,33,48,.92)); border:1px solid rgba(204,225,239,.12); border-radius:10px; padding:10px; }
-  .metric-group h2 { font:800 18px/1.1 Manrope,sans-serif; margin:0 0 7px; }
-  .metric-grid { display:grid; grid-template-columns:repeat(2,1fr); gap:5px; }
-  .metric { background:rgba(255,255,255,.045); border-radius:7px; padding:7px; min-height:54px; }
-  .metric span { display:block; color:#9bb1bf; font-size:11px; }
-  .metric b { display:block; color:#e7f2f6; font:800 18px/1.15 Manrope,sans-serif; margin-top:2px; }
-  .metric small { color:#9bb1bf; font-size:10px; }
-  .metric.accent b { color:#7dd3d7; }
-  .metric.warn b { color:#f2b56b; }
-  .metric.good b { color:#a9c7ff; }
-  .card { background: linear-gradient(160deg, rgba(18,44,62,.72), rgba(13,33,48,.8)); border: 1px solid rgba(204,225,239,.12); border-radius: 8px; padding: 5px 3px; text-align: center; }
-  .card b { display: block; font: 700 20px/1.05 Manrope, sans-serif; color: #d8f4f2; margin-top: 1px; }
-  .card span { font-size: 12px; color: #9bb1bf; line-height: 1.15; }
-  .panels { display: grid; grid-template-columns: 1fr 1fr; gap: 2px; }
-  .wide { grid-column: 1 / -1; }
-  .chart-wrap { height: 260px; margin-top: 6px; position: relative; }
-  .chart-wrap svg { width: 100%; height: 100%; display: block; }
-  .legend { display:flex; gap:14px; flex-wrap:wrap; font-size:12px; color:#9bb1bf; margin-top:2px; }
-  .chart-caption { display:flex; justify-content:space-between; gap:8px; color:#8fa7b5; font-size:11px; margin-top:2px; }
-  .legend span::before { content:""; display:inline-block; width:10px; height:3px; vertical-align:middle; margin-right:4px; background:currentColor; }
-  .method { display:grid; grid-template-columns:repeat(3,1fr); gap:4px; margin-top:6px; }
-  .method div { background:rgba(255,255,255,.035); border-radius:6px; padding:5px; color:#b7cbd3; font-size:12px; }
-  .method b { color:#e7f2f6; display:block; margin-bottom:1px; }
-  .panel { background: linear-gradient(160deg, rgba(18,44,62,.72), rgba(13,33,48,.8)); border: 1px solid rgba(204,225,239,.12); border-radius: 10px; padding: 6px 5px; }
-  .panel h2 { font: 700 17px/1.15 Manrope, sans-serif; margin: 0 0 2px; }
-  .rule { color: #b7cbd3; font-size: 14px; margin: 0 0 4px; line-height: 1.25; }
-  table.f-table { width: 100%; border-collapse: collapse; font-size: 15px; }
-  table.f-table th, table.f-table td { padding: 2px 3px; text-align: left; border-bottom: 1px solid rgba(255,255,255,.08); }
-  table.f-table th { font-size: 13px; color: #9bb1bf; font-weight: 600; }
-  table.f-table .num { text-align: right; font-variant-numeric: tabular-nums; }
-  .stable { background: rgba(125,211,215,.14); border-radius: 6px; padding: 5px 6px; margin-top: 4px; font-size: 15px; line-height: 1.3; }
-  .note { font-size: 13px; color: #8fa7b5; margin-top: 6px; line-height: 1.25; }
-  #status { padding: 6px; background: rgba(255,255,255,.04); border-radius: 6px; font-size: 15px; }
-  @media (max-width: 800px) { .panels { grid-template-columns: 1fr; } .summary-row { grid-template-columns:1fr; } .method { grid-template-columns:1fr; } .chart-wrap { height:240px; } }
+.shell.verif{width:min(1180px,calc(100% - 20px))}
+.verif{padding:14px 0 28px;max-width:none;margin:0}.verif h1{font:800 27px/1.08 Manrope,sans-serif;margin:0}.verif .lead{color:#9bb1bf;font-size:14px;margin:5px 0 12px}
+.controls{display:flex;gap:8px;align-items:center;margin-bottom:10px;flex-wrap:wrap}.controls label{font-size:13px;color:#9bb1bf}.controls select,.controls button{background:#102535;color:#e7f2f6;border:1px solid rgba(213,237,240,.16);padding:7px 10px;border-radius:7px;font-size:14px}.controls button{cursor:pointer;background:rgba(125,211,215,.15);border-color:rgba(125,211,215,.35);color:#c6f0ec}
+#status{padding:9px;background:rgba(255,255,255,.04);border-radius:8px;font-size:14px}
+.hero{background:linear-gradient(145deg,rgba(22,53,73,.92),rgba(10,29,43,.96));border:1px solid rgba(204,225,239,.14);border-radius:13px;padding:15px;margin-bottom:10px}.hero-kicker{font-size:11px;text-transform:uppercase;letter-spacing:.08em;color:#7dd3d7;font-weight:800}.hero h2{font:800 25px/1.15 Manrope,sans-serif;margin:5px 0 4px}.hero p{margin:0;color:#b7cbd3;font-size:14px;line-height:1.4}
+.summary-row{display:grid;grid-template-columns:repeat(3,1fr);gap:8px;margin:0 0 10px}.metric-group{background:linear-gradient(160deg,rgba(18,44,62,.82),rgba(13,33,48,.92));border:1px solid rgba(204,225,239,.12);border-radius:11px;padding:11px}.metric-group h2{font:800 17px/1.1 Manrope,sans-serif;margin:0 0 8px}.metric-grid{display:grid;grid-template-columns:repeat(2,1fr);gap:6px}.metric{background:rgba(255,255,255,.045);border-radius:8px;padding:8px;min-height:58px}.metric span{display:block;color:#9bb1bf;font-size:10px;line-height:1.2}.metric b{display:block;color:#e7f2f6;font:800 18px/1.15 Manrope,sans-serif;margin-top:3px}.metric small{color:#8fa7b5;font-size:9px}.metric.accent b{color:#7dd3d7}.metric.warn b{color:#f2b56b}.metric.good b{color:#a9c7ff}
+.panel{background:linear-gradient(160deg,rgba(18,44,62,.72),rgba(13,33,48,.8));border:1px solid rgba(204,225,239,.12);border-radius:11px;padding:12px}.wide{margin-bottom:10px}.panel h2{font:800 18px/1.15 Manrope,sans-serif;margin:0 0 3px}.rule{color:#a9bdc7;font-size:12px;margin:0 0 7px;line-height:1.35}
+.chart-wrap{height:315px;margin-top:4px}.chart-wrap svg{width:100%;height:100%;display:block}.chart-caption{display:flex;justify-content:space-between;gap:8px;color:#8fa7b5;font-size:10px;margin-top:4px}
+.panels{display:grid;grid-template-columns:1fr 1fr;gap:8px}.detail-head{display:flex;justify-content:space-between;align-items:end;gap:8px;margin-bottom:7px}.detail-head small{color:#8fa7b5;font-size:10px}
+table.f-table{width:100%;border-collapse:collapse;font-size:13px}table.f-table th,table.f-table td{padding:5px 4px;text-align:left;border-bottom:1px solid rgba(255,255,255,.08)}table.f-table th{font-size:10px;color:#9bb1bf;font-weight:600}table.f-table .num{text-align:right;font-variant-numeric:tabular-nums}
+.stable{background:rgba(125,211,215,.1);border-radius:7px;padding:7px 8px;margin-top:7px;font-size:12px;line-height:1.35;color:#c8dce3}.method{display:grid;grid-template-columns:repeat(4,1fr);gap:6px;margin-top:8px}.method div{background:rgba(255,255,255,.035);border-radius:7px;padding:8px;color:#b7cbd3;font-size:11px}.method b{color:#e7f2f6;display:block;margin-bottom:2px}.note{font-size:11px;color:#8fa7b5;margin-top:8px;line-height:1.4}
+@media(max-width:800px){.verif{padding-top:10px}.verif h1{font-size:22px}.hero{padding:12px}.hero h2{font-size:20px}.summary-row,.panels{grid-template-columns:1fr}.metric-grid{grid-template-columns:repeat(2,1fr)}.chart-wrap{height:290px}.method{grid-template-columns:repeat(2,1fr)}}
+@media(max-width:430px){.shell.verif{width:calc(100% - 14px)}.metric-group{padding:9px}.metric b{font-size:17px}.metric{min-height:55px;padding:7px}.chart-wrap{height:270px}}
 </style>
 </head>
 <body>
@@ -68,58 +39,22 @@
 </header>
 
 <main class="shell verif">
-  <h1>GFS GERÇEKLEŞME ANALİZİ</h1>
-  <p class="lead">Son 16 gün · 64 GFS döngüsü · Gerçekleşen istasyon ölçümleriyle karşılaştırma</p>
-
-  <div class="controls">
-    <label>İstasyon
-      <select id="station">
-        <option value="eyupsultan">Eyüpsultan</option>
-        <option value="enka">ENKA Balmumcu</option>
-      </select>
-    </label>
-    <button id="refresh" type="button">Yenile</button>
-  </div>
-
-  <div id="status">Veriler yükleniyor…</div>
-
-  <div id="content" hidden>
-    <div class="summary-row" id="overall"></div>
-
-    <div class="panel wide">
-      <h2>Tahmin süresi → hata</h2>
-      <p class="rule">Her nokta, o tahmin ufkunda doğrulanmış tüm GFS döngülerinin ortalama hatasını gösterir. <b>Ne kadar aşağıdaysa o kadar iyi.</b></p>
-      <div class="chart-wrap"><svg id="lead-chart" viewBox="0 0 900 260" role="img" aria-label="Tahmin süresine göre GFS hata grafiği"></svg></div>
-      <div class="legend"><span style="color:#7dd3d7">Sıcaklık MAE (°C)</span><span style="color:#f2b56b">Rüzgâr hız MAE (km/sa)</span><span style="color:#a9c7ff">Yağış miktarı MAE (mm)</span></div>
-      <div class="chart-caption"><span>+6 → +12 → +18 → … → +180 saat</span><span id="chart-sample">—</span></div>
-    </div>
-
-    <div class="panels">
-      <div class="panel">
-        <h2>Sıcaklık</h2>
-        <p class="rule">Başarı kademeli: 0 °C fark %100, 0,3 °C fark %97, 1 °C fark %90. Sapma yönü: tahmin ölçümden ne kadar yüksek/düşük.</p>
-        <table class="f-table" id="temp-table">
-          <thead><tr><th>Tahmin saati</th><th class="num">Başarı</th><th class="num">Sapma yönü</th><th class="num">Kayıt</th></tr></thead>
-          <tbody></tbody>
-        </table>
-        <div id="temp-stable" class="stable"></div>
-      </div>
-
-      <div class="panel">
-        <h2>Yağış (6 saat)</h2>
-        <p class="rule">0,2 mm altı yağışsız. İkisi de yağışsızsa veya fark 1 mm ve altındaysa başarı. Sapma yönü: tahmin ölçümden ne kadar fazla/az.</p>
-        <table class="f-table" id="rain-table">
-          <thead><tr><th>Tahmin saati</th><th class="num">Başarı</th><th class="num">Sapma yönü</th><th class="num">Kayıt</th></tr></thead>
-          <tbody></tbody>
-        </table>
-        <div id="rain-stable" class="stable"></div>
-      </div>
-    </div>
-
-    <div class="method"><div><b>Arşiv</b><span id="archive-meta">—</span></div><div><b>Eşleşme</b><span>Geçerlilik saati ±45 dk</span></div><div><b>Ölçüm</b><span>İstasyon gözlemi; gelecek saatler hesaplanmaz</span></div></div>
-    <p class="note">MAE = ortalama mutlak hata. Bias, modelin sürekli sıcak/soğuk veya fazla/az tahmin etme eğilimini gösterir. Uzun tahmin ufuklarında örnek sayısı daha düşüktür.</p>
-  </div>
-</main>
+<h1>GFS GERÇEKLEŞME ANALİZİ</h1>
+<p class="lead">Son 16 gün · 64 GFS döngüsü · gerçekleşen istasyon ölçümleriyle karşılaştırma</p>
+<div class="controls"><label>İstasyon <select id="station"><option value="eyupsultan">Eyüpsultan</option><option value="enka">ENKA Balmumcu</option></select></label><button id="refresh" type="button">Yenile</button></div>
+<div id="status">Veriler yükleniyor…</div>
+<div id="content" hidden>
+<section class="hero"><div class="hero-kicker">Kısa cevap</div><h2 id="hero-title">GFS tahmin performansı hesaplanıyor…</h2><p id="hero-sub">Kısa vadeli tahminler ile daha uzun tahmin ufuklarını karşılaştırıyoruz.</p></section>
+<div class="summary-row" id="overall"></div>
+<section class="panel wide"><h2>GFS tahmin süresi uzadıkça hata nasıl değişiyor?</h2><p class="rule">Her nokta, o tahmin ufkunda doğrulanmış GFS tahminlerinin ortalama mutlak hatasıdır. <b>Daha düşük = daha iyi.</b></p><div class="chart-wrap"><svg id="lead-chart" viewBox="0 0 900 315" role="img" aria-label="Tahmin süresine göre GFS hata grafiği"></svg></div><div class="chart-caption"><span>+6 → +12 → +18 → … → +180 saat</span><span id="chart-sample">—</span></div></section>
+<div class="panels">
+<section class="panel"><div class="detail-head"><h2>Sıcaklık · tahmin ufkuna göre</h2><small>±1 °C içinde başarı</small></div><table class="f-table" id="temp-table"><thead><tr><th>Ufuk</th><th class="num">MAE</th><th class="num">Bias</th><th class="num">±1 °C</th><th class="num">N</th></tr></thead><tbody></tbody></table><div id="temp-stable" class="stable"></div></section>
+<section class="panel"><div class="detail-head"><h2>Yağış · 6 saatlik toplam</h2><small>tespit + miktar</small></div><table class="f-table" id="rain-table"><thead><tr><th>Ufuk</th><th class="num">MAE</th><th class="num">Bias</th><th class="num">Tespit</th><th class="num">N</th></tr></thead><tbody></tbody></table><div id="rain-stable" class="stable"></div></section>
+</div>
+<section class="panel" style="margin-top:8px"><div class="detail-head"><h2>Rüzgâr · tahmin ufkuna göre</h2><small>hız MAE · yön hatası</small></div><table class="f-table" id="wind-table"><thead><tr><th>Ufuk</th><th class="num">Hız MAE</th><th class="num">Yön</th><th class="num">N</th></tr></thead><tbody></tbody></table></section>
+<div class="method"><div><b>Arşiv</b><span id="archive-meta">—</span></div><div><b>Eşleşme</b><span>Geçerlilik saati ±45 dk</span></div><div><b>Doğrulama</b><span>Gelecekteki tahminler hesaplanmaz</span></div><div><b>Ölçüm</b><span>İstasyon gözlemi</span></div></div>
+<p class="note">MAE = ortalama mutlak hata. Bias, modelin sistematik olarak sıcak/soğuk veya fazla/az tahmin etme eğilimidir. “±1 °C içinde” gerçekleşen değerden en fazla 1 °C uzaklıktaki tahminlerin oranıdır.</p>
+</div></main>
 
 <script>
 const GFS_BASE = "https://gfs-watch-istanbul-gfs.muhsin-ulusoy.workers.dev";
@@ -198,7 +133,7 @@ function byLead(pairs,type){
   return [...map.entries()].sort((a,b)=>a[0]-b[0]).map(([lead,g])=>{
     if(type==="wind"){const d=g.filter(x=>x.directionDiff!=null);return {lead,n:g.length,speedMae:g.reduce((s,x)=>s+Math.abs(x.speedDiff),0)/g.length,directionMae:d.length?d.reduce((s,x)=>s+x.directionDiff,0)/d.length:null};}
     const bias=g.reduce((s,x)=>s+x.diff,0)/g.length,mae=g.reduce((s,x)=>s+Math.abs(x.diff),0)/g.length;
-    const success=type==="temp"?g.reduce((s,x)=>s+Math.max(0,100-10*Math.abs(x.diff)),0)/g.length:g.filter(x=>x.hit).length/g.length*100;
+    const success=type==="temp"?g.filter(x=>Math.abs(x.diff)<=TEMP_HIT).length/g.length*100:g.filter(x=>x.hit).length/g.length*100;
     return {lead,n:g.length,bias,mae,success};
   });
 }
@@ -254,17 +189,17 @@ function drawLeadChart(tempHours,rainHours,windHours){
     const th=byLead(pairs.temp,"temp"),rh=byLead(pairs.rain,"rain"),wh=byLead(pairs.wind,"wind");
     const t=overallTemp(pairs.temp),r=overallRain(pairs.rain),w=overallWind(pairs.wind),tb=bestWorst(th,"mae"),wb=bestWorst(wh,"speedMae");
     document.getElementById("overall").innerHTML=[
-      `<section class="metric-group"><h2>Sıcaklık</h2><div class="metric-grid"><div class="metric accent"><span>Ortalama hata</span><b>${t?fmt(t.bias,1):"—"} °C</b><small>bias</small></div><div class="metric"><span>MAE</span><b>${t?fmt(t.mae,1):"—"} °C</b><small>ortalama mutlak hata</small></div><div class="metric good"><span>En başarılı tahmin</span><b>${tb.best?"+ "+tb.best.lead+" saat":"—"}</b><small>${tb.best?fmt(tb.best.mae,1)+" °C MAE":"—"}</small></div><div class="metric warn"><span>En yüksek hata</span><b>${tb.worst?"+ "+tb.worst.lead+" saat":"—"}</b><small>${tb.worst?fmt(tb.worst.mae,1)+" °C MAE":"—"}</small></div></div></section>`,
-      `<section class="metric-group"><h2>Yağış</h2><div class="metric-grid"><div class="metric good"><span>Yağış tespit başarısı</span><b>${r?fmt(r.success,0):"—"}%</b><small>yağış / yağışsız</small></div><div class="metric"><span>Ortalama miktar hatası</span><b>${r?fmt(r.mae,1):"—"} mm</b><small>6 saatlik toplam</small></div><div class="metric accent"><span>Doğrulanan nokta</span><b>${r?r.n:"—"}</b><small>eşleşen tahmin</small></div><div class="metric"><span>Arşiv</span><b>${runs.length}/64</b><small>GFS döngüsü</small></div></div></section>`,
-      `<section class="metric-group"><h2>Rüzgâr</h2><div class="metric-grid"><div class="metric accent"><span>Ortalama hız hatası</span><b>${w?fmt(w.speedMae,1):"—"} km/sa</b><small>MAE</small></div><div class="metric"><span>Yön hatası</span><b>${w&&w.directionMae!=null?fmt(w.directionMae,0):"—"}°</b><small>ortalama dairesel fark</small></div><div class="metric good"><span>En başarılı tahmin</span><b>${wb.best?"+ "+wb.best.lead+" saat":"—"}</b><small>${wb.best?fmt(wb.best.speedMae,1)+" km/sa MAE":"—"}</small></div><div class="metric warn"><span>En yüksek hata</span><b>${wb.worst?"+ "+wb.worst.lead+" saat":"—"}</b><small>${wb.worst?fmt(wb.worst.speedMae,1)+" km/sa MAE":"—"}</small></div></div></section>`
-    ].join("");
+`<section class="metric-group"><h2>🌡 Sıcaklık</h2><div class="metric-grid"><div class="metric accent"><span>Bias · ortalama hata</span><b>${t?(t.bias>0?"+":"")+fmt(t.bias,1):"—"} °C</b><small>yönlü sapma</small></div><div class="metric"><span>MAE</span><b>${t?fmt(t.mae,1):"—"} °C</b><small>mutlak hata</small></div><div class="metric good"><span>±1 °C içinde</span><b>${t?fmt(pairs.temp.filter(x=>Math.abs(x.diff)<=TEMP_HIT).length/pairs.temp.length*100,0):"—"}%</b><small>başarı oranı</small></div><div class="metric warn"><span>En zayıf tahmin</span><b>${tb.worst?"+ "+tb.worst.lead+" saat":"—"}</b><small>${tb.worst?fmt(tb.worst.mae,1)+" °C MAE":"—"}</small></div></div></section>`,
+`<section class="metric-group"><h2>🌧 Yağış</h2><div class="metric-grid"><div class="metric good"><span>Yağış tespit başarısı</span><b>${r?fmt(r.success,0):"—"}%</b><small>yağış / yağışsız</small></div><div class="metric"><span>Ortalama miktar hatası</span><b>${r?fmt(r.mae,1):"—"} mm</b><small>6 saatlik toplam</small></div><div class="metric accent"><span>Doğrulanan nokta</span><b>${r?r.n:"—"}</b><small>eşleşen tahmin</small></div><div class="metric warn"><span>En zayıf tahmin</span><b>${rh.length?"+ "+bestWorst(rh,"mae").worst.lead+" saat":"—"}</b><small>${rh.length?fmt(bestWorst(rh,"mae").worst.mae,1)+" mm MAE":"—"}</small></div></div></section>`,
+`<section class="metric-group"><h2>💨 Rüzgâr</h2><div class="metric-grid"><div class="metric accent"><span>Ortalama hız hatası</span><b>${w?fmt(w.speedMae,1):"—"} km/sa</b><small>MAE</small></div><div class="metric"><span>Ortalama yön hatası</span><b>${w&&w.directionMae!=null?fmt(w.directionMae,0):"—"}°</b><small>dairesel fark</small></div><div class="metric good"><span>En başarılı tahmin</span><b>${wb.best?"+ "+wb.best.lead+" saat":"—"}</b><small>${wb.best?fmt(wb.best.speedMae,1)+" km/sa MAE":"—"}</small></div><div class="metric warn"><span>En zayıf tahmin</span><b>${wb.worst?"+ "+wb.worst.lead+" saat":"—"}</b><small>${wb.worst?fmt(wb.worst.speedMae,1)+" km/sa MAE":"—"}</small></div></div></section>`
+].join("");;
     drawLeadChart(th,rh,wh);
-    document.getElementById("chart-sample").textContent=`Sıcaklık ${pairs.temp.length} · Yağış ${pairs.rain.length} · Rüzgâr ${pairs.wind.length} doğrulanmış nokta`;
-    const tt=document.querySelector("#temp-table tbody");tt.innerHTML="";for(const x of th){const tr=document.createElement("tr");tr.innerHTML=`<td>+${x.lead} saat</td><td class="num">${fmt(x.success,0)}%</td><td class="num">${biasText(x.bias,"temp")}</td><td class="num">${x.n}</td>`;tt.appendChild(tr);}
-    const rt=document.querySelector("#rain-table tbody");rt.innerHTML="";for(const x of rh){const tr=document.createElement("tr");tr.innerHTML=`<td>+${x.lead} saat</td><td class="num">${fmt(x.success,0)}%</td><td class="num">${biasText(x.bias,"rain")}</td><td class="num">${x.n}</td>`;rt.appendChild(tr);}
-    document.getElementById("temp-stable").textContent=tb.best?`En başarılı sıcaklık tahmini +${tb.best.lead} saatte: MAE ${fmt(tb.best.mae,1)} °C. En yüksek hata +${tb.worst.lead} saatte: ${fmt(tb.worst.mae,1)} °C.`:"Yeterli veri yok.";
+    document.getElementById("hero-title").textContent=t?`GFS sıcaklığı ortalama ${fmt(t.mae,1)} °C hata ile tahmin ediyor.`:"GFS doğrulama verisi hesaplanıyor…"; document.getElementById("hero-sub").textContent=t?`Modelin sistematik sapması ${(t.bias>0?"+":"")+fmt(t.bias,1)} °C. Kısa vadede hata daha düşük, tahmin süresi uzadıkça hata artıyor.`:"Yeterli doğrulama verisi yok."; document.getElementById("chart-sample").textContent=`Sıcaklık ${pairs.temp.length} · Yağış ${pairs.rain.length} · Rüzgâr ${pairs.wind.length} doğrulanmış nokta`;
+    const tt=document.querySelector("#temp-table tbody");tt.innerHTML="";for(const x of th){const tr=document.createElement("tr");tr.innerHTML=`<td>+${x.lead}</td><td class="num">${fmt(x.mae,1)} °C</td><td class="num">${biasText(x.bias,"temp")}</td><td class="num">${fmt(x.success,0)}%</td><td class="num">${x.n}</td>`;tt.appendChild(tr);}
+    const rt=document.querySelector("#rain-table tbody");rt.innerHTML="";for(const x of rh){const tr=document.createElement("tr");tr.innerHTML=`<td>+${x.lead}</td><td class="num">${fmt(x.mae,1)} mm</td><td class="num">${biasText(x.bias,"rain")}</td><td class="num">${fmt(x.success,0)}%</td><td class="num">${x.n}</td>`;rt.appendChild(tr);}
+    document.getElementById("temp-stable").textContent=t?`En iyi tahmin ufku +${tb.best.lead} saat · MAE ${fmt(tb.best.mae,1)} °C · ±1 °C içinde ${fmt(pairs.temp.filter(x=>Math.abs(x.diff)<=TEMP_HIT).length/pairs.temp.length*100,0)}%.`:"Yeterli veri yok.";
     document.getElementById("rain-stable").textContent=r?`Yağış tespit başarısı ${fmt(r.success,0)}%; ortalama miktar hatası ${fmt(r.mae,1)} mm.`:"Yeterli veri yok.";
-    document.getElementById("archive-meta").textContent=`${runs.length}/64 döngü · ${samples.length} istasyon gözlemi · +6 → +180 saat doğrulama`;
+    const wt=document.querySelector("#wind-table tbody");wt.innerHTML="";for(const x of wh){const tr=document.createElement("tr");tr.innerHTML=`<td>+${x.lead}</td><td class="num">${fmt(x.speedMae,1)} km/sa</td><td class="num">${x.directionMae!=null?fmt(x.directionMae,0)+"°":"—"}</td><td class="num">${x.n}</td>`;wt.appendChild(tr);} document.getElementById("archive-meta").textContent=`${runs.length}/64 döngü · ${samples.length} istasyon gözlemi · +6 → +180 saat doğrulama`;
     status.hidden=true;content.hidden=false;
   }catch(e){status.textContent="Hata: "+(e.message||"veri alınamadı");}
 }
