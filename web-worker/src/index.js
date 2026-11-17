@@ -433,8 +433,11 @@ export default {
 
       // Serve the admin document directly from the asset binding. Do not let
       // the static-assets router issue directory/index redirects (307).
+      // Keep the admin document at a root-level asset. Cloudflare's static
+      // asset router treats /admin/* as a directory namespace and may emit
+      // a canonical 307 even for /admin/index.html.
       const assetPath = path === "/admin" || path === "/admin/" || path === "/admin/index.html"
-        ? "/admin/index.html"
+        ? "/admin-panel.html"
         : path;
       const assetUrl = new URL(assetPath, url.origin);
       const assetRequest = new Request(assetUrl.toString(), {
