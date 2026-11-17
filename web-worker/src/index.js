@@ -197,8 +197,7 @@ function stripStrayLiteralNewlineText(response, requestPath = "") {
 }
 
 function basicAuthOk(request, env) {
-  const header = request.headers.get("Authorization") || "";
-  if (!env.ADMIN_PASSWORD || !header.startsWith("Basic ")) return false;
+  const header = request.headers.get("Authorization") || "";  if (!env.ADMIN_PASSWORD || !header.startsWith("Basic ")) return false;
   try {
     const decoded = atob(header.slice(6));
     const separator = decoded.indexOf(":");
@@ -397,8 +396,7 @@ async function analyticsStats(env) {
       devices: await makeGroups("device"),
       os: await makeGroups("os"),
       browsers: await makeGroups("browser"),
-      cities: await makeGroups("city"),
-      sources: Object.entries(sourceMap).sort((a,b) => b[1] - a[1]).map(r => [r[0], r[1], pageviewsToday]),
+      cities: await makeGroups("city"),      sources: Object.entries(sourceMap).sort((a,b) => b[1] - a[1]).map(r => [r[0], r[1], pageviewsToday]),
       pages: pages.map(r => [r.label, Number(r.count || 0), pageviewsToday]),
       recent: recent.map(r => ({
         time: new Date(r.ts_utc).toLocaleTimeString("tr-TR", { timeZone: "Europe/Istanbul", hour: "2-digit", minute: "2-digit" }),
@@ -409,7 +407,7 @@ async function analyticsStats(env) {
       }))
     },
     days: dayRows.map(r => ({ day: r.day, visitors: Number(r.visitors || 0), pageviews: Number(r.pageviews || 0) })),
-    month: monthRows.map(r => ({ day: r.day, visitors: Number(r.visitors || 0), pageviews: Number(r.pageviews || 0 }))
+    month: monthRows.map(r => ({ day: r.day, visitors: Number(r.visitors || 0), pageviews: Number(r.pageviews || 0) }))
   };
 }
 
@@ -597,8 +595,7 @@ export default {
       if (isLiveEcmwfLatest) {
         const published = await callService(
           env.ISTANBUL_GFS,
-          request,
-          "/ecmwf/latest",
+          request,          "/ecmwf/latest",
           "https://gfs-watch-istanbul-gfs.muhsin-ulusoy.workers.dev"
         );
         if (published) return published;
