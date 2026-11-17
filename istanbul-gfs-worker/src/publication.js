@@ -281,6 +281,22 @@ export function buildIstanbulInteractiveSvg(runs) {
         (latest ? 3.2 : 1.8) + '"' + (latest ? "" : ' stroke-dasharray="4 3"') +
         ' stroke-linecap="round" stroke-linejoin="round" opacity="' + (latest ? "1" : ".94") + '"/>'
       );
+      // Mark invalid forecast rows with a small X at the bottom of the plot.
+      // The point itself remains unplotted and the line stays broken.
+      values.forEach((value, index) => {
+        if (value === null && pointsBySeries[seriesIndex][index]?.__invalid_chart_point === true) {
+          const fx = xPositions[index];
+          const fy = plotY + plotHeight - 7;
+          const fHour = Number(pointsBySeries[seriesIndex][index]?.forecast_hour);
+          const fLabel = Number.isFinite(fHour) ? "F" + Math.round(fHour) : "F?";
+          parts.push(
+            '<g class="gfs-invalid-point" data-forecast-hour="' + escapeXml(fLabel) + '">',
+            '<text x="' + fx.toFixed(3) + '" y="' + fy.toFixed(3) + '" text-anchor="middle" fill="' + item.color + '" font-size="13" font-weight="900" font-family="' + FONT + '">×</text>',
+            '<text x="' + fx.toFixed(3) + '" y="' + (fy + 11).toFixed(3) + '" text-anchor="middle" fill="' + item.color + '" font-size="7" font-weight="700" font-family="' + FONT + '">' + escapeXml(fLabel) + '</text>',
+            '</g>'
+          );
+        }
+      });
       if (latest) values.forEach((value, index) => {
         if (value !== null) parts.push('<circle cx="' + xPositions[index].toFixed(3) + '" cy="' +
           yPositions[index] + '" r="2.8" fill="' + item.color + '"/>');
@@ -507,6 +523,12 @@ function briefingWrap(text,maxChars=38) {
 }
 export function buildIstanbulBriefingSvg(document, now=new Date(), stationObservation=null) {
   const points=briefingForecastPoints(document,now);
+  const invalidSteps=[...new Set(points
+    .filter(p => ["temperature_2m_c","temperature_850hpa_c","precipitation_6h_mm","wind_speed_10m_kmh"]
+      .every(field => numeric(p?.[field]) === null))
+    .map(p => Number(p?.forecast_hour))
+    .filter(Number.isFinite)
+    .sort((a,b)=>a-b))];
   const rainLines=briefingRainLines(points);
   const tempLines=briefingWrap(briefingTemperatureSummary(points,stationObservation),38);
   const W=1080,H=1920, outerX=56, outerW=968, firstY=300, gap=28;
@@ -525,6 +547,9 @@ export function buildIstanbulBriefingSvg(document, now=new Date(), stationObserv
     draw(firstY,"Yağış saatleri",rainLines.length?rainLines:["Önümüzdeki günler için çıktı yok."],rainH)+
     draw(secondY,"5 günlük sıcaklık",tempLines,tempH)+
     '<text x="'+outerX+'" y="'+footerY+'" fill="#6F8997" font-family="Inter, sans-serif" font-size="26">istanbulunhavasi.com</text>'+
+    (invalidSteps.length
+      ? '<text x="'+outerX+'" y="'+(footerY+42)+'" fill="#F3C96B" font-family="Inter, sans-serif" font-size="21">Veri kalite notu · geçersiz: '+esc(invalidSteps.map(v=>"F"+v).join(", "))+'</text>'
+      : '')+
     '</svg>';
   return { key:"notifications/istanbul-gfs-"+runStamp(document.run_id_utc)+"-5day-briefing.svg", run_id_utc:document.run_id_utc, body, width:W, height:H };
 }
