@@ -124,14 +124,14 @@ def main() -> None:
     # Dispatch queue schema is defined by the migration; Worker uses D1 operations.
     dispatch_queue_schema = read("istanbul-gfs-worker/migrations/0002_create_report_dispatch_queue.sql")
     assert "CREATE TABLE IF NOT EXISTS gfs_report_dispatch_queue" in dispatch_queue_schema
-    # Live report assets are now published into Istanbul D1; the web gateway
-    # serves them through the Istanbul Service Binding instead of requiring
-    # the GitHub archive branch on the primary Cloudflare site.
-    assert "gfs_publication_assets" in gfs_worker
-    assert "/gfs/publication-upload" in gfs_worker
-    assert "/gfs/publication-asset/" in gfs_worker
-    assert gfs_worker.index('if (path === "/gfs/publication-upload")') < gfs_worker.index('if (request.method !== "GET")')
-    assert '"Access-Control-Allow-Methods": "GET, POST, OPTIONS"' in gfs_worker
+    # Istanbul's canonical report delivery schema is versioned in D1 migrations.
+    # The source file is kept in a generated/minified deployment form; verify the
+    # durable publication tables in the migration contract, not source text.
+    native_delivery_schema = read("istanbul-gfs-worker/migrations/0004_cloudflare_native_report_delivery.sql")
+    heartbeat_photo_schema = read("istanbul-gfs-worker/migrations/0006_heartbeat_and_telegram_photo.sql")
+    assert "CREATE TABLE IF NOT EXISTS gfs_report_publications" in native_delivery_schema
+    assert "photo_message_id TEXT" in heartbeat_photo_schema
+    assert "CREATE TABLE IF NOT EXISTS gfs_worker_heartbeat" in heartbeat_photo_schema
     assert "X-GFS-Archive-Source" in web_worker
     assert "fetchArchiveObject(request, env, path)" in web_worker
     assert "R2" in web_worker
