@@ -139,12 +139,20 @@ function buildSeries(runs) {
   });
   const dates = validKeys.map(key => new Date(key + ":00Z"));
   const offsets = dates.map(date => (date.getTime() - firstMs) / 3600000);
-  return { series, validKeys, pointsBySeries, localLabels, dates, offsets };
+  const invalidBySeries = series.map(item => ({
+    run_id_utc: item.document.run_id_utc,
+    forecast_hours: [...item.points.values()]
+      .filter(point => point?.__invalid_chart_point === true)
+      .map(point => Number(point?.forecast_hour))
+      .filter(Number.isFinite)
+      .sort((a, b) => a - b),
+  }));
+  return { series, validKeys, pointsBySeries, localLabels, dates, offsets, invalidBySeries };
 }
 
 export function buildIstanbulInteractiveSvg(runs) {
   const chart = buildSeries(runs);
-  const { series, validKeys, pointsBySeries, localLabels, dates, offsets } = chart;
+  const { series, validKeys, pointsBySeries, localLabels, dates, offsets, invalidBySeries } = chart;
   const W = 1152;
   const H = 838;
   const panelWidth = 505;
@@ -358,6 +366,13 @@ export function buildIstanbulInteractiveSvg(runs) {
     validKeys.length + ' ortak nokta · ' + series.length + ' döngü</text>',
     '<text x="1090" y="810" text-anchor="end" fill="#E7F2F6" font-size="10" font-family="' + FONT +
     '">Kaynak: MeteoPT GFS · İstanbul nokta tahmini</text>',
+    invalidBySeries.some(item => item.forecast_hours.length)
+      ? '<text x="63" y="828" fill="#F3C96B" font-size="9" font-family="' + FONT + '">Veri kalite notu: ' +
+        invalidBySeries.filter(item => item.forecast_hours.length).map(item =>
+          escapeXml(runLabel(item.run_id_utc, item.run_id_utc === series[series.length - 1].document.run_id_utc)) +
+          ' · geçersiz F: ' + item.forecast_hours.join(", ")
+        ).join(" · ") + '</text>'
+      : '',
     '<metadata id="gfs-renderer-version">cloudflare-js-v4</metadata>',
     '<metadata id="gfs-interactive-data"><![CDATA[' + metadataText + ']]></metadata>',
     '<g id="gfs-interaction-layer">'
