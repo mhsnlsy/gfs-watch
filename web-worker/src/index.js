@@ -415,8 +415,11 @@ async function snapshotAnalyticsDay(env, day) {
   const db = env.ANALYTICS_DB;
   if (!db) return;
 
-  const start = day + "T00:00:00+00:00";
-  const end = day + "T23:59:59.999+00:00";
+  // Analytics days are Istanbul calendar days (UTC+03:00), not UTC dates.
+  const startDate = new Date(day + "T00:00:00+03:00");
+  const endDate = new Date(startDate.getTime() + 24 * 60 * 60 * 1000);
+  const start = startDate.toISOString();
+  const end = endDate.toISOString();
 
   const q = async (sql, ...args) => (await db.prepare(sql).bind(...args).all()).results || [];
   const one = async (sql, ...args) => (await db.prepare(sql).bind(...args).first()) || {};
