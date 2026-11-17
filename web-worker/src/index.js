@@ -175,17 +175,242 @@ async function fetchD1PublicationAsset(request, env, key) {
   return response.ok ? response : null;
 }
 
-function stripStrayLiteralNewlineText(response) {
+function stripStrayLiteralNewlineText(response, requestPath = "") {
   const contentType = response.headers.get("content-type") || "";
   if (!contentType.toLowerCase().includes("text/html")) return response;
 
-  return new HTMLRewriter()
-    .on("*", {
-      text(text) {
-        if (text.text.trim() === "\\n") text.remove();
-      },
-    })
-    .transform(response);
+  let rewriter = new HTMLRewriter().on("*", {
+    text(text) {
+      if (text.text.trim() === "\\n") text.remove();
+    },
+  });
+
+  if (!requestPath.startsWith("/admin")) {
+    rewriter = rewriter.on("body", {
+      element(element) {
+        element.append('<script src="/analytics.js?v=1" defer></script>', { html: true });
+      }
+    });
+  }
+
+  return rewriter.transform(response);
+}
+
+function basicAuthOk(request, env) {
+  const header = request.headers.get("Authorization") || "";
+  if (!env.ADMIN_PASSWORD || !header.startsWith("Basic ")) return false;
+  try {
+    const decoded = atob(header.slice(6));
+    const separator = decoded.indexOf(":");
+    return separator > 0 &&
+      decoded.slice(0, separator) === "admin" &&
+      decoded.slice(separator + 1) === env.ADMIN_PASSWORD;
+  } catch (_) {
+    return false;
+  }
+}
+
+function adminUnauthorized() {
+  return new Response("Authentication required", {
+    status: 401,
+    headers: {
+      "WWW-Authenticate": 'Basic realm="Istanbul Havası Admin", charset="UTF-8"',
+      "Cache-Control": "no-store"
+    }
+  });
+}
+
+function parseAnalyticsUserAgent(ua) {
+  const s = String(ua || "");
+  const device = /iPad|Tablet/i.test(s) ? "Tablet" : (/Mobi|Android/i.test(s) ? "Mobil" : "Masaüstü");
+  const os = /iPhone|iPad|iPod/i.test(s) ? "iOS" :
+    (/Android/i.test(s) ? "Android" :
+    (/Windows/i.test(s) ? "Windows" :
+    (/Mac OS X/i.test(s) ? "macOS" :
+    (/Linux/i.test(s) ? "Linux" : "Diğer"))));
+  const browser = /SamsungBrowser/i.test(s) ? "Samsung Internet" :
+    (/Edg\//i.test(s) ? "Edge" :
+    (/OPR\//i.test(s) ? "Opera" :
+    (/Chrome\//i.test(s) ? "Chrome" :
+    (/Safari\//i.test(s) && !/Chrome\//i.test(s) ? "Safari" :
+    (/Firefox\//i.test(s) ? "Firefox" : "Diğer")))));
+  return { device, os, browser };
+}
+
+function analyticsMeta(request) {
+  const parsed = parseAnalyticsUserAgent(request.headers.get("User-Agent") || "");
+  const cf = request.cf || {};
+  return {
+    city: cf.city || null,
+    country: cf.country || request.headers.get("CF-IPCountry") || null,
+    device: parsed.device,
+    os: parsed.os,
+    browser: parsed.browser,
+    referrer: (request.headers.get("Referer") || "").slice(0, 500) || null
+  };
+}
+
+function analyticsDayStartUtc(daysAgo) {
+  const local = new Intl.DateTimeFormat("en-CA", {
+    timeZone: "Europe/Istanbul",
+    year: "numeric", month: "2-digit", day: "2-digit"
+  }).format(new Date());
+  const [y, m, d] = local.split("-").map(Number);
+  const start = new Date(Date.UTC(y, m - 1, d) - 3 * 60 * 60 * 1000);
+  start.setUTCDate(start.getUTCDate() - Number(daysAgo || 0));
+  return start.toISOString();
+}
+
+function classifySource(referrer) {
+  const r = String(referrer || "").toLowerCase();
+  if (!r) return "Direkt";
+  if (/google\.|bing\.|yahoo\.|duckduckgo\./.test(r)) return "Arama";
+  if (/instagram\.com/.test(r)) return "Instagram";
+  if (/t\.me|telegram\./.test(r)) return "Telegram";
+  if (/x\.com|twitter\.com/.test(r)) return "X";
+  if (/facebook\.com/.test(r)) return "Facebook";
+  if (/youtube\.com|youtu\.be/.test(r)) return "YouTube";
+  return "Diğer";
+}
+
+function analyticsSessionId(request, body) {
+  const fromBody = String(body?.session_id || "").trim();
+  if (fromBody) return fromBody.slice(0, 120);
+  const cookie = request.headers.get("Cookie") || "";
+  const match = cookie.match(/(?:^|;\s*)ih_session=([^;]+)/);
+  return match ? decodeURIComponent(match[1]).slice(0, 120) : crypto.randomUUID();
+}
+
+async function recordAnalyticsEvent(request, env) {
+  if (!env.ANALYTICS_DB) return null;
+  const body = await request.json().catch(() => ({}));
+  const type = body.type === "heartbeat" ? "heartbeat" : "pageview";
+  const sessionId = analyticsSessionId(request, body);
+  const path = String(body.path || "/").slice(0, 500);
+  const now = new Date().toISOString();
+  const meta = analyticsMeta(request);
+
+  await env.ANALYTICS_DB.prepare(
+    `INSERT INTO analytics_sessions
+      (session_id, first_seen_utc, last_seen_utc, last_path, city, country, device, os, browser, referrer)
+     VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+     ON CONFLICT(session_id) DO UPDATE SET
+      last_seen_utc=excluded.last_seen_utc,
+      last_path=excluded.last_path,
+      city=excluded.city,
+      country=excluded.country,
+      device=excluded.device,
+      os=excluded.os,
+      browser=excluded.browser,
+      referrer=COALESCE(analytics_sessions.referrer, excluded.referrer)`
+  ).bind(sessionId, now, now, path, meta.city, meta.country, meta.device, meta.os, meta.browser, meta.referrer).run();
+
+  if (type === "pageview") {
+    await env.ANALYTICS_DB.prepare(
+      `INSERT INTO analytics_events
+       (session_id, ts_utc, event_type, path, city, country, device, os, browser, referrer)
+       VALUES (?, ?, 'pageview', ?, ?, ?, ?, ?, ?, ?)`
+    ).bind(sessionId, now, path, meta.city, meta.country, meta.device, meta.os, meta.browser, meta.referrer).run();
+  }
+  return sessionId;
+}
+
+async function analyticsStats(env) {
+  const db = env.ANALYTICS_DB;
+  if (!db) return { ok: false, error: "analytics_db_missing" };
+  const todayStart = analyticsDayStartUtc(0);
+  const weekStart = analyticsDayStartUtc(6);
+  const monthStart = analyticsDayStartUtc(29);
+  const activeCutoff = new Date(Date.now() - 90000).toISOString();
+
+  const q = async (sql, ...args) => (await db.prepare(sql).bind(...args).all()).results || [];
+  const one = async (sql, ...args) => (await db.prepare(sql).bind(...args).first()) || {};
+
+  const live = await one(
+    "SELECT COUNT(*) AS n FROM analytics_sessions WHERE last_seen_utc >= ?",
+    activeCutoff
+  );
+  const livePages = await q(
+    "SELECT last_path AS path, COUNT(*) AS count FROM analytics_sessions WHERE last_seen_utc >= ? GROUP BY last_path ORDER BY count DESC LIMIT 10",
+    activeCutoff
+  );
+
+  const uniqueToday = Number((await one(
+    "SELECT COUNT(DISTINCT session_id) AS n FROM analytics_events WHERE ts_utc >= ?",
+    todayStart
+  )).n || 0);
+  const pageviewsToday = Number((await one(
+    "SELECT COUNT(*) AS n FROM analytics_events WHERE ts_utc >= ?",
+    todayStart
+  )).n || 0);
+  const newToday = Number((await one(
+    "SELECT COUNT(*) AS n FROM analytics_events e JOIN analytics_sessions s ON s.session_id=e.session_id WHERE e.ts_utc >= ? AND s.first_seen_utc >= ?",
+    todayStart, todayStart
+  )).n || 0);
+  const returningToday = Math.max(0, uniqueToday - newToday);
+
+  const group = async (field) => q(
+    `SELECT COALESCE(${field}, 'Bilinmiyor') AS label, COUNT(*) AS count
+     FROM analytics_events WHERE ts_utc >= ?
+     GROUP BY ${field} ORDER BY count DESC LIMIT 10`,
+    todayStart
+  );
+  const pages = await q(
+    "SELECT path AS label, COUNT(*) AS count FROM analytics_events WHERE ts_utc >= ? GROUP BY path ORDER BY count DESC LIMIT 10",
+    todayStart
+  );
+  const sourceRows = await q(
+    "SELECT referrer, COUNT(*) AS count FROM analytics_events WHERE ts_utc >= ? GROUP BY referrer ORDER BY count DESC LIMIT 30",
+    todayStart
+  );
+  const sourceMap = {};
+  sourceRows.forEach(row => {
+    const label = classifySource(row.referrer);
+    sourceMap[label] = (sourceMap[label] || 0) + Number(row.count || 0);
+  });
+
+  const recent = await q(
+    "SELECT ts_utc, city, device, browser, path FROM analytics_events WHERE event_type='pageview' ORDER BY id DESC LIMIT 12"
+  );
+  const dayRows = await q(
+    "SELECT substr(ts_utc,1,10) AS day, COUNT(DISTINCT session_id) AS visitors, COUNT(*) AS pageviews FROM analytics_events WHERE ts_utc >= ? GROUP BY day ORDER BY day DESC",
+    weekStart
+  );
+  const monthRows = await q(
+    "SELECT substr(ts_utc,1,10) AS day, COUNT(DISTINCT session_id) AS visitors, COUNT(*) AS pageviews FROM analytics_events WHERE ts_utc >= ? GROUP BY day ORDER BY day DESC",
+    monthStart
+  );
+
+  const makeGroups = async (field) => (await group(field)).map(r => [r.label, Number(r.count || 0), pageviewsToday]);
+
+  return {
+    ok: true,
+    live: {
+      active_visitors: Number(live.n || 0),
+      pages: livePages.map(r => ({ path: r.path, count: Number(r.count || 0) }))
+    },
+    today: {
+      unique_visitors: uniqueToday,
+      pageviews: pageviewsToday,
+      new_visitors: newToday,
+      returning_visitors: returningToday,
+      devices: await makeGroups("device"),
+      os: await makeGroups("os"),
+      browsers: await makeGroups("browser"),
+      cities: await makeGroups("city"),
+      sources: Object.entries(sourceMap).sort((a,b) => b[1] - a[1]).map(r => [r[0], r[1], pageviewsToday]),
+      pages: pages.map(r => [r.label, Number(r.count || 0), pageviewsToday]),
+      recent: recent.map(r => ({
+        time: new Date(r.ts_utc).toLocaleTimeString("tr-TR", { timeZone: "Europe/Istanbul", hour: "2-digit", minute: "2-digit" }),
+        city: r.city,
+        device: r.device,
+        browser: r.browser,
+        path: r.path
+      }))
+    },
+    days: dayRows.map(r => ({ day: r.day, visitors: Number(r.visitors || 0), pageviews: Number(r.pageviews || 0) })),
+    month: monthRows.map(r => ({ day: r.day, visitors: Number(r.visitors || 0), pageviews: Number(r.pageviews || 0 }))
+  };
 }
 
 export default {
@@ -203,6 +428,32 @@ export default {
           "Access-Control-Max-Age": "86400",
         },
       });
+    }
+
+    if (path.startsWith("/admin")) {
+      if (!basicAuthOk(request, env)) return adminUnauthorized();
+      const adminAsset = path === "/admin" || path === "/admin/" ? "/admin/index.html" : path;
+      const response = await env.ASSETS.fetch(new Request(new URL(adminAsset, url), request));
+      const headers = new Headers(response.headers);
+      headers.set("Cache-Control", "no-store, max-age=0");
+      return new Response(response.body, { status: response.status, statusText: response.statusText, headers });
+    }
+
+    if (path === "/api/analytics/event" && request.method === "POST") {
+      const sessionId = await recordAnalyticsEvent(request, env);
+      const headers = new Headers({
+        "Content-Type": "application/json; charset=utf-8",
+        "Cache-Control": "no-store"
+      });
+      if (!request.headers.get("Cookie")?.match(/(?:^|;\s*)ih_session=/) && sessionId) {
+        headers.append("Set-Cookie", "ih_session=" + encodeURIComponent(sessionId) + "; Max-Age=31536000; Path=/; SameSite=Lax; Secure");
+      }
+      return new Response(JSON.stringify({ ok: true }), { status: 200, headers });
+    }
+
+    if (path === "/api/admin/analytics") {
+      if (!basicAuthOk(request, env)) return adminUnauthorized();
+      return responseJson(await analyticsStats(env));
     }
 
     if (path === "/favicon.svg" || path === "/favicon.ico") {
@@ -469,8 +720,8 @@ export default {
       const headers = new Headers(assetResponse.headers);
       headers.set("Cache-Control", "no-store, max-age=0");
       headers.set("CDN-Cache-Control", "no-store");
-      return stripStrayLiteralNewlineText(new Response(assetResponse.body, { status: assetResponse.status, statusText: assetResponse.statusText, headers }));
+      return stripStrayLiteralNewlineText(new Response(assetResponse.body, { status: assetResponse.status, statusText: assetResponse.statusText, headers }), path);
     }
-    return stripStrayLiteralNewlineText(assetResponse);
+    return stripStrayLiteralNewlineText(assetResponse, path);
   },
 };
