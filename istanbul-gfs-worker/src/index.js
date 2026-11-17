@@ -1206,6 +1206,26 @@ async function handleApi(request, env) {
     }
   }
 
+  if (path === "/gfs/verification" || path === "/api/verification") {
+    try {
+      // Verification needs enough historical GFS cycles for the full lead-time
+      // range. Four cycles only cover ~18 hours of model age, so long leads
+      // can never mature into observations. Keep the latest 56 cycles
+      // (~14 days) available; the page itself filters to observed valid times.
+      const runs = await listRuns(env, 56);
+      const latest = runs[0] || null;
+      if (!latest) return json({ ok: false, error: "No archived Istanbul GFS runs are available yet" }, 503);
+      return json({
+        ...latest,
+        comparison_runs: runs,
+        verification_run_count: runs.length,
+        verification_max_lead_hours: 180,
+      });
+    } catch (error) {
+      return json({ ok: false, error: String(error?.message || error) }, 503);
+    }
+  }
+
   if (path === "/gfs/comparison" || path === "/api/comparison") {
     try {
       let runs = await listRuns(env, 4);
