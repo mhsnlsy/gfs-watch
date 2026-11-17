@@ -144,14 +144,14 @@ const stationObservation = {
 const report = buildIstanbulReportText(runs[3], new Date("2026-11-01T12:00:00Z"), stationObservation);
 assert.ok(report.includes("İSTANBUL GFS · 18Z"));
 assert.ok(report.includes("ÖNÜMÜZDEKİ 24 SAAT"));
-assert.ok(report.includes("5 GÜNLÜK TAHMİN"));
+assert.ok(report.includes("KRONOLOJİK HAVA ÖZETİ"));
 assert.ok(report.includes("Kaynak: MeteoPT GFS"));
 assert.ok(report.includes("ENKA BALMUMCU"));
 assert.ok(report.includes("13,2°C"));
 assert.ok(report.includes("2,4 mm"));
 assert.ok(report.includes("ÖNÜMÜZDEKİ 24 SAAT"));
 assert.ok(report.includes("Nem"));
-assert.ok(report.includes("5 GÜNLÜK TAHMİN"));
+assert.ok(report.includes("KRONOLOJİK HAVA ÖZETİ"));
 assert.ok(report.includes("Cum 06.11"));
 assert.ok(report.includes("YAĞIŞ ZAMANLARI · 72 SAAT"));
 assert.ok(!report.includes("\n\n\n"), "Telegram report should not contain excessive blank lines");
