@@ -112,6 +112,11 @@ jobs:
             web-worker/public/data/sisli-station-temperature-history.json \
             web-worker/public/data/sisli-station-rain-history.json
 
+          # Preserve the text-only admin and analytics assets after the clean public build.
+          mkdir -p web-worker/public/admin
+          cp web-worker/admin-assets/index.html web-worker/public/admin/index.html
+          cp web-worker/admin-assets/analytics.js web-worker/public/analytics.js
+
           printf '{"apiBaseUrl":"%s"}' "$PUSH_API_URL" > web-worker/public/push-config.json
           touch web-worker/public/.nojekyll
           test -s web-worker/public/index.html
