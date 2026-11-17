@@ -66,14 +66,14 @@ export async function loadIstanbulTelegramFont(archive) {
  * Only the raster output resolution and font source differ.
  */
 export async function renderIstanbulPhotoPng(svg, fontBytes) {
-  return renderSvgPhotoPng(svg, fontBytes, TELEGRAM_IMAGE_WIDTH, TELEGRAM_IMAGE_HEIGHT, ["Son GFS raporu","Sıcaklık","850 hPa sıcaklık","Yağış","10 m rüzgâr hızı","MeteoPT GFS"]);
+  return renderSvgPhotoPng(svg, fontBytes, TELEGRAM_IMAGE_WIDTH, TELEGRAM_IMAGE_HEIGHT, ["Son GFS raporu","Sıcaklık","850 hPa sıcaklık","Yağış","10 m rüzgâr hızı","MeteoPT GFS"], "0 0 1152 838");
 }
 
 export async function renderIstanbulBriefingPhotoPng(svg, fontBytes) {
-  return renderSvgPhotoPng(svg, fontBytes, 2160, 3840, ["İstanbul Havası","5 günlük özet","YAĞIŞ SAATLERİ","5 GÜNLÜK SICAKLIK"]);
+  return renderSvgPhotoPng(svg, fontBytes, 2160, 3840, ["İstanbul Havası","5 günlük özet","YAĞIŞ SAATLERİ","5 GÜNLÜK SICAKLIK"], "0 0 1080 1920");
 }
 
-async function renderSvgPhotoPng(svg, fontBytes, targetWidth, targetHeight, required) {
+async function renderSvgPhotoPng(svg, fontBytes, targetWidth, targetHeight, required, expectedViewBox) {
   if (typeof svg !== "string" || !svg.includes("<svg")) {
     throw new Error("Cannot rasterize an invalid Istanbul GFS SVG report");
   }
@@ -82,8 +82,8 @@ async function renderSvgPhotoPng(svg, fontBytes, targetWidth, targetHeight, requ
   }
 
   const opening = svg.match(/<svg\b[^>]*>/i);
-  if (!opening || !/viewBox="0 0 1152 838"/i.test(opening[0])) {
-    throw new Error("Telegram report must use the homepage four-panel SVG viewBox (0 0 1152 838)");
+  if (!opening || !new RegExp('viewBox="' + expectedViewBox.replace(/ /g, "\\s+") + '"', "i").test(opening[0])) {
+    throw new Error("Telegram SVG has an unexpected viewBox; expected " + expectedViewBox);
   }
   for (const required of [
     "Son GFS raporu",
