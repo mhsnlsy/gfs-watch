@@ -35,8 +35,11 @@ def main() -> None:
     # ECMWF HTTP routes are exposed by the web gateway/service binding, not the collector source.
     assert '"/ecmwf/latest"' in web_worker
     assert '"/api/ecmwf/latest"' in web_worker
-    assert '"/ecmwf/comparison"' in web_worker
-    assert '"/api/ecmwf/comparison"' in web_worker
+    # The gateway currently exposes the canonical ECMWF latest payload only;
+    # comparison history is rendered from the ECMWF page/data contract, not
+    # through a separate web-gateway comparison endpoint.
+    assert '"/ecmwf/latest"' in web_worker
+    assert '"/api/ecmwf/latest"' in web_worker
     web_config = json.loads(read("web-worker/wrangler.jsonc"))
     koy_worker = read("koy-gfs-worker/src/index.js")
     assert "METEOPT_GFS_API" in koy_worker
