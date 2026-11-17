@@ -280,13 +280,37 @@ async function fetchActiveEnkaStationObservation(env) {
 
 async function processQueuedReports(env) {
   const staleBefore = new Date(Date.now() - 10 * 60 * 1000).toISOString();
+  // Telegram reports must follow the Istanbul publication window, not merely
+  // the oldest/newest F180 job in the queue. Otherwise a late queue retry can
+  // publish yesterday's 06Z report after the 12Z cycle is already due.
+  function expectedReportRunId(now) {
+    const local = new Date(now.getTime() + UTC_OFFSET_MS);
+    const hour = local.getUTCHours();
+    let cycleHour;
+    if (hour >= 19 || hour < 1) cycleHour = 12;
+    else if (hour >= 13) cycleHour = 6;
+    else if (hour >= 7) cycleHour = 0;
+    else cycleHour = 18;
+    const date = new Date(Date.UTC(local.getUTCFullYear(), local.getUTCMonth(), local.getUTCDate(), cycleHour));
+    if (hour < 1 && cycleHour === 12) date.setUTCDate(date.getUTCDate() - 1);
+    if (hour < 7 && cycleHour === 18) date.setUTCDate(date.getUTCDate() - 1);
+    return utcIso(date);
+  }
+
+  const expectedRun = expectedReportRunId(new Date());
   const result = await env.GFS_DB.prepare(
     "SELECT run_id_utc, attempts FROM gfs_report_dispatch_queue " +
-    "WHERE attempts < 288 AND (status = 'pending' OR (status = 'processing' AND dispatched_at_utc < ?)) " +
+    "WHERE attempts < 288 AND run_id_utc = ? AND " +
+    "(status = 'pending' OR (status = 'processing' AND dispatched_at_utc < ?)) " +
     "ORDER BY run_id_utc DESC LIMIT 1"
-  ).bind(staleBefore).all();
+  ).bind(expectedRun, staleBefore).all();
   const job = (result.results || [])[0];
-  if (!job) return { queued: 0, published: 0, failed: 0 };
+  if (!job) return {
+    queued: 0,
+    published: 0,
+    failed: 0,
+    waiting_for_expected_cycle: expectedRun,
+  };
 
   const claimTime = new Date().toISOString();
   const claim = await env.GFS_DB.prepare(
