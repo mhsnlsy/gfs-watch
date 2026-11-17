@@ -285,15 +285,18 @@ async function processQueuedReports(env) {
   // publish yesterday's 06Z report after the 12Z cycle is already due.
   function expectedReportRunId(now) {
     const local = new Date(now.getTime() + UTC_OFFSET_MS);
-    const hour = local.getUTCHours();
+    const minutes = local.getUTCHours() * 60 + local.getUTCMinutes();
     let cycleHour;
-    if (hour >= 19 || hour < 1) cycleHour = 12;
-    else if (hour >= 13) cycleHour = 6;
-    else if (hour >= 7) cycleHour = 0;
-    else cycleHour = 18;
+    let dayOffset = 0;
+    if (minutes >= 19 * 60 + 20) cycleHour = 12;
+    else if (minutes >= 13 * 60 + 20) cycleHour = 6;
+    else if (minutes >= 7 * 60 + 20) cycleHour = 0;
+    else {
+      cycleHour = 18;
+      dayOffset = -1;
+    }
     const date = new Date(Date.UTC(local.getUTCFullYear(), local.getUTCMonth(), local.getUTCDate(), cycleHour));
-    if (hour < 1 && cycleHour === 12) date.setUTCDate(date.getUTCDate() - 1);
-    if (hour < 7 && cycleHour === 18) date.setUTCDate(date.getUTCDate() - 1);
+    date.setUTCDate(date.getUTCDate() + dayOffset);
     return utcIso(date);
   }
 
