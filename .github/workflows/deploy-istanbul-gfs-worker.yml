@@ -182,27 +182,30 @@ jobs:
             warnings: result.warnings
           }));
           NODE
-      - name: Regenerate latest GFS chart asset
+      - name: Verify latest GFS data after collection
         env:
           ISTANBUL_GFS_API: https://gfs-watch-istanbul-gfs.muhsin-ulusoy.workers.dev
-          GFS_DISPATCH_TOKEN: ${{ secrets.GFS_DISPATCH_TOKEN }}
         run: |
           set -euo pipefail
-          curl --fail --silent --show-error --max-time 60 \
-            --request POST \
-            --url "$ISTANBUL_GFS_API/internal/regenerate-latest-chart?check=$(date +%s)" \
-            --header "Authorization: Bearer $GFS_DISPATCH_TOKEN" \
-            --header "Accept: application/json" \
-            -o "$RUNNER_TEMP/istanbul-chart-regeneration.json"
-          node - "$RUNNER_TEMP/istanbul-chart-regeneration.json" <<'NODE'
+          curl --silent --show-error --fail --max-time 100 \\
+            "$ISTANBUL_GFS_API/gfs/latest?verify=$(date +%s)" \\
+            -o "$RUNNER_TEMP/istanbul-latest-after-collection.json"
+          node - "$RUNNER_TEMP/istanbul-latest-after-collection.json" <<'NODE'
           const fs = require("fs");
           const doc = JSON.parse(fs.readFileSync(process.argv[2], "utf8"));
-          if (doc.ok !== true || !doc.run_id_utc || !doc.key) {
-            throw new Error("Latest GFS chart regeneration failed: " + JSON.stringify(doc));
+          if (doc.schema !== "gfs-watch.forecast.v1" || doc.f180?.available !== true ||
+              !Array.isArray(doc.forecast_6_hourly) || doc.forecast_6_hourly.length < 40) {
+            throw new Error("Latest Istanbul GFS data validation failed: " + JSON.stringify({
+              schema: doc.schema, run_id_utc: doc.run_id_utc,
+              f180: doc.f180, points: doc.forecast_6_hourly?.length
+            }));
           }
-          console.log(JSON.stringify(doc));
+          console.log(JSON.stringify({
+            run_id_utc: doc.run_id_utc,
+            forecast_points: doc.forecast_6_hourly.length,
+            f180_ready: doc.f180.available
+          }));
           NODE
-
       - name: Verify active ENKA station panel contract
         env:
           STATIONS_API: https://gfs-watch-stations.muhsin-ulusoy.workers.dev
