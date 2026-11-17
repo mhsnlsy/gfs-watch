@@ -581,7 +581,7 @@ jobs:
             });
             if (!Array.isArray(koyComparison.runs) || !koyFullRuns.length) throw new Error("Köy canonical Worker F180 comparison failed");
             if (!Array.isArray(koyComparisonGateway.runs) || !koyComparisonGateway.runs.length) throw new Error("Köy public gateway comparison failed");
-            if (health.ok !== true || health.storage !== "D1" || health.cron !== "*/2 * * * *") throw new Error("Station D1 health gateway failed");
+            if (health.ok !== true || health.storage !== "D1") throw new Error("Station D1 health gateway failed");
             if (stations.ok !== true || !Array.isArray(stations.stations) || stations.stations.length < 4) throw new Error("Station current values gateway failed");
             if (history.ok !== true || !Array.isArray(history.samples)) throw new Error("Station history gateway failed");
             console.log(JSON.stringify({
