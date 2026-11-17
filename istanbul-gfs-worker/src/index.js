@@ -1188,7 +1188,28 @@ async function handleApi(request, env) {
   if (path.startsWith("/gfs/publication-asset/")) {
     const key = decodeURIComponent(path.slice("/gfs/publication-asset/".length)).replace(/^\/+/, "");
     try {
-      const row = await getPublicationAsset(env, key);
+      let row = await getPublicationAsset(env, key);
+      // If the current run is archived but the publication asset was missed
+      // by a transient dispatch race, rebuild the requested current comparison
+      // directly from the archived GFS runs and persist it to D1.
+      if (!row && key.startsWith("notifications/istanbul-gfs-") && key.endsWith("-comparison.svg")) {
+        const runs = await listRuns(env, 4);
+        const requestedStamp = key.slice("notifications/istanbul-gfs-".length, -"-comparison.svg".length);
+        const matching = runs.find(run => runStamp(run.run_id_utc) === requestedStamp);
+        if (matching) {
+          const chart = buildIstanbulInteractiveSvg(runs);
+          if (chart.key === key) {
+            await putPublicationAsset(env, {
+              key: chart.key,
+              run_id_utc: chart.run_id_utc,
+              content_type: "image/svg+xml; charset=utf-8",
+              encoding: "utf8",
+              body: chart.body,
+            });
+            row = await getPublicationAsset(env, key);
+          }
+        }
+      }
       if (!row) return json({ ok: false, error: "Publication asset not found" }, 404);
       return decodePublicationAsset(row);
     } catch (error) {
