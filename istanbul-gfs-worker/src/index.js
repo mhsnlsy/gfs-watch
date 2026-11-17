@@ -1,3 +1,4 @@
+// Telegram cycle selection is intentionally tied to Istanbul publication windows.
 // Manual GFS reconciliation trigger marker: 2026-11-17 19:xx TSİ
 import { buildIstanbulInteractiveSvg, buildIstanbulBriefingSvg, buildIstanbulReportText } from "./publication.js";
 import { METEOPT_ECMWF_API, METEOPT_ECMWF_WEB, METEOPT_GFS_API, METEOPT_SOURCE_POLICY, meteoptSourceMetadata } from "../../shared/meteopt-source.js";
