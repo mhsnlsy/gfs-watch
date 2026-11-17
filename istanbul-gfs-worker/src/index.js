@@ -1214,9 +1214,8 @@ async function handleApi(request, env) {
   if (path === "/gfs/verification" || path === "/api/verification") {
     try {
       // Verification needs enough historical GFS cycles for the full lead-time
-      // range. Four cycles only cover ~18 hours of model age, so long leads
-      // can never mature into observations. Keep the latest 56 cycles
-      // (~14 days) available; the page itself filters to observed valid times.
+      // range. Keep the latest 64 cycles (16 days) available; the page itself
+      // filters to valid times that have matching station observations.
       const runs = await listRuns(env, GFS_RUN_RETENTION);
       const latest = runs[0] || null;
       if (!latest) return json({ ok: false, error: "No archived Istanbul GFS runs are available yet" }, 503);
