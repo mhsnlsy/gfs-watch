@@ -125,7 +125,8 @@ jobs:
           echo "Unauthenticated /admin HTTP status: $status"
           test "$status" = "401"
 
-          admin_status="$(curl -sS -o /tmp/admin.html -w "%{http_code}" --max-time 20             -u "admin:$ADMIN_PASSWORD" "$WEB/admin")"
+          admin_status="$(curl -sS -o /tmp/admin.html -w "%{http_code}" --max-time 20 \
+            -u "admin:$ADMIN_PASSWORD" "$WEB/admin/")"
           echo "Authenticated /admin HTTP status: $admin_status"
           test "$admin_status" = "200"
           grep -Fq 'admin-build' /tmp/admin.html || {
@@ -134,7 +135,8 @@ jobs:
             exit 1
           }
 
-          api_status="$(curl -sS -o /tmp/analytics.json -w "%{http_code}" --max-time 20             -u "admin:$ADMIN_PASSWORD" "$WEB/api/admin/analytics")"
+          api_status="$(curl -sS -o /tmp/analytics.json -w "%{http_code}" --max-time 20 \
+            -u "admin:$ADMIN_PASSWORD" "$WEB/api/admin/analytics")"
           echo "Authenticated analytics API HTTP status: $api_status"
           test "$api_status" = "200"
 
