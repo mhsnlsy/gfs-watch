@@ -21,6 +21,14 @@
     ],
     "not_found_handling": "404-page"
   },
+  "d1_databases": [
+    {
+      "binding": "ANALYTICS_DB",
+      "database_name": "gfs-watch-web-analytics",
+      "database_id": "__D1_DATABASE_ID__",
+      "migrations_dir": "migrations"
+    }
+  ],
   "services": [
     {
       "binding": "ISTANBUL_GFS",
