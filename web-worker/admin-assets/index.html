@@ -4,5 +4,96 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width,initial-scale=1">
 <title>İstanbul Havası — Admin</title>
-<meta name="admin-build" content="2026-11-17-admin-v3">
+<meta name="admin-build" content="2026-11-17-admin-v4">
 <style>
+:root{color-scheme:dark}
+*{box-sizing:border-box}
+html,body{margin:0;padding:0;background:#080b10;color:#d8dee9;font:14px/1.5 ui-monospace,SFMono-Regular,Menlo,Monaco,Consolas,"Liberation Mono",monospace}
+body{padding:24px}
+main{max-width:1200px;margin:0 auto}
+pre{margin:0;white-space:pre-wrap;word-break:break-word}
+h1{font-size:18px;margin:0 0 8px;color:#fff}
+h2{font-size:14px;margin:24px 0 8px;color:#8bd5ff}
+.status{margin:0 0 18px;color:#8aa0b5}
+.line{border-top:1px solid #202733;margin:18px 0}
+.err{color:#ff8f8f}
+.ok{color:#8fe3a8}
+.dim{color:#778494}
+.grid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:16px}
+section{min-width:0}
+@media(max-width:760px){body{padding:14px}.grid{grid-template-columns:1fr}}
+</style>
+</head>
+<body>
+<main>
+<h1>İSTANBUL HAVASI — ADMIN</h1>
+<div id="status" class="status">Bağlanıyor…</div>
+<div class="line"></div>
+<div class="grid">
+<section><h2>BUGÜN</h2><pre id="today">Yükleniyor…</pre></section>
+<section><h2>AKTİF ZİYARETÇİLER</h2><pre id="active">Yükleniyor…</pre></section>
+</div>
+<div class="line"></div>
+<section><h2>7 GÜN</h2><pre id="days">Yükleniyor…</pre></section>
+<div class="line"></div>
+<section><h2>30 GÜN</h2><pre id="month">Yükleniyor…</pre></section>
+<div class="line"></div>
+<section><h2>SON ZİYARETLER</h2><pre id="recent">Yükleniyor…</pre></section>
+</main>
+<script>
+(function(){
+"use strict";
+var statusEl=document.getElementById("status");
+function text(v){return v===null||v===undefined?"-":String(v)}
+function rows(obj){
+ if(!obj||!obj.length)return "  -";
+ return obj.map(function(r){return "  "+r[0]+": "+text(r[1])}).join("\n");
+}
+function fmtDays(a){
+ if(!a||!a.length)return "  -";
+ return a.map(function(r){return "  "+r.day+"  visitors="+r.visitors+"  pageviews="+r.pageviews}).join("\n");
+}
+function fmtRecent(a){
+ if(!a||!a.length)return "  -";
+ return a.map(function(r){return "  "+r.time+"  "+r.city+"  "+r.device+"  "+r.browser+"  "+r.path}).join("\n");
+}
+function load(){
+ fetch("/api/admin/analytics",{credentials:"same-origin",cache:"no-store"})
+ .then(function(r){
+   if(!r.ok) throw new Error("HTTP "+r.status);
+   return r.json();
+ })
+ .then(function(d){
+   if(!d||d.ok!==true) throw new Error("API yanıtı geçersiz");
+   var t=d.today||{};
+   document.getElementById("today").textContent=[
+     "unique visitors : "+text(t.unique_visitors),
+     "pageviews       : "+text(t.pageviews),
+     "new visitors    : "+text(t.new_visitors),
+     "returning       : "+text(t.returning_visitors),
+     "",
+     "DEVICES",""+rows(t.devices),
+     "","OS",""+rows(t.os),
+     "","BROWSERS",""+rows(t.browsers),
+     "","CITIES",""+rows(t.cities),
+     "","SOURCES",""+rows(t.sources),
+     "","PAGES",""+rows(t.pages)
+   ].join("\n");
+   document.getElementById("active").textContent="active now : "+text(d.active_visitors);
+   document.getElementById("days").textContent=fmtDays(d.days);
+   document.getElementById("month").textContent=fmtDays(d.month);
+   document.getElementById("recent").textContent=fmtRecent(t.recent);
+   statusEl.textContent="LIVE · son güncelleme "+new Date().toLocaleTimeString("tr-TR");
+   statusEl.className="status ok";
+ })
+ .catch(function(e){
+   statusEl.textContent="API HATASI · "+e.message;
+   statusEl.className="status err";
+ });
+}
+load();
+setInterval(load,30000);
+})();
+</script>
+</body>
+</html>
