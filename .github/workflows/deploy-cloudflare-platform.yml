@@ -534,17 +534,17 @@ jobs:
             const rows = stations.stations || [];
             const required = ["enka", "eyupsultan", "sisli"];
             const summary = required.map(key => {
-              const row = rows.find(item => item.station_key === key);
+              const row = rows.find(item => item.station_key === key || item.station_key === undefined && item.key === key);
               return {
                 key,
-                station_id: row?.station_id || null,
                 status: row?.status || null,
                 temperature_c: row?.temperature_c ?? row?.temperature_2m_c ?? null,
-                observed_at_utc: row?.observed_at_utc || null,
+                observed_at_utc: row?.observed_at_utc || row?.source_observed_at_utc || null,
                 last_error: row?.last_error || null
               };
             });
-            if (health.ok !== true || stations.ok !== true || summary.some(row => !row.station_id)) {
+            if (health.ok !== true || stations.ok !== true ||
+                summary.some(row => row.status !== "live" || !row.observed_at_utc)) {
               throw new Error("Apex station API contract failed: " + JSON.stringify({health, summary}));
             }
             console.log("Apex station API diagnostics:", JSON.stringify(summary));
