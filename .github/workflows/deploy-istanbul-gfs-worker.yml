@@ -192,7 +192,7 @@ jobs:
           const fs = require("fs");
           const doc = JSON.parse(fs.readFileSync(process.argv[2], "utf8"));
           const latestRun = String(doc.latest_run_id_utc || "");
-          const latestPublication = doc.latest_publication || {};
+          const latestPublication = doc.latest_report_publication || {};
           const local = new Date(Date.now() + 3 * 60 * 60 * 1000);
           const expectedCycle = local.getUTCHours() >= 19 || local.getUTCHours() < 1 ? "12:00:00+00:00" :
             local.getUTCHours() >= 13 ? "06:00:00+00:00" :
