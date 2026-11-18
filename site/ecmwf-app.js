@@ -610,8 +610,12 @@ function buildSvg(runs) {
       if(!response.ok)throw new Error("HTTP "+response.status);
       const doc=await response.json();
       if(!doc||doc.schema!=="gfs-watch.ecmwf-eps.v1"||doc.status!=="ready")throw new Error("ECMWF veri paketi hazır değil.");
-      const runs=(Array.isArray(doc.comparison_runs)?doc.comparison_runs:[]).filter(Boolean).slice(-4);
-      const allRuns=runs.length?[...runs].sort((a,b)=>Date.parse(a.run_id_utc)-Date.parse(b.run_id_utc)):[doc];
+      // The API's comparison_runs holds only the OLDER cycles; the current one is the document itself.
+      const byRun=new Map();
+      for(const r of [...(Array.isArray(doc.comparison_runs)?doc.comparison_runs:[]),doc]){
+        if(r&&r.run_id_utc&&Array.isArray(r.forecast_6_hourly)&&r.forecast_6_hourly.length)byRun.set(Date.parse(r.run_id_utc),{run_id_utc:r.run_id_utc,forecast_6_hourly:r.forecast_6_hourly});
+      }
+      const allRuns=[...byRun.entries()].sort((a,b)=>a[0]-b[0]).map(e=>e[1]).slice(-4);
       try{renderSvg(allRuns);}catch(chartError){console.error("ECMWF grafik hatası",chartError);}
       renderTable(doc);
       const setText=(id,text)=>{const el=$(id);if(el)el.textContent=text;};
