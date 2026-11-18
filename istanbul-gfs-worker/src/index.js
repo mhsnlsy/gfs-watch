@@ -38,6 +38,16 @@ function json(data, status = 200) {
   });
 }
 
+function valuesFromField(field) {
+  if (Array.isArray(field)) return field;
+  if (!field || typeof field !== "object") return [];
+  if (Array.isArray(field.values)) return field.values;
+  if (Array.isArray(field.data)) return field.data;
+  if (Array.isArray(field.forecast)) return field.forecast;
+  if (Array.isArray(field.series)) return field.series;
+  return [];
+}
+
 function number(values, index) {
   const raw = values?.[index];
   if (raw === null || raw === undefined || raw === "") return null;
@@ -118,14 +128,15 @@ function normalize(candidate, now) {
     wind850: "wind_speed_850hpa_kmh",
     apcp: "precipitation_6h_mm",
   };
+  const data = candidate.document?.data || {};
   const series = {};
   for (const key of Object.keys(names)) {
-    series[key] = candidate.document?.data?.[key]?.values || [];
+    series[key] = valuesFromField(data[key]);
   }
   const seriesByAlias = (...keys) => {
     for (const key of keys) {
-      const values = candidate.document?.data?.[key]?.values;
-      if (Array.isArray(values) && values.length) return values;
+      const values = valuesFromField(data[key]);
+      if (values.length) return values;
     }
     return [];
   };
@@ -205,6 +216,14 @@ function normalize(candidate, now) {
       forecast: "MeteoPT GFS point forecast (Istanbul, TR)",
       forecast_url: candidate.url,
     }),
+    // Direction counts make upstream direction-series regressions visible in
+    // the live API instead of leaving the table arrows silently blank.
+    wind_direction_10m_numeric_points: points.filter(point =>
+      point.wind_direction_10m_deg !== null
+    ).length,
+    wind_direction_850hpa_numeric_points: points.filter(point =>
+      point.wind_direction_850hpa_deg !== null
+    ).length,
     f72: {
       available: hasF72,
       forecast_hour: 72,
