@@ -685,9 +685,10 @@ async function deliverPendingTelegram(env) {
   }
 }
 
-function ecmwfRunCandidate(now = new Date()) {
+function ecmwfRunCandidates(now = new Date(), limit = 6) {
   const hour = now.getUTCHours() >= 12 ? 12 : 0;
-  return new Date(Date.UTC(now.getUTCFullYear(), now.getUTCMonth(), now.getUTCDate(), hour));
+  const latest = new Date(Date.UTC(now.getUTCFullYear(), now.getUTCMonth(), now.getUTCDate(), hour));
+  return Array.from({ length: limit }, (_, index) => new Date(latest.getTime() - index * 12 * 3600000));
 }
 
 function ecmwfNumber(value) {
@@ -762,6 +763,10 @@ async function fetchEcmwfDocument(runDt) {
     previousHour = steps[i];
   }
   if (forecasts.length < 8) throw new Error("MeteoPT ECMWF usable forecast is too short: " + forecasts.length);
+  const horizon = forecasts[forecasts.length - 1]?.forecast_hour || 0;
+  if (horizon < 180) {
+    throw new Error("MeteoPT ECMWF cycle is not complete yet: only +" + horizon + "h is usable");
+  }
   const daily = {};
   for (const item of forecasts) {
     const date = item.valid_time_istanbul.slice(0, 10);
@@ -831,14 +836,17 @@ async function fetchEcmwfDocument(runDt) {
 }
 
 async function collectEcmwf(env) {
-  const runDt = ecmwfRunCandidate();
-  const runId = runDt.toISOString().replace(".000Z", "+00:00");
   const current = await env.GFS_DB.prepare("SELECT run_id_utc, payload_json FROM ecmwf_current WHERE key = 'latest'").first();
-  if (current && current.run_id_utc === runId) {
-    return { updated: false, run_id_utc: runId, source: "meteopt" };
-  }
-  const payload = await fetchEcmwfDocument(runDt);
-  await env.GFS_DB.prepare(
+  const candidates = ecmwfRunCandidates();
+  const errors = [];
+  for (const runDt of candidates) {
+    const runId = runDt.toISOString().replace(".000Z", "+00:00");
+    if (current && current.run_id_utc === runId) {
+      return { updated: false, run_id_utc: runId, source: "meteopt", forecast_horizon_hours: JSON.parse(current.payload_json)?.forecast_horizon_hours || null };
+    }
+    try {
+      const payload = await fetchEcmwfDocument(runDt);
+      await env.GFS_DB.prepare(
     "INSERT INTO ecmwf_runs (run_id_utc, payload_json, published_at_utc, stored_at_utc) VALUES (?, ?, ?, ?) ON CONFLICT(run_id_utc) DO UPDATE SET payload_json=excluded.payload_json, published_at_utc=excluded.published_at_utc, stored_at_utc=excluded.stored_at_utc"
   ).bind(runId, JSON.stringify(payload), runId, new Date().toISOString()).run();
   await env.GFS_DB.prepare(
@@ -848,7 +856,23 @@ async function collectEcmwf(env) {
     await env.ECMWF_ARCHIVE.put("data/ecmwf/latest.json", JSON.stringify(payload));
     await env.ECMWF_ARCHIVE.put("data/ecmwf/" + runId.replaceAll(":", "").replaceAll("+", "") + ".json", JSON.stringify(payload));
   }
-  return { updated: true, run_id_utc: runId, source: "meteopt", forecast_horizon_hours: payload.forecast_horizon_hours };
+    return { updated: true, run_id_utc: runId, source: "meteopt", forecast_horizon_hours: payload.forecast_horizon_hours };
+    } catch (error) {
+      errors.push(runId + ": " + String(error?.message || error));
+      console.warn(JSON.stringify({ event: "ecmwf_cycle_unavailable", run_id_utc: runId, message: String(error?.message || error) }));
+    }
+  }
+  if (current) {
+    return {
+      updated: false,
+      run_id_utc: current.run_id_utc,
+      source: "meteopt",
+      forecast_horizon_hours: JSON.parse(current.payload_json)?.forecast_horizon_hours || null,
+      fallback: true,
+      errors,
+    };
+  }
+  throw new Error("No complete MeteoPT ECMWF cycle available: " + errors.join(" | "));
 }
 
 async function collectData(env) {
