@@ -228,11 +228,31 @@ jobs:
               f180: doc.f180, points: doc.forecast_6_hourly?.length
             }));
           }
+          const tablePoints = doc.forecast_6_hourly.filter(point =>
+            Number(point.forecast_hour) > 0 && Number(point.forecast_hour) <= 180 &&
+            Number(point.forecast_hour) % 3 === 0
+          );
+          const wind10DirectionPoints = tablePoints.filter(point =>
+            point.wind_direction_10m_deg !== null && point.wind_direction_10m_deg !== undefined &&
+            Number.isFinite(Number(point.wind_direction_10m_deg))
+          ).length;
+          const wind850DirectionPoints = tablePoints.filter(point =>
+            point.wind_direction_850hpa_deg !== null && point.wind_direction_850hpa_deg !== undefined &&
+            Number.isFinite(Number(point.wind_direction_850hpa_deg))
+          ).length;
           console.log(JSON.stringify({
             run_id_utc: doc.run_id_utc,
             forecast_points: doc.forecast_6_hourly.length,
-            f180_ready: doc.f180.available
+            f180_ready: doc.f180.available,
+            wind10_direction_points: wind10DirectionPoints,
+            wind850_direction_points: wind850DirectionPoints,
+            wind10_direction_metadata: doc.wind_direction_10m_numeric_points ?? null,
+            wind850_direction_metadata: doc.wind_direction_850hpa_numeric_points ?? null
           }));
+          if (wind10DirectionPoints < 1 || wind850DirectionPoints < 1) {
+            throw new Error("MeteoPT GFS wind direction data missing from the F180 payload: " +
+              JSON.stringify({ wind10DirectionPoints, wind850DirectionPoints }));
+          }
           NODE
       - name: Verify active ENKA station panel contract
         env:
