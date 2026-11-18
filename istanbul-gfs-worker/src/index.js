@@ -1317,13 +1317,23 @@ async function handleApi(request, env) {
 
   if (path === "/ecmwf/latest" || path === "/api/ecmwf/latest") {
     try {
-      let row = await env.GFS_DB.prepare("SELECT payload_json FROM ecmwf_current WHERE key = 'latest'").first();
-      if (!row) {
+      let row = await env.GFS_DB.prepare("SELECT run_id_utc, payload_json FROM ecmwf_current WHERE key = 'latest'").first();
+      let current = row?.payload_json ? JSON.parse(row.payload_json) : null;
+      if (!current || Number(current.forecast_horizon_hours || 0) < 180) {
         await collectEcmwf(env);
-        row = await env.GFS_DB.prepare("SELECT payload_json FROM ecmwf_current WHERE key = 'latest'").first();
+        row = await env.GFS_DB.prepare("SELECT run_id_utc, payload_json FROM ecmwf_current WHERE key = 'latest'").first();
+        current = row?.payload_json ? JSON.parse(row.payload_json) : current;
       }
-      if (!row) return json({ ok: false, error: "No MeteoPT ECMWF run is available yet" }, 503);
-      return json(JSON.parse(row.payload_json));
+      if (!current) return json({ ok: false, error: "No complete MeteoPT ECMWF run is available yet" }, 503);
+      const rows = await env.GFS_DB.prepare("SELECT run_id_utc, payload_json FROM ecmwf_runs WHERE run_id_utc <> ? ORDER BY run_id_utc DESC LIMIT 3").bind(row?.run_id_utc || current.run_id_utc).all();
+      const comparisonRuns = (rows.results || []).map(item => {
+        const archived = JSON.parse(item.payload_json);
+        return {
+          run_id_utc: archived.run_id_utc,
+          forecast_6_hourly: Array.isArray(archived.forecast_6_hourly) ? archived.forecast_6_hourly : [],
+        };
+      }).filter(item => item.forecast_6_hourly.length > 0);
+      return json({ ...current, comparison_runs: comparisonRuns });
     } catch (error) {
       return json({ ok: false, error: String(error?.message || error) }, 503);
     }
