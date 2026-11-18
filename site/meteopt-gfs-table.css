@@ -2084,3 +2084,22 @@ html,body{
     white-space: nowrap !important;
   }
 }
+ 
+/* Final wind-direction visibility: keep arrows clear on desktop and narrow screens. */
+#meteopt-gfs-table .meteopt-wind-arrow{
+  flex:0 0 auto!important;
+  width:11px!important;
+  height:11px!important;
+  font-size:11px!important;
+  line-height:11px!important;
+  color:#ffe08a!important;
+  text-shadow:0 0 4px rgba(255,224,138,.22)!important;
+}
+@media(max-width:850px),(pointer:coarse){
+  #meteopt-gfs-table .meteopt-wind-arrow{
+    width:10px!important;
+    height:10px!important;
+    font-size:10px!important;
+    line-height:10px!important;
+  }
+}
