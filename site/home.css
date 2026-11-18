@@ -5633,3 +5633,32 @@ nav a:hover{color:#eef7f8}
 .briefing-share-button:active{transform:translateY(1px)}
 .briefing-share-button:focus-visible{outline:2px solid rgba(125,211,215,.55);outline-offset:2px}
 @media(prefers-reduced-motion:reduce){.briefing-share-button{transition:none}}
+
+
+/* 20261118: briefing visual cleanup — preserve all wording/data.
+   Only fix the desktop card geometry and share-button collision. */
+@media (min-width:561px){
+  .dashboard-left > .station-briefing-inline .briefing-row{
+    grid-template-columns:118px minmax(0,1fr)!important;
+    gap:9px!important;
+  }
+  .dashboard-left > .station-briefing-inline .briefing-row#brief-temperature-trend-row{
+    padding-right:92px!important;
+  }
+  .dashboard-left > .station-briefing-inline .briefing-row#brief-rain{
+    padding-right:8px!important;
+  }
+  .dashboard-left > .station-briefing-inline .briefing-k{
+    white-space:normal!important;
+  }
+  .dashboard-left > .station-briefing-inline .briefing-v{
+    min-width:0!important;
+    overflow-wrap:normal!important;
+    word-break:normal!important;
+  }
+}
+@media (max-width:560px){
+  .dashboard-left > .station-briefing-inline .briefing-row#brief-temperature-trend-row{
+    padding-right:8px!important;
+  }
+}
