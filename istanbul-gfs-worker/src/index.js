@@ -249,6 +249,14 @@ function normalize(candidate, now) {
     },
     daily_summary: daily,
     forecast_6_hourly: points,
+    // Temporary provider-schema diagnostics; removed after the live direction
+    // field names are confirmed.
+    meteopt_wind_source_fields: Object.keys(candidate.document?.data || {}).filter(key =>
+      /wind|dir|\bu10\b|\bv10\b/i.test(key)
+    ),
+    meteopt_top_level_wind_fields: Object.keys(candidate.document || {}).filter(key =>
+      /wind|dir|\bu10\b|\bv10\b/i.test(key)
+    ),
     forecast_horizon_hours: Math.max(...steps),
     forecast_valid_until_utc: points.length ? points[points.length - 1].valid_time_utc : null,
   };
