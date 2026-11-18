@@ -39,7 +39,9 @@ function json(data, status = 200) {
 }
 
 function number(values, index) {
-  const value = Number(values?.[index]);
+  const raw = values?.[index];
+  if (raw === null || raw === undefined || raw === "") return null;
+  const value = Number(raw);
   return Number.isFinite(value) ? value : null;
 }
 
@@ -113,7 +115,6 @@ function normalize(candidate, now) {
     snlevel: "snowln",
     tmp850mb: "temperature_850hpa_c",
     wind10m: "wind_speed_10m_kmh",
-    winddir10m: "wind_direction_10m_deg",
     wind850: "wind_speed_850hpa_kmh",
     apcp: "precipitation_6h_mm",
   };
@@ -121,6 +122,16 @@ function normalize(candidate, now) {
   for (const key of Object.keys(names)) {
     series[key] = candidate.document?.data?.[key]?.values || [];
   }
+  const seriesByAlias = (...keys) => {
+    for (const key of keys) {
+      const values = candidate.document?.data?.[key]?.values;
+      if (Array.isArray(values) && values.length) return values;
+    }
+    return [];
+  };
+  // Accept both MeteoPT naming variants, matching the Köy GFS collector.
+  const windDirection10m = seriesByAlias("wind10mdir", "winddir10m");
+  const windDirection850 = seriesByAlias("wind850mdir", "wind850dir", "winddir850");
 
   const points = [];
   for (let index = 0; index < steps.length; index += 1) {
@@ -135,6 +146,8 @@ function normalize(candidate, now) {
     for (const [sourceKey, outputKey] of Object.entries(names)) {
       point[outputKey] = number(series[sourceKey], index);
     }
+    point.wind_direction_10m_deg = number(windDirection10m, index);
+    point.wind_direction_850hpa_deg = number(windDirection850, index);
     points.push(point);
   }
 
