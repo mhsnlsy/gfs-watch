@@ -616,9 +616,16 @@ function buildSvg(runs) {
       renderTable(doc);
       const setText=(id,text)=>{const el=$(id);if(el)el.textContent=text;};
       setText("ecmwf-run-meta","Döngü: "+shortRun(doc.run_id_utc)+" UTC · Grafik: +180 saat");
-      setText("ecmwf-updated","Yayınlandı: "+shortRun(doc.updated_at_utc)+" TSİ");
+      // Expected newest cycle: 00Z/12Z becomes available at MeteoPT ~7 h after its nominal time.
+      const nowMs=Date.now(), slot=12*3600000, avail=7*3600000;
+      const expectedMs=Math.floor((nowMs-avail)/slot)*slot;
+      const gotMs=Date.parse(doc.run_id_utc);
+      const waiting=Number.isFinite(gotMs)&&gotMs<expectedMs;
+      setText("ecmwf-updated",waiting
+        ? "Yeni döngü ("+String(new Date(expectedMs).getUTCHours()).padStart(2,"0")+"Z) MeteoPT'de bekleniyor · 5 dk'da bir kontrol"
+        : "Güncel döngü · 5 dk'da bir kontrol");
       setText("ecmwf-table-run","Döngü: "+shortRun(doc.run_id_utc)+" UTC");
-      setText("ecmwf-table-updated","Yayınlandı: "+shortRun(doc.updated_at_utc)+" TSİ");
+      setText("ecmwf-table-updated",waiting?"Yeni döngü bekleniyor":"Güncel");
       status.textContent="Güncel · MeteoPT ECMWF";
     }catch(error){
       status.textContent="ECMWF verisi alınamadı · "+(error.message||"geçici bağlantı sorunu");
