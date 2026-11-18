@@ -80,7 +80,7 @@ def main() -> None:
         "const panelLeft = [55, 592];",
         "const panelTop = [214, 493];",
         "latestRunMs + 180 * 3600000",
-        "common = common.filter(key => item.points.has(key))",
+        "let common = [...series[series.length - 1].points.keys()]",
         "function buildPanelAxis(field, valuesBySeries, options = {})",
     ):
         if geometry not in ecmwf_app:

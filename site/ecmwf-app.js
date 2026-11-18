@@ -219,7 +219,8 @@ function buildSeries(runs) {
   });
 
   let common = [...series[series.length - 1].points.keys()];
-  for (const item of series.slice(0, -1)) common = common.filter(key => item.points.has(key));
+  // The newest cycle defines the +180 h axis. Older cycles are drawn wherever they
+  // have data; a short/partial older cycle must not shrink the whole chart.
   common.sort();
   if (common.length < 2) throw new Error("The available ECMWF cycles have fewer than two common valid times");
 
