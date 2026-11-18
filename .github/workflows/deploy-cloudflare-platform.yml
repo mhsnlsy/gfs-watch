@@ -150,16 +150,41 @@ jobs:
             wrangler r2 bucket create "$R2_BUCKET"
           fi
 
+                    upload_with_retry() {
+            local key="$1"
+            local file="$2"
+            local mime="$3"
+            local cache_control="$4"
+            local attempt=1
+            local max_attempts=5
+            while [ "$attempt" -le "$max_attempts" ]; do
+              if wrangler r2 object put "$R2_BUCKET/$key" --file "$file" --remote \
+                --content-type "$mime" --cache-control "$cache_control" --force; then
+                return 0
+              fi
+              if [ "$attempt" -eq "$max_attempts" ]; then
+                echo "::error::R2 upload failed after $max_attempts attempts: $key"
+                return 1
+              fi
+              delay=$((attempt * 3))
+              echo "::warning::R2 upload attempt $attempt/$max_attempts failed for $key; retrying in ${delay}s."
+              sleep "$delay"
+              attempt=$((attempt + 1))
+            done
+          }
+
           upload_tree_parallel() {
             local source="$1"
             local prefix="$2"
+            local parallelism="${3:-3}"
             [ -d "$source" ] || return 0
 
             export UPLOAD_SOURCE="$source"
             export UPLOAD_PREFIX="$prefix"
             export R2_BUCKET
+            export -f upload_with_retry
             find "$source" -type f -print0 |
-              xargs -0 -r -P 8 -n 1 bash -c '
+              xargs -0 -r -P "$parallelism" -n 1 bash -c '
                 set -euo pipefail
                 file="$1"
                 relative="${file#"$UPLOAD_SOURCE"/}"
@@ -171,8 +196,7 @@ jobs:
                     cache_control="no-store, max-age=0"
                     ;;
                 esac
-                wrangler r2 object put "$R2_BUCKET/$key" --file "$file" --remote \
-                  --content-type "$mime" --cache-control "$cache_control" --force
+                upload_with_retry "$key" "$file" "$mime" "$cache_control"
               ' _
           }
 
