@@ -46,6 +46,68 @@
     return b*gamma/(a-gamma);
   }
 
+
+  // ---- Helpers required by the SVG builder (were missing -> "isoMinute is not defined") ----
+  const APP_NAME = "İstanbul Havası";
+  function numeric(value) {
+    if (value === null || value === undefined || value === "") return null;
+    const n = Number(value);
+    return Number.isFinite(n) ? n : null;
+  }
+  function escapeXml(value) {
+    return String(value == null ? "" : value).replace(/[&<>"']/g, ch => ({
+      "&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&apos;"
+    }[ch]));
+  }
+  function isoMinute(value) {
+    const date = new Date(value);
+    return Number.isFinite(date.getTime()) ? date.toISOString().slice(0, 16) : null;
+  }
+  function localDate(value) { return new Date(new Date(value).getTime() + TR_OFFSET_MS); }
+  function pad2(value) { return String(value).padStart(2, "0"); }
+  function formatTrDate(date) {
+    return pad2(date.getUTCDate()) + "." + pad2(date.getUTCMonth() + 1) + "." + date.getUTCFullYear() +
+      " " + pad2(date.getUTCHours()) + ":" + pad2(date.getUTCMinutes());
+  }
+  function formatUtcDate(date) { return formatTrDate(date); }
+  function runLabel(runId, latest) {
+    const d = new Date(runId);
+    const label = pad2(d.getUTCHours()) + "Z | " + pad2(d.getUTCDate()) + "." +
+      pad2(d.getUTCMonth() + 1) + " " + pad2(d.getUTCHours()) + ":00";
+    return latest ? "YENİ · " + label : label;
+  }
+  function runStamp(runId) {
+    const d = new Date(runId);
+    return d.getUTCFullYear() + pad2(d.getUTCMonth() + 1) + pad2(d.getUTCDate()) + "T" + pad2(d.getUTCHours()) + "Z";
+  }
+  function boxesOverlap(a, b, pad = 4) {
+    return a.x < b.x + b.width + pad && a.x + a.width + pad > b.x &&
+      a.y < b.y + b.height + pad && a.y + a.height + pad > b.y;
+  }
+  function seriesCalloutPlacement({ x, y, plotX, plotY, plotWidth, plotHeight, label, avoidBoxes = [] }) {
+    const labelWidth = Math.max(36, String(label || "").length * 6.8 + 12);
+    const preferredBelow = y - plotY < 18;
+    const preferredRight = x > plotX + plotWidth - 56;
+    const place = (below, right) => {
+      const labelX = right ? x - 10 : x + 10;
+      const labelY = below ? y + 18 : y - 12;
+      const boxX = right ? labelX - labelWidth : labelX - 5;
+      const boxY = labelY - 12;
+      return { below, nearRight: right, labelX, labelY, labelWidth, boxX, boxY,
+        box: { x: boxX, y: boxY, width: labelWidth, height: 16 } };
+    };
+    const candidates = [[preferredBelow, preferredRight],[!preferredBelow, preferredRight],
+      [preferredBelow, !preferredRight],[!preferredBelow, !preferredRight]];
+    let fallback = null;
+    for (const [below, right] of candidates) {
+      const layout = place(below, right);
+      const inside = layout.box.y >= plotY - 4 && layout.box.y + layout.box.height <= plotY + plotHeight + 20;
+      if (!fallback) fallback = layout;
+      if (inside && !avoidBoxes.some(box => boxesOverlap(layout.box, box))) return layout;
+    }
+    return fallback;
+  }
+
   // ECMWF uses the same four-cycle valid-time renderer and axis rules as homepage GFS.
 function isTemperatureField(field) {
   return field === "temperature_2m_c" || field === "temperature_850hpa_c";
@@ -434,7 +496,7 @@ function buildSvg(runs) {
     const chart=host.querySelector(".gfs-interactive-chart");
     if(!chart)return;
     chart.innerHTML="";
-    const svgText=buildSvg(runs);
+    const svgText=buildSvg(runs).body;
     const doc=new DOMParser().parseFromString(svgText,"image/svg+xml");
     const svg=doc.documentElement;
     chart.appendChild(document.importNode(svg,true));
@@ -497,7 +559,7 @@ function buildSvg(runs) {
   function renderTable(doc) {
     const body=$("meteopt-table-body");
     if(!body)return;
-    const points=Array.isArray(doc.forecast_6_hourly)?doc.forecast_6_hourly:[];
+    const points=Array.isArray(doc.forecasts)&&doc.forecasts.length?doc.forecasts:(Array.isArray(doc.forecast_6_hourly)?doc.forecast_6_hourly:[]);
     const hours=points.map(point=>({step:Number(point.forecast_hour),point}))
       .filter(item=>Number.isFinite(item.step)&&item.step>0&&item.step<=180&&item.step%3===0)
       .sort((a,b)=>a.step-b.step);
@@ -514,7 +576,7 @@ function buildSvg(runs) {
       const d850=tableNumber(p.wind_direction_850hpa_deg ?? (p.wind_850hpa&&p.wind_850hpa.direction_deg));
       const temp=tableNumber(p.temperature_2m_c);
       const rh=tableNumber(p.humidity_2m_percent);
-      const snow=tableNumber(p.snowln);
+      const snow=tableNumber(p.snowln ?? p.snow_level_m);
       const vals=[
         tableValueCell(temp,"t2m"),
         tableValueCell(tableNumber(p.precipitation_interval_mm ?? p.precipitation_6h_mm),"precip"),
@@ -549,12 +611,13 @@ function buildSvg(runs) {
       if(!doc||doc.schema!=="gfs-watch.ecmwf-eps.v1"||doc.status!=="ready")throw new Error("ECMWF veri paketi hazır değil.");
       const runs=(Array.isArray(doc.comparison_runs)?doc.comparison_runs:[]).filter(Boolean).slice(-4);
       const allRuns=runs.length?[...runs].sort((a,b)=>Date.parse(a.run_id_utc)-Date.parse(b.run_id_utc)):[doc];
-      renderSvg(allRuns);
+      try{renderSvg(allRuns);}catch(chartError){console.error("ECMWF grafik hatası",chartError);}
       renderTable(doc);
-      $("ecmwf-run-meta").textContent="Döngü: "+shortRun(doc.run_id_utc)+" UTC · Geçerlilik: +"+doc.forecast_horizon_hours+" saat";
-      $("ecmwf-updated").textContent="Yayınlandı: "+shortRun(doc.updated_at_utc)+" TSİ";
-      $("ecmwf-table-run").textContent="Döngü: "+shortRun(doc.run_id_utc)+" UTC";
-      $("ecmwf-table-updated").textContent="Yayınlandı: "+shortRun(doc.updated_at_utc)+" TSİ";
+      const setText=(id,text)=>{const el=$(id);if(el)el.textContent=text;};
+      setText("ecmwf-run-meta","Döngü: "+shortRun(doc.run_id_utc)+" UTC · Geçerlilik: +"+doc.forecast_horizon_hours+" saat");
+      setText("ecmwf-updated","Yayınlandı: "+shortRun(doc.updated_at_utc)+" TSİ");
+      setText("ecmwf-table-run","Döngü: "+shortRun(doc.run_id_utc)+" UTC");
+      setText("ecmwf-table-updated","Yayınlandı: "+shortRun(doc.updated_at_utc)+" TSİ");
       status.textContent="Güncel · MeteoPT ECMWF";
     }catch(error){
       status.textContent="ECMWF verisi alınamadı · "+(error.message||"geçici bağlantı sorunu");

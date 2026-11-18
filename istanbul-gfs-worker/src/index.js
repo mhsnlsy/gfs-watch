@@ -731,6 +731,10 @@ async function fetchEcmwfDocument(runDt) {
   const wind850 = ecmwfSeries(raw, "wind850");
   const rain = ecmwfSeries(raw, "apcp");
   const pressure = ecmwfSeries(raw, "prmsl");
+  const humidity = ecmwfSeries(raw, "rh2m");
+  const snowLevel = ecmwfSeries(raw, "snlevel");
+  const windDirection850 = ecmwfSeries(raw, "wind850mdir").length ? ecmwfSeries(raw, "wind850mdir")
+    : ecmwfSeries(raw, "wind850dir").length ? ecmwfSeries(raw, "wind850dir") : ecmwfSeries(raw, "winddir850");
   const forecasts = [];
   let previousHour = 0;
   for (let i = 0; i < steps.length; i += 1) {
@@ -751,6 +755,9 @@ async function fetchEcmwfDocument(runDt) {
       valid_time_utc: valid.toISOString().replace(".000Z", "+00:00"),
       valid_time_istanbul: local.toISOString().slice(0, 16) + "+03:00",
       temperature_2m_c: Math.round(values.temperature * 100) / 100,
+      humidity_2m_percent: ecmwfNumber(humidity[i]),
+      snowln: ecmwfNumber(snowLevel[i]),
+      wind_direction_850hpa_deg: ecmwfNumber(windDirection850[i]) === null ? null : Math.round(((ecmwfNumber(windDirection850[i]) % 360) + 360) % 360),
       temperature_2m_stddev_c: null,
       wind_speed_10m_kmh: Math.round(Math.max(0, values.wind) * 100) / 100,
       wind_direction_10m_deg: Math.round(((values.windDirection % 360) + 360) % 360),
@@ -846,10 +853,12 @@ async function collectEcmwf(env) {
     const runId = runDt.toISOString().replace(".000Z", "+00:00");
     if (current && current.run_id_utc === runId) {
       const currentHorizon = Number(JSON.parse(current.payload_json)?.forecast_horizon_hours || 0);
-      if (currentHorizon >= 180) {
+      const cachedFirst = JSON.parse(current.payload_json)?.forecasts?.[0];
+      const cacheHasTableFields = cachedFirst && "humidity_2m_percent" in cachedFirst;
+      if (currentHorizon >= 180 && cacheHasTableFields) {
         return { updated: false, run_id_utc: runId, source: "meteopt", forecast_horizon_hours: currentHorizon };
       }
-      errors.push(runId + ": cached cycle is incomplete at +" + currentHorizon + "h");
+      errors.push(runId + ": cached cycle is incomplete or outdated (+" + currentHorizon + "h)");
     }
     try {
       const payload = await fetchEcmwfDocument(runDt);
