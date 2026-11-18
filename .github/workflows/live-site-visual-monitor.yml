@@ -130,6 +130,18 @@ jobs:
                           Number(p.forecast_hour) % 3 === 0 &&
                           p.snowln !== null && p.snowln !== undefined &&
                           Number.isFinite(Number(p.snowln))
+                        ).length,
+                        wind10_direction_points: (doc.forecast_6_hourly || []).filter(p =>
+                          Number(p.forecast_hour) > 0 && Number(p.forecast_hour) <= 180 &&
+                          Number(p.forecast_hour) % 3 === 0 &&
+                          p.wind_direction_10m_deg !== null && p.wind_direction_10m_deg !== undefined &&
+                          Number.isFinite(Number(p.wind_direction_10m_deg))
+                        ).length,
+                        wind850_direction_points: (doc.forecast_6_hourly || []).filter(p =>
+                          Number(p.forecast_hour) > 0 && Number(p.forecast_hour) <= 180 &&
+                          Number(p.forecast_hour) % 3 === 0 &&
+                          p.wind_direction_850hpa_deg !== null && p.wind_direction_850hpa_deg !== undefined &&
+                          Number.isFinite(Number(p.wind_direction_850hpa_deg))
                         ).length
                       };
                     } catch (error) {
@@ -183,6 +195,10 @@ jobs:
                     numeric_humidity_count: humidityValues.filter(value => value && value !== "—" && Number.isFinite(Number(value.replace(",", ".")))).length,
                     numeric_dew_point_count: dewPoints.filter(value => value && value !== "—" && Number.isFinite(Number(value.replace(",", ".")))).length,
                     numeric_snowln_count: snowlines.filter(value => value && value !== "—" && Number.isFinite(Number(value.replace(",", ".")))).length,
+                    wind10_arrows_count: rows.filter(row => row.cells[4]?.querySelector(".meteopt-wind-arrow")).length,
+                    wind850_arrows_count: rows.filter(row => row.cells[6]?.querySelector(".meteopt-wind-arrow")).length,
+                    wind10_first_arrow_transform: rows.find(row => row.cells[4]?.querySelector(".meteopt-wind-arrow"))?.cells[4]?.querySelector(".meteopt-wind-arrow")?.style.getPropertyValue("--wind-angle") || "",
+                    wind850_first_arrow_transform: rows.find(row => row.cells[6]?.querySelector(".meteopt-wind-arrow"))?.cells[6]?.querySelector(".meteopt-wind-arrow")?.style.getPropertyValue("--wind-angle") || "",
                     dew_point_values: dewPoints,
                     snowln_values: snowlines,
                     humidity_scale_valid: rows.every(row => {
@@ -267,6 +283,10 @@ jobs:
                     }),
                     dew_point_values: dewPoints,
                     numeric_dew_point_count: dewPoints.filter(value => value && value !== "—" && Number.isFinite(Number(value.replace(",", ".")))).length,
+                    wind10_arrows_count: rows.filter(row => row.cells[4]?.querySelector(".meteopt-wind-arrow")).length,
+                    wind850_arrows_count: rows.filter(row => row.cells[6]?.querySelector(".meteopt-wind-arrow")).length,
+                    wind10_first_arrow_transform: rows.find(row => row.cells[4]?.querySelector(".meteopt-wind-arrow"))?.cells[4]?.querySelector(".meteopt-wind-arrow")?.style.getPropertyValue("--wind-angle") || "",
+                    wind850_first_arrow_transform: rows.find(row => row.cells[6]?.querySelector(".meteopt-wind-arrow"))?.cells[6]?.querySelector(".meteopt-wind-arrow")?.style.getPropertyValue("--wind-angle") || "",
                     snowln_first_row: rows[0]?.cells[9]?.innerText.trim() || "",
                     viewport_width: window.innerWidth,
                     document_width: document.documentElement.scrollWidth
@@ -289,6 +309,7 @@ jobs:
                 if (!istanbul || istanbul.rows < 30 || istanbul.last_step < 180 || istanbul.columns !== 10 ||
                     istanbul.numeric_humidity_count !== istanbul.rows || !istanbul.humidity_scale_valid ||
                     istanbul.numeric_dew_point_count < Math.max(1, istanbul.rows - 1) || istanbul.numeric_snowln_count !== istanbul.rows ||
+                    istanbul.wind10_arrows_count < 1 || istanbul.wind850_arrows_count < 1 ||
                     JSON.stringify(istanbul.headers) !== JSON.stringify(expectedIstanbulHeaders)) {
                   throw new Error("The Istanbul GFS table must render the requested 10-column order and 24 RH.2m, Dew Point and Snowln values on " +
                     viewport + ": " + JSON.stringify(istanbul));
@@ -296,6 +317,7 @@ jobs:
                 const koy = report.koy_viewports[viewport];
                 if (!koy || koy.rows < 30 || koy.last_step < 180 || koy.columns !== 10 ||
                     koy.numeric_humidity_count !== koy.rows || !koy.humidity_scale_valid || koy.numeric_dew_point_count !== koy.rows ||
+                    koy.wind10_arrows_count < 1 || koy.wind850_arrows_count < 1 ||
                     JSON.stringify(koy.headers) !== JSON.stringify(expectedKoyHeaders)) {
                   throw new Error("The Köy table must render the requested 10-column order, 24 RH.2m values and 24 dew points on " +
                     viewport + ": " + JSON.stringify(koy));
@@ -304,6 +326,8 @@ jobs:
               if (!report.f180 || report.f180.status !== 200 || report.f180.points < 30 ||
                   report.f180.rh2m_numeric_points !== report.f180.points ||
                   report.f180.snowln_numeric_points !== report.f180.points ||
+                  report.f180.wind10_direction_points < 1 ||
+                  report.f180.wind850_direction_points < 1 ||
                   !report.f180.run_id_utc || report.f180.horizon_hours < 180) {
                 throw new Error("The browser did not receive a valid live F180 payload: " + JSON.stringify(report.f180));
               }
