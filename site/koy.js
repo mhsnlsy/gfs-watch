@@ -560,7 +560,10 @@ function meteoptTableValue(value,field,digits=1){
 function meteoptWindValue(speed,direction){
  if(speed==null)return '<span class="meteopt-value">—</span>';
  const band=meteoptTableBand("wind",speed);
- const arrow=direction==null?"":'<span class="meteopt-wind-arrow" style="--wind-angle:'+direction+'deg" aria-label="Rüzgâr yönü '+Math.round(direction)+'°">↑</span>';
+ const rawBearing=direction==null?NaN:Number(direction);
+ const bearing=Number.isFinite(rawBearing)?((rawBearing%360)+360)%360:null;
+ const travel=bearing==null?null:(bearing+180)%360;
+ const arrow=travel==null?"":'<span class="meteopt-wind-arrow" style="--wind-angle:'+travel+'deg" title="Rüzgârın gidiş yönü '+Math.round(travel)+'°" aria-label="Rüzgârın gidiş yönü '+Math.round(travel)+'°">↑</span>';
  return '<span class="meteopt-value '+band+' meteopt-wind-value">'+fmt(speed,0)+arrow+'</span>';
 }
 function renderF180(d){
