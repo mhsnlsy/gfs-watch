@@ -224,9 +224,10 @@ function buildSeries(runs) {
   if (common.length < 2) throw new Error("The available ECMWF cycles have fewer than two common valid times");
 
   const firstMs = Date.parse(common[0] + ":00Z");
+  const latestRunMs = Date.parse(series[series.length - 1].document.run_id_utc);
   const validKeys = common.filter(key => {
     const timestamp = Date.parse(key + ":00Z");
-    return timestamp >= firstMs && timestamp <= firstMs + 180 * 3600000;
+    return timestamp >= firstMs && timestamp <= latestRunMs + 180 * 3600000;
   });
   if (validKeys.length < 2) throw new Error("The common valid-time window is too short");
 
@@ -614,7 +615,7 @@ function buildSvg(runs) {
       try{renderSvg(allRuns);}catch(chartError){console.error("ECMWF grafik hatası",chartError);}
       renderTable(doc);
       const setText=(id,text)=>{const el=$(id);if(el)el.textContent=text;};
-      setText("ecmwf-run-meta","Döngü: "+shortRun(doc.run_id_utc)+" UTC · Geçerlilik: +"+doc.forecast_horizon_hours+" saat");
+      setText("ecmwf-run-meta","Döngü: "+shortRun(doc.run_id_utc)+" UTC · Grafik: +180 saat");
       setText("ecmwf-updated","Yayınlandı: "+shortRun(doc.updated_at_utc)+" TSİ");
       setText("ecmwf-table-run","Döngü: "+shortRun(doc.run_id_utc)+" UTC");
       setText("ecmwf-table-updated","Yayınlandı: "+shortRun(doc.updated_at_utc)+" TSİ");
