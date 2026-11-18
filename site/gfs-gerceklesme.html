@@ -337,7 +337,7 @@ function drawScoreChart(rows) {
   const wrap = document.getElementById("score-wrap");
   const toggle = document.getElementById("score-toggle");
   const NS = "http://www.w3.org/2000/svg";
-  const width = Math.max(340, Math.floor(svg.parentElement.clientWidth || window.innerWidth || 760));
+  const width = Math.max(340, Math.floor(document.querySelector(".shell.verif").clientWidth || window.innerWidth || 760));
   const left = width < 460 ? 64 : 88;
   const scoreX = width - 82;
   const sampleX = width - 25;
@@ -495,6 +495,7 @@ document.getElementById("score-toggle").onclick = () => {
   showAllFHours = !showAllFHours;
   drawScoreChart(activeScoreRows);
 };
+window.addEventListener("resize", () => { if (activeScoreRows.length) drawScoreChart(activeScoreRows); });
 document.getElementById("station").onchange = load;
 document.getElementById("refresh").onclick = load;
 load();
