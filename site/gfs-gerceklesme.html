@@ -108,7 +108,7 @@ table.f-table{width:100%;border-collapse:collapse;font-size:13px}table.f-table t
 <section class="panel method-panel">
   <h2>Puan nasıl hesaplanıyor?</h2>
   <div class="method">
-    <div><b>1 · Hata karşılaştırması</b><span>Sıcaklık °C, yağış mm ve rüzgâr km/sa hataları kendi değişkenlerinin içinde karşılaştırılır.</span></div>
+    <div><b>1 · Hata karşılaştırması</b><span>Sıcaklıkta hata ve 1 °C isabeti; yağışta mm hatası ve yağış var/yok isabeti birlikte değerlendirilir.</span></div>
     <div><b>2 · Eşit ağırlık</b><span>Üç değişkenin puanı eşit ağırlıkla birleştirilir. Her F için en az 8 eşleşme aranır.</span></div>
     <div><b>3 · 100 üzerinden</b><span>En yüksek genel puan 100 olur. Diğer F saatleri bu en yüksek puana oranlanır.</span></div>
   </div>
@@ -235,39 +235,95 @@ function scoreAgainstBest(value, best) {
   if (best === 0) return value === 0 ? 100 : 0;
   return Math.max(0, Math.min(100, 100 * best / value));
 }
-function bestByError(rows, key) {
-  const eligible = rows.filter(row => row.n >= MIN_PAIRS && Number.isFinite(row[key]));
-  if (!eligible.length) return null;
-  return eligible.reduce((best, row) => row[key] < best[key] ? row : best);
+function scoreAgainstHighest(value, best) {
+  if (!Number.isFinite(value) || !Number.isFinite(best)) return null;
+  if (best === 0) return value === 0 ? 100 : 0;
+  return Math.max(0, Math.min(100, 100 * value / best));
+}
+function bestByScore(rows) {
+  if (!rows.length) return null;
+  return rows.reduce((best, row) => row.score > best.score ? row : best);
+}
+function normalizeCategory(rows, rawKey) {
+  const max = rows.length ? Math.max(...rows.map(row => row[rawKey])) : 0;
+  return rows.map(row => ({ ...row, score: max > 0 ? 100 * row[rawKey] / max : 100 }));
 }
 function buildScores(tempHours, rainHours, windHours) {
-  const tBest = bestByError(tempHours, "mae");
-  const rBest = bestByError(rainHours, "mae");
-  const wBest = bestByError(windHours, "speedMae");
-  if (!tBest || !rBest || !wBest) return { rows: [], tBest, rBest, wBest };
+  const tempEligible = tempHours.filter(row => row.n >= MIN_PAIRS);
+  const rainEligible = rainHours.filter(row => row.n >= MIN_PAIRS);
+  const directionAvailable = windHours.some(row => row.n >= MIN_PAIRS && row.directionN >= MIN_PAIRS);
+  const windEligible = windHours.filter(row =>
+    row.n >= MIN_PAIRS && (!directionAvailable || row.directionN >= MIN_PAIRS)
+  );
 
-  const rainByLead = new Map(rainHours.filter(row => row.n >= MIN_PAIRS).map(row => [row.lead, row]));
-  const windByLead = new Map(windHours.filter(row => row.n >= MIN_PAIRS).map(row => [row.lead, row]));
-  const candidates = tempHours.filter(row => row.n >= MIN_PAIRS && rainByLead.has(row.lead) && windByLead.has(row.lead));
+  const tempBestMae = tempEligible.length ? Math.min(...tempEligible.map(row => row.mae)) : null;
+  const tempBestHit = tempEligible.length ? Math.max(...tempEligible.map(row => row.hitRate)) : null;
+  const rainBestMae = rainEligible.length ? Math.min(...rainEligible.map(row => row.mae)) : null;
+  const rainBestHit = rainEligible.length ? Math.max(...rainEligible.map(row => row.hitRate)) : null;
+  const windBestSpeed = windEligible.length ? Math.min(...windEligible.map(row => row.speedMae)) : null;
+  const windBestDirection = directionAvailable
+    ? Math.min(...windEligible.map(row => row.directionMae)) : null;
+
+  const tempScores = normalizeCategory(tempEligible.map(row => ({
+    ...row,
+    rawScore: (
+      scoreAgainstBest(row.mae, tempBestMae) +
+      scoreAgainstHighest(row.hitRate, tempBestHit)
+    ) / 2
+  })), "rawScore");
+
+  const rainScores = normalizeCategory(rainEligible.map(row => ({
+    ...row,
+    rawScore: (
+      scoreAgainstBest(row.mae, rainBestMae) +
+      scoreAgainstHighest(row.hitRate, rainBestHit)
+    ) / 2
+  })), "rawScore");
+
+  const windScores = normalizeCategory(windEligible.map(row => {
+    const speedScore = scoreAgainstBest(row.speedMae, windBestSpeed);
+    const directionScore = directionAvailable
+      ? scoreAgainstBest(row.directionMae, windBestDirection) : null;
+    return {
+      ...row,
+      rawScore: directionAvailable ? (speedScore + directionScore) / 2 : speedScore
+    };
+  }), "rawScore");
+
+  const tempByLead = new Map(tempScores.map(row => [row.lead, row]));
+  const rainByLead = new Map(rainScores.map(row => [row.lead, row]));
+  const windByLead = new Map(windScores.map(row => [row.lead, row]));
+  const candidates = tempScores.filter(row => rainByLead.has(row.lead) && windByLead.has(row.lead));
   const rows = candidates.map(tempRow => {
     const rainRow = rainByLead.get(tempRow.lead);
     const windRow = windByLead.get(tempRow.lead);
-    const tempScore = scoreAgainstBest(tempRow.mae, tBest.mae);
-    const rainScore = scoreAgainstBest(rainRow.mae, rBest.mae);
-    const windScore = scoreAgainstBest(windRow.speedMae, wBest.speedMae);
-    const baseScore = (tempScore + rainScore + windScore) / 3;
+    const baseScore = (tempRow.score + rainRow.score + windRow.score) / 3;
     return {
       lead: tempRow.lead,
-      tempScore, rainScore, windScore, baseScore,
-      tempMae: tempRow.mae, rainMae: rainRow.mae, windMae: windRow.speedMae,
-      tempN: tempRow.n, rainN: rainRow.n, windN: windRow.n,
+      tempScore: tempRow.score,
+      rainScore: rainRow.score,
+      windScore: windRow.score,
+      baseScore,
+      tempMae: tempRow.mae,
+      rainMae: rainRow.mae,
+      windMae: windRow.speedMae,
+      tempN: tempRow.n,
+      rainN: rainRow.n,
+      windN: windRow.n,
       sampleCount: Math.min(tempRow.n, rainRow.n, windRow.n)
     };
   });
   const topBase = rows.length ? Math.max(...rows.map(row => row.baseScore)) : 0;
   for (const row of rows) row.score = topBase > 0 ? 100 * row.baseScore / topBase : 100;
+
   rows.sort((a, b) => b.score - a.score || b.sampleCount - a.sampleCount || a.lead - b.lead);
-  return { rows, tBest, rBest, wBest };
+  return {
+    rows,
+    tBest: bestByScore(tempScores),
+    rBest: bestByScore(rainScores),
+    wBest: bestByScore(windScores),
+    directionIncluded: directionAvailable
+  };
 }
 function drawScoreChart(rows) {
   const svg = document.getElementById("f-score-chart");
@@ -337,7 +393,7 @@ function renderMetricCard(icon, title, best, key, unit, hitLabel) {
   return '<section class="score-card">' +
     '<h3>' + icon + ' ' + title + '</h3>' +
     '<div class="score-lead">F+' + best.lead + '</div>' +
-    '<div class="score-points">Bu değişkende en iyi: <b>100/100</b></div>' +
+    '<div class="score-points">Değişken puanı: <b>' + fmt(best.score, 0) + '/100</b></div>' +
     '<div class="score-detail">Ortalama hata: <b>' + fmt(best[key], 1) + ' ' + unit +
     '</b><br>Karşılaştırma: <b>' + best.n + '</b> gerçekleşmiş tahmin' + extra + '</div>' +
     '</section>';
@@ -390,7 +446,7 @@ async function load() {
       document.getElementById("hero-title").textContent =
         "En tutarlı tahmin ufku F+" + winner.lead + " saat · " + fmt(winner.score, 0) + "/100 puan.";
       document.getElementById("hero-sub").textContent =
-        "Bu sıralama sıcaklık, yağış ve rüzgârın kendi hata ölçülerini eşit ağırlıkla birleştirir. En yüksek puan, bu arşivde gerçekleşen ölçümlere en iyi uyan F saatine verilir.";
+        "Sıcaklık isabeti, yağış miktarı ve tespit başarısı, rüzgâr hızı ve yönü birlikte değerlendirilir. Üç değişken eşit ağırlıktadır; en iyi genel F 100 puan alır.";
     } else {
       document.getElementById("hero-title").textContent = "Henüz ortak puanlama için yeterli veri yok.";
       document.getElementById("hero-sub").textContent =
