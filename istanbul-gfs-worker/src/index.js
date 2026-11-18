@@ -255,10 +255,6 @@ function normalize(candidate, now) {
     wind_direction_850hpa_numeric_points: points.filter(point =>
       point.wind_direction_850hpa_deg !== null
     ).length,
-    // Temporary provider-schema diagnostics; removed after the live direction
-    // field names are confirmed.
-    meteopt_data_field_names: Object.keys(candidate.document?.data || {}),
-    meteopt_top_level_field_names: Object.keys(candidate.document || {}),
     forecast_horizon_hours: Math.max(...steps),
     forecast_valid_until_utc: points.length ? points[points.length - 1].valid_time_utc : null,
   };
