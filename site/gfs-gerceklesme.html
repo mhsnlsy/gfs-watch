@@ -342,7 +342,7 @@ function drawScoreChart(rows) {
   const left = width < 460 ? 44 : 64;
   const top = mobile ? 42 : 40;
   const rowHeight = mobile ? 34 : 28;
-  const visibleRows = showAllFHours ? rows : rows.slice(0, 8);
+  const visibleRows = showAllFHours ? rows : rows.slice(0, 5);
   const height = Math.max(120, top + visibleRows.length * rowHeight + 18);
   // Keep the bar plot to roughly half the available width so the right side
   // can show the three component scores as readable columns.
@@ -362,7 +362,7 @@ function drawScoreChart(rows) {
   svg.style.height = "auto";
   wrap.classList.toggle("expanded", showAllFHours);
   toggle.hidden = rows.length <= 8;
-  toggle.textContent = showAllFHours ? "İlk 8 F saatine dön" : "Tüm " + rows.length + " F saatini göster";
+  toggle.textContent = showAllFHours ? "İlk 5 F saatine dön" : "Tüm " + rows.length + " F saatini göster";
   function node(tag, attrs, value) {
     const element = document.createElementNS(NS, tag);
     for (const [key, item] of Object.entries(attrs || {})) element.setAttribute(key, item);
