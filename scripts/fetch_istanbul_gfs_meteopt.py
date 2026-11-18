@@ -67,6 +67,14 @@ def values_for(document: dict, name: str) -> list:
     return series if isinstance(series, list) else []
 
 
+def values_for_any(document: dict, names: tuple[str, ...]) -> list:
+    for name in names:
+        values = values_for(document, name)
+        if values:
+            return values
+    return []
+
+
 def normalize(document: dict, source_url: str, cycle: datetime, require_f180: bool = True) -> dict:
     raw_steps = ((document.get("steps") or {}).get("values") or [])
     steps = []
@@ -85,11 +93,12 @@ def normalize(document: dict, source_url: str, cycle: datetime, require_f180: bo
         "tmp2m": "temperature_2m_c",
         "tmp850mb": "temperature_850hpa_c",
         "wind10m": "wind_speed_10m_kmh",
-        "winddir10m": "wind_direction_10m_deg",
         "wind850": "wind_speed_850hpa_kmh",
         "apcp": "precipitation_6h_mm",
     }
     series = {key: values_for(document, key) for key in names}
+    wind_direction_10m = values_for_any(document, ("wind10mdir", "winddir10m"))
+    wind_direction_850 = values_for_any(document, ("wind850mdir", "wind850dir", "winddir850"))
     points = []
     for index, lead in enumerate(steps):
         if lead <= 0:
@@ -102,6 +111,8 @@ def normalize(document: dict, source_url: str, cycle: datetime, require_f180: bo
         }
         for source_key, output_key in names.items():
             point[output_key] = number(series[source_key], index)
+        point["wind_direction_10m_deg"] = number(wind_direction_10m, index)
+        point["wind_direction_850hpa_deg"] = number(wind_direction_850, index)
         points.append(point)
 
     by_day: dict[str, list[dict]] = {}
