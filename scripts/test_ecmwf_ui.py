@@ -79,7 +79,7 @@ def main() -> None:
         "const panelHeight = 250;",
         "const panelLeft = [55, 592];",
         "const panelTop = [214, 493];",
-        "firstMs + 180 * 3600000",
+        "latestRunMs + 180 * 3600000",
         "common = common.filter(key => item.points.has(key))",
         "function buildPanelAxis(field, valuesBySeries, options = {})",
     ):
