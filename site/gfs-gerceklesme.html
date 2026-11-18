@@ -31,13 +31,13 @@ table.f-table{width:100%;border-collapse:collapse;font-size:13px}table.f-table t
 .best-pills{display:flex;flex-wrap:wrap;gap:7px;margin-top:12px}
 .best-pill{padding:7px 10px;border:1px solid rgba(125,211,215,.2);border-radius:8px;background:rgba(125,211,215,.08);color:#c9e5e8;font-size:12px}
 .best-pill b{color:#7dd3d7}
-.score-panel{padding:14px}
-.score-panel h2{font-size:20px;margin-bottom:5px}
-.score-intro{color:#a9bdc7;font-size:13px;line-height:1.45;margin:0 0 10px}
+.score-panel{padding:11px}
+.score-panel h2{font-size:18px;margin-bottom:4px}
+.score-intro{color:#a9bdc7;font-size:12px;line-height:1.4;margin:0 0 8px}
 .score-legend{display:flex;flex-wrap:wrap;gap:7px;margin:8px 0 10px}
-.score-legend span{font-size:11px;color:#a9bdc7;background:rgba(255,255,255,.045);padding:6px 8px;border-radius:7px}
-.score-wrap{max-height:66vh;overflow-y:auto;overflow-x:hidden;border-radius:8px;background:rgba(2,12,20,.18);scrollbar-width:thin}
-.score-wrap svg{width:100%;min-width:560px;height:auto;display:block}
+.score-legend span{font-size:10px;color:#a9bdc7;background:rgba(255,255,255,.045);padding:5px 7px;border-radius:7px}
+.score-wrap{max-height:48vh;overflow-y:auto;overflow-x:hidden;border-radius:8px;background:rgba(2,12,20,.18);scrollbar-width:thin}
+.score-wrap svg{width:100%;min-width:520px;height:auto;display:block}
 .score-caption{display:flex;justify-content:space-between;gap:8px;flex-wrap:wrap;color:#8fa7b5;font-size:11px;margin-top:8px}
 .score-cards{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:8px}
 .score-card{background:linear-gradient(160deg,rgba(18,44,62,.82),rgba(13,33,48,.92));border:1px solid rgba(204,225,239,.12);border-radius:11px;padding:12px;min-width:0}
@@ -60,7 +60,7 @@ table.f-table{width:100%;border-collapse:collapse;font-size:13px}table.f-table t
 @media(max-width:430px){
  .best-pill{font-size:11px;padding:6px 8px}
  .score-panel h2{font-size:18px}
- .score-wrap{max-height:62vh}
+ .score-wrap{max-height:46vh}
 }
 
 </style>
@@ -328,7 +328,7 @@ function buildScores(tempHours, rainHours, windHours) {
 function drawScoreChart(rows) {
   const svg = document.getElementById("f-score-chart");
   const NS = "http://www.w3.org/2000/svg";
-  const width = 760, left = 104, barWidth = 430, top = 52, rowHeight = 36;
+  const width = 760, left = 104, barWidth = 430, top = 42, rowHeight = 27;
   const height = Math.max(145, top + rows.length * rowHeight + 26);
   svg.innerHTML = "";
   svg.setAttribute("viewBox", "0 0 " + width + " " + height);
@@ -367,16 +367,16 @@ function drawScoreChart(rows) {
       " · Rüzgâr " + fmt(row.windScore, 0) +
       " · Eşleşme " + row.tempN + "/" + row.rainN + "/" + row.windN);
     const rankColor = index === 0 ? "#7dd3d7" : "#c7d7e2";
-    node("text", { x: 12, y: y + 3, fill: "#8fa7b5", "font-size": 11 }, String(index + 1) + ".");
-    node("text", { x: 43, y: y + 4, fill: rankColor, "font-size": 13, "font-weight": 700 }, "F+" + row.lead);
-    node("rect", { x: barX, y: barY, width: barWidth, height: 15, rx: 7, fill: "rgba(255,255,255,.07)" });
+    node("text", { x: 12, y: y + 2, fill: "#8fa7b5", "font-size": 10 }, String(index + 1) + ".");
+    node("text", { x: 43, y: y + 3, fill: rankColor, "font-size": 12, "font-weight": 700 }, "F+" + row.lead);
+    node("rect", { x: barX, y: barY, width: barWidth, height: 11, rx: 6, fill: "rgba(255,255,255,.07)" });
     node("rect", { x: barX, y: barY, width: Math.max(2, barLength), height: 15, rx: 7,
       fill: index === 0 ? "#7dd3d7" : "#5d9eaa" });
-    node("text", { x: scoreX, y: y + 3, fill: "#e7f2f6", "font-size": 13,
+    node("text", { x: scoreX, y: y + 3, fill: "#e7f2f6", "font-size": 12,
       "font-weight": 800, "text-anchor": "middle" }, fmt(row.score, 0));
-    node("text", { x: sampleX, y: y + 3, fill: "#9bb1bf", "font-size": 10,
+    node("text", { x: sampleX, y: y + 3, fill: "#9bb1bf", "font-size": 9,
       "text-anchor": "middle" }, String(row.sampleCount));
-    node("text", { x: left, y: y + 16, fill: "#8fa7b5", "font-size": 9 },
+    node("text", { x: left, y: y + 12, fill: "#8fa7b5", "font-size": 8 },
       "Sıcaklık " + fmt(row.tempScore, 0) + " · Yağış " + fmt(row.rainScore, 0) + " · Rüzgâr " + fmt(row.windScore, 0));
     // SVG title is the native hover/tap description for each ranked bar.
     const hit = node("rect", { x: 0, y: y - 15, width, height: 27, fill: "transparent" });
