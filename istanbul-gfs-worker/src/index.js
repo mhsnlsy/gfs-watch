@@ -570,19 +570,19 @@ async function deliverPendingTelegram(env) {
   const leaseUntil=new Date(Date.now()+5*60*1000).toISOString();
   const result=await env.GFS_DB.prepare(
     "SELECT run_id_utc, report_text, svg_asset_key, png_asset_key, briefing_svg_asset_key, briefing_png_asset_key, status, attempts, text_message_id, photo_message_id, briefing_photo_message_id FROM gfs_report_publications " +
-    "WHERE attempts < 288 AND (status IN ('pending','partial') OR (status='sending' AND lease_until_utc < ?)) ORDER BY created_at_utc ASC LIMIT 1"
+    "WHERE attempts < 288 AND (status IN ('pending','partial') OR (status = 'sending' AND lease_until_utc < ?)) ORDER BY created_at_utc ASC LIMIT 1"
   ).bind(now).all();
   const p=(result.results||[])[0];
   if(!p) return {configured:true,delivered:0};
 
   const claimed=await env.GFS_DB.prepare(
-    "UPDATE gfs_report_publications SET status='sending', attempts=attempts+1, lease_until_utc=?, updated_at_utc=? WHERE run_id_utc=? AND attempts<288 AND (status IN ('pending','partial') OR (status='sending' AND lease_until_utc < ?))"
+    "UPDATE gfs_report_publications SET status = 'sending', attempts=attempts+1, lease_until_utc=?, updated_at_utc=? WHERE run_id_utc=? AND attempts<288 AND (status IN ('pending','partial') OR (status = 'sending' AND lease_until_utc < ?))"
   ).bind(leaseUntil,now,p.run_id_utc,now).run();
   if(Number(claimed.meta?.changes||0)!==1) return {configured:true,delivered:0,claimed:false};
 
   const failures=[];
   const save=async(column,id)=>{
-    await env.GFS_DB.prepare("UPDATE gfs_report_publications SET "+column+"=?, updated_at_utc=? WHERE run_id_utc=? AND status='sending'")
+    await env.GFS_DB.prepare("UPDATE gfs_report_publications SET "+column+"=?, updated_at_utc=? WHERE run_id_utc=? AND status = 'sending'")
       .bind(String(id),new Date().toISOString(),p.run_id_utc).run();
   };
 
@@ -612,7 +612,7 @@ async function deliverPendingTelegram(env) {
         bytes=isBriefing?await renderIstanbulBriefingPhotoPng(asset.body,font):await renderIstanbulPhotoPng(asset.body,font);
         await env.ECMWF_ARCHIVE.put(pngKey,bytes,{httpMetadata:{contentType:"image/png",cacheControl:"public,max-age=3600"}});
         await env.GFS_DB.prepare(
-          "UPDATE gfs_report_publications SET "+(isBriefing?"briefing_png_asset_key":"png_asset_key")+"=?, updated_at_utc=? WHERE run_id_utc=? AND status='sending'"
+          "UPDATE gfs_report_publications SET "+(isBriefing?"briefing_png_asset_key":"png_asset_key")+"=?, updated_at_utc=? WHERE run_id_utc=? AND status = 'sending'"
         ).bind(pngKey,new Date().toISOString(),p.run_id_utc).run();
       }
       const form=new FormData();
@@ -632,7 +632,7 @@ async function deliverPendingTelegram(env) {
   const complete=Boolean(p.text_message_id&&p.briefing_photo_message_id&&p.photo_message_id);
   const at=new Date().toISOString();
   if(complete){
-    await env.GFS_DB.prepare("UPDATE gfs_report_publications SET status='sent', lease_until_utc=NULL, updated_at_utc=?, sent_at_utc=?, last_error=NULL WHERE run_id_utc=? AND status='sending'")
+    await env.GFS_DB.prepare("UPDATE gfs_report_publications SET status='sent', lease_until_utc=NULL, updated_at_utc=?, sent_at_utc=?, last_error=NULL WHERE run_id_utc=? AND status = 'sending'")
       .bind(at,at,p.run_id_utc).run();
     await env.GFS_DB.prepare("UPDATE gfs_report_dispatch_queue SET status='completed', dispatched_at_utc=?, last_error=NULL WHERE run_id_utc=?")
       .bind(at,p.run_id_utc).run();
@@ -641,7 +641,7 @@ async function deliverPendingTelegram(env) {
   }
 
   const err=(failures.length?failures.join(" | "):"Publication incomplete; successful parts retained").slice(0,1000);
-  await env.GFS_DB.prepare("UPDATE gfs_report_publications SET status='partial', lease_until_utc=NULL, updated_at_utc=?, last_error=? WHERE run_id_utc=? AND status='sending'")
+  await env.GFS_DB.prepare("UPDATE gfs_report_publications SET status='partial', lease_until_utc=NULL, updated_at_utc=?, last_error=? WHERE run_id_utc=? AND status = 'sending'")
     .bind(at,err,p.run_id_utc).run();
   console.error(JSON.stringify({event:"istanbul_telegram_delivery_partial",run_id_utc:p.run_id_utc,text_message_id:p.text_message_id||null,briefing_photo_message_id:p.briefing_photo_message_id||null,photo_message_id:p.photo_message_id||null,failures}));
   return {configured:true,delivered:0,partial:true,run_id_utc:p.run_id_utc,parts:{text:Boolean(p.text_message_id),briefing_photo:Boolean(p.briefing_photo_message_id),comparison_photo:Boolean(p.photo_message_id)},failures};
