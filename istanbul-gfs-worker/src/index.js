@@ -249,14 +249,16 @@ function normalize(candidate, now) {
     },
     daily_summary: daily,
     forecast_6_hourly: points,
+    wind_direction_10m_numeric_points: points.filter(point =>
+      point.wind_direction_10m_deg !== null
+    ).length,
+    wind_direction_850hpa_numeric_points: points.filter(point =>
+      point.wind_direction_850hpa_deg !== null
+    ).length,
     // Temporary provider-schema diagnostics; removed after the live direction
     // field names are confirmed.
-    meteopt_wind_source_fields: Object.keys(candidate.document?.data || {}).filter(key =>
-      /wind|dir|\bu10\b|\bv10\b/i.test(key)
-    ),
-    meteopt_top_level_wind_fields: Object.keys(candidate.document || {}).filter(key =>
-      /wind|dir|\bu10\b|\bv10\b/i.test(key)
-    ),
+    meteopt_data_field_names: Object.keys(candidate.document?.data || {}),
+    meteopt_top_level_field_names: Object.keys(candidate.document || {}),
     forecast_horizon_hours: Math.max(...steps),
     forecast_valid_until_utc: points.length ? points[points.length - 1].valid_time_utc : null,
   };
@@ -286,10 +288,27 @@ async function writeCurrent(env, key, payload) {
 
 async function archiveRun(env, payload) {
   const storedAt = new Date().toISOString();
-  const result = await env.GFS_DB.prepare(
-    "INSERT OR IGNORE INTO gfs_runs (run_id_utc, payload_json, published_at_utc, stored_at_utc) VALUES (?, ?, ?, ?)"
-  ).bind(payload.run_id_utc, JSON.stringify(payload), payload.published_at_utc, storedAt).run();
-  return Number(result.meta?.changes || 0) > 0;
+  const serialized = JSON.stringify(payload);
+  const existing = await env.GFS_DB.prepare(
+    "SELECT payload_json FROM gfs_runs WHERE run_id_utc = ?"
+  ).bind(payload.run_id_utc).first();
+
+  if (!existing) {
+    const inserted = await env.GFS_DB.prepare(
+      "INSERT OR IGNORE INTO gfs_runs (run_id_utc, payload_json, published_at_utc, stored_at_utc) VALUES (?, ?, ?, ?)"
+    ).bind(payload.run_id_utc, serialized, payload.published_at_utc, storedAt).run();
+    if (Number(inserted.meta?.changes || 0) > 0) return true;
+  }
+
+  // Refresh an existing cycle with corrected/enriched fields (for example,
+  // restored wind directions), while returning false so an update never
+  // re-queues or duplicates an already-published Telegram report.
+  if (existing?.payload_json !== serialized) {
+    await env.GFS_DB.prepare(
+      "UPDATE gfs_runs SET payload_json = ?, published_at_utc = ?, stored_at_utc = ? WHERE run_id_utc = ?"
+    ).bind(serialized, payload.published_at_utc, storedAt, payload.run_id_utc).run();
+  }
+  return false;
 }
 
 async function listRuns(env, limit = GFS_RUN_RETENTION) {
@@ -914,6 +933,11 @@ async function collectData(env) {
           Number(point.forecast_hour) % 3 === 0 &&
           (point.humidity_2m_percent === null || point.humidity_2m_percent === undefined ||
            point.snowln === null || point.snowln === undefined)
+        ) ||
+        currentF72?.run_id_utc === payload.run_id_utc &&
+        (
+          Number(currentF72.payload?.wind_direction_10m_numeric_points || 0) < 1 ||
+          Number(currentF72.payload?.wind_direction_850hpa_numeric_points || 0) < 1
         );
       if (!currentF72 ||
           Date.parse(payload.run_id_utc) > Date.parse(currentF72.run_id_utc) ||
