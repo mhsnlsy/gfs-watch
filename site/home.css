@@ -5635,30 +5635,58 @@ nav a:hover{color:#eef7f8}
 @media(prefers-reduced-motion:reduce){.briefing-share-button{transition:none}}
 
 
-/* 20261118: briefing visual cleanup — preserve all wording/data.
-   Only fix the desktop card geometry and share-button collision. */
-@media (min-width:561px){
-  .dashboard-left > .station-briefing-inline .briefing-row{
-    grid-template-columns:118px minmax(0,1fr)!important;
-    gap:9px!important;
+
+
+/* 20261118 FINAL BRIEFING LAYOUT
+   Keep all briefing wording exactly as generated.
+   Desktop: give the text column real width so sentences do not stack vertically.
+   The share control stays in the briefing header and never overlays the copy. */
+@media (min-width:1200px) and (pointer:fine){
+  .dashboard-left .station-card > .station-briefing-inline .briefing{
+    display:grid!important;
+    grid-template-columns:minmax(0,1fr) minmax(0,1fr)!important;
+    gap:10px!important;
+    width:100%!important;
   }
-  .dashboard-left > .station-briefing-inline .briefing-row#brief-temperature-trend-row{
-    padding-right:92px!important;
-  }
-  .dashboard-left > .station-briefing-inline .briefing-row#brief-rain{
-    padding-right:8px!important;
-  }
-  .dashboard-left > .station-briefing-inline .briefing-k{
-    white-space:normal!important;
-  }
-  .dashboard-left > .station-briefing-inline .briefing-v{
+
+  .dashboard-left .station-card > .station-briefing-inline .briefing-row{
+    display:grid!important;
+    grid-template-columns:170px minmax(0,1fr)!important;
+    gap:10px!important;
+    width:100%!important;
     min-width:0!important;
+    min-height:0!important;
+    box-sizing:border-box!important;
+    padding:10px 12px!important;
+    align-items:start!important;
+  }
+
+  .dashboard-left .station-card > .station-briefing-inline .briefing-k{
+    min-width:0!important;
+    white-space:normal!important;
+    overflow-wrap:normal!important;
+  }
+
+  .dashboard-left .station-card > .station-briefing-inline .briefing-v{
+    min-width:0!important;
+    width:100%!important;
+    max-width:none!important;
     overflow-wrap:normal!important;
     word-break:normal!important;
   }
-}
-@media (max-width:560px){
-  .dashboard-left > .station-briefing-inline .briefing-row#brief-temperature-trend-row{
-    padding-right:8px!important;
+
+  .dashboard-left .station-card > .station-briefing-inline #brief-temperature-trend-row{
+    padding-right:12px!important;
+  }
+
+  .dashboard-left .station-card > .station-briefing-inline .briefing-share-head{
+    grid-column:1 / -1!important;
+    position:relative!important;
+    z-index:2!important;
+  }
+
+  .dashboard-left .station-card > .station-briefing-inline .briefing-share-button{
+    position:static!important;
+    flex:0 0 auto!important;
   }
 }
