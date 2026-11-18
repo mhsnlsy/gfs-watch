@@ -842,7 +842,11 @@ async function collectEcmwf(env) {
   for (const runDt of candidates) {
     const runId = runDt.toISOString().replace(".000Z", "+00:00");
     if (current && current.run_id_utc === runId) {
-      return { updated: false, run_id_utc: runId, source: "meteopt", forecast_horizon_hours: JSON.parse(current.payload_json)?.forecast_horizon_hours || null };
+      const currentHorizon = Number(JSON.parse(current.payload_json)?.forecast_horizon_hours || 0);
+      if (currentHorizon >= 180) {
+        return { updated: false, run_id_utc: runId, source: "meteopt", forecast_horizon_hours: currentHorizon };
+      }
+      errors.push(runId + ": cached cycle is incomplete at +" + currentHorizon + "h");
     }
     try {
       const payload = await fetchEcmwfDocument(runDt);
