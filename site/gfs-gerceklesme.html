@@ -49,6 +49,19 @@ table.f-table{width:100%;border-collapse:collapse;font-size:13px}table.f-table t
 .score-card .score-points{font-size:12px;color:#a9c7ff;margin-top:3px}
 .score-card .score-detail{font-size:12px;line-height:1.45;color:#9bb1bf;margin-top:8px}
 .score-card .score-detail b{color:#e7f2f6}
+.score-card h3{margin-bottom:8px}
+.score-rank-list{display:grid;gap:5px}
+.score-rank-row{display:grid;grid-template-columns:20px minmax(54px,1fr) 64px 48px;align-items:center;column-gap:6px;padding:6px 7px;border-radius:7px;background:rgba(255,255,255,.045);font-variant-numeric:tabular-nums}
+.score-rank-number{color:#8fa7b5;font-size:11px}
+.score-rank-lead{font:800 14px/1.1 Manrope,sans-serif;color:#7dd3d7}
+.score-rank-points{font-size:12px;font-weight:800;color:#a9c7ff;text-align:right}
+.score-rank-count{font-size:10px;color:#9bb1bf;text-align:right}
+.score-rank-detail{grid-column:2/5;color:#a9bdc7;font-size:10px;line-height:1.35;margin-top:2px}
+@media(max-width:800px){
+ .score-rank-row{grid-template-columns:20px minmax(60px,1fr) 68px 50px;padding:7px}
+ .score-rank-lead{font-size:14px}
+ .score-rank-detail{font-size:11px}
+}
 .method-panel{padding:13px}
 .method-panel h2{font-size:17px}
 .method-panel .method{grid-template-columns:repeat(3,1fr)}
@@ -324,11 +337,20 @@ function buildScores(tempHours, rainHours, windHours) {
   for (const row of rows) row.score = topBase > 0 ? 100 * row.baseScore / topBase : 100;
 
   rows.sort((a, b) => b.score - a.score || b.sampleCount - a.sampleCount || a.lead - b.lead);
+  const rankCategory = items => [...items].sort((a, b) =>
+    b.score - a.score || b.n - a.n || a.lead - b.lead
+  );
+  const tempRanked = rankCategory(tempScores);
+  const rainRanked = rankCategory(rainScores);
+  const windRanked = rankCategory(windScores);
   return {
     rows,
-    tBest: bestByScore(tempScores),
-    rBest: bestByScore(rainScores),
-    wBest: bestByScore(windScores),
+    tempTop: tempRanked.slice(0, 5),
+    rainTop: rainRanked.slice(0, 5),
+    windTop: windRanked.slice(0, 5),
+    tBest: tempRanked[0] || null,
+    rBest: rainRanked[0] || null,
+    wBest: windRanked[0] || null,
     directionIncluded: directionAvailable
   };
 }
@@ -423,17 +445,31 @@ function drawScoreChart(rows) {
     svg.appendChild(group);
   });
 }
-function renderMetricCard(icon, title, best, key, unit, hitLabel) {
-  if (!best) {
-    return '<section class="score-card"><h3>' + icon + ' ' + title + '</h3><div class="score-lead">—</div><div class="score-detail">Puanlama için yeterli eşleşme henüz yok.</div></section>';
+function renderMetricCard(icon, title, rows, type) {
+  if (!rows || !rows.length) {
+    return '<section class="score-card"><h3>' + icon + ' ' + title + '</h3><div class="score-detail">Puanlama için yeterli eşleşme henüz yok.</div></section>';
   }
-  const extra = hitLabel ? '<br>' + hitLabel : "";
+  const items = rows.map((row, index) => {
+    let detail = "";
+    if (type === "temp") {
+      detail = 'Hata ' + fmt(row.mae, 1) + ' °C · 1 °C içinde ' + fmt(row.hitRate, 0) + '%';
+    } else if (type === "rain") {
+      detail = 'Hata ' + fmt(row.mae, 1) + ' mm · Yağış tespiti ' + fmt(row.hitRate, 0) + '%';
+    } else {
+      detail = 'Hız hatası ' + fmt(row.speedMae, 1) + ' km/sa · Yön ' +
+        (row.directionMae !== null ? fmt(row.directionMae, 0) + '°' : '—');
+    }
+    return '<div class="score-rank-row">' +
+      '<span class="score-rank-number">' + (index + 1) + '.</span>' +
+      '<b class="score-rank-lead">F+' + row.lead + '</b>' +
+      '<span class="score-rank-points">' + fmt(row.score, 0) + '/100</span>' +
+      '<span class="score-rank-count">N=' + row.n + '</span>' +
+      '<small class="score-rank-detail">' + detail + '</small>' +
+      '</div>';
+  }).join("");
   return '<section class="score-card">' +
-    '<h3>' + icon + ' ' + title + '</h3>' +
-    '<div class="score-lead">F+' + best.lead + '</div>' +
-    '<div class="score-points">Değişken puanı: <b>' + fmt(best.score, 0) + '/100</b></div>' +
-    '<div class="score-detail">Ortalama hata: <b>' + fmt(best[key], 1) + ' ' + unit +
-    '</b><br>Karşılaştırma: <b>' + best.n + '</b> gerçekleşmiş tahmin' + extra + '</div>' +
+    '<h3>' + icon + ' ' + title + ' · En iyi 5</h3>' +
+    '<div class="score-rank-list">' + items + '</div>' +
     '</section>';
 }
 function renderBestPills(scores) {
@@ -500,12 +536,9 @@ async function load() {
       samples.length + " istasyon gözlemi · " + MIN_PAIRS + " eşleşme alt sınırı";
 
     document.getElementById("score-cards").innerHTML = [
-      renderMetricCard("🌡️", "Sıcaklıkta en iyi", scores.tBest, "mae", "°C",
-        "1 °C içinde doğru: " + (scores.tBest ? fmt(tempHours.find(row => row.lead === scores.tBest.lead).hitRate, 0) + "%" : "—")),
-      renderMetricCard("🌧️", "Yağışta en iyi", scores.rBest, "mae", "mm",
-        "Yağış var/yok tespiti: " + (scores.rBest ? fmt(rainHours.find(row => row.lead === scores.rBest.lead).hitRate, 0) + "%" : "—")),
-      renderMetricCard("💨", "Rüzgârda en iyi", scores.wBest, "speedMae", "km/sa",
-        "Ortalama yön farkı: " + (scores.wBest && scores.wBest.directionMae !== null ? fmt(scores.wBest.directionMae, 0) + "°" : "ölçüm yok"))
+      renderMetricCard("🌡️", "Sıcaklıkta en iyi", scores.tempTop, "temp"),
+      renderMetricCard("🌧️", "Yağışta en iyi", scores.rainTop, "rain"),
+      renderMetricCard("💨", "Rüzgârda en iyi", scores.windTop, "wind")
     ].join("");
 
     if (!scores.rows.length) {
