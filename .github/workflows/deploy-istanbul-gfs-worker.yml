@@ -247,9 +247,7 @@ jobs:
             wind10_direction_points: wind10DirectionPoints,
             wind850_direction_points: wind850DirectionPoints,
             wind10_direction_metadata: doc.wind_direction_10m_numeric_points ?? null,
-            wind850_direction_metadata: doc.wind_direction_850hpa_numeric_points ?? null,
-            meteopt_data_field_names: doc.meteopt_data_field_names ?? [],
-            meteopt_top_level_field_names: doc.meteopt_top_level_field_names ?? []
+            wind850_direction_metadata: doc.wind_direction_850hpa_numeric_points ?? null
           }));
           if (wind10DirectionPoints < 1 || wind850DirectionPoints < 1) {
             throw new Error("MeteoPT GFS wind direction data missing from the F180 payload: " +
