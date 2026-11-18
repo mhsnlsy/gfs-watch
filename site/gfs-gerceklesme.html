@@ -23,6 +23,46 @@ table.f-table{width:100%;border-collapse:collapse;font-size:13px}table.f-table t
 .stable{background:rgba(125,211,215,.1);border-radius:7px;padding:7px 8px;margin-top:7px;font-size:12px;line-height:1.35;color:#c8dce3}.method{display:grid;grid-template-columns:repeat(4,1fr);gap:6px;margin-top:8px}.method div{background:rgba(255,255,255,.035);border-radius:7px;padding:8px;color:#b7cbd3;font-size:11px}.method b{color:#e7f2f6;display:block;margin-bottom:2px}.note{font-size:11px;color:#8fa7b5;margin-top:8px;line-height:1.4}
 @media(max-width:800px){.verif{padding-top:10px}.verif h1{font-size:22px}.hero{padding:12px}.hero h2{font-size:20px}.summary-row,.panels{grid-template-columns:1fr}.metric-grid{grid-template-columns:repeat(2,1fr)}.chart-wrap{height:290px}.method{grid-template-columns:repeat(2,1fr)}}
 @media(max-width:430px){.shell.verif{width:calc(100% - 14px)}.metric-group{padding:9px}.metric b{font-size:17px}.metric{min-height:55px;padding:7px}.chart-wrap{height:270px}}
+
+#content{display:grid;gap:10px}
+.hero{padding:17px}
+.hero h2{font-size:24px;line-height:1.2;margin:6px 0 7px}
+.hero p{font-size:14px;line-height:1.5;max-width:900px}
+.best-pills{display:flex;flex-wrap:wrap;gap:7px;margin-top:12px}
+.best-pill{padding:7px 10px;border:1px solid rgba(125,211,215,.2);border-radius:8px;background:rgba(125,211,215,.08);color:#c9e5e8;font-size:12px}
+.best-pill b{color:#7dd3d7}
+.score-panel{padding:14px}
+.score-panel h2{font-size:20px;margin-bottom:5px}
+.score-intro{color:#a9bdc7;font-size:13px;line-height:1.45;margin:0 0 10px}
+.score-legend{display:flex;flex-wrap:wrap;gap:7px;margin:8px 0 10px}
+.score-legend span{font-size:11px;color:#a9bdc7;background:rgba(255,255,255,.045);padding:6px 8px;border-radius:7px}
+.score-wrap{max-height:66vh;overflow-y:auto;overflow-x:hidden;border-radius:8px;background:rgba(2,12,20,.18);scrollbar-width:thin}
+.score-wrap svg{width:100%;display:block}
+.score-caption{display:flex;justify-content:space-between;gap:8px;flex-wrap:wrap;color:#8fa7b5;font-size:11px;margin-top:8px}
+.score-cards{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:8px}
+.score-card{background:linear-gradient(160deg,rgba(18,44,62,.82),rgba(13,33,48,.92));border:1px solid rgba(204,225,239,.12);border-radius:11px;padding:12px;min-width:0}
+.score-card h3{font:800 16px/1.2 Manrope,sans-serif;margin:0 0 9px}
+.score-card .score-lead{font:800 24px/1.1 Manrope,sans-serif;color:#7dd3d7}
+.score-card .score-points{font-size:12px;color:#a9c7ff;margin-top:3px}
+.score-card .score-detail{font-size:12px;line-height:1.45;color:#9bb1bf;margin-top:8px}
+.score-card .score-detail b{color:#e7f2f6}
+.method-panel{padding:13px}
+.method-panel h2{font-size:17px}
+.method-panel .method{grid-template-columns:repeat(3,1fr)}
+@media(max-width:800px){
+ .hero h2{font-size:21px}
+ .score-cards{grid-template-columns:1fr}
+ .score-card{padding:11px}
+ .score-card .score-lead{font-size:22px}
+ .score-panel{padding:11px}
+ .method-panel .method{grid-template-columns:1fr}
+}
+@media(max-width:430px){
+ .best-pill{font-size:11px;padding:6px 8px}
+ .score-panel h2{font-size:18px}
+ .score-wrap{max-height:62vh}
+}
+
 </style>
 </head>
 <body>
@@ -44,166 +84,340 @@ table.f-table{width:100%;border-collapse:collapse;font-size:13px}table.f-table t
 <div class="controls"><label>İstasyon <select id="station"><option value="eyupsultan">Eyüpsultan</option><option value="enka">ENKA Balmumcu</option></select></label><button id="refresh" type="button">Yenile</button></div>
 <div id="status">Veriler yükleniyor…</div>
 <div id="content" hidden>
-<section class="hero"><div class="hero-kicker">Kısa cevap</div><h2 id="hero-title">GFS tahmin performansı hesaplanıyor…</h2><p id="hero-sub">Kısa vadeli tahminler ile daha uzun tahmin ufuklarını karşılaştırıyoruz.</p></section>
-<div class="summary-row" id="overall"></div>
-<section class="panel wide"><h2>Tahmin süresi uzadıkça hata nasıl değişiyor?</h2><p class="rule">Her nokta, GFS tahmininin gerçekleşen ölçümden ne kadar saptığını gösterir. <b>Daha düşük değer daha iyi tahmin demektir.</b></p><div class="chart-wrap"><svg id="lead-chart" viewBox="0 0 900 315" role="img" aria-label="Tahmin süresine göre GFS hata grafiği"></svg></div><div class="chart-caption"><span>+6 → +12 → +18 → … → +180 saat</span><span id="chart-sample">—</span></div></section>
-<div class="panels">
-<section class="panel"><div class="detail-head"><h2>Sıcaklık · tahmin süresine göre</h2><small>1 °C içinde doğru</small></div><table class="f-table" id="temp-table"><thead><tr><th>Ufuk</th><th class="num">Ortalama yanılma</th><th class="num">Genel eğilim</th><th class="num">1 °C içinde doğru</th><th class="num">Karşılaştırılan tahmin</th></tr></thead><tbody></tbody></table><div id="temp-stable" class="stable"></div></section>
-<section class="panel"><div class="detail-head"><h2>Yağış · 6 saatlik toplam</h2><small>tespit ve miktar</small></div><table class="f-table" id="rain-table"><thead><tr><th>Ufuk</th><th class="num">Ortalama yanılma</th><th class="num">Genel eğilim</th><th class="num">Yağışı doğru bulma</th><th class="num">Karşılaştırılan tahmin</th></tr></thead><tbody></tbody></table><div id="rain-stable" class="stable"></div></section>
-</div>
-<section class="panel" style="margin-top:8px"><div class="detail-head"><h2>Rüzgâr · tahmin süresine göre</h2><small>ortalama hız hatası · ortalama yön hatası</small></div><table class="f-table" id="wind-table"><thead><tr><th>Ufuk</th><th class="num">Ortalama hız yanılması</th><th class="num">Ortalama yön farkı</th><th class="num">Karşılaştırılan tahmin</th></tr></thead><tbody></tbody></table></section>
-<div class="method"><div><b>Arşiv</b><span id="archive-meta">—</span></div><div><b>Eşleşme</b><span>Geçerlilik saati ±45 dk</span></div><div><b>Doğrulama</b><span>Gelecekteki tahminler hesaplanmaz</span></div><div><b>Ölçüm</b><span>İstasyon gözlemi</span></div></div>
-<p class="note">Ortalama yanılma, tahmin ile gerçekleşen ölçüm arasındaki farkların mutlak değerlerinin ortalamasıdır. Genel tahmin eğilimi, modelin sistematik olarak daha sıcak veya daha soğuk tahmin etme eğilimini gösterir. “1 °C içinde doğru”, tahminin gerçekleşen ölçümden en fazla 1 °C uzaklıkta olduğu tahminlerin oranıdır.</p>
+<section class="hero">
+  <div class="hero-kicker">Ölçüme göre tahmin tutarlılığı</div>
+  <h2 id="hero-title">En tutarlı tahmin saatleri hesaplanıyor…</h2>
+  <p id="hero-sub">Her F saati, geçmiş GFS tahminlerinin gerçekleşen istasyon ölçümleriyle karşılaştırılmasıyla puanlanır.</p>
+  <div class="best-pills" id="best-summary"></div>
+</section>
+
+<section class="panel score-panel">
+  <h2>F saatlerine göre doğruluk puanı</h2>
+  <p class="score-intro">Çubuklar, her tahmin ufkunun sıcaklık, yağış ve rüzgâr performansından oluşan genel puanını gösterir. En tutarlı F saati 100 puan alır; diğerleri ona göre sıralanır.</p>
+  <div class="score-legend">
+    <span><b>F+24</b> = model çalıştıktan 24 saat sonrası</span>
+    <span><b>100</b> = bu arşivdeki en tutarlı tahmin ufku</span>
+    <span><b>En az 8</b> gerçekleşmiş eşleşme gerekir</span>
+  </div>
+  <div class="score-wrap"><svg id="f-score-chart" viewBox="0 0 900 400" role="img" aria-label="Her GFS tahmin ufkunun 100 üzerinden doğruluk puanı"></svg></div>
+  <div class="score-caption"><span id="score-caption">—</span><span>Skor olasılık yüzdesi değil, göreli doğruluk puanıdır.</span></div>
+</section>
+
+<div class="score-cards" id="score-cards"></div>
+
+<section class="panel method-panel">
+  <h2>Puan nasıl hesaplanıyor?</h2>
+  <div class="method">
+    <div><b>1 · Hata karşılaştırması</b><span>Sıcaklık °C, yağış mm ve rüzgâr km/sa hataları kendi değişkenlerinin içinde karşılaştırılır.</span></div>
+    <div><b>2 · Eşit ağırlık</b><span>Üç değişkenin puanı eşit ağırlıkla birleştirilir. Her F için en az 8 eşleşme aranır.</span></div>
+    <div><b>3 · 100 üzerinden</b><span>En yüksek genel puan 100 olur. Diğer F saatleri bu en yüksek puana oranlanır.</span></div>
+  </div>
+  <p class="note">Puanlar son 16 günlük arşivde gerçekleşmiş istasyon ölçümlerine dayanır. Örnek sayısı yetersiz F saatleri puanlanmaz; eksik veya geçersiz veri sıfır hata kabul edilmez.</p>
+</section>
 </div></main>
 
 <script>
 const GFS_BASE = "https://gfs-watch-istanbul-gfs.muhsin-ulusoy.workers.dev";
-const TEMP_HIT = 1;
+const MIN_PAIRS = 8;
 const DRY = 0.2;
-const RAIN_TOL = 1;
 const MATCH_MS = 45 * 60 * 1000;
 
 function fmt(n, d = 1) {
   return Number(n).toLocaleString("tr-TR", { minimumFractionDigits: d, maximumFractionDigits: d });
 }
-
+function finite(value) {
+  if (value === null || value === undefined || value === "" || typeof value === "boolean") return null;
+  const n = Number(value);
+  return Number.isFinite(n) ? n : null;
+}
 async function fetchJSON(url) {
   const r = await fetch(url, { cache: "no-store" });
-  if (!r.ok) throw new Error("Veri alınamadı");
+  if (!r.ok) throw new Error("Veri alınamadı (HTTP " + r.status + ")");
   return r.json();
 }
-
 function nearest(samples, time) {
-  const t = Date.parse(time);
-  if (!Number.isFinite(t)) return null;
+  const target = Date.parse(time);
+  if (!Number.isFinite(target)) return null;
   let best = null, bestGap = MATCH_MS;
-  for (const s of samples) {
-    const st = Date.parse(s.observed_at_utc || s.source_observed_at_utc || "");
-    if (!Number.isFinite(st)) continue;
-    const g = Math.abs(st - t);
-    if (g < bestGap) { bestGap = g; best = s; }
+  for (const sample of samples) {
+    const stamp = Date.parse(sample.observed_at_utc || sample.source_observed_at_utc || sample.logged_at_utc || "");
+    if (!Number.isFinite(stamp)) continue;
+    const gap = Math.abs(stamp - target);
+    if (gap < bestGap) { bestGap = gap; best = sample; }
   }
   return best;
 }
-
 function uniqueRuns(doc) {
-  const runs = (Array.isArray(doc.comparison_runs) ? doc.comparison_runs : [doc]).slice(0, 64);
-  const seen = new Set(), out = [];
-  for (const r of runs) {
-    if (r && r.run_id_utc && !seen.has(r.run_id_utc)) {
-      seen.add(r.run_id_utc);
-      out.push(r);
+  const candidates = Array.isArray(doc.comparison_runs) ? doc.comparison_runs : [doc];
+  const seen = new Set(), runs = [];
+  for (const run of candidates.slice(0, 64)) {
+    if (run && run.run_id_utc && !seen.has(run.run_id_utc)) {
+      seen.add(run.run_id_utc);
+      runs.push(run);
     }
   }
-  return out;
+  return runs;
 }
+function circularDiff(a, b) {
+  const diff = Math.abs(a - b) % 360;
+  return diff > 180 ? 360 - diff : diff;
+}
+function collect(samples, runs) {
+  const temp = [], rain = [], wind = [];
+  const now = Date.now();
+  for (const run of runs) {
+    for (const step of (Array.isArray(run.forecast_6_hourly) ? run.forecast_6_hourly : [])) {
+      const valid = Date.parse(step.valid_time_utc || "");
+      const lead = finite(step.forecast_hour);
+      if (!Number.isFinite(valid) || valid > now || lead === null || lead <= 0) continue;
+      const observation = nearest(samples, step.valid_time_utc);
+      if (!observation) continue;
 
-function pearson(xs, ys) {
-  const n = xs.length;
-  if (n < 3) return null;
-  const mx = xs.reduce((a, b) => a + b, 0) / n;
-  const my = ys.reduce((a, b) => a + b, 0) / n;
-  let num = 0, dx = 0, dy = 0;
-  for (let i = 0; i < n; i++) {
-    const a = xs[i] - mx, b = ys[i] - my;
-    num += a * b; dx += a * a; dy += b * b;
-  }
-  const den = Math.sqrt(dx * dy);
-  return den === 0 ? null : num / den;
-}
+      const modelTemp = finite(step.temperature_2m_c);
+      const observedTemp = finite(observation.temperature_c ?? observation.temperature_2m_c);
+      if (modelTemp !== null && observedTemp !== null) {
+        temp.push({ lead: Math.round(lead), error: modelTemp - observedTemp });
+      }
 
-function circularDiff(a,b){let d=Math.abs(a-b)%360;return d>180?360-d:d;}
-function collect(samples,runs){
-  const temp=[],rain=[],wind=[],now=Date.now();
-  for(const run of runs) for(const step of run.forecast_6_hourly||[]){
-    const valid=Date.parse(step.valid_time_utc||""); if(!Number.isFinite(valid)||valid>now) continue;
-    const obs=nearest(samples,step.valid_time_utc); if(!obs) continue;
-    const lead=Number(step.forecast_hour); if(!Number.isFinite(lead)||lead<=0) continue;
-    const mt=Number(step.temperature_2m_c),ot=Number(obs.temperature_c);
-    if(Number.isFinite(mt)&&Number.isFinite(ot)) temp.push({lead,diff:mt-ot});
-    const mr=Number(step.precipitation_6h_mm),or=Number(obs.rain_6h_mm);
-    if(Number.isFinite(mr)&&Number.isFinite(or)){const mw=mr>=DRY,ow=or>=DRY;rain.push({lead,diff:mr-or,hit:(!mw&&!ow)||(mw&&ow&&Math.abs(mr-or)<=RAIN_TOL)});}
-    const ms=Number(step.wind_speed_10m_kmh),os=Number(obs.wind_speed_kmh);
-    if(Number.isFinite(ms)&&Number.isFinite(os)){const md=Number(step.wind_direction_10m_deg),od=Number(obs.wind_direction);wind.push({lead,speedDiff:ms-os,directionDiff:Number.isFinite(md)&&Number.isFinite(od)?circularDiff(md,od):null});}
+      const modelRain = finite(step.precipitation_6h_mm);
+      const observedRain = finite(observation.rain_6h_mm ?? observation.precipitation_6h_mm);
+      if (modelRain !== null && observedRain !== null) {
+        rain.push({
+          lead: Math.round(lead),
+          error: modelRain - observedRain,
+          hit: (modelRain >= DRY) === (observedRain >= DRY)
+        });
+      }
+
+      const modelWind = finite(step.wind_speed_10m_kmh);
+      const observedWind = finite(observation.wind_speed_kmh ?? observation.wind_speed_10m_kmh);
+      if (modelWind !== null && observedWind !== null) {
+        const modelDirection = finite(step.wind_direction_10m_deg);
+        const observedDirection = finite(observation.wind_direction ?? observation.wind_direction_10m_deg);
+        wind.push({
+          lead: Math.round(lead),
+          speedError: modelWind - observedWind,
+          directionError: modelDirection !== null && observedDirection !== null
+            ? circularDiff(modelDirection, observedDirection) : null
+        });
+      }
+    }
   }
-  return {temp,rain,wind};
+  return { temp, rain, wind };
 }
-function byLead(pairs,type){
-  const map=new Map(); for(const p of pairs){if(!map.has(p.lead))map.set(p.lead,[]);map.get(p.lead).push(p);}
-  return [...map.entries()].sort((a,b)=>a[0]-b[0]).map(([lead,g])=>{
-    if(type==="wind"){const d=g.filter(x=>x.directionDiff!=null);return {lead,n:g.length,speedMae:g.reduce((s,x)=>s+Math.abs(x.speedDiff),0)/g.length,directionMae:d.length?d.reduce((s,x)=>s+x.directionDiff,0)/d.length:null};}
-    const bias=g.reduce((s,x)=>s+x.diff,0)/g.length,mae=g.reduce((s,x)=>s+Math.abs(x.diff),0)/g.length;
-    const success=type==="temp"?g.filter(x=>Math.abs(x.diff)<=TEMP_HIT).length/g.length*100:g.filter(x=>x.hit).length/g.length*100;
-    return {lead,n:g.length,bias,mae,success};
+function byLead(pairs, type) {
+  const groups = new Map();
+  for (const pair of pairs) {
+    if (!groups.has(pair.lead)) groups.set(pair.lead, []);
+    groups.get(pair.lead).push(pair);
+  }
+  return Array.from(groups.entries()).sort((a, b) => a[0] - b[0]).map(([lead, group]) => {
+    if (type === "wind") {
+      const directions = group.filter(item => item.directionError !== null);
+      return {
+        lead, n: group.length,
+        speedMae: group.reduce((sum, item) => sum + Math.abs(item.speedError), 0) / group.length,
+        directionMae: directions.length
+          ? directions.reduce((sum, item) => sum + item.directionError, 0) / directions.length : null,
+        directionN: directions.length
+      };
+    }
+    const mae = group.reduce((sum, item) => sum + Math.abs(item.error), 0) / group.length;
+    const bias = group.reduce((sum, item) => sum + item.error, 0) / group.length;
+    const hitRate = type === "temp"
+      ? group.filter(item => Math.abs(item.error) <= 1).length / group.length * 100
+      : group.filter(item => item.hit).length / group.length * 100;
+    return { lead, n: group.length, mae, bias, hitRate };
   });
 }
-function biasText(v,type){
-  if(v===null || v===undefined || Number.isNaN(Number(v))) return "—";
-  const n=Number(v);
-  const unit=type==="temp" ? "°C" : "mm";
-  return (n>0?"+":"")+fmt(n,1)+" "+unit;
+function scoreAgainstBest(value, best) {
+  if (!Number.isFinite(value) || !Number.isFinite(best)) return null;
+  if (best === 0) return value === 0 ? 100 : 0;
+  return Math.max(0, Math.min(100, 100 * best / value));
 }
-function overallTemp(p){if(!p.length)return null;return {bias:p.reduce((s,x)=>s+x.diff,0)/p.length,mae:p.reduce((s,x)=>s+Math.abs(x.diff),0)/p.length,n:p.length};}
-function overallRain(p){if(!p.length)return null;return {mae:p.reduce((s,x)=>s+Math.abs(x.diff),0)/p.length,success:p.filter(x=>x.hit).length/p.length*100,n:p.length};}
-function overallWind(p){if(!p.length)return null;const d=p.filter(x=>x.directionDiff!=null);return {speedMae:p.reduce((s,x)=>s+Math.abs(x.speedDiff),0)/p.length,directionMae:d.length?d.reduce((s,x)=>s+x.directionDiff,0)/d.length:null,n:p.length};}
-function bestWorst(a,key){if(!a.length)return {best:null,worst:null};const s=[...a].sort((x,y)=>x[key]-y[key]);return {best:s[0],worst:s[s.length-1]};}
-function drawLeadChart(tempHours,rainHours,windHours){
-  const svg=document.getElementById("lead-chart"),W=900,H=300,L=54,R=16,T=14,B=30,NS="http://www.w3.org/2000/svg";
-  const bands=[
-    {key:"temp",label:"Sıcaklık ortalama yanılması",unit:"°C",data:tempHours,color:"#7dd3d7"},
-    {key:"wind",label:"Rüzgâr hızı ortalama yanılma",unit:"kilometre/saat",data:windHours,color:"#f2b56b"},
-    {key:"rain",label:"Yağış miktarı ortalama yanılması",unit:"mm",data:rainHours,color:"#a9c7ff"}
-  ];
-  svg.innerHTML="";
-  const x=v=>L+(v/180)*(W-L-R);
-  bands.forEach((band,idx)=>{
-    const top=T+idx*88, bottom=top+64;
-    const max=Math.max(1,...band.data.map(x=>Number(x[band.key==="wind"?"speedMae":"mae"])||0));
-    const y=v=>bottom-(Math.max(0,Math.min(max,v))/max)*(bottom-top);
-    for(let i=0;i<=2;i++){
-      const yy=top+(bottom-top)*i/2,e=document.createElementNS(NS,"line");
-      e.setAttribute("x1",L);e.setAttribute("x2",W-R);e.setAttribute("y1",yy);e.setAttribute("y2",yy);
-      e.setAttribute("stroke","rgba(255,255,255,.08)");svg.appendChild(e);
-    }
-    const pts=band.data.map(v=>[x(v.lead),y(Number(v[band.key==="wind"?"speedMae":"mae"])||0)]);
-    if(pts.length){
-      const line=document.createElementNS(NS,"polyline");
-      line.setAttribute("points",pts.map(p=>p.join(",")).join(" "));
-      line.setAttribute("fill","none");line.setAttribute("stroke",band.color);line.setAttribute("stroke-width","2.5");
-      svg.appendChild(line);
-    }
-    const title=document.createElementNS(NS,"text");
-    title.setAttribute("x",L);title.setAttribute("y",top+11);title.setAttribute("fill",band.color);title.setAttribute("font-size","11");title.setAttribute("font-weight","700");
-    title.textContent=band.label+" ("+band.unit+") · 0–"+fmt(max,1);svg.appendChild(title);
-  });
-  for(let lead=6;lead<=180;lead+=6){
-    const e=document.createElementNS(NS,"text");e.setAttribute("x",x(lead));e.setAttribute("y",H-8);e.setAttribute("text-anchor","middle");
-    e.setAttribute("fill","#9bb1bf");e.setAttribute("font-size",lead%24===0?"10":"8");e.textContent="+"+lead;svg.appendChild(e);
-  }
-}async function load(){
-  const station=document.getElementById("station").value,status=document.getElementById("status"),content=document.getElementById("content");
-  status.hidden=false;status.textContent="Yükleniyor…";content.hidden=true;
-  try{
-    const [hist,gfs]=await Promise.all([fetchJSON(location.origin+"/api/history/"+station+"?hours=384"),fetchJSON(GFS_BASE+"/gfs/verification")]);
-    const runs=uniqueRuns(gfs),samples=hist.samples||[],pairs=collect(samples,runs);
-    const th=byLead(pairs.temp,"temp"),rh=byLead(pairs.rain,"rain"),wh=byLead(pairs.wind,"wind");
-    const t=overallTemp(pairs.temp),r=overallRain(pairs.rain),w=overallWind(pairs.wind),tb=bestWorst(th,"mae"),wb=bestWorst(wh,"speedMae");
-    document.getElementById("overall").innerHTML=[
-`<section class="metric-group"><h2>🌡 Sıcaklık</h2><div class="metric-grid"><div class="metric accent"><span>genel tahmin eğilimi · ortalama hata</span><b>${t?(t.bias>0?"+":"")+fmt(t.bias,1):"—"} °C</b><small>modelin ortalama sıcaklık sapması</small></div><div class="metric"><span>Ortalama yanılma</span><b>${t?fmt(t.mae,1):"—"} °C</b><small>tahminin gerçekleşen ölçümden ortalama uzaklığı</small></div><div class="metric good"><span>1 °C içinde doğru</span><b>${t?fmt(pairs.temp.filter(x=>Math.abs(x.diff)<=TEMP_HIT).length/pairs.temp.length*100,0):"—"}%</b><small>ölçümden en fazla 1 °C uzaklık</small></div><div class="metric warn"><span>En çok yanılan tahmin süresi</span><b>${tb.worst?"+ "+tb.worst.lead+" saat":"—"}</b><small>${tb.worst?fmt(tb.worst.mae,1)+" °C ortalama mutlak hata":"—"}</small></div></div></section>`,
-`<section class="metric-group"><h2>🌧 Yağış</h2><div class="metric-grid"><div class="metric good"><span>Yağış tespit başarısı</span><b>${r?fmt(r.success,0):"—"}%</b><small>yağış / yağışsız</small></div><div class="metric"><span>Ortalama yağış hatası</span><b>${r?fmt(r.mae,1):"—"} mm</b><small>6 saatlik yağış toplamı</small></div><div class="metric accent"><span>Karşılaştırılan tahmin sayısı</span><b>${r?r.n:"—"}</b><small>gerçekleşen ölçümle eşleşen tahmin</small></div><div class="metric warn"><span>En çok yanılan tahmin süresi</span><b>${rh.length?"+ "+bestWorst(rh,"mae").worst.lead+" saat":"—"}</b><small>${rh.length?fmt(bestWorst(rh,"mae").worst.mae,1)+" mm ortalama mutlak hata":"—"}</small></div></div></section>`,
-`<section class="metric-group"><h2>💨 Rüzgâr</h2><div class="metric-grid"><div class="metric accent"><span>Ortalama hız hatası</span><b>${w?fmt(w.speedMae,1):"—"} kilometre/saat</b><small>tahminin gerçekleşen ölçümden ortalama uzaklığı</small></div><div class="metric"><span>Ortalama yön farkı</span><b>${w&&w.directionMae!=null?fmt(w.directionMae,0):"—"}°</b><small>dairesel fark</small></div><div class="metric good"><span>En başarılı tahmin süresi</span><b>${wb.best?"+ "+wb.best.lead+" saat":"—"}</b><small>${wb.best?fmt(wb.best.speedMae,1)+" kilometre/saat ortalama hata":"—"}</small></div><div class="metric warn"><span>En çok yanılan tahmin süresi</span><b>${wb.worst?"+ "+wb.worst.lead+" saat":"—"}</b><small>${wb.worst?fmt(wb.worst.speedMae,1)+" kilometre/saat ortalama hata":"—"}</small></div></div></section>`
-].join("");;
-    drawLeadChart(th,rh,wh);
-    document.getElementById("hero-title").textContent=t?`GFS sıcaklığı ortalama ${fmt(t.mae,1)} °C hata ile tahmin ediyor.`:"GFS doğrulama verisi hesaplanıyor…"; document.getElementById("hero-sub").textContent=t?`GFS'nin genel tahmin eğilimi ${(t.bias>0?"+":"")+fmt(t.bias,1)} °C. Kısa vadede hata daha düşük, tahmin süresi uzadıkça hata artıyor.`:"Yeterli doğrulama verisi yok."; document.getElementById("chart-sample").textContent=`Sıcaklık ${pairs.temp.length} · Yağış ${pairs.rain.length} · Rüzgâr ${pairs.wind.length} doğrulanmış nokta`;
-    const tt=document.querySelector("#temp-table tbody");tt.innerHTML="";for(const x of th){const tr=document.createElement("tr");tr.innerHTML=`<td>+${x.lead}</td><td class="num">${fmt(x.mae,1)} °C</td><td class="num">${biasText(x.bias,"temp")}</td><td class="num">${fmt(x.success,0)}%</td><td class="num">${x.n}</td>`;tt.appendChild(tr);}
-    const rt=document.querySelector("#rain-table tbody");rt.innerHTML="";for(const x of rh){const tr=document.createElement("tr");tr.innerHTML=`<td>+${x.lead}</td><td class="num">${fmt(x.mae,1)} mm</td><td class="num">${biasText(x.bias,"rain")}</td><td class="num">${fmt(x.success,0)}%</td><td class="num">${x.n}</td>`;rt.appendChild(tr);}
-    document.getElementById("temp-stable").textContent=t?`En iyi tahmin ufku +${tb.best.lead} saat · ortalama mutlak hata ${fmt(tb.best.mae,1)} °C · 1 °C içinde ${fmt(pairs.temp.filter(x=>Math.abs(x.diff)<=TEMP_HIT).length/pairs.temp.length*100,0)}%.`:"Yeterli veri yok.";
-    document.getElementById("rain-stable").textContent=r?`Yağış tespit başarısı ${fmt(r.success,0)}%; ortalama yağış miktarı hatası ${fmt(r.mae,1)} mm.`:"Yeterli veri yok.";
-    const wt=document.querySelector("#wind-table tbody");wt.innerHTML="";for(const x of wh){const tr=document.createElement("tr");tr.innerHTML=`<td>+${x.lead}</td><td class="num">${fmt(x.speedMae,1)} kilometre/saat</td><td class="num">${x.directionMae!=null?fmt(x.directionMae,0)+"°":"—"}</td><td class="num">${x.n}</td>`;wt.appendChild(tr);} document.getElementById("archive-meta").textContent=`${runs.length}/64 döngü · ${samples.length} istasyon gözlemi · +6 → +180 saat doğrulama`;
-    status.hidden=true;content.hidden=false;
-  }catch(e){status.textContent="Hata: "+(e.message||"veri alınamadı");}
+function bestByError(rows, key) {
+  const eligible = rows.filter(row => row.n >= MIN_PAIRS && Number.isFinite(row[key]));
+  if (!eligible.length) return null;
+  return eligible.reduce((best, row) => row[key] < best[key] ? row : best);
 }
+function buildScores(tempHours, rainHours, windHours) {
+  const tBest = bestByError(tempHours, "mae");
+  const rBest = bestByError(rainHours, "mae");
+  const wBest = bestByError(windHours, "speedMae");
+  if (!tBest || !rBest || !wBest) return { rows: [], tBest, rBest, wBest };
 
+  const rainByLead = new Map(rainHours.filter(row => row.n >= MIN_PAIRS).map(row => [row.lead, row]));
+  const windByLead = new Map(windHours.filter(row => row.n >= MIN_PAIRS).map(row => [row.lead, row]));
+  const candidates = tempHours.filter(row => row.n >= MIN_PAIRS && rainByLead.has(row.lead) && windByLead.has(row.lead));
+  const rows = candidates.map(tempRow => {
+    const rainRow = rainByLead.get(tempRow.lead);
+    const windRow = windByLead.get(tempRow.lead);
+    const tempScore = scoreAgainstBest(tempRow.mae, tBest.mae);
+    const rainScore = scoreAgainstBest(rainRow.mae, rBest.mae);
+    const windScore = scoreAgainstBest(windRow.speedMae, wBest.speedMae);
+    const baseScore = (tempScore + rainScore + windScore) / 3;
+    return {
+      lead: tempRow.lead,
+      tempScore, rainScore, windScore, baseScore,
+      tempMae: tempRow.mae, rainMae: rainRow.mae, windMae: windRow.speedMae,
+      tempN: tempRow.n, rainN: rainRow.n, windN: windRow.n,
+      sampleCount: Math.min(tempRow.n, rainRow.n, windRow.n)
+    };
+  });
+  const topBase = rows.length ? Math.max(...rows.map(row => row.baseScore)) : 0;
+  for (const row of rows) row.score = topBase > 0 ? 100 * row.baseScore / topBase : 100;
+  rows.sort((a, b) => b.score - a.score || b.sampleCount - a.sampleCount || a.lead - b.lead);
+  return { rows, tBest, rBest, wBest };
+}
+function drawScoreChart(rows) {
+  const svg = document.getElementById("f-score-chart");
+  const NS = "http://www.w3.org/2000/svg";
+  const width = 900, left = 116, barWidth = 570, top = 52, rowHeight = 30;
+  const height = Math.max(145, top + rows.length * rowHeight + 26);
+  svg.innerHTML = "";
+  svg.setAttribute("viewBox", "0 0 " + width + " " + height);
+  svg.style.height = height + "px";
+  function node(tag, attrs, value) {
+    const element = document.createElementNS(NS, tag);
+    for (const [key, item] of Object.entries(attrs || {})) element.setAttribute(key, item);
+    if (value !== undefined) element.textContent = value;
+    svg.appendChild(element);
+    return element;
+  }
+  [0, 25, 50, 75, 100].forEach(tick => {
+    const x = left + barWidth * tick / 100;
+    node("line", { x1: x, x2: x, y1: 31, y2: height - 18, stroke: "rgba(255,255,255,.11)", "stroke-width": 1 });
+    node("text", { x, y: 20, fill: "#9bb1bf", "font-size": 11, "text-anchor": "middle" }, String(tick));
+  });
+  node("text", { x: left + barWidth + 65, y: 20, fill: "#9bb1bf", "font-size": 11, "text-anchor": "middle" }, "PUAN");
+  node("text", { x: 826, y: 20, fill: "#9bb1bf", "font-size": 10, "text-anchor": "middle" }, "ÖRNEK");
+  if (!rows.length) {
+    node("text", { x: 450, y: 88, fill: "#b7cbd3", "font-size": 17, "text-anchor": "middle" },
+      "Henüz puanlanabilecek yeterli ortak veri yok.");
+    return;
+  }
+  rows.forEach((row, index) => {
+    const y = top + index * rowHeight;
+    const barY = y - 12;
+    const barX = left;
+    const barLength = barWidth * row.score / 100;
+    const title = node("title", {}, "F+" + row.lead +
+      " · Genel " + fmt(row.score, 0) + "/100" +
+      " · Sıcaklık " + fmt(row.tempScore, 0) +
+      " · Yağış " + fmt(row.rainScore, 0) +
+      " · Rüzgâr " + fmt(row.windScore, 0) +
+      " · Eşleşme " + row.tempN + "/" + row.rainN + "/" + row.windN);
+    const rankColor = index === 0 ? "#7dd3d7" : "#c7d7e2";
+    node("text", { x: 12, y: y + 3, fill: "#8fa7b5", "font-size": 11 }, String(index + 1) + ".");
+    node("text", { x: 43, y: y + 4, fill: rankColor, "font-size": 13, "font-weight": 700 }, "F+" + row.lead);
+    node("rect", { x: barX, y: barY, width: barWidth, height: 15, rx: 7, fill: "rgba(255,255,255,.07)" });
+    node("rect", { x: barX, y: barY, width: Math.max(2, barLength), height: 15, rx: 7,
+      fill: index === 0 ? "#7dd3d7" : "#5d9eaa" });
+    node("text", { x: left + barWidth + 65, y: y + 3, fill: "#e7f2f6", "font-size": 13,
+      "font-weight": 800, "text-anchor": "middle" }, fmt(row.score, 0));
+    node("text", { x: 826, y: y + 3, fill: "#9bb1bf", "font-size": 10,
+      "text-anchor": "middle" }, String(row.sampleCount));
+    // SVG title is the native hover/tap description for each ranked bar.
+    const hit = node("rect", { x: 0, y: y - 15, width, height: 27, fill: "transparent" });
+    const hitTitle = document.createElementNS(NS, "title");
+    hitTitle.textContent = title.textContent;
+    hit.appendChild(hitTitle);
+  });
+}
+function renderMetricCard(icon, title, best, key, unit, hitLabel) {
+  if (!best) {
+    return '<section class="score-card"><h3>' + icon + ' ' + title + '</h3><div class="score-lead">—</div><div class="score-detail">Puanlama için yeterli eşleşme henüz yok.</div></section>';
+  }
+  const extra = hitLabel ? '<br>' + hitLabel : "";
+  return '<section class="score-card">' +
+    '<h3>' + icon + ' ' + title + '</h3>' +
+    '<div class="score-lead">F+' + best.lead + '</div>' +
+    '<div class="score-points">Bu değişkende en iyi: <b>100/100</b></div>' +
+    '<div class="score-detail">Ortalama hata: <b>' + fmt(best[key], 1) + ' ' + unit +
+    '</b><br>Karşılaştırma: <b>' + best.n + '</b> gerçekleşmiş tahmin' + extra + '</div>' +
+    '</section>';
+}
+function renderBestPills(scores) {
+  const rows = scores.rows;
+  if (!rows.length) {
+    document.getElementById("best-summary").innerHTML = "";
+    return;
+  }
+  const top = rows[0];
+  document.getElementById("best-summary").innerHTML =
+    '<span class="best-pill">En iyi genel: <b>F+' + top.lead + ' · 100/100</b></span>' +
+    '<span class="best-pill">Sıcaklık: <b>F+' + scores.tBest.lead + '</b></span>' +
+    '<span class="best-pill">Yağış: <b>F+' + scores.rBest.lead + '</b></span>' +
+    '<span class="best-pill">Rüzgâr: <b>F+' + scores.wBest.lead + '</b></span>';
+}
+async function load() {
+  const station = document.getElementById("station").value;
+  const status = document.getElementById("status");
+  const content = document.getElementById("content");
+  status.hidden = false;
+  status.textContent = "GFS tahminleri ve istasyon ölçümleri karşılaştırılıyor…";
+  content.hidden = true;
+  try {
+    const results = await Promise.all([
+      fetchJSON(location.origin + "/api/history/" + station + "?hours=384"),
+      fetchJSON(GFS_BASE + "/gfs/verification")
+    ]);
+    const history = results[0], documentData = results[1];
+    const runs = uniqueRuns(documentData);
+    const samples = Array.isArray(history.samples) ? history.samples : [];
+    const pairs = collect(samples, runs);
+    const tempHours = byLead(pairs.temp, "temp");
+    const rainHours = byLead(pairs.rain, "rain");
+    const windHours = byLead(pairs.wind, "wind");
+    const scores = buildScores(tempHours, rainHours, windHours);
+
+    const overallTempMae = pairs.temp.length
+      ? pairs.temp.reduce((sum, item) => sum + Math.abs(item.error), 0) / pairs.temp.length : null;
+    const overallRainMae = pairs.rain.length
+      ? pairs.rain.reduce((sum, item) => sum + Math.abs(item.error), 0) / pairs.rain.length : null;
+    const overallRainHit = pairs.rain.length
+      ? pairs.rain.filter(item => item.hit).length / pairs.rain.length * 100 : null;
+    const overallWindMae = pairs.wind.length
+      ? pairs.wind.reduce((sum, item) => sum + Math.abs(item.speedError), 0) / pairs.wind.length : null;
+
+    if (scores.rows.length) {
+      const winner = scores.rows[0];
+      document.getElementById("hero-title").textContent =
+        "En tutarlı tahmin ufku F+" + winner.lead + " saat · " + fmt(winner.score, 0) + "/100 puan.";
+      document.getElementById("hero-sub").textContent =
+        "Bu sıralama sıcaklık, yağış ve rüzgârın kendi hata ölçülerini eşit ağırlıkla birleştirir. En yüksek puan, bu arşivde gerçekleşen ölçümlere en iyi uyan F saatine verilir.";
+    } else {
+      document.getElementById("hero-title").textContent = "Henüz ortak puanlama için yeterli veri yok.";
+      document.getElementById("hero-sub").textContent =
+        "Her F saatinin sıcaklık, yağış ve rüzgâr verilerinde en az " + MIN_PAIRS + " gerçekleşmiş eşleşme bulunmalı.";
+    }
+
+    renderBestPills(scores);
+    drawScoreChart(scores.rows);
+    document.getElementById("score-caption").textContent =
+      scores.rows.length + " F saati puanlandı · " + runs.length + " GFS döngüsü · " +
+      samples.length + " istasyon gözlemi · " + MIN_PAIRS + " eşleşme alt sınırı";
+
+    document.getElementById("score-cards").innerHTML = [
+      renderMetricCard("🌡️", "Sıcaklıkta en iyi", scores.tBest, "mae", "°C",
+        "1 °C içinde doğru: " + (scores.tBest ? fmt(tempHours.find(row => row.lead === scores.tBest.lead).hitRate, 0) + "%" : "—")),
+      renderMetricCard("🌧️", "Yağışta en iyi", scores.rBest, "mae", "mm",
+        "Yağış var/yok tespiti: " + (scores.rBest ? fmt(rainHours.find(row => row.lead === scores.rBest.lead).hitRate, 0) + "%" : "—")),
+      renderMetricCard("💨", "Rüzgârda en iyi", scores.wBest, "speedMae", "km/sa",
+        "Ortalama yön farkı: " + (scores.wBest && scores.wBest.directionMae !== null ? fmt(scores.wBest.directionMae, 0) + "°" : "ölçüm yok"))
+    ].join("");
+
+    if (!scores.rows.length) {
+      status.textContent = "Veriler geldi; ancak her F saatinde üç değişken için de en az " +
+        MIN_PAIRS + " eşleşme bulunmadığından genel puan hesaplanamadı.";
+    } else {
+      status.hidden = true;
+    }
+    content.hidden = false;
+  } catch (error) {
+    status.textContent = "Hata: " + (error.message || "veri alınamadı");
+  }
+}
 document.getElementById("station").onchange = load;
 document.getElementById("refresh").onclick = load;
 load();
