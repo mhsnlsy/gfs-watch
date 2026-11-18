@@ -69,9 +69,13 @@
   function windValueCell(speed, direction, digits = 0) {
     if (speed === null) return '<span class="meteopt-value">—</span>';
     const cls = colour("wind", speed);
-    const arrow = direction === null
+    const rawBearing = direction === null ? NaN : Number(direction);
+    const bearing = Number.isFinite(rawBearing) ? ((rawBearing % 360) + 360) % 360 : null;
+    // Meteorological direction is where wind comes FROM; show where it travels.
+    const travel = bearing === null ? null : (bearing + 180) % 360;
+    const arrow = travel === null
       ? ""
-      : '<span class="meteopt-wind-arrow" style="--wind-angle:' + ((Number(direction) + 180) % 360) + 'deg" aria-label="Rüzgâr yönü ' + Math.round(direction) + '°">↑</span>';
+      : '<span class="meteopt-wind-arrow" style="--wind-angle:' + travel + 'deg" title="Rüzgârın gidiş yönü ' + Math.round(travel) + '°" aria-label="Rüzgârın gidiş yönü ' + Math.round(travel) + '°">↑</span>';
     return '<span class="meteopt-value ' + cls + ' meteopt-wind-value">' + display(speed, digits) + arrow + '</span>';
   }
 
