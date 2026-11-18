@@ -551,140 +551,88 @@ async function telegramApi(env, method, body, isForm = false) {
 }
 
 async function deliverPendingTelegram(env) {
-  if (!env.TELEGRAM_TOKEN || !env.TELEGRAM_CHAT_ID) {
-    return { configured: false, delivered: 0, waiting: true };
-  }
-  const nowDate = new Date();
-  const now = nowDate.toISOString();
-  const leaseUntil = new Date(nowDate.getTime() + 5 * 60 * 1000).toISOString();
-  const result = await env.GFS_DB.prepare(
-    "SELECT run_id_utc, report_text, svg_asset_key, png_asset_key, briefing_svg_asset_key, briefing_png_asset_key, status, attempts, " +
-    "text_message_id, photo_message_id, briefing_photo_message_id FROM gfs_report_publications " +
-    "WHERE attempts < 288 AND (status IN ('pending', 'partial') OR " +
-    "(status = 'sending' AND lease_until_utc < ?)) " +
-    "ORDER BY created_at_utc ASC LIMIT 1"
+  if (!env.TELEGRAM_TOKEN || !env.TELEGRAM_CHAT_ID) return { configured:false, delivered:0, waiting:true };
+
+  const now=new Date().toISOString();
+  const leaseUntil=new Date(Date.now()+5*60*1000).toISOString();
+  const result=await env.GFS_DB.prepare(
+    "SELECT run_id_utc, report_text, svg_asset_key, png_asset_key, briefing_svg_asset_key, briefing_png_asset_key, status, attempts, text_message_id, photo_message_id, briefing_photo_message_id FROM gfs_report_publications " +
+    "WHERE attempts < 288 AND (status IN ('pending','partial') OR (status='sending' AND lease_until_utc < ?)) ORDER BY created_at_utc ASC LIMIT 1"
   ).bind(now).all();
-  const publication = (result.results || [])[0];
-  if (!publication) return { configured: true, delivered: 0 };
+  const p=(result.results||[])[0];
+  if(!p) return {configured:true,delivered:0};
 
-  const claimed = await env.GFS_DB.prepare(
-    "UPDATE gfs_report_publications SET status = 'sending', attempts = attempts + 1, " +
-    "lease_until_utc = ?, updated_at_utc = ? WHERE run_id_utc = ? AND attempts < 288 AND " +
-    "(status IN ('pending', 'partial') OR (status = 'sending' AND lease_until_utc < ?))"
-  ).bind(leaseUntil, now, publication.run_id_utc, now).run();
-  if (Number(claimed.meta?.changes || 0) !== 1) {
-    return { configured: true, delivered: 0, claimed: false };
+  const claimed=await env.GFS_DB.prepare(
+    "UPDATE gfs_report_publications SET status='sending', attempts=attempts+1, lease_until_utc=?, updated_at_utc=? WHERE run_id_utc=? AND attempts<288 AND (status IN ('pending','partial') OR (status='sending' AND lease_until_utc < ?))"
+  ).bind(leaseUntil,now,p.run_id_utc,now).run();
+  if(Number(claimed.meta?.changes||0)!==1) return {configured:true,delivered:0,claimed:false};
+
+  const failures=[];
+  const save=async(column,id)=>{
+    await env.GFS_DB.prepare("UPDATE gfs_report_publications SET "+column+"=?, updated_at_utc=? WHERE run_id_utc=? AND status='sending'")
+      .bind(String(id),new Date().toISOString(),p.run_id_utc).run();
+  };
+
+  if(!p.text_message_id){
+    try{
+      const m=await telegramApi(env,"sendMessage",{chat_id:env.TELEGRAM_CHAT_ID,text:p.report_text,disable_web_page_preview:true});
+      p.text_message_id=String(m.message_id); await save("text_message_id",p.text_message_id);
+    }catch(e){ failures.push("text: "+String(e?.message||e).slice(0,300)); }
   }
 
-  try {
-    if (!publication.text_message_id) {
-      const message = await telegramApi(env, "sendMessage", {
-        chat_id: env.TELEGRAM_CHAT_ID,
-        text: publication.report_text,
-        disable_web_page_preview: true,
-      });
-      publication.text_message_id = String(message.message_id);
-      await env.GFS_DB.prepare(
-        "UPDATE gfs_report_publications SET text_message_id = ?, updated_at_utc = ? " +
-        "WHERE run_id_utc = ? AND status = 'sending'"
-      ).bind(publication.text_message_id, new Date().toISOString(), publication.run_id_utc).run();
-    }
-
-    if (!publication.briefing_photo_message_id) {
-      const briefingSvgKey = String(publication.briefing_svg_asset_key || "");
-      const briefingPngKey = briefingSvgKey
-        ? "data/" + briefingSvgKey.replace(/^notifications\//, "notifications/").replace(/\.svg$/i, "-telegram-5day.png")
-        : publication.briefing_png_asset_key;
-      let briefingObject = briefingPngKey ? await env.ECMWF_ARCHIVE.get(briefingPngKey) : null;
-      let briefingBytes;
-      if (briefingObject) {
-        briefingBytes = new Uint8Array(await briefingObject.arrayBuffer());
-      } else {
-        const asset = await getPublicationAsset(env, publication.briefing_svg_asset_key);
-        if (!asset || typeof asset.body !== "string") throw new Error("Published five-day briefing SVG is missing: " + publication.briefing_svg_asset_key);
-        const telegramFont = await loadIstanbulTelegramFont(env.ECMWF_ARCHIVE);
-        briefingBytes = await renderIstanbulBriefingPhotoPng(asset.body, telegramFont);
-        await env.ECMWF_ARCHIVE.put(briefingPngKey, briefingBytes, { httpMetadata: { contentType: "image/png", cacheControl: "public, max-age=3600" } });
+  const sendImage=async(kind)=>{
+    const isBriefing=kind==="briefing";
+    const already=isBriefing?p.briefing_photo_message_id:p.photo_message_id;
+    if(already) return;
+    try{
+      const svgKey=String(isBriefing?p.briefing_svg_asset_key:p.svg_asset_key||"");
+      const pngKey=svgKey
+        ? "data/"+svgKey.replace(/^notifications\//,"notifications/").replace(/\.svg$/i,isBriefing?"-telegram-5day.png":"-telegram-home-4panel-v3.png")
+        : (isBriefing?p.briefing_png_asset_key:p.png_asset_key);
+      let object=pngKey?await env.ECMWF_ARCHIVE.get(pngKey):null;
+      let bytes;
+      if(object) bytes=new Uint8Array(await object.arrayBuffer());
+      else{
+        const asset=await getPublicationAsset(env,isBriefing?p.briefing_svg_asset_key:p.svg_asset_key);
+        if(!asset||typeof asset.body!=="string") throw new Error("Published "+(isBriefing?"five-day briefing":"comparison")+" SVG is missing");
+        const font=await loadIstanbulTelegramFont(env.ECMWF_ARCHIVE);
+        bytes=isBriefing?await renderIstanbulBriefingPhotoPng(asset.body,font):await renderIstanbulPhotoPng(asset.body,font);
+        await env.ECMWF_ARCHIVE.put(pngKey,bytes,{httpMetadata:{contentType:"image/png",cacheControl:"public,max-age=3600"}});
         await env.GFS_DB.prepare(
-          "UPDATE gfs_report_publications SET briefing_png_asset_key = ?, updated_at_utc = ? WHERE run_id_utc = ? AND status = 'sending'"
-        ).bind(briefingPngKey, new Date().toISOString(), publication.run_id_utc).run();
+          "UPDATE gfs_report_publications SET "+(isBriefing?"briefing_png_asset_key":"png_asset_key")+"=?, updated_at_utc=? WHERE run_id_utc=? AND status='sending'"
+        ).bind(pngKey,new Date().toISOString(),p.run_id_utc).run();
       }
-      const form = new FormData();
-      form.set("chat_id", env.TELEGRAM_CHAT_ID);
-      form.set("caption", "🌦 İstanbul Havası · 5 günlük özet");
-      form.set("photo", new Blob([briefingBytes], { type: "image/png" }), "istanbul-havasi-5-gunluk-ozet.png");
-      const message = await telegramApi(env, "sendPhoto", form, true);
-      publication.briefing_photo_message_id = String(message.message_id);
-      await env.GFS_DB.prepare(
-        "UPDATE gfs_report_publications SET briefing_photo_message_id = ?, updated_at_utc = ? WHERE run_id_utc = ? AND status = 'sending'"
-      ).bind(publication.briefing_photo_message_id, new Date().toISOString(), publication.run_id_utc).run();
-    }
+      const form=new FormData();
+      form.set("chat_id",env.TELEGRAM_CHAT_ID);
+      form.set("caption",isBriefing?"🌦 İstanbul Havası · 5 günlük özet":"📊 İstanbul GFS · 4'lü döngü karşılaştırması");
+      form.set("photo",new Blob([bytes],{type:"image/png"}),isBriefing?"istanbul-havasi-5-gunluk-ozet.png":(pngKey.split("/").pop()||"istanbul-gfs-comparison.png"));
+      const m=await telegramApi(env,"sendPhoto",form,true);
+      const id=String(m.message_id);
+      if(isBriefing){p.briefing_photo_message_id=id;await save("briefing_photo_message_id",id);}
+      else{p.photo_message_id=id;await save("photo_message_id",id);}
+    }catch(e){ failures.push((isBriefing?"briefing_photo":"comparison_photo")+": "+String(e?.message||e).slice(0,300)); }
+  };
 
-    if (!publication.photo_message_id) {
-      const svgKey = String(publication.svg_asset_key || "");
-      const pngKey = svgKey
-        ? "data/" + svgKey.replace(/^notifications\//, "notifications/").replace(/\.svg$/i, "-telegram-home-4panel-v3.png")
-        : publication.png_asset_key;
-      let object = pngKey ? await env.ECMWF_ARCHIVE.get(pngKey) : null;
-      let pngBytes;
-      if (object) {
-        pngBytes = new Uint8Array(await object.arrayBuffer());
-      } else {
-        const asset = await getPublicationAsset(env, publication.svg_asset_key);
-        if (!asset || typeof asset.body !== "string") throw new Error("Published SVG asset is missing from D1: " + publication.svg_asset_key);
-        const telegramFont = await loadIstanbulTelegramFont(env.ECMWF_ARCHIVE);
-        pngBytes = await renderIstanbulPhotoPng(asset.body, telegramFont);
-        await env.ECMWF_ARCHIVE.put(pngKey, pngBytes, { httpMetadata: { contentType: "image/png", cacheControl: "public, max-age=3600" } });
-        await env.GFS_DB.prepare(
-          "UPDATE gfs_report_publications SET png_asset_key = ?, updated_at_utc = ? WHERE run_id_utc = ? AND status = 'sending'"
-        ).bind(pngKey, new Date().toISOString(), publication.run_id_utc).run();
-      }
-      const filename = (pngKey.split("/").pop() || "istanbul-gfs-comparison-telegram-home-4panel-v3.png").replace(/\.svg$/i, ".png");
-      const form = new FormData();
-      form.set("chat_id", env.TELEGRAM_CHAT_ID);
-      form.set("caption", "📊 İstanbul GFS · 4'lü döngü karşılaştırması");
-      form.set("photo", new Blob([pngBytes], { type: "image/png" }), filename);
-      const message = await telegramApi(env, "sendPhoto", form, true);
-      publication.photo_message_id = String(message.message_id);
-      await env.GFS_DB.prepare(
-        "UPDATE gfs_report_publications SET photo_message_id = ?, updated_at_utc = ? WHERE run_id_utc = ? AND status = 'sending'"
-      ).bind(publication.photo_message_id, new Date().toISOString(), publication.run_id_utc).run();
-    }
+  await sendImage("briefing");
+  await sendImage("comparison");
 
-    const sentAt = new Date().toISOString();
-    await env.GFS_DB.prepare(
-      "UPDATE gfs_report_publications SET photo_message_id = ?, status = 'sent', " +
-      "lease_until_utc = NULL, updated_at_utc = ?, sent_at_utc = ?, last_error = NULL " +
-      "WHERE run_id_utc = ? AND status = 'sending'"
-    ).bind(publication.photo_message_id, sentAt, sentAt, publication.run_id_utc).run();
-    await env.GFS_DB.prepare(
-      "UPDATE gfs_report_dispatch_queue SET status = 'completed', dispatched_at_utc = ?, last_error = NULL " +
-      "WHERE run_id_utc = ?"
-    ).bind(sentAt, publication.run_id_utc).run();
-
-    console.log(JSON.stringify({
-      event: "istanbul_telegram_report_delivered",
-      run_id_utc: publication.run_id_utc,
-      text_message_id: publication.text_message_id,
-      photo_message_id: publication.photo_message_id,
-    }));
-    return { configured: true, delivered: 1, run_id_utc: publication.run_id_utc };
-  } catch (error) {
-    const message = String(error?.message || error).slice(0, 500);
-    await env.GFS_DB.prepare(
-      "UPDATE gfs_report_publications SET status = ?, lease_until_utc = NULL, " +
-      "updated_at_utc = ?, last_error = ? WHERE run_id_utc = ? AND status = 'sending'"
-    ).bind(publication.text_message_id ? "partial" : "pending", new Date().toISOString(),
-      message, publication.run_id_utc).run();
-    console.error(JSON.stringify({
-      event: "istanbul_telegram_delivery_retry",
-      run_id_utc: publication.run_id_utc,
-      message,
-    }));
-    return { configured: true, delivered: 0, failed: 1, error: message };
+  const complete=Boolean(p.text_message_id&&p.briefing_photo_message_id&&p.photo_message_id);
+  const at=new Date().toISOString();
+  if(complete){
+    await env.GFS_DB.prepare("UPDATE gfs_report_publications SET status='sent', lease_until_utc=NULL, updated_at_utc=?, sent_at_utc=?, last_error=NULL WHERE run_id_utc=? AND status='sending'")
+      .bind(at,at,p.run_id_utc).run();
+    await env.GFS_DB.prepare("UPDATE gfs_report_dispatch_queue SET status='completed', dispatched_at_utc=?, last_error=NULL WHERE run_id_utc=?")
+      .bind(at,p.run_id_utc).run();
+    console.log(JSON.stringify({event:"istanbul_telegram_report_delivered",run_id_utc:p.run_id_utc,text_message_id:p.text_message_id,briefing_photo_message_id:p.briefing_photo_message_id,photo_message_id:p.photo_message_id}));
+    return {configured:true,delivered:1,run_id_utc:p.run_id_utc,parts:{text:true,briefing_photo:true,comparison_photo:true}};
   }
+
+  const err=(failures.length?failures.join(" | "):"Publication incomplete; successful parts retained").slice(0,1000);
+  await env.GFS_DB.prepare("UPDATE gfs_report_publications SET status='partial', lease_until_utc=NULL, updated_at_utc=?, last_error=? WHERE run_id_utc=? AND status='sending'")
+    .bind(at,err,p.run_id_utc).run();
+  console.error(JSON.stringify({event:"istanbul_telegram_delivery_partial",run_id_utc:p.run_id_utc,text_message_id:p.text_message_id||null,briefing_photo_message_id:p.briefing_photo_message_id||null,photo_message_id:p.photo_message_id||null,failures}));
+  return {configured:true,delivered:0,partial:true,run_id_utc:p.run_id_utc,parts:{text:Boolean(p.text_message_id),briefing_photo:Boolean(p.briefing_photo_message_id),comparison_photo:Boolean(p.photo_message_id)},failures};
 }
-
 function ecmwfRunCandidates(now = new Date(), limit = 6) {
   const hour = now.getUTCHours() >= 12 ? 12 : 0;
   const latest = new Date(Date.UTC(now.getUTCFullYear(), now.getUTCMonth(), now.getUTCDate(), hour));
