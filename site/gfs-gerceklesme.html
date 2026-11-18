@@ -345,9 +345,9 @@ function buildScores(tempHours, rainHours, windHours) {
   const windRanked = rankCategory(windScores);
   return {
     rows,
-    tempTop: tempRanked.slice(0, 5),
-    rainTop: rainRanked.slice(0, 5),
-    windTop: windRanked.slice(0, 5),
+    tempTop: tempRanked.slice(0, 10),
+    rainTop: rainRanked.slice(0, 10),
+    windTop: windRanked.slice(0, 10),
     tBest: tempRanked[0] || null,
     rBest: rainRanked[0] || null,
     wBest: windRanked[0] || null,
@@ -468,7 +468,7 @@ function renderMetricCard(icon, title, rows, type) {
       '</div>';
   }).join("");
   return '<section class="score-card">' +
-    '<h3>' + icon + ' ' + title + ' · En iyi 5</h3>' +
+    '<h3>' + icon + ' ' + title + ' · En iyi 10</h3>' +
     '<div class="score-rank-list">' + items + '</div>' +
     '</section>';
 }
