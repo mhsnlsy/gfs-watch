@@ -1,6 +1,11 @@
 name: Köy Climate — Isolated D1 Refresh
 
 on:
+  push:
+    branches: [main]
+    paths:
+      - "scripts/refresh_koy_climate.mjs"
+      - ".github/workflows/koy-climate-refresh.yml"
   schedule:
     - cron: "30 1 * * *"
   workflow_dispatch:
