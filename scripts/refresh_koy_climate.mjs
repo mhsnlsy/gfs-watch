@@ -85,6 +85,18 @@ function round(value, digits = 2) {
   return Math.round(value * multiplier) / multiplier;
 }
 
+let lastArchiveRequestAt = 0;
+const ARCHIVE_MIN_INTERVAL_MS = 4500;
+
+function delay(ms) {
+  return new Promise(resolve => setTimeout(resolve, ms));
+}
+
+async function waitForArchiveSlot() {
+  const waitMs = Math.max(0, lastArchiveRequestAt + ARCHIVE_MIN_INTERVAL_MS - Date.now());
+  if (waitMs > 0) await delay(waitMs);
+}
+
 function average(values) {
   const valid = values.filter(Number.isFinite);
   if (!valid.length) return null;
@@ -121,6 +133,7 @@ async function fetchJson(url, label, attempts = 5) {
   let lastError = null;
   for (let attempt = 1; attempt <= attempts; attempt++) {
     try {
+      await waitForArchiveSlot();
       const response = await fetch(url, {
         headers: {
           "User-Agent": "Mozilla/5.0 (compatible; IstanbulHavasi-KoyClimate/2.0; +https://istanbulunhavasi.com/)",
@@ -128,22 +141,34 @@ async function fetchJson(url, label, attempts = 5) {
         },
         signal: AbortSignal.timeout(90000),
       });
+      lastArchiveRequestAt = Date.now();
       if (response.ok) return await response.json();
 
       const detail = await response.text().catch(() => "");
       lastError = new Error(
         label + ": HTTP " + response.status + (detail ? " · " + detail.slice(0, 240) : "")
       );
-      if (response.status !== 429 && response.status < 500) throw lastError;
+      if (response.status === 429) {
+        const retryAfterSeconds = Number(response.headers.get("Retry-After"));
+        const waitMs = Number.isFinite(retryAfterSeconds) && retryAfterSeconds > 0
+          ? (retryAfterSeconds + 5) * 1000
+          : 65000;
+        console.warn("[" + label + "] rate limited; retrying after " + Math.round(waitMs / 1000) + " s");
+        if (attempt < attempts) await delay(waitMs);
+        continue;
+      }
+      if (response.status < 500) throw lastError;
     } catch (error) {
       lastError = error;
       if (attempt === attempts) break;
+      // 429 is handled above with the server-provided/minute-long delay.
+      if (String(error?.message || error).includes("HTTP 429")) continue;
     }
 
     if (attempt < attempts) {
-      const delay = Math.min(30000, 2000 * (2 ** (attempt - 1)));
-      console.warn("[" + label + "] retry " + (attempt + 1) + "/" + attempts + " after " + delay + " ms");
-      await new Promise(resolve => setTimeout(resolve, delay));
+      const waitMs = Math.min(30000, 5000 * (2 ** (attempt - 1)));
+      console.warn("[" + label + "] retry " + (attempt + 1) + "/" + attempts + " after " + waitMs + " ms");
+      await delay(waitMs);
     }
   }
   throw lastError || new Error(label + ": request failed");
@@ -186,7 +211,7 @@ async function downloadHistoricalMonth(model, month, currentYear) {
   const monthText = String(month).padStart(2, "0");
   const lastDay = daysInMonth(currentYear, month);
   const documents = [];
-  const chunkYears = 10;
+  const chunkYears = 25;
 
   // Small, sequential calendar-month windows avoid large multi-decade
   // responses and reduce upstream 503/429 pressure.
