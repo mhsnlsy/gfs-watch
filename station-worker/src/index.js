@@ -449,6 +449,7 @@ function observationFromMgm(stationKey, row, sourceUrl) {
     temperature_2m_c: temp,
     humidity_percent: humidity,
     station_pressure_hpa: pressure,
+    pressure_hpa: pressure,
     actual_station_pressure_hpa: pressure,
     wind_speed_10m_kmh: windKmh,
     wind_speed_10m_knots: windKmh === null ? null : round(windKmh / 1.852, 1),
@@ -548,7 +549,7 @@ async function getCurrent(env, stationKey) {
 async function getHistory(env, stationKey, hours) {
   const since = new Date(Date.now() - hours * 3600000).toISOString();
   const { results } = await env.STATIONS_DB.prepare(
-    "SELECT station_id, observed_at_utc AS source_observed_at_utc, fetched_at_utc, temperature_c, humidity_percent, pressure_hpa, wind_speed_kmh, wind_direction, rain_1h_mm, rain_10m_mm, rain_6h_mm, rain_12h_mm, rain_24h_mm, rain_00_now_mm, feels_like_c FROM station_history WHERE station_key = ? AND fetched_at_utc >= ? ORDER BY fetched_at_utc ASC LIMIT 20000"
+    "SELECT station_id, observed_at_utc, observed_at_utc AS source_observed_at_utc, fetched_at_utc, temperature_c, humidity_percent, pressure_hpa, wind_speed_kmh, wind_direction, rain_1h_mm, rain_10m_mm, rain_6h_mm, rain_12h_mm, rain_24h_mm, rain_00_now_mm, feels_like_c FROM station_history WHERE station_key = ? AND fetched_at_utc >= ? ORDER BY fetched_at_utc ASC LIMIT 20000"
   ).bind(stationKey, since).all();
   return results || [];
 }
