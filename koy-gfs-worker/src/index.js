@@ -173,13 +173,45 @@ async function buildClimatePayload(model, parts, archive, recent) {
 
 async function refreshClimateCache(env, forceDate = null) {
   const parts = forceDate || istanbulDateParts();
-  const end = climateDateKey(parts);
-  const start = String(1984) + "-" + String(parts.month).padStart(2, "0") + "-01";
-  const results = [];
+  const periodDate = climateDateKey(parts);
 
+  // Historical reanalysis is used only for the long-term baseline.
+  // Current-month readings are fetched from the continuously updated
+  // Forecast API because CERRA ends in June 2021 and ERA5/ERA5-Land
+  // are published with a delay.
+  const historicalStart = "1984-01-01";
+  const historicalEnd = String(parts.year - 1) + "-" +
+    String(parts.month).padStart(2, "0") + "-" +
+    String(parts.day).padStart(2, "0");
+  const recentStart = String(parts.year) + "-" +
+    String(parts.month).padStart(2, "0") + "-01";
+
+  const recentUrl = "https://api.open-meteo.com/v1/forecast"
+    + "?latitude=" + LOCATION.latitude
+    + "&longitude=" + LOCATION.longitude
+    + "&start_date=" + recentStart
+    + "&end_date=" + periodDate
+    + "&daily=temperature_2m_max,temperature_2m_min,temperature_2m_mean,precipitation_sum,wind_speed_10m_mean,wind_gusts_10m_max"
+    + "&timezone=Europe/Istanbul";
+
+  const recentResponse = await fetch(recentUrl, {
+    headers: {
+      "User-Agent": "Mozilla/5.0 (compatible; IstanbulHavasi/1.0; +https://istanbulunhavasi.com/)",
+      "Accept": "application/json",
+      "Cache-Control": "no-cache",
+    },
+    signal: AbortSignal.timeout(60000),
+  });
+  if (!recentResponse.ok) {
+    throw new Error("Open-Meteo recent climate HTTP " + recentResponse.status);
+  }
+  const recent = await recentResponse.json();
+
+  const results = [];
   for (const model of Object.keys(CLIMATE_MODELS)) {
-    const archive = await fetchClimateArchive(model, start, end);
-    const payload = await buildClimatePayload(model, parts, archive);
+    const archive = await fetchClimateArchive(model, historicalStart, historicalEnd);
+    const payload = await buildClimatePayload(model, parts, archive, recent);
+
     await env.GFS_DB.prepare(
       "INSERT INTO climate_cache (cache_key, model, period_date, payload_json, updated_at_utc) " +
       "VALUES (?, ?, ?, ?, ?) " +
@@ -192,7 +224,12 @@ async function refreshClimateCache(env, forceDate = null) {
       JSON.stringify(payload),
       payload.updated_at_utc
     ).run();
-    results.push({ model, period_date: periodDate, updated_at_utc: payload.updated_at_utc });
+
+    results.push({
+      model,
+      period_date: periodDate,
+      updated_at_utc: payload.updated_at_utc
+    });
   }
 
   return { ok: true, period_date: periodDate, models: results };
