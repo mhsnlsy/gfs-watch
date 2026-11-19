@@ -14,9 +14,11 @@ const CLIMATE_MODELS = {
     label: "CERRA",
     resolution: "5.5 KM",
     startYear: 1985,
+    // Historical baseline only needs temperature and precipitation.
+    // Wind is calculated from the current-month Forecast API below.
     daily: [
       "temperature_2m_max","temperature_2m_min","temperature_2m_mean",
-      "precipitation_sum","wind_speed_10m_mean","wind_gusts_10m_max"
+      "precipitation_sum"
     ],
     supportsPrecip: true,
     supportsWind: true,
@@ -25,9 +27,10 @@ const CLIMATE_MODELS = {
     label: "ERA5",
     resolution: "~31 KM",
     startYear: 1940,
+    // Historical baseline only needs temperature and precipitation.
     daily: [
       "temperature_2m_max","temperature_2m_min","temperature_2m_mean",
-      "precipitation_sum","wind_speed_10m_mean","wind_gusts_10m_max"
+      "precipitation_sum"
     ],
     supportsPrecip: true,
     supportsWind: true,
