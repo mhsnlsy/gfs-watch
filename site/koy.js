@@ -92,9 +92,11 @@ async function getStation(path){
  if(!doc)throw lastError||Error("Station API unavailable");
  if(path.includes("/history/")&&Array.isArray(doc.samples)){
   doc.samples=doc.samples.map(s=>({...s,
+   observed_at_utc:s.observed_at_utc || s.source_observed_at_utc || s.logged_at_utc || s.fetched_at_utc || null,
+   logged_at_utc:s.logged_at_utc || s.observed_at_utc || s.source_observed_at_utc || s.fetched_at_utc || null,
    temperature_2m_c:s.temperature_2m_c == null ? s.temperature_c : s.temperature_2m_c,
    humidity_percent:s.humidity_percent,
-   pressure_hpa:s.pressure_hpa,
+   pressure_hpa:s.pressure_hpa == null ? (s.station_pressure_hpa == null ? s.actual_station_pressure_hpa : s.station_pressure_hpa) : s.pressure_hpa,
    wind_speed_10m_kmh:s.wind_speed_10m_kmh == null ? s.wind_speed_kmh : s.wind_speed_10m_kmh,
    wind_direction_deg:s.wind_direction_deg == null ? s.wind_direction : s.wind_direction_deg,
    precipitation_1h_mm:s.precipitation_1h_mm == null ? s.rain_1h_mm : s.precipitation_1h_mm,
@@ -134,7 +136,7 @@ function buildVirtualHomeObservation(source){
  const t=num(source.temperature_2m_c),rh=num(source.humidity_percent),wind=num(source.wind_speed_10m_kmh);
  if(t==null)return null;
  const correctedT=Number((t-MGM_HOME_TEMP_CORRECTION_C).toFixed(1));
- const p=num(source.pressure_hpa);
+ const p=num(source.pressure_hpa == null ? (source.station_pressure_hpa == null ? source.actual_station_pressure_hpa : source.station_pressure_hpa) : source.pressure_hpa);
  let correctedP=null;
  if(p!=null){
   const tk=t+273.15,tev=correctedT+273.15,L=HOME_STANDARD_LAPSE_K_PER_KM/1000;
