@@ -2,7 +2,7 @@
   "use strict";
 
   const TZ = "Europe/Istanbul";
-  const API = "./api/climate";
+  const API = "https://gfs-watch-koy-gfs.muhsin-ulusoy.workers.dev/api/climate";
   const CURRENT_API = "https://api.open-meteo.com/v1/forecast?latitude=40.955664&longitude=39.006648&current=temperature_2m&timezone=Europe%2FIstanbul";
 
   const $ = id => document.getElementById(id);
