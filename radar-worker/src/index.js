@@ -9,8 +9,8 @@ const ANALYSIS_RADIUS_KM = 25;
 // Minimum gap between two Telegram radar alerts (persisted in D1 radar_state.last_alert_ts).
 const ALERT_COOLDOWN_SEC = 60 * 60;
 const THRESHOLD_DBZ_STRONG = 30;
-const ENTRY_ALERT_RADIUS_KM = 25;
-const RADAR_BUILD = "paid-cron-2026-11-10-dbz-classes-9";
+const ENTRY_ALERT_RADIUS_KM = 0.25; // Telegram alarm radius: 250 m from the monitored location.
+const RADAR_BUILD = "paid-cron-2026-11-19-250m-alert-1";
 const RADAR_CRON = "*/6 * * * *";
 const TOMORROW_CRON = "45 16 * * *"; // 19:45 Europe/Istanbul
 // Hard gap between tomorrow-weather Telegram sends. Not seeded from today's tests,
@@ -18,9 +18,9 @@ const TOMORROW_CRON = "45 16 * * *"; // 19:45 Europe/Istanbul
 const TOMORROW_COOLDOWN_MIN = 1438; // 23h 58m
 const TOMORROW_COOLDOWN_SEC = TOMORROW_COOLDOWN_MIN * 60;
 const HISTORY_LEN = 4;
-const ZOOM = 7;
+const ZOOM = 10;
 const TILE_SIZE = 256;
-// Web-Mercator ground resolution at the monitored latitude (≈0.92 km/px at z7, 256 px tiles).
+// Web-Mercator ground resolution at the monitored latitude (≈0.115 km/px at z10, 256 px tiles).
 const PIXEL_KM = 156543.03392 * Math.cos(LAT * Math.PI / 180) / (2 ** ZOOM) / 1000;
 const ANALYSIS_CFG = `${LAT},${LON},${ANALYSIS_RADIUS_KM},${ZOOM}`;
 const ANALYSIS_RADIUS_PX = Math.ceil(ANALYSIS_RADIUS_KM / PIXEL_KM);
@@ -313,7 +313,7 @@ function drawCircle(rgba,w,cx,cy,r,color,width=2){const h=rgba.length/(w*4);for(
 function drawMarker(rgba,w,cx,cy){drawCircle(rgba,w,cx,cy,9,[0,92,230],3);drawCircle(rgba,w,cx,cy,4,[255,255,255],2);drawLine(rgba,w,cx-14,cy,cx+14,cy,[255,255,255],1);drawLine(rgba,w,cx,cy-14,cx,cy+14,[255,255,255],1);}
 function drawArrow(rgba,w,x0,y0,x1,y1){drawLine(rgba,w,x0,y0,x1,y1,[255,255,255],3);const ang=Math.atan2(y1-y0,x1-x0),len=14;drawLine(rgba,w,x1,y1,x1-len*Math.cos(ang-0.5),y1-len*Math.sin(ang-0.5),[255,255,255],3);drawLine(rgba,w,x1,y1,x1-len*Math.cos(ang+0.5),y1-len*Math.sin(ang+0.5),[255,255,255],3);}
 function compositeRadar(base,radar){const rgba=new Uint8Array(base.w*base.h*4),bb=base.ct===6?4:3,rb=radar.ct===6?4:3;for(let p=0,i=0;p<base.w*base.h;p++,i+=4){const bi=p*bb,ri=p*rb;rgba[i]=base.data[bi]||0;rgba[i+1]=base.data[bi+1]||0;rgba[i+2]=base.data[bi+2]||0;rgba[i+3]=255;const a=(radar.ct===6?(radar.data[ri+3]||0):255)/255;if(a>0){rgba[i]=Math.round((radar.data[ri]||0)*a+rgba[i]*(1-a));rgba[i+1]=Math.round((radar.data[ri+1]||0)*a+rgba[i+1]*(1-a));rgba[i+2]=Math.round((radar.data[ri+2]||0)*a+rgba[i+2]*(1-a));}}return rgba;}
-async function makeRadarReportPng(base,radar,curr){const rgba=compositeRadar(base,radar),w=base.w,h=base.h,[px,py]=latlonToPixel(LAT,LON,ZOOM),cx=(px%TILE_SIZE)+TILE_SIZE,cy=(py%TILE_SIZE)+TILE_SIZE;drawCircle(rgba,w,cx,cy,Math.round(ENTRY_ALERT_RADIUS_KM/PIXEL_KM),[255,255,255],2);drawMarker(rgba,w,cx,cy);if(curr.centroid_dist!=null){const mx=cx+curr.avg_dx,my=cy+curr.avg_dy;drawCircle(rgba,w,mx,my,8,[255,255,255],2);drawArrow(rgba,w,cx,cy,mx,my);}return encodePngRGBA(w,h,rgba);}
+async function makeRadarReportPng(base,radar,curr){const rgba=compositeRadar(base,radar),w=base.w,h=base.h,[px,py]=latlonToPixel(LAT,LON,ZOOM),cx=(px%TILE_SIZE)+TILE_SIZE,cy=(py%TILE_SIZE)+TILE_SIZE;drawCircle(rgba,w,cx,cy,Math.max(2,Math.round(ENTRY_ALERT_RADIUS_KM/PIXEL_KM)),[255,255,255],2);drawMarker(rgba,w,cx,cy);if(curr.centroid_dist!=null){const mx=cx+curr.avg_dx,my=cy+curr.avg_dy;drawCircle(rgba,w,mx,my,8,[255,255,255],2);drawArrow(rgba,w,cx,cy,mx,my);}return encodePngRGBA(w,h,rgba);}
 
 async function check(env){
   const timeline=await (await fetch("https://api.rainviewer.com/public/weather-maps.json",{cf:{cacheTtl:0}})).json();
@@ -554,7 +554,7 @@ export default {
         service: "radar-monitor",
         interval: "6m",
         build: RADAR_BUILD,
-        alert_rule: "RainViewer yağış 25 km içinde + yaklaşma, 45 dk cooldown",
+        alert_rule: "RainViewer yağış 250 m içinde, 60 dk cooldown",
         info: DBZ_CLASSES.map(cls => (cls.min + "–" + (cls.max === null ? "∞" : cls.max) + " dBZ: " + cls.label)).join("; "),
         intensity_classes: DBZ_CLASSES.map(cls => ({
           min_dbz: cls.min,
@@ -562,7 +562,7 @@ export default {
           label: cls.label,
           emoji: cls.emoji,
         })),
-        center: { lat: LAT, lon: LON, radius_km: ANALYSIS_RADIUS_KM, cooldown_min: ALERT_COOLDOWN_SEC / 60 },
+        center: { lat: LAT, lon: LON, analysis_radius_km: ANALYSIS_RADIUS_KM, alert_radius_m: ENTRY_ALERT_RADIUS_KM * 1000, cooldown_min: ALERT_COOLDOWN_SEC / 60 },
         crons: [RADAR_CRON, TOMORROW_CRON],
         tomorrow_cooldown_min: TOMORROW_COOLDOWN_MIN,
         last_tomorrow_ts: await readTomorrowTs(env.RADAR_DB),
