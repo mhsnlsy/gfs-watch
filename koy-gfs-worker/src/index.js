@@ -1604,10 +1604,20 @@ async function api(request, env) {
 
       let data = await getClimateCache(env, model);
       if (!data || (model === null && Object.keys(data).length < 3)) {
-        // Cold-start fallback: populate the nightly cache immediately after
-        // deployment, then all normal requests become D1 reads.
-        await refreshClimateCache(env);
+        // Cold-start: refresh only the requested model. This prevents one
+        // unavailable/slow reanalysis from blocking the other tabs.
+        const dateParts = istanbulDateParts();
+        await refreshClimateCache(env, model
+          ? { ...dateParts, models: [model] }
+          : dateParts);
         data = await getClimateCache(env, model);
+      }
+
+      if (!data) {
+        return json({
+          ok: false,
+          error: "Climate cache unavailable for model " + (model || "all"),
+        }, 503);
       }
 
       return json({
