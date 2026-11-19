@@ -9,6 +9,210 @@ const LOCATION = {
 };
 const CYCLES = [18, 12, 6, 0];
 
+const CLIMATE_MODELS = {
+  cerra: { label: "CERRA", resolution: "5.5 KM" },
+  era5: { label: "ERA5", resolution: "~31 KM" },
+  era5_land: { label: "ERA5-LAND", resolution: "~9 KM" },
+};
+
+function istanbulDateParts(date = new Date()) {
+  const parts = new Intl.DateTimeFormat("en-US", {
+    timeZone: "Europe/Istanbul",
+    year: "numeric",
+    month: "2-digit",
+    day: "2-digit",
+  }).formatToParts(date);
+  const out = {};
+  for (const part of parts) if (part.type !== "literal") out[part.type] = Number(part.value);
+  return out;
+}
+
+function climateDateKey(parts) {
+  return String(parts.year) + "-" + String(parts.month).padStart(2, "0") + "-" + String(parts.day).padStart(2, "0");
+}
+
+function climateArchiveUrl(model, start, end) {
+  const daily = [
+    "temperature_2m_max",
+    "temperature_2m_min",
+    "temperature_2m_mean",
+    "precipitation_sum",
+    "wind_speed_10m_mean",
+    "wind_gusts_10m_max",
+  ].join(",");
+  return "https://archive-api.open-meteo.com/v1/archive"
+    + "?latitude=" + LOCATION.latitude
+    + "&longitude=" + LOCATION.longitude
+    + "&start_date=" + start
+    + "&end_date=" + end
+    + "&daily=" + daily
+    + "&models=" + encodeURIComponent(model)
+    + "&timezone=Europe/Istanbul";
+}
+
+async function fetchClimateArchive(model, start, end) {
+  const response = await fetch(climateArchiveUrl(model, start, end), {
+    headers: {
+      "User-Agent": "Mozilla/5.0 (compatible; IstanbulHavasi/1.0; +https://istanbulunhavasi.com/)",
+      "Accept": "application/json",
+      "Cache-Control": "no-cache",
+    },
+    signal: AbortSignal.timeout(60000),
+  });
+  if (!response.ok) {
+    throw new Error("Open-Meteo climate HTTP " + response.status);
+  }
+  return response.json();
+}
+
+function climateRows(document) {
+  const d = document?.daily;
+  if (!d || !Array.isArray(d.time)) return [];
+  return d.time.map((time, i) => ({
+    time,
+    year: Number(time.slice(0, 4)),
+    month: Number(time.slice(5, 7)),
+    day: Number(time.slice(8, 10)),
+    mean: Number.isFinite(Number(d.temperature_2m_mean?.[i])) ? Number(d.temperature_2m_mean[i]) : null,
+    max: Number.isFinite(Number(d.temperature_2m_max?.[i])) ? Number(d.temperature_2m_max[i]) : null,
+    min: Number.isFinite(Number(d.temperature_2m_min?.[i])) ? Number(d.temperature_2m_min[i]) : null,
+    precip: Number.isFinite(Number(d.precipitation_sum?.[i])) ? Number(d.precipitation_sum[i]) : 0,
+    windMean: Number.isFinite(Number(d.wind_speed_10m_mean?.[i])) ? Number(d.wind_speed_10m_mean[i]) : null,
+    windMax: Number.isFinite(Number(d.wind_gusts_10m_max?.[i])) ? Number(d.wind_gusts_10m_max[i]) : null,
+  }));
+}
+
+function climateAverage(values) {
+  const valid = values.filter(value => Number.isFinite(value));
+  return valid.length ? valid.reduce((sum, value) => sum + value, 0) / valid.length : null;
+}
+
+function climateRound(value, digits = 1) {
+  if (!Number.isFinite(value)) return null;
+  const p = 10 ** digits;
+  return Math.round(value * p) / p;
+}
+
+async function buildClimatePayload(model, parts, archive) {
+  const rows = climateRows(archive);
+  const monthRows = rows.filter(row =>
+    row.year === parts.year && row.month === parts.month && row.day <= parts.day
+  );
+  const dayRows = rows.filter(row => row.month === parts.month && row.day === parts.day && row.mean !== null);
+  const historical = dayRows.filter(row => row.year < parts.year);
+
+  const monthlyHistory = new Map();
+  for (const row of rows.filter(row => row.month === parts.month && row.year < parts.year)) {
+    if (!monthlyHistory.has(row.year)) monthlyHistory.set(row.year, 0);
+    monthlyHistory.set(row.year, monthlyHistory.get(row.year) + (row.precip || 0));
+  }
+
+  const monthlyNormals = [...monthlyHistory.values()];
+  const monthPrecip = monthRows.reduce((sum, row) => sum + (row.precip || 0), 0);
+  const monthNormal = climateAverage(monthlyNormals);
+  const anomaly = monthNormal != null && monthNormal !== 0
+    ? ((monthPrecip - monthNormal) / monthNormal) * 100
+    : null;
+
+  const historicalMeans = historical.map(row => row.mean).filter(v => v !== null);
+  const historicalMin = historicalMeans.length ? Math.min(...historicalMeans) : null;
+  const historicalMax = historicalMeans.length ? Math.max(...historicalMeans) : null;
+  const historicalAvg = climateAverage(historicalMeans);
+  const minRow = historical.find(row => row.mean === historicalMin);
+  const maxRow = historical.find(row => row.mean === historicalMax);
+  const today = monthRows.find(row => row.year === parts.year && row.day === parts.day) || null;
+  const record = historical.reduce((best, row) => {
+    if (!best || row.precip > best.precip) return row;
+    return best;
+  }, null);
+
+  return {
+    schema: "koy-climate.v1",
+    location: LOCATION,
+    model,
+    model_label: CLIMATE_MODELS[model].label,
+    resolution: CLIMATE_MODELS[model].resolution,
+    period_date: climateDateKey(parts),
+    month: parts.month,
+    month_name: new Intl.DateTimeFormat("en-US", { month: "long" }).format(new Date(Date.UTC(parts.year, parts.month - 1, 1))).toUpperCase(),
+    month_readings_through_day: parts.day,
+    historical_start_year: 1984,
+    historical_end_year: parts.year - 1,
+    month: {
+      avg_temp_c: climateRound(climateAverage(monthRows.map(row => row.mean).filter(v => v !== null))),
+      high_c: climateRound(Math.max(...monthRows.map(row => row.max).filter(v => v !== null))),
+      low_c: climateRound(Math.min(...monthRows.map(row => row.min).filter(v => v !== null))),
+      precipitation_mm: climateRound(monthPrecip),
+      avg_wind_kmh: climateRound(climateAverage(monthRows.map(row => row.windMean).filter(v => v !== null))),
+      max_wind_kmh: climateRound(monthRows.reduce((max, row) => row.windMax != null ? Math.max(max, row.windMax) : max, -Infinity)),
+    },
+    long_term: {
+      min_c: climateRound(historicalMin),
+      min_year: minRow?.year ?? null,
+      avg_c: climateRound(historicalAvg),
+      max_c: climateRound(historicalMax),
+      max_year: maxRow?.year ?? null,
+      current_temperature_c: null,
+      today_mean_c: climateRound(today?.mean),
+      today_precipitation_mm: climateRound(today?.precip || 0),
+      record_daily_precipitation_mm: climateRound(record?.precip),
+      record_daily_precipitation_year: record?.year ?? null,
+    },
+    precipitation_anomaly: {
+      current_mm: climateRound(monthPrecip),
+      normal_mm: climateRound(monthNormal),
+      percent: climateRound(anomaly),
+    },
+    updated_at_utc: new Date().toISOString(),
+  };
+}
+
+async function refreshClimateCache(env, forceDate = null) {
+  const parts = forceDate || istanbulDateParts();
+  const end = climateDateKey(parts);
+  const start = String(1984) + "-" + String(parts.month).padStart(2, "0") + "-01";
+  const results = [];
+
+  for (const model of Object.keys(CLIMATE_MODELS)) {
+    const archive = await fetchClimateArchive(model, start, end);
+    const payload = await buildClimatePayload(model, parts, archive);
+    await env.GFS_DB.prepare(
+      "INSERT INTO climate_cache (cache_key, model, period_date, payload_json, updated_at_utc) " +
+      "VALUES (?, ?, ?, ?, ?) " +
+      "ON CONFLICT(cache_key) DO UPDATE SET model=excluded.model, period_date=excluded.period_date, " +
+      "payload_json=excluded.payload_json, updated_at_utc=excluded.updated_at_utc"
+    ).bind(
+      model + ":" + end,
+      model,
+      end,
+      JSON.stringify(payload),
+      payload.updated_at_utc
+    ).run();
+    results.push({ model, period_date: end, updated_at_utc: payload.updated_at_utc });
+  }
+
+  return { ok: true, period_date: end, models: results };
+}
+
+async function getClimateCache(env, model = null) {
+  if (model) {
+    const row = await env.GFS_DB.prepare(
+      "SELECT payload_json, updated_at_utc FROM climate_cache WHERE model = ? ORDER BY period_date DESC LIMIT 1"
+    ).bind(model).first();
+    return row?.payload_json ? JSON.parse(row.payload_json) : null;
+  }
+
+  const rows = await env.GFS_DB.prepare(
+    "SELECT model, payload_json FROM climate_cache ORDER BY model, period_date DESC"
+  ).all();
+  const out = {};
+  for (const row of rows.results || []) {
+    if (!out[row.model] && row.payload_json) out[row.model] = JSON.parse(row.payload_json);
+  }
+  return out;
+}
+
+
 function json(data, status = 200) {
   return new Response(JSON.stringify(data, null, 2), {
     status,
@@ -1297,6 +1501,33 @@ async function api(request, env) {
     }
   }
 
+  if (path === "/api/climate") {
+    try {
+      const model = new URL(request.url).searchParams.get("model") || null;
+      if (model && !CLIMATE_MODELS[model]) {
+        return json({ ok: false, error: "Unknown climate model" }, 400);
+      }
+
+      let data = await getClimateCache(env, model);
+      if (!data || (model === null && Object.keys(data).length < 3)) {
+        // Cold-start fallback: populate the nightly cache immediately after
+        // deployment, then all normal requests become D1 reads.
+        await refreshClimateCache(env);
+        data = await getClimateCache(env, model);
+      }
+
+      return json({
+        ok: true,
+        schema: "koy-climate.v1",
+        location: LOCATION,
+        data,
+        source: "Open-Meteo archive · cached in Cloudflare D1",
+      });
+    } catch (error) {
+      return json({ ok: false, error: String(error?.message || error) }, 503);
+    }
+  }
+
   if (path === "/api/health") {
     try {
       const current = await currentRun(env, "f72");
@@ -1306,7 +1537,7 @@ async function api(request, env) {
         ok: true,
         service: "gfs-watch-koy-gfs",
         storage: "D1",
-        cron: "*/10 * * * *",
+        cron: ["*/10 * * * *", "30 1 * * *"],
         location: LOCATION,
         latest_run_id_utc: current?.run_id_utc || null,
         latest_updated_at_utc: current?.updated_at_utc || null,
@@ -1597,6 +1828,20 @@ export default {
   },
 
   async scheduled(controller, env, ctx) {
+    const cron = controller.cron || "";
+    if (cron === "30 1 * * *") {
+      ctx.waitUntil(
+        refreshClimateCache(env).catch(error => {
+          console.error(JSON.stringify({
+            event: "koy_climate_cron_error",
+            message: String(error?.message || error),
+            scheduled_time: new Date(controller.scheduledTime).toISOString(),
+          }));
+        })
+      );
+      return;
+    }
+
     ctx.waitUntil(
       collect(env).catch(error => {
         console.error(JSON.stringify({
