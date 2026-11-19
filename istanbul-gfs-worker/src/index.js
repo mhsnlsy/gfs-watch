@@ -24,6 +24,7 @@ const ECMWF_LOCATION = {
   longitude: 28.9436,
 };
 const ECMWF_SCHEMA = "gfs-watch.ecmwf-eps.v1";
+const ECMWF_MAX_FORECAST_HOURS = 360;
 
 function json(data, status = 200) {
   return new Response(JSON.stringify(data), {
@@ -202,6 +203,7 @@ function normalize(candidate, now) {
 
   const hasF72 = steps.includes(72);
   const hasF180 = steps.includes(180);
+  const hasF360 = steps.includes(360);
   const first = points[0] || {};
   const payload = {
     schema: "gfs-watch.forecast.v1",
@@ -234,12 +236,20 @@ function normalize(candidate, now) {
       forecast_hour: 180,
       source: "MeteoPT",
     },
+    f360: {
+      available: hasF360,
+      forecast_hour: 360,
+      source: "MeteoPT",
+    },
     noaa_source_file: {
       f72_available: hasF72,
       f72_source_name: hasF72 ? "MeteoPT" : null,
       f180_available: hasF180,
       f180_source_name: hasF180 ? "MeteoPT" : null,
       f180_source_url: API_BASE,
+      f360_available: hasF360,
+      f360_source_name: hasF360 ? "MeteoPT" : null,
+      f360_source_url: API_BASE,
     },
     current_conditions: {
       temperature_2m_c: first.temperature_2m_c ?? null,
@@ -721,9 +731,14 @@ async function fetchEcmwfDocument(runDt) {
   if (String(raw?.run || "") !== expected) {
     throw new Error("MeteoPT ECMWF returned run " + String(raw?.run || "empty") + ", expected " + expected);
   }
+  // Keep each source-array index beside its forecast hour. This preserves the
+  // alignment when the provider includes an F0 value but the public series
+  // intentionally starts at F3.
   const steps = (raw?.steps?.values || [])
-    .map(value => Number(value))
-    .filter(value => Number.isInteger(value) && value > 0 && value % 3 === 0);
+    .map((value, index) => ({ hour: Number(value), index }))
+    .filter(item => Number.isInteger(item.hour) && item.hour > 0 &&
+      item.hour <= ECMWF_MAX_FORECAST_HOURS && item.hour % 3 === 0)
+    .sort((a, b) => a.hour - b.hour);
   const temperature = ecmwfSeries(raw, "tmp2m");
   const temperature850 = ecmwfSeries(raw, "tmp850mb");
   const wind = ecmwfSeries(raw, "wind10m");
@@ -738,26 +753,28 @@ async function fetchEcmwfDocument(runDt) {
   const forecasts = [];
   let previousHour = 0;
   for (let i = 0; i < steps.length; i += 1) {
+    const sourceIndex = steps[i].index;
+    const forecastHour = steps[i].hour;
     const values = {
-      temperature: ecmwfNumber(temperature[i]),
-      temperature850: ecmwfNumber(temperature850[i]),
-      wind: ecmwfNumber(wind[i]),
-      windDirection: ecmwfNumber(windDirection[i]),
-      wind850: ecmwfNumber(wind850[i]),
-      rain: ecmwfNumber(rain[i]),
-      pressure: ecmwfNumber(pressure[i]),
+      temperature: ecmwfNumber(temperature[sourceIndex]),
+      temperature850: ecmwfNumber(temperature850[sourceIndex]),
+      wind: ecmwfNumber(wind[sourceIndex]),
+      windDirection: ecmwfNumber(windDirection[sourceIndex]),
+      wind850: ecmwfNumber(wind850[sourceIndex]),
+      rain: ecmwfNumber(rain[sourceIndex]),
+      pressure: ecmwfNumber(pressure[sourceIndex]),
     };
     if (Object.values(values).some(value => value === null)) continue;
-    const valid = new Date(runDt.getTime() + steps[i] * 3600000);
+    const valid = new Date(runDt.getTime() + forecastHour * 3600000);
     const local = new Date(valid.getTime() + UTC_OFFSET_MS);
     forecasts.push({
-      forecast_hour: steps[i],
+      forecast_hour: forecastHour,
       valid_time_utc: valid.toISOString().replace(".000Z", "+00:00"),
       valid_time_istanbul: local.toISOString().slice(0, 16) + "+03:00",
       temperature_2m_c: Math.round(values.temperature * 100) / 100,
-      humidity_2m_percent: ecmwfNumber(humidity[i]),
-      snowln: ecmwfNumber(snowLevel[i]),
-      wind_direction_850hpa_deg: ecmwfNumber(windDirection850[i]) === null ? null : Math.round(((ecmwfNumber(windDirection850[i]) % 360) + 360) % 360),
+      humidity_2m_percent: ecmwfNumber(humidity[sourceIndex]),
+      snowln: ecmwfNumber(snowLevel[sourceIndex]),
+      wind_direction_850hpa_deg: ecmwfNumber(windDirection850[sourceIndex]) === null ? null : Math.round(((ecmwfNumber(windDirection850[sourceIndex]) % 360) + 360) % 360),
       temperature_2m_stddev_c: null,
       wind_speed_10m_kmh: Math.round(Math.max(0, values.wind) * 100) / 100,
       wind_direction_10m_deg: Math.round(((values.windDirection % 360) + 360) % 360),
@@ -768,14 +785,15 @@ async function fetchEcmwfDocument(runDt) {
       temperature_850hpa: { mean_c: Math.round(values.temperature850 * 100) / 100, stddev_c: null },
       wind_850hpa: { mean_kmh: Math.round(Math.max(0, values.wind850) * 100) / 100, stddev_kmh: null },
       mslp: { mean_hpa: Math.round(values.pressure * 10) / 10, stddev_hpa: null },
-      precipitation_interval_hours: steps[i] - previousHour,
+      precipitation_interval_hours: forecastHour - previousHour,
     });
     previousHour = steps[i];
   }
   if (forecasts.length < 8) throw new Error("MeteoPT ECMWF usable forecast is too short: " + forecasts.length);
   const horizon = forecasts[forecasts.length - 1]?.forecast_hour || 0;
-  if (horizon < 180) {
-    throw new Error("MeteoPT ECMWF cycle is not complete yet: only +" + horizon + "h is usable");
+  const hasF360 = forecasts.some(item => Number(item.forecast_hour) === ECMWF_MAX_FORECAST_HOURS);
+  if (horizon < ECMWF_MAX_FORECAST_HOURS || !hasF360) {
+    throw new Error("MeteoPT ECMWF cycle is not complete yet: only +" + horizon + "h is usable; F360 is required");
   }
   const daily = {};
   for (const item of forecasts) {
@@ -818,6 +836,7 @@ async function fetchEcmwfDocument(runDt) {
     surface_ensemble_spread_available: false,
     resolution: "MeteoPT nokta",
     forecast_horizon_hours: forecasts[forecasts.length - 1].forecast_hour,
+    f360: { available: hasF360, forecast_hour: ECMWF_MAX_FORECAST_HOURS, source: "MeteoPT" },
     run_id_utc: runDt.toISOString().replace(".000Z", "+00:00"),
     updated_at_utc: new Date().toISOString(),
     forecast_valid_until_utc: forecasts[forecasts.length - 1].valid_time_utc,
@@ -852,10 +871,13 @@ async function collectEcmwf(env) {
   for (const runDt of candidates) {
     const runId = runDt.toISOString().replace(".000Z", "+00:00");
     if (current && current.run_id_utc === runId) {
-      const currentHorizon = Number(JSON.parse(current.payload_json)?.forecast_horizon_hours || 0);
-      const cachedFirst = JSON.parse(current.payload_json)?.forecasts?.[0];
+      const cachedDocument = JSON.parse(current.payload_json);
+      const currentHorizon = Number(cachedDocument?.forecast_horizon_hours || 0);
+      const cachedFirst = cachedDocument?.forecasts?.[0];
       const cacheHasTableFields = cachedFirst && "humidity_2m_percent" in cachedFirst;
-      if (currentHorizon >= 180 && cacheHasTableFields) {
+      const cacheHasF360 = Array.isArray(cachedDocument?.forecasts) &&
+        cachedDocument.forecasts.some(item => Number(item?.forecast_hour) === ECMWF_MAX_FORECAST_HOURS);
+      if (currentHorizon >= ECMWF_MAX_FORECAST_HOURS && cacheHasTableFields && cacheHasF360) {
         return { updated: false, run_id_utc: runId, source: "meteopt", forecast_horizon_hours: currentHorizon };
       }
       errors.push(runId + ": cached cycle is incomplete or outdated (+" + currentHorizon + "h)");
@@ -1336,7 +1358,7 @@ async function handleApi(request, env) {
     try {
       let row = await env.GFS_DB.prepare("SELECT run_id_utc, payload_json FROM ecmwf_current WHERE key = 'latest'").first();
       let current = row?.payload_json ? JSON.parse(row.payload_json) : null;
-      if (!current || Number(current.forecast_horizon_hours || 0) < 180) {
+      if (!current || Number(current.forecast_horizon_hours || 0) < ECMWF_MAX_FORECAST_HOURS) {
         await collectEcmwf(env);
         row = await env.GFS_DB.prepare("SELECT run_id_utc, payload_json FROM ecmwf_current WHERE key = 'latest'").first();
         current = row?.payload_json ? JSON.parse(row.payload_json) : current;
