@@ -67,24 +67,18 @@ function climateDateKey(parts) {
 
 function climateArchiveUrl(model, start, end) {
   const daily = CLIMATE_MODELS[model].daily.join(",");
-  // Open-Meteo exposes the long-running reanalysis datasets through
-  // model-specific archive endpoints. Using /v1/era5 and /v1/era5-land
-  // is more reliable than routing these requests through /v1/archive
-  // with a models= parameter from a Cloudflare Worker.
-  const endpointByModel = {
-    cerra: "cerra",
-    era5: "era5",
-    era5_land: "era5-land",
-  };
-  const endpoint = endpointByModel[model];
-  if (!endpoint) throw new Error("Unsupported climate model: " + model);
+  // Open-Meteo Historical Weather API uses the unified /v1/archive
+  // endpoint. Pin the selected reanalysis with models= so the historical
+  // series never silently switches to another model.
+  if (!CLIMATE_MODELS[model]) throw new Error("Unsupported climate model: " + model);
 
-  return "https://archive-api.open-meteo.com/v1/" + endpoint
+  return "https://archive-api.open-meteo.com/v1/archive"
     + "?latitude=" + LOCATION.latitude
     + "&longitude=" + LOCATION.longitude
     + "&start_date=" + start
     + "&end_date=" + end
     + "&daily=" + daily
+    + "&models=" + encodeURIComponent(model)
     + "&timezone=Europe/Istanbul";
 }
 
