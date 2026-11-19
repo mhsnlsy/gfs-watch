@@ -10,9 +10,34 @@ const LOCATION = {
 const CYCLES = [18, 12, 6, 0];
 
 const CLIMATE_MODELS = {
-  cerra: { label: "CERRA", resolution: "5.5 KM" },
-  era5: { label: "ERA5", resolution: "~31 KM" },
-  era5_land: { label: "ERA5-LAND", resolution: "~9 KM" },
+  cerra: {
+    label: "CERRA",
+    resolution: "5.5 KM",
+    startYear: 1985,
+    daily: [
+      "temperature_2m_max","temperature_2m_min","temperature_2m_mean",
+      "precipitation_sum","wind_speed_10m_mean","wind_gusts_10m_max"
+    ],
+  },
+  era5: {
+    label: "ERA5",
+    resolution: "~31 KM",
+    startYear: 1940,
+    daily: [
+      "temperature_2m_max","temperature_2m_min","temperature_2m_mean",
+      "precipitation_sum","wind_speed_10m_mean","wind_gusts_10m_max"
+    ],
+  },
+  era5_land: {
+    label: "ERA5-LAND",
+    resolution: "~9 KM",
+    startYear: 1950,
+    // ERA5-Land Historical Weather API does not expose precipitation or
+    // 10 m wind in this endpoint. Keep the request model-valid.
+    daily: [
+      "temperature_2m_max","temperature_2m_min","temperature_2m_mean"
+    ],
+  },
 };
 
 function istanbulDateParts(date = new Date()) {
@@ -32,14 +57,7 @@ function climateDateKey(parts) {
 }
 
 function climateArchiveUrl(model, start, end) {
-  const daily = [
-    "temperature_2m_max",
-    "temperature_2m_min",
-    "temperature_2m_mean",
-    "precipitation_sum",
-    "wind_speed_10m_mean",
-    "wind_gusts_10m_max",
-  ].join(",");
+  const daily = CLIMATE_MODELS[model].daily.join(",");
   return "https://archive-api.open-meteo.com/v1/archive"
     + "?latitude=" + LOCATION.latitude
     + "&longitude=" + LOCATION.longitude
@@ -178,7 +196,7 @@ async function refreshClimateCache(env, forceDate = null) {
   // Current-month readings are fetched from the continuously updated
   // Forecast API because CERRA ends in June 2021 and ERA5/ERA5-Land
   // are published with a delay.
-  const historicalStart = "1984-01-01";
+  const historicalStartByModel = model => String(CLIMATE_MODELS[model].startYear) + "-01-01";
   const historicalEnd = String(parts.year - 1) + "-" +
     String(parts.month).padStart(2, "0") + "-" +
     String(parts.day).padStart(2, "0");
@@ -204,7 +222,7 @@ async function refreshClimateCache(env, forceDate = null) {
 
   const results = [];
   for (const model of Object.keys(CLIMATE_MODELS)) {
-    const archive = await fetchClimateArchive(model, historicalStart, historicalEnd);
+    const archive = await fetchClimateArchive(model, historicalStartByModel(model), historicalEnd);
     const payload = await buildClimatePayload(model, parts, archive, recent);
 
     await env.GFS_DB.prepare(
