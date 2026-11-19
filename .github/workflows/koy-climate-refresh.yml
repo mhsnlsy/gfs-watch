@@ -10,7 +10,7 @@ on:
     - cron: "30 1 * * *"
   workflow_dispatch:
   workflow_run:
-    workflows: ["Deploy Cloudflare Station Service"]
+    workflows: ["Deploy Cloudflare Station Service", "Deploy Cloudflare Köy GFS Service"]
     types: [completed]
 
 permissions:
