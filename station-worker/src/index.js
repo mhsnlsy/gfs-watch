@@ -468,7 +468,7 @@ function observationFromMgm(stationKey, row, sourceUrl) {
     observation_method: "mgm-sondurumlar"
   };
 }
-async function storeObservation(env, stationKey, observation) {
+async function storeObservation(env, stationKey, observation, triggerSource, durationMs) {
   if (!env.STATIONS_DB) return;
   const payload = JSON.stringify(observation);
   const nowIso = new Date().toISOString();
@@ -508,8 +508,26 @@ async function storeObservation(env, stationKey, observation) {
     observation.feels_like_c,
     payload
   );
-  await env.STATIONS_DB.batch([current, history]);
+  const diagnostic = env.STATIONS_DB.prepare(
+    "INSERT INTO station_collection_diagnostics (station_key, last_attempt_utc, last_success_utc, last_error, last_trigger_source, collection_duration_ms) VALUES (?, ?, ?, NULL, ?, ?) " +
+    "ON CONFLICT(station_key) DO UPDATE SET last_attempt_utc=excluded.last_attempt_utc, last_success_utc=excluded.last_success_utc, last_error=NULL, last_trigger_source=excluded.last_trigger_source, collection_duration_ms=excluded.collection_duration_ms"
+  ).bind(stationKey, nowIso, nowIso, triggerSource || "unknown", Math.max(0, Math.round(durationMs || 0)));
+  await env.STATIONS_DB.batch([current, history, diagnostic]);
 }
+async function recordCollectionFailure(env, stationKey, error, triggerSource, durationMs) {
+  if (!env.STATIONS_DB) return;
+  const nowIso = new Date().toISOString();
+  const message = String(error && error.message || error || "Unknown collection error").slice(0, 1200);
+  const diagnostic = env.STATIONS_DB.prepare(
+    "INSERT INTO station_collection_diagnostics (station_key, last_attempt_utc, last_success_utc, last_error, last_trigger_source, collection_duration_ms) VALUES (?, ?, NULL, ?, ?, ?) " +
+    "ON CONFLICT(station_key) DO UPDATE SET last_attempt_utc=excluded.last_attempt_utc, last_error=excluded.last_error, last_trigger_source=excluded.last_trigger_source, collection_duration_ms=excluded.collection_duration_ms"
+  ).bind(stationKey, nowIso, message, triggerSource || "unknown", Math.max(0, Math.round(durationMs || 0)));
+  const current = env.STATIONS_DB.prepare(
+    "UPDATE station_current SET last_error = ?, last_attempt_utc = ? WHERE station_key = ?"
+  ).bind(message, nowIso, stationKey);
+  await env.STATIONS_DB.batch([diagnostic, current]);
+}
+
 async function pruneHistory(env) {
   // Station history is intentionally retained indefinitely. The API still limits
   // the requested window/response size, but the underlying D1 archive is not pruned.
@@ -519,24 +537,48 @@ async function pruneHistory(env) {
     ).bind(new Date(Date.now() - RETENTION_HOURS * 3600000).toISOString()).run();
   }
 }
-async function collectAll(env) {
-  const results = {};
-  for (const key of Object.keys(STATION_DEFS)) {
-    try {
-      let observation;
-      if (key === "enka") {
-        observation = await fetchEnka(env);
-      } else {
-        const { row, url } = await fetchMgmStation(key);
-        observation = observationFromMgm(key, row, url);
-      }
-      await storeObservation(env, key, observation);
-      results[key] = { ok: true, observed_at_utc: observation.observed_at_utc };
-    } catch (error) {
-      console.error("[COLLECT " + key + "]", error && error.message ? error.message : error);
-      results[key] = { ok: false, error: String(error && error.message || error) };
+async function collectOne(env, stationKey, triggerSource) {
+  const startedAt = Date.now();
+  try {
+    let observation;
+    if (stationKey === "enka") {
+      observation = await fetchEnka(env);
+    } else {
+      const { row, url } = await fetchMgmStation(stationKey);
+      observation = observationFromMgm(stationKey, row, url);
     }
+    const durationMs = Date.now() - startedAt;
+    await storeObservation(env, stationKey, observation, triggerSource, durationMs);
+    return {
+      ok: true,
+      status: observation.status || "live",
+      observed_at_utc: observation.observed_at_utc || null,
+      observation_method: observation.observation_method || null,
+      duration_ms: durationMs
+    };
+  } catch (error) {
+    const durationMs = Date.now() - startedAt;
+    const message = String(error && error.message || error);
+    console.error("[COLLECT " + stationKey + "]", message);
+    try {
+      await recordCollectionFailure(env, stationKey, error, triggerSource, durationMs);
+    } catch (diagnosticError) {
+      console.error("[COLLECT DIAGNOSTIC " + stationKey + "]", diagnosticError && diagnosticError.message || diagnosticError);
+    }
+    return { ok: false, error: message, duration_ms: durationMs };
   }
+}
+
+async function collectAll(env, triggerSource = "unknown") {
+  // These upstream stations are independent. A slow ENKA request must never
+  // hold back the three MGM stations or make a two-minute collection overrun.
+  const collected = await Promise.all(
+    Object.keys(STATION_DEFS).map(async key => ({
+      key,
+      result: await collectOne(env, key, triggerSource)
+    }))
+  );
+  const results = Object.fromEntries(collected.map(item => [item.key, item.result]));
   await pruneHistory(env);
   return results;
 }
@@ -601,15 +643,24 @@ export default {
     if (path === "/api/health" || path === "/health") {
       const rows = [];
       for (const key of Object.keys(STATION_DEFS)) {
-        const row = await env.STATIONS_DB.prepare(
-          "SELECT station_key, status, last_success_utc, last_attempt_utc, last_error, observed_at_utc FROM station_current WHERE station_key = ?"
-        ).bind(key).first();
+        const [row, diagnostic] = await Promise.all([
+          env.STATIONS_DB.prepare(
+            "SELECT station_key, status, last_success_utc, last_attempt_utc, last_error, observed_at_utc FROM station_current WHERE station_key = ?"
+          ).bind(key).first(),
+          env.STATIONS_DB.prepare(
+            "SELECT last_attempt_utc, last_success_utc, last_error, last_trigger_source, collection_duration_ms FROM station_collection_diagnostics WHERE station_key = ?"
+          ).bind(key).first()
+        ]);
+        const lastError = diagnostic && diagnostic.last_error || row && row.last_error || null;
         rows.push({
           key,
           status: row && row.status || "unknown",
-          last_success_utc: row && row.last_success_utc || null,
-          last_attempt_utc: row && row.last_attempt_utc || null,
-          last_error: row && row.last_error || null,
+          collection_status: lastError ? "error" : diagnostic && diagnostic.last_success_utc ? "ok" : "unknown",
+          last_success_utc: diagnostic && diagnostic.last_success_utc || row && row.last_success_utc || null,
+          last_attempt_utc: diagnostic && diagnostic.last_attempt_utc || row && row.last_attempt_utc || null,
+          last_error: lastError,
+          last_trigger_source: diagnostic && diagnostic.last_trigger_source || null,
+          collection_duration_ms: diagnostic && diagnostic.collection_duration_ms != null ? diagnostic.collection_duration_ms : null,
           observed_at_utc: row && row.observed_at_utc || null
         });
       }
@@ -617,14 +668,24 @@ export default {
     }
 
     if (path === "/collect" || path === "/api/collect") {
-      const results = await collectAll(env);
-      return json({ ok: true, results, collected_at_utc: new Date().toISOString() });
+      const results = await collectAll(env, "manual");
+      const failures = Object.entries(results).filter(([, result]) => !result.ok);
+      return json({
+        ok: failures.length === 0,
+        results,
+        failed_stations: failures.map(([key]) => key),
+        collected_at_utc: new Date().toISOString()
+      }, failures.length ? 502 : 200);
     }
 
     return json({ ok: false, error: "Not found" }, 404);
   },
 
   async scheduled(event, env, ctx) {
-    ctx.waitUntil(collectAll(env));
+    ctx.waitUntil(
+      collectAll(env, "cron").catch(error => {
+        console.error("[SCHEDULED COLLECTION]", error && error.message || error);
+      })
+    );
   }
 };

@@ -40,6 +40,20 @@ def main() -> int:
     sql = WORKER.read_text(encoding="utf-8")
     errors = []
 
+    diagnostics_migration = MIGRATIONS / "0006_station_collection_diagnostics.sql"
+    if not diagnostics_migration.exists():
+        errors.append("missing station collection diagnostics migration 0006")
+    else:
+        migration_sql = diagnostics_migration.read_text(encoding="utf-8")
+        if "station_collection_diagnostics" not in migration_sql:
+            errors.append("migration 0006 does not create station_collection_diagnostics")
+    if "Promise.all(" not in sql or "Object.keys(STATION_DEFS).map" not in sql:
+        errors.append("station collection must fetch independent stations concurrently")
+    if "recordCollectionFailure" not in sql or "collection_status" not in sql:
+        errors.append("station collection failures must be persisted and exposed by /api/health")
+    if 'collectAll(env, "cron")' not in sql or 'collectAll(env, "manual")' not in sql:
+        errors.append("cron and bootstrap collection sources must be tracked separately")
+
     for table, allowed in (("station_current", CURRENT_COLUMNS), ("station_history", HISTORY_COLUMNS)):
         used = extract_insert_columns(sql, table)
         bad = used - allowed
