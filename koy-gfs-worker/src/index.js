@@ -78,52 +78,54 @@ function climateArchiveUrl(model, start, end) {
 }
 
 async function fetchClimateArchive(model, start, end) {
-  // Open-Meteo can return 503 for a large multi-decade ERA5 request even
-  // though the same model works for smaller ranges. Split the historical
-  // baseline into two bounded requests and merge them before calculating the
-  // climate statistics. This keeps the nightly Worker refresh reliable.
+  // Open-Meteo occasionally returns 503 for long ERA5/ERA5-Land archive
+  // windows. The climate panel only needs one calendar month per year, so
+  // request compact 5-year chunks instead of multi-decade ranges.
   const startYear = Number(start.slice(0, 4));
   const endYear = Number(end.slice(0, 4));
-  const splitYear = Math.floor((startYear + endYear) / 2);
-  const ranges = startYear < endYear
-    ? [
-        [start, String(splitYear) + "-12-31"],
-        [String(splitYear + 1) + "-01-01", end],
-      ]
-    : [[start, end]];
-
-  const documents = [];
-  for (const [rangeStart, rangeEnd] of ranges) {
-    let lastStatus = null;
-    let document = null;
-    for (let attempt = 1; attempt <= 3; attempt++) {
-      const response = await fetch(climateArchiveUrl(model, rangeStart, rangeEnd), {
-        headers: {
-          "User-Agent": "Mozilla/5.0 (compatible; IstanbulHavasi/1.0; +https://istanbulunhavasi.com/)",
-          "Accept": "application/json",
-          "Cache-Control": "no-cache",
-        },
-        signal: AbortSignal.timeout(60000),
-      });
-      lastStatus = response.status;
-      if (response.ok) {
-        document = await response.json();
-        break;
-      }
-      // Retry transient upstream failures with a short backoff.
-      if (response.status === 429 || response.status >= 500) {
-        await new Promise(resolve => setTimeout(resolve, 750 * attempt));
-        continue;
-      }
-      throw new Error("Open-Meteo climate HTTP " + response.status);
-    }
-    if (!document) {
-      throw new Error("Open-Meteo climate HTTP " + lastStatus + " after retries");
-    }
-    documents.push(document);
+  const ranges = [];
+  for (let year = startYear; year <= endYear; year += 5) {
+    const chunkEndYear = Math.min(year + 4, endYear);
+    const rangeStart = String(year) + "-" + start.slice(5);
+    const rangeEnd = String(chunkEndYear) + "-" + end.slice(5);
+    ranges.push([rangeStart, rangeEnd]);
   }
 
-  if (documents.length === 1) return documents[0];
+  async function fetchChunk(rangeStart, rangeEnd) {
+    let lastStatus = null;
+    for (let attempt = 1; attempt <= 4; attempt++) {
+      try {
+        const response = await fetch(climateArchiveUrl(model, rangeStart, rangeEnd), {
+          headers: {
+            "User-Agent": "Mozilla/5.0 (compatible; IstanbulHavasi/1.0; +https://istanbulunhavasi.com/)",
+            "Accept": "application/json",
+            "Cache-Control": "no-cache",
+          },
+          signal: AbortSignal.timeout(30000),
+        });
+        lastStatus = response.status;
+        if (response.ok) return await response.json();
+        if (response.status !== 429 && response.status < 500) {
+          throw new Error("Open-Meteo climate HTTP " + response.status);
+        }
+      } catch (error) {
+        if (attempt === 4) throw error;
+        lastStatus = error?.status ?? lastStatus;
+      }
+      await new Promise(resolve => setTimeout(resolve, 500 * attempt));
+    }
+    throw new Error("Open-Meteo climate HTTP " + lastStatus + " after retries");
+  }
+
+  // Four concurrent compact requests keep the Worker fast while avoiding
+  // the upstream 503s seen with the previous multi-decade request.
+  const documents = [];
+  for (let i = 0; i < ranges.length; i += 4) {
+    const batch = await Promise.all(
+      ranges.slice(i, i + 4).map(([rangeStart, rangeEnd]) => fetchChunk(rangeStart, rangeEnd))
+    );
+    documents.push(...batch);
+  }
 
   const merged = { ...documents[0], daily: { ...documents[0].daily } };
   for (const document of documents.slice(1)) {
@@ -137,7 +139,6 @@ async function fetchClimateArchive(model, start, end) {
   }
   return merged;
 }
-
 function climateRows(document) {
   const d = document?.daily;
   if (!d || !Array.isArray(d.time)) return [];
