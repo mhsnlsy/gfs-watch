@@ -90,12 +90,18 @@ jobs:
       - name: Test Köy worker homepage-identical SVG publication
         run: node scripts/test_koy_worker_publication.mjs
 
+      - name: Test Köy climate data-pipeline contracts
+        run: node scripts/test_koy_climate_contract.mjs
+
       - name: Validate worker JavaScript syntax
         run: |
           node --check web-worker/src/index.js
           node --check istanbul-gfs-worker/src/index.js
           node --check istanbul-gfs-worker/src/publication.js
           node --check koy-gfs-worker/src/index.js
+          node --check station-worker/src/index.js
+          node --check scripts/refresh_koy_climate.mjs
+          node --check site/koy-climate.js
 
   website:
     name: Website JavaScript syntax
