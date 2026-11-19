@@ -160,14 +160,22 @@
     return ticks;
   }
 
-  function buildChart(result) {
+  // Desktop: 2 columns x 3 rows (5 variables + the overall-agreement panel); phones: single column.
+  const wideLayout = () => window.matchMedia && window.matchMedia("(min-width: 900px)").matches;
+
+  function buildChart(result, cols) {
     const rows = result.rows;
-    const W = 720, L = 50, R = 16, plotW = W - L - R;
-    const panelH = 178, plotTop = 30, plotH = 104, gap = 10;
-    const stripTop = 24 + VARS.length * (panelH + gap) + 6;
-    const H = stripTop + 92;
+    const panelH = 178, plotTop = 30, plotH = 104, gap = 10, padX = 6;
+    const panelW = cols === 2 ? 538 : 708;
+    const W = padX * 2 + cols * panelW + (cols - 1) * 12;
+    const plotOff = 44, plotRight = 26;
+    const plotW = panelW - plotOff - plotRight;
+    const panelCount = VARS.length + 1; // + overall agreement
+    const rowsOfPanels = Math.ceil(panelCount / cols);
+    const H = 24 + rowsOfPanels * (panelH + gap) + 4;
     const fMin = rows[0].f, fMax = rows[rows.length - 1].f;
-    const xOf = f => L + ((f - fMin) / Math.max(1, fMax - fMin)) * plotW;
+    const colLeft = col => padX + col * (panelW + 12);
+    const xOf = (f, col = 0) => colLeft(col) + plotOff + ((f - fMin) / Math.max(1, fMax - fMin)) * plotW;
     // Each step owns the span up to the midpoints of its neighbours, so 3/6/12 h cadences leave no gaps.
     const span = rows.map((row, i) => {
       const prev = i > 0 ? rows[i - 1].f : row.f - (rows[1] ? rows[1].f - row.f : 6);
@@ -191,100 +199,123 @@
         tickFs.push(fMax);
       }
     }
+    const dayLabel = f => new Intl.DateTimeFormat("tr-TR", { timeZone: "Europe/Istanbul", weekday: "short", day: "2-digit" }).format(new Date(result.refInit + f * HOUR));
+    const panelGeom = index => {
+      const col = index % cols, row = Math.floor(index / cols);
+      return { col, row, left: colLeft(col), top: 24 + row * (panelH + gap) };
+    };
+    const frame = (g, title, unit) => parts.push(
+      '<rect x="' + g.left + '" y="' + g.top + '" width="' + panelW + '" height="' + panelH + '" rx="12" fill="#102a3a" stroke="#416174"/>',
+      '<text x="' + (g.left + 14) + '" y="' + (g.top + 22) + '" fill="#FFFFFF" font-size="14" font-weight="700" font-family="' + font + '">' + esc(title) + "</text>",
+      unit ? '<text x="' + (g.left + panelW - 14) + '" y="' + (g.top + 22) + '" text-anchor="end" fill="#B8D7DF" font-size="12" font-family="' + font + '">' + esc(unit) + "</text>" : ""
+    );
+    const axisTicks = (g, withDay) => tickFs.forEach(f => {
+      const x = xOf(f, g.col);
+      parts.push(
+        '<line x1="' + x.toFixed(1) + '" x2="' + x.toFixed(1) + '" y1="' + (g.top + plotTop) + '" y2="' + (g.top + plotTop + plotH) + '" stroke="#456579" stroke-dasharray="1 5" opacity=".45"/>',
+        '<text x="' + x.toFixed(1) + '" y="' + (g.top + plotTop + plotH + 16) + '" text-anchor="middle" fill="#E7F2F6" font-size="10.5" font-weight="650" font-family="' + font + '">F' + Math.round(f) + "</text>",
+        withDay ? '<text x="' + x.toFixed(1) + '" y="' + (g.top + plotTop + plotH + 29) + '" text-anchor="middle" fill="#8EAEB7" font-size="9.5" font-family="' + font + '">' + esc(dayLabel(f)) + "</text>" : ""
+      );
+    });
 
     VARS.forEach((variable, index) => {
-      const top = 24 + index * (panelH + gap);
+      const g = panelGeom(index);
       const gValues = rows.map(row => row.values[variable.id].gfs);
       const eValues = rows.map(row => row.values[variable.id].ec);
       const all = gValues.concat(eValues).filter(value => value !== null);
       let lo = all.length ? Math.min(...all) : 0;
       let hi = all.length ? Math.max(...all) : 1;
-      if (variable.id === "rain" || variable.id === "wind") lo = Math.min(0, lo);
+      if (variable.id === "rain" || variable.id === "wind" || variable.id === "wind850") lo = Math.min(0, lo);
       const ticks = niceTicks(lo, Math.max(hi, lo + (variable.id === "rain" ? 2 : 1)));
       const yLo = ticks[0], yHi = ticks[ticks.length - 1];
-      const yOf = value => top + plotTop + (yHi - value) * plotH / (yHi - yLo);
-      parts.push(
-        '<rect x="6" y="' + top + '" width="' + (W - 12) + '" height="' + panelH + '" rx="12" fill="#102a3a" stroke="#416174"/>',
-        '<text x="20" y="' + (top + 22) + '" fill="#FFFFFF" font-size="15" font-weight="700" font-family="' + font + '">' + esc(variable.label) + "</text>",
-        '<text x="' + (W - 20) + '" y="' + (top + 22) + '" text-anchor="end" fill="#B8D7DF" font-size="12" font-family="' + font + '">' + esc(variable.unit) + "</text>"
-      );
-      // Ayrışma bantları
+      const yOf = value => g.top + plotTop + (yHi - value) * plotH / (yHi - yLo);
+      frame(g, variable.label, variable.unit);
       rows.forEach((row, rowIndex) => {
         const status = row.statuses[variable.id];
         if (status !== "warn" && status !== "major") return;
-        const x1 = Math.max(L, xOf(span[rowIndex].from)), x2 = Math.min(L + plotW, xOf(span[rowIndex].to));
-        parts.push('<rect x="' + x1.toFixed(1) + '" y="' + (top + plotTop) + '" width="' + Math.max(1, x2 - x1).toFixed(1) + '" height="' + plotH + '" fill="' + COLORS[status] + '" opacity="' + (status === "major" ? ".26" : ".13") + '"/>');
+        const x1 = Math.max(xOf(fMin, g.col), xOf(span[rowIndex].from, g.col)), x2 = Math.min(xOf(fMax, g.col), xOf(span[rowIndex].to, g.col));
+        parts.push('<rect x="' + x1.toFixed(1) + '" y="' + (g.top + plotTop) + '" width="' + Math.max(1, x2 - x1).toFixed(1) + '" height="' + plotH + '" fill="' + COLORS[status] + '" opacity="' + (status === "major" ? ".26" : ".13") + '"/>');
       });
       ticks.forEach(tick => {
         const y = yOf(tick);
         parts.push(
-          '<line x1="' + L + '" x2="' + (L + plotW) + '" y1="' + y.toFixed(1) + '" y2="' + y.toFixed(1) + '" stroke="#456579" stroke-dasharray="2 4" opacity=".6"/>',
-          '<text x="' + (L - 8) + '" y="' + (y + 4).toFixed(1) + '" text-anchor="end" fill="#E7F2F6" font-size="11" font-family="' + font + '">' + fmt(tick, Math.abs(tick) < 10 && variable.id === "rain" ? 1 : 0) + "</text>"
+          '<line x1="' + (g.left + plotOff) + '" x2="' + (g.left + plotOff + plotW) + '" y1="' + y.toFixed(1) + '" y2="' + y.toFixed(1) + '" stroke="#456579" stroke-dasharray="2 4" opacity=".6"/>',
+          '<text x="' + (g.left + plotOff - 8) + '" y="' + (y + 4).toFixed(1) + '" text-anchor="end" fill="#E7F2F6" font-size="11" font-family="' + font + '">' + fmt(tick, Math.abs(tick) < 10 && variable.id === "rain" ? 1 : 0) + "</text>"
         );
       });
-      tickFs.forEach(f => {
-        const x = xOf(f);
-        parts.push(
-          '<line x1="' + x.toFixed(1) + '" x2="' + x.toFixed(1) + '" y1="' + (top + plotTop) + '" y2="' + (top + plotTop + plotH) + '" stroke="#456579" stroke-dasharray="1 5" opacity=".45"/>',
-          '<text x="' + x.toFixed(1) + '" y="' + (top + plotTop + plotH + 16) + '" text-anchor="middle" fill="#E7F2F6" font-size="10.5" font-weight="650" font-family="' + font + '">F' + Math.round(f) + "</text>",
-          '<text x="' + x.toFixed(1) + '" y="' + (top + plotTop + plotH + 29) + '" text-anchor="middle" fill="#8EAEB7" font-size="9.5" font-family="' + font + '">' + esc(new Intl.DateTimeFormat("tr-TR", { timeZone: "Europe/Istanbul", weekday: "short", day: "2-digit" }).format(new Date(result.refInit + f * HOUR))) + "</text>"
-        );
-      });
+      axisTicks(g, true);
       const path = (values, color, width) => {
         let d = "", open = false;
         values.forEach((value, i) => {
           if (value === null) { open = false; return; }
-          d += (open ? " L " : " M ") + xOf(rows[i].f).toFixed(1) + " " + yOf(value).toFixed(1);
+          d += (open ? " L " : " M ") + xOf(rows[i].f, g.col).toFixed(1) + " " + yOf(value).toFixed(1);
           open = true;
         });
         return '<path d="' + d + '" fill="none" stroke="' + color + '" stroke-width="' + width + '" stroke-linecap="round" stroke-linejoin="round"/>';
       };
       if (variable.id === "rain") {
-        // Yağış: yan yana sütunlar daha okunaklı
         rows.forEach((row, i) => {
-          const bw = Math.max(2, (xOf(span[i].to) - xOf(span[i].from)) * 0.36);
+          const bw = Math.max(1.5, (xOf(span[i].to, g.col) - xOf(span[i].from, g.col)) * 0.36);
           [["gfs", -bw], ["ec", 0]].forEach(([key, offset]) => {
             const value = row.values.rain[key];
             if (value === null || value <= 0) return;
             const y = yOf(value), y0 = yOf(0);
-            parts.push('<rect x="' + (xOf(row.f) + offset).toFixed(1) + '" y="' + y.toFixed(1) + '" width="' + bw.toFixed(1) + '" height="' + Math.max(1, y0 - y).toFixed(1) + '" fill="' + COLORS[key] + '" rx="1"/>');
+            parts.push('<rect x="' + (xOf(row.f, g.col) + offset).toFixed(1) + '" y="' + y.toFixed(1) + '" width="' + bw.toFixed(1) + '" height="' + Math.max(1, y0 - y).toFixed(1) + '" fill="' + COLORS[key] + '" rx="1"/>');
           });
         });
       } else {
-        parts.push(path(gValues, COLORS.gfs, 2.4), path(eValues, COLORS.ec, 2.4));
+        parts.push(path(gValues, COLORS.gfs, 2.2), path(eValues, COLORS.ec, 2.2));
       }
     });
 
-    // Durum şeridi
-    parts.push(
-      '<text x="20" y="' + (stripTop + 8) + '" fill="#FFFFFF" font-size="14" font-weight="700" font-family="' + font + '">Genel uyum (en kötü değişken)</text>'
-    );
+    // Overall-agreement panel (last cell)
+    const sg = panelGeom(VARS.length);
+    frame(sg, "Genel uyum (en kötü değişken)", "");
+    const barTop = sg.top + plotTop + 8;
     rows.forEach((row, rowIndex) => {
-      const x1 = Math.max(L, xOf(span[rowIndex].from)), x2 = Math.min(L + plotW, xOf(span[rowIndex].to));
-      parts.push('<rect x="' + x1.toFixed(1) + '" y="' + (stripTop + 20) + '" width="' + Math.max(1, x2 - x1).toFixed(1) + '" height="30" fill="' + COLORS[row.overall] + '" opacity=".92"/>');
+      const x1 = Math.max(xOf(fMin, sg.col), xOf(span[rowIndex].from, sg.col)), x2 = Math.min(xOf(fMax, sg.col), xOf(span[rowIndex].to, sg.col));
+      parts.push('<rect x="' + x1.toFixed(1) + '" y="' + barTop + '" width="' + Math.max(1, x2 - x1).toFixed(1) + '" height="34" fill="' + COLORS[row.overall] + '" opacity=".92"/>');
     });
     tickFs.forEach(f => {
-      parts.push('<text x="' + xOf(f).toFixed(1) + '" y="' + (stripTop + 68) + '" text-anchor="middle" fill="#E7F2F6" font-size="10.5" font-weight="650" font-family="' + font + '">F' + Math.round(f) + "</text>");
+      parts.push('<text x="' + xOf(f, sg.col).toFixed(1) + '" y="' + (barTop + 50) + '" text-anchor="middle" fill="#E7F2F6" font-size="10.5" font-weight="650" font-family="' + font + '">F' + Math.round(f) + "</text>");
     });
-    parts.push(
-      '<line class="kars-xhair" x1="0" x2="0" y1="24" y2="' + (stripTop + 52) + '" stroke="#EAF5F8" stroke-width="1.2" stroke-dasharray="4 4" opacity=".8" visibility="hidden" pointer-events="none"/>',
-      "</svg>"
-    );
-    return { svg: parts.join(""), W, L, plotW, fMin, fMax, xOf };
+    const count = status => rows.filter(row => row.overall === status).length;
+    [["ok", "Tutarlı"], ["warn", "Orta fark"], ["major", "Belirgin ayrışma"]].forEach(([status, label], i) => {
+      const x = sg.left + plotOff + i * Math.floor(plotW / 3);
+      parts.push(
+        '<rect x="' + x + '" y="' + (barTop + 64) + '" width="10" height="10" rx="2" fill="' + COLORS[status] + '"/>',
+        '<text x="' + (x + 15) + '" y="' + (barTop + 73) + '" fill="#E7F2F6" font-size="11" font-family="' + font + '">' + label + " " + count(status) + "/" + rows.length + "</text>"
+      );
+    });
+
+    // One crosshair per column, spanning that column's panels
+    const crosshairs = [];
+    for (let col = 0; col < cols; col++) {
+      const lastRow = Math.floor((panelCount - 1 - ((panelCount - 1 - col) % cols)) / cols);
+      const bottom = 24 + (Math.max(0, lastRow) + 1) * (panelH + gap) - gap;
+      parts.push('<line class="kars-xhair" data-col="' + col + '" x1="0" x2="0" y1="24" y2="' + bottom + '" stroke="#EAF5F8" stroke-width="1.2" stroke-dasharray="4 4" opacity=".8" visibility="hidden" pointer-events="none"/>');
+      crosshairs.push(col);
+    }
+    parts.push("</svg>");
+    return { svg: parts.join(""), W, cols, panelW, plotOff, plotW, colLeft, fMin, fMax, xOf };
   }
 
   function attachReadout(host, chart, result) {
     const svg = host.querySelector("svg");
-    const line = svg.querySelector(".kars-xhair");
+    const lines = [...svg.querySelectorAll(".kars-xhair")];
     const readout = $("kars-readout");
     const show = event => {
       const box = svg.getBoundingClientRect();
       const x = (event.clientX - box.left) / box.width * chart.W;
+      const col = Math.min(chart.cols - 1, Math.max(0, Math.floor((x - 6) / (chart.panelW + 12))));
       let best = result.rows[0];
-      for (const row of result.rows) if (Math.abs(chart.xOf(row.f) - x) < Math.abs(chart.xOf(best.f) - x)) best = row;
-      line.setAttribute("x1", chart.xOf(best.f));
-      line.setAttribute("x2", chart.xOf(best.f));
-      line.setAttribute("visibility", "visible");
+      for (const row of result.rows) if (Math.abs(chart.xOf(row.f, col) - x) < Math.abs(chart.xOf(best.f, col) - x)) best = row;
+      lines.forEach(line => {
+        const c = Number(line.getAttribute("data-col"));
+        line.setAttribute("x1", chart.xOf(best.f, c));
+        line.setAttribute("x2", chart.xOf(best.f, c));
+        line.setAttribute("visibility", "visible");
+      });
       readout.innerHTML = "";
       readout.appendChild(el("strong", "", "F" + Math.round(best.f) + " · " + trLabel(best.ms) + " TSİ · " + STATUS_TEXT[best.overall]));
       VARS.forEach(variable => {
@@ -468,6 +499,19 @@
     return response.json();
   }
 
+  let lastResult = null;
+  function drawChart() {
+    if (!lastResult) return;
+    const chartHost = $("kars-chart");
+    const chart = buildChart(lastResult, wideLayout() ? 2 : 1);
+    chartHost.innerHTML = chart.svg;
+    attachReadout(chartHost, chart, lastResult);
+  }
+  if (window.matchMedia) {
+    const query = window.matchMedia("(min-width: 900px)");
+    (query.addEventListener ? query.addEventListener.bind(query, "change") : query.addListener.bind(query))(drawChart);
+  }
+
   async function load() {
     const chartHost = $("kars-chart");
     try {
@@ -478,9 +522,8 @@
       validateF360(ecDoc, "ECMWF");
       const result = compare(gfsDoc, ecDoc);
       if (result.rows.length < 4) throw new Error("F360 aralığında ortak geçerlilik saati sayısı çok az (" + result.rows.length + ")");
-      const chart = buildChart(result);
-      chartHost.innerHTML = chart.svg;
-      attachReadout(chartHost, chart, result);
+      lastResult = result;
+      drawChart();
       buildAnalysis(result);
       const status = $("kars-common-status");
       if (status) status.textContent = "İki modelde de F360 hazır · ortak grafik F" + Math.round(result.rows[result.rows.length - 1].f) + "'e kadar";
