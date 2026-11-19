@@ -1662,16 +1662,10 @@ async function api(request, env) {
         return json({ ok: false, error: "Unknown climate model" }, 400);
       }
 
-      let data = await getClimateCache(env, model);
-      if (!data || (model === null && Object.keys(data).length < 3)) {
-        // Cold-start: refresh only the requested model. This prevents one
-        // unavailable/slow reanalysis from blocking the other tabs.
-        const dateParts = istanbulDateParts();
-        await refreshClimateCache(env, model
-          ? { ...dateParts, models: [model] }
-          : dateParts);
-        data = await getClimateCache(env, model);
-      }
+      // Climate data is populated exclusively by the isolated
+      // GitHub Actions workflow. The public Worker never calls the
+      // multi-decade Open-Meteo archive API on a visitor request.
+      const data = await getClimateCache(env, model);
 
       if (!data) {
         return json({
@@ -1993,19 +1987,8 @@ export default {
 
   async scheduled(controller, env, ctx) {
     const cron = controller.cron || "";
-    if (cron === "30 1 * * *") {
-      ctx.waitUntil(
-        refreshClimateCache(env).catch(error => {
-          console.error(JSON.stringify({
-            event: "koy_climate_cron_error",
-            message: String(error?.message || error),
-            scheduled_time: new Date(controller.scheduledTime).toISOString(),
-          }));
-        })
-      );
-      return;
-    }
-
+    // Climate cache is refreshed by the isolated GitHub Actions
+    // workflow. This Worker cron is intentionally GFS-only.
     ctx.waitUntil(
       collect(env).catch(error => {
         console.error(JSON.stringify({
