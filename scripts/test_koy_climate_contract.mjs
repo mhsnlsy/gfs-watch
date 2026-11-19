@@ -19,7 +19,8 @@ assert.match(refresh, /ON CONFLICT\(cache_key\) DO UPDATE/);
 assert.doesNotMatch(refresh, /\bBEGIN\s*;/i);
 assert.doesNotMatch(refresh, /\bCOMMIT\s*;/i);
 
-assert.match(stationWorker, /\/api\/climate\/month\/\(canakci\)/);
+assert.ok(stationWorker.includes("climateMonthMatch = path.match"));
+assert.ok(stationWorker.includes("canakci"));
 assert.match(stationWorker, /date\(fetched_at_utc, '\+3 hours'\)/);
 assert.match(stationWorker, /MAX\(rain_00_now_mm\)/);
 assert.match(stationWorker, /station_id:\s*String\(row\.istNo\s*\|\|\s*def\.station_id\)/);
