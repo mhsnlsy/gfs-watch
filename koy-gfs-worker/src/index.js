@@ -182,14 +182,10 @@ async function refreshClimateCache(env, forceDate = null) {
   const historicalEnd = String(parts.year - 1) + "-" +
     String(parts.month).padStart(2, "0") + "-" +
     String(parts.day).padStart(2, "0");
-  const recentStart = String(parts.year) + "-" +
-    String(parts.month).padStart(2, "0") + "-01";
-
   const recentUrl = "https://api.open-meteo.com/v1/forecast"
     + "?latitude=" + LOCATION.latitude
     + "&longitude=" + LOCATION.longitude
-    + "&start_date=" + recentStart
-    + "&end_date=" + periodDate
+    + "&past_days=31&forecast_days=1"
     + "&daily=temperature_2m_max,temperature_2m_min,temperature_2m_mean,precipitation_sum,wind_speed_10m_mean,wind_gusts_10m_max"
     + "&timezone=Europe/Istanbul";
 
