@@ -123,11 +123,6 @@
     }).format(value);
   }
 
-  function clearStaleStatus() {
-    const label = $("climate-now-label");
-    if (label) label.classList.remove("stale");
-  }
-
   function render(historical, station) {
     if (!historical || historical.model !== selectedModel) {
       throw new Error("İstenen modelin kendi klimatoloji verisi dönmedi");
@@ -224,19 +219,21 @@
         : "— mm");
 
     const record = Number(long.record_daily_precipitation_mm);
-    const todayRain = Number(today.precipitation_mm);
+    const todayRain = today.precipitation_mm == null ? null : Number(today.precipitation_mm);
     const ratio = supported.precipitation &&
-      Number.isFinite(record) && record > 0 && Number.isFinite(todayRain)
+      Number.isFinite(record) && record > 0 &&
+      todayRain !== null && Number.isFinite(todayRain)
       ? todayRain / record * 100
       : null;
     setText("climate-precip-ratio",
       ratio == null ? "Günlük kayıt karşılaştırması yok" :
       fmt(ratio, 0) + "% · tarihsel günlük rekorun");
 
-    const currentRain = Number(month.precipitation_mm);
-    const normalRain = Number(normal.normal_mm);
+    const currentRain = month.precipitation_mm == null ? null : Number(month.precipitation_mm);
+    const normalRain = normal.normal_mm == null ? null : Number(normal.normal_mm);
     const anomaly = supported.precipitation &&
-      Number.isFinite(currentRain) && Number.isFinite(normalRain) && normalRain > 0
+      currentRain !== null && Number.isFinite(currentRain) &&
+      normalRain !== null && Number.isFinite(normalRain) && normalRain > 0
       ? (currentRain - normalRain) / normalRain * 100
       : null;
     setText("climate-anomaly-value",
@@ -248,6 +245,9 @@
         : "MGM ay başından bugüne " + fmt(currentRain) +
           " mm · tarihsel aynı dönemin ortalaması " + fmt(normalRain) +
           " mm · " + (normal.years || 0) + " yıl");
+    setText("climate-anomaly-label",
+      String(historical.month_name || "").toUpperCase() + " " +
+      String(station.period_date).slice(0, 4) + " YAĞIŞ ANOMALİSİ");
     setText("climate-anomaly-source",
       supported.precipitation
         ? meta.label + " · " + historical.historical_start_year +
@@ -276,7 +276,6 @@
       ") · " + monthDate +
       " · Long term: " + meta.label + " yeniden analiz arşivi · " +
       meta.note + " · Eksik istasyon günleri tahminle doldurulmaz.");
-    clearStaleStatus();
   }
 
   function setSelectedTab(model) {
