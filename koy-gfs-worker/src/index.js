@@ -98,7 +98,7 @@ async function fetchClimateArchive(model, start, end) {
 
   async function fetchChunk(rangeStart, rangeEnd) {
     let lastStatus = null;
-    for (let attempt = 1; attempt <= 4; attempt++) {
+    for (let attempt = 1; attempt <= 5; attempt++) {
       try {
         const response = await fetch(climateArchiveUrl(model, rangeStart, rangeEnd), {
           headers: {
@@ -106,7 +106,7 @@ async function fetchClimateArchive(model, start, end) {
             "Accept": "application/json",
             "Cache-Control": "no-cache",
           },
-          signal: AbortSignal.timeout(30000),
+          signal: AbortSignal.timeout(45000),
         });
         lastStatus = response.status;
         if (response.ok) return await response.json();
@@ -114,22 +114,24 @@ async function fetchClimateArchive(model, start, end) {
           throw new Error("Open-Meteo climate HTTP " + response.status);
         }
       } catch (error) {
-        if (attempt === 4) throw error;
+        if (attempt === 5) throw error;
         lastStatus = error?.status ?? lastStatus;
       }
-      await new Promise(resolve => setTimeout(resolve, 500 * attempt));
+      // 503/429 responses are transient upstream pressure signals. Back off
+      // before the next request instead of opening several archive requests
+      // concurrently from the same Worker invocation.
+      await new Promise(resolve => setTimeout(resolve, 1000 * attempt));
     }
     throw new Error("Open-Meteo climate HTTP " + lastStatus + " after retries");
   }
 
-  // Four concurrent compact requests keep the Worker fast while avoiding
-  // the upstream 503s seen with the previous multi-decade request.
+  // Do NOT request multiple ERA5/ERA5-Land archive ranges concurrently.
+  // The previous 4-way fan-out caused the live Worker to receive 503s from
+  // Open-Meteo even though an individual archive request is valid. Keep one
+  // upstream archive request in flight at a time and retry transient 5xx/429s.
   const documents = [];
-  for (let i = 0; i < ranges.length; i += 4) {
-    const batch = await Promise.all(
-      ranges.slice(i, i + 4).map(([rangeStart, rangeEnd]) => fetchChunk(rangeStart, rangeEnd))
-    );
-    documents.push(...batch);
+  for (const [rangeStart, rangeEnd] of ranges) {
+    documents.push(await fetchChunk(rangeStart, rangeEnd));
   }
 
   const merged = { ...documents[0], daily: { ...documents[0].daily } };
