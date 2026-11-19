@@ -65,6 +65,7 @@ def synthetic_document(run_dt: datetime) -> dict:
         "surface_ensemble_spread_available": False,
         "resolution": "MeteoPT nokta",
         "forecast_horizon_hours": 360,
+        "f360": {"available": True, "forecast_hour": 360, "source": "MeteoPT"},
         "run_id_utc": run_dt.isoformat(timespec="seconds"),
         "updated_at_utc": run_dt.isoformat(timespec="seconds"),
         "forecast_valid_until_utc": (run_dt + timedelta(hours=360)).isoformat(timespec="seconds"),
@@ -121,14 +122,26 @@ def run_offline_tests() -> None:
     assert not same_published_cycle(None, "2026-11-01T00:00:00+00:00")
 
     document = synthetic_document(datetime(2026, 11, 1, 0, tzinfo=timezone.utc))
-    _validate_meteopt_document(document)
+    _validate_meteopt_document(document, require_f360=True)
     assert document["schema"] == SCHEMA
     assert document["forecast_source"] == "meteopt"
     assert document["location"]["latitude"] == 41.0901
     assert document["location"]["longitude"] == 28.9436
     assert len(document["forecasts"]) == 84
     assert document["forecasts"][-1]["forecast_hour"] == 360
+    assert document["f360"]["available"] is True
     assert len(document["forecast_6_hourly"]) == len(document["forecasts"])
+
+    incomplete = json.loads(json.dumps(document))
+    incomplete["forecasts"] = incomplete["forecasts"][:-1]
+    incomplete["forecast_6_hourly"] = incomplete["forecast_6_hourly"][:-1]
+    incomplete["forecast_horizon_hours"] = 354
+    try:
+        _validate_meteopt_document(incomplete, require_f360=True)
+    except ValueError:
+        pass
+    else:
+        raise AssertionError("An ECMWF cycle without F360 was accepted as complete.")
     assert document["surface_ensemble_spread_available"] is False
 
     broken = json.loads(json.dumps(document))
@@ -174,7 +187,7 @@ def main() -> None:
     if len(sys.argv) > 1:
         path = Path(sys.argv[1])
         document = json.loads(path.read_text(encoding="utf-8"))
-        _validate_meteopt_document(document)
+        _validate_meteopt_document(document, require_f360=True)
         print(f"[ECMWF METEOPT LIVE SMOKE] {path}: {len(document['forecasts'])} valid steps.")
 
 
