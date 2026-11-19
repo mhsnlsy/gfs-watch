@@ -31,7 +31,7 @@ assert.match(climateWorker, /Climate cache unavailable for model/);
 
 assert.match(climateUi, /\/api\/climate\/month\/canakci/);
 assert.match(climateUi, /historicalDoc\.data\.model !== model/);
-assert.match(climateUi, /same takvim gününün/);
+assert.match(climateUi, /aynı takvim günü/);
 assert.doesNotMatch(climateUi, /CURRENT_API/);
 assert.doesNotMatch(climateUi, /api\.open-meteo\.com\/v1\/forecast/);
 
