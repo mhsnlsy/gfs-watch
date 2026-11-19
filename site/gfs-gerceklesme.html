@@ -123,7 +123,7 @@ details.fold>.score-cards,details.fold>.method,details.fold>.note{margin:0 12px 
 
 <section class="panel score-panel">
   <h2>Hangi F saatleri en güvenilir?</h2>
-  <p class="score-intro">Her F saati sıcaklık, yağış ve rüzgâr başarısına göre 0–100 puan alır. En başarılı F saati 100'dür. Puan olasılık değil, F saatlerinin birbirine göre sıralamasıdır.</p>
+  <p class="score-intro">F+18 ve sonrası puanlanır. F+12 ve daha yakın saatler puan dışıdır; model yeni çalıştığı için bu saatler zaten çok yakındır. Kalan her F saati sıcaklık, yağış ve rüzgâr başarısına göre 0–100 puan alır. En başarılı F saati 100'dür. Puan olasılık değil, saatlerin birbirine göre sıralamasıdır.</p>
   <div class="score-wrap" id="score-wrap"><svg id="f-score-chart" viewBox="0 0 760 260" role="img" aria-label="GFS tahmin saatlerinin doğruluk puanı"></svg></div>
   <button class="score-toggle" id="score-toggle" type="button" hidden>Tüm F saatlerini göster</button>
   <div class="score-caption"><span id="score-caption">—</span></div>
@@ -138,16 +138,17 @@ details.fold>.score-cards,details.fold>.method,details.fold>.note{margin:0 12px 
   <summary>Puan nasıl hesaplanıyor?</summary>
   <div class="method">
     <div><b>1 · Hata ölçülür</b><span>Sıcaklıkta fark ve 1 °C içinde kalma oranı, yağışta miktar farkı ve var/yok isabeti, rüzgârda hız ve yön farkı kullanılır.</span></div>
-    <div><b>2 · Eşit ağırlık</b><span>Sıcaklık, yağış ve rüzgâr puanları eşit ağırlıkla birleştirilir. Her F saati için en az 8 eşleşme aranır.</span></div>
+    <div><b>2 · Eşit ağırlık</b><span>Sıcaklık, yağış ve rüzgâr puanları eşit ağırlıkla birleştirilir. F+12 ve daha yakın saatler puan dışı bırakılır. Her puanlanan F saati için en az 8 eşleşme aranır.</span></div>
     <div><b>3 · 100 üzerinden</b><span>En iyi F saati 100 puan alır; diğerleri buna göre sıralanır.</span></div>
   </div>
-  <p class="note">Puanlar son 16 günlük arşivde gerçekleşmiş ölçümlere dayanır. Yetersiz örnekli F saatleri puanlanmaz; eksik veri sıfır hata sayılmaz.</p>
+  <p class="note">Puanlar son 16 günlük arşivde gerçekleşmiş ölçümlere dayanır. F+6 ve F+12, modelin yeni çalıştığı çok yakın saatler olduğu için puanlanmaz. Yetersiz örnekli diğer F saatleri de puan dışı kalır; eksik veri sıfır hata sayılmaz.</p>
 </details>
 </div></main>
 
 <script>
 const GFS_BASE = "https://gfs-watch-istanbul-gfs.muhsin-ulusoy.workers.dev";
 const MIN_PAIRS = 8;
+const MIN_SCORE_LEAD = 13;
 const DRY = 0.2;
 const MATCH_MS = 45 * 60 * 1000;
 let showAllFHours = false;
@@ -279,11 +280,17 @@ function normalizeCategory(rows, rawKey) {
   const max = rows.length ? Math.max(...rows.map(row => row[rawKey])) : 0;
   return rows.map(row => ({ ...row, score: max > 0 ? 100 * row[rawKey] / max : 100 }));
 }
+function scoreableHours(rows) {
+  return rows.filter(row => row.lead >= MIN_SCORE_LEAD);
+}
 function buildScores(tempHours, rainHours, windHours) {
-  const tempEligible = tempHours.filter(row => row.n >= MIN_PAIRS);
-  const rainEligible = rainHours.filter(row => row.n >= MIN_PAIRS);
-  const directionAvailable = windHours.some(row => row.n >= MIN_PAIRS && row.directionN >= MIN_PAIRS);
-  const windEligible = windHours.filter(row =>
+  const scoredTemp = scoreableHours(tempHours);
+  const scoredRain = scoreableHours(rainHours);
+  const scoredWind = scoreableHours(windHours);
+  const tempEligible = scoredTemp.filter(row => row.n >= MIN_PAIRS);
+  const rainEligible = scoredRain.filter(row => row.n >= MIN_PAIRS);
+  const directionAvailable = scoredWind.some(row => row.n >= MIN_PAIRS && row.directionN >= MIN_PAIRS);
+  const windEligible = scoredWind.filter(row =>
     row.n >= MIN_PAIRS && (!directionAvailable || row.directionN >= MIN_PAIRS)
   );
 
@@ -551,7 +558,7 @@ async function load() {
       document.getElementById("hero-title").textContent =
         "En güvenilir tahmin: modelden " + winner.lead + " saat sonrası (F+" + winner.lead + ").";
       document.getElementById("hero-sub").textContent =
-        "Sıcaklık, yağış ve rüzgâr birlikte değerlendirildiğinde bu saat ölçümlere en yakın çıktı. Aşağıdaki tablo, tahmin uzaklaştıkça hatanın nasıl değiştiğini gösteriyor.";
+        "Sıcaklık, yağış ve rüzgâr birlikte değerlendirildiğinde bu saat ölçümlere en yakın çıktı. F+12 ve daha yakın saatler puan dışı bırakıldı. Aşağıdaki tablo, tahmin uzaklaştıkça hatanın nasıl değiştiğini gösteriyor.";
     } else {
       document.getElementById("hero-title").textContent = "Henüz ortak puanlama için yeterli veri yok.";
       document.getElementById("hero-sub").textContent =
@@ -562,8 +569,9 @@ async function load() {
     renderBestPills(scores);
     drawScoreChart(scores.rows);
     document.getElementById("score-caption").textContent =
-      scores.rows.length + " F saati puanlandı · " + runs.length + " GFS döngüsü · " +
-      samples.length + " istasyon gözlemi · " + MIN_PAIRS + " eşleşme alt sınırı";
+      scores.rows.length + " F saati puanlandı · F+12 ve daha yakın saatler puan dışı · " +
+      runs.length + " GFS döngüsü · " + samples.length + " istasyon gözlemi · " +
+      MIN_PAIRS + " eşleşme alt sınırı";
 
     document.getElementById("score-cards").innerHTML = [
       renderMetricCard("🌡️", "Sıcaklıkta en iyi", scores.tempTop, "temp"),
