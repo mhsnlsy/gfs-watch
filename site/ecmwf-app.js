@@ -498,6 +498,7 @@ function buildSvg(runs) {
     const chart=host.querySelector(".gfs-interactive-chart");
     if(!chart)return;
     chart.innerHTML="";
+    ["display","grid-template-columns","grid-auto-flow","gap"].forEach(prop=>chart.style.removeProperty(prop));
     const svgText=buildSvg(runs).body;
     const doc=new DOMParser().parseFromString(svgText,"image/svg+xml");
     const svg=doc.documentElement;
@@ -507,9 +508,40 @@ function buildSvg(runs) {
     if(!liveSvg||!metadataNode)return;
     let metadata;
     try{metadata=JSON.parse(metadataNode.textContent||"{}");}catch(_){return;}
-    if(typeof attachGfsSvgInteractions==="function"){
-      attachGfsSvgInteractions(chart,liveSvg,metadata,null,isMobileGfsLayout());
+    if(typeof attachGfsSvgInteractions!=="function")return;
+    // Phones: same vertical four-panel stack as the homepage GFS report.
+    if(typeof isMobileGfsLayout==="function"&&isMobileGfsLayout()&&typeof buildMobileGfsPanelViews==="function"){
+      const views=buildMobileGfsPanelViews(liveSvg,metadata);
+      if(views&&views.length){
+        liveSvg.remove();
+        chart.dataset.mobilePanels="true";
+        chart.classList.add("gfs-mobile-panel-stack");
+        chart.style.setProperty("display","grid","important");
+        chart.style.setProperty("grid-template-columns","minmax(0,1fr)","important");
+        chart.style.setProperty("grid-auto-flow","row","important");
+        chart.style.setProperty("gap","12px","important");
+        chart.__gfsMobileSyncGroup=null;
+        const syncGroup=chart.__gfsMobileSyncGroup={members:[]};
+        views.forEach(({svg:panelSvg,metadata:panelMetadata})=>{
+          const panelHost=document.createElement("div");
+          panelHost.className="gfs-mobile-panel-host";
+          forceDarkGfsSvg(panelSvg);
+          removeNativeMobileGfsLegend(panelSvg);
+          panelHost.style.setProperty("background","#0A1B29","important");
+          panelHost.style.setProperty("overflow","hidden","important");
+          panelHost.style.setProperty("position","relative","important");
+          addMobileGfsCycleLabels(panelHost,panelMetadata.panels&&panelMetadata.panels[0],panelSvg);
+          panelSvg.style.setProperty("overflow","hidden","important");
+          panelHost.appendChild(panelSvg);
+          chart.appendChild(panelHost);
+          attachGfsSvgInteractions(panelHost,panelSvg,panelMetadata,syncGroup);
+        });
+        return;
+      }
     }
+    chart.classList.remove("gfs-mobile-panel-stack");
+    delete chart.dataset.mobilePanels;
+    attachGfsSvgInteractions(chart,liveSvg,metadata,null,true);
   }
 
   function tableFinite(value) {
