@@ -5690,3 +5690,12 @@ nav a:hover{color:#eef7f8}
     flex:0 0 auto!important;
   }
 }
+
+
+/* Desktop homepage GFS report: charts fill more of the (unchanged) frame — less side padding */
+@media (min-width:901px) and (hover:hover){
+  #bildirimler .koy-gfs-report-card:not(:has(#ecmwf-gfs-comparison-container)) .gfs-interactive-chart:not(.gfs-mobile-panel-stack){
+    width:96%!important;
+    max-width:96%!important;
+  }
+}
