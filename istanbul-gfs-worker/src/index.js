@@ -1358,7 +1358,9 @@ async function handleApi(request, env) {
     try {
       let row = await env.GFS_DB.prepare("SELECT run_id_utc, payload_json FROM ecmwf_current WHERE key = 'latest'").first();
       let current = row?.payload_json ? JSON.parse(row.payload_json) : null;
-      if (!current || Number(current.forecast_horizon_hours || 0) < ECMWF_MAX_FORECAST_HOURS) {
+      // The five-minute Cron refreshes ECMWF independently. Do not fan out
+      // upstream requests on every page view while a new F360 cycle is pending.
+      if (!current) {
         await collectEcmwf(env);
         row = await env.GFS_DB.prepare("SELECT run_id_utc, payload_json FROM ecmwf_current WHERE key = 'latest'").first();
         current = row?.payload_json ? JSON.parse(row.payload_json) : current;
