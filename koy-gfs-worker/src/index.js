@@ -18,6 +18,8 @@ const CLIMATE_MODELS = {
       "temperature_2m_max","temperature_2m_min","temperature_2m_mean",
       "precipitation_sum","wind_speed_10m_mean","wind_gusts_10m_max"
     ],
+    supportsPrecip: true,
+    supportsWind: true,
   },
   era5: {
     label: "ERA5",
@@ -27,6 +29,8 @@ const CLIMATE_MODELS = {
       "temperature_2m_max","temperature_2m_min","temperature_2m_mean",
       "precipitation_sum","wind_speed_10m_mean","wind_gusts_10m_max"
     ],
+    supportsPrecip: true,
+    supportsWind: true,
   },
   era5_land: {
     label: "ERA5-LAND",
@@ -37,6 +41,8 @@ const CLIMATE_MODELS = {
     daily: [
       "temperature_2m_max","temperature_2m_min","temperature_2m_mean"
     ],
+    supportsPrecip: false,
+    supportsWind: false,
   },
 };
 
@@ -130,9 +136,13 @@ async function buildClimatePayload(model, parts, archive, recent) {
   }
 
   const monthlyNormals = [...monthlyHistory.values()];
-  const monthPrecip = monthRows.reduce((sum, row) => sum + (row.precip || 0), 0);
-  const monthNormal = climateAverage(monthlyNormals);
-  const anomaly = monthNormal != null && monthNormal !== 0
+  const supportsPrecip = CLIMATE_MODELS[model].supportsPrecip;
+  const supportsWind = CLIMATE_MODELS[model].supportsWind;
+  const monthPrecip = supportsPrecip
+    ? monthRows.reduce((sum, row) => sum + (row.precip || 0), 0)
+    : null;
+  const monthNormal = supportsPrecip ? climateAverage(monthlyNormals) : null;
+  const anomaly = supportsPrecip && monthNormal != null && monthNormal !== 0
     ? ((monthPrecip - monthNormal) / monthNormal) * 100
     : null;
 
@@ -163,9 +173,9 @@ async function buildClimatePayload(model, parts, archive, recent) {
       avg_temp_c: climateRound(climateAverage(monthRows.map(row => row.mean).filter(v => v !== null))),
       high_c: climateRound(Math.max(...monthRows.map(row => row.max).filter(v => v !== null))),
       low_c: climateRound(Math.min(...monthRows.map(row => row.min).filter(v => v !== null))),
-      precipitation_mm: climateRound(monthPrecip),
-      avg_wind_kmh: climateRound(climateAverage(monthRows.map(row => row.windMean).filter(v => v !== null))),
-      max_wind_kmh: climateRound(monthRows.reduce((max, row) => row.windMax != null ? Math.max(max, row.windMax) : max, -Infinity)),
+      precipitation_mm: supportsPrecip ? climateRound(monthPrecip) : null,
+      avg_wind_kmh: supportsWind ? climateRound(climateAverage(monthRows.map(row => row.windMean).filter(v => v !== null))) : null,
+      max_wind_kmh: supportsWind ? climateRound(monthRows.reduce((max, row) => row.windMax != null ? Math.max(max, row.windMax) : max, -Infinity)) : null,
     },
     long_term: {
       min_c: climateRound(historicalMin),
