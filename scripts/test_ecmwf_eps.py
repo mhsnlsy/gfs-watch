@@ -20,7 +20,7 @@ from fetch_ecmwf_eps import (  # noqa: E402
 
 
 def synthetic_document(run_dt: datetime) -> dict:
-    steps = list(range(3, 181, 3))
+    steps = list(range(3, 145, 3)) + list(range(150, 361, 6))
     forecasts = []
     for hour in steps:
         valid = run_dt + timedelta(hours=hour)
@@ -64,10 +64,10 @@ def synthetic_document(run_dt: datetime) -> dict:
         "ensemble_forecast_source": "MeteoPT ECMWF point",
         "surface_ensemble_spread_available": False,
         "resolution": "MeteoPT nokta",
-        "forecast_horizon_hours": 180,
+        "forecast_horizon_hours": 360,
         "run_id_utc": run_dt.isoformat(timespec="seconds"),
         "updated_at_utc": run_dt.isoformat(timespec="seconds"),
-        "forecast_valid_until_utc": (run_dt + timedelta(hours=180)).isoformat(timespec="seconds"),
+        "forecast_valid_until_utc": (run_dt + timedelta(hours=360)).isoformat(timespec="seconds"),
         "location": {
             "name": "İstanbul",
             "latitude": 41.0901,
@@ -115,7 +115,7 @@ def synthetic_document(run_dt: datetime) -> dict:
 
 def run_offline_tests() -> None:
     steps = forecast_steps()
-    assert steps == list(range(0, 145, 3)) + [150, 156, 162, 168, 174, 180]
+    assert steps == list(range(0, 145, 3)) + list(range(150, 361, 6))
     assert same_published_cycle("2026-11-01T00:00:00Z", "2026-11-01T00:00:00+00:00")
     assert not same_published_cycle("2026-10-31T12:00:00+00:00", "2026-11-01T00:00:00+00:00")
     assert not same_published_cycle(None, "2026-11-01T00:00:00+00:00")
@@ -126,8 +126,8 @@ def run_offline_tests() -> None:
     assert document["forecast_source"] == "meteopt"
     assert document["location"]["latitude"] == 41.0901
     assert document["location"]["longitude"] == 28.9436
-    assert len(document["forecasts"]) == 60
-    assert document["forecasts"][-1]["forecast_hour"] == 180
+    assert len(document["forecasts"]) == 84
+    assert document["forecasts"][-1]["forecast_hour"] == 360
     assert len(document["forecast_6_hourly"]) == len(document["forecasts"])
     assert document["surface_ensemble_spread_available"] is False
 
@@ -166,7 +166,7 @@ def run_offline_tests() -> None:
             "2026-11-01T00:00:00+00:00",
         ]
 
-    print("[ECMWF METEOPT OFFLINE SMOKE] MeteoPT schema, 180h timeline, validation and 4-cycle comparison checks passed.")
+    print("[ECMWF METEOPT OFFLINE SMOKE] MeteoPT schema, 360h timeline, validation and 4-cycle comparison checks passed.")
 
 
 def main() -> None:
