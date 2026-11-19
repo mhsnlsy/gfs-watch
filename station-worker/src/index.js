@@ -669,9 +669,10 @@ async function getCurrentMonthClimate(env, stationKey) {
     ok: true,
     schema: "koy-station-month.v1",
     source: "MGM Çanakçı · station history in Cloudflare D1",
+    quality_control: "raw MGM observations; no additional station-data quality control is applied",
     station: {
       key: stationKey,
-      station_id: String(current?.station_id || "18223"),
+      station_id: current?.station_id ? String(current.station_id) : null,
       station_name: current?.station_name || "MGM Çanakçı",
       source_url: current?.source_url || "https://www.mgm.gov.tr/tahmin/il-ve-ilceler.aspx?il=Giresun&ilce=Çanakçı"
     },
