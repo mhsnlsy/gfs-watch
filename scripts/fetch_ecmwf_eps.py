@@ -105,7 +105,7 @@ def _meteopt_number(value):
     return number
 
 
-def _meteopt_ecmwf_candidates(limit: int = 6) -> list[datetime]:
+def _meteopt_ecmwf_candidates(limit: int = 2) -> list[datetime]:
     """Recent ECMWF 00Z and 12Z cycles, newest first."""
     now = datetime.now(timezone.utc).replace(minute=0, second=0, microsecond=0)
     hour = 12 if now.hour >= 12 else 0
