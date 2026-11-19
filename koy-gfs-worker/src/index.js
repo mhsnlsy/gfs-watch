@@ -137,7 +137,6 @@ async function buildClimatePayload(model, parts, archive, recent) {
     model_label: CLIMATE_MODELS[model].label,
     resolution: CLIMATE_MODELS[model].resolution,
     period_date: climateDateKey(parts),
-    month: parts.month,
     month_name: new Intl.DateTimeFormat("en-US", { month: "long" }).format(new Date(Date.UTC(parts.year, parts.month - 1, 1))).toUpperCase(),
     month_readings_through_day: parts.day,
     historical_start_year: rows.length ? Math.min(...rows.map(row => row.year)) : null,
