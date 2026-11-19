@@ -327,22 +327,25 @@ function buildSvg(runs) {
       );
     });
 
-    const tickIndexes = [];
-    offsets.forEach((offset, index) => {
-      if (index === 0 || Math.abs(offset % 12) < 0.01) tickIndexes.push(index);
-    });
-    if (tickIndexes[tickIndexes.length - 1] !== offsets.length - 1) tickIndexes.push(offsets.length - 1);
-    tickIndexes.forEach(index => {
-      const d = localDate(dates[index]);
+    // Day ticks sit at true local (TSİ) midnights on the time-proportional axis, so they stay
+    // correct when ECMWF switches from 3-hourly to 6-hourly steps after F144.
+    const firstValidMs = dates[0].getTime();
+    const lastValidMs = dates[dates.length - 1].getTime();
+    const firstLocal = localDate(dates[0]);
+    let midnightMs = Date.UTC(firstLocal.getUTCFullYear(), firstLocal.getUTCMonth(), firstLocal.getUTCDate() + 1) - TR_OFFSET_MS;
+    for (; midnightMs <= lastValidMs + 1; midnightMs += 24 * 3600000) {
+      const x = plotX + xRatio((midnightMs - firstValidMs) / 3600000) * plotWidth;
+      if (x < plotX - 0.5 || x > plotX + plotWidth + 0.5) continue;
+      const d = localDate(new Date(midnightMs));
       const day = pad2(d.getUTCDate());
       const weekday = ["Paz", "Pzt", "Sal", "Çar", "Per", "Cum", "Cmt"][d.getUTCDay()];
-      const anchor = index === 0 ? "start" : index === offsets.length - 1 ? "end" : "middle";
       parts.push(
-        '<text x="' + xPositions[index] + '" y="' + (plotY + plotHeight + 19) + '" text-anchor="' + anchor +
-        '" fill="#E7F2F6" font-size="10" font-weight="650" font-family="' + FONT + '"><tspan x="' +
-        xPositions[index] + '">' + day + '</tspan><tspan x="' + xPositions[index] + '" dy="13">' + weekday + '</tspan></text>'
+        '<line x1="' + x.toFixed(2) + '" x2="' + x.toFixed(2) + '" y1="' + plotY + '" y2="' + (plotY + plotHeight) +
+        '" stroke="#456579" stroke-width="1" stroke-dasharray="1 5" opacity=".55"/>',
+        '<text x="' + x.toFixed(2) + '" y="' + (plotY + plotHeight + 19) + '" text-anchor="middle" fill="#E7F2F6" font-size="10" font-weight="650" font-family="' +
+        FONT + '"><tspan x="' + x.toFixed(2) + '">' + day + '</tspan><tspan x="' + x.toFixed(2) + '" dy="13">' + weekday + '</tspan></text>'
       );
-    });
+    }
 
     const panelSeries = [];
     series.forEach((item, seriesIndex) => {
@@ -365,7 +368,7 @@ function buildSvg(runs) {
       let pathData = "";
       let open = false;
       plotValues.forEach((value, index) => {
-        if (value === null) { open = false; return; }
+        if (value === null) return; // bridge steps an older cycle does not have (3 h vs 6 h grid)
         pathData += (open ? " L " : " M ") + xPositions[index].toFixed(3) + " " + yPositions[index];
         open = true;
       });
