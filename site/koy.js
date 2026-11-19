@@ -111,7 +111,7 @@ async function getStation(path){
   doc.station={...s,
    temperature_2m_c:s.temperature_2m_c == null ? s.temperature_c : s.temperature_2m_c,
    humidity_percent:s.humidity_percent,
-   pressure_hpa:s.pressure_hpa,
+   pressure_hpa:s.pressure_hpa == null ? (s.station_pressure_hpa == null ? s.actual_station_pressure_hpa : s.station_pressure_hpa) : s.pressure_hpa,
    wind_speed_10m_kmh:s.wind_speed_10m_kmh == null ? s.wind_speed_kmh : s.wind_speed_10m_kmh,
    wind_direction_deg:s.wind_direction_deg == null ? (s.wind_direction_degrees == null ? s.wind_direction : s.wind_direction_degrees) : s.wind_direction_deg,
    wind_direction_degrees:s.wind_direction_degrees == null ? (s.wind_direction_deg == null ? s.wind_direction : s.wind_direction_deg) : s.wind_direction_degrees,
