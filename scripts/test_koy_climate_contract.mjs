@@ -10,6 +10,11 @@ const climateWorkflow = read(".github/workflows/koy-climate-refresh.yml");
 const stationWorkflow = read(".github/workflows/deploy-stations-worker.yml");
 
 assert.match(refresh, /models:\s*model/);
+assert.match(refresh, /ARCHIVE_MIN_INTERVAL_MS = 4500/);
+assert.match(refresh, /chunkYears = 25/);
+assert.match(refresh, /waitForArchiveSlot/);
+assert.match(refresh, /65000/);
+
 assert.match(refresh, /row\.day\s*===\s*parts\.day/);
 assert.match(refresh, /precipitation_normal_to_date/);
 assert.match(refresh, /historicalEndYear/);
