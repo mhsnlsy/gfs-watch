@@ -22,6 +22,7 @@ from fetch_ecmwf_eps import (  # noqa: E402
 def synthetic_document(run_dt: datetime) -> dict:
     steps = list(range(3, 145, 3)) + list(range(150, 361, 6))
     forecasts = []
+    previous_hour = 0
     for hour in steps:
         valid = run_dt + timedelta(hours=hour)
         forecasts.append({
@@ -36,12 +37,14 @@ def synthetic_document(run_dt: datetime) -> dict:
             "wind_direction_10m_deg": 180.0,
             "wind_speed_10m_stddev_kmh": None,
             "precipitation_interval_mm": 0.1,
+            "precipitation_interval_hours": hour - previous_hour,
             "precipitation_interval_stddev_mm": None,
             "precipitation_accumulated_mm": None,
             "temperature_850hpa": {"mean_c": 1.0, "stddev_c": None},
             "wind_850hpa": {"mean_kmh": 36.0, "stddev_kmh": None},
             "mslp": {"mean_hpa": 1013.2, "stddev_hpa": None},
         })
+        previous_hour = hour
     timeline = [{
         "forecast_hour": item["forecast_hour"],
         "valid_time_utc": item["valid_time_utc"],
@@ -52,14 +55,14 @@ def synthetic_document(run_dt: datetime) -> dict:
         "wind_direction_10m_deg": item["wind_direction_10m_deg"],
         "wind_speed_850hpa_kmh": item["wind_850hpa"]["mean_kmh"],
         "precipitation_6h_mm": item["precipitation_interval_mm"],
-        "precipitation_interval_hours": 3,
+        "precipitation_interval_hours": item["precipitation_interval_hours"],
     } for item in forecasts]
     return {
         "schema": SCHEMA,
         "status": "ready",
         "forecast_source": "meteopt",
         "model": "ECMWF via MeteoPT",
-        "product": "MeteoPT ECMWF 3-hour point",
+        "product": "MeteoPT ECMWF 3-hour/6-hour point",
         "surface_forecast_source": "MeteoPT ECMWF point",
         "ensemble_forecast_source": "MeteoPT ECMWF point",
         "surface_ensemble_spread_available": False,
