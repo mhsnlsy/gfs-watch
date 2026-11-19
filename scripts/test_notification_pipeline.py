@@ -266,7 +266,7 @@ def main() -> None:
     assert "fetchActiveEnkaStationObservation(env)" in gfs_worker
     assert "env.STATIONS.fetch" in gfs_worker
     assert 'rh2m: "humidity_2m_percent"' in gfs_worker
-    assert koy["triggers"]["crons"] == ["*/10 * * * *"]
+    assert koy["triggers"]["crons"] == ["*/10 * * * *", "30 1 * * *"]
     assert stations["triggers"]["crons"] == ["*/2 * * * *"]
     assert istanbul["d1_databases"][0]["database_name"] == "gfs-watch-istanbul-gfs"
     assert koy["d1_databases"][0]["database_name"] == "gfs-watch-koy-gfs"
