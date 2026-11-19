@@ -357,7 +357,8 @@
       const cycleOffset = Math.abs(result.gfs.initMs - result.ec.initMs) / HOUR;
       const explanation = sharedEndF < MAX_F
         ? "Her iki modelin kendi döngüsünde F360 verisi var. Döngüler " + fmt(cycleOffset, 0) +
-          " saat farklı başladığı için aynı geçerlilik saatlerinde ortak aralık F" + sharedEndF + "'te sona eriyor."
+          " saat farklı başladığı için teorik ortak üst sınır F" + sharedEndF +
+          "; mevcut ortak veri F" + reach + "'te sona eriyor."
         : "İki kaynak da F360 verisi sunuyor; ancak ortak zaman çizelgesinde son adım F" + reach +
           ". Bu bölümde iki modelden en az birinin geçerlilik saati eksik.";
       const note = el("div", "kars-card");
