@@ -209,14 +209,17 @@ async function refreshClimateCache(env, forceDate = null) {
   // Current-month readings are fetched from the continuously updated
   // Forecast API because CERRA ends in June 2021 and ERA5/ERA5-Land
   // are published with a delay.
-  const historicalStartByModel = model => String(CLIMATE_MODELS[model].startYear) + "-01-01";
-  // Keep the historical request bounded to the current month. The previous
-  // implementation downloaded every day from 1950/1985 to the previous year,
-  // which is unnecessarily large for a daily climate panel and can time out
-  // inside a Cloudflare Worker.
+  // The panel only needs the selected calendar month for the historical
+  // distribution and precipitation normal. Requesting every day from 1940
+  // onward made ERA5/ERA5-Land archive responses unnecessarily large and
+  // caused Cloudflare/Open-Meteo 503s.
+  const monthStart = String(parts.month).padStart(2, "0") + "-01";
+  const daysInMonth = new Date(Date.UTC(parts.year, parts.month, 0)).getUTCDate();
+  const historicalStartByModel = model =>
+    String(CLIMATE_MODELS[model].startYear) + "-" + monthStart;
   const historicalEnd = String(parts.year - 1) + "-" +
     String(parts.month).padStart(2, "0") + "-" +
-    String(parts.day).padStart(2, "0");
+    String(daysInMonth).padStart(2, "0");
   const recentUrl = "https://api.open-meteo.com/v1/forecast"
     + "?latitude=" + LOCATION.latitude
     + "&longitude=" + LOCATION.longitude
