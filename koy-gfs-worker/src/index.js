@@ -1695,7 +1695,7 @@ async function api(request, env) {
         ok: true,
         service: "gfs-watch-koy-gfs",
         storage: "D1",
-        cron: ["*/10 * * * *", "30 1 * * *"],
+        cron: ["*/10 * * * *"],
         location: LOCATION,
         latest_run_id_utc: current?.run_id_utc || null,
         latest_updated_at_utc: current?.updated_at_utc || null,
