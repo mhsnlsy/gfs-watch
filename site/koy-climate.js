@@ -7,8 +7,9 @@
 
   const $ = id => document.getElementById(id);
   const fmt = (v, digits = 1) => {
+    if (v === null || v === undefined || v === "" || !Number.isFinite(Number(v))) return "—";
     const x = Number(v);
-    return Number.isFinite(x) ? x.toLocaleString("tr-TR", {
+    return x.toLocaleString("tr-TR", {
       minimumFractionDigits: digits,
       maximumFractionDigits: digits
     }) : "—";
@@ -52,8 +53,8 @@
 
     setText("climate-period",
       String(data.month_name || "").toUpperCase() +
-      " · NOV 1 – " + String(data.month_readings_through_day || "—") +
-      " · STATION / MODEL READINGS<br>40.956°N, 39.007°E");
+      " · " + String(data.month_readings_through_day || "—") +
+      " DAYS · CURRENT-MONTH READINGS\n40.956°N, 39.007°E");
 
     setText("climate-avg-temp", fmt(month.avg_temp_c) + "°C");
     setText("climate-month-high", fmt(month.high_c) + "°C");
@@ -117,7 +118,7 @@
       meta.label + " · " + data.historical_start_year + "–" + data.historical_end_year);
 
     setText("climate-status",
-      "Cloudflare D1 · gece güncellendi · " +
+      "Cloudflare D1 · nightly cache · " +
       new Intl.DateTimeFormat("tr-TR", {
         timeZone:TZ, day:"2-digit", month:"2-digit",
         hour:"2-digit", minute:"2-digit"
