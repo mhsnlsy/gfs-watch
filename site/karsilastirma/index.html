@@ -52,9 +52,9 @@
       <div>
         <div class="section-kicker">GFS ↔ ECMWF IFS · F360</div>
         <h2>Son iki döngü: nerede uyumlu, nerede ayrışıyor?</h2>
-        <p class="section-description">Son GFS ve son ECMWF döngüsü aynı geçerlilik saatlerinde (6 saatlik) F360'a kadar karşılaştırılır. F, zaman adımının tahmin saatidir.</p>
+        <p class="section-description">Her modelin son çıktısı kendi başlangıç saatinden F360'a kadar alınır. Grafik yalnızca iki modelde ortak olan geçerlilik saatlerini karşılaştırır; döngüler farklı saatte başladıysa ortak grafik F360'tan biraz önce bitebilir.</p>
       </div>
-      <div class="section-note"><span id="kars-gfs-run">GFS döngüsü yükleniyor…</span><br><span id="kars-ec-run">ECMWF döngüsü yükleniyor…</span></div>
+      <div class="section-note"><span id="kars-gfs-run">GFS döngüsü yükleniyor…</span><br><span id="kars-ec-run">ECMWF döngüsü yükleniyor…</span><br><span id="kars-common-status">İki modelin F360 verisi bekleniyor…</span></div>
     </div>
     <div class="kars-legend">
       <span><i style="background:#F1C98B"></i>GFS</span>
@@ -74,6 +74,6 @@
   <span>Veri kaynağı: MeteoPT GFS · MeteoPT ECMWF · İstanbul noktası</span>
 </footer>
 <script src="/gfs-api-config.js"></script>
-<script src="/karsilastirma.js?v=20261119-f360-1" defer></script>
+<script src="/karsilastirma.js?v=20261119-f360-2" defer></script>
 </body>
 </html>
