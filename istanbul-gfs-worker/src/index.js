@@ -787,7 +787,7 @@ async function fetchEcmwfDocument(runDt) {
       mslp: { mean_hpa: Math.round(values.pressure * 10) / 10, stddev_hpa: null },
       precipitation_interval_hours: forecastHour - previousHour,
     });
-    previousHour = steps[i];
+    previousHour = forecastHour;
   }
   if (forecasts.length < 8) throw new Error("MeteoPT ECMWF usable forecast is too short: " + forecasts.length);
   const horizon = forecasts[forecasts.length - 1]?.forecast_hour || 0;
