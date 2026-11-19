@@ -487,7 +487,7 @@ async function storeObservation(env, stationKey, observation, triggerSource, dur
     nowIso
   );
   const history = env.STATIONS_DB.prepare(
-    "INSERT INTO station_history (station_key, station_id, station_name, observed_at_utc, fetched_at_utc, temperature_c, humidity_percent, pressure_hpa, wind_speed_kmh, wind_direction, rain_1h_mm, rain_10m_mm, rain_6h_mm, rain_12h_mm, rain_24h_mm, rain_00_now_mm, feels_like_c, payload_json) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)"
+    "INSERT OR REPLACE INTO station_history (station_key, station_id, station_name, observed_at_utc, fetched_at_utc, temperature_c, humidity_percent, pressure_hpa, wind_speed_kmh, wind_direction, rain_1h_mm, rain_10m_mm, rain_6h_mm, rain_12h_mm, rain_24h_mm, rain_00_now_mm, feels_like_c, payload_json) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)"
   ).bind(
     stationKey,
     observation.station_id || "",

@@ -51,6 +51,8 @@ def main() -> int:
         errors.append("station collection must fetch independent stations concurrently")
     if "recordCollectionFailure" not in sql or "collection_status" not in sql:
         errors.append("station collection failures must be persisted and exposed by /api/health")
+    if not re.search(r"INSERT\\s+OR\\s+REPLACE\\s+INTO\\s+station_history", sql, re.IGNORECASE):
+        errors.append("repeated source timestamps must update the existing history row instead of failing on the unique key")
     if 'collectAll(env, "cron")' not in sql or 'collectAll(env, "manual")' not in sql:
         errors.append("cron and bootstrap collection sources must be tracked separately")
 
