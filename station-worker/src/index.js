@@ -487,7 +487,13 @@ async function storeObservation(env, stationKey, observation, triggerSource, dur
     nowIso
   );
   const history = env.STATIONS_DB.prepare(
-    "INSERT OR REPLACE INTO station_history (station_key, station_id, station_name, observed_at_utc, fetched_at_utc, temperature_c, humidity_percent, pressure_hpa, wind_speed_kmh, wind_direction, rain_1h_mm, rain_10m_mm, rain_6h_mm, rain_12h_mm, rain_24h_mm, rain_00_now_mm, feels_like_c, payload_json) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)"
+    "INSERT INTO station_history (station_key, station_id, station_name, observed_at_utc, fetched_at_utc, temperature_c, humidity_percent, pressure_hpa, wind_speed_kmh, wind_direction, rain_1h_mm, rain_10m_mm, rain_6h_mm, rain_12h_mm, rain_24h_mm, rain_00_now_mm, feels_like_c, payload_json) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?) " +
+    "ON CONFLICT(station_key, observed_at_utc) DO UPDATE SET " +
+    "station_id=excluded.station_id, station_name=excluded.station_name, fetched_at_utc=excluded.fetched_at_utc, " +
+    "temperature_c=excluded.temperature_c, humidity_percent=excluded.humidity_percent, pressure_hpa=excluded.pressure_hpa, " +
+    "wind_speed_kmh=excluded.wind_speed_kmh, wind_direction=excluded.wind_direction, rain_1h_mm=excluded.rain_1h_mm, " +
+    "rain_10m_mm=excluded.rain_10m_mm, rain_6h_mm=excluded.rain_6h_mm, rain_12h_mm=excluded.rain_12h_mm, " +
+    "rain_24h_mm=excluded.rain_24h_mm, rain_00_now_mm=excluded.rain_00_now_mm, feels_like_c=excluded.feels_like_c, payload_json=excluded.payload_json"
   ).bind(
     stationKey,
     observation.station_id || "",

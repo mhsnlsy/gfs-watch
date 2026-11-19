@@ -121,19 +121,21 @@ jobs:
         run: |
           set -euo pipefail
           baseline="$(date -u +%s)"
-          echo "Triggering one independent collection for ENKA, Eyüpsultan, Şişli and Çanakçı..."
-          curl --silent --show-error --max-time 150 \
-            "$STATIONS_API/collect?bootstrap=$(date +%s)" \
-            -o "$RUNNER_TEMP/station-collection.json"
-
-          node - "$RUNNER_TEMP/station-collection.json" <<'NODE'
+          echo "Waiting briefly for the new Worker version to reach the API edge..."
+          collection_ok=0
+          for attempt in $(seq 1 5); do
+            echo "Station bootstrap attempt $attempt/5..."
+            if curl --silent --show-error --max-time 150 \
+              "$STATIONS_API/collect?bootstrap=$(date +%s)" \
+              -o "$RUNNER_TEMP/station-collection.json"; then
+              if node - "$RUNNER_TEMP/station-collection.json" <<'NODE'
           const fs = require("fs");
           const doc = JSON.parse(fs.readFileSync(process.argv[2], "utf8"));
           const required = ["enka", "eyupsultan", "sisli", "canakci"];
           const results = doc.results || {};
-          const failures = required.filter(key => !results[key] || results[key].ok !== true);
+          const failures = required.filter(key => !results[key] || results[key].ok !== true || results[key].status !== "live");
           if (doc.ok !== true || failures.length) {
-            console.error("Station collection failed:", JSON.stringify({
+            console.error("Station bootstrap attempt failed:", JSON.stringify({
               failed_stations: failures,
               results
             }, null, 2));
@@ -141,16 +143,24 @@ jobs:
           }
           for (const key of required) {
             const result = results[key];
-            if (result.status !== "live") {
-              throw new Error(key + " did not return a fresh live observation: " + JSON.stringify(result));
-            }
             console.log(key + ": live · " + result.duration_ms + " ms · " + (result.observed_at_utc || "timestamp unavailable"));
           }
-          const enka = results.enka;
-          if (enka.observation_method && enka.status === "stale" && enka.observation_method !== "enka-camera-overlay") {
-            throw new Error("ENKA stale-source camera fallback was not activated: " + JSON.stringify(enka));
-          }
           NODE
+              then
+                collection_ok=1
+                break
+              fi
+            fi
+            if [ "$attempt" -lt 5 ]; then
+              echo "Worker rollout or upstream collection not ready; retrying in 15 seconds."
+              sleep 15
+            fi
+          done
+          if [ "$collection_ok" -ne 1 ]; then
+            echo "::error::Station bootstrap collection failed after five attempts."
+            [ -s "$RUNNER_TEMP/station-collection.json" ] && cat "$RUNNER_TEMP/station-collection.json" || true
+            exit 1
+          fi
 
           curl --silent --show-error --fail --max-time 12 "$STATIONS_API/health?check=$(date +%s)" -o "$RUNNER_TEMP/station-health.json"
           node - "$RUNNER_TEMP/station-health.json" "$baseline" <<'NODE'

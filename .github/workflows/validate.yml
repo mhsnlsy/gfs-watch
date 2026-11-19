@@ -54,7 +54,8 @@ jobs:
           python scripts/test_notification_pipeline.py
           python scripts/test_850hpa_history.py
           python scripts/test_gfs_wind_direction.py
-          python scripts/test_gfs_report_chart_theme.py scripts/test_station_schema.py
+          python scripts/test_gfs_report_chart_theme.py
+          python scripts/test_station_schema.py
 
   workers:
     name: Worker + station contracts
