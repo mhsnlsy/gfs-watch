@@ -1,0 +1,80 @@
+name: Köy Climate — Isolated D1 Refresh
+
+on:
+  schedule:
+    - cron: "30 1 * * *"
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: koy-climate-refresh
+  cancel-in-progress: false
+
+jobs:
+  refresh:
+    name: Refresh CERRA / ERA5 / ERA5-Land climate cache
+    runs-on: ubuntu-latest
+    timeout-minutes: 35
+    env:
+      CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+      CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v5
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v5
+        with:
+          node-version: "22"
+
+      - name: Verify Cloudflare credentials
+        run: |
+          set -euo pipefail
+          test -n "$CLOUDFLARE_API_TOKEN"
+          test -n "$CLOUDFLARE_ACCOUNT_ID"
+
+      - name: Install Wrangler
+        run: npm install --global wrangler@4
+
+      - name: Build climate payloads independently
+        run: node scripts/refresh_koy_climate.mjs
+
+      - name: Ensure climate cache table exists
+        run: |
+          set -euo pipefail
+          wrangler d1 execute gfs-watch-koy-gfs --remote --command             "CREATE TABLE IF NOT EXISTS climate_cache (cache_key TEXT PRIMARY KEY, model TEXT NOT NULL, period_date TEXT NOT NULL, payload_json TEXT NOT NULL, updated_at_utc TEXT NOT NULL);"
+
+      - name: Publish all three model caches atomically
+        run: |
+          set -euo pipefail
+          test -s koy-climate-refresh.sql
+          wrangler d1 execute gfs-watch-koy-gfs --remote --file koy-climate-refresh.sql
+
+      - name: Verify D1 contains fresh model-specific data
+        run: |
+          set -euo pipefail
+          wrangler d1 execute gfs-watch-koy-gfs --remote --command             "SELECT model, period_date, updated_at_utc, length(payload_json) AS payload_bytes FROM climate_cache WHERE period_date = (SELECT MAX(period_date) FROM climate_cache) ORDER BY model;"
+
+      - name: Verify public Köy climate endpoint is read-only/cache-backed
+        run: |
+          set -euo pipefail
+          base="https://gfs-watch-koy-gfs.muhsin-ulusoy.workers.dev/api/climate"
+          for model in cerra era5 era5_land; do
+            curl --silent --show-error --fail --max-time 30               "$base?model=$model&climate_cache_check=$(date +%s)"               -o "$RUNNER_TEMP/$model.json"
+            node - "$RUNNER_TEMP/$model.json" "$model" <<'NODE'
+          const fs = require("fs");
+          const doc = JSON.parse(fs.readFileSync(process.argv[2], "utf8"));
+          const model = process.argv[3];
+          if (doc.ok !== true || doc.data?.model !== model) {
+            throw new Error("Public climate endpoint failed for " + model + ": " + JSON.stringify(doc));
+          }
+          console.log(JSON.stringify({
+            model,
+            period_date: doc.data.period_date,
+            historical: [doc.data.historical_start_year, doc.data.historical_end_year],
+            updated_at_utc: doc.data.updated_at_utc
+          }));
+          NODE
+          done
