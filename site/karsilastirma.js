@@ -3,6 +3,7 @@
 
   const $ = id => document.getElementById(id);
   const HOUR = 3600000;
+  const MAX_F = 360;
   const base = String(window.GFS_WATCH_API_BASE || window.location.origin).replace(/\/$/, "");
   const COLORS = { gfs: "#F1C98B", ec: "#7DD3D7", ok: "#3FB58A", warn: "#F1C98B", major: "#F2706E" };
   const STATUS_TEXT = { ok: "tutarlı", warn: "orta fark", major: "belirgin ayrışma" };
@@ -13,7 +14,7 @@
     { id: "t2m", label: "2 m sıcaklık", unit: "°C", field: "temperature_2m_c", warn: 1.5, major: 3, digits: 1 },
     { id: "t850", label: "850 hPa sıcaklık", unit: "°C", field: "temperature_850hpa_c", warn: 1.5, major: 3, digits: 1 },
     { id: "wind", label: "10 m rüzgâr", unit: "km/sa", field: "wind_speed_10m_kmh", warn: 8, major: 15, digits: 0 },
-    { id: "rain", label: "Yağış (6 saatlik toplam)", unit: "mm", field: "precipitation_6h_mm", warn: 0.8, major: 2, digits: 1 },
+    { id: "rain", label: "Yağış (6–12 saatlik toplam)", unit: "mm", field: "precipitation_6h_mm", warn: 0.8, major: 2, digits: 1 },
   ];
 
   const num = value => {
@@ -61,22 +62,23 @@
     });
     const byMs = new Map(rows.map(row => [row.ms, row]));
     // Yağış adım başına aralık toplamıdır; 6 saatlik pencereyi tam kapsıyorsa toplanır.
-    const rain6 = ms => {
-      const window = rows.filter(row => row.ms > ms - 6 * HOUR && row.ms <= ms);
+    const rainWindow = (ms, hours) => {
+      const window = rows.filter(row => row.ms > ms - hours * HOUR && row.ms <= ms);
       const covered = window.reduce((sum, row) => sum + row.interval, 0);
-      if (!window.length || covered !== 6) return null;
+      if (!window.length || covered !== hours) return null;
       const values = window.map(row => num(row.point.precipitation_6h_mm));
       return values.some(value => value === null) ? null : values.reduce((a, b) => a + b, 0);
     };
-    return { initMs, run: doc.run_id_utc, byMs, rain6 };
+    return { initMs, run: doc.run_id_utc, byMs, rainWindow };
   }
 
-  function statusOf(variable, a, b) {
+  function statusOf(variable, a, b, scale = 1) {
     if (a === null || b === null) return null;
     const diff = Math.abs(a - b);
     if (variable.id === "rain") {
-      if (diff >= variable.major || (Math.max(a, b) >= 1 && Math.min(a, b) < 0.1)) return "major";
-      return diff >= variable.warn ? "warn" : "ok";
+      // scale: 1 for 6 h windows, 2 for 12 h windows (accumulation grows with the window).
+      if (diff >= variable.major * scale || (Math.max(a, b) >= scale && Math.min(a, b) < 0.1 * scale)) return "major";
+      return diff >= variable.warn * scale ? "warn" : "ok";
     }
     if (diff >= variable.major) return "major";
     return diff >= variable.warn ? "warn" : "ok";
@@ -92,23 +94,29 @@
       const date = new Date(ms);
       if (date.getUTCHours() % 6 !== 0) continue;
       const f = (ms - refInit) / HOUR;
-      if (!(f > 0 && f <= 180)) continue;
+      if (!(f > 0 && f <= MAX_F)) continue;
       const g = gfs.byMs.get(ms).point;
       const e = ec.byMs.get(ms).point;
       const values = {};
       const statuses = {};
       let overall = null;
+      let rainHours = 6;
       for (const variable of VARS) {
-        const a = variable.id === "rain" ? gfs.rain6(ms) : num(g[variable.field]);
-        const b = variable.id === "rain" ? ec.rain6(ms) : num(e[variable.field]);
+        let a, b, scale = 1;
+        if (variable.id === "rain") {
+          a = gfs.rainWindow(ms, 6); b = ec.rainWindow(ms, 6);
+          if (a === null || b === null) { a = gfs.rainWindow(ms, 12); b = ec.rainWindow(ms, 12); rainHours = 12; scale = 2; }
+        } else {
+          a = num(g[variable.field]); b = num(e[variable.field]);
+        }
         values[variable.id] = { gfs: a, ec: b, diff: a === null || b === null ? null : a - b };
-        statuses[variable.id] = statusOf(variable, a, b);
+        statuses[variable.id] = statusOf(variable, a, b, scale);
         const s = statuses[variable.id];
         if (s && (overall === null || RANK[s] > RANK[overall])) overall = s;
       }
-      rows.push({ f, ms, values, statuses, overall });
+      rows.push({ f, ms, values, statuses, overall, rainHours });
     }
-    return { gfs, ec, refInit, rows: rows.filter(row => row.overall !== null) };
+    return { gfs, ec, refInit, rows: rows.filter(row => row.overall !== null), gfsHorizon: Number(gfsDoc.forecast_horizon_hours) || null, ecHorizon: Number(ecDoc.forecast_horizon_hours) || null };
   }
 
   // ---- Grafik -------------------------------------------------------------
@@ -133,15 +141,22 @@
     const H = stripTop + 92;
     const fMin = rows[0].f, fMax = rows[rows.length - 1].f;
     const xOf = f => L + ((f - fMin) / Math.max(1, fMax - fMin)) * plotW;
-    const half = rows.length > 1 ? (rows[1].f - rows[0].f) / 2 : 3;
+    // Each step owns the span up to the midpoints of its neighbours, so 3/6/12 h cadences leave no gaps.
+    const span = rows.map((row, i) => {
+      const prev = i > 0 ? rows[i - 1].f : row.f - (rows[1] ? rows[1].f - row.f : 6);
+      const next = i < rows.length - 1 ? rows[i + 1].f : row.f + (row.f - prev);
+      return { from: (row.f + prev) / 2, to: (row.f + next) / 2 };
+    });
     const font = "system-ui,-apple-system,Segoe UI,sans-serif";
     const parts = [
-      '<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 ' + W + " " + H + '" role="img" aria-label="GFS ve ECMWF F180 karşılaştırma grafiği">',
+      '<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 ' + W + " " + H + '" role="img" aria-label="GFS ve ECMWF F360 karşılaştırma grafiği">',
       '<rect width="' + W + '" height="' + H + '" fill="#0A1B29"/>',
     ];
     const tickFs = [];
-    for (let f = Math.ceil(fMin / 24) * 24; f <= fMax; f += 24) tickFs.push(f);
-    if (!tickFs.includes(fMin)) tickFs.unshift(fMin);
+    const tickStep = fMax - fMin > 200 ? 48 : 24;
+    for (let f = Math.ceil(fMin / tickStep) * tickStep; f <= fMax; f += tickStep) tickFs.push(f);
+    if (tickFs.length && tickFs[0] - fMin > tickStep / 2) tickFs.unshift(fMin);
+    else if (!tickFs.length) tickFs.push(fMin);
 
     VARS.forEach((variable, index) => {
       const top = 24 + index * (panelH + gap);
@@ -160,10 +175,10 @@
         '<text x="' + (W - 20) + '" y="' + (top + 22) + '" text-anchor="end" fill="#B8D7DF" font-size="12" font-family="' + font + '">' + esc(variable.unit) + "</text>"
       );
       // Ayrışma bantları
-      rows.forEach(row => {
+      rows.forEach((row, rowIndex) => {
         const status = row.statuses[variable.id];
         if (status !== "warn" && status !== "major") return;
-        const x1 = Math.max(L, xOf(row.f - half)), x2 = Math.min(L + plotW, xOf(row.f + half));
+        const x1 = Math.max(L, xOf(span[rowIndex].from)), x2 = Math.min(L + plotW, xOf(span[rowIndex].to));
         parts.push('<rect x="' + x1.toFixed(1) + '" y="' + (top + plotTop) + '" width="' + Math.max(1, x2 - x1).toFixed(1) + '" height="' + plotH + '" fill="' + COLORS[status] + '" opacity="' + (status === "major" ? ".26" : ".13") + '"/>');
       });
       ticks.forEach(tick => {
@@ -192,8 +207,8 @@
       };
       if (variable.id === "rain") {
         // Yağış: yan yana sütunlar daha okunaklı
-        const bw = Math.max(2, (plotW / rows.length) * 0.36);
         rows.forEach((row, i) => {
+          const bw = Math.max(2, (xOf(span[i].to) - xOf(span[i].from)) * 0.36);
           [["gfs", -bw], ["ec", 0]].forEach(([key, offset]) => {
             const value = row.values.rain[key];
             if (value === null || value <= 0) return;
@@ -210,9 +225,9 @@
     parts.push(
       '<text x="20" y="' + (stripTop + 8) + '" fill="#FFFFFF" font-size="14" font-weight="700" font-family="' + font + '">Genel uyum (en kötü değişken)</text>'
     );
-    const cell = Math.max(2, plotW / rows.length);
-    rows.forEach(row => {
-      parts.push('<rect x="' + (xOf(row.f) - cell / 2).toFixed(1) + '" y="' + (stripTop + 20) + '" width="' + cell.toFixed(1) + '" height="30" fill="' + COLORS[row.overall] + '" opacity=".92"/>');
+    rows.forEach((row, rowIndex) => {
+      const x1 = Math.max(L, xOf(span[rowIndex].from)), x2 = Math.min(L + plotW, xOf(span[rowIndex].to));
+      parts.push('<rect x="' + x1.toFixed(1) + '" y="' + (stripTop + 20) + '" width="' + Math.max(1, x2 - x1).toFixed(1) + '" height="30" fill="' + COLORS[row.overall] + '" opacity=".92"/>');
     });
     tickFs.forEach(f => {
       parts.push('<text x="' + xOf(f).toFixed(1) + '" y="' + (stripTop + 68) + '" text-anchor="middle" fill="#E7F2F6" font-size="10.5" font-weight="650" font-family="' + font + '">F' + Math.round(f) + "</text>");
@@ -298,11 +313,48 @@
       "(tutarlılık %" + Math.round(count("ok") / total * 100) + ")."));
     host.appendChild(summary);
 
+    // Coverage: F counts from the NEWER cycle, so the shared range ends where the model whose
+    // data stops first runs out of valid times. Say exactly that instead of implying a failure.
+    const reach = Math.round(rows[total - 1].f);
+    if (reach < MAX_F) {
+      const gEnd = result.gfs.initMs + (result.gfsHorizon || 0) * HOUR;
+      const eEnd = result.ec.initMs + (result.ecHorizon || 0) * HOUR;
+      const limiting = gEnd < eEnd ? "GFS" : "ECMWF";
+      const limitingF = limiting === "GFS" ? result.gfsHorizon : result.ecHorizon;
+      const newer = result.gfs.initMs >= result.ec.initMs ? "GFS" : "ECMWF";
+      const note = el("div", "kars-card");
+      note.appendChild(el("h3", "", "Ortak kapsam: F6–F" + reach));
+      note.appendChild(el("p", "kars-summary",
+        "F, daha yeni döngü olan " + newer + "'in başlangıcından sayılır. " + limiting + " verisi kendi döngüsünden F" + (limitingF || "?") +
+        " geçerlilik saatine kadar uzandığı için ortak aralık F" + reach + "'de biter. Bu, " + limiting + " döngüsü daha eskiyse beklenen bir durumdur."));
+      host.appendChild(note);
+    }
+
+    // Skill falls with lead time: show consistency per horizon band.
+    const bands = [[0, 72, "F0–72 (kısa vade)"], [72, 144, "F72–144 (orta vade)"], [144, 240, "F144–240"], [240, MAX_F, "F240–360 (uzun vade)"]];
+    const bandCard = el("div", "kars-card");
+    bandCard.appendChild(el("h3", "", "Vade bandına göre uyum"));
+    const bandTable = el("table", "kars-table");
+    const bandHead = el("tr");
+    ["Vade", "Adım", "Tutarlı", "Orta", "Belirgin"].forEach(text => bandHead.appendChild(el("th", "", text)));
+    bandTable.appendChild(bandHead);
+    bands.forEach(([lo, hi, label]) => {
+      const inBand = rows.filter(row => row.f > lo && row.f <= hi);
+      if (!inBand.length) return;
+      const n = status => inBand.filter(row => row.overall === status).length;
+      const pct = count => "%" + Math.round(count / inBand.length * 100);
+      const tr = el("tr");
+      [label, String(inBand.length), pct(n("ok")), pct(n("warn")), pct(n("major"))].forEach(text => tr.appendChild(el("td", "", text)));
+      bandTable.appendChild(tr);
+    });
+    bandCard.appendChild(bandTable);
+    host.appendChild(bandCard);
+
     const major = groupRanges(rows, row => row.overall === "major");
     const majorCard = el("div", "kars-card kars-major");
     majorCard.appendChild(el("h3", "", "Belirgin ayrışan F değerleri"));
     if (!major.length) {
-      majorCard.appendChild(el("p", "kars-summary", "F180'e kadar belirgin ayrışma yok. Modeller bu eşiklerde uyumlu."));
+      majorCard.appendChild(el("p", "kars-summary", "Karşılaştırılan aralıkta belirgin ayrışma yok. Modeller bu eşiklerde uyumlu."));
     } else {
       const ul = el("ul");
       major.forEach(range => {
@@ -368,7 +420,7 @@
     statsCard.appendChild(table);
     statsCard.appendChild(el("p", "kars-note",
       "Eşikler — 2 m ve 850 hPa sıcaklık: ≥1,5 °C orta, ≥3 °C belirgin · 10 m rüzgâr: ≥8 orta, ≥15 km/sa belirgin · 6 saatlik yağış: ≥0,8 mm orta, ≥2 mm belirgin ya da biri ≥1 mm kuru/ıslak çelişkisi. " +
-      "Yağış, her modelin adım aralıklarının 6 saatlik toplamıdır. F, daha yeni başlatılan modelin döngü saatine göre sayılır."));
+      "Yağış, iki modelin de adımlarının tam kapsadığı 6 saatlik toplamdır; uzun vadede adımlar seyrekleşince 12 saatlik toplam kullanılır ve eşikler 2 ile çarpılır. F, daha yeni başlatılan modelin döngü saatine göre sayılır."));
     host.appendChild(statsCard);
   }
 
@@ -383,8 +435,8 @@
     const chartHost = $("kars-chart");
     try {
       const [gfsDoc, ecDoc] = await Promise.all([getJson("/api/latest"), getJson("/api/ecmwf/latest")]);
-      $("kars-gfs-run").textContent = "GFS: " + runLabel(gfsDoc.run_id_utc) + " · F" + (gfsDoc.forecast_horizon_hours || 180);
-      $("kars-ec-run").textContent = "ECMWF: " + runLabel(ecDoc.run_id_utc) + " · F" + Math.min(180, ecDoc.forecast_horizon_hours || 180);
+      $("kars-gfs-run").textContent = "GFS: " + runLabel(gfsDoc.run_id_utc) + " · veri F" + (gfsDoc.forecast_horizon_hours || "?");
+      $("kars-ec-run").textContent = "ECMWF: " + runLabel(ecDoc.run_id_utc) + " · veri F" + (ecDoc.forecast_horizon_hours || "?");
       const result = compare(gfsDoc, ecDoc);
       if (result.rows.length < 4) throw new Error("Ortak geçerlilik saati sayısı çok az (" + result.rows.length + ")");
       const chart = buildChart(result);
