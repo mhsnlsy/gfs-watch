@@ -240,7 +240,7 @@ const virtualStart = koyAppJs.indexOf("function buildVirtualHomeObservation(sour
 const virtualEnd = koyAppJs.indexOf("function buildVirtualHomeHistory(source){", virtualStart);
 assert.ok(virtualStart >= 0 && virtualEnd > virtualStart, "Köy Ev virtual observation adapter must exist.");
 const chartStart = koyAppJs.indexOf("function svgStationHistory(");
-const chartEnd = koyAppJs.indexOf("\\nlet activeStationTooltip", chartStart);
+const chartEnd = koyAppJs.indexOf("let activeStationTooltip", chartStart);
 assert.ok(chartStart >= 0 && chartEnd > chartStart, "Köy station history chart renderer must exist.");
 
 const hourAnchor = Math.floor(Date.now() / 3600000) * 3600000;
@@ -289,13 +289,16 @@ const stationApiSandbox = {
   })
 };
 vm.createContext(stationApiSandbox);
+const stationTestSource = [
+  koyAppJs.slice(stationApiStart, stationApiEnd),
+  koyAppJs.slice(virtualStart, virtualEnd),
+  koyAppJs.slice(chartStart, chartEnd),
+  "this.getKoyStation = getStation;",
+  "this.buildKoyVirtualObservation = buildVirtualHomeObservation;",
+  "this.renderKoyStationHistory = svgStationHistory;"
+].join(String.fromCharCode(10));
 vm.runInContext(
-  koyAppJs.slice(stationApiStart, stationApiEnd) +
-  koyAppJs.slice(virtualStart, virtualEnd) +
-  koyAppJs.slice(chartStart, chartEnd) +
-  "\\nthis.getKoyStation = getStation;" +
-  "\\nthis.buildKoyVirtualObservation = buildVirtualHomeObservation;" +
-  "\\nthis.renderKoyStationHistory = svgStationHistory;",
+  stationTestSource,
   stationApiSandbox,
   {filename:"site/koy.js#station-history-contract"}
 );
