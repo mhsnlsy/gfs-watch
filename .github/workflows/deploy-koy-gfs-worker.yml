@@ -167,6 +167,27 @@ jobs:
             exit 1
           fi
 
+          echo "Testing live climate cache for CERRA / ERA5 / ERA5-Land..."
+          for climate_model in cerra era5 era5_land; do
+            curl --silent --show-error --fail --max-time 120               "$KOY_GFS_API/climate?model=$climate_model&deploy_check=$(date +%s)"               -o "$RUNNER_TEMP/koy-climate-$climate_model.json"
+            node - "$RUNNER_TEMP/koy-climate-$climate_model.json" "$climate_model" <<'NODE'
+          const fs = require("fs");
+          const file = process.argv[2];
+          const model = process.argv[3];
+          const doc = JSON.parse(fs.readFileSync(file, "utf8"));
+          if (doc.ok !== true || !doc.data || doc.data.model !== model) {
+            throw new Error("Köy climate model contract failed for " + model + ": " + JSON.stringify(doc));
+          }
+          console.log(JSON.stringify({
+            model,
+            period_date: doc.data.period_date,
+            historical_start_year: doc.data.historical_start_year,
+            historical_end_year: doc.data.historical_end_year,
+            month: doc.data.month
+          }));
+          NODE
+          done
+
           echo "Testing live F72 collection..."
           curl --silent --show-error --fail --max-time 60 "$KOY_GFS_API/f72?check=$(date +%s)" -o "$RUNNER_TEMP/koy-f72.json"
 
