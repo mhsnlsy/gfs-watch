@@ -242,7 +242,7 @@ def fetch_meteopt_ecmwf_document(run_dt: datetime) -> dict:
         "status": "ready",
         "forecast_source": "meteopt",
         "model": "ECMWF via MeteoPT",
-        "product": "MeteoPT ECMWF 3-hour point",
+        "product": "MeteoPT ECMWF 3-hour/6-hour point",
         "surface_forecast_source": "MeteoPT ECMWF point",
         "ensemble_forecast_source": "MeteoPT ECMWF point",
         "surface_ensemble_spread_available": False,
@@ -275,7 +275,7 @@ def fetch_meteopt_ecmwf_document(run_dt: datetime) -> dict:
         "source_url": SOURCE_URL,
         "notes": [
             "Sıcaklık, rüzgâr, yağış, 850 hPa ve basınç aynı MeteoPT ECMWF noktasından gelir.",
-            "Seri 3 saatte bir. Ensemble sapması ve bölgesel basınç merkezi bu kaynakta yok.",
+            "Seri F144’e kadar 3 saatte, sonrasında 6 saatte bir. Ensemble sapması ve bölgesel basınç merkezi bu kaynakta yok.",
         ],
         "forecasts": forecasts,
         "daily_summary": daily_summary,
