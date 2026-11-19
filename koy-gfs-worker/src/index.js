@@ -199,7 +199,7 @@ async function buildClimatePayload(model, parts, archive, recent) {
 }
 
 async function refreshClimateCache(env, forceDate = null) {
-  const parts = forceDate || istanbulDateParts();
+  const parts = forceDate && !forceDate.models ? forceDate : istanbulDateParts();
   const periodDate = climateDateKey(parts);
 
   // Historical reanalysis is used only for the long-term baseline.
@@ -207,6 +207,10 @@ async function refreshClimateCache(env, forceDate = null) {
   // Forecast API because CERRA ends in June 2021 and ERA5/ERA5-Land
   // are published with a delay.
   const historicalStartByModel = model => String(CLIMATE_MODELS[model].startYear) + "-01-01";
+  // Keep the historical request bounded to the current month. The previous
+  // implementation downloaded every day from 1950/1985 to the previous year,
+  // which is unnecessarily large for a daily climate panel and can time out
+  // inside a Cloudflare Worker.
   const historicalEnd = String(parts.year - 1) + "-" +
     String(parts.month).padStart(2, "0") + "-" +
     String(parts.day).padStart(2, "0");
@@ -233,7 +237,14 @@ async function refreshClimateCache(env, forceDate = null) {
   const results = [];
   const errors = [];
 
-  for (const model of Object.keys(CLIMATE_MODELS)) {
+  // Refresh one model at a time, but allow the HTTP request to target a
+  // specific model so a missing/failed model cannot surface stale data from
+  // another model.
+  const modelsToRefresh = Array.isArray(forceDate?.models)
+    ? forceDate.models
+    : Object.keys(CLIMATE_MODELS);
+
+  for (const model of modelsToRefresh) {
     try {
       const archive = await fetchClimateArchive(model, historicalStartByModel(model), historicalEnd);
       const payload = await buildClimatePayload(model, parts, archive, recent);
