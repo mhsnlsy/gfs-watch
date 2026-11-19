@@ -1566,6 +1566,55 @@ html.ios12 .backdrop-filter{display:none}
     }
   </style>
 
+
+<style id="koy-climate-css">
+.koy-climate-section{padding-top:24px}
+.koy-climate-panel{background:linear-gradient(145deg,rgba(11,29,45,.98),rgba(8,23,37,.99));border:1px solid rgba(125,211,215,.12);border-radius:24px;padding:22px;overflow:hidden}
+.koy-climate-head{display:flex;justify-content:space-between;gap:18px;align-items:flex-start}
+.koy-climate-head h2{margin:7px 0 4px}
+.koy-climate-sub{font-size:11px;line-height:1.65;color:#8198a7;letter-spacing:.01em}
+.koy-climate-status{font-size:9px;color:#8198a7;text-align:right;padding-top:4px}
+.climate-tabs{display:flex;gap:6px;margin:16px 0 18px}
+.climate-tab{appearance:none;border:0;background:rgba(255,255,255,.025);color:#778b9b;padding:9px 14px;border-radius:12px;font:600 12px "DM Sans",sans-serif;cursor:pointer}
+.climate-tab.active{background:rgba(255,255,255,.06);color:#e8eef2;box-shadow:inset 0 -2px 0 rgba(125,211,215,.22)}
+.climate-grid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:10px}
+.climate-card{background:rgba(18,39,58,.78);border:1px solid rgba(170,207,220,.045);border-radius:17px;padding:17px 18px;min-width:0}
+.climate-card .label{font-size:11px;color:#718697;letter-spacing:0;text-transform:none;font-weight:500}
+.climate-card .value{font:700 24px/1.1 Manrope,sans-serif;letter-spacing:-.04em;margin-top:8px;color:#f1f5f7}
+.climate-card .value.orange{color:#fb9a68}
+.climate-card .value.blue{color:#70b8f4}
+.climate-card .small{font-size:10px;color:#718697;margin-top:7px}
+.climate-long-title{margin:24px 0 38px;font-size:11px;color:#728696;font-weight:700;letter-spacing:.02em}
+.climate-range{padding:0 7px 4px}
+.climate-range-bar{height:11px;border-radius:999px;position:relative;background:linear-gradient(90deg,#3278dc 0%,#25b8dd 30%,#a7d957 50%,#f0d43e 70%,#f17c39 100%)}
+.climate-now-dot{position:absolute;width:22px;height:22px;top:-5.5px;left:50%;transform:translateX(-50%);border-radius:50%;background:#34452b;border:3px solid #071521;box-shadow:0 0 0 1px rgba(215,225,161,.28)}
+.climate-now-label{position:absolute;top:-34px;left:50%;transform:translateX(-50%);white-space:nowrap;color:#c7ee32;font-size:12px;font-weight:800}
+.climate-range-labels{display:flex;justify-content:space-between;gap:10px;color:#8ba0af;font-size:11px;margin-top:10px}
+.climate-range-labels span:nth-child(2){color:#c0cbd2}
+.climate-extra{display:grid;gap:10px;margin-top:22px}
+.climate-card.wide{padding:17px 18px}
+.climate-anomaly{margin-top:12px;background:rgba(18,39,58,.78);border:1px solid rgba(170,207,220,.045);border-radius:17px;padding:17px 18px}
+.climate-anomaly-head{display:flex;justify-content:space-between;gap:12px;align-items:flex-start}
+.climate-anomaly-value{font:800 28px/1 Manrope,sans-serif;margin-top:7px;color:#8fd7ba}
+.climate-anomaly-source{font-size:9px;color:#718697;text-align:right}
+.climate-anomaly-bar{height:8px;border-radius:999px;background:linear-gradient(90deg,#3780dc 0%,#52c5e0 48%,#e5d34d 52%,#f07942 100%);margin-top:16px;position:relative;overflow:hidden}
+.climate-anomaly-bar i{position:absolute;top:-3px;bottom:-3px;width:2px;left:50%;background:#edf5f8;box-shadow:0 0 0 3px rgba(237,245,248,.12)}
+.climate-anomaly-detail{font-size:10px;color:#8299a7;margin-top:9px;line-height:1.5}
+@media(max-width:560px){
+  .koy-climate-panel{padding:16px;border-radius:19px}
+  .koy-climate-head{display:block}
+  .koy-climate-status{text-align:left;margin-top:7px}
+  .climate-tabs{overflow-x:auto;scrollbar-width:none}
+  .climate-tabs::-webkit-scrollbar{display:none}
+  .climate-tab{flex:0 0 auto}
+  .climate-grid{gap:8px}
+  .climate-card{padding:14px 15px;border-radius:15px}
+  .climate-card .value{font-size:21px}
+  .climate-long-title{font-size:10px;margin:22px 0 38px}
+  .climate-range-labels{font-size:10px}
+  .climate-now-label{font-size:11px}
+}
+</style>
 </head>
 <body data-default-station="home">
   <script>
@@ -1696,7 +1745,78 @@ html.ios12 .backdrop-filter{display:none}
 
     </div>
   </div>
-</section>  <footer class="shell footer"><span><strong data-app-name>İstanbul Havası</strong> <span data-app-version>4.0-koy</span></span><span>Veri kaynakları: MGM Çanakçı · MeteoPT GFS · Otomatik yenileme: 5 dakika</span></footer>
+</section>  
+<section class="section koy-climate-section" id="koy-climate" aria-label="Bu ay ve uzun dönem klimatoloji">
+  <div class="koy-climate-panel">
+    <div class="koy-climate-head">
+      <div>
+        <div class="section-kicker">BU AY & UZUN DÖNEM</div>
+        <h2>Köy · Klimatoloji</h2>
+        <div class="koy-climate-sub" id="climate-period">NOVEMBER · NOV 1 – 19 · MODEL DAILY DATA<br>40.956°N, 39.007°E</div>
+      </div>
+      <div class="koy-climate-status" id="climate-status">Veri yükleniyor…</div>
+    </div>
+
+    <div class="climate-tabs" role="tablist" aria-label="Klimatoloji modeli">
+      <button class="climate-tab active" type="button" data-model="cerra" role="tab" aria-selected="true">CERRA</button>
+      <button class="climate-tab" type="button" data-model="era5" role="tab" aria-selected="false">ERA5</button>
+      <button class="climate-tab" type="button" data-model="era5_land" role="tab" aria-selected="false">ERA5-Land</button>
+    </div>
+
+    <div class="climate-grid">
+      <div class="climate-card"><div class="label">Avg Temp</div><div class="value" id="climate-avg-temp">—°C</div></div>
+      <div class="climate-card"><div class="label">Month high</div><div class="value orange" id="climate-month-high">—°C</div></div>
+      <div class="climate-card"><div class="label">Month low</div><div class="value blue" id="climate-month-low">—°C</div></div>
+      <div class="climate-card"><div class="label">Total precipitation</div><div class="value" id="climate-month-precip">— mm</div></div>
+      <div class="climate-card"><div class="label">Avg Wind</div><div class="value" id="climate-avg-wind">— km/h</div></div>
+      <div class="climate-card"><div class="label">Max Wind</div><div class="value" id="climate-max-wind">— km/h</div></div>
+    </div>
+
+    <div class="climate-long-title" id="climate-long-title">LONG TERM FOR NOV 19 · CERRA · 1984–2026 · 5.5 KM</div>
+    <div class="climate-range">
+      <div class="climate-range-bar">
+        <div class="climate-now-label" id="climate-now-label">now —°C</div>
+        <div class="climate-now-dot" id="climate-now-dot"></div>
+      </div>
+      <div class="climate-range-labels">
+        <span id="climate-min-label">—</span>
+        <span id="climate-avg-label">avg —°C</span>
+        <span id="climate-max-label">—</span>
+      </div>
+    </div>
+
+    <div class="climate-extra">
+      <div class="climate-card wide">
+        <div class="label">Today's mean</div>
+        <div class="value" id="climate-today-mean">—°C</div>
+        <div class="small" id="climate-today-diff">—</div>
+      </div>
+      <div class="climate-card wide">
+        <div class="label">Record daily precipitation</div>
+        <div class="value" id="climate-record-precip">— mm</div>
+        <div class="small" id="climate-record-year">—</div>
+      </div>
+      <div class="climate-card wide">
+        <div class="label">Fallen today</div>
+        <div class="value" id="climate-today-precip">— mm</div>
+        <div class="small" id="climate-precip-ratio">—</div>
+      </div>
+    </div>
+
+    <div class="climate-anomaly">
+      <div class="climate-anomaly-head">
+        <div>
+          <div class="label">KASIM 2026 YAĞIŞ ANOMALİSİ</div>
+          <div class="climate-anomaly-value" id="climate-anomaly-value">—</div>
+        </div>
+        <div class="climate-anomaly-source" id="climate-anomaly-source">CERRA · 1984–2025</div>
+      </div>
+      <div class="climate-anomaly-bar" id="climate-anomaly-bar"><i></i></div>
+      <div class="climate-anomaly-detail" id="climate-anomaly-detail">Hesaplanıyor…</div>
+    </div>
+  </div>
+</section>
+  <footer class="shell footer"><span><strong data-app-name>İstanbul Havası</strong> <span data-app-version>4.0-koy</span></span><span>Veri kaynakları: MGM Çanakçı · MeteoPT GFS · Otomatik yenileme: 5 dakika</span></footer>
   <style>
     #pull-refresh-indicator{position:fixed;z-index:99999;top:calc(env(safe-area-inset-top,0px) + 9px);left:50%;transform:translate(-50%,-150%);opacity:0;pointer-events:none;display:flex;align-items:center;gap:9px;padding:10px 15px;border:1px solid rgba(125,211,215,.35);border-radius:999px;background:rgba(8,25,39,.96);color:#d8f7f1;font:600 12px "DM Sans",sans-serif;box-shadow:0 8px 28px rgba(0,0,0,.32);transition:transform .18s ease,opacity .18s ease}
     #pull-refresh-indicator.visible{transform:translate(-50%,0);opacity:1}
@@ -1770,6 +1890,7 @@ html.ios12 .backdrop-filter{display:none}
     <script src="./gfs-cycle-theme.js?v=20261111-theme-fix-1"></script>
     <script src="./gfs-api-config.js?v=20261111-api-config-1"></script>
     <script src="./koy.js?v=20261118-wind-direction-outflow-1" defer></script>
+    <script src="./koy-climate.js?v=20261119-climate-panel-1" defer></script>
 
 
 
