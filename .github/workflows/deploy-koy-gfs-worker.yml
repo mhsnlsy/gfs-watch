@@ -145,7 +145,7 @@ jobs:
               if node - "$RUNNER_TEMP/koy-health.json" <<'NODE'
           const fs = require("fs");
           const doc = JSON.parse(fs.readFileSync(process.argv[2], "utf8"));
-          if (doc.ok !== true || doc.service !== "gfs-watch-koy-gfs" || doc.cron !== "*/10 * * * *") {
+          if (doc.ok !== true || doc.service !== "gfs-watch-koy-gfs" || JSON.stringify(doc.cron) !== JSON.stringify(["*/10 * * * *", "30 1 * * *"])) {
             throw new Error("Köy GFS Worker health contract failed");
           }
           if (doc.svg_renderer !== "cloudflare-js-v10-f180-180h") {
