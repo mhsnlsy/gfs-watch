@@ -78,18 +78,64 @@ function climateArchiveUrl(model, start, end) {
 }
 
 async function fetchClimateArchive(model, start, end) {
-  const response = await fetch(climateArchiveUrl(model, start, end), {
-    headers: {
-      "User-Agent": "Mozilla/5.0 (compatible; IstanbulHavasi/1.0; +https://istanbulunhavasi.com/)",
-      "Accept": "application/json",
-      "Cache-Control": "no-cache",
-    },
-    signal: AbortSignal.timeout(60000),
-  });
-  if (!response.ok) {
-    throw new Error("Open-Meteo climate HTTP " + response.status);
+  // Open-Meteo can return 503 for a large multi-decade ERA5 request even
+  // though the same model works for smaller ranges. Split the historical
+  // baseline into two bounded requests and merge them before calculating the
+  // climate statistics. This keeps the nightly Worker refresh reliable.
+  const startYear = Number(start.slice(0, 4));
+  const endYear = Number(end.slice(0, 4));
+  const splitYear = Math.floor((startYear + endYear) / 2);
+  const ranges = startYear < endYear
+    ? [
+        [start, String(splitYear) + "-12-31"],
+        [String(splitYear + 1) + "-01-01", end],
+      ]
+    : [[start, end]];
+
+  const documents = [];
+  for (const [rangeStart, rangeEnd] of ranges) {
+    let lastStatus = null;
+    let document = null;
+    for (let attempt = 1; attempt <= 3; attempt++) {
+      const response = await fetch(climateArchiveUrl(model, rangeStart, rangeEnd), {
+        headers: {
+          "User-Agent": "Mozilla/5.0 (compatible; IstanbulHavasi/1.0; +https://istanbulunhavasi.com/)",
+          "Accept": "application/json",
+          "Cache-Control": "no-cache",
+        },
+        signal: AbortSignal.timeout(60000),
+      });
+      lastStatus = response.status;
+      if (response.ok) {
+        document = await response.json();
+        break;
+      }
+      // Retry transient upstream failures with a short backoff.
+      if (response.status === 429 || response.status >= 500) {
+        await new Promise(resolve => setTimeout(resolve, 750 * attempt));
+        continue;
+      }
+      throw new Error("Open-Meteo climate HTTP " + response.status);
+    }
+    if (!document) {
+      throw new Error("Open-Meteo climate HTTP " + lastStatus + " after retries");
+    }
+    documents.push(document);
   }
-  return response.json();
+
+  if (documents.length === 1) return documents[0];
+
+  const merged = { ...documents[0], daily: { ...documents[0].daily } };
+  for (const document of documents.slice(1)) {
+    for (const [key, values] of Object.entries(document.daily || {})) {
+      if (key === "time") {
+        merged.daily.time = [...(merged.daily.time || []), ...(values || [])];
+      } else {
+        merged.daily[key] = [...(merged.daily[key] || []), ...(values || [])];
+      }
+    }
+  }
+  return merged;
 }
 
 function climateRows(document) {
