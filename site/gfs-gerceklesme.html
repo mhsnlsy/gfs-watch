@@ -7,7 +7,7 @@
 <meta name="description" content="GFS tahminlerinin gerçekleşen istasyon ölçümleriyle 16 günlük arşiv üzerinden doğrulanması.">
 <title>GFS Gerçekleşme · İstanbul Havası</title>
 <link rel="icon" href="/favicon.svg" type="image/svg+xml">
-<link rel="stylesheet" href="/home.css?v=20261116-gerceklesme-12">
+<link rel="stylesheet" href="/home.css?v=20261116-gerceklesme-13">
 <link rel="stylesheet" href="/header-common.css?v=20261110-shared-header-1">
 <style>
 .shell.verif{width:min(1180px,calc(100% - 20px))}
@@ -80,6 +80,13 @@ table.f-table{width:100%;border-collapse:collapse;font-size:13px}table.f-table t
  .score-wrap.expanded{max-height:300px}
 }
 
+.hero{display:block!important}main.shell.verif{width:100%!important;max-width:1180px!important;min-width:0!important;padding-inline:14px!important;box-sizing:border-box!important;margin:0 auto!important;overflow-x:hidden!important}
+.f-help{margin-top:10px!important;font-size:12.5px!important;color:#9bb1bf!important}.f-help b{color:#e7f2f6}
+.band-wrap{overflow-x:auto}.band-table th,.band-table td{font-size:13px;padding:8px 6px}.band-table th{white-space:normal}.band-table td:first-child{font-weight:700;color:#e7f2f6}
+.band-table tr.best td{background:rgba(125,211,215,.08)}
+details.fold{padding:0}details.fold>summary{cursor:pointer;padding:12px;font:800 15px/1.2 Manrope,sans-serif;list-style:none}details.fold>summary::before{content:"▸ ";color:#7dd3d7}details.fold[open]>summary::before{content:"▾ "}
+details.fold>.score-cards,details.fold>.method,details.fold>.note{margin:0 12px 12px}
+@media(max-width:800px){.band-table th,.band-table td{font-size:12px;padding:7px 4px}}
 </style>
 </head>
 <body>
@@ -95,42 +102,47 @@ table.f-table{width:100%;border-collapse:collapse;font-size:13px}table.f-table t
 </header>
 
 <main class="shell verif">
-<h1>GFS GERÇEKLEŞME ANALİZİ</h1>
-<p class="lead">Son 16 gün · 64 GFS döngüsü · gerçekleşen istasyon ölçümleriyle karşılaştırma</p>
+<h1>GFS tahminleri ne kadar tutuyor?</h1>
+<p class="lead">GFS modelinin geçmişte yaptığı tahminler, aynı saatte istasyonda gerçekten ölçülen değerlerle karşılaştırıldı (son 16 gün, 64 model çalışması).</p>
 <div class="controls"><label>İstasyon <select id="station"><option value="eyupsultan">Eyüpsultan</option><option value="enka">ENKA Balmumcu</option></select></label><button id="refresh" type="button">Yenile</button></div>
 <div id="status">Veriler yükleniyor…</div>
 <div id="content" hidden>
 <section class="hero">
-  <div class="hero-kicker">Ölçüme göre tahmin tutarlılığı</div>
-  <h2 id="hero-title">En tutarlı tahmin saatleri hesaplanıyor…</h2>
-  <p id="hero-sub">Her F saati, geçmiş GFS tahminlerinin gerçekleşen istasyon ölçümleriyle karşılaştırılmasıyla puanlanır.</p>
+  <div class="hero-kicker">Kısaca</div>
+  <h2 id="hero-title">Sonuç hesaplanıyor…</h2>
+  <p id="hero-sub"></p>
   <div class="best-pills" id="best-summary"></div>
+  <p class="f-help"><b>F+24 nedir?</b> Modelin çalıştığı andan 24 saat sonrası için yaptığı tahmin. F sayısı büyüdükçe tahmin daha uzak bir geleceği anlatır.</p>
+</section>
+
+<section class="panel">
+  <h2>Tahmin uzaklaştıkça ne kadar şaşıyor?</h2>
+  <p class="score-intro">Tahmin ufkuna göre ortalama hata. Sayılar küçüldükçe (sıcaklık, rüzgâr) veya büyüdükçe (yağış isabeti) tahmin daha güvenilirdir.</p>
+  <div class="band-wrap"><table class="f-table band-table"><thead><tr><th>Ne kadar ilerisi?</th><th class="num">Sıcaklık hatası</th><th class="num">Rüzgâr hızı hatası</th><th class="num">Yağış var/yok isabeti</th><th class="num">Ölçüm sayısı</th></tr></thead><tbody id="band-body"></tbody></table></div>
 </section>
 
 <section class="panel score-panel">
-  <h2>F saatlerine göre doğruluk puanı</h2>
-  <p class="score-intro">Çubuklar, her tahmin ufkunun sıcaklık, yağış ve rüzgâr performansından oluşan genel puanını gösterir. En tutarlı F saati 100 puan alır; diğerleri ona göre sıralanır.</p>
-  <div class="score-legend">
-    <span><b>F+24</b> = model çalıştıktan 24 saat sonrası</span>
-    <span><b>100</b> = bu arşivdeki en tutarlı tahmin ufku</span>
-    <span><b>En az 8</b> gerçekleşmiş eşleşme gerekir</span>
-  </div>
-  <div class="score-wrap" id="score-wrap"><svg id="f-score-chart" viewBox="0 0 760 260" role="img" aria-label="En tutarlı GFS tahmin saatlerinin doğruluk puanı"></svg></div>
+  <h2>Hangi F saatleri en güvenilir?</h2>
+  <p class="score-intro">Her F saati sıcaklık, yağış ve rüzgâr başarısına göre 0–100 puan alır. En başarılı F saati 100'dür. Puan olasılık değil, F saatlerinin birbirine göre sıralamasıdır.</p>
+  <div class="score-wrap" id="score-wrap"><svg id="f-score-chart" viewBox="0 0 760 260" role="img" aria-label="GFS tahmin saatlerinin doğruluk puanı"></svg></div>
   <button class="score-toggle" id="score-toggle" type="button" hidden>Tüm F saatlerini göster</button>
-  <div class="score-caption"><span id="score-caption">—</span><span>Skor olasılık yüzdesi değil, göreli doğruluk puanıdır.</span></div>
+  <div class="score-caption"><span id="score-caption">—</span></div>
 </section>
 
-<div class="score-cards" id="score-cards"></div>
+<details class="panel fold">
+  <summary>Değişken bazında en iyi 10 F saati</summary>
+  <div class="score-cards" id="score-cards"></div>
+</details>
 
-<section class="panel method-panel">
-  <h2>Puan nasıl hesaplanıyor?</h2>
+<details class="panel fold method-panel">
+  <summary>Puan nasıl hesaplanıyor?</summary>
   <div class="method">
-    <div><b>1 · Hata karşılaştırması</b><span>Sıcaklıkta hata ve 1 °C isabeti; yağışta miktar ve var/yok isabeti; rüzgârda hız ve yön farkı kullanılır.</span></div>
-    <div><b>2 · Eşit ağırlık</b><span>Bu ölçütlerle üç ayrı puan hesaplanır ve genel puanda eşit ağırlıkla birleştirilir. Her F için en az 8 eşleşme aranır.</span></div>
-    <div><b>3 · 100 üzerinden</b><span>Her başlıkta en iyi F 100 puan alır. Üç başlığın birleşiminde en iyi F de 100 olur; diğerleri buna göre sıralanır.</span></div>
+    <div><b>1 · Hata ölçülür</b><span>Sıcaklıkta fark ve 1 °C içinde kalma oranı, yağışta miktar farkı ve var/yok isabeti, rüzgârda hız ve yön farkı kullanılır.</span></div>
+    <div><b>2 · Eşit ağırlık</b><span>Sıcaklık, yağış ve rüzgâr puanları eşit ağırlıkla birleştirilir. Her F saati için en az 8 eşleşme aranır.</span></div>
+    <div><b>3 · 100 üzerinden</b><span>En iyi F saati 100 puan alır; diğerleri buna göre sıralanır.</span></div>
   </div>
-  <p class="note">Puanlar son 16 günlük arşivde gerçekleşmiş istasyon ölçümlerine dayanır. Örnek sayısı yetersiz F saatleri puanlanmaz; eksik veya geçersiz veri sıfır hata kabul edilmez.</p>
-</section>
+  <p class="note">Puanlar son 16 günlük arşivde gerçekleşmiş ölçümlere dayanır. Yetersiz örnekli F saatleri puanlanmaz; eksik veri sıfır hata sayılmaz.</p>
+</details>
 </div></main>
 
 <script>
@@ -360,7 +372,7 @@ function drawScoreChart(rows) {
   const NS = "http://www.w3.org/2000/svg";
   const width = Math.max(340, Math.floor(document.querySelector(".shell.verif").clientWidth || window.innerWidth || 760));
   const mobile = width < 760;
-  const left = width < 460 ? 44 : 64;
+  const left = width < 460 ? 58 : 64;
   const top = mobile ? 42 : 40;
   const rowHeight = mobile ? 34 : 28;
   const visibleRows = showAllFHours ? rows : rows.slice(0, 5);
@@ -471,6 +483,24 @@ function renderMetricCard(icon, title, rows, type) {
     '<div class="score-rank-list">' + items + '</div>' +
     '</section>';
 }
+function renderBands(pairs) {
+  const bands = [["İlk gün (F+6–24)", 0, 24], ["2.–3. gün (F+30–72)", 25, 72], ["4.–5. gün (F+78–120)", 73, 120], ["6.–7. gün (F+126–180)", 121, 180]];
+  const avg = (a, f) => a.length ? a.reduce((x, y) => x + f(y), 0) / a.length : null;
+  const rows = bands.map(([name, lo, hi]) => {
+    const t = pairs.temp.filter(p => p.lead >= lo && p.lead <= hi);
+    const r = pairs.rain.filter(p => p.lead >= lo && p.lead <= hi);
+    const w = pairs.wind.filter(p => p.lead >= lo && p.lead <= hi);
+    return { name, n: Math.min(t.length, r.length, w.length),
+      t: avg(t, p => Math.abs(p.error)), w: avg(w, p => Math.abs(p.speedError)),
+      r: r.length ? r.filter(p => p.hit).length / r.length * 100 : null };
+  });
+  const ok = rows.filter(x => x.n >= MIN_PAIRS && x.t !== null);
+  const best = ok.length ? ok.reduce((a, b) => b.t < a.t ? b : a) : null;
+  document.getElementById("band-body").innerHTML = rows.map(x => x.n < MIN_PAIRS
+    ? '<tr><td>' + x.name + '</td><td class="num" colspan="4">Yeterli ölçüm yok</td></tr>'
+    : '<tr' + (x === best ? ' class="best"' : '') + '><td>' + x.name + '</td><td class="num">' + fmt(x.t, 1) + ' °C</td><td class="num">' +
+      fmt(x.w, 1) + ' km/sa</td><td class="num">%' + fmt(x.r, 0) + '</td><td class="num">' + x.n + '</td></tr>').join("");
+}
 function renderBestPills(scores) {
   const rows = scores.rows;
   if (!rows.length) {
@@ -479,7 +509,7 @@ function renderBestPills(scores) {
   }
   const top = rows[0];
   document.getElementById("best-summary").innerHTML =
-    '<span class="best-pill">En iyi genel: <b>F+' + top.lead + ' · 100/100</b></span>' +
+    '<span class="best-pill">Genel: <b>F+' + top.lead + '</b></span>' +
     '<span class="best-pill">Sıcaklık: <b>F+' + scores.tBest.lead + '</b></span>' +
     '<span class="best-pill">Yağış: <b>F+' + scores.rBest.lead + '</b></span>' +
     '<span class="best-pill">Rüzgâr: <b>F+' + scores.wBest.lead + '</b></span>';
@@ -519,15 +549,16 @@ async function load() {
     if (scores.rows.length) {
       const winner = scores.rows[0];
       document.getElementById("hero-title").textContent =
-        "En tutarlı tahmin ufku F+" + winner.lead + " saat · " + fmt(winner.score, 0) + "/100 puan.";
+        "En güvenilir tahmin: modelden " + winner.lead + " saat sonrası (F+" + winner.lead + ").";
       document.getElementById("hero-sub").textContent =
-        "Sıcaklık isabeti, yağış miktarı ve tespit başarısı, rüzgâr hızı ve yönü birlikte değerlendirilir. Üç değişken eşit ağırlıktadır; en iyi genel F 100 puan alır.";
+        "Sıcaklık, yağış ve rüzgâr birlikte değerlendirildiğinde bu saat ölçümlere en yakın çıktı. Aşağıdaki tablo, tahmin uzaklaştıkça hatanın nasıl değiştiğini gösteriyor.";
     } else {
       document.getElementById("hero-title").textContent = "Henüz ortak puanlama için yeterli veri yok.";
       document.getElementById("hero-sub").textContent =
-        "Her F saatinin sıcaklık, yağış ve rüzgâr verilerinde en az " + MIN_PAIRS + " gerçekleşmiş eşleşme bulunmalı.";
+        "Her F saatinde sıcaklık, yağış ve rüzgâr için en az " + MIN_PAIRS + " ölçüm eşleşmesi gerekiyor.";
     }
 
+    renderBands(pairs);
     renderBestPills(scores);
     drawScoreChart(scores.rows);
     document.getElementById("score-caption").textContent =
