@@ -22,6 +22,18 @@
     .ecmwf-page .gfs-clone-svg{border-radius:10px}
   }
 </style>
+<style id="ecmwf-date-cell-nowrap">
+  #meteopt-gfs-table .meteopt-data-table td:nth-child(2){white-space:nowrap!important;overflow:hidden!important;text-overflow:clip!important;letter-spacing:0!important}
+  @media (max-width:850px),(pointer:coarse){
+    #meteopt-gfs-table .meteopt-data-table td:nth-child(2){font-size:9px!important;padding-left:2px!important;padding-right:2px!important;text-align:center!important}
+  }
+  @media (max-width:380px){
+    #meteopt-gfs-table .meteopt-data-table.koy-snowln-table td:nth-child(2){font-size:8px!important}
+  }
+  @media (max-width:335px){
+    #meteopt-gfs-table .meteopt-data-table.koy-snowln-table td:nth-child(2){font-size:7px!important}
+  }
+</style>
 </head>
 <body>
 <header class="shell topbar">
@@ -87,7 +99,7 @@
             <span id="ecmwf-table-status" role="status" aria-live="polite">Veri yükleniyor…</span>
           </div>
           <div class="meteopt-table-scroll" aria-label="ECMWF 180 saatlik tahmin tablosu">
-            <table class="meteopt-data-table">
+            <table class="meteopt-data-table koy-snowln-table">
               <thead><tr>
                 <th>Steps</th><th>Date/Hour (TSİ)</th><th>T.2m</th><th>Prec.</th><th>W.10m</th><th>T.850</th><th>W.850</th><th>RH.2m<br>(%)</th><th>Dew Point<br>(°C)</th><th>Snowln<br>(m)</th>
               </tr></thead>
