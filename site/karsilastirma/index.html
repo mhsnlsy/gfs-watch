@@ -11,6 +11,11 @@
 <link rel="stylesheet" href="/header-common.css?v=20261110-shared-header-1">
 <style>
   .kars-page{padding-bottom:40px}
+  /* Desktop: the SVG scales with its box, so capping the column at 70% of the page width makes
+     the charts 30% smaller; legend, readout and analysis cards share that column. */
+  @media (min-width:900px){
+    .kars-legend,.kars-chart,.kars-readout,#kars-analysis{max-width:70%}
+  }
   .kars-page .section-head{padding-top:26px}
   .kars-legend{display:flex;flex-wrap:wrap;gap:14px;font-size:13px;color:#E7F2F6;margin:6px 0 12px}
   .kars-legend i{display:inline-block;width:22px;height:3px;border-radius:2px;vertical-align:middle;margin-right:6px}
@@ -74,6 +79,6 @@
   <span>Veri kaynağı: MeteoPT GFS · MeteoPT ECMWF · İstanbul noktası</span>
 </footer>
 <script src="/gfs-api-config.js"></script>
-<script src="/karsilastirma.js?v=20261119-f360-2" defer></script>
+<script src="/karsilastirma.js?v=20261119-compact-1" defer></script>
 </body>
 </html>
