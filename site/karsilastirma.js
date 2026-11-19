@@ -14,6 +14,7 @@
     { id: "t2m", label: "2 m sıcaklık", unit: "°C", field: "temperature_2m_c", warn: 1.5, major: 3, digits: 1 },
     { id: "t850", label: "850 hPa sıcaklık", unit: "°C", field: "temperature_850hpa_c", warn: 1.5, major: 3, digits: 1 },
     { id: "wind", label: "10 m rüzgâr", unit: "km/sa", field: "wind_speed_10m_kmh", warn: 8, major: 15, digits: 0 },
+    { id: "wind850", label: "850 hPa rüzgâr", unit: "km/sa", field: "wind_speed_850hpa_kmh", warn: 12, major: 25, digits: 0 },
     { id: "rain", label: "Yağış (6–12 saatlik toplam)", unit: "mm", field: "precipitation_6h_mm", warn: 0.8, major: 2, digits: 1 },
   ];
 
@@ -52,7 +53,7 @@
     const initMs = Date.parse(doc.run_id_utc);
     const raw = (Array.isArray(doc.forecast_6_hourly) ? doc.forecast_6_hourly : [])
       .map(point => ({ point, fh: num(point?.forecast_hour), ms: Date.parse(point?.valid_time_utc) }))
-      .filter(item => item.fh !== null && item.fh > 0 && Number.isFinite(item.ms))
+      .filter(item => item.fh !== null && item.fh > 0 && item.fh <= MAX_F && Number.isFinite(item.ms))
       .sort((a, b) => a.fh - b.fh);
     let previous = 0;
     const rows = raw.map(item => {
@@ -70,6 +71,32 @@
       return values.some(value => value === null) ? null : values.reduce((a, b) => a + b, 0);
     };
     return { initMs, run: doc.run_id_utc, byMs, rainWindow };
+  }
+
+  function validateF360(doc, model) {
+    const points = Array.isArray(doc?.forecast_6_hourly) ? doc.forecast_6_hourly : [];
+    const maxHour = points.reduce((max, point) => Math.max(max, num(point?.forecast_hour) || 0), 0);
+    const declaredHorizon = num(doc?.forecast_horizon_hours) || maxHour;
+    const endPoint = points.find(point => num(point?.forecast_hour) === MAX_F);
+    if (!Number.isFinite(Date.parse(doc?.run_id_utc || "")) ||
+        declaredHorizon < MAX_F || maxHour < MAX_F || !endPoint) {
+      throw new Error(
+        model + " son çıktısı F360'a ulaşmadı (bildirilen F" +
+        Math.round(declaredHorizon) + ", bulunan son adım F" + Math.round(maxHour) +
+        "). Her iki modelin F360 verisi hazır olduğunda kıyas otomatik oluşacak."
+      );
+    }
+    const required = [
+      "temperature_2m_c",
+      "temperature_850hpa_c",
+      "wind_speed_10m_kmh",
+      "wind_speed_850hpa_kmh",
+    ];
+    const missing = required.filter(field => num(endPoint[field]) === null);
+    if (missing.length) {
+      throw new Error(model + " F360 adımında eksik alan var: " + missing.join(", "));
+    }
+    return { maxHour, declaredHorizon };
   }
 
   function statusOf(variable, a, b, scale = 1) {
@@ -157,6 +184,13 @@
     for (let f = Math.ceil(fMin / tickStep) * tickStep; f <= fMax; f += tickStep) tickFs.push(f);
     if (tickFs.length && tickFs[0] - fMin > tickStep / 2) tickFs.unshift(fMin);
     else if (!tickFs.length) tickFs.push(fMin);
+    if (Math.abs(tickFs[tickFs.length - 1] - fMax) > 1) {
+      if (tickFs.length > 1 && fMax - tickFs[tickFs.length - 1] < tickStep * 0.6) {
+        tickFs[tickFs.length - 1] = fMax;
+      } else {
+        tickFs.push(fMax);
+      }
+    }
 
     VARS.forEach((variable, index) => {
       const top = 24 + index * (panelH + gap);
@@ -313,20 +347,23 @@
       "(tutarlılık %" + Math.round(count("ok") / total * 100) + ")."));
     host.appendChild(summary);
 
-    // Coverage: F counts from the NEWER cycle, so the shared range ends where the model whose
-    // data stops first runs out of valid times. Say exactly that instead of implying a failure.
+    // Each source is validated through its own F360. The common curve can end earlier
+    // when the two model cycles start at different hours.
     const reach = Math.round(rows[total - 1].f);
     if (reach < MAX_F) {
-      const gEnd = result.gfs.initMs + (result.gfsHorizon || 0) * HOUR;
-      const eEnd = result.ec.initMs + (result.ecHorizon || 0) * HOUR;
-      const limiting = gEnd < eEnd ? "GFS" : "ECMWF";
-      const limitingF = limiting === "GFS" ? result.gfsHorizon : result.ecHorizon;
-      const newer = result.gfs.initMs >= result.ec.initMs ? "GFS" : "ECMWF";
+      const gEnd = result.gfs.initMs + Math.min(MAX_F, result.gfsHorizon || MAX_F) * HOUR;
+      const eEnd = result.ec.initMs + Math.min(MAX_F, result.ecHorizon || MAX_F) * HOUR;
+      const sharedEndF = Math.round((Math.min(gEnd, eEnd) - result.refInit) / HOUR);
+      const cycleOffset = Math.abs(result.gfs.initMs - result.ec.initMs) / HOUR;
+      const explanation = sharedEndF < MAX_F
+        ? "Her iki modelin kendi döngüsünde F360 verisi var. Döngüler " + fmt(cycleOffset, 0) +
+          " saat farklı başladığı için teorik ortak üst sınır F" + sharedEndF +
+          "; mevcut ortak veri F" + reach + "'te sona eriyor."
+        : "İki kaynak da F360 verisi sunuyor; ancak ortak zaman çizelgesinde son adım F" + reach +
+          ". Bu bölümde iki modelden en az birinin geçerlilik saati eksik.";
       const note = el("div", "kars-card");
       note.appendChild(el("h3", "", "Ortak kapsam: F6–F" + reach));
-      note.appendChild(el("p", "kars-summary",
-        "F, daha yeni döngü olan " + newer + "'in başlangıcından sayılır. " + limiting + " verisi kendi döngüsünden F" + (limitingF || "?") +
-        " geçerlilik saatine kadar uzandığı için ortak aralık F" + reach + "'de biter. Bu, " + limiting + " döngüsü daha eskiyse beklenen bir durumdur."));
+      note.appendChild(el("p", "kars-summary", explanation));
       host.appendChild(note);
     }
 
@@ -419,7 +456,7 @@
     });
     statsCard.appendChild(table);
     statsCard.appendChild(el("p", "kars-note",
-      "Eşikler — 2 m ve 850 hPa sıcaklık: ≥1,5 °C orta, ≥3 °C belirgin · 10 m rüzgâr: ≥8 orta, ≥15 km/sa belirgin · 6 saatlik yağış: ≥0,8 mm orta, ≥2 mm belirgin ya da biri ≥1 mm kuru/ıslak çelişkisi. " +
+      "Eşikler — 2 m ve 850 hPa sıcaklık: ≥1,5 °C orta, ≥3 °C belirgin · 10 m rüzgâr: ≥8 orta, ≥15 km/sa belirgin · 850 hPa rüzgâr: ≥12 orta, ≥25 km/sa belirgin · 6 saatlik yağış: ≥0,8 mm orta, ≥2 mm belirgin ya da biri ≥1 mm kuru/ıslak çelişkisi. " +
       "Yağış, iki modelin de adımlarının tam kapsadığı 6 saatlik toplamdır; uzun vadede adımlar seyrekleşince 12 saatlik toplam kullanılır ve eşikler 2 ile çarpılır. F, daha yeni başlatılan modelin döngü saatine göre sayılır."));
     host.appendChild(statsCard);
   }
@@ -437,20 +474,26 @@
       const [gfsDoc, ecDoc] = await Promise.all([getJson("/api/latest"), getJson("/api/ecmwf/latest")]);
       $("kars-gfs-run").textContent = "GFS: " + runLabel(gfsDoc.run_id_utc) + " · veri F" + (gfsDoc.forecast_horizon_hours || "?");
       $("kars-ec-run").textContent = "ECMWF: " + runLabel(ecDoc.run_id_utc) + " · veri F" + (ecDoc.forecast_horizon_hours || "?");
+      validateF360(gfsDoc, "GFS");
+      validateF360(ecDoc, "ECMWF");
       const result = compare(gfsDoc, ecDoc);
-      if (result.rows.length < 4) throw new Error("Ortak geçerlilik saati sayısı çok az (" + result.rows.length + ")");
+      if (result.rows.length < 4) throw new Error("F360 aralığında ortak geçerlilik saati sayısı çok az (" + result.rows.length + ")");
       const chart = buildChart(result);
       chartHost.innerHTML = chart.svg;
       attachReadout(chartHost, chart, result);
       buildAnalysis(result);
+      const status = $("kars-common-status");
+      if (status) status.textContent = "İki modelde de F360 hazır · ortak grafik F" + Math.round(result.rows[result.rows.length - 1].f) + "'e kadar";
     } catch (error) {
       chartHost.innerHTML = "";
       chartHost.appendChild(el("div", "", "Karşılaştırma oluşturulamadı: " + (error.message || "geçici bağlantı sorunu")));
       chartHost.firstChild.style.cssText = "padding:30px 14px;color:#F1C98B";
+      const status = $("kars-common-status");
+      if (status) status.textContent = "F360 veri kapsamı bekleniyor";
     }
   }
 
-  window.__karsilastirma = { compare, statusOf, VARS };
+  window.__karsilastirma = { compare, statusOf, validateF360, VARS };
   load();
   window.setInterval(load, 300000);
 })();

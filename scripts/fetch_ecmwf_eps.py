@@ -17,14 +17,14 @@ from zoneinfo import ZoneInfo
 ISTANBUL_TZ = ZoneInfo("Europe/Istanbul")
 LATITUDE = 41.0901
 LONGITUDE = 28.9436
-MAX_FORECAST_HOUR = 180
+MAX_FORECAST_HOUR = 360
 SCHEMA = "gfs-watch.ecmwf-eps.v1"
 SOURCE_URL = "https://www.meteopt.com/modelos/ecmwf?lat=41.0901&lon=28.9436"
 LICENSE_URL = "https://www.meteopt.com/modelos/ecmwf"
 
 
 def forecast_steps(max_hour: int = MAX_FORECAST_HOUR) -> list[int]:
-    """MeteoPT ECMWF 00/12Z steps: 3-hourly through 144h, then 6-hourly."""
+    """MeteoPT ECMWF 00/12Z steps: 3-hourly through 144h, then 6-hourly to F360."""
     return list(range(0, min(max_hour, 144) + 1, 3)) + (
         list(range(150, max_hour + 1, 6)) if max_hour >= 150 else []
     )
@@ -51,7 +51,7 @@ def _normalise_datetime(value) -> datetime:
     return parsed.astimezone(timezone.utc).replace(minute=0, second=0, microsecond=0)
 
 
-def _validate_meteopt_document(document: dict) -> None:
+def _validate_meteopt_document(document: dict, require_f360: bool = False) -> None:
     """Validate the canonical MeteoPT ECMWF point-series contract."""
     if document.get("schema") != SCHEMA or document.get("status") != "ready":
         raise ValueError("ECMWF IFS document schema/status is invalid.")
@@ -63,6 +63,11 @@ def _validate_meteopt_document(document: dict) -> None:
         raise ValueError("MeteoPT ECMWF steps are duplicated or out of order.")
     if any(not isinstance(hour, int) or hour <= 0 or hour % 3 != 0 for hour in hours):
         raise ValueError("MeteoPT ECMWF steps must be positive 3-hour marks.")
+    if require_f360 and (hours[-1] != MAX_FORECAST_HOUR or
+                         document.get("forecast_horizon_hours") != MAX_FORECAST_HOUR):
+        raise ValueError(
+            f"MeteoPT ECMWF F360 is required; received F{hours[-1]}."
+        )
     for item in forecasts:
         for key in ("temperature_2m_c", "wind_speed_10m_kmh", "precipitation_interval_mm"):
             value = item.get(key)
@@ -100,7 +105,7 @@ def _meteopt_number(value):
     return number
 
 
-def _meteopt_ecmwf_candidates(limit: int = 6) -> list[datetime]:
+def _meteopt_ecmwf_candidates(limit: int = 2) -> list[datetime]:
     """Recent ECMWF 00Z and 12Z cycles, newest first."""
     now = datetime.now(timezone.utc).replace(minute=0, second=0, microsecond=0)
     hour = 12 if now.hour >= 12 else 0
@@ -132,13 +137,14 @@ def fetch_meteopt_ecmwf_document(run_dt: datetime) -> dict:
         raise ValueError(f"MeteoPT ECMWF {payload.get('run') or 'boş'} döndü, istenen {expected}")
     data = payload.get("data") or {}
     steps = []
-    for raw in (payload.get("steps") or {}).get("values") or []:
+    for source_index, raw in enumerate((payload.get("steps") or {}).get("values") or []):
         try:
             hour = int(raw)
         except (TypeError, ValueError):
             continue
-        if hour > 0 and hour % 3 == 0:
-            steps.append(hour)
+        if 0 < hour <= MAX_FORECAST_HOUR and hour % 3 == 0:
+            steps.append((hour, source_index))
+    steps.sort(key=lambda item: item[0])
     if len(steps) < 8:
         raise ValueError(f"MeteoPT ECMWF {expected} henüz kısa: {len(steps)} satır")
 
@@ -158,18 +164,18 @@ def fetch_meteopt_ecmwf_document(run_dt: datetime) -> dict:
     pressure = series("prmsl")
     forecasts = []
     previous = 0
-    for index, hour in enumerate(steps):
+    for hour, source_index in steps:
         values = {
-            "temp": _meteopt_number(temperature[index]) if index < len(temperature) else None,
-            "temp850": _meteopt_number(temperature_850[index]) if index < len(temperature_850) else None,
-            "wind": _meteopt_number(wind[index]) if index < len(wind) else None,
-            "wind_dir": _meteopt_number(wind_direction[index]) if index < len(wind_direction) else None,
-            "wind850": _meteopt_number(wind_850[index]) if index < len(wind_850) else None,
-            "wind850_direction": _meteopt_number(wind_850_direction[index]) if index < len(wind_850_direction) else None,
-            "humidity": _meteopt_number(humidity[index]) if index < len(humidity) else None,
-            "snowln": _meteopt_number(snowln[index]) if index < len(snowln) else None,
-            "rain": _meteopt_number(rain[index]) if index < len(rain) else None,
-            "pressure": _meteopt_number(pressure[index]) if index < len(pressure) else None,
+            "temp": _meteopt_number(temperature[source_index]) if source_index < len(temperature) else None,
+            "temp850": _meteopt_number(temperature_850[source_index]) if source_index < len(temperature_850) else None,
+            "wind": _meteopt_number(wind[source_index]) if source_index < len(wind) else None,
+            "wind_dir": _meteopt_number(wind_direction[source_index]) if source_index < len(wind_direction) else None,
+            "wind850": _meteopt_number(wind_850[source_index]) if source_index < len(wind_850) else None,
+            "wind850_direction": _meteopt_number(wind_850_direction[source_index]) if source_index < len(wind_850_direction) else None,
+            "humidity": _meteopt_number(humidity[source_index]) if source_index < len(humidity) else None,
+            "snowln": _meteopt_number(snowln[source_index]) if source_index < len(snowln) else None,
+            "rain": _meteopt_number(rain[source_index]) if source_index < len(rain) else None,
+            "pressure": _meteopt_number(pressure[source_index]) if source_index < len(pressure) else None,
         }
         if any(values[key] is None for key in ("temp", "temp850", "wind", "wind850", "rain", "pressure")):
             continue
@@ -236,12 +242,17 @@ def fetch_meteopt_ecmwf_document(run_dt: datetime) -> dict:
         "status": "ready",
         "forecast_source": "meteopt",
         "model": "ECMWF via MeteoPT",
-        "product": "MeteoPT ECMWF 3-hour point",
+        "product": "MeteoPT ECMWF 3-hour/6-hour point",
         "surface_forecast_source": "MeteoPT ECMWF point",
         "ensemble_forecast_source": "MeteoPT ECMWF point",
         "surface_ensemble_spread_available": False,
         "resolution": "MeteoPT nokta",
         "forecast_horizon_hours": forecasts[-1]["forecast_hour"],
+        "f360": {
+            "available": forecasts[-1]["forecast_hour"] >= MAX_FORECAST_HOUR,
+            "forecast_hour": MAX_FORECAST_HOUR,
+            "source": "MeteoPT",
+        },
         "run_id_utc": run_dt.isoformat(timespec="seconds"),
         "updated_at_utc": datetime.now(timezone.utc).isoformat(timespec="seconds"),
         "forecast_valid_until_utc": forecasts[-1]["valid_time_utc"],
@@ -264,7 +275,7 @@ def fetch_meteopt_ecmwf_document(run_dt: datetime) -> dict:
         "source_url": SOURCE_URL,
         "notes": [
             "Sıcaklık, rüzgâr, yağış, 850 hPa ve basınç aynı MeteoPT ECMWF noktasından gelir.",
-            "Seri 3 saatte bir. Ensemble sapması ve bölgesel basınç merkezi bu kaynakta yok.",
+            "Seri F144’e kadar 3 saatte, sonrasında 6 saatte bir. Ensemble sapması ve bölgesel basınç merkezi bu kaynakta yok.",
         ],
         "forecasts": forecasts,
         "daily_summary": daily_summary,
@@ -283,7 +294,7 @@ def fetch_meteopt_ecmwf_document(run_dt: datetime) -> dict:
             ],
         },
     }
-    _validate_meteopt_document(document)
+    _validate_meteopt_document(document, require_f360=True)
     print(
         f"[ECMWF METEOPT] {expected}: {len(forecasts)} satır, "
         f"son +{forecasts[-1]['forecast_hour']} saat, {place}"

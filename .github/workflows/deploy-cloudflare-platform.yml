@@ -323,30 +323,39 @@ jobs:
             const maxHour = Math.max(...points.map(point => Number(point.forecast_hour) || 0));
             const validPoints = points.filter(point => {
               const hour = Number(point.forecast_hour);
-              return Number.isFinite(hour) && hour > 0 && hour <= 180;
+              return Number.isFinite(hour) && hour > 0 && hour <= 360;
             });
             if (doc.schema !== "gfs-watch.ecmwf-eps.v1" || doc.forecast_source !== "meteopt" ||
                 doc.source_url !== "https://www.meteopt.com/modelos/ecmwf?lat=41.0901&lon=28.9436" ||
                 !doc.run_id_utc || validPoints.length < 30 || maxHour < 180 ||
                 !Number.isFinite(Date.parse(doc.run_id_utc)) ||
                 !Array.isArray(doc.forecasts) || doc.forecasts.length < 30) {
-              throw new Error("Live ECMWF/MeteoPT contract failed: " + JSON.stringify({
+              throw new Error("Live ECMWF/MeteoPT base contract failed: " + JSON.stringify({
                 schema: doc.schema, forecast_source: doc.forecast_source, source_url: doc.source_url,
                 run_id_utc: doc.run_id_utc, comparison_runs: runs.length,
-                points: points.length, valid_points_through_180h: validPoints.length, max_forecast_hour: maxHour
+                points: points.length, valid_points_through_360h: validPoints.length, max_forecast_hour: maxHour
               }));
             }
+            const f360Ready = Number(doc.forecast_horizon_hours) >= 360 &&
+              maxHour >= 360 && points.some(point => Number(point.forecast_hour) === 360) &&
+              validPoints.length >= 84 && doc.forecasts.length >= 84;
             const priorCompleteRuns = runs.filter(run => {
               const historical = Array.isArray(run.forecast_6_hourly) ? run.forecast_6_hourly : [];
-              return historical.filter(point => {
+              const historicalPoints = historical.filter(point => {
                 const hour = Number(point.forecast_hour);
-                return Number.isFinite(hour) && hour > 0 && hour <= 180;
-              }).length >= 30;
+                return Number.isFinite(hour) && hour > 0 && hour <= 360;
+              });
+              return historicalPoints.length >= 84 &&
+                historicalPoints.some(point => Number(point.forecast_hour) === 360);
             });
             console.log("Verified live ECMWF from MeteoPT:", JSON.stringify({
               run_id_utc: doc.run_id_utc, points: points.length,
-              horizon_hours: doc.forecast_horizon_hours, complete_comparison_runs: priorCompleteRuns.length
+              horizon_hours: doc.forecast_horizon_hours, f360_ready: f360Ready,
+              complete_comparison_runs: priorCompleteRuns.length
             }));
+            if (!f360Ready) {
+              console.warn("ECMWF F360 is not published yet; the comparison page will stay gated until the real F360 point series is available.");
+            }
           NODE
           if [ "${R2_ENABLED:-0}" = "1" ]; then
             curl --silent --show-error --fail --max-time 30 \
