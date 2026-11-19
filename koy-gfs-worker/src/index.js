@@ -231,31 +231,50 @@ async function refreshClimateCache(env, forceDate = null) {
   const recent = await recentResponse.json();
 
   const results = [];
+  const errors = [];
+
   for (const model of Object.keys(CLIMATE_MODELS)) {
-    const archive = await fetchClimateArchive(model, historicalStartByModel(model), historicalEnd);
-    const payload = await buildClimatePayload(model, parts, archive, recent);
+    try {
+      const archive = await fetchClimateArchive(model, historicalStartByModel(model), historicalEnd);
+      const payload = await buildClimatePayload(model, parts, archive, recent);
 
-    await env.GFS_DB.prepare(
-      "INSERT INTO climate_cache (cache_key, model, period_date, payload_json, updated_at_utc) " +
-      "VALUES (?, ?, ?, ?, ?) " +
-      "ON CONFLICT(cache_key) DO UPDATE SET model=excluded.model, period_date=excluded.period_date, " +
-      "payload_json=excluded.payload_json, updated_at_utc=excluded.updated_at_utc"
-    ).bind(
-      model + ":" + periodDate,
-      model,
-      periodDate,
-      JSON.stringify(payload),
-      payload.updated_at_utc
-    ).run();
+      await env.GFS_DB.prepare(
+        "INSERT INTO climate_cache (cache_key, model, period_date, payload_json, updated_at_utc) " +
+        "VALUES (?, ?, ?, ?, ?) " +
+        "ON CONFLICT(cache_key) DO UPDATE SET model=excluded.model, period_date=excluded.period_date, " +
+        "payload_json=excluded.payload_json, updated_at_utc=excluded.updated_at_utc"
+      ).bind(
+        model + ":" + periodDate,
+        model,
+        periodDate,
+        JSON.stringify(payload),
+        payload.updated_at_utc
+      ).run();
 
-    results.push({
-      model,
-      period_date: periodDate,
-      updated_at_utc: payload.updated_at_utc
-    });
+      results.push({
+        model,
+        period_date: periodDate,
+        updated_at_utc: payload.updated_at_utc
+      });
+    } catch (error) {
+      errors.push({
+        model,
+        error: String(error?.message || error),
+      });
+      console.error(JSON.stringify({
+        event: "koy_climate_model_error",
+        model,
+        message: String(error?.message || error),
+        period_date: periodDate,
+      }));
+    }
   }
 
-  return { ok: true, period_date: periodDate, models: results };
+  if (!results.length) {
+    throw new Error("No climate models could be refreshed: " + JSON.stringify(errors));
+  }
+
+  return { ok: true, period_date: periodDate, models: results, errors };
 }
 
 async function getClimateCache(env, model = null) {
