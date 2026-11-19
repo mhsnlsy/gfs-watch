@@ -199,6 +199,50 @@ jobs:
 
           cat "$RUNNER_TEMP/station-health.json"
 
+      - name: Verify the live Çanakçı monthly observation summary
+        env:
+          STATIONS_API: https://gfs-watch-stations.muhsin-ulusoy.workers.dev/api
+        run: |
+          set -euo pipefail
+          curl --silent --show-error --fail --retry 5 --retry-all-errors --retry-delay 3 --max-time 35 \
+            "$STATIONS_API/climate/month/canakci?verify=$(date +%s)" \
+            -o "$RUNNER_TEMP/canakci-month.json"
+          node - "$RUNNER_TEMP/canakci-month.json" <<'NODE'
+          const fs = require("fs");
+          const doc = JSON.parse(fs.readFileSync(process.argv[2], "utf8"));
+          const numeric = value => value !== null && value !== undefined && Number.isFinite(Number(value));
+          if (doc.ok !== true || doc.schema !== "koy-station-month.v1") {
+            throw new Error("Çanakçı monthly endpoint contract failed: " + JSON.stringify(doc));
+          }
+          if (doc.station?.key !== "canakci" || String(doc.station?.station_id || "") !== "18223") {
+            throw new Error("The monthly endpoint is not serving WStatMap Çanakçı station 18223: " +
+              JSON.stringify(doc.station));
+          }
+          if (!numeric(doc.month?.avg_temp_c) || !numeric(doc.month?.high_c) ||
+              !numeric(doc.month?.low_c) || Number(doc.month.low_c) > Number(doc.month.avg_temp_c) ||
+              Number(doc.month.avg_temp_c) > Number(doc.month.high_c)) {
+            throw new Error("Çanakçı monthly temperature statistics are missing or inconsistent: " +
+              JSON.stringify(doc.month));
+          }
+          if (Number(doc.month?.days_with_temperature || 0) < 1 ||
+              Number(doc.month?.sample_count || 0) < 1 ||
+              !Array.isArray(doc.daily) || !doc.daily.length) {
+            throw new Error("Çanakçı monthly D1 observation history is empty");
+          }
+          if (doc.month.precipitation_mm !== null && !numeric(doc.month.precipitation_mm)) {
+            throw new Error("Monthly precipitation must be numeric or null, never a fabricated zero");
+          }
+          console.log(JSON.stringify({
+            station: doc.station,
+            period_date: doc.period_date,
+            month: doc.month,
+            today: doc.today,
+            coverage: doc.coverage,
+            current_status: doc.current?.status || "no-current-reading",
+            quality_control: doc.quality_control
+          }));
+          NODE
+
       - name: Retire the old GitHub Actions station collectors
         if: success()
         run: |
