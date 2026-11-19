@@ -93,9 +93,13 @@ function climateRound(value, digits = 1) {
   return Math.round(value * p) / p;
 }
 
-async function buildClimatePayload(model, parts, archive) {
+async function buildClimatePayload(model, parts, archive, recent) {
   const rows = climateRows(archive);
-  const monthRows = rows.filter(row =>
+  // The archive is intentionally used only for the historical baseline.
+  // Current-month readings come from the continuously updated Forecast API,
+  // because CERRA ends in June 2021 and ERA5/ERA5-Land have publication lag.
+  const recentRows = climateRows(recent);
+  const monthRows = recentRows.filter(row =>
     row.year === parts.year && row.month === parts.month && row.day <= parts.day
   );
   const dayRows = rows.filter(row => row.month === parts.month && row.day === parts.day && row.mean !== null);
@@ -136,8 +140,8 @@ async function buildClimatePayload(model, parts, archive) {
     month: parts.month,
     month_name: new Intl.DateTimeFormat("en-US", { month: "long" }).format(new Date(Date.UTC(parts.year, parts.month - 1, 1))).toUpperCase(),
     month_readings_through_day: parts.day,
-    historical_start_year: 1984,
-    historical_end_year: parts.year - 1,
+    historical_start_year: rows.length ? Math.min(...rows.map(row => row.year)) : null,
+    historical_end_year: rows.length ? Math.max(...rows.map(row => row.year)) : null,
     month: {
       avg_temp_c: climateRound(climateAverage(monthRows.map(row => row.mean).filter(v => v !== null))),
       high_c: climateRound(Math.max(...monthRows.map(row => row.max).filter(v => v !== null))),
@@ -182,16 +186,16 @@ async function refreshClimateCache(env, forceDate = null) {
       "ON CONFLICT(cache_key) DO UPDATE SET model=excluded.model, period_date=excluded.period_date, " +
       "payload_json=excluded.payload_json, updated_at_utc=excluded.updated_at_utc"
     ).bind(
-      model + ":" + end,
+      model + ":" + periodDate,
       model,
-      end,
+      periodDate,
       JSON.stringify(payload),
       payload.updated_at_utc
     ).run();
-    results.push({ model, period_date: end, updated_at_utc: payload.updated_at_utc });
+    results.push({ model, period_date: periodDate, updated_at_utc: payload.updated_at_utc });
   }
 
-  return { ok: true, period_date: end, models: results };
+  return { ok: true, period_date: periodDate, models: results };
 }
 
 async function getClimateCache(env, model = null) {
@@ -1521,7 +1525,7 @@ async function api(request, env) {
         schema: "koy-climate.v1",
         location: LOCATION,
         data,
-        source: "Open-Meteo archive · cached in Cloudflare D1",
+        source: "Open-Meteo historical baseline + current-month observations · cached in Cloudflare D1",
       });
     } catch (error) {
       return json({ ok: false, error: String(error?.message || error) }, 503);
