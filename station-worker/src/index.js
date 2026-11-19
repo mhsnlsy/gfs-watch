@@ -437,7 +437,7 @@ function observationFromMgm(stationKey, row, sourceUrl) {
   const rain24h = asNumber(row.yagis24Saat);
   const rain00 = asNumber(row.yagis00Now);
   return {
-    station_id: def.station_id,
+    station_id: String(row.istNo || def.station_id),
     station_name: def.station_name,
     source: def.source,
     source_url: sourceUrl || def.source_url,
@@ -594,6 +594,141 @@ async function getCurrent(env, stationKey) {
   ).bind(stationKey).first();
   return row ? JSON.parse(row.payload_json) : null;
 }
+async function getCurrentMonthClimate(env, stationKey) {
+  if (stationKey !== "canakci") {
+    throw new Error("Monthly climate observations are currently available for Çanakçı only");
+  }
+  if (!env.STATIONS_DB) throw new Error("Station D1 binding is unavailable");
+
+  const parts = new Intl.DateTimeFormat("en-US", {
+    timeZone: "Europe/Istanbul",
+    year: "numeric",
+    month: "2-digit",
+    day: "2-digit"
+  }).formatToParts(new Date());
+  const dateParts = {};
+  for (const part of parts) {
+    if (part.type !== "literal") dateParts[part.type] = Number(part.value);
+  }
+  const year = dateParts.year;
+  const month = dateParts.month;
+  const day = dateParts.day;
+  const periodDate = year + "-" + String(month).padStart(2, "0") + "-" + String(day).padStart(2, "0");
+  const monthStartUtc = new Date(Date.UTC(year, month - 1, 1) - 3 * 3600000).toISOString();
+  const nowUtc = new Date().toISOString();
+
+  // Use fetched_at_utc converted to Europe/Istanbul local date. This captures
+  // the actual two-minute MGM polling history, not a forecast-grid substitute.
+  const result = await env.STATIONS_DB.prepare(
+    "SELECT date(fetched_at_utc, '+3 hours') AS local_date, " +
+    "COUNT(*) AS sample_count, COUNT(temperature_c) AS temperature_samples, " +
+    "AVG(temperature_c) AS mean_temperature_c, MIN(temperature_c) AS min_temperature_c, " +
+    "MAX(temperature_c) AS max_temperature_c, AVG(wind_speed_kmh) AS mean_wind_kmh, " +
+    "MAX(wind_speed_kmh) AS max_wind_kmh, MAX(rain_00_now_mm) AS precipitation_mm, " +
+    "COUNT(rain_00_now_mm) AS precipitation_samples, MAX(fetched_at_utc) AS last_sample_at_utc " +
+    "FROM station_history WHERE station_key = ? AND fetched_at_utc >= ? AND fetched_at_utc <= ? " +
+    "GROUP BY date(fetched_at_utc, '+3 hours') ORDER BY local_date"
+  ).bind(stationKey, monthStartUtc, nowUtc).all();
+
+  const daily = (result.results || []).map(row => ({
+    date: row.local_date,
+    sample_count: Number(row.sample_count || 0),
+    temperature_samples: Number(row.temperature_samples || 0),
+    mean_temperature_c: round(asNumber(row.mean_temperature_c), 2),
+    min_temperature_c: round(asNumber(row.min_temperature_c), 1),
+    max_temperature_c: round(asNumber(row.max_temperature_c), 1),
+    mean_wind_kmh: round(asNumber(row.mean_wind_kmh), 1),
+    max_wind_kmh: round(asNumber(row.max_wind_kmh), 1),
+    precipitation_mm: row.precipitation_samples ? round(asNumber(row.precipitation_mm), 1) : null,
+    precipitation_samples: Number(row.precipitation_samples || 0),
+    last_sample_at_utc: row.last_sample_at_utc || null
+  }));
+
+  const temperatureDays = daily.filter(row => row.temperature_samples > 0);
+  const precipitationDays = daily.filter(row => row.precipitation_mm !== null);
+  const windDays = daily.filter(row => row.mean_wind_kmh !== null);
+  const today = daily.find(row => row.date === periodDate) || null;
+  const averageOf = values => {
+    const valid = values.filter(value => Number.isFinite(value));
+    return valid.length ? valid.reduce((sum, value) => sum + value, 0) / valid.length : null;
+  };
+  const sumKnown = values => {
+    const valid = values.filter(value => Number.isFinite(value));
+    return valid.length ? valid.reduce((sum, value) => sum + value, 0) : null;
+  };
+
+  const current = await getCurrent(env, stationKey);
+  const currentTemperature = asNumber(current?.temperature_2m_c);
+  const daysWithTemperature = temperatureDays.length;
+  const expectedDays = day;
+  const latestDailySample = daily.reduce((latest, row) =>
+    !latest || String(row.last_sample_at_utc || "") > String(latest.last_sample_at_utc || "") ? row : latest,
+  null);
+
+  return {
+    ok: true,
+    schema: "koy-station-month.v1",
+    source: "MGM Çanakçı · station history in Cloudflare D1",
+    station: {
+      key: stationKey,
+      station_id: String(current?.station_id || "18223"),
+      station_name: current?.station_name || "MGM Çanakçı",
+      source_url: current?.source_url || "https://www.mgm.gov.tr/tahmin/il-ve-ilceler.aspx?il=Giresun&ilce=Çanakçı"
+    },
+    period_date: periodDate,
+    month: {
+      year,
+      month,
+      days_elapsed: expectedDays,
+      days_with_temperature: daysWithTemperature,
+      days_with_precipitation: precipitationDays.length,
+      days_with_wind: windDays.length,
+      temperature_coverage_percent: round(expectedDays ? daysWithTemperature / expectedDays * 100 : 0, 1),
+      avg_temp_c: round(averageOf(temperatureDays.map(row => row.mean_temperature_c)), 1),
+      high_c: temperatureDays.length
+        ? round(Math.max(...temperatureDays.map(row => row.max_temperature_c).filter(Number.isFinite)), 1)
+        : null,
+      low_c: temperatureDays.length
+        ? round(Math.min(...temperatureDays.map(row => row.min_temperature_c).filter(Number.isFinite)), 1)
+        : null,
+      precipitation_mm: sumKnown(precipitationDays.map(row => row.precipitation_mm)),
+      avg_wind_kmh: round(averageOf(windDays.map(row => row.mean_wind_kmh)), 1),
+      max_wind_kmh: windDays.length
+        ? round(Math.max(...windDays.map(row => row.max_wind_kmh).filter(Number.isFinite)), 1)
+        : null,
+      sample_count: daily.reduce((sum, row) => sum + row.sample_count, 0)
+    },
+    today: today ? {
+      date: today.date,
+      mean_temp_c: today.mean_temperature_c,
+      high_c: today.max_temperature_c,
+      low_c: today.min_temperature_c,
+      precipitation_mm: today.precipitation_mm,
+      avg_wind_kmh: today.mean_wind_kmh,
+      max_wind_kmh: today.max_wind_kmh,
+      sample_count: today.sample_count
+    } : null,
+    current: current ? {
+      temperature_c: currentTemperature,
+      status: current.status || null,
+      is_stale: Boolean(current.is_stale),
+      observed_at_utc: current.observed_at_utc || null,
+      fetched_at_utc: current.fetched_at_utc || null,
+      age_minutes: asNumber(current.age_minutes),
+      source: current.source || "MGM Çanakçı"
+    } : null,
+    coverage: {
+      expected_days: expectedDays,
+      temperature_days: daysWithTemperature,
+      precipitation_days: precipitationDays.length,
+      wind_days: windDays.length,
+      latest_sample_at_utc: latestDailySample?.last_sample_at_utc || null
+    },
+    daily,
+    updated_at_utc: nowUtc
+  };
+}
+
 async function getHistory(env, stationKey, hours) {
   const since = new Date(Date.now() - hours * 3600000).toISOString();
   const { results } = await env.STATIONS_DB.prepare(
@@ -611,6 +746,16 @@ export default {
     if (request.method === "OPTIONS") return json({ ok: true });
     const url = new URL(request.url);
     const path = url.pathname;
+
+    const climateMonthMatch = path.match(/^\/api\/climate\/month\/(canakci)$/);
+    if (climateMonthMatch) {
+      try {
+        const data = await getCurrentMonthClimate(env, climateMonthMatch[1]);
+        return json(data);
+      } catch (error) {
+        return json({ ok: false, error: String(error && error.message || error) }, 503);
+      }
+    }
 
     if (path === "/api/stations" || path === "/stations") {
       const stations = [];
