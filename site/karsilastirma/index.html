@@ -1,0 +1,80 @@
+<!doctype html>
+<html lang="tr">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<meta name="theme-color" content="#081827">
+<meta name="description" content="İstanbul için son GFS ve son ECMWF döngüsünün F180'e kadar karşılaştırması: hangi saatlerde modeller uyumlu, hangilerinde belirgin ayrışıyor.">
+<title>İstanbul Havası — GFS ↔ ECMWF</title>
+<link rel="icon" href="/favicon.svg" type="image/svg+xml">
+<link rel="stylesheet" href="/home.css?v=20261112-gfs-clone-1">
+<link rel="stylesheet" href="/header-common.css?v=20261110-shared-header-1">
+<style>
+  .kars-page{padding-bottom:40px}
+  .kars-page .section-head{padding-top:26px}
+  .kars-legend{display:flex;flex-wrap:wrap;gap:14px;font-size:13px;color:#E7F2F6;margin:6px 0 12px}
+  .kars-legend i{display:inline-block;width:22px;height:3px;border-radius:2px;vertical-align:middle;margin-right:6px}
+  .kars-legend b{display:inline-block;width:12px;height:12px;border-radius:3px;vertical-align:middle;margin-right:6px}
+  .kars-chart{background:#0A1B29;border:1px solid #416174;border-radius:13px;padding:8px;overflow:hidden}
+  .kars-chart svg{display:block;width:100%;height:auto;touch-action:pan-y}
+  .kars-readout{min-height:44px;margin-top:10px;padding:10px 12px;border-radius:10px;background:#102a3a;border:1px solid #416174;font-size:13px;line-height:1.5;color:#E7F2F6}
+  .kars-card{margin-top:16px;padding:16px 18px;border-radius:13px;background:#102a3a;border:1px solid #416174}
+  .kars-card h3{margin:0 0 10px;font-size:17px;color:#fff}
+  .kars-card ul{margin:0;padding-left:18px}
+  .kars-card li{margin:0 0 10px;font-size:14px;line-height:1.5;color:#E7F2F6}
+  .kars-card li small{display:block;color:#8EAEB7;font-size:12px}
+  .kars-major h3{color:#F2908E}.kars-ok h3{color:#6FD3A8}.kars-warn h3{color:#F1C98B}
+  .kars-table{width:100%;border-collapse:collapse;font-size:13px}
+  .kars-table th,.kars-table td{padding:7px 6px;text-align:right;border-bottom:1px solid #2a465a;color:#E7F2F6}
+  .kars-table th:first-child,.kars-table td:first-child{text-align:left}
+  .kars-note{font-size:12px;color:#8EAEB7;margin-top:12px;line-height:1.55}
+  .kars-summary{font-size:15px;line-height:1.6;color:#fff;margin:0}
+</style>
+</head>
+<body>
+<header class="shell topbar">
+  <a class="brand" href="/" aria-label="İstanbul Havası · Şehir için hava tahmini">
+    <span class="brand-mark"><img src="/favicon-192x192.png" alt="" width="38" height="38" style="display:block;width:100%;height:100%;object-fit:contain;border-radius:inherit"></span>
+    <span>İstanbul Havası<small>Şehir için hava tahmini</small></span>
+  </a>
+  <nav aria-label="Ana gezinme">
+    <a href="/">Anasayfa</a>
+    <a href="/ecmwf/">ECMWF</a>
+    <a href="/karsilastirma/" aria-current="page">GFS ↔ ECMWF</a>
+    <a href="/koy.html">Köy</a>
+    <a href="/gfs-gerceklesme.html">GFS Gerçekleşme</a>
+  </nav>
+  <div class="top-right"><span class="version"><span data-app-name>İstanbul Havası</span></span></div>
+</header>
+
+<main class="shell kars-page">
+  <section class="section">
+    <div class="section-head">
+      <div>
+        <div class="section-kicker">GFS ↔ ECMWF IFS · F180</div>
+        <h2>Son iki döngü: nerede uyumlu, nerede ayrışıyor?</h2>
+        <p class="section-description">Son GFS ve son ECMWF döngüsü aynı geçerlilik saatlerinde (6 saatlik) karşılaştırılır. F, zaman adımının tahmin saatidir.</p>
+      </div>
+      <div class="section-note"><span id="kars-gfs-run">GFS döngüsü yükleniyor…</span><br><span id="kars-ec-run">ECMWF döngüsü yükleniyor…</span></div>
+    </div>
+    <div class="kars-legend">
+      <span><i style="background:#F1C98B"></i>GFS</span>
+      <span><i style="background:#7DD3D7"></i>ECMWF IFS</span>
+      <span><b style="background:#3FB58A"></b>Tutarlı</span>
+      <span><b style="background:#F1C98B"></b>Orta fark</span>
+      <span><b style="background:#F2706E"></b>Belirgin ayrışma</span>
+    </div>
+    <div class="kars-chart" id="kars-chart"><div class="gfs-chart-loading" style="padding:40px 12px;color:#E7F2F6">Veriler yükleniyor…</div></div>
+    <div class="kars-readout" id="kars-readout">Grafiğe dokunun veya üzerinde gezinin: o F adımındaki GFS / ECMWF değerleri burada görünür.</div>
+    <div id="kars-analysis"></div>
+  </section>
+</main>
+
+<footer class="shell footer">
+  <span><strong data-app-name>İstanbul Havası</strong></span>
+  <span>Veri kaynağı: MeteoPT GFS · MeteoPT ECMWF · İstanbul noktası</span>
+</footer>
+<script src="/gfs-api-config.js"></script>
+<script src="/karsilastirma.js?v=20261118-1" defer></script>
+</body>
+</html>
