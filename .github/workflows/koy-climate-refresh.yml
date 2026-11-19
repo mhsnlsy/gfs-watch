@@ -4,6 +4,9 @@ on:
   schedule:
     - cron: "30 1 * * *"
   workflow_dispatch:
+  workflow_run:
+    workflows: ["Deploy Cloudflare Station Service"]
+    types: [completed]
 
 permissions:
   contents: read
@@ -14,6 +17,7 @@ concurrency:
 
 jobs:
   refresh:
+    if: github.event_name != 'workflow_run' || github.event.workflow_run.conclusion == 'success'
     name: Refresh CERRA / ERA5 / ERA5-Land climate cache
     runs-on: ubuntu-latest
     timeout-minutes: 35
@@ -46,7 +50,7 @@ jobs:
           set -euo pipefail
           wrangler d1 execute gfs-watch-koy-gfs --remote --command             "CREATE TABLE IF NOT EXISTS climate_cache (cache_key TEXT PRIMARY KEY, model TEXT NOT NULL, period_date TEXT NOT NULL, payload_json TEXT NOT NULL, updated_at_utc TEXT NOT NULL);"
 
-      - name: Publish all three model caches atomically
+      - name: Publish all three model caches in one atomic INSERT
         run: |
           set -euo pipefail
           test -s koy-climate-refresh.sql
@@ -57,24 +61,98 @@ jobs:
           set -euo pipefail
           wrangler d1 execute gfs-watch-koy-gfs --remote --command             "SELECT model, period_date, updated_at_utc, length(payload_json) AS payload_bytes FROM climate_cache WHERE period_date = (SELECT MAX(period_date) FROM climate_cache) ORDER BY model;"
 
-      - name: Verify public Köy climate endpoint is read-only/cache-backed
+      - name: Verify all three model caches through the public Cloudflare Worker
         run: |
           set -euo pipefail
           base="https://gfs-watch-koy-gfs.muhsin-ulusoy.workers.dev/api/climate"
           for model in cerra era5 era5_land; do
-            curl --silent --show-error --fail --max-time 30               "$base?model=$model&climate_cache_check=$(date +%s)"               -o "$RUNNER_TEMP/$model.json"
+            curl --silent --show-error --fail --retry 5 --retry-all-errors --retry-delay 3 --max-time 45 \
+              "$base?model=$model&climate_cache_check=$(date +%s)" \
+              -o "$RUNNER_TEMP/$model.json"
             node - "$RUNNER_TEMP/$model.json" "$model" <<'NODE'
           const fs = require("fs");
           const doc = JSON.parse(fs.readFileSync(process.argv[2], "utf8"));
           const model = process.argv[3];
-          if (doc.ok !== true || doc.data?.model !== model) {
-            throw new Error("Public climate endpoint failed for " + model + ": " + JSON.stringify(doc));
+          const data = doc.data || {};
+          const numeric = value => value !== null && value !== undefined && Number.isFinite(Number(value));
+          if (doc.ok !== true || data.model !== model || data.schema !== "koy-climate.v2") {
+            throw new Error("Model-specific public cache failed for " + model + ": " + JSON.stringify(doc));
+          }
+          if (!numeric(data.long_term?.min_c) || !numeric(data.long_term?.avg_c) ||
+              !numeric(data.long_term?.max_c) ||
+              Number(data.long_term.min_c) > Number(data.long_term.avg_c) ||
+              Number(data.long_term.avg_c) > Number(data.long_term.max_c)) {
+            throw new Error(model + ": same-calendar-day long-term distribution is incomplete or inconsistent");
+          }
+          if (!Array.isArray(data.daily_history) || data.daily_history.length < 300 ||
+              Number(data.historical_year_count || 0) < 20 ||
+              Number(data.historical_day_sample_count || 0) < 20) {
+            throw new Error(model + ": historical month/day archive is incomplete");
+          }
+          if (data.supported?.temperature !== true) {
+            throw new Error(model + ": temperature capability not declared");
+          }
+          if (model === "era5_land" &&
+              (data.supported.precipitation !== false || data.supported.wind !== false ||
+               data.precipitation_normal_to_date?.normal_mm !== null ||
+               data.long_term?.record_daily_precipitation_mm !== null)) {
+            throw new Error("ERA5-Land is exposing unsupported historical precipitation/wind values");
+          }
+          if (model !== "era5_land" &&
+              (data.supported.precipitation !== true || data.supported.wind !== true ||
+               !numeric(data.precipitation_normal_to_date?.normal_mm))) {
+            throw new Error(model + ": expected precipitation/wind baseline is missing");
+          }
+          if (model === "cerra" && Number(data.historical_end_year) > 2021) {
+            throw new Error("CERRA archive exceeds its documented June 2021 availability");
           }
           console.log(JSON.stringify({
             model,
-            period_date: doc.data.period_date,
-            historical: [doc.data.historical_start_year, doc.data.historical_end_year],
-            updated_at_utc: doc.data.updated_at_utc
+            period_date: data.period_date,
+            historical: [data.historical_start_year, data.historical_end_year],
+            years: data.historical_year_count,
+            same_day_samples: data.historical_day_sample_count,
+            archive_rows: data.daily_history.length,
+            supported: data.supported,
+            updated_at_utc: data.updated_at_utc
           }));
           NODE
           done
+
+      - name: Verify MGM Çanakçı month-to-date observations through Cloudflare
+        env:
+          STATIONS_API: https://gfs-watch-stations.muhsin-ulusoy.workers.dev/api
+        run: |
+          set -euo pipefail
+          curl --silent --show-error --fail --retry 5 --retry-all-errors --retry-delay 3 --max-time 40 \
+            "$STATIONS_API/climate/month/canakci?climate_check=$(date +%s)" \
+            -o "$RUNNER_TEMP/canakci-month.json"
+          node - "$RUNNER_TEMP/canakci-month.json" <<'NODE'
+          const fs = require("fs");
+          const doc = JSON.parse(fs.readFileSync(process.argv[2], "utf8"));
+          const numeric = value => value !== null && value !== undefined && Number.isFinite(Number(value));
+          if (doc.ok !== true || doc.schema !== "koy-station-month.v1" ||
+              doc.station?.key !== "canakci" || String(doc.station?.station_id || "") !== "18223") {
+            throw new Error("MGM Çanakçı station 18223 monthly endpoint failed: " + JSON.stringify(doc));
+          }
+          if (!numeric(doc.month?.avg_temp_c) || !numeric(doc.month?.high_c) ||
+              !numeric(doc.month?.low_c) ||
+              Number(doc.month.low_c) > Number(doc.month.avg_temp_c) ||
+              Number(doc.month.avg_temp_c) > Number(doc.month.high_c) ||
+              Number(doc.month?.sample_count || 0) < 1 ||
+              Number(doc.month?.days_with_temperature || 0) < 1) {
+            throw new Error("MGM Çanakçı monthly aggregates are empty or inconsistent: " + JSON.stringify(doc.month));
+          }
+          if (doc.month.precipitation_mm !== null && !numeric(doc.month.precipitation_mm)) {
+            throw new Error("MGM monthly precipitation must be numeric or null");
+          }
+          console.log(JSON.stringify({
+            station: doc.station,
+            period_date: doc.period_date,
+            month: doc.month,
+            today: doc.today,
+            coverage: doc.coverage,
+            current: doc.current,
+            quality_control: doc.quality_control
+          }));
+          NODE
