@@ -357,6 +357,38 @@ jobs:
               console.warn("ECMWF F360 is not published yet; the comparison page will stay gated until the real F360 point series is available.");
             }
           NODE
+
+          # Read the same latest GFS payload consumed by the comparison page and
+          # report the real F360 coverage without fabricating a longer horizon.
+          curl --silent --show-error --fail --max-time 60 "$WEB/gfs/latest?verify=$(date +%s)" -o "$RUNNER_TEMP/live-gfs-latest.json"
+          node - "$RUNNER_TEMP/live-gfs-latest.json" <<'NODE'
+            const fs = require("fs");
+            const doc = JSON.parse(fs.readFileSync(process.argv[2], "utf8"));
+            const points = Array.isArray(doc.forecast_6_hourly) ? doc.forecast_6_hourly : [];
+            const maxHour = Math.max(0, ...points.map(point => Number(point.forecast_hour) || 0));
+            const f360 = points.find(point => Number(point.forecast_hour) === 360);
+            const required = ["temperature_2m_c", "temperature_850hpa_c", "wind_speed_10m_kmh", "wind_speed_850hpa_kmh"];
+            const missing = required.filter(key => !Number.isFinite(Number(f360?.[key])));
+            const ready = Number(doc.forecast_horizon_hours) >= 360 && maxHour >= 360 && Boolean(f360) && missing.length === 0;
+            console.log("Verified live GFS for F360 comparison:", JSON.stringify({
+              run_id_utc: doc.run_id_utc,
+              forecast_horizon_hours: doc.forecast_horizon_hours,
+              points: points.length,
+              max_forecast_hour: maxHour,
+              f360_ready: ready,
+              missing_f360_fields: missing
+            }));
+            if (!ready) {
+              console.warn("GFS F360 is not ready yet; the comparison page will stay gated instead of presenting a partial F360 chart.");
+            }
+          NODE
+
+          curl --silent --show-error --fail --max-time 20 "$WEB/karsilastirma/" -o "$RUNNER_TEMP/live-model-comparison.html"
+          grep -Fq 'kars-common-status' "$RUNNER_TEMP/live-model-comparison.html" || { echo "::error::Live model comparison page is missing its F360 coverage status."; exit 1; }
+          curl --silent --show-error --fail --max-time 20 "$WEB/karsilastirma.js?v=20261119-f360-2" -o "$RUNNER_TEMP/live-model-comparison.js"
+          grep -Fq 'function validateF360' "$RUNNER_TEMP/live-model-comparison.js" || { echo "::error::Live model comparison asset does not validate F360 input."; exit 1; }
+          grep -Fq 'id: "wind850"' "$RUNNER_TEMP/live-model-comparison.js" || { echo "::error::Live model comparison asset is missing the 850 hPa wind chart."; exit 1; }
+          echo "Verified deployed GFS ↔ ECMWF F360 comparison page and five-variable renderer."
           if [ "${R2_ENABLED:-0}" = "1" ]; then
             curl --silent --show-error --fail --max-time 30 \
               --dump-header "$RUNNER_TEMP/r2-ecmwf-headers.txt" \
