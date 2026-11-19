@@ -698,7 +698,7 @@ async function deliverPendingTelegram(env) {
   console.error(JSON.stringify({event:"istanbul_telegram_delivery_partial",run_id_utc:p.run_id_utc,text_message_id:p.text_message_id||null,briefing_photo_message_id:p.briefing_photo_message_id||null,photo_message_id:p.photo_message_id||null,failures}));
   return {configured:true,delivered:0,partial:true,run_id_utc:p.run_id_utc,parts:{text:Boolean(p.text_message_id),briefing_photo:Boolean(p.briefing_photo_message_id),comparison_photo:Boolean(p.photo_message_id)},failures};
 }
-function ecmwfRunCandidates(now = new Date(), limit = 6) {
+function ecmwfRunCandidates(now = new Date(), limit = 2) {
   const hour = now.getUTCHours() >= 12 ? 12 : 0;
   const latest = new Date(Date.UTC(now.getUTCFullYear(), now.getUTCMonth(), now.getUTCDate(), hour));
   return Array.from({ length: limit }, (_, index) => new Date(latest.getTime() - index * 12 * 3600000));
