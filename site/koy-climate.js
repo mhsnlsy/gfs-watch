@@ -12,7 +12,7 @@
     return x.toLocaleString("tr-TR", {
       minimumFractionDigits: digits,
       maximumFractionDigits: digits
-    }) : "—";
+    });
   };
   const MODEL_META = {
     cerra: { label:"CERRA", resolution:"5.5 KM" },
