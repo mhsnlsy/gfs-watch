@@ -62,11 +62,11 @@ function injectStyle(){
  "#koy-observation-history .oh-chart-name{display:flex;align-items:center;gap:8px;color:#aeb7c2;font-size:12px}",
  "#koy-observation-history .oh-chart-dot{width:9px;height:9px;border-radius:50%;flex:none}",
  "#koy-observation-history .oh-value{font:700 15px Manrope,sans-serif;color:var(--chart-color);white-space:nowrap}",
- "#koy-observation-history .oh-graph{height:160px;margin-top:7px}",
+ "#koy-observation-history .oh-graph{height:160px;margin-top:7px;touch-action:none}",
  "#koy-observation-history svg{width:100%;height:100%;display:block;overflow:visible}",
  "#koy-observation-history .oh-grid{stroke:rgba(200,220,235,.10);stroke-width:1}",
   "#koy-observation-history .oh-line{fill:none;stroke:var(--chart-color);stroke-width:2.4;stroke-linecap:round;stroke-linejoin:round}",
-  "#koy-observation-history .oh-point{fill:transparent;stroke:transparent;stroke-width:12;cursor:crosshair;vector-effect:non-scaling-stroke;touch-action:none}",
+  "#koy-observation-history .oh-point{fill:transparent;stroke:transparent;stroke-width:12;cursor:crosshair;pointer-events:none;vector-effect:non-scaling-stroke}",
   "#koy-observation-history .oh-point:hover{fill:transparent;stroke:transparent}",
   "#koy-observation-history .oh-tooltip{position:fixed;z-index:100000;pointer-events:none;display:none;min-width:120px;max-width:190px;padding:8px 10px;border:1px solid rgba(204,225,239,.18);border-radius:9px;background:rgba(17,24,33,.96);box-shadow:0 8px 25px rgba(0,0,0,.35);color:#eef5f8;font:10px/1.45 DM Sans,sans-serif}",
   "#koy-observation-history .oh-tooltip strong{display:block;color:var(--chart-color);font-size:12px;margin-bottom:2px}",
@@ -157,22 +157,38 @@ function renderChart(v,points,hours){
  '<div class="oh-range">Lowest '+fmt(min,v.digits)+' · Highest '+fmt(max,v.digits)+' '+v.unit+'</div><div class="oh-axis">'+ticks.map(t=>'<span>'+esc(t)+'</span>').join("")+'</div></article>';
 }
 function bindChartTooltips(){
- document.querySelectorAll("#koy-observation-history .oh-point").forEach(point=>{
-  const article=point.closest(".oh-chart");
-  const label=article?.querySelector(".oh-chart-name")?.textContent?.trim()||"";
-  const color=article?.style.getPropertyValue("--chart-color")||"";
-  const html=()=>"<strong>"+esc(label)+"</strong><span>"+esc(point.dataset.time||"—")+"</span><span>"+esc(point.dataset.value||"—")+"</span>";
-  const show=e=>showTooltip(e,html(),color);
-  point.addEventListener("pointerenter",show);
-  point.addEventListener("pointermove",show);
-  point.addEventListener("pointerdown",show);
-  point.addEventListener("click",e=>{
-    if(point.dataset.tooltipOpen==="1"){hideTooltip();point.dataset.tooltipOpen="0";return;}
-    point.dataset.tooltipOpen="1";show(e);
+ document.querySelectorAll("#koy-observation-history .oh-chart").forEach(article=>{
+  const svg=article.querySelector(".oh-graph svg");
+  const points=Array.from(article.querySelectorAll(".oh-point"));
+  if(!svg||!points.length)return;
+  const label=article.querySelector(".oh-chart-name")?.textContent?.trim()||"";
+  const color=article.style.getPropertyValue("--chart-color")||"";
+  const nearest=e=>{
+   const rect=svg.getBoundingClientRect();
+   const sx=e.clientX,sy=e.clientY;
+   let best=null,bestD=Infinity;
+   points.forEach(point=>{
+    const px=rect.left+(Number(point.getAttribute("cx"))/1000)*rect.width;
+    const py=rect.top+(Number(point.getAttribute("cy"))/180)*rect.height;
+    const d=Math.hypot(sx-px,sy-py);
+    if(d<bestD){bestD=d;best=point;}
+   });
+   return best;
+  };
+  const show=e=>{
+   const point=nearest(e);
+   if(!point)return;
+   const html="<strong>"+esc(label)+"</strong><span>"+esc(point.dataset.time||"—")+"</span><span>"+esc(point.dataset.value||"—")+"</span>";
+   showTooltip(e,html,color);
+  };
+  svg.addEventListener("pointerdown",e=>{
+   svg.setPointerCapture?.(e.pointerId);
+   show(e);
   });
-  point.addEventListener("pointerleave",hideTooltip);
-  point.addEventListener("focus",show);
-  point.addEventListener("blur",()=>{point.dataset.tooltipOpen="0";hideTooltip();});
+  svg.addEventListener("pointermove",show);
+  svg.addEventListener("pointerup",e=>{if(e.pointerType!=="mouse")hideTooltip();svg.releasePointerCapture?.(e.pointerId);});
+  svg.addEventListener("pointercancel",hideTooltip);
+  svg.addEventListener("pointerleave",e=>{if(e.pointerType==="mouse")hideTooltip();});
  });
 }
 function start(){injectStyle();build();}
