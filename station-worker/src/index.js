@@ -468,57 +468,66 @@ function observationFromMgm(stationKey, row, sourceUrl) {
     observation_method: "mgm-sondurumlar"
   };
 }
-async function storeObservation(env, stationKey, observation, triggerSource, durationMs) {
+async function storeObservation(env, stationKey, observation, triggerSource, durationMs, options = {}) {
   if (!env.STATIONS_DB) return;
   const payload = JSON.stringify(observation);
   const nowIso = new Date().toISOString();
-  const current = env.STATIONS_DB.prepare(
-    "INSERT OR REPLACE INTO station_current (station_key, station_id, station_name, observed_at_utc, fetched_at_utc, status, payload_json, last_error, last_success_utc, last_attempt_utc) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)"
-  ).bind(
-    stationKey,
-    observation.station_id || "",
-    observation.station_name || stationKey,
-    observation.observed_at_utc || null,
-    observation.fetched_at_utc || nowIso,
-    observation.status || "live",
-    payload,
-    null,
-    nowIso,
-    nowIso
-  );
-  const history = env.STATIONS_DB.prepare(
-    "INSERT INTO station_history (station_key, station_id, station_name, observed_at_utc, fetched_at_utc, temperature_c, humidity_percent, pressure_hpa, wind_speed_kmh, wind_direction, rain_1h_mm, rain_10m_mm, rain_6h_mm, rain_12h_mm, rain_24h_mm, rain_00_now_mm, feels_like_c, payload_json) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?) " +
-    "ON CONFLICT(station_key, observed_at_utc) DO UPDATE SET " +
-    "station_id=excluded.station_id, station_name=excluded.station_name, fetched_at_utc=excluded.fetched_at_utc, " +
-    "temperature_c=excluded.temperature_c, humidity_percent=excluded.humidity_percent, pressure_hpa=excluded.pressure_hpa, " +
-    "wind_speed_kmh=excluded.wind_speed_kmh, wind_direction=excluded.wind_direction, rain_1h_mm=excluded.rain_1h_mm, " +
-    "rain_10m_mm=excluded.rain_10m_mm, rain_6h_mm=excluded.rain_6h_mm, rain_12h_mm=excluded.rain_12h_mm, " +
-    "rain_24h_mm=excluded.rain_24h_mm, rain_00_now_mm=excluded.rain_00_now_mm, feels_like_c=excluded.feels_like_c, payload_json=excluded.payload_json"
-  ).bind(
-    stationKey,
-    observation.station_id || "",
-    observation.station_name || stationKey,
-    observation.observed_at_utc || null,
-    observation.fetched_at_utc || nowIso,
-    observation.temperature_2m_c,
-    observation.humidity_percent,
-    observation.station_pressure_hpa,
-    observation.wind_speed_10m_kmh,
-    observation.wind_direction_degrees,
-    observation.precipitation_1h_mm,
-    observation.precipitation_10m_mm,
-    observation.precipitation_6h_mm,
-    observation.precipitation_12h_mm,
-    observation.precipitation_24h_mm,
-    observation.precipitation_daily_mm,
-    observation.feels_like_c,
-    payload
-  );
-  const diagnostic = env.STATIONS_DB.prepare(
+  const statements = [
+    env.STATIONS_DB.prepare(
+      "INSERT OR REPLACE INTO station_current (station_key, station_id, station_name, observed_at_utc, fetched_at_utc, status, payload_json, last_error, last_success_utc, last_attempt_utc) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)"
+    ).bind(
+      stationKey,
+      observation.station_id || "",
+      observation.station_name || stationKey,
+      observation.observed_at_utc || null,
+      observation.fetched_at_utc || nowIso,
+      observation.status || "live",
+      payload,
+      null,
+      nowIso,
+      nowIso
+    )
+  ];
+
+  // Keep the live Köy observation on the existing two-minute refresh. Only
+  // the dedicated ten-minute workflow writes Çanakçı history points.
+  if (options.archiveHistory !== false) {
+    statements.push(env.STATIONS_DB.prepare(
+      "INSERT INTO station_history (station_key, station_id, station_name, observed_at_utc, fetched_at_utc, temperature_c, humidity_percent, pressure_hpa, wind_speed_kmh, wind_direction, rain_1h_mm, rain_10m_mm, rain_6h_mm, rain_12h_mm, rain_24h_mm, rain_00_now_mm, feels_like_c, payload_json) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?) " +
+      "ON CONFLICT(station_key, observed_at_utc) DO UPDATE SET " +
+      "station_id=excluded.station_id, station_name=excluded.station_name, fetched_at_utc=excluded.fetched_at_utc, " +
+      "temperature_c=excluded.temperature_c, humidity_percent=excluded.humidity_percent, pressure_hpa=excluded.pressure_hpa, " +
+      "wind_speed_kmh=excluded.wind_speed_kmh, wind_direction=excluded.wind_direction, rain_1h_mm=excluded.rain_1h_mm, " +
+      "rain_10m_mm=excluded.rain_10m_mm, rain_6h_mm=excluded.rain_6h_mm, rain_12h_mm=excluded.rain_12h_mm, " +
+      "rain_24h_mm=excluded.rain_24h_mm, rain_00_now_mm=excluded.rain_00_now_mm, feels_like_c=excluded.feels_like_c, payload_json=excluded.payload_json"
+    ).bind(
+      stationKey,
+      observation.station_id || "",
+      observation.station_name || stationKey,
+      observation.observed_at_utc || null,
+      observation.fetched_at_utc || nowIso,
+      observation.temperature_2m_c,
+      observation.humidity_percent,
+      observation.station_pressure_hpa,
+      observation.wind_speed_10m_kmh,
+      observation.wind_direction_degrees,
+      observation.precipitation_1h_mm,
+      observation.precipitation_10m_mm,
+      observation.precipitation_6h_mm,
+      observation.precipitation_12h_mm,
+      observation.precipitation_24h_mm,
+      observation.precipitation_daily_mm,
+      observation.feels_like_c,
+      payload
+    ));
+  }
+
+  statements.push(env.STATIONS_DB.prepare(
     "INSERT INTO station_collection_diagnostics (station_key, last_attempt_utc, last_success_utc, last_error, last_trigger_source, collection_duration_ms) VALUES (?, ?, ?, NULL, ?, ?) " +
     "ON CONFLICT(station_key) DO UPDATE SET last_attempt_utc=excluded.last_attempt_utc, last_success_utc=excluded.last_success_utc, last_error=NULL, last_trigger_source=excluded.last_trigger_source, collection_duration_ms=excluded.collection_duration_ms"
-  ).bind(stationKey, nowIso, nowIso, triggerSource || "unknown", Math.max(0, Math.round(durationMs || 0)));
-  await env.STATIONS_DB.batch([current, history, diagnostic]);
+  ).bind(stationKey, nowIso, nowIso, triggerSource || "unknown", Math.max(0, Math.round(durationMs || 0))));
+
+  await env.STATIONS_DB.batch(statements);
 }
 async function recordCollectionFailure(env, stationKey, error, triggerSource, durationMs) {
   if (!env.STATIONS_DB) return;
@@ -543,7 +552,7 @@ async function pruneHistory(env) {
     ).bind(new Date(Date.now() - RETENTION_HOURS * 3600000).toISOString()).run();
   }
 }
-async function collectOne(env, stationKey, triggerSource) {
+async function collectOne(env, stationKey, triggerSource, options = {}) {
   const startedAt = Date.now();
   try {
     let observation;
@@ -554,7 +563,7 @@ async function collectOne(env, stationKey, triggerSource) {
       observation = observationFromMgm(stationKey, row, url);
     }
     const durationMs = Date.now() - startedAt;
-    await storeObservation(env, stationKey, observation, triggerSource, durationMs);
+    await storeObservation(env, stationKey, observation, triggerSource, durationMs, options);
     return {
       ok: true,
       status: observation.status || "live",
@@ -576,12 +585,15 @@ async function collectOne(env, stationKey, triggerSource) {
 }
 
 async function collectAll(env, triggerSource = "unknown") {
-  // These upstream stations are independent. A slow ENKA request must never
-  // hold back the three MGM stations or make a two-minute collection overrun.
+  // Every live station, including Köy, retains the existing two-minute
+  // current-value refresh. Only Çanakçı history writes are decimated; the
+  // isolated GitHub Actions workflow writes those archive samples every 10m.
   const collected = await Promise.all(
     Object.keys(STATION_DEFS).map(async key => ({
       key,
-      result: await collectOne(env, key, triggerSource)
+      result: await collectOne(env, key, triggerSource, {
+        archiveHistory: !(key === "canakci" && triggerSource === "cron")
+      })
     }))
   );
   const results = Object.fromEntries(collected.map(item => [item.key, item.result]));
@@ -942,15 +954,8 @@ export default {
   },
 
   async scheduled(event, env, ctx) {
-    // Çanakçı history is collected by the isolated GitHub Actions workflow
-    // every 10 minutes. The station Worker keeps its existing fast cadence for
-    // the other live station feeds.
     ctx.waitUntil(
-      Promise.all(
-        Object.keys(STATION_DEFS)
-          .filter(key => key !== "canakci")
-          .map(key => collectOne(env, key, "cron"))
-      ).catch(error => {
+      collectAll(env, "cron").catch(error => {
         console.error("[SCHEDULED COLLECTION]", error && error.message || error);
       })
     );
