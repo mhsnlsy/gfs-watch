@@ -627,6 +627,7 @@ async function getCurrentMonthClimate(env, stationKey) {
     "MAX(wind_speed_kmh) AS max_wind_kmh, MAX(rain_00_now_mm) AS precipitation_mm, " +
     "COUNT(rain_00_now_mm) AS precipitation_samples, MAX(fetched_at_utc) AS last_sample_at_utc " +
     "FROM station_history WHERE station_key = ? AND fetched_at_utc >= ? AND fetched_at_utc <= ? " +
+    "AND COALESCE(json_extract(payload_json, '$.is_stale'), 0) = 0 " +
     "GROUP BY date(fetched_at_utc, '+3 hours') ORDER BY local_date"
   ).bind(stationKey, monthStartUtc, nowUtc).all();
 
