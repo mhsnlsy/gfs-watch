@@ -100,7 +100,7 @@ function build(){
  bind();renderChips();renderCharts();
 }
 function bind(){
- $("oh-toggle").addEventListener("click",()=>{state.opened=!state.opened;$("oh-content").hidden=!state.opened;$("oh-toggle").setAttribute("aria-expanded",String(state.opened));if(state.opened&&!state.cache.has(state.hours))load();});
+ $("oh-toggle").addEventListener("click",()=>{state.opened=!state.opened;$("oh-content").hidden=!state.opened;$("oh-toggle").setAttribute("aria-expanded",String(state.opened));if(state.opened){if(state.cache.has(state.hours))renderCharts();else load();}else if(state.openPicker)closePicker();});
  $("oh-window").addEventListener("click",e=>{const b=e.target.closest("button[data-hours]");if(!b)return;state.hours=Number(b.dataset.hours);$("oh-window").querySelectorAll("button").forEach(x=>x.classList.toggle("active",x===b));load();});
  $("oh-zone").addEventListener("click",e=>{const b=e.target.closest("button[data-zone]");if(!b)return;state.zone=b.dataset.zone;$("oh-zone").querySelectorAll("button").forEach(x=>x.classList.toggle("active",x===b));renderCharts();});
  $("oh-add").addEventListener("click",openPicker);$("oh-backdrop").addEventListener("click",closePicker);
