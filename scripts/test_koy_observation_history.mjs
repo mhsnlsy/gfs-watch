@@ -20,6 +20,9 @@ for (const token of ["24h", "48h", "7d", "30d", "Local", "UTC", "Add variable",
 assert.ok(workflow.includes('cron: "*/10 * * * *"'));
 assert.ok(workflow.includes("/api/collect/canakci"));
 assert.ok(workflow.includes("/api/history-graph/canakci?hours=24&bucket=10"));
+assert.ok(workflow.includes("PUBLIC_WEB: https://istanbulunhavasi.com"));
+assert.ok(workflow.includes('"$PUBLIC_WEB/koy.html?history-verify='));
+assert.ok(workflow.includes('"$PUBLIC_WEB/koy-observation-history.js?history-verify='));
 assert.ok(testWorkflow.includes(".github/workflows/canakci-history-10m.yml"));
 assert.ok(!testWorkflow.includes(".github/workflows/village-history.yml"));
 assert.match(worker, /MAX_HISTORY_HOURS = 8760/);
