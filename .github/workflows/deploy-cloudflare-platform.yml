@@ -340,9 +340,9 @@ NODE
           const fs = require("fs");
           const html = fs.readFileSync(process.argv[2], "utf8");
           const js = fs.readFileSync(process.argv[3], "utf8");
-          const scriptTag = html.match(/<script\\b[^>]*src=["'][^"']*koy-observation-history\\.js[^"']*["'][^>]*>/i)?.[0] || "";
+          const scriptTag = html.match(/<script\b[^>]*src=["'][^"']*koy-observation-history\.js[^"']*["'][^>]*>/i)?.[0] || "";
           if (!html.includes('<div class="koy-climate-panel">') ||
-              !scriptTag || !/\\bdefer\\b/i.test(scriptTag) ||
+              !scriptTag || !/\bdefer\b/i.test(scriptTag) ||
               !js.includes('querySelector(".koy-climate-panel")') ||
               !js.includes("/history-graph/canakci?hours=") ||
               !js.includes("Geçmiş")) {
