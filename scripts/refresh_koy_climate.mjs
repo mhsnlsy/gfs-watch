@@ -333,19 +333,17 @@ function buildPayload(model, parts, downloaded) {
       years: precipNormal.years,
       through_day: parts.day,
     },
-    // Preserve the actual per-day, per-year archive slice in D1 so the
-    // three datasets remain independently inspectable and reusable.
-    daily_history: downloaded.rows.map(row => ({
-      date: row.date,
-      year: row.year,
-      day: row.day,
-      mean_c: round(row.mean),
-      max_c: round(row.max),
-      min_c: round(row.min),
-      precipitation_mm: round(row.precipitation),
-      average_wind_kmh: round(row.windMean),
-      max_wind_kmh: round(row.windMax),
-    })),
+    // The full month archive (up to ~2,600 rows for ERA5) is far larger than
+    // D1's ~100 KB statement limit, so only the series that actually produces
+    // the long-term numbers is stored: one row per year for today's calendar
+    // day as [year, mean_c, precipitation_mm]. min/avg/max/record are
+    // recomputable from it, which the deploy workflow verifies.
+    archive_row_count: downloaded.rows.length,
+    same_day_history: currentDayRows.map(row => [
+      row.year,
+      round(row.mean),
+      round(row.precipitation),
+    ]),
     updated_at_utc: new Date().toISOString(),
   };
 
@@ -378,7 +376,8 @@ async function main() {
       history_years: [payload.historical_start_year, payload.historical_end_year],
       historical_year_count: payload.historical_year_count,
       historical_same_day_samples: payload.historical_day_sample_count,
-      daily_history_rows: payload.daily_history.length,
+      archive_rows_downloaded: payload.archive_row_count,
+      same_day_history_rows: payload.same_day_history.length,
       precipitation_supported: payload.supported.precipitation,
       wind_supported: payload.supported.wind,
       precipitation_normal_to_date_mm: payload.precipitation_normal_to_date.normal_mm,
@@ -409,6 +408,14 @@ async function main() {
     "payload_json=excluded.payload_json,",
     "updated_at_utc=excluded.updated_at_utc;",
   ].join("\n");
+
+  // D1 rejects statements above ~100 KB (SQLITE_TOOBIG). Fail here, with a
+  // clear message, instead of in the middle of the Cloudflare upload.
+  const statementBytes = Buffer.byteLength(sql, "utf8");
+  console.log("D1 statement size: " + statementBytes + " bytes");
+  if (statementBytes > 90000) {
+    throw new Error("Refusing to publish: D1 statement is " + statementBytes + " bytes (limit ~100000)");
+  }
 
   const output = path.join(process.cwd(), "koy-climate-refresh.sql");
   fs.writeFileSync(output, sql + "\n");

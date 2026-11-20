@@ -21,6 +21,9 @@ assert.match(refresh, /historicalEndYear/);
 assert.match(refresh, /model === "cerra"/);
 assert.match(refresh, /2021\s*:\s*2020/);
 assert.match(refresh, /ON CONFLICT\(cache_key\) DO UPDATE/);
+assert.match(refresh, /same_day_history/);
+assert.match(refresh, /statementBytes > 90000/);
+assert.doesNotMatch(refresh, /daily_history:/);
 assert.doesNotMatch(refresh, /\bBEGIN\s*;/i);
 assert.doesNotMatch(refresh, /\bCOMMIT\s*;/i);
 
@@ -36,7 +39,7 @@ assert.match(climateWorker, /getClimateCache\(env, model\)/);
 assert.match(climateWorker, /Climate cache unavailable for model/);
 
 assert.match(climateUi, /\/api\/climate\/month\/canakci/);
-assert.ok(climateUi.includes("historicalDoc?.data?.model !== model"));
+assert.match(climateUi, /data\.model !== model/);
 assert.match(climateUi, /aynı takvim günü/i);
 assert.doesNotMatch(climateUi, /CURRENT_API/);
 assert.doesNotMatch(climateUi, /api\.open-meteo\.com\/v1\/forecast/);

@@ -89,10 +89,20 @@ jobs:
               Number(data.long_term.avg_c) > Number(data.long_term.max_c)) {
             throw new Error(model + ": same-calendar-day long-term distribution is incomplete or inconsistent");
           }
-          if (!Array.isArray(data.daily_history) || data.daily_history.length < 300 ||
+          const series = data.same_day_history;
+          if (!Array.isArray(series) || series.length < 20 ||
               Number(data.historical_year_count || 0) < 20 ||
-              Number(data.historical_day_sample_count || 0) < 20) {
+              Number(data.historical_day_sample_count || 0) < 20 ||
+              Number(data.archive_row_count || 0) < 300) {
             throw new Error(model + ": historical month/day archive is incomplete");
+          }
+          const means = series.map(row => Number(row[1])).filter(Number.isFinite);
+          const near = (a, b) => Math.abs(a - b) <= 0.06;
+          if (means.length !== series.length ||
+              !near(Math.min(...means), Number(data.long_term.min_c)) ||
+              !near(Math.max(...means), Number(data.long_term.max_c)) ||
+              !near(means.reduce((a, b) => a + b, 0) / means.length, Number(data.long_term.avg_c))) {
+            throw new Error(model + ": long-term min/avg/max do not match the stored same-day series");
           }
           if (data.supported?.temperature !== true) {
             throw new Error(model + ": temperature capability not declared");
@@ -117,7 +127,8 @@ jobs:
             historical: [data.historical_start_year, data.historical_end_year],
             years: data.historical_year_count,
             same_day_samples: data.historical_day_sample_count,
-            archive_rows: data.daily_history.length,
+            archive_rows: data.archive_row_count,
+            same_day_rows: series.length,
             supported: data.supported,
             updated_at_utc: data.updated_at_utc
           }));
