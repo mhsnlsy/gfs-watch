@@ -215,7 +215,23 @@
     setText("climate-anomaly-label",
       monthLabel + " " + (monthlyData?.month?.year || "") + " YAĞIŞ ANOMALİSİ");
 
-    if (supported.precipitation && normal.normal_mm !== null) {
+    const precipitationCoverage = asNumber(month.precipitation_coverage_percent);
+    const requiredCoverage = 90;
+    if (!supported.precipitation) {
+      setText("climate-anomaly-value", "—");
+      setText("climate-anomaly-detail",
+        "ERA5-Land tarihsel yağış sağlamaz; anomali bu model için hesaplanmaz.");
+      setText("climate-anomaly-source", meta.label + " · yağış desteklenmiyor");
+    } else if (precipitationCoverage === null || precipitationCoverage < requiredCoverage) {
+      setText("climate-anomaly-value", "YETERSİZ VERİ");
+      setText("climate-anomaly-detail",
+        "Yağış kaydı " + (monthlyData?.coverage?.precipitation_days ?? 0) +
+        "/" + (month.days_elapsed ?? 0) + " gün için mevcut (" +
+        fmt(precipitationCoverage, 0) +
+        "%). Güvenilir anomali için en az " + requiredCoverage +
+        "% günlük kapsama gerekli.");
+      setText("climate-anomaly-source", "MGM istasyon verisi · eksik günler");
+    } else if (normal.normal_mm !== null) {
       const actual = asNumber(month.precipitation_mm);
       const reference = asNumber(normal.normal_mm);
       const anomaly = actual !== null && reference !== null && reference > 0
@@ -234,11 +250,8 @@
       }
     } else {
       setText("climate-anomaly-value", "—");
-      setText("climate-anomaly-detail",
-        supported.precipitation
-          ? "Bu tarih aralığı için yağış normali hesaplanamadı."
-          : "ERA5-Land bu arşiv uç noktasında yağış normali sağlamıyor.");
-      setText("climate-anomaly-source", meta.label + " · desteklenmeyen değişken");
+      setText("climate-anomaly-detail", "Bu tarih aralığı için yağış normali hesaplanamadı.");
+      setText("climate-anomaly-source", meta.label + " · normal hesaplanamadı");
     }
   }
 
