@@ -1,0 +1,48 @@
+name: Village Observation History
+
+on:
+  schedule:
+    - cron: "*/10 * * * *"
+  workflow_dispatch:
+
+concurrency:
+  group: village-observation-history
+  cancel-in-progress: true
+
+permissions:
+  contents: read
+
+jobs:
+  collect-canakci:
+    runs-on: ubuntu-latest
+    timeout-minutes: 3
+    steps:
+      - name: Collect Çanakçı observation
+        env:
+          STATIONS_API: https://gfs-watch-stations.muhsin-ulusoy.workers.dev
+        run: |
+          set -euo pipefail
+          curl --fail --silent --show-error --retry 3 --retry-all-errors --retry-delay 2 --max-time 25             "$STATIONS_API/api/collect/canakci?source=github-actions"             -o "$RUNNER_TEMP/canakci-collect.json"
+          node - "$RUNNER_TEMP/canakci-collect.json" <<'NODE'
+          const fs = require("fs");
+          const doc = JSON.parse(fs.readFileSync(process.argv[2], "utf8"));
+          if (!doc.ok || !doc.result || !doc.result.ok) {
+            throw new Error("Çanakçı collection failed: " + JSON.stringify(doc));
+          }
+          console.log("Çanakçı history sample collected:", doc.result.observed_at_utc || "unknown");
+          NODE
+
+      - name: Verify history endpoint
+        env:
+          STATIONS_API: https://gfs-watch-stations.muhsin-ulusoy.workers.dev
+        run: |
+          set -euo pipefail
+          curl --fail --silent --show-error --max-time 20             "$STATIONS_API/api/history/canakci?hours=1"             -o "$RUNNER_TEMP/canakci-history.json"
+          node - "$RUNNER_TEMP/canakci-history.json" <<'NODE'
+          const fs = require("fs");
+          const doc = JSON.parse(fs.readFileSync(process.argv[2], "utf8"));
+          if (!doc.ok || !Array.isArray(doc.samples)) {
+            throw new Error("Çanakçı history endpoint returned an invalid payload.");
+          }
+          console.log("Çanakçı history samples:", doc.samples.length);
+          NODE
