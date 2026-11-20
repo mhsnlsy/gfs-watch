@@ -1,6 +1,7 @@
 (() => {
 "use strict";
 const API=(window.GFS_WATCH_STATIONS_API||"https://gfs-watch-stations.muhsin-ulusoy.workers.dev")+"/api";
+// Köy History v1.1 — published asset marker
 const TZ="Europe/Istanbul";
 const C={temperature:"#ef4444",dewPoint:"#3b82f6",precipitation1h:"#19a7e0",dailyPrecipitation:"#f97316",windChill:"#8b5cf6",heatIndex:"#eab308",humidity:"#16b981",windSpeed:"#10b981",windDirection:"#6366f1",pressure:"#f59e0b",precipitation10m:"#14b8a6",precipitation6h:"#8b5cf6",precipitation12h:"#ec4899",precipitation24h:"#f43f5e"};
 const V=[
