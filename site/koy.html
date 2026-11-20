@@ -1595,6 +1595,9 @@ html.ios12 .backdrop-filter{display:none}
 .climate-card.wide{padding:17px 18px}
 .koy-climate-source{margin-top:8px;color:#91a6b4;font-size:10px;line-height:1.55;max-width:760px}
 .climate-now-label.stale{opacity:.65;border-style:dashed}
+.climate-longterm-section{margin-top:26px;padding-top:20px;border-top:1px solid var(--line)}
+.climate-longterm-section .climate-tabs{margin-top:0}
+.climate-longterm-section .climate-long-title{margin-top:17px}
 .climate-anomaly{margin-top:12px;background:rgba(18,39,58,.78);border:1px solid rgba(170,207,220,.045);border-radius:17px;padding:17px 18px}
 .climate-anomaly-head{display:flex;justify-content:space-between;gap:12px;align-items:flex-start}
 .climate-anomaly-value{font:800 28px/1 Manrope,sans-serif;margin-top:7px;color:#8fd7ba}
@@ -1769,13 +1772,13 @@ html.ios12 .backdrop-filter{display:none}
       <div class="climate-card"><div class="label">Maksimum rüzgâr</div><div class="value" id="climate-max-wind">— km/h</div></div>
     </div>
 
-    <div class="climate-tabs" role="tablist" aria-label="Klimatoloji modeli">
-      <button class="climate-tab active" type="button" data-model="cerra" role="tab" aria-selected="true">CERRA</button>
-      <button class="climate-tab" type="button" data-model="era5" role="tab" aria-selected="false">ERA5</button>
-      <button class="climate-tab" type="button" data-model="era5_land" role="tab" aria-selected="false">ERA5-Land</button>
-    </div>
-
-    <div class="climate-long-title" id="climate-long-title">LONG TERM FOR NOV 19 · CERRA · 1984–2026 · 5.5 KM</div>
+    <div class="climate-longterm-section" aria-label="Uzun dönem klimatoloji modeli">
+      <div class="climate-tabs" role="tablist" aria-label="Uzun dönem klimatoloji modeli">
+        <button class="climate-tab active" type="button" data-model="cerra" role="tab" aria-selected="true">CERRA</button>
+        <button class="climate-tab" type="button" data-model="era5" role="tab" aria-selected="false">ERA5</button>
+        <button class="climate-tab" type="button" data-model="era5_land" role="tab" aria-selected="false">ERA5-Land</button>
+      </div>
+      <div class="climate-long-title" id="climate-long-title">LONG TERM FOR NOV 19 · CERRA · 1984–2026 · 5.5 KM</div>
     <div class="climate-range">
       <div class="climate-range-bar">
         <div class="climate-now-label" id="climate-now-label">now —°C</div>
@@ -1804,6 +1807,8 @@ html.ios12 .backdrop-filter{display:none}
         <div class="value" id="climate-today-precip">— mm</div>
         <div class="small" id="climate-precip-ratio">—</div>
       </div>
+    </div>
+
     </div>
 
     <div class="climate-anomaly">
