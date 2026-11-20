@@ -108,9 +108,22 @@ jobs:
               period_date: data.period_date, expectedDate, long_term: data.long_term
             }));
           }
-          if (!Array.isArray(data.daily_history) || data.daily_history.length < 20 ||
-              Number(data.historical_day_sample_count) < 10) {
+          if (!Array.isArray(data.same_day_history) ||
+              data.same_day_history.length < 10 ||
+              data.same_day_history.length !== Number(data.historical_day_sample_count) ||
+              Number(data.archive_row_count) < data.same_day_history.length * 20) {
             throw new Error("Calendar-day history is incomplete: " + model);
+          }
+          for (const row of data.same_day_history) {
+            if (!Array.isArray(row) || row.length !== 3 ||
+                !Number.isFinite(Number(row[0])) ||
+                !Number.isFinite(Number(row[1]))) {
+              throw new Error("Malformed same-day archive row in " + model + ": " + JSON.stringify(row));
+            }
+          }
+          if (data.supported?.precipitation === true &&
+              !Number.isFinite(Number(data.precipitation_normal_to_date?.normal_mm))) {
+            throw new Error("Historical precipitation normal is missing for " + model);
           }
           if (model === "era5_land" && data.supported?.precipitation !== false) {
             throw new Error("ERA5-Land precipitation must not be fabricated.");
@@ -123,7 +136,8 @@ jobs:
             period_date: data.period_date,
             years: [data.historical_start_year, data.historical_end_year],
             same_day_samples: data.historical_day_sample_count,
-            daily_history_rows: data.daily_history.length,
+            archive_row_count: data.archive_row_count,
+            same_day_samples: data.same_day_history.length,
             long_term_mean_c: data.long_term.avg_c,
             precipitation_supported: data.supported.precipitation,
             wind_supported: data.supported.wind,
