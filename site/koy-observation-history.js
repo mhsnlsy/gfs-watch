@@ -66,7 +66,7 @@ function injectStyle(){
  "#koy-observation-history svg{width:100%;height:100%;display:block;overflow:visible}",
  "#koy-observation-history .oh-grid{stroke:rgba(200,220,235,.10);stroke-width:1}",
   "#koy-observation-history .oh-line{fill:none;stroke:var(--chart-color);stroke-width:2.4;stroke-linecap:round;stroke-linejoin:round}",
-  "#koy-observation-history .oh-point{fill:var(--chart-color);stroke:#202832;stroke-width:2;cursor:crosshair;vector-effect:non-scaling-stroke}",
+  "#koy-observation-history .oh-point{fill:var(--chart-color);stroke:#202832;stroke-width:2;cursor:crosshair;vector-effect:non-scaling-stroke;touch-action:none}",
   "#koy-observation-history .oh-point:hover{stroke:#eef5f8;stroke-width:2.5}",
   "#koy-observation-history .oh-tooltip{position:fixed;z-index:100000;pointer-events:none;display:none;min-width:120px;max-width:190px;padding:8px 10px;border:1px solid rgba(204,225,239,.18);border-radius:9px;background:rgba(17,24,33,.96);box-shadow:0 8px 25px rgba(0,0,0,.35);color:#eef5f8;font:10px/1.45 DM Sans,sans-serif}",
   "#koy-observation-history .oh-tooltip strong{display:block;color:var(--chart-color);font-size:12px;margin-bottom:2px}",
@@ -153,7 +153,7 @@ function renderChart(v,points,hours){
  const last=points[points.length-1],tickCount=Math.min(6,points.length),ticks=[];
  for(let i=0;i<tickCount;i++){const ix=Math.round(i*(points.length-1)/Math.max(1,tickCount-1));ticks.push(dateLabel(points[ix].time,hours,true));}
  return '<article class="oh-chart" style="--chart-color:'+v.color+'"><div class="oh-chart-head"><div class="oh-chart-name"><span class="oh-chart-dot" style="background:'+v.color+'"></span>'+esc(v.label)+'</div><div class="oh-value">'+fmt(last.value,v.digits)+' '+v.unit+'</div></div>'+
- '<div class="oh-graph"><svg viewBox="0 0 '+width+' '+height+'" preserveAspectRatio="none" role="img" aria-label="'+esc(v.label)+' history chart">'+grid+'<path class="oh-line" d="'+path+'"></path>'+points.map((p,i)=>{const px=x(i),py=y(p.value),time=dateLabel(p.time,hours,false),value=fmt(p.value,v.digits)+" "+v.unit;return '<circle class="oh-point" cx="'+px.toFixed(2)+'" cy="'+py.toFixed(2)+'" r="5" tabindex="0" data-time="'+esc(time)+'" data-value="'+esc(value)+'" aria-label="'+esc(time)+" · "+esc(value)+'"></circle>';}).join("")+'</svg></div>'+
+ '<div class="oh-graph"><svg viewBox="0 0 '+width+' '+height+'" preserveAspectRatio="none" role="img" aria-label="'+esc(v.label)+' history chart">'+grid+'<path class="oh-line" d="'+path+'"></path>'+points.map((p,i)=>{const px=x(i),py=y(p.value),time=dateLabel(p.time,hours,false),value=fmt(p.value,v.digits)+" "+v.unit;return '<circle class="oh-point" cx="'+px.toFixed(2)+'" cy="'+py.toFixed(2)+'" r="6" tabindex="0" data-time="'+esc(time)+'" data-value="'+esc(value)+'" aria-label="'+esc(time)+" · "+esc(value)+'"><title>'+esc(time)+" · "+esc(value)+'</title></circle>';}).join("")+'</svg></div>'+
  '<div class="oh-range">Lowest '+fmt(min,v.digits)+' · Highest '+fmt(max,v.digits)+' '+v.unit+'</div><div class="oh-axis">'+ticks.map(t=>'<span>'+esc(t)+'</span>').join("")+'</div></article>';
 }
 function bindChartTooltips(){
@@ -162,11 +162,17 @@ function bindChartTooltips(){
   const label=article?.querySelector(".oh-chart-name")?.textContent?.trim()||"";
   const color=article?.style.getPropertyValue("--chart-color")||"";
   const html=()=>"<strong>"+esc(label)+"</strong><span>"+esc(point.dataset.time||"—")+"</span><span>"+esc(point.dataset.value||"—")+"</span>";
-  point.addEventListener("pointerenter",e=>showTooltip(e,html(),color));
-  point.addEventListener("pointermove",e=>showTooltip(e,html(),color));
+  const show=e=>showTooltip(e,html(),color);
+  point.addEventListener("pointerenter",show);
+  point.addEventListener("pointermove",show);
   point.addEventListener("pointerleave",hideTooltip);
-  point.addEventListener("focus",e=>showTooltip(e,html(),color));
-  point.addEventListener("blur",hideTooltip);
+  point.addEventListener("pointerdown",show);
+  point.addEventListener("click",e=>{
+    if(point.dataset.tooltipOpen==="1"){hideTooltip();point.dataset.tooltipOpen="0";return;}
+    point.dataset.tooltipOpen="1";show(e);
+  });
+  point.addEventListener("focus",show);
+  point.addEventListener("blur",()=>{point.dataset.tooltipOpen="0";hideTooltip();});
  });
 }
 function start(){injectStyle();build();}
