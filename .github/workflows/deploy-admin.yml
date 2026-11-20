@@ -4,6 +4,7 @@ on:
   push:
     branches: [main]
     paths:
+      - "site/**"
       - "web-worker/src/index.js"
       - "web-worker/admin-assets/**"
       - "web-worker/wrangler.jsonc"
@@ -86,6 +87,16 @@ jobs:
           test -n "$ADMIN_PASSWORD"
           printf '%s' "$ADMIN_PASSWORD" |
             wrangler secret put ADMIN_PASSWORD --config wrangler.jsonc
+
+      - name: Verify Köy History asset before deploy
+        run: |
+          set -euo pipefail
+          test -s site/koy.html
+          test -s site/koy-observation-history.js
+          grep -Fq 'koy-observation-history.js' site/koy.html
+          grep -Fq 'history-graph/canakci' site/koy-observation-history.js
+          grep -Fq 'Geçmiş' site/koy-observation-history.js
+          echo "Köy History assets are present and wired."
 
       - name: Build static assets
         env:
