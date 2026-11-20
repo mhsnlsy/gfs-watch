@@ -88,6 +88,45 @@ jobs:
           console.log("Çanakçı history samples available:", doc.samples.length);
           NODE
 
+      - name: Verify the graph endpoint used by the Köy page
+        env:
+          STATIONS_API: https://gfs-watch-stations.muhsin-ulusoy.workers.dev
+        run: |
+          set -euo pipefail
+
+          response="$RUNNER_TEMP/canakci-history-graph.json"
+
+          curl \
+            --fail \
+            --silent \
+            --show-error \
+            --retry 2 \
+            --retry-all-errors \
+            --retry-delay 2 \
+            --max-time 20 \
+            "$STATIONS_API/api/history-graph/canakci?hours=24&bucket=10" \
+            -o "$response"
+
+          node - "$response" <<'NODE'
+          const fs = require("fs");
+          const doc = JSON.parse(fs.readFileSync(process.argv[2], "utf8"));
+          if (doc.ok !== true || doc.station_key !== "canakci" ||
+              !Array.isArray(doc.samples) || doc.samples.length < 1) {
+            throw new Error("Köy History graph endpoint returned no usable samples: " + JSON.stringify(doc));
+          }
+          const latest = doc.samples[doc.samples.length - 1];
+          if (!latest.latest_fetched_at_utc ||
+              !Number.isFinite(Date.parse(latest.latest_fetched_at_utc)) ||
+              Number(latest.sample_count) < 1) {
+            throw new Error("Köy History graph sample is missing its collection timestamp.");
+          }
+          console.log("Köy History graph verified:", JSON.stringify({
+            station: doc.station_key,
+            samples: doc.samples.length,
+            latest_fetched_at_utc: latest.latest_fetched_at_utc
+          }));
+          NODE
+
       - name: Report isolated workflow result
         run: |
           echo "Çanakçı 10-minute history collection: SUCCESS"
