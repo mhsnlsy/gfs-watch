@@ -127,6 +127,48 @@ jobs:
           }));
           NODE
 
+      - name: Verify the public Köy page loads the History module
+        env:
+          WEB: https://gfs-watch-web.muhsin-ulusoy.workers.dev
+          PUBLIC_WEB: https://istanbulunhavasi.com
+        run: |
+          set -euo pipefail
+
+          curl --location --fail --silent --show-error --retry 3 --retry-all-errors --retry-delay 2 --max-time 30 \
+            "$WEB/koy.html?history-verify=$(date +%s)" \
+            -o "$RUNNER_TEMP/koy-worker-page.html"
+          curl --location --fail --silent --show-error --retry 3 --retry-all-errors --retry-delay 2 --max-time 30 \
+            "$PUBLIC_WEB/koy.html?history-verify=$(date +%s)" \
+            -o "$RUNNER_TEMP/koy-public-page.html"
+          curl --location --fail --silent --show-error --retry 3 --retry-all-errors --retry-delay 2 --max-time 30 \
+            "$WEB/koy-observation-history.js?history-verify=$(date +%s)" \
+            -o "$RUNNER_TEMP/koy-worker-history.js"
+          curl --location --fail --silent --show-error --retry 3 --retry-all-errors --retry-delay 2 --max-time 30 \
+            "$PUBLIC_WEB/koy-observation-history.js?history-verify=$(date +%s)" \
+            -o "$RUNNER_TEMP/koy-public-history.js"
+
+          node - "$RUNNER_TEMP/koy-worker-page.html" "$RUNNER_TEMP/koy-public-page.html" \
+            "$RUNNER_TEMP/koy-worker-history.js" "$RUNNER_TEMP/koy-public-history.js" <<'NODE'
+          const fs = require("fs");
+          const [workerHtml, publicHtml, workerJs, publicJs] = process.argv.slice(2)
+            .map(file => fs.readFileSync(file, "utf8"));
+          function verifyPage(label, html, js) {
+            const scriptTag = html.split(/\r?\n/).find(line =>
+              line.includes("koy-observation-history.js")
+            ) || "";
+            if (!html.includes('<div class="koy-climate-panel">') ||
+                !scriptTag.includes("defer") ||
+                !js.includes('querySelector(".koy-climate-panel")') ||
+                !js.includes("/history-graph/canakci?hours=") ||
+                !js.includes("Geçmiş")) {
+              throw new Error(label + " Köy page is missing the History panel/module/API binding.");
+            }
+            console.log(label + " Köy History page and module verified.");
+          }
+          verifyPage("Worker", workerHtml, workerJs);
+          verifyPage("Public", publicHtml, publicJs);
+          NODE
+
       - name: Report isolated workflow result
         run: |
           echo "Çanakçı 10-minute history collection: SUCCESS"

@@ -325,32 +325,6 @@ NODE
           CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
         run: wrangler deploy --config wrangler.jsonc
 
-      - name: Verify deployed Köy History page and script
-        env:
-          WEB: https://gfs-watch-web.muhsin-ulusoy.workers.dev
-        run: |
-          set -euo pipefail
-          curl --silent --show-error --fail --max-time 20 \
-            "$WEB/koy.html?history-verify=$(date +%s)" \
-            -o "$RUNNER_TEMP/koy-history-page.html"
-          curl --silent --show-error --fail --max-time 20 \
-            "$WEB/koy-observation-history.js?history-verify=$(date +%s)" \
-            -o "$RUNNER_TEMP/koy-observation-history.js"
-          node - "$RUNNER_TEMP/koy-history-page.html" "$RUNNER_TEMP/koy-observation-history.js" <<'NODE'
-          const fs = require("fs");
-          const html = fs.readFileSync(process.argv[2], "utf8");
-          const js = fs.readFileSync(process.argv[3], "utf8");
-          const scriptTag = html.match(/<script\b[^>]*src=["'][^"']*koy-observation-history\.js[^"']*["'][^>]*>/i)?.[0] || "";
-          if (!html.includes('<div class="koy-climate-panel">') ||
-              !scriptTag || !/\bdefer\b/i.test(scriptTag) ||
-              !js.includes('querySelector(".koy-climate-panel")') ||
-              !js.includes("/history-graph/canakci?hours=") ||
-              !js.includes("Geçmiş")) {
-            throw new Error("The deployed Köy page is missing its History panel hook or graph module.");
-          }
-          console.log("Verified deployed Köy History page, deferred script and graph API binding.");
-          NODE
-
       - name: Verify protected admin panel
         env:
           WEB: https://gfs-watch-web.muhsin-ulusoy.workers.dev
