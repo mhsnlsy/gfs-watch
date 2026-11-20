@@ -127,6 +127,8 @@
       "Sıcaklık " + (coverage.temperature_days ?? month.days_with_temperature ?? 0) + "/" +
       month.days_elapsed + " gün · yağış " +
       (coverage.precipitation_days ?? month.days_with_precipitation ?? 0) + "/" +
+      month.days_elapsed + " gün · rüzgâr " +
+      (coverage.wind_days ?? month.days_with_wind ?? 0) + "/" +
       month.days_elapsed + " gün · " +
       (month.sample_count ?? 0).toLocaleString("tr-TR") +
       " ölçüm · son kayıt " + stampText +
