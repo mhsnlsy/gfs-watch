@@ -9,8 +9,8 @@ const LOCATION = {
 const MODELS = {
   cerra: {
     label: "CERRA",
-    resolution: "5 km",
-    startYear: 1985,
+    resolution: "5.5 km",
+    startYear: 1984,
     supportsPrecip: true,
     supportsWind: true,
     daily: [
@@ -24,7 +24,7 @@ const MODELS = {
   },
   era5: {
     label: "ERA5",
-    resolution: "~25 km",
+    resolution: "~31 km",
     startYear: 1940,
     supportsPrecip: true,
     supportsWind: true,
@@ -39,7 +39,7 @@ const MODELS = {
   },
   era5_land: {
     label: "ERA5-Land",
-    resolution: "~11 km",
+    resolution: "~9 km",
     startYear: 1950,
     supportsPrecip: false,
     supportsWind: false,
