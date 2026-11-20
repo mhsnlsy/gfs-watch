@@ -47,8 +47,21 @@ jobs:
       - name: Install Wrangler
         run: npm install --global wrangler@4
 
-      - name: Build separate calendar-day historical payloads
-        run: node scripts/refresh_koy_climate.mjs
+      - name: Build separate calendar-day historical payloads with transient-failure retries
+        run: |
+          set -euo pipefail
+          for attempt in 1 2 3; do
+            rm -f koy-climate-refresh.sql
+            if node scripts/refresh_koy_climate.mjs; then
+              exit 0
+            fi
+            echo "::warning::Historical archive build failed on attempt $attempt/3."
+            if [ "$attempt" -lt 3 ]; then
+              sleep $((30 * attempt))
+            fi
+          done
+          echo "::error::CERRA / ERA5 / ERA5-Land archive build failed after three full attempts."
+          exit 1
 
       - name: Verify generated SQL is one D1-safe atomic statement
         run: |
@@ -82,7 +95,17 @@ jobs:
       - name: Publish all three model caches in one atomic INSERT
         run: |
           set -euo pipefail
-          wrangler d1 execute gfs-watch-koy-gfs --remote --file koy-climate-refresh.sql
+          for attempt in 1 2 3; do
+            if wrangler d1 execute gfs-watch-koy-gfs --remote --file koy-climate-refresh.sql; then
+              exit 0
+            fi
+            echo "::warning::D1 publication failed on attempt $attempt/3."
+            if [ "$attempt" -lt 3 ]; then
+              sleep $((10 * attempt))
+            fi
+          done
+          echo "::error::Atomic D1 publication failed after three attempts."
+          exit 1
 
       - name: Verify all three model caches through the public Cloudflare Worker
         env:
