@@ -1,6 +1,10 @@
 name: Çanakçı History Collector · 10m
 
 on:
+  push:
+    branches: [main]
+    paths:
+      - ".github/workflows/canakci-history-10m.yml"
   schedule:
     - cron: "*/10 * * * *"
   workflow_dispatch:
