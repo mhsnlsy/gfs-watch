@@ -25,7 +25,7 @@
     {id:"dewPoint", label:"Dew Point", color:COLORS.dewPoint, field:"dew_point_c", unit:"°C", agg:"avg", digits:1},
     {id:"precipitation1h", label:"Precipitation 1h", color:COLORS.precipitation1h, field:"rain_1h_mm", unit:"mm", agg:"max", digits:1},
     {id:"dailyPrecipitation", label:"Daily Precipitation", color:COLORS.dailyPrecipitation, field:"rain_00_now_mm", unit:"mm", agg:"max", digits:1},
-    {id:"windChill", label:"Wind Chill", color:COLORS.windChill, field:"feels_like_c", unit:"°C", agg:"avg", digits:1},
+    {id:"windChill", label:"Wind Chill", color:COLORS.windChill, field:"wind_chill_c", unit:"°C", agg:"avg", digits:1},
     {id:"heatIndex", label:"Heat Index", color:COLORS.heatIndex, field:"heat_index_c", unit:"°C", agg:"avg", digits:1},
     {id:"humidity", label:"Relative Humidity", color:COLORS.humidity, field:"humidity_percent", unit:"%", agg:"avg", digits:0},
     {id:"windSpeed", label:"Wind Speed", color:COLORS.windSpeed, field:"wind_speed_kmh", unit:"km/h", agg:"avg", digits:1},
@@ -89,7 +89,7 @@
       #koy-observation-history .oh-zone button{border:0;background:transparent;color:#697786;font-size:10px;font-weight:700;padding:8px 15px;border-radius:10px;cursor:pointer}
       #koy-observation-history .oh-zone button.active{background:#202a38;color:#edf5f8}
       #koy-observation-history .oh-vars{display:flex;flex-wrap:wrap;gap:8px;padding:14px 20px 5px}
-      #koy-observation-history .oh-chip{display:inline-flex;align-items:center;gap:7px;border:1px solid color-mix(in srgb,var(--c) 85%,transparent);color:#aeb7c2;background:rgba(255,255,255,.015);border-radius:999px;padding:7px 10px;font-size:10px;white-space:nowrap}
+      #koy-observation-history .oh-chip{display:inline-flex;align-items:center;gap:7px;border:1px solid rgba(125,211,215,.28);color:#aeb7c2;background:rgba(255,255,255,.015);border-radius:999px;padding:7px 10px;font-size:10px;white-space:nowrap}
       #koy-observation-history .oh-chip-dot{width:8px;height:8px;border-radius:50%;background:var(--c);flex:none}
       #koy-observation-history .oh-chip-x{border:0;background:transparent;color:#66727f;padding:0 0 0 2px;font-size:15px;line-height:1;cursor:pointer}
       #koy-observation-history .oh-add{margin:5px 20px 16px;border:1px dashed rgba(204,225,239,.14);background:#171e28;color:#8d98a6;border-radius:999px;padding:9px 14px;font-size:10px;font-weight:600;cursor:pointer}
