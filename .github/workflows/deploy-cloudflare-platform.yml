@@ -145,9 +145,44 @@ jobs:
           fi
 
           test -s "$GITHUB_WORKSPACE/forecast-data/public/ecmwf/latest.json" || { echo "::error::ECMWF latest.json is missing from gfs-watch-state"; exit 1; }
-          wrangler r2 bucket list > "$RUNNER_TEMP/r2-buckets.txt"
+
+          # Cloudflare can transiently return API code 10001 for the R2 bucket
+          # listing endpoint. Do not fail an otherwise healthy deploy on one
+          # transient control-plane response.
+          r2_bucket_list_ok=0
+          for attempt in $(seq 1 5); do
+            if wrangler r2 bucket list > "$RUNNER_TEMP/r2-buckets.txt"; then
+              r2_bucket_list_ok=1
+              break
+            fi
+            if [ "$attempt" -lt 5 ]; then
+              delay=$((attempt * 3))
+              echo "::warning::R2 bucket list attempt $attempt/5 failed; retrying in ${delay}s."
+              sleep "$delay"
+            fi
+          done
+          test "$r2_bucket_list_ok" -eq 1 || {
+            echo "::error::Cloudflare R2 bucket list failed after 5 attempts."
+            exit 1
+          }
+
           if ! grep -Fq "$R2_BUCKET" "$RUNNER_TEMP/r2-buckets.txt"; then
-            wrangler r2 bucket create "$R2_BUCKET"
+            r2_bucket_create_ok=0
+            for attempt in $(seq 1 5); do
+              if wrangler r2 bucket create "$R2_BUCKET"; then
+                r2_bucket_create_ok=1
+                break
+              fi
+              if [ "$attempt" -lt 5 ]; then
+                delay=$((attempt * 3))
+                echo "::warning::R2 bucket create attempt $attempt/5 failed; retrying in ${delay}s."
+                sleep "$delay"
+              fi
+            done
+            test "$r2_bucket_create_ok" -eq 1 || {
+              echo "::error::R2 bucket creation failed after 5 attempts."
+              exit 1
+            }
           fi
 
                     upload_with_retry() {
