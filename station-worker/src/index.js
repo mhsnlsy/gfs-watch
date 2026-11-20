@@ -686,6 +686,8 @@ async function getCurrentMonthClimate(env, stationKey) {
       days_with_precipitation: precipitationDays.length,
       days_with_wind: windDays.length,
       temperature_coverage_percent: round(expectedDays ? daysWithTemperature / expectedDays * 100 : 0, 1),
+      precipitation_coverage_percent: round(expectedDays ? precipitationDays.length / expectedDays * 100 : 0, 1),
+      wind_coverage_percent: round(expectedDays ? windDays.length / expectedDays * 100 : 0, 1),
       avg_temp_c: round(averageOf(temperatureDays.map(row => row.mean_temperature_c)), 1),
       high_c: temperatureDays.length
         ? round(Math.max(...temperatureDays.map(row => row.max_temperature_c).filter(Number.isFinite)), 1)
@@ -722,8 +724,11 @@ async function getCurrentMonthClimate(env, stationKey) {
     coverage: {
       expected_days: expectedDays,
       temperature_days: daysWithTemperature,
+      missing_temperature_days: Math.max(0, expectedDays - daysWithTemperature),
       precipitation_days: precipitationDays.length,
+      missing_precipitation_days: Math.max(0, expectedDays - precipitationDays.length),
       wind_days: windDays.length,
+      missing_wind_days: Math.max(0, expectedDays - windDays.length),
       latest_sample_at_utc: latestDailySample?.last_sample_at_utc || null
     },
     daily,
