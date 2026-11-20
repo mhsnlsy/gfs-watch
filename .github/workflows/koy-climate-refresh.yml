@@ -79,12 +79,12 @@ jobs:
           wrangler d1 execute gfs-watch-koy-gfs --remote --command \
             "CREATE TABLE IF NOT EXISTS climate_cache (cache_key TEXT PRIMARY KEY, model TEXT NOT NULL, period_date TEXT NOT NULL, payload_json TEXT NOT NULL, updated_at_utc TEXT NOT NULL);"
 
-      - name: Publish all three model caches to Cloudflare D1
+      - name: Publish all three model caches in one atomic INSERT
         run: |
           set -euo pipefail
           wrangler d1 execute gfs-watch-koy-gfs --remote --file koy-climate-refresh.sql
 
-      - name: Verify all three independent model payloads through the public Worker
+      - name: Verify all three model caches through the public Cloudflare Worker
         env:
           KOY_CLIMATE_API: https://gfs-watch-koy-gfs.muhsin-ulusoy.workers.dev/api/climate
         run: |
@@ -108,8 +108,9 @@ jobs:
               period_date: data.period_date, expectedDate, long_term: data.long_term
             }));
           }
+          const minimumSamples = data.period_date.slice(5) === "02-29" ? 8 : 10;
           if (!Array.isArray(data.same_day_history) ||
-              data.same_day_history.length < 10 ||
+              data.same_day_history.length < minimumSamples ||
               data.same_day_history.length !== Number(data.historical_day_sample_count) ||
               Number(data.archive_row_count) < data.same_day_history.length * 20) {
             throw new Error("Calendar-day history is incomplete: " + model);
@@ -135,9 +136,8 @@ jobs:
             model,
             period_date: data.period_date,
             years: [data.historical_start_year, data.historical_end_year],
-            same_day_samples: data.historical_day_sample_count,
             archive_row_count: data.archive_row_count,
-            same_day_samples: data.same_day_history.length,
+            historical_day_samples: data.same_day_history.length,
             long_term_mean_c: data.long_term.avg_c,
             precipitation_supported: data.supported.precipitation,
             wind_supported: data.supported.wind,
