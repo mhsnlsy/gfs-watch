@@ -137,12 +137,30 @@ async function load(){
 }
 function showTooltipAtX(clientX,chartRect,html,color){const tip=$("oh-tooltip");if(!tip)return;tip.style.setProperty("--chart-color",color);tip.innerHTML=html;tip.style.display="block";const rect=tip.getBoundingClientRect(),m=10;let left=clientX-rect.width/2;let top=chartRect.top-rect.height-10;if(top<m)top=chartRect.top+10;if(left+rect.width>innerWidth-m)left=innerWidth-rect.width-m;if(left<m)left=m;tip.style.left=left+"px";tip.style.top=top+"px"}
 function hideTooltip(){const tip=$("oh-tooltip");if(tip)tip.style.display="none"}
+function localDailyPrecipitation(points){
+ const out=[];
+ let dayKey="",startRaw=null,carry=0,prevRaw=null;
+ for(const p of points){
+  const d=new Date(p.time);
+  const localKey=new Date(d.getTime()+180*60000).toISOString().slice(0,10);
+  if(localKey!==dayKey){
+   dayKey=localKey;startRaw=Number(p.value)||0;carry=0;prevRaw=startRaw;
+  }else if(prevRaw!==null && Number(p.value)<prevRaw-0.05){
+   carry=Math.max(0,prevRaw-(startRaw||0));
+  }
+  const raw=Number(p.value)||0;
+  const value=raw>=prevRaw-0.05 && carry===0 ? Math.max(0,raw-(startRaw||0)) : Math.max(0,carry+raw);
+  out.push({time:p.time,value});
+  prevRaw=raw;
+ }
+ return out;
+}
 function renderCharts(){
  if(!state.opened)return;
  const data=state.cache.get(state.hours);
  if(!data||!Array.isArray(data.samples)||!data.samples.length){$("oh-current-time").textContent="Bu dönem için kayıt bulunamadı";$("oh-charts").innerHTML='<div class="oh-empty">Bu dönem için kayıt bulunamadı.</div>';return;}
  const latest=data.samples[data.samples.length-1];$("oh-current-time").textContent=dateLabel(latest.latest_fetched_at_utc||latest.bucket_utc,state.hours,false);
- $("oh-charts").innerHTML=state.selected.map(id=>{const v=V.find(item=>item.id===id);if(!v)return "";const points=data.samples.map(s=>({time:s.bucket_utc,value:val(s[v.field])})).filter(p=>p.value!==null);return renderChart(v,points,state.hours);}).join("");bindChartTooltips();
+ $("oh-charts").innerHTML=state.selected.map(id=>{const v=V.find(item=>item.id===id);if(!v)return "";let points=data.samples.map(s=>({time:s.bucket_utc,value:val(s[v.field])})).filter(p=>p.value!==null);if(v.id==="dailyPrecipitation")points=localDailyPrecipitation(points);return renderChart(v,points,state.hours);}).join("");bindChartTooltips();
 }
 function renderChart(v,points,hours){
  if(!points.length)return '<article class="oh-chart" style="--chart-color:'+v.color+'"><div class="oh-chart-name"><span class="oh-chart-dot" style="background:'+v.color+'"></span>'+esc(v.label)+'</div><div class="oh-empty">Bu değişken için ölçüm bulunmuyor.</div></article>';
