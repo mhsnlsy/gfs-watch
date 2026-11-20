@@ -954,8 +954,13 @@ export default {
   },
 
   async scheduled(event, env, ctx) {
+    // Çanakçı is collected by the isolated 10-minute GitHub Actions workflow.
     ctx.waitUntil(
-      collectAll(env, "cron").catch(error => {
+      Promise.all(
+        Object.keys(STATION_DEFS)
+          .filter(key => key !== "canakci")
+          .map(key => collectOne(env, key, "cron"))
+      ).catch(error => {
         console.error("[SCHEDULED COLLECTION]", error && error.message || error);
       })
     );
