@@ -69,9 +69,9 @@ function injectStyle(){
   "#koy-observation-history .oh-point{fill:transparent;stroke:transparent;stroke-width:12;cursor:crosshair;pointer-events:none;vector-effect:non-scaling-stroke}",
   "#koy-observation-history .oh-point:hover{fill:transparent;stroke:transparent}",
  "#koy-observation-history .oh-crosshair{stroke:rgba(238,245,248,.42);stroke-width:1;stroke-dasharray:4 4;pointer-events:none;vector-effect:non-scaling-stroke}",
-  "#koy-observation-history .oh-tooltip{position:fixed;z-index:100000;pointer-events:none;display:none;min-width:120px;max-width:190px;padding:8px 10px;border:1px solid rgba(204,225,239,.18);border-radius:9px;background:rgba(17,24,33,.96);box-shadow:0 8px 25px rgba(0,0,0,.35);color:#eef5f8;font:10px/1.45 DM Sans,sans-serif}",
-  "#koy-observation-history .oh-tooltip strong{display:block;color:var(--chart-color);font-size:12px;margin-bottom:2px}",
-  "#koy-observation-history .oh-tooltip span{display:block;color:#aeb7c2}",
+  "#koy-observation-history .oh-chart-tooltip{position:absolute;z-index:20;pointer-events:none;display:none;min-width:120px;max-width:190px;padding:8px 10px;border:1px solid rgba(204,225,239,.18);border-radius:9px;background:rgba(17,24,33,.96);box-shadow:0 8px 25px rgba(0,0,0,.35);color:#eef5f8;font:10px/1.45 DM Sans,sans-serif}",
+  "#koy-observation-history .oh-chart-tooltip strong{display:block;color:var(--chart-color);font-size:12px;margin-bottom:2px}",
+  "#koy-observation-history .oh-chart-tooltip span{display:block;color:#aeb7c2}",
  "#koy-observation-history .oh-range{font-size:9px;color:#8d99a6;margin-top:1px}",
  "#koy-observation-history .oh-axis{display:flex;justify-content:space-between;gap:5px;color:#7e8a98;font-size:8px;margin-top:7px}",
  "#koy-observation-history .oh-axis span{text-align:center;flex:1;white-space:nowrap}",
@@ -102,7 +102,7 @@ function build(){
  '<div class="oh-zone" id="oh-zone"><button type="button" data-zone="local" class="active">TSİ (UTC+3)</button></div></div></div>'+
  '<div class="oh-vars" id="oh-vars"></div><button type="button" class="oh-add" id="oh-add">＋ Add variable</button>'+
  '<div class="oh-chart-list" id="oh-charts"><div class="oh-empty">Geçmiş veriler yükleniyor…</div></div></div></section>'+
- '<div class="oh-tooltip" id="oh-tooltip" role="status" aria-live="polite"></div><div class="oh-picker-backdrop" id="oh-backdrop"></div><div class="oh-picker" id="oh-picker" role="dialog" aria-modal="true" aria-label="Add variable"><div class="oh-picker-head">Add variable</div><div id="oh-options"></div></div>';
+ '<div class="oh-picker-backdrop" id="oh-backdrop"></div><div class="oh-picker" id="oh-picker" role="dialog" aria-modal="true" aria-label="Add variable"><div class="oh-picker-head">Add variable</div><div id="oh-options"></div></div>';
  panel.appendChild(root);
  bind();renderChips();renderCharts();
 }
@@ -172,48 +172,85 @@ function renderChart(v,points,hours){
  const last=points[points.length-1],tickCount=Math.min(6,points.length),ticks=[];
  for(let i=0;i<tickCount;i++){const ix=Math.round(i*(points.length-1)/Math.max(1,tickCount-1));ticks.push(dateLabel(points[ix].time,hours,true));}
  return '<article class="oh-chart" style="--chart-color:'+v.color+'"><div class="oh-chart-head"><div class="oh-chart-name"><span class="oh-chart-dot" style="background:'+v.color+'"></span>'+esc(v.label)+'</div><div class="oh-value">'+fmt(last.value,v.digits)+' '+v.unit+'</div></div>'+
- '<div class="oh-graph"><svg viewBox="0 0 '+width+' '+height+'" preserveAspectRatio="none" role="img" aria-label="'+esc(v.label)+' history chart">'+grid+'<path class="oh-line" d="'+path+'"></path><line class="oh-crosshair" x1="0" y1="'+pad.t+'" x2="0" y2="'+(height-pad.b)+'" opacity="0"></line>'+points.map((p,i)=>{const px=x(i),py=y(p.value),time=dateLabel(p.time,hours,false),value=fmt(p.value,v.digits)+" "+v.unit;return '<circle class="oh-point" cx="'+px.toFixed(2)+'" cy="'+py.toFixed(2)+'" r="8" tabindex="0" data-time="'+esc(time)+'" data-value="'+esc(value)+'" aria-label="'+esc(time)+" · "+esc(value)+'"></circle>';}).join("")+'</svg></div>'+
+ '<div class="oh-graph"><svg viewBox="0 0 '+width+' '+height+'" preserveAspectRatio="none" role="img" aria-label="'+esc(v.label)+' history chart">'+grid+'<path class="oh-line" d="'+path+'"></path><line class="oh-crosshair" x1="0" y1="'+pad.t+'" x2="0" y2="'+(height-pad.b)+'" opacity="0"></line>'+points.map((p,i)=>{const px=x(i),py=y(p.value),time=dateLabel(p.time,hours,false),value=fmt(p.value,v.digits)+" "+v.unit;return '<circle class="oh-point" cx="'+px.toFixed(2)+'" cy="'+py.toFixed(2)+'" r="8" tabindex="0" data-time="'+esc(time)+'" data-value="'+esc(value)+'" data-epoch="'+new Date(p.time).getTime()+'" aria-label="'+esc(time)+" · "+esc(value)+'"></circle>';}).join("")+'</svg><div class="oh-chart-tooltip" aria-hidden="true"></div></div>'+
  '<div class="oh-range">Lowest '+fmt(min,v.digits)+' · Highest '+fmt(max,v.digits)+' '+v.unit+'</div><div class="oh-axis">'+ticks.map(t=>'<span>'+esc(t)+'</span>').join("")+'</div></article>';
 }
 function bindChartTooltips(){
- document.querySelectorAll("#koy-observation-history .oh-chart").forEach(article=>{
+ const charts=Array.from(document.querySelectorAll("#koy-observation-history .oh-chart")).map(article=>{
   const svg=article.querySelector(".oh-graph svg");
   const points=Array.from(article.querySelectorAll(".oh-point"));
   const crosshair=svg?.querySelector(".oh-crosshair");
-  if(!svg||!points.length||!crosshair)return;
-  const label=article.querySelector(".oh-chart-name")?.textContent?.trim()||"";
-  const color=article.style.getPropertyValue("--chart-color")||"";
-  const nearest=e=>{
-   const rect=svg.getBoundingClientRect();
-   const sx=e.clientX;
-   let best=null,bestD=Infinity;
-   points.forEach(point=>{
-    const px=rect.left+(Number(point.getAttribute("cx"))/1000)*rect.width;
-    const d=Math.abs(sx-px);
-    if(d<bestD){bestD=d;best=point;}
-   });
-   return best;
-  };
-  const show=e=>{
-   const point=nearest(e);
+  const tooltip=article.querySelector(".oh-chart-tooltip");
+  return {article,svg,points,crosshair,tooltip};
+ }).filter(c=>c.svg&&c.points.length&&c.crosshair&&c.tooltip);
+ if(!charts.length)return;
+ let active=false;
+ const nearestByX=(chart,clientX)=>{
+  const rect=chart.svg.getBoundingClientRect();
+  let best=null,bestD=Infinity;
+  chart.points.forEach(point=>{
+   const px=rect.left+(Number(point.getAttribute("cx"))/1000)*rect.width;
+   const d=Math.abs(clientX-px);
+   if(d<bestD){bestD=d;best=point;}
+  });
+  return best;
+ };
+ const nearestByTime=(chart,targetTime)=>{
+  let best=null,bestD=Infinity;
+  chart.points.forEach(point=>{
+   const d=Math.abs(Number(point.dataset.epoch)-targetTime);
+   if(d<bestD){bestD=d;best=point;}
+  });
+  return best;
+ };
+ const hideAll=()=>{
+  active=false;
+  charts.forEach(c=>{
+   c.crosshair.setAttribute("opacity","0");
+   c.tooltip.style.display="none";
+   c.tooltip.setAttribute("aria-hidden","true");
+  });
+ };
+ const showAll=(sourceEvent)=>{
+  const source=charts.find(c=>c.svg===sourceEvent.currentTarget);
+  if(!source)return;
+  const sourcePoint=nearestByX(source,sourceEvent.clientX);
+  if(!sourcePoint)return;
+  const targetTime=Number(sourcePoint.dataset.epoch);
+  active=true;
+  charts.forEach(c=>{
+   const point=nearestByTime(c,targetTime);
    if(!point)return;
-   const rect=svg.getBoundingClientRect();
+   const rect=c.svg.getBoundingClientRect();
    const px=Number(point.getAttribute("cx"));
    const clientX=rect.left+(px/1000)*rect.width;
-   crosshair.setAttribute("x1",px.toFixed(2));
-   crosshair.setAttribute("x2",px.toFixed(2));
-   crosshair.setAttribute("y1","0");
-   crosshair.setAttribute("y2","180");
-   crosshair.setAttribute("opacity","1");
+   c.crosshair.setAttribute("x1",px.toFixed(2));
+   c.crosshair.setAttribute("x2",px.toFixed(2));
+   c.crosshair.setAttribute("y1","0");
+   c.crosshair.setAttribute("y2","180");
+   c.crosshair.setAttribute("opacity","1");
+   const label=c.article.querySelector(".oh-chart-name")?.textContent?.trim()||"";
+   const color=c.article.style.getPropertyValue("--chart-color")||"";
    const html="<strong>"+esc(label)+"</strong><span>"+esc(point.dataset.time||"—")+"</span><span>"+esc(point.dataset.value||"—")+"</span>";
-   showTooltipAtX(clientX+8,rect,html,color);
-  };
-  const hide=()=>{hideTooltip();crosshair.setAttribute("opacity","0");};
-  svg.addEventListener("pointerdown",e=>{svg.setPointerCapture?.(e.pointerId);show(e);});
-  svg.addEventListener("pointermove",show);
-  svg.addEventListener("pointerup",e=>{if(e.pointerType!=="mouse")hide();svg.releasePointerCapture?.(e.pointerId);});
-  svg.addEventListener("pointercancel",hide);
-  svg.addEventListener("pointerleave",e=>{if(e.pointerType==="mouse")hide();});
+   c.tooltip.style.setProperty("--chart-color",color);
+   c.tooltip.innerHTML=html;
+   c.tooltip.style.display="block";
+   c.tooltip.setAttribute("aria-hidden","false");
+   const tw=c.tooltip.offsetWidth,th=c.tooltip.offsetHeight;
+   let left=(px/1000)*rect.width-tw/2+8;
+   let top=6;
+   if(left<6)left=6;
+   if(left+tw>rect.width-6)left=rect.width-tw-6;
+   c.tooltip.style.left=left+"px";
+   c.tooltip.style.top=top+"px";
+  });
+ };
+ charts.forEach(c=>{
+  c.svg.addEventListener("pointerdown",e=>{c.svg.setPointerCapture?.(e.pointerId);showAll(e);});
+  c.svg.addEventListener("pointermove",showAll);
+  c.svg.addEventListener("pointerup",e=>{if(e.pointerType!=="mouse")hideAll();c.svg.releasePointerCapture?.(e.pointerId);});
+  c.svg.addEventListener("pointercancel",hideAll);
+  c.svg.addEventListener("pointerleave",e=>{if(e.pointerType==="mouse")hideAll();});
  });
 }
 function start(){injectStyle();build();}
