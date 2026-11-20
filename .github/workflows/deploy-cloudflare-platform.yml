@@ -161,10 +161,23 @@ jobs:
               sleep "$delay"
             fi
           done
-          test "$r2_bucket_list_ok" -eq 1 || {
-            echo "::error::Cloudflare R2 bucket list failed after 5 attempts."
-            exit 1
+          disable_r2_fallback() {
+            node - wrangler.jsonc <<'NODE'
+            const fs = require("fs");
+            const file = process.argv[2];
+            const config = JSON.parse(fs.readFileSync(file, "utf8"));
+            delete config.r2_buckets;
+            fs.writeFileSync(file, JSON.stringify(config, null, 2) + "\n");
+NODE
+            echo "R2 unavailable; continuing with the existing D1/Static Assets fallback."
+            echo "R2_ENABLED=0" >> "$GITHUB_ENV"
           }
+
+          if [ "$r2_bucket_list_ok" -ne 1 ]; then
+            echo "::warning::Cloudflare R2 bucket list failed after 5 attempts; disabling R2 for this deploy."
+            disable_r2_fallback
+            exit 0
+          fi
 
           if ! grep -Fq "$R2_BUCKET" "$RUNNER_TEMP/r2-buckets.txt"; then
             r2_bucket_create_ok=0
@@ -179,10 +192,11 @@ jobs:
                 sleep "$delay"
               fi
             done
-            test "$r2_bucket_create_ok" -eq 1 || {
-              echo "::error::R2 bucket creation failed after 5 attempts."
-              exit 1
-            }
+            if [ "$r2_bucket_create_ok" -ne 1 ]; then
+              echo "::warning::R2 bucket creation failed after 5 attempts; disabling R2 for this deploy."
+              disable_r2_fallback
+              exit 0
+            fi
           fi
 
                     upload_with_retry() {
@@ -247,13 +261,21 @@ jobs:
               doc.forecast_source === "meteopt" && maxHour >= 180 ? 0 : 1);
           NODE
           then
-            upload_tree_parallel "$GITHUB_WORKSPACE/forecast-data/public/ecmwf" "data/ecmwf"
+            if ! upload_tree_parallel "$GITHUB_WORKSPACE/forecast-data/public/ecmwf" "data/ecmwf"; then
+            echo "::warning::ECMWF R2 archive upload failed; disabling R2 for this deploy."
+            disable_r2_fallback
+            exit 0
+          fi
             echo "Uploaded complete ECMWF archive cache."
           else
             echo "Skipping ECMWF cache upload: checked-out latest.json is not a complete 180h MeteoPT payload."
           fi
 
-          upload_tree_parallel "$GITHUB_WORKSPACE/istanbul-gfs-data/gfs/notifications" "data/notifications"
+          if ! upload_tree_parallel "$GITHUB_WORKSPACE/istanbul-gfs-data/gfs/notifications" "data/notifications"; then
+            echo "::warning::Notification R2 archive upload failed; disabling R2 for this deploy."
+            disable_r2_fallback
+            exit 0
+          fi
 
           uploaded="$(find "$GITHUB_WORKSPACE/istanbul-gfs-data/gfs/notifications" -type f 2>/dev/null | wc -l | tr -d ' ')"
           test "$uploaded" -gt 0 || { echo "::error::No notification archive objects were uploaded to R2"; exit 1; }
