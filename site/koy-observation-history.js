@@ -65,12 +65,12 @@ function injectStyle(){
  "#koy-observation-history .oh-graph{height:160px;margin-top:7px}",
  "#koy-observation-history svg{width:100%;height:100%;display:block;overflow:visible}",
  "#koy-observation-history .oh-grid{stroke:rgba(200,220,235,.10);stroke-width:1}",
- "#koy-observation-history .oh-line{fill:none;stroke:var(--chart-color);stroke-width:2.4;stroke-linecap:round;stroke-linejoin:round}
-#koy-observation-history .oh-point{fill:var(--chart-color);stroke:#202832;stroke-width:2;cursor:crosshair;vector-effect:non-scaling-stroke}
-#koy-observation-history .oh-point:hover{stroke:#eef5f8;stroke-width:2.5}
-#koy-observation-history .oh-tooltip{position:fixed;z-index:100000;pointer-events:none;display:none;min-width:120px;max-width:190px;padding:8px 10px;border:1px solid rgba(204,225,239,.18);border-radius:9px;background:rgba(17,24,33,.96);box-shadow:0 8px 25px rgba(0,0,0,.35);color:#eef5f8;font:10px/1.45 DM Sans,sans-serif}
-#koy-observation-history .oh-tooltip strong{display:block;color:var(--chart-color);font-size:12px;margin-bottom:2px}
-#koy-observation-history .oh-tooltip span{display:block;color:#aeb7c2}",
+  "#koy-observation-history .oh-line{fill:none;stroke:var(--chart-color);stroke-width:2.4;stroke-linecap:round;stroke-linejoin:round}",
+  "#koy-observation-history .oh-point{fill:var(--chart-color);stroke:#202832;stroke-width:2;cursor:crosshair;vector-effect:non-scaling-stroke}",
+  "#koy-observation-history .oh-point:hover{stroke:#eef5f8;stroke-width:2.5}",
+  "#koy-observation-history .oh-tooltip{position:fixed;z-index:100000;pointer-events:none;display:none;min-width:120px;max-width:190px;padding:8px 10px;border:1px solid rgba(204,225,239,.18);border-radius:9px;background:rgba(17,24,33,.96);box-shadow:0 8px 25px rgba(0,0,0,.35);color:#eef5f8;font:10px/1.45 DM Sans,sans-serif}",
+  "#koy-observation-history .oh-tooltip strong{display:block;color:var(--chart-color);font-size:12px;margin-bottom:2px}",
+  "#koy-observation-history .oh-tooltip span{display:block;color:#aeb7c2}",
  "#koy-observation-history .oh-range{font-size:9px;color:#8d99a6;margin-top:1px}",
  "#koy-observation-history .oh-axis{display:flex;justify-content:space-between;gap:5px;color:#7e8a98;font-size:8px;margin-top:7px}",
  "#koy-observation-history .oh-axis span{text-align:center;flex:1;white-space:nowrap}",
