@@ -5,7 +5,6 @@ on:
   push:
     branches: [main]
     paths:
-      - ".github/workflows/deploy-cloudflare-platform.yml"
       - "site/**"
       - "assets/brand/**"
       - "scripts/build_site_icons.py"
