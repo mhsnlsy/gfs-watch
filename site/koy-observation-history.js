@@ -184,9 +184,11 @@ function bindChartTooltips(){
    const clientX=rect.left+(px/1000)*rect.width;
    crosshair.setAttribute("x1",px.toFixed(2));
    crosshair.setAttribute("x2",px.toFixed(2));
+   crosshair.setAttribute("y1","0");
+   crosshair.setAttribute("y2","180");
    crosshair.setAttribute("opacity","1");
    const html="<strong>"+esc(label)+"</strong><span>"+esc(point.dataset.time||"—")+"</span><span>"+esc(point.dataset.value||"—")+"</span>";
-   showTooltipAtX(clientX,rect,html,color);
+   showTooltipAtX(clientX+8,rect,html,color);
   };
   const hide=()=>{hideTooltip();crosshair.setAttribute("opacity","0");};
   svg.addEventListener("pointerdown",e=>{svg.setPointerCapture?.(e.pointerId);show(e);});
