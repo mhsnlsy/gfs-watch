@@ -124,7 +124,9 @@
       : "zaman bilgisi yok";
     setText("climate-status",
       "MGM Çanakçı · " +
-      (coverage.temperature_days ?? month.days_with_temperature ?? 0) + "/" +
+      "Sıcaklık " + (coverage.temperature_days ?? month.days_with_temperature ?? 0) + "/" +
+      month.days_elapsed + " gün · yağış " +
+      (coverage.precipitation_days ?? month.days_with_precipitation ?? 0) + "/" +
       month.days_elapsed + " gün · " +
       (month.sample_count ?? 0).toLocaleString("tr-TR") +
       " ölçüm · son kayıt " + stampText +
@@ -210,6 +212,9 @@
       setText("climate-precip-ratio", "Tarihsel yağış karşılaştırması yok");
     }
 
+    setText("climate-anomaly-label",
+      monthLabel + " " + (monthlyData?.month?.year || "") + " YAĞIŞ ANOMALİSİ");
+
     if (supported.precipitation && normal.normal_mm !== null) {
       const actual = asNumber(month.precipitation_mm);
       const reference = asNumber(normal.normal_mm);
@@ -223,8 +228,6 @@
         " mm · " + (normal.years || 0) + " yıllık karşılaştırma");
       setText("climate-anomaly-source",
         "MGM gerçekleşen / " + meta.label + " normali");
-      setText("climate-anomaly-label",
-        monthLabel + " " + (monthData?.month?.year || "") + " YAĞIŞ ANOMALİSİ");
       const marker = $("climate-anomaly-bar")?.querySelector("i");
       if (marker && anomaly !== null) {
         marker.style.left = Math.max(3, Math.min(97, 50 + anomaly / 2)) + "%";
