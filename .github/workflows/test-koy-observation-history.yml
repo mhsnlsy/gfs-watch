@@ -1,0 +1,32 @@
+name: Test Köy Observation History
+
+on:
+  pull_request:
+    branches: [main]
+    paths:
+      - ".github/workflows/test-koy-observation-history.yml"
+      - ".github/workflows/village-history.yml"
+      - ".github/workflows/validate.yml"
+      - "site/koy.html"
+      - "site/koy-observation-history.js"
+      - "station-worker/src/index.js"
+      - "scripts/test_koy_observation_history.mjs"
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  test-history:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v5
+      - uses: actions/setup-node@v5
+        with:
+          node-version: "22"
+      - name: Check feature JavaScript syntax
+        run: |
+          node --check site/koy-observation-history.js
+          node --check station-worker/src/index.js
+      - name: Test Köy history UI and archive behavior
+        run: node scripts/test_koy_observation_history.mjs

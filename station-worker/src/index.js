@@ -34,7 +34,7 @@ const STATION_DEFS = {
 };
 const RETENTION_HOURS = null;
 const MAX_SOURCE_AGE_MINUTES = 20;
-const MAX_HISTORY_HOURS = 384; // 16 günlük GFS doğrulama penceresi
+const MAX_HISTORY_HOURS = 8760; // 1 yıllık gözlem geçmişi
 
 function json(data, status = 200) {
   return new Response(JSON.stringify(data), {
@@ -468,57 +468,66 @@ function observationFromMgm(stationKey, row, sourceUrl) {
     observation_method: "mgm-sondurumlar"
   };
 }
-async function storeObservation(env, stationKey, observation, triggerSource, durationMs) {
+async function storeObservation(env, stationKey, observation, triggerSource, durationMs, options = {}) {
   if (!env.STATIONS_DB) return;
   const payload = JSON.stringify(observation);
   const nowIso = new Date().toISOString();
-  const current = env.STATIONS_DB.prepare(
-    "INSERT OR REPLACE INTO station_current (station_key, station_id, station_name, observed_at_utc, fetched_at_utc, status, payload_json, last_error, last_success_utc, last_attempt_utc) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)"
-  ).bind(
-    stationKey,
-    observation.station_id || "",
-    observation.station_name || stationKey,
-    observation.observed_at_utc || null,
-    observation.fetched_at_utc || nowIso,
-    observation.status || "live",
-    payload,
-    null,
-    nowIso,
-    nowIso
-  );
-  const history = env.STATIONS_DB.prepare(
-    "INSERT INTO station_history (station_key, station_id, station_name, observed_at_utc, fetched_at_utc, temperature_c, humidity_percent, pressure_hpa, wind_speed_kmh, wind_direction, rain_1h_mm, rain_10m_mm, rain_6h_mm, rain_12h_mm, rain_24h_mm, rain_00_now_mm, feels_like_c, payload_json) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?) " +
-    "ON CONFLICT(station_key, observed_at_utc) DO UPDATE SET " +
-    "station_id=excluded.station_id, station_name=excluded.station_name, fetched_at_utc=excluded.fetched_at_utc, " +
-    "temperature_c=excluded.temperature_c, humidity_percent=excluded.humidity_percent, pressure_hpa=excluded.pressure_hpa, " +
-    "wind_speed_kmh=excluded.wind_speed_kmh, wind_direction=excluded.wind_direction, rain_1h_mm=excluded.rain_1h_mm, " +
-    "rain_10m_mm=excluded.rain_10m_mm, rain_6h_mm=excluded.rain_6h_mm, rain_12h_mm=excluded.rain_12h_mm, " +
-    "rain_24h_mm=excluded.rain_24h_mm, rain_00_now_mm=excluded.rain_00_now_mm, feels_like_c=excluded.feels_like_c, payload_json=excluded.payload_json"
-  ).bind(
-    stationKey,
-    observation.station_id || "",
-    observation.station_name || stationKey,
-    observation.observed_at_utc || null,
-    observation.fetched_at_utc || nowIso,
-    observation.temperature_2m_c,
-    observation.humidity_percent,
-    observation.station_pressure_hpa,
-    observation.wind_speed_10m_kmh,
-    observation.wind_direction_degrees,
-    observation.precipitation_1h_mm,
-    observation.precipitation_10m_mm,
-    observation.precipitation_6h_mm,
-    observation.precipitation_12h_mm,
-    observation.precipitation_24h_mm,
-    observation.precipitation_daily_mm,
-    observation.feels_like_c,
-    payload
-  );
-  const diagnostic = env.STATIONS_DB.prepare(
+  const statements = [
+    env.STATIONS_DB.prepare(
+      "INSERT OR REPLACE INTO station_current (station_key, station_id, station_name, observed_at_utc, fetched_at_utc, status, payload_json, last_error, last_success_utc, last_attempt_utc) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)"
+    ).bind(
+      stationKey,
+      observation.station_id || "",
+      observation.station_name || stationKey,
+      observation.observed_at_utc || null,
+      observation.fetched_at_utc || nowIso,
+      observation.status || "live",
+      payload,
+      null,
+      nowIso,
+      nowIso
+    )
+  ];
+
+  // Keep the live Köy observation on the existing two-minute refresh. Only
+  // the dedicated ten-minute workflow writes Çanakçı history points.
+  if (options.archiveHistory !== false) {
+    statements.push(env.STATIONS_DB.prepare(
+      "INSERT INTO station_history (station_key, station_id, station_name, observed_at_utc, fetched_at_utc, temperature_c, humidity_percent, pressure_hpa, wind_speed_kmh, wind_direction, rain_1h_mm, rain_10m_mm, rain_6h_mm, rain_12h_mm, rain_24h_mm, rain_00_now_mm, feels_like_c, payload_json) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?) " +
+      "ON CONFLICT(station_key, observed_at_utc) DO UPDATE SET " +
+      "station_id=excluded.station_id, station_name=excluded.station_name, fetched_at_utc=excluded.fetched_at_utc, " +
+      "temperature_c=excluded.temperature_c, humidity_percent=excluded.humidity_percent, pressure_hpa=excluded.pressure_hpa, " +
+      "wind_speed_kmh=excluded.wind_speed_kmh, wind_direction=excluded.wind_direction, rain_1h_mm=excluded.rain_1h_mm, " +
+      "rain_10m_mm=excluded.rain_10m_mm, rain_6h_mm=excluded.rain_6h_mm, rain_12h_mm=excluded.rain_12h_mm, " +
+      "rain_24h_mm=excluded.rain_24h_mm, rain_00_now_mm=excluded.rain_00_now_mm, feels_like_c=excluded.feels_like_c, payload_json=excluded.payload_json"
+    ).bind(
+      stationKey,
+      observation.station_id || "",
+      observation.station_name || stationKey,
+      observation.observed_at_utc || null,
+      observation.fetched_at_utc || nowIso,
+      observation.temperature_2m_c,
+      observation.humidity_percent,
+      observation.station_pressure_hpa,
+      observation.wind_speed_10m_kmh,
+      observation.wind_direction_degrees,
+      observation.precipitation_1h_mm,
+      observation.precipitation_10m_mm,
+      observation.precipitation_6h_mm,
+      observation.precipitation_12h_mm,
+      observation.precipitation_24h_mm,
+      observation.precipitation_daily_mm,
+      observation.feels_like_c,
+      payload
+    ));
+  }
+
+  statements.push(env.STATIONS_DB.prepare(
     "INSERT INTO station_collection_diagnostics (station_key, last_attempt_utc, last_success_utc, last_error, last_trigger_source, collection_duration_ms) VALUES (?, ?, ?, NULL, ?, ?) " +
     "ON CONFLICT(station_key) DO UPDATE SET last_attempt_utc=excluded.last_attempt_utc, last_success_utc=excluded.last_success_utc, last_error=NULL, last_trigger_source=excluded.last_trigger_source, collection_duration_ms=excluded.collection_duration_ms"
-  ).bind(stationKey, nowIso, nowIso, triggerSource || "unknown", Math.max(0, Math.round(durationMs || 0)));
-  await env.STATIONS_DB.batch([current, history, diagnostic]);
+  ).bind(stationKey, nowIso, nowIso, triggerSource || "unknown", Math.max(0, Math.round(durationMs || 0))));
+
+  await env.STATIONS_DB.batch(statements);
 }
 async function recordCollectionFailure(env, stationKey, error, triggerSource, durationMs) {
   if (!env.STATIONS_DB) return;
@@ -543,7 +552,7 @@ async function pruneHistory(env) {
     ).bind(new Date(Date.now() - RETENTION_HOURS * 3600000).toISOString()).run();
   }
 }
-async function collectOne(env, stationKey, triggerSource) {
+async function collectOne(env, stationKey, triggerSource, options = {}) {
   const startedAt = Date.now();
   try {
     let observation;
@@ -554,7 +563,7 @@ async function collectOne(env, stationKey, triggerSource) {
       observation = observationFromMgm(stationKey, row, url);
     }
     const durationMs = Date.now() - startedAt;
-    await storeObservation(env, stationKey, observation, triggerSource, durationMs);
+    await storeObservation(env, stationKey, observation, triggerSource, durationMs, options);
     return {
       ok: true,
       status: observation.status || "live",
@@ -576,12 +585,15 @@ async function collectOne(env, stationKey, triggerSource) {
 }
 
 async function collectAll(env, triggerSource = "unknown") {
-  // These upstream stations are independent. A slow ENKA request must never
-  // hold back the three MGM stations or make a two-minute collection overrun.
+  // Every live station, including Köy, retains the existing two-minute
+  // current-value refresh. Only Çanakçı history writes are decimated; the
+  // isolated GitHub Actions workflow writes those archive samples every 10m.
   const collected = await Promise.all(
     Object.keys(STATION_DEFS).map(async key => ({
       key,
-      result: await collectOne(env, key, triggerSource)
+      result: await collectOne(env, key, triggerSource, {
+        archiveHistory: !(key === "canakci" && triggerSource === "cron")
+      })
     }))
   );
   const results = Object.fromEntries(collected.map(item => [item.key, item.result]));
@@ -736,6 +748,80 @@ async function getCurrentMonthClimate(env, stationKey) {
   };
 }
 
+
+function dewPointC(temperatureC, humidityPercent) {
+  if (!Number.isFinite(temperatureC) || !Number.isFinite(humidityPercent) || humidityPercent <= 0) return null;
+  const rh = Math.max(1, Math.min(100, humidityPercent));
+  const a = 17.62, b = 243.12;
+  const gamma = Math.log(rh / 100) + (a * temperatureC) / (b + temperatureC);
+  return round((b * gamma) / (a - gamma), 1);
+}
+
+function windChillC(temperatureC, windKmh) {
+  if (!Number.isFinite(temperatureC) || !Number.isFinite(windKmh) || temperatureC > 10 || windKmh < 4.8) return null;
+  return round(13.12 + 0.6215 * temperatureC - 11.37 * Math.pow(windKmh, 0.16) + 0.3965 * temperatureC * Math.pow(windKmh, 0.16), 1);
+}
+
+function heatIndexC(temperatureC, humidityPercent) {
+  if (!Number.isFinite(temperatureC) || !Number.isFinite(humidityPercent) || temperatureC < 27 || humidityPercent < 40) return null;
+  const t = temperatureC * 9 / 5 + 32;
+  const rh = humidityPercent;
+  let hi = -42.379 + 2.04901523 * t + 10.14333127 * rh - 0.22475541 * t * rh
+    - 0.00683783 * t * t - 0.05481717 * rh * rh
+    + 0.00122874 * t * t * rh + 0.00085282 * t * rh * rh
+    - 0.00000199 * t * t * rh * rh;
+  if (rh < 13 && t >= 80 && t <= 112) {
+    hi -= ((13 - rh) / 4) * Math.sqrt((17 - Math.abs(t - 95)) / 17);
+  } else if (rh > 85 && t >= 80 && t <= 87) {
+    hi += ((rh - 85) / 10) * ((87 - t) / 5);
+  }
+  return round((hi - 32) * 5 / 9, 1);
+}
+
+async function getHistoryGraph(env, stationKey, hours, bucketMinutes) {
+  const safeBucket = Math.max(10, Math.min(120, Number.isFinite(bucketMinutes) ? bucketMinutes : 30));
+  const since = new Date(Date.now() - hours * 3600000).toISOString();
+  const bucketSeconds = safeBucket * 60;
+  const { results } = await env.STATIONS_DB.prepare(
+    "SELECT CAST(strftime('%s', fetched_at_utc) / ? AS INTEGER) * ? AS bucket_epoch, " +
+    "AVG(temperature_c) AS temperature_c, AVG(humidity_percent) AS humidity_percent, " +
+    "AVG(pressure_hpa) AS pressure_hpa, AVG(wind_speed_kmh) AS wind_speed_kmh, " +
+    "AVG(wind_direction) AS wind_direction, MAX(rain_1h_mm) AS rain_1h_mm, " +
+    "MAX(rain_10m_mm) AS rain_10m_mm, MAX(rain_6h_mm) AS rain_6h_mm, " +
+    "MAX(rain_12h_mm) AS rain_12h_mm, MAX(rain_24h_mm) AS rain_24h_mm, " +
+    "MAX(rain_00_now_mm) AS rain_00_now_mm, AVG(feels_like_c) AS feels_like_c, " +
+    "COUNT(*) AS sample_count, MAX(fetched_at_utc) AS latest_fetched_at_utc " +
+    "FROM station_history WHERE station_key = ? AND fetched_at_utc >= ? " +
+    "GROUP BY bucket_epoch ORDER BY bucket_epoch ASC LIMIT 20000"
+  ).bind(bucketSeconds, bucketSeconds, stationKey, since).all();
+
+  return (results || []).map(row => {
+    const temperature = asNumber(row.temperature_c);
+    const humidity = asNumber(row.humidity_percent);
+    const wind = asNumber(row.wind_speed_kmh);
+    return {
+      bucket_utc: new Date(Number(row.bucket_epoch) * 1000).toISOString(),
+      temperature_c: round(temperature, 1),
+      dew_point_c: dewPointC(temperature, humidity),
+      humidity_percent: round(humidity, 1),
+      pressure_hpa: round(asNumber(row.pressure_hpa), 1),
+      wind_speed_kmh: round(wind, 1),
+      wind_direction: round(asNumber(row.wind_direction), 0),
+      rain_1h_mm: round(asNumber(row.rain_1h_mm), 1),
+      rain_10m_mm: round(asNumber(row.rain_10m_mm), 1),
+      rain_6h_mm: round(asNumber(row.rain_6h_mm), 1),
+      rain_12h_mm: round(asNumber(row.rain_12h_mm), 1),
+      rain_24h_mm: round(asNumber(row.rain_24h_mm), 1),
+      rain_00_now_mm: round(asNumber(row.rain_00_now_mm), 1),
+      feels_like_c: round(asNumber(row.feels_like_c), 1),
+      wind_chill_c: windChillC(temperature, wind),
+      heat_index_c: heatIndexC(temperature, humidity),
+      sample_count: Number(row.sample_count || 0),
+      latest_fetched_at_utc: row.latest_fetched_at_utc || null
+    };
+  });
+}
+
 async function getHistory(env, stationKey, hours) {
   const since = new Date(Date.now() - hours * 3600000).toISOString();
   const { results } = await env.STATIONS_DB.prepare(
@@ -778,6 +864,23 @@ export default {
       const station = await getCurrent(env, currentMatch[1]);
       if (!station) return json({ ok: false, error: "İstasyon verisi yok" }, 404);
       return json({ ok: true, station });
+    }
+
+    const historyGraphMatch = path.match(/^\/api\/history-graph\/(enka|eyupsultan|sisli|canakci)$/);
+    if (historyGraphMatch) {
+      const requested = Number(url.searchParams.get("hours") || 24);
+      const hours = Math.max(1, Math.min(MAX_HISTORY_HOURS, Number.isFinite(requested) ? requested : 24));
+      const bucket = Number(url.searchParams.get("bucket") || 30);
+      const samples = await getHistoryGraph(env, historyGraphMatch[1], hours, bucket);
+      return json({
+        ok: true,
+        station_key: historyGraphMatch[1],
+        hours,
+        bucket_minutes: Math.max(10, Math.min(120, Number.isFinite(bucket) ? bucket : 30)),
+        count: samples.length,
+        samples,
+        updated_at_utc: new Date().toISOString()
+      });
     }
 
     const historyMatch = path.match(/^\/api\/history\/(enka|eyupsultan|sisli|canakci)$/);
@@ -823,6 +926,17 @@ export default {
         });
       }
       return json({ ok: true, storage: "D1", stations: rows, updated_at_utc: new Date().toISOString() });
+    }
+
+    const singleCollectMatch = path.match(/^\/(?:api\/)?collect\/(enka|eyupsultan|sisli|canakci)$/);
+    if (singleCollectMatch) {
+      const result = await collectOne(env, singleCollectMatch[1], url.searchParams.get("source") || "manual");
+      return json({
+        ok: result.ok,
+        station_key: singleCollectMatch[1],
+        result,
+        collected_at_utc: new Date().toISOString()
+      }, result.ok ? 200 : 502);
     }
 
     if (path === "/collect" || path === "/api/collect") {
