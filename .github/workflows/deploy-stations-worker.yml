@@ -199,6 +199,39 @@ jobs:
 
           cat "$RUNNER_TEMP/station-health.json"
 
+      - name: Verify the Köy History graph API
+        env:
+          STATIONS_API: https://gfs-watch-stations.muhsin-ulusoy.workers.dev/api
+        run: |
+          set -euo pipefail
+          curl --silent --show-error --fail --retry 3 --retry-all-errors --retry-delay 2 --max-time 25 \
+            "$STATIONS_API/history-graph/canakci?hours=24&bucket=10&verify=$(date +%s)" \
+            -o "$RUNNER_TEMP/canakci-history-graph.json"
+          node - "$RUNNER_TEMP/canakci-history-graph.json" <<'NODE'
+          const fs = require("fs");
+          const doc = JSON.parse(fs.readFileSync(process.argv[2], "utf8"));
+          const samples = Array.isArray(doc.samples) ? doc.samples : [];
+          const latest = samples[samples.length - 1];
+          const fields = ["temperature_c", "dew_point_c", "humidity_percent", "pressure_hpa",
+            "wind_speed_kmh", "wind_direction", "rain_1h_mm", "rain_10m_mm",
+            "rain_6h_mm", "rain_12h_mm", "rain_24h_mm", "rain_00_now_mm",
+            "wind_chill_c", "heat_index_c", "latest_fetched_at_utc"];
+          if (doc.ok !== true || doc.station_key !== "canakci" || samples.length < 1 ||
+              !latest || fields.some(key => !Object.prototype.hasOwnProperty.call(latest, key)) ||
+              !Number.isFinite(Date.parse(latest.latest_fetched_at_utc)) ||
+              Number(latest.sample_count) < 1) {
+            throw new Error("Live Köy History graph API contract failed: " + JSON.stringify({
+              ok: doc.ok, station_key: doc.station_key, sample_count: samples.length, latest
+            }));
+          }
+          console.log("Verified live Köy History graph API:", JSON.stringify({
+            station: doc.station_key,
+            samples: samples.length,
+            bucket_minutes: doc.bucket_minutes,
+            latest_fetched_at_utc: latest.latest_fetched_at_utc
+          }));
+          NODE
+
       - name: Verify the live Çanakçı monthly observation summary
         env:
           STATIONS_API: https://gfs-watch-stations.muhsin-ulusoy.workers.dev/api

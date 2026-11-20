@@ -5,7 +5,9 @@ on:
     branches: [main]
     paths:
       - ".github/workflows/test-koy-observation-history.yml"
-      - ".github/workflows/village-history.yml"
+      - ".github/workflows/canakci-history-10m.yml"
+      - ".github/workflows/deploy-cloudflare-platform.yml"
+      - ".github/workflows/deploy-stations-worker.yml"
       - ".github/workflows/validate.yml"
       - "site/koy.html"
       - "site/koy-observation-history.js"
