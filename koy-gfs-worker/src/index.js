@@ -1,5 +1,6 @@
 import { METEOPT_GFS_API, METEOPT_GFS_WEB, METEOPT_SOURCE_POLICY, meteoptSourceMetadata } from "../../shared/meteopt-source.js";
 import { buildPanelAxis, formatAxisTick, formatPeakValue, peakUnit, seriesCalloutPlacement } from "../../shared/gfs-chart-axis.js";
+import { NIGHTLY_CRON, climateTick, refreshClimateAll } from "./climate-nightly.js";
 
 const API_BASE = METEOPT_GFS_API;
 const LOCATION = {
@@ -1695,7 +1696,7 @@ async function api(request, env) {
         ok: true,
         service: "gfs-watch-koy-gfs",
         storage: "D1",
-        cron: ["*/10 * * * *"],
+        cron: ["*/10 * * * *", "30 1 * * *"],
         location: LOCATION,
         latest_run_id_utc: current?.run_id_utc || null,
         latest_updated_at_utc: current?.updated_at_utc || null,
@@ -1987,16 +1988,31 @@ export default {
 
   async scheduled(controller, env, ctx) {
     const cron = controller.cron || "";
-    // Climate cache is refreshed by the isolated GitHub Actions
-    // workflow. This Worker cron is intentionally GFS-only.
+    const scheduledTime = new Date(controller.scheduledTime);
+    const logError = (event, error) => console.error(JSON.stringify({
+      event,
+      message: String(error?.message || error),
+      scheduled_time: scheduledTime.toISOString(),
+    }));
+
+    if (cron === NIGHTLY_CRON) {
+      // 04:30 Europe/Istanbul: refresh CERRA, ERA5 and ERA5-Land inside Cloudflare.
+      ctx.waitUntil(
+        refreshClimateAll(env, scheduledTime)
+          .then(result => console.log(JSON.stringify({ event: "koy_climate_nightly", ...result })))
+          .catch(error => logError("koy_climate_nightly_error", error))
+      );
+      return;
+    }
+
+    ctx.waitUntil(collect(env).catch(error => logError("koy_gfs_cron_error", error)));
+    // Self-healing: finish any model whose nightly refresh failed or was rate limited.
     ctx.waitUntil(
-      collect(env).catch(error => {
-        console.error(JSON.stringify({
-          event: "koy_gfs_cron_error",
-          message: String(error?.message || error),
-          scheduled_time: new Date(controller.scheduledTime).toISOString(),
-        }));
-      })
+      climateTick(env, scheduledTime)
+        .then(result => {
+          if (!result.idle) console.log(JSON.stringify({ event: "koy_climate_tick", ...result }));
+        })
+        .catch(error => logError("koy_climate_tick_error", error))
     );
   },
 };

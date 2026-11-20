@@ -1,0 +1,84 @@
+name: Köy Climate — Cloudflare Nightly Proof
+
+# Manual end-to-end proof that the refresh really runs inside Cloudflare.
+# It back-dates today's ERA5-Land cache row by one day (the old payload keeps
+# being served), then waits for the Worker's 10-minute cron to rebuild it and
+# checks the refreshed_by marker. If Cloudflare does not rebuild it, the
+# GitHub fallback restores the row so the panel never goes empty.
+
+on:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: koy-climate-refresh
+  cancel-in-progress: false
+
+jobs:
+  prove:
+    name: Prove Cloudflare rebuilds a missing climate model
+    runs-on: ubuntu-latest
+    timeout-minutes: 40
+    env:
+      CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+      CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
+      KOY_API: https://gfs-watch-koy-gfs.muhsin-ulusoy.workers.dev/api
+    steps:
+      - uses: actions/checkout@v5
+      - uses: actions/setup-node@v5
+        with:
+          node-version: "22"
+
+      - name: Install Wrangler
+        run: npm install --global wrangler@4
+
+      - name: Worker advertises both crons
+        run: |
+          set -euo pipefail
+          curl --silent --show-error --fail --retry 5 --retry-all-errors --max-time 20 "$KOY_API/health?proof=$(date +%s)" -o "$RUNNER_TEMP/health.json"
+          node -e '
+            const d = JSON.parse(require("fs").readFileSync(process.argv[1], "utf8"));
+            if (JSON.stringify(d.cron) !== JSON.stringify(["*/10 * * * *", "30 1 * * *"])) throw new Error("Cron list is not deployed yet: " + JSON.stringify(d.cron));
+            console.log("crons", d.cron);
+          ' "$RUNNER_TEMP/health.json"
+
+      - name: Back-date today's ERA5-Land row
+        run: |
+          set -euo pipefail
+          TODAY=$(TZ=Europe/Istanbul date +%F)
+          YESTERDAY=$(TZ=Europe/Istanbul date -d 'yesterday' +%F)
+          echo "TODAY=$TODAY" >> "$GITHUB_ENV"
+          wrangler d1 execute gfs-watch-koy-gfs --remote --command \
+            "DELETE FROM climate_cache WHERE cache_key='era5_land:$YESTERDAY'; UPDATE climate_cache SET period_date='$YESTERDAY', cache_key='era5_land:$YESTERDAY' WHERE model='era5_land' AND period_date='$TODAY';"
+          wrangler d1 execute gfs-watch-koy-gfs --remote --command \
+            "SELECT cache_key, period_date FROM climate_cache WHERE model='era5_land' ORDER BY period_date DESC LIMIT 3;"
+
+      - name: Wait for the Cloudflare Worker to rebuild it
+        run: |
+          set -euo pipefail
+          for attempt in $(seq 1 32); do
+            curl --silent --fail --max-time 30 "$KOY_API/climate?model=era5_land&proof=$(date +%s)" -o "$RUNNER_TEMP/land.json" || true
+            if node -e '
+              const d = JSON.parse(require("fs").readFileSync(process.argv[1], "utf8")).data || {};
+              if (d.refreshed_by === "cloudflare-worker" && d.period_date === process.argv[2]) {
+                console.log(JSON.stringify({ model: d.model, period_date: d.period_date, refreshed_by: d.refreshed_by, years: [d.historical_start_year, d.historical_end_year], updated_at_utc: d.updated_at_utc }));
+                process.exit(0);
+              }
+              process.exit(1);
+            ' "$RUNNER_TEMP/land.json" "$TODAY" 2>/dev/null; then
+              exit 0
+            fi
+            echo "attempt $attempt: not rebuilt yet"
+            sleep 30
+          done
+          echo "Cloudflare did not rebuild era5_land within 16 minutes" >&2
+          exit 1
+
+      - name: Fallback restore from GitHub if Cloudflare did not rebuild
+        if: failure()
+        run: |
+          set -euo pipefail
+          node scripts/refresh_koy_climate.mjs
+          wrangler d1 execute gfs-watch-koy-gfs --remote --file koy-climate-refresh.sql

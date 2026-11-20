@@ -90,6 +90,9 @@ jobs:
       - name: Test Köy worker homepage-identical SVG publication
         run: node scripts/test_koy_worker_publication.mjs
 
+      - name: Test Köy Cloudflare nightly climate refresh (offline end-to-end)
+        run: node scripts/test_koy_climate_nightly.mjs
+
       - name: Test Köy climate data-pipeline contracts
         run: node scripts/test_koy_climate_contract.mjs
 
@@ -99,6 +102,8 @@ jobs:
           node --check istanbul-gfs-worker/src/index.js
           node --check istanbul-gfs-worker/src/publication.js
           node --check koy-gfs-worker/src/index.js
+          node --check koy-gfs-worker/src/climate-nightly.js
+          node --check shared/koy-climate-core.js
           node --check station-worker/src/index.js
           node --check scripts/refresh_koy_climate.mjs
           node --check site/koy-climate.js
