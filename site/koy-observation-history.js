@@ -68,6 +68,7 @@ function injectStyle(){
   "#koy-observation-history .oh-line{fill:none;stroke:var(--chart-color);stroke-width:2.4;stroke-linecap:round;stroke-linejoin:round}",
   "#koy-observation-history .oh-point{fill:transparent;stroke:transparent;stroke-width:12;cursor:crosshair;pointer-events:none;vector-effect:non-scaling-stroke}",
   "#koy-observation-history .oh-point:hover{fill:transparent;stroke:transparent}",
+ "#koy-observation-history .oh-crosshair{stroke:rgba(238,245,248,.42);stroke-width:1;stroke-dasharray:4 4;pointer-events:none;vector-effect:non-scaling-stroke}",
   "#koy-observation-history .oh-tooltip{position:fixed;z-index:100000;pointer-events:none;display:none;min-width:120px;max-width:190px;padding:8px 10px;border:1px solid rgba(204,225,239,.18);border-radius:9px;background:rgba(17,24,33,.96);box-shadow:0 8px 25px rgba(0,0,0,.35);color:#eef5f8;font:10px/1.45 DM Sans,sans-serif}",
   "#koy-observation-history .oh-tooltip strong{display:block;color:var(--chart-color);font-size:12px;margin-bottom:2px}",
   "#koy-observation-history .oh-tooltip span{display:block;color:#aeb7c2}",
@@ -153,24 +154,24 @@ function renderChart(v,points,hours){
  const last=points[points.length-1],tickCount=Math.min(6,points.length),ticks=[];
  for(let i=0;i<tickCount;i++){const ix=Math.round(i*(points.length-1)/Math.max(1,tickCount-1));ticks.push(dateLabel(points[ix].time,hours,true));}
  return '<article class="oh-chart" style="--chart-color:'+v.color+'"><div class="oh-chart-head"><div class="oh-chart-name"><span class="oh-chart-dot" style="background:'+v.color+'"></span>'+esc(v.label)+'</div><div class="oh-value">'+fmt(last.value,v.digits)+' '+v.unit+'</div></div>'+
- '<div class="oh-graph"><svg viewBox="0 0 '+width+' '+height+'" preserveAspectRatio="none" role="img" aria-label="'+esc(v.label)+' history chart">'+grid+'<path class="oh-line" d="'+path+'"></path>'+points.map((p,i)=>{const px=x(i),py=y(p.value),time=dateLabel(p.time,hours,false),value=fmt(p.value,v.digits)+" "+v.unit;return '<circle class="oh-point" cx="'+px.toFixed(2)+'" cy="'+py.toFixed(2)+'" r="8" tabindex="0" data-time="'+esc(time)+'" data-value="'+esc(value)+'" aria-label="'+esc(time)+" · "+esc(value)+'"></circle>';}).join("")+'</svg></div>'+
+ '<div class="oh-graph"><svg viewBox="0 0 '+width+' '+height+'" preserveAspectRatio="none" role="img" aria-label="'+esc(v.label)+' history chart">'+grid+'<path class="oh-line" d="'+path+'"></path><line class="oh-crosshair" x1="0" y1="'+pad.t+'" x2="0" y2="'+(height-pad.b)+'" opacity="0"></line>'+points.map((p,i)=>{const px=x(i),py=y(p.value),time=dateLabel(p.time,hours,false),value=fmt(p.value,v.digits)+" "+v.unit;return '<circle class="oh-point" cx="'+px.toFixed(2)+'" cy="'+py.toFixed(2)+'" r="8" tabindex="0" data-time="'+esc(time)+'" data-value="'+esc(value)+'" aria-label="'+esc(time)+" · "+esc(value)+'"></circle>';}).join("")+'</svg></div>'+
  '<div class="oh-range">Lowest '+fmt(min,v.digits)+' · Highest '+fmt(max,v.digits)+' '+v.unit+'</div><div class="oh-axis">'+ticks.map(t=>'<span>'+esc(t)+'</span>').join("")+'</div></article>';
 }
 function bindChartTooltips(){
  document.querySelectorAll("#koy-observation-history .oh-chart").forEach(article=>{
   const svg=article.querySelector(".oh-graph svg");
   const points=Array.from(article.querySelectorAll(".oh-point"));
-  if(!svg||!points.length)return;
+  const crosshair=svg?.querySelector(".oh-crosshair");
+  if(!svg||!points.length||!crosshair)return;
   const label=article.querySelector(".oh-chart-name")?.textContent?.trim()||"";
   const color=article.style.getPropertyValue("--chart-color")||"";
   const nearest=e=>{
    const rect=svg.getBoundingClientRect();
-   const sx=e.clientX,sy=e.clientY;
+   const sx=e.clientX;
    let best=null,bestD=Infinity;
    points.forEach(point=>{
     const px=rect.left+(Number(point.getAttribute("cx"))/1000)*rect.width;
-    const py=rect.top+(Number(point.getAttribute("cy"))/180)*rect.height;
-    const d=Math.hypot(sx-px,sy-py);
+    const d=Math.abs(sx-px);
     if(d<bestD){bestD=d;best=point;}
    });
    return best;
@@ -178,17 +179,19 @@ function bindChartTooltips(){
   const show=e=>{
    const point=nearest(e);
    if(!point)return;
+   const px=Number(point.getAttribute("cx"));
+   crosshair.setAttribute("x1",px.toFixed(2));
+   crosshair.setAttribute("x2",px.toFixed(2));
+   crosshair.setAttribute("opacity","1");
    const html="<strong>"+esc(label)+"</strong><span>"+esc(point.dataset.time||"—")+"</span><span>"+esc(point.dataset.value||"—")+"</span>";
    showTooltip(e,html,color);
   };
-  svg.addEventListener("pointerdown",e=>{
-   svg.setPointerCapture?.(e.pointerId);
-   show(e);
-  });
+  const hide=()=>{hideTooltip();crosshair.setAttribute("opacity","0");};
+  svg.addEventListener("pointerdown",e=>{svg.setPointerCapture?.(e.pointerId);show(e);});
   svg.addEventListener("pointermove",show);
-  svg.addEventListener("pointerup",e=>{if(e.pointerType!=="mouse")hideTooltip();svg.releasePointerCapture?.(e.pointerId);});
-  svg.addEventListener("pointercancel",hideTooltip);
-  svg.addEventListener("pointerleave",e=>{if(e.pointerType==="mouse")hideTooltip();});
+  svg.addEventListener("pointerup",e=>{if(e.pointerType!=="mouse")hide();svg.releasePointerCapture?.(e.pointerId);});
+  svg.addEventListener("pointercancel",hide);
+  svg.addEventListener("pointerleave",e=>{if(e.pointerType==="mouse")hide();});
  });
 }
 function start(){injectStyle();build();}
