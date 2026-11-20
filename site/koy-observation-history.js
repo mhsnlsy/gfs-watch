@@ -19,7 +19,7 @@ const V=[
 {id:"precipitation12h",label:"Precipitation 12h",color:C.precipitation12h,field:"rain_12h_mm",unit:"mm",digits:1,rain:true},
 {id:"precipitation24h",label:"Precipitation 24h",color:C.precipitation24h,field:"rain_24h_mm",unit:"mm",digits:1,rain:true}
 ];
-const state={hours:24,zone:"local",selected:["temperature","dewPoint","precipitation1h","dailyPrecipitation"],cache:new Map(),opened:false,loading:false,openPicker:false};
+const state={hours:24,zone:"local",selected:["temperature","dewPoint","precipitation1h","dailyPrecipitation"],cache:new Map(),opened:false,loading:new Set(),openPicker:false};
 const $=id=>document.getElementById(id);
 const esc=s=>String(s==null?"":s).replace(/[&<>"]/g,c=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;"}[c]));
 const val=v=>v===null||v===undefined||v===""||!Number.isFinite(Number(v))?null:Number(v);
@@ -117,16 +117,16 @@ function renderChips(){
  $("oh-vars").innerHTML=state.selected.map(id=>{const v=V.find(item=>item.id===id);if(!v)return "";return '<span class="oh-chip" style="--chip-color:'+v.color+'"><span class="oh-chip-dot"></span>'+esc(v.label)+'<button type="button" class="oh-chip-x" data-remove="'+v.id+'" aria-label="Remove '+esc(v.label)+'">×</button></span>';}).join("");
 }
 async function load(){
- const key=state.hours;if(state.loading)return;if(state.cache.has(key)){renderCharts();return;}
- state.loading=true;$("oh-charts").innerHTML='<div class="oh-empty">Geçmiş veriler yükleniyor…</div>';
+ const key=state.hours;if(state.cache.has(key)){renderCharts();return;}if(state.loading.has(key))return;
+ state.loading.add(key);$("oh-charts").innerHTML='<div class="oh-empty">Geçmiş veriler yükleniyor…</div>';
  try{
   const bucket=key<=48?10:key<=168?30:60;
   const response=await fetch(API+"/history-graph/canakci?hours="+key+"&bucket="+bucket+"&v="+Date.now(),{cache:"no-store"});
   if(!response.ok)throw new Error("HTTP "+response.status);
   const data=await response.json();if(data.ok!==true||!Array.isArray(data.samples))throw new Error(data.error||"Invalid history payload");
   state.cache.set(key,data);renderCharts();
- }catch(error){$("oh-charts").innerHTML='<div class="oh-empty">Geçmiş veriler şu anda alınamadı. Biraz sonra yeniden deneyebilirsin.</div>';console.error("Köy Observation History:",error);}
- finally{state.loading=false;}
+ }catch(error){if(state.hours===key)$("oh-charts").innerHTML='<div class="oh-empty">Geçmiş veriler şu anda alınamadı. Biraz sonra yeniden deneyebilirsin.</div>';console.error("Köy Observation History:",error);}
+ finally{state.loading.delete(key);}
 }
 function renderCharts(){
  if(!state.opened)return;
