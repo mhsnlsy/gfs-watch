@@ -218,7 +218,7 @@
       monthLabel + " " + (monthlyData?.month?.year || "") + " YAĞIŞ ANOMALİSİ");
 
     const precipitationCoverage = asNumber(month.precipitation_coverage_percent);
-    const requiredCoverage = 90;
+    const requiredCoverage = 65; // Temporary: lowered from 90 while early-month history is incomplete
     if (!supported.precipitation) {
       setText("climate-anomaly-value", "—");
       setText("climate-anomaly-detail",
