@@ -62,7 +62,7 @@ function injectStyle(){
  "#koy-observation-history .oh-chart-name{display:flex;align-items:center;gap:8px;color:#aeb7c2;font-size:12px}",
  "#koy-observation-history .oh-chart-dot{width:9px;height:9px;border-radius:50%;flex:none}",
  "#koy-observation-history .oh-value{font:700 15px Manrope,sans-serif;color:var(--chart-color);white-space:nowrap}",
- "#koy-observation-history .oh-graph{height:160px;margin-top:7px;touch-action:none}",
+ "#koy-observation-history .oh-graph{height:160px;margin-top:7px;position:relative;touch-action:none}",
  "#koy-observation-history svg{width:100%;height:100%;display:block;overflow:visible}",
  "#koy-observation-history .oh-grid{stroke:rgba(200,220,235,.10);stroke-width:1}",
   "#koy-observation-history .oh-line{fill:none;stroke:var(--chart-color);stroke-width:2.4;stroke-linecap:round;stroke-linejoin:round}",
@@ -248,7 +248,7 @@ function bindChartTooltips(){
  charts.forEach(c=>{
   c.svg.addEventListener("pointerdown",e=>{c.svg.setPointerCapture?.(e.pointerId);showAll(e);});
   c.svg.addEventListener("pointermove",showAll);
-  c.svg.addEventListener("pointerup",e=>{if(e.pointerType!=="mouse")hideAll();c.svg.releasePointerCapture?.(e.pointerId);});
+  c.svg.addEventListener("pointerup",e=>{c.svg.releasePointerCapture?.(e.pointerId);});
   c.svg.addEventListener("pointercancel",hideAll);
   c.svg.addEventListener("pointerleave",e=>{if(e.pointerType==="mouse")hideAll();});
  });
