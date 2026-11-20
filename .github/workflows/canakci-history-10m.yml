@@ -1,0 +1,93 @@
+name: Çanakçı History Collector · 10m
+
+on:
+  schedule:
+    - cron: "*/10 * * * *"
+  workflow_dispatch:
+
+concurrency:
+  group: canakci-history-10m
+  cancel-in-progress: false
+
+permissions: {}
+
+jobs:
+  collect:
+    name: Collect Çanakçı history sample
+    runs-on: ubuntu-latest
+    timeout-minutes: 4
+    steps:
+      - name: Collect exactly one Çanakçı sample
+        env:
+          STATIONS_API: https://gfs-watch-stations.muhsin-ulusoy.workers.dev
+        run: |
+          set -euo pipefail
+
+          response="$RUNNER_TEMP/canakci-collect.json"
+
+          curl \
+            --fail \
+            --silent \
+            --show-error \
+            --retry 3 \
+            --retry-all-errors \
+            --retry-delay 2 \
+            --max-time 25 \
+            "$STATIONS_API/api/collect/canakci?source=github-actions-10m" \
+            -o "$response"
+
+          node - "$response" <<'NODE'
+          const fs = require("fs");
+          const doc = JSON.parse(fs.readFileSync(process.argv[2], "utf8"));
+
+          if (!doc.ok || !doc.result || !doc.result.ok) {
+            throw new Error("Çanakçı collection failed: " + JSON.stringify(doc));
+          }
+
+          const result = doc.result;
+
+          if (!result.observed_at_utc) {
+            throw new Error("Collection succeeded but observed_at_utc is missing.");
+          }
+
+          console.log("Çanakçı sample:", result.observed_at_utc);
+          console.log("Trigger:", "github-actions-10m");
+          NODE
+
+      - name: Verify the sample is queryable
+        env:
+          STATIONS_API: https://gfs-watch-stations.muhsin-ulusoy.workers.dev
+        run: |
+          set -euo pipefail
+
+          response="$RUNNER_TEMP/canakci-history.json"
+
+          curl \
+            --fail \
+            --silent \
+            --show-error \
+            --retry 2 \
+            --retry-all-errors \
+            --retry-delay 2 \
+            --max-time 20 \
+            "$STATIONS_API/api/history/canakci?hours=1" \
+            -o "$response"
+
+          node - "$response" <<'NODE'
+          const fs = require("fs");
+          const doc = JSON.parse(fs.readFileSync(process.argv[2], "utf8"));
+
+          if (!doc.ok || !Array.isArray(doc.samples)) {
+            throw new Error("Çanakçı history endpoint returned an invalid payload.");
+          }
+
+          if (doc.samples.length < 1) {
+            throw new Error("Çanakçı history endpoint returned zero samples.");
+          }
+
+          console.log("Çanakçı history samples available:", doc.samples.length);
+          NODE
+
+      - name: Report isolated workflow result
+        run: |
+          echo "Çanakçı 10-minute history collection: SUCCESS"
