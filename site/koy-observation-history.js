@@ -135,7 +135,7 @@ async function load(){
  }catch(error){if(state.hours===key)$("oh-charts").innerHTML='<div class="oh-empty">Geçmiş veriler şu anda alınamadı. Biraz sonra yeniden deneyebilirsin.</div>';console.error("Köy Observation History:",error);}
  finally{state.loading.delete(key);}
 }
-function showTooltip(e,html,color){const tip=$("oh-tooltip");if(!tip)return;tip.style.setProperty("--chart-color",color);tip.innerHTML=html;tip.style.display="block";const rect=tip.getBoundingClientRect(),m=10;let left=e.clientX+14,top=e.clientY-rect.height-14;if(left+rect.width>innerWidth-m)left=e.clientX-rect.width-14;if(top<m)top=e.clientY+14;tip.style.left=Math.max(m,Math.min(left,innerWidth-rect.width-m))+"px";tip.style.top=Math.max(m,Math.min(top,innerHeight-rect.height-m))+"px"}
+function showTooltipAtX(clientX,chartRect,html,color){const tip=$("oh-tooltip");if(!tip)return;tip.style.setProperty("--chart-color",color);tip.innerHTML=html;tip.style.display="block";const rect=tip.getBoundingClientRect(),m=10;let left=clientX-rect.width/2;let top=chartRect.top-rect.height-10;if(top<m)top=chartRect.top+10;if(left+rect.width>innerWidth-m)left=innerWidth-rect.width-m;if(left<m)left=m;tip.style.left=left+"px";tip.style.top=top+"px"}
 function hideTooltip(){const tip=$("oh-tooltip");if(tip)tip.style.display="none"}
 function renderCharts(){
  if(!state.opened)return;
@@ -179,12 +179,14 @@ function bindChartTooltips(){
   const show=e=>{
    const point=nearest(e);
    if(!point)return;
+   const rect=svg.getBoundingClientRect();
    const px=Number(point.getAttribute("cx"));
+   const clientX=rect.left+(px/1000)*rect.width;
    crosshair.setAttribute("x1",px.toFixed(2));
    crosshair.setAttribute("x2",px.toFixed(2));
    crosshair.setAttribute("opacity","1");
    const html="<strong>"+esc(label)+"</strong><span>"+esc(point.dataset.time||"—")+"</span><span>"+esc(point.dataset.value||"—")+"</span>";
-   showTooltip(e,html,color);
+   showTooltipAtX(clientX,rect,html,color);
   };
   const hide=()=>{hideTooltip();crosshair.setAttribute("opacity","0");};
   svg.addEventListener("pointerdown",e=>{svg.setPointerCapture?.(e.pointerId);show(e);});
