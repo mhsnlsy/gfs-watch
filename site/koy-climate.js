@@ -33,7 +33,15 @@
   }
 
   function monthName(data) {
-    return String(data?.month_name || "").toLocaleUpperCase("tr-TR");
+    if (data?.month_name) return String(data.month_name).toLocaleUpperCase("tr-TR");
+    const month = Number(data?.month?.month);
+    const year = Number(data?.month?.year);
+    if (month >= 1 && month <= 12) {
+      return new Intl.DateTimeFormat("tr-TR", { month: "long", timeZone: TZ })
+        .format(new Date(Date.UTC(year || new Date().getUTCFullYear(), month - 1, 1)))
+        .toLocaleUpperCase("tr-TR");
+    }
+    return "";
   }
 
   function clearModelValues() {
@@ -215,6 +223,8 @@
         " mm · " + (normal.years || 0) + " yıllık karşılaştırma");
       setText("climate-anomaly-source",
         "MGM gerçekleşen / " + meta.label + " normali");
+      setText("climate-anomaly-label",
+        monthLabel + " " + (monthData?.month?.year || "") + " YAĞIŞ ANOMALİSİ");
       const marker = $("climate-anomaly-bar")?.querySelector("i");
       if (marker && anomaly !== null) {
         marker.style.left = Math.max(3, Math.min(97, 50 + anomaly / 2)) + "%";
