@@ -25,7 +25,7 @@ const $=id=>document.getElementById(id);
 const esc=s=>String(s==null?"":s).replace(/[&<>"]/g,c=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;"}[c]));
 const val=v=>v===null||v===undefined||v===""||!Number.isFinite(Number(v))?null:Number(v);
 const fmt=(v,d)=>v===null||!Number.isFinite(v)?"—":v.toLocaleString("tr-TR",{minimumFractionDigits:d,maximumFractionDigits:d});
-const tz=()=>state.zone==="local"?TZ:"UTC";
+const tz=()=>TZ;
 function dateLabel(v,hours,axis){const d=new Date(v);if(!Number.isFinite(d.getTime()))return "—";if(axis&&hours>48)return new Intl.DateTimeFormat("en-GB",{timeZone:tz(),weekday:"short",day:"2-digit",month:"short"}).format(d);if(axis)return new Intl.DateTimeFormat("en-GB",{timeZone:tz(),hour:"2-digit",minute:"2-digit",hourCycle:"h23"}).format(d);return new Intl.DateTimeFormat("en-GB",{timeZone:tz(),weekday:"short",day:"2-digit",month:"short",hour:"2-digit",minute:"2-digit",hourCycle:"h23"}).format(d);}
 function injectStyle(){
  if($("koy-observation-history-style"))return;
