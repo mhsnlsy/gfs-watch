@@ -65,7 +65,12 @@ function injectStyle(){
  "#koy-observation-history .oh-graph{height:160px;margin-top:7px}",
  "#koy-observation-history svg{width:100%;height:100%;display:block;overflow:visible}",
  "#koy-observation-history .oh-grid{stroke:rgba(200,220,235,.10);stroke-width:1}",
- "#koy-observation-history .oh-line{fill:none;stroke:var(--chart-color);stroke-width:2.4;stroke-linecap:round;stroke-linejoin:round}",
+ "#koy-observation-history .oh-line{fill:none;stroke:var(--chart-color);stroke-width:2.4;stroke-linecap:round;stroke-linejoin:round}
+#koy-observation-history .oh-point{fill:var(--chart-color);stroke:#202832;stroke-width:2;cursor:crosshair;vector-effect:non-scaling-stroke}
+#koy-observation-history .oh-point:hover{stroke:#eef5f8;stroke-width:2.5}
+#koy-observation-history .oh-tooltip{position:fixed;z-index:100000;pointer-events:none;display:none;min-width:120px;max-width:190px;padding:8px 10px;border:1px solid rgba(204,225,239,.18);border-radius:9px;background:rgba(17,24,33,.96);box-shadow:0 8px 25px rgba(0,0,0,.35);color:#eef5f8;font:10px/1.45 DM Sans,sans-serif}
+#koy-observation-history .oh-tooltip strong{display:block;color:var(--chart-color);font-size:12px;margin-bottom:2px}
+#koy-observation-history .oh-tooltip span{display:block;color:#aeb7c2}",
  "#koy-observation-history .oh-range{font-size:9px;color:#8d99a6;margin-top:1px}",
  "#koy-observation-history .oh-axis{display:flex;justify-content:space-between;gap:5px;color:#7e8a98;font-size:8px;margin-top:7px}",
  "#koy-observation-history .oh-axis span{text-align:center;flex:1;white-space:nowrap}",
@@ -96,7 +101,7 @@ function build(){
  '<div class="oh-zone" id="oh-zone"><button type="button" data-zone="local" class="active">Local</button><button type="button" data-zone="utc">UTC</button></div></div></div>'+
  '<div class="oh-vars" id="oh-vars"></div><button type="button" class="oh-add" id="oh-add">＋ Add variable</button>'+
  '<div class="oh-chart-list" id="oh-charts"><div class="oh-empty">Geçmiş veriler yükleniyor…</div></div></div></section>'+
- '<div class="oh-picker-backdrop" id="oh-backdrop"></div><div class="oh-picker" id="oh-picker" role="dialog" aria-modal="true" aria-label="Add variable"><div class="oh-picker-head">Add variable</div><div id="oh-options"></div></div>';
+ '<div class="oh-tooltip" id="oh-tooltip" role="status" aria-live="polite"></div><div class="oh-picker-backdrop" id="oh-backdrop"></div><div class="oh-picker" id="oh-picker" role="dialog" aria-modal="true" aria-label="Add variable"><div class="oh-picker-head">Add variable</div><div id="oh-options"></div></div>';
  panel.appendChild(root);
  bind();renderChips();renderCharts();
 }
@@ -129,12 +134,14 @@ async function load(){
  }catch(error){if(state.hours===key)$("oh-charts").innerHTML='<div class="oh-empty">Geçmiş veriler şu anda alınamadı. Biraz sonra yeniden deneyebilirsin.</div>';console.error("Köy Observation History:",error);}
  finally{state.loading.delete(key);}
 }
+function showTooltip(e,html,color){const tip=$("oh-tooltip");if(!tip)return;tip.style.setProperty("--chart-color",color);tip.innerHTML=html;tip.style.display="block";const rect=tip.getBoundingClientRect(),m=10;let left=e.clientX+14,top=e.clientY-rect.height-14;if(left+rect.width>innerWidth-m)left=e.clientX-rect.width-14;if(top<m)top=e.clientY+14;tip.style.left=Math.max(m,Math.min(left,innerWidth-rect.width-m))+"px";tip.style.top=Math.max(m,Math.min(top,innerHeight-rect.height-m))+"px"}
+function hideTooltip(){const tip=$("oh-tooltip");if(tip)tip.style.display="none"}
 function renderCharts(){
  if(!state.opened)return;
  const data=state.cache.get(state.hours);
  if(!data||!Array.isArray(data.samples)||!data.samples.length){$("oh-current-time").textContent="Bu dönem için kayıt bulunamadı";$("oh-charts").innerHTML='<div class="oh-empty">Bu dönem için kayıt bulunamadı.</div>';return;}
  const latest=data.samples[data.samples.length-1];$("oh-current-time").textContent=dateLabel(latest.latest_fetched_at_utc||latest.bucket_utc,state.hours,false);
- $("oh-charts").innerHTML=state.selected.map(id=>{const v=V.find(item=>item.id===id);if(!v)return "";const points=data.samples.map(s=>({time:s.bucket_utc,value:val(s[v.field])})).filter(p=>p.value!==null);return renderChart(v,points,state.hours);}).join("");
+ $("oh-charts").innerHTML=state.selected.map(id=>{const v=V.find(item=>item.id===id);if(!v)return "";const points=data.samples.map(s=>({time:s.bucket_utc,value:val(s[v.field])})).filter(p=>p.value!==null);return renderChart(v,points,state.hours);}).join("");bindChartTooltips();
 }
 function renderChart(v,points,hours){
  if(!points.length)return '<article class="oh-chart" style="--chart-color:'+v.color+'"><div class="oh-chart-name"><span class="oh-chart-dot" style="background:'+v.color+'"></span>'+esc(v.label)+'</div><div class="oh-empty">Bu değişken için ölçüm bulunmuyor.</div></article>';
@@ -146,8 +153,21 @@ function renderChart(v,points,hours){
  const last=points[points.length-1],tickCount=Math.min(6,points.length),ticks=[];
  for(let i=0;i<tickCount;i++){const ix=Math.round(i*(points.length-1)/Math.max(1,tickCount-1));ticks.push(dateLabel(points[ix].time,hours,true));}
  return '<article class="oh-chart" style="--chart-color:'+v.color+'"><div class="oh-chart-head"><div class="oh-chart-name"><span class="oh-chart-dot" style="background:'+v.color+'"></span>'+esc(v.label)+'</div><div class="oh-value">'+fmt(last.value,v.digits)+' '+v.unit+'</div></div>'+
- '<div class="oh-graph"><svg viewBox="0 0 '+width+' '+height+'" preserveAspectRatio="none" role="img" aria-label="'+esc(v.label)+' history chart">'+grid+'<path class="oh-line" d="'+path+'"></path></svg></div>'+
+ '<div class="oh-graph"><svg viewBox="0 0 '+width+' '+height+'" preserveAspectRatio="none" role="img" aria-label="'+esc(v.label)+' history chart">'+grid+'<path class="oh-line" d="'+path+'"></path>'+points.map((p,i)=>{const px=x(i),py=y(p.value),time=dateLabel(p.time,hours,false),value=fmt(p.value,v.digits)+" "+v.unit;return '<circle class="oh-point" cx="'+px.toFixed(2)+'" cy="'+py.toFixed(2)+'" r="5" tabindex="0" data-time="'+esc(time)+'" data-value="'+esc(value)+'" aria-label="'+esc(time)+" · "+esc(value)+'"></circle>';}).join("")+'</svg></div>'+
  '<div class="oh-range">Lowest '+fmt(min,v.digits)+' · Highest '+fmt(max,v.digits)+' '+v.unit+'</div><div class="oh-axis">'+ticks.map(t=>'<span>'+esc(t)+'</span>').join("")+'</div></article>';
+}
+function bindChartTooltips(){
+ document.querySelectorAll("#koy-observation-history .oh-point").forEach(point=>{
+  const article=point.closest(".oh-chart");
+  const label=article?.querySelector(".oh-chart-name")?.textContent?.trim()||"";
+  const color=article?.style.getPropertyValue("--chart-color")||"";
+  const html=()=>"<strong>"+esc(label)+"</strong><span>"+esc(point.dataset.time||"—")+"</span><span>"+esc(point.dataset.value||"—")+"</span>";
+  point.addEventListener("pointerenter",e=>showTooltip(e,html(),color));
+  point.addEventListener("pointermove",e=>showTooltip(e,html(),color));
+  point.addEventListener("pointerleave",hideTooltip);
+  point.addEventListener("focus",e=>showTooltip(e,html(),color));
+  point.addEventListener("blur",hideTooltip);
+ });
 }
 function start(){injectStyle();build();}
 if(document.readyState==="loading")document.addEventListener("DOMContentLoaded",start);else start();
