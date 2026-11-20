@@ -99,7 +99,7 @@ function build(){
  '<div class="oh-head"><div class="oh-title">Observation History</div><div class="oh-sub">Çanakçı MGM · istasyon gözlemleri</div><div class="oh-current-time" id="oh-current-time">Son ölçüm zamanı bekleniyor</div>'+
  '<div class="oh-toggle-row"><div class="oh-segment" id="oh-window">'+
  '<button type="button" data-hours="24" class="active">24h</button><button type="button" data-hours="48">48h</button><button type="button" data-hours="168">7d</button><button type="button" data-hours="720">30d</button></div>'+
- '<div class="oh-zone" id="oh-zone"><button type="button" data-zone="local" class="active">Local</button><button type="button" data-zone="utc">UTC</button></div></div></div>'+
+ '<div class="oh-zone" id="oh-zone"><button type="button" data-zone="local" class="active">TSİ (UTC+3)</button></div></div></div>'+
  '<div class="oh-vars" id="oh-vars"></div><button type="button" class="oh-add" id="oh-add">＋ Add variable</button>'+
  '<div class="oh-chart-list" id="oh-charts"><div class="oh-empty">Geçmiş veriler yükleniyor…</div></div></div></section>'+
  '<div class="oh-tooltip" id="oh-tooltip" role="status" aria-live="polite"></div><div class="oh-picker-backdrop" id="oh-backdrop"></div><div class="oh-picker" id="oh-picker" role="dialog" aria-modal="true" aria-label="Add variable"><div class="oh-picker-head">Add variable</div><div id="oh-options"></div></div>';
