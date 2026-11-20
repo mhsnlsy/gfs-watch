@@ -20,7 +20,23 @@ const V=[
 {id:"precipitation12h",label:"Precipitation 12h",color:C.precipitation12h,field:"rain_12h_mm",unit:"mm",digits:1,rain:true},
 {id:"precipitation24h",label:"Precipitation 24h",color:C.precipitation24h,field:"rain_24h_mm",unit:"mm",digits:1,rain:true}
 ];
-const state={hours:24,zone:"local",selected:["temperature","dewPoint","precipitation1h","dailyPrecipitation"],cache:new Map(),opened:false,loading:new Set(),openPicker:false};
+const HISTORY_PREFS_KEY="koy-observation-history-prefs-v1";
+const DEFAULT_HISTORY_PREFS={hours:720,selected:["temperature","dailyPrecipitation","pressure"]};
+function loadHistoryPrefs(){
+ try{
+  const raw=localStorage.getItem(HISTORY_PREFS_KEY);
+  if(!raw)return {...DEFAULT_HISTORY_PREFS,selected:[...DEFAULT_HISTORY_PREFS.selected]};
+  const p=JSON.parse(raw);
+  const hours=[24,48,168,720].includes(Number(p.hours))?Number(p.hours):DEFAULT_HISTORY_PREFS.hours;
+  const selected=Array.isArray(p.selected)?p.selected.filter(id=>V.some(v=>v.id===id)):[];
+  return {hours,selected:selected.length?selected:[...DEFAULT_HISTORY_PREFS.selected]};
+ }catch(_){return {...DEFAULT_HISTORY_PREFS,selected:[...DEFAULT_HISTORY_PREFS.selected]};}
+}
+function saveHistoryPrefs(){
+ try{localStorage.setItem(HISTORY_PREFS_KEY,JSON.stringify({hours:state.hours,selected:state.selected}));}catch(_){}
+}
+const savedHistoryPrefs=loadHistoryPrefs();
+const state={hours:savedHistoryPrefs.hours,zone:"local",selected:savedHistoryPrefs.selected,cache:new Map(),opened:false,loading:new Set(),openPicker:false};
 const $=id=>document.getElementById(id);
 const esc=s=>String(s==null?"":s).replace(/[&<>"]/g,c=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;"}[c]));
 const val=v=>v===null||v===undefined||v===""||!Number.isFinite(Number(v))?null:Number(v);
@@ -104,15 +120,16 @@ function build(){
  '<div class="oh-chart-list" id="oh-charts"><div class="oh-empty">Geçmiş veriler yükleniyor…</div></div></div></section>'+
  '<div class="oh-picker-backdrop" id="oh-backdrop"></div><div class="oh-picker" id="oh-picker" role="dialog" aria-modal="true" aria-label="Add variable"><div class="oh-picker-head">Add variable</div><div id="oh-options"></div></div>';
  panel.appendChild(root);
- bind();renderChips();renderCharts();
+ $("oh-window").querySelectorAll("button[data-hours]").forEach(x=>x.classList.toggle("active",Number(x.dataset.hours)===state.hours));
+bind();renderChips();renderCharts();
 }
 function bind(){
  $("oh-toggle").addEventListener("click",()=>{state.opened=!state.opened;$("oh-content").hidden=!state.opened;$("oh-toggle").setAttribute("aria-expanded",String(state.opened));if(state.opened){if(state.cache.has(state.hours))renderCharts();else load();}else if(state.openPicker)closePicker();});
- $("oh-window").addEventListener("click",e=>{const b=e.target.closest("button[data-hours]");if(!b)return;state.hours=Number(b.dataset.hours);$("oh-window").querySelectorAll("button").forEach(x=>x.classList.toggle("active",x===b));load();});
+ $("oh-window").addEventListener("click",e=>{const b=e.target.closest("button[data-hours]");if(!b)return;state.hours=Number(b.dataset.hours);saveHistoryPrefs();$("oh-window").querySelectorAll("button").forEach(x=>x.classList.toggle("active",x===b));load();});
  $("oh-zone").addEventListener("click",e=>{const b=e.target.closest("button[data-zone]");if(!b)return;state.zone=b.dataset.zone;$("oh-zone").querySelectorAll("button").forEach(x=>x.classList.toggle("active",x===b));renderCharts();});
  $("oh-add").addEventListener("click",openPicker);$("oh-backdrop").addEventListener("click",closePicker);
- $("oh-options").addEventListener("click",e=>{const b=e.target.closest("button[data-variable]");if(!b||b.disabled)return;const id=b.dataset.variable;if(state.selected.includes(id))return;state.selected.push(id);closePicker();renderChips();renderCharts();});
- $("oh-vars").addEventListener("click",e=>{const b=e.target.closest("button[data-remove]");if(!b)return;state.selected=state.selected.filter(id=>id!==b.dataset.remove);renderChips();renderCharts();});
+ $("oh-options").addEventListener("click",e=>{const b=e.target.closest("button[data-variable]");if(!b||b.disabled)return;const id=b.dataset.variable;if(state.selected.includes(id))return;state.selected.push(id);saveHistoryPrefs();closePicker();renderChips();renderCharts();});
+ $("oh-vars").addEventListener("click",e=>{const b=e.target.closest("button[data-remove]");if(!b)return;state.selected=state.selected.filter(id=>id!==b.dataset.remove);saveHistoryPrefs();renderChips();renderCharts();});
  document.addEventListener("keydown",e=>{if(e.key==="Escape"&&state.openPicker)closePicker();});
 }
 function openPicker(){
