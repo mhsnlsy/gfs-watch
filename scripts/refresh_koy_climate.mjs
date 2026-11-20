@@ -10,7 +10,7 @@ const MODELS = {
   cerra: {
     label: "CERRA",
     resolution: "5.5 km",
-    startYear: 1984,
+    startYear: 1985,
     supportsPrecip: true,
     supportsWind: true,
     daily: [
