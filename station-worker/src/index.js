@@ -584,35 +584,19 @@ async function collectOne(env, stationKey, triggerSource, options = {}) {
   }
 }
 
-async function canakciArchiveDue(env) {
-  // Fail open: if the lookup errors, archive (a duplicate row collapses on conflict).
-  try {
-    const row = await env.STATIONS_DB.prepare(
-      "SELECT MAX(fetched_at_utc) AS latest FROM station_history WHERE station_key = 'canakci'"
-    ).first();
-    const latest = row && row.latest ? Date.parse(row.latest) : NaN;
-    return !Number.isFinite(latest) || Date.now() - latest >= 9 * 60000;
-  } catch (error) {
-    console.error("[ARCHIVE DUE]", error && error.message || error);
-    return true;
-  }
-}
 async function collectAll(env, triggerSource = "unknown") {
   // Every live station, including Köy, retains the existing two-minute
-  // current-value refresh. Çanakçı history writes are decimated to ~10 minutes:
-  // the cron archives whenever the newest archived Çanakçı row is at least 9
-  // minutes old, so a delayed or skipped cron run can never leave a hole larger
-  // than one tick. Duplicates collapse on the (station_key, observed_at_utc)
-  // conflict. GitHub Actions' "*/10" schedule is heavily throttled (often 1 run
-  // per 4-8 h), so it must not be the only writer of the archive that feeds the
-  // Köy 24-hour charts; it stays as an extra, best-effort collector.
-  const archiveCanakci = triggerSource !== "cron" || await canakciArchiveDue(env);
+  // current-value refresh. Every station, Çanakçı included, is archived on every
+  // cron tick: station_history is unique on (station_key, observed_at_utc), so a
+  // tick that sees the same MGM observation again only refreshes that row and
+  // each real observation is stored exactly once. GitHub Actions' "*/10"
+  // schedule is heavily throttled (often 1 run per 4-8 h), so it must never be
+  // the writer of the archive that feeds the Köy 24-hour charts; it stays as an
+  // extra, best-effort collector.
   const collected = await Promise.all(
     Object.keys(STATION_DEFS).map(async key => ({
       key,
-      result: await collectOne(env, key, triggerSource, {
-        archiveHistory: key === "canakci" ? archiveCanakci : true
-      })
+      result: await collectOne(env, key, triggerSource, { archiveHistory: true })
     }))
   );
   const results = Object.fromEntries(collected.map(item => [item.key, item.result]));

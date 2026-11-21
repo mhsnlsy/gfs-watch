@@ -627,6 +627,10 @@ function svgStationHistory(samples,metric,title,unit){
  const line=groups.map(g=>g.map((p,i)=>(i?"L":"M")+xb(p).toFixed(1)+" "+y(p.mean).toFixed(1)).join(" ")).join(" ");
  const area=groups.filter(g=>g.length>1).map(g=>g.map((p,i)=>(i?"L":"M")+xb(p).toFixed(1)+" "+y(p.mean).toFixed(1)).join(" ")+" L "+xb(g[g.length-1])+" "+(H-B)+" L "+xb(g[0])+" "+(H-B)+" Z").join(" ");
  const ranges=data.map(p=>{if(p.max-p.min<0.05)return "";const xx=xb(p),a=y(p.max),b=y(p.min),c=4.5;return '<path d="M'+xx+' '+a+'V'+b+' M'+(xx-c)+' '+a+'h'+(2*c)+' M'+(xx-c)+' '+b+'h'+(2*c)+'" stroke="rgba(125,211,215,.78)" stroke-width="1.7" fill="none"/>'}).join("");
+ // Dashed connector across stretches with no archived data, so isolated real
+ // observations stay readable while the gap is visibly marked as "no data".
+ const gapLine=groups.slice(1).map((g,i)=>{const prev=groups[i],a=prev[prev.length-1],b=g[0];return "M"+xb(a).toFixed(1)+" "+y(a.mean).toFixed(1)+" L"+xb(b).toFixed(1)+" "+y(b.mean).toFixed(1)}).join(" ");
+ if(gapLine)s+='<path d="'+gapLine+'" fill="none" stroke="rgba(142,219,210,.38)" stroke-width="1.6" stroke-dasharray="2 6" stroke-linecap="round"><title>Bu aralıkta arşiv verisi yok</title></path>';
  s+='<path d="'+area+'" fill="rgba(125,211,215,.10)" stroke="none"/>'+ranges+'<path d="'+line+'" fill="none" stroke="#8edbd2" stroke-width="3.2" stroke-linecap="round" stroke-linejoin="round"/>';
  groups.filter(g=>g.length===1).forEach(g=>{s+='<circle cx="'+xb(g[0])+'" cy="'+y(g[0].mean)+'" r="3" fill="#8edbd2"/>'});
  const last=data[data.length-1];s+='<circle cx="'+xb(last)+'" cy="'+y(last.mean)+'" r="6" fill="#f1fff9" stroke="#a4e7d5" stroke-width="1.5"/>';
