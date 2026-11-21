@@ -586,13 +586,18 @@ async function collectOne(env, stationKey, triggerSource, options = {}) {
 
 async function collectAll(env, triggerSource = "unknown") {
   // Every live station, including Köy, retains the existing two-minute
-  // current-value refresh. Only Çanakçı history writes are decimated; the
-  // isolated GitHub Actions workflow writes those archive samples every 10m.
+  // current-value refresh. Çanakçı history writes are decimated to ~10 minutes:
+  // the cron archives in the first two runs of every 10-minute window (minute
+  // 0-3; duplicates collapse on the (station_key, observed_at_utc) conflict).
+  // GitHub Actions' "*/10" schedule is heavily throttled (often 1 run per 4-8 h),
+  // so it can no longer be the only writer of the Çanakçı archive that feeds the
+  // Köy 24-hour charts; it stays as an extra, best-effort collector.
+  const archiveWindow = new Date().getUTCMinutes() % 10 < 4;
   const collected = await Promise.all(
     Object.keys(STATION_DEFS).map(async key => ({
       key,
       result: await collectOne(env, key, triggerSource, {
-        archiveHistory: !(key === "canakci" && triggerSource === "cron")
+        archiveHistory: !(key === "canakci" && triggerSource === "cron" && !archiveWindow)
       })
     }))
   );
