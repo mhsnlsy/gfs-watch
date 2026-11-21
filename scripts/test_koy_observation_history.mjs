@@ -27,6 +27,7 @@ assert.ok(testWorkflow.includes(".github/workflows/canakci-history-10m.yml"));
 assert.ok(!testWorkflow.includes(".github/workflows/village-history.yml"));
 assert.match(worker, /MAX_HISTORY_HOURS = 8760/);
 assert.match(worker, /history-graph/);
-assert.match(worker, /archiveHistory: !\(key === "canakci" && triggerSource === "cron"\)/);
+assert.match(worker, /archiveHistory: !\(key === "canakci" && triggerSource === "cron" && !archiveWindow\)/);
+assert.match(worker, /getUTCMinutes\(\) % 10 < 4/);
 assert.match(worker, /collectAll\(env, "cron"\)/);
 console.log("Köy Observation History contract OK");
