@@ -584,8 +584,10 @@ function svgStationHistory(samples,metric,title,unit){
  const step=hourly?3600000:1800000;
  // Rainfall uses completed, Istanbul-hour-aligned bins. The 24-hour
  // window therefore advances only at HH:00 rather than following refresh minute.
- const chartEnd=hourly?Math.floor(now/step)*step:now;
- const from=hourly?chartEnd-24*step:now-24*3600000;
+ // Both charts use clock-aligned bins (HH:00 / HH:30) so labels land on whole hours.
+ // Temperature includes the current, still-filling bin; rainfall only completed hours.
+ const chartEnd=hourly?Math.floor(now/step)*step:Math.floor(now/step)*step+step;
+ const from=chartEnd-24*3600000;
  const bins=[];
  for(let t=from;t<chartEnd;t+=step)bins.push({start:t,values:[]});
  (Array.isArray(samples)?samples:[]).forEach(s=>{
@@ -610,22 +612,23 @@ function svgStationHistory(samples,metric,title,unit){
  const x=t=>L+(t-from)/86400000*PW,y=v=>T+(hi-v)*PH/(hi-lo),xb=p=>x(p.start+step/2);
  let s='<svg viewBox="0 0 '+W+' '+H+'" preserveAspectRatio="none" role="img" aria-label="'+esc(title)+'">';
  for(let j=0;j<=4;j++){const v=lo+(hi-lo)*j/4,yy=y(v);s+='<line x1="'+L+'" y1="'+yy+'" x2="'+(W-R)+'" y2="'+yy+'" stroke="rgba(190,218,228,.17)" stroke-dasharray="3 5"/><text x="'+(L-9)+'" y="'+(yy+3.5)+'" fill="#a8bfca" font-size="10" text-anchor="end">'+fmt(v,metric==="temperature_2m_c"?1:1)+'</text>'}
- bins.forEach((b,i)=>{
-  if(hourly){
-   // Match the temperature chart: one time label every 2 hours.
-   if(i%2&&i!==bins.length-1)return;
-   const hh=new Intl.DateTimeFormat("tr-TR",{timeZone:"Europe/Istanbul",hour:"2-digit",minute:"2-digit",hourCycle:"h23"}).format(new Date(b.start));
-   s+='<text x="'+x(b.start)+'" y="'+(H-8)+'" fill="#a8bfca" font-size="10" text-anchor="middle"><title>'+hh+' TSİ</title>'+hh+'</text>';
-   return;
-  }
-  if(i%4&&i!==bins.length-1)return;
-  s+='<text x="'+x(b.start)+'" y="'+(H-8)+'" fill="#a8bfca" font-size="10" text-anchor="middle">'+new Intl.DateTimeFormat("tr-TR",{timeZone:"Europe/Istanbul",hour:"2-digit",minute:"2-digit"}).format(new Date(b.start))+'</text>';
+ // One label every 2 whole hours (Istanbul time) on both charts. No forced last
+ // label: it used to collide with the previous one (e.g. "14:00" + "15:00").
+ const labelFmt=new Intl.DateTimeFormat("tr-TR",{timeZone:"Europe/Istanbul",hour:"2-digit",minute:"2-digit",hourCycle:"h23"});
+ bins.forEach(b=>{
+  const hh=labelFmt.format(new Date(b.start)),parts=hh.split(":");
+  if(parts[1]!=="00"||Number(parts[0])%2)return;
+  s+='<text x="'+x(b.start)+'" y="'+(H-8)+'" fill="#a8bfca" font-size="10" text-anchor="middle"><title>'+hh+' TSİ</title>'+hh+'</text>';
  });
- const groups=[];data.forEach(p=>{const g=groups[groups.length-1];if(!g||p.index!==g[g.length-1].index+1)groups.push([p]);else g.push(p)});
+ // Join points across short gaps (up to 2 h for temperature, 3 h for rain) so a
+ // missed fetch does not leave the chart as unconnected dots.
+ const maxGap=hourly?3:4;
+ const groups=[];data.forEach(p=>{const g=groups[groups.length-1];if(!g||p.index-g[g.length-1].index>maxGap)groups.push([p]);else g.push(p)});
  const line=groups.map(g=>g.map((p,i)=>(i?"L":"M")+xb(p).toFixed(1)+" "+y(p.mean).toFixed(1)).join(" ")).join(" ");
  const area=groups.filter(g=>g.length>1).map(g=>g.map((p,i)=>(i?"L":"M")+xb(p).toFixed(1)+" "+y(p.mean).toFixed(1)).join(" ")+" L "+xb(g[g.length-1])+" "+(H-B)+" L "+xb(g[0])+" "+(H-B)+" Z").join(" ");
- const ranges=data.map(p=>{const xx=xb(p),a=y(p.max),b=y(p.min),c=4.5;return '<path d="M'+xx+' '+a+'V'+b+' M'+(xx-c)+' '+a+'h'+(2*c)+' M'+(xx-c)+' '+b+'h'+(2*c)+'" stroke="rgba(125,211,215,.78)" stroke-width="1.7" fill="none"/>'}).join("");
+ const ranges=data.map(p=>{if(p.max-p.min<0.05)return "";const xx=xb(p),a=y(p.max),b=y(p.min),c=4.5;return '<path d="M'+xx+' '+a+'V'+b+' M'+(xx-c)+' '+a+'h'+(2*c)+' M'+(xx-c)+' '+b+'h'+(2*c)+'" stroke="rgba(125,211,215,.78)" stroke-width="1.7" fill="none"/>'}).join("");
  s+='<path d="'+area+'" fill="rgba(125,211,215,.10)" stroke="none"/>'+ranges+'<path d="'+line+'" fill="none" stroke="#8edbd2" stroke-width="3.2" stroke-linecap="round" stroke-linejoin="round"/>';
+ groups.filter(g=>g.length===1).forEach(g=>{s+='<circle cx="'+xb(g[0])+'" cy="'+y(g[0].mean)+'" r="3" fill="#8edbd2"/>'});
  const last=data[data.length-1];s+='<circle cx="'+xb(last)+'" cy="'+y(last.mean)+'" r="6" fill="#f1fff9" stroke="#a4e7d5" stroke-width="1.5"/>';
  data.forEach(p=>{
   const period=new Intl.DateTimeFormat("tr-TR",{timeZone:"Europe/Istanbul",hour:"2-digit",minute:"2-digit"}).format(new Date(p.start))+"–"+new Intl.DateTimeFormat("tr-TR",{timeZone:"Europe/Istanbul",hour:"2-digit",minute:"2-digit"}).format(new Date(p.start+step))+" TSİ";
@@ -748,7 +751,10 @@ function renderStationHistory(doc,rainDoc){
  $("station-rain-meta").textContent=stationLabel+" · "+rainSamples.length+" kayıt · 72 saatlik arşiv · saatlik kayan 1 saat toplam";
  $("history-source-note").textContent=isHome?"Sıcaklık ve yağış: Çanakçı MGM gerçek ölçümlerinden +217 m rakım düzeltmesiyle türetilmiş Köy Ev sanal istasyonu.":"Sıcaklık: MGM Çanakçı gözlem geçmişi. Yağış: bağımsız 72 saatlik MGM yağış arşivi.";
  $("station-temperature-trend").innerHTML=svgStationHistory(samples,"temperature_2m_c",tempTitle,"°C");
- const tempValues=samples.map(s=>num(s.temperature_2m_c)).filter(v=>v!=null);
+ // The archive holds 72 h; the badge says "24 saatte", so only use the last 24 h
+ // (same window as the chart axis).
+ const since24=Date.now()-24*3600000;
+ const tempValues=samples.filter(s=>{const t=Date.parse(s.observed_at_utc||s.logged_at_utc||"");return Number.isFinite(t)&&t>=since24}).map(s=>num(s.temperature_2m_c)).filter(v=>v!=null);
  const tempMinMaxBadge=$("station-temperature-minmax");
  if(tempMinMaxBadge){
   if(tempValues.length){
