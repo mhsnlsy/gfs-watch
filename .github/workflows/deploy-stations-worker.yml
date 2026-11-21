@@ -131,9 +131,14 @@ jobs:
               if node - "$RUNNER_TEMP/station-collection.json" <<'NODE'
           const fs = require("fs");
           const doc = JSON.parse(fs.readFileSync(process.argv[2], "utf8"));
-          const required = ["enka", "eyupsultan", "sisli", "canakci"];
+          // MGM stations must be live. ENKA (WeatherLink) is a third-party feed that can
+          // be offline for hours; it only has to be collected without error, so its
+          // outage never blocks deploying the Çanakçı/Köy history pipeline.
+          const required = ["eyupsultan", "sisli", "canakci"];
           const results = doc.results || {};
           const failures = required.filter(key => !results[key] || results[key].ok !== true || results[key].status !== "live");
+          if (!results.enka || results.enka.ok !== true) failures.push("enka");
+          if (results.enka && results.enka.status !== "live") console.warn("::warning::ENKA feed is " + results.enka.status + " (not blocking)");
           if (doc.ok !== true || failures.length) {
             console.error("Station bootstrap attempt failed:", JSON.stringify({
               failed_stations: failures,
@@ -173,7 +178,8 @@ jobs:
             const row = rows.find(item => item.key === key);
             const success = Date.parse(row && row.last_success_utc || "");
             const attempt = Date.parse(row && row.last_attempt_utc || "");
-            return !row || row.collection_status !== "ok" || row.status !== "live" ||
+            const mustBeLive = key !== "enka";
+            return !row || row.collection_status !== "ok" || (mustBeLive && row.status !== "live") ||
               !Number.isFinite(success) || success < baseline - 5000 ||
               !Number.isFinite(attempt) || attempt < baseline - 5000 ||
               Boolean(row.last_error);
